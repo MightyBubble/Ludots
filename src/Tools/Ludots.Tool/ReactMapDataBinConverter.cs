@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
@@ -22,6 +23,7 @@ namespace Ludots.Tool
         public byte MinWater { get; set; }
         public byte MaxWater { get; set; }
         public Dictionary<int, int> BiomeCounts { get; set; } = new Dictionary<int, int>();
+        public Dictionary<int, int> AreaCounts { get; set; } = new Dictionary<int, int>();
         public Dictionary<int, int> VegetationCounts { get; set; } = new Dictionary<int, int>();
     }
 
@@ -56,6 +58,74 @@ namespace Ludots.Tool
             return ConvertToVertexMapBinary(inputPath, outputPath: string.Empty, input, output);
         }
 
+        public static MutableGridLogicTerrainField ReadGridLogicTerrainField(
+            string inputPath,
+            int cellSizeCm = SpatialScaleDefaults.CellCm)
+        {
+            using var input = File.OpenRead(inputPath);
+            return ReadGridLogicTerrainField(inputPath, input, cellSizeCm);
+        }
+
+        public static MutableGridLogicTerrainField ReadGridLogicTerrainField(
+            string inputName,
+            Stream input,
+            int cellSizeCm = SpatialScaleDefaults.CellCm)
+        {
+            if (input == null) throw new ArgumentNullException(nameof(input));
+            if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+
+            using var br = new BinaryReader(input, Encoding.UTF8, leaveOpen: true);
+            int widthChunks = br.ReadInt32();
+            int heightChunks = br.ReadInt32();
+            byte strideOrVersion = br.ReadByte();
+
+            ValidateReactHeader(inputName, input, widthChunks, heightChunks, strideOrVersion);
+
+            int widthCells = checked(widthChunks * ChunkSize);
+            int heightCells = checked(heightChunks * ChunkSize);
+            var terrain = new MutableGridLogicTerrainField(widthCells, heightCells, cellSizeCm, ChunkSize);
+            byte[] reactChunk = new byte[ReactChunkBytes];
+
+            for (int cy = 0; cy < heightChunks; cy++)
+            {
+                for (int cx = 0; cx < widthChunks; cx++)
+                {
+                    int read = input.Read(reactChunk, 0, reactChunk.Length);
+                    if (read != reactChunk.Length)
+                    {
+                        throw new EndOfStreamException($"Unexpected EOF when reading chunk ({cx},{cy}) from '{inputName}'.");
+                    }
+
+                    for (int ly = 0; ly < ChunkSize; ly++)
+                    {
+                        for (int lx = 0; lx < ChunkSize; lx++)
+                        {
+                            int cell = (ly * ChunkSize) + lx;
+                            int i = cell * ReactCellStride;
+
+                            byte b0 = reactChunk[i];
+                            byte b2 = reactChunk[i + 2];
+                            byte areaId = reactChunk[i + 3];
+                            byte height = (byte)((b0 >> 4) & 0x0F);
+                            byte water = (byte)(b0 & 0x0F);
+
+                            var flags = LogicTerrainSurfaceFlags.None;
+                            if ((b2 & 0b1000_0000) != 0) flags |= LogicTerrainSurfaceFlags.Ramp;
+                            if ((b2 & 0b0000_1000) != 0) flags |= LogicTerrainSurfaceFlags.Blocked;
+                            if (water > height) flags |= LogicTerrainSurfaceFlags.Water;
+
+                            terrain.SetCell(
+                                cx * ChunkSize + lx,
+                                cy * ChunkSize + ly,
+                                new LogicTerrainCell(height, water, flags, areaId));
+                        }
+                    }
+                }
+            }
+
+            return terrain;
+        }
+
         private static ReactMapConversionSummary ConvertToVertexMapBinary(string inputPath, string outputPath, Stream input, Stream output)
         {
             using var br = new BinaryReader(input, Encoding.UTF8, leaveOpen: true);
@@ -64,17 +134,7 @@ namespace Ludots.Tool
             int heightChunks = br.ReadInt32();
             byte strideOrVersion = br.ReadByte();
 
-            if (widthChunks <= 0 || heightChunks <= 0)
-            {
-                throw new InvalidDataException($"Invalid chunk dimensions: {widthChunks}x{heightChunks}");
-            }
-
-            long expectedBody = (long)widthChunks * heightChunks * ReactChunkBytes;
-            long remaining = input.Length - input.Position;
-            if (remaining < expectedBody)
-            {
-                throw new InvalidDataException($"Input too small. Expected body bytes={expectedBody}, actual remaining={remaining}.");
-            }
+            ValidateReactHeader(inputPath, input, widthChunks, heightChunks, strideOrVersion);
 
             var summary = new ReactMapConversionSummary
             {
@@ -102,10 +162,11 @@ namespace Ludots.Tool
             var biomes = new byte[mapCells];
             var vegs = new byte[mapCells];
             var ramp = new bool[mapCells];
+            var blocked = new bool[mapCells];
             var snow = new bool[mapCells];
             var mud = new bool[mapCells];
             var ice = new bool[mapCells];
-            var territory = new byte[mapCells];
+            var areaIds = new byte[mapCells];
 
             for (int cy = 0; cy < heightChunks; cy++)
             {
@@ -127,7 +188,7 @@ namespace Ludots.Tool
                             byte b0 = reactChunk[i];
                             byte b1 = reactChunk[i + 1];
                             byte b2 = reactChunk[i + 2];
-                            byte b3 = reactChunk[i + 3];
+                            byte areaId = reactChunk[i + 3];
 
                             byte height = (byte)((b0 >> 4) & 0x0F);
                             byte water = (byte)(b0 & 0x0F);
@@ -138,6 +199,7 @@ namespace Ludots.Tool
                             bool isSnow = (b2 & 0b0100_0000) != 0;
                             bool isMud = (b2 & 0b0010_0000) != 0;
                             bool isIce = (b2 & 0b0001_0000) != 0;
+                            bool isBlocked = (b2 & 0b0000_1000) != 0;
 
                             int globalC = cx * ChunkSize + lx;
                             int globalR = cy * ChunkSize + ly;
@@ -148,10 +210,11 @@ namespace Ludots.Tool
                             biomes[globalIndex] = biome;
                             vegs[globalIndex] = veg;
                             ramp[globalIndex] = isRamp;
+                            blocked[globalIndex] = isBlocked;
                             snow[globalIndex] = isSnow;
                             mud[globalIndex] = isMud;
                             ice[globalIndex] = isIce;
-                            territory[globalIndex] = b3;
+                            areaIds[globalIndex] = areaId;
 
                             if (height < summary.MinHeight) summary.MinHeight = height;
                             if (height > summary.MaxHeight) summary.MaxHeight = height;
@@ -160,6 +223,9 @@ namespace Ludots.Tool
 
                             if (!summary.BiomeCounts.TryGetValue(biome, out int bc)) bc = 0;
                             summary.BiomeCounts[biome] = bc + 1;
+
+                            if (!summary.AreaCounts.TryGetValue(areaId, out int ac)) ac = 0;
+                            summary.AreaCounts[areaId] = ac + 1;
 
                             if (!summary.VegetationCounts.TryGetValue(veg, out int vc)) vc = 0;
                             summary.VegetationCounts[veg] = vc + 1;
@@ -171,12 +237,6 @@ namespace Ludots.Tool
             static byte HeightAt(byte[] data, int w, int h, int c, int r)
             {
                 if ((uint)c >= (uint)w || (uint)r >= (uint)h) return 0;
-                return data[r * w + c];
-            }
-
-            static bool BoolAt(bool[] data, int w, int h, int c, int r)
-            {
-                if ((uint)c >= (uint)w || (uint)r >= (uint)h) return false;
                 return data[r * w + c];
             }
 
@@ -268,20 +328,21 @@ namespace Ludots.Tool
 
             var packed = new byte[PackedBytesPerChunk];
             var layer2 = new byte[Layer2BytesPerChunk];
-            var flagsZeros = new byte[FlagsBytesPerChunk];
             var factionsZeros = new byte[FactionsBytesPerChunk];
 
+            var blockedU = new ulong[FlagsUlongsPerChunk];
             var rampU = new ulong[FlagsUlongsPerChunk];
             var snowU = new ulong[FlagsUlongsPerChunk];
             var mudU = new ulong[FlagsUlongsPerChunk];
             var iceU = new ulong[FlagsUlongsPerChunk];
 
+            var blockedBytes = new byte[FlagsBytesPerChunk];
             var rampBytes = new byte[RampBytesPerChunk];
             var snowBytes = new byte[FlagsBytesPerChunk];
             var mudBytes = new byte[FlagsBytesPerChunk];
             var iceBytes = new byte[FlagsBytesPerChunk];
 
-            var chunkTerritory = new byte[TerritoryBytesPerChunk];
+            var chunkAreaIds = new byte[TerritoryBytesPerChunk];
             var cliffStraighten = new byte[CliffStraightenBytesPerChunk];
 
             for (int cy = 0; cy < heightChunks; cy++)
@@ -290,11 +351,12 @@ namespace Ludots.Tool
                 {
                     Array.Clear(packed, 0, packed.Length);
                     Array.Clear(layer2, 0, layer2.Length);
+                    Array.Clear(blockedU, 0, blockedU.Length);
                     Array.Clear(rampU, 0, rampU.Length);
                     Array.Clear(snowU, 0, snowU.Length);
                     Array.Clear(mudU, 0, mudU.Length);
                     Array.Clear(iceU, 0, iceU.Length);
-                    Array.Clear(chunkTerritory, 0, chunkTerritory.Length);
+                    Array.Clear(chunkAreaIds, 0, chunkAreaIds.Length);
                     Array.Clear(cliffStraighten, 0, cliffStraighten.Length);
 
                     for (int ly = 0; ly < ChunkSize; ly++)
@@ -312,12 +374,13 @@ namespace Ludots.Tool
                             int ulongIndex = cell >> 6;
                             int bitIndex = cell & 0x3F;
                             ulong mask = 1UL << bitIndex;
+                            if (blocked[globalIndex]) blockedU[ulongIndex] |= mask;
                             if (ramp[globalIndex]) rampU[ulongIndex] |= mask;
                             if (snow[globalIndex]) snowU[ulongIndex] |= mask;
                             if (mud[globalIndex]) mudU[ulongIndex] |= mask;
                             if (ice[globalIndex]) iceU[ulongIndex] |= mask;
 
-                            chunkTerritory[cell] = territory[globalIndex];
+                            chunkAreaIds[cell] = areaIds[globalIndex];
 
                             bool isOdd = (globalR & 1) == 1;
 
@@ -350,6 +413,7 @@ namespace Ludots.Tool
                         }
                     }
 
+                    Buffer.BlockCopy(blockedU, 0, blockedBytes, 0, blockedBytes.Length);
                     Buffer.BlockCopy(rampU, 0, rampBytes, 0, rampBytes.Length);
                     Buffer.BlockCopy(snowU, 0, snowBytes, 0, snowBytes.Length);
                     Buffer.BlockCopy(mudU, 0, mudBytes, 0, mudBytes.Length);
@@ -357,13 +421,13 @@ namespace Ludots.Tool
 
                     bw.Write(packed);
                     bw.Write(layer2);
-                    bw.Write(flagsZeros);
+                    bw.Write(blockedBytes);
                     bw.Write(rampBytes);
                     bw.Write(factionsZeros);
                     bw.Write(snowBytes);
                     bw.Write(mudBytes);
                     bw.Write(iceBytes);
-                    bw.Write(chunkTerritory);
+                    bw.Write(chunkAreaIds);
                     bw.Write(cliffStraighten);
                 }
             }
@@ -371,6 +435,31 @@ namespace Ludots.Tool
             bw.Flush();
             summary.OutputBytes = output.Length;
             return summary;
+        }
+
+        private static void ValidateReactHeader(
+            string inputName,
+            Stream input,
+            int widthChunks,
+            int heightChunks,
+            byte strideOrVersion)
+        {
+            if (widthChunks <= 0 || heightChunks <= 0)
+            {
+                throw new InvalidDataException($"Invalid chunk dimensions in '{inputName}': {widthChunks}x{heightChunks}");
+            }
+
+            if (strideOrVersion != ReactCellStride)
+            {
+                throw new InvalidDataException($"React terrain cell stride mismatch in '{inputName}'. Expected={ReactCellStride}, actual={strideOrVersion}.");
+            }
+
+            long expectedBody = (long)widthChunks * heightChunks * ReactChunkBytes;
+            long remaining = input.Length - input.Position;
+            if (remaining < expectedBody)
+            {
+                throw new InvalidDataException($"Input '{inputName}' too small. Expected body bytes={expectedBody}, actual remaining={remaining}.");
+            }
         }
     }
 }

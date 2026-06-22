@@ -19,8 +19,9 @@ namespace Ludots.Core.Navigation.NavMesh
             public readonly byte W;
             public readonly bool IsRamp;
             public readonly bool IsBlocked;
+            public readonly byte AreaId;
 
-            public Vtx(int c, int r, Vector3 pos, float waterY, byte h, byte w, bool isRamp, bool isBlocked)
+            public Vtx(int c, int r, Vector3 pos, float waterY, byte h, byte w, bool isRamp, bool isBlocked, byte areaId)
             {
                 C = c;
                 R = r;
@@ -30,6 +31,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 W = w;
                 IsRamp = isRamp;
                 IsBlocked = isBlocked;
+                AreaId = areaId;
             }
         }
 
@@ -127,6 +129,7 @@ namespace Ludots.Core.Navigation.NavMesh
             var triA = new List<int>(8192);
             var triB = new List<int>(8192);
             var triC = new List<int>(8192);
+            var triAreaIds = new List<byte>(8192);
             var cellWalkable = new bool[tileWidth * tileHeight];
 
             int walkableTriCount = 0;
@@ -168,8 +171,8 @@ namespace Ludots.Core.Navigation.NavMesh
                         t2p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
                     }
 
-                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t1p1, t1p2, t1p3, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t2p1, t2p2, t2p3, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t1p1, t1p2, t1p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t2p1, t2p2, t2p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 }
             }
 
@@ -207,6 +210,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 n0,
                 n1,
                 n2,
+                triAreaIds.ToArray(),
                 portals);
 
             using (var ms = new System.IO.MemoryStream())
@@ -227,6 +231,7 @@ namespace Ludots.Core.Navigation.NavMesh
             byte w = 0;
             bool ramp = false;
             bool blocked = false;
+            byte areaId = 0;
 
             if ((uint)c < (uint)mapWidth && (uint)r < (uint)mapHeight)
             {
@@ -235,6 +240,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 w = cell.WaterHeightLevel;
                 ramp = cell.IsRamp;
                 blocked = cell.IsBlocked;
+                areaId = cell.AreaId;
             }
 
             terrain.GetWorldPositionMeters(c, r, out float worldX, out float worldZ);
@@ -242,7 +248,7 @@ namespace Ludots.Core.Navigation.NavMesh
             float z = worldZ - originZm;
             float y = h * heightScale;
             float waterY = w * heightScale;
-            return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, ramp, blocked);
+            return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, ramp, blocked, areaId);
         }
 
         private static void AddFace(
@@ -262,21 +268,23 @@ namespace Ludots.Core.Navigation.NavMesh
             List<int> triA,
             List<int> triB,
             List<int> triC,
+            List<byte> triAreaIds,
             ref int walkableTriCount)
         {
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
+            byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
 
             if (minH == maxH)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
 
             bool isRamp = p1.IsRamp || p2.IsRamp || p3.IsRamp;
             if (isRamp)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
 
@@ -298,10 +306,10 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h1, l, out var m1) &&
                     TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h2, l, out var m2))
                 {
-                    AppendWalkableTri(config, h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                    AppendWalkableTri(config, h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AppendWalkableTri(config, h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h1.AreaId, h2.AreaId, h1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AppendWalkableTri(config, h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h2.AreaId, h1.AreaId, h2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                    AppendWalkableTri(config, l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AppendWalkableTri(config, l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, l.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 }
 
                 return;
@@ -314,10 +322,10 @@ namespace Ludots.Core.Navigation.NavMesh
             if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l1, out var s1) &&
                 TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l2, out var s2))
             {
-                AppendWalkableTri(config, h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, h.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                AppendWalkableTri(config, l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                AppendWalkableTri(config, l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l1.AreaId, l2.AreaId, l1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendWalkableTri(config, l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l2.AreaId, l1.AreaId, l2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
             }
         }
 
@@ -329,6 +337,7 @@ namespace Ludots.Core.Navigation.NavMesh
             float wb,
             Vector3 c,
             float wc,
+            byte areaId,
             Dictionary<VertexKey, int> vertexIndex,
             List<int> vx,
             List<int> vy,
@@ -336,6 +345,7 @@ namespace Ludots.Core.Navigation.NavMesh
             List<int> triA,
             List<int> triB,
             List<int> triC,
+            List<byte> triAreaIds,
             ref int walkableTriCount)
         {
             if (wa > a.Y || wb > b.Y || wc > c.Y) return;
@@ -357,7 +367,15 @@ namespace Ludots.Core.Navigation.NavMesh
             triA.Add(ia);
             triB.Add(ib);
             triC.Add(ic);
+            triAreaIds.Add(areaId);
             walkableTriCount++;
+        }
+
+        private static byte ResolveAreaId(byte a, byte b, byte c)
+        {
+            if (a == b || a == c) return a;
+            if (b == c) return b;
+            return a;
         }
 
         private static int GetOrAddVertex(Vector3 p, Dictionary<VertexKey, int> vertexIndex, List<int> vx, List<int> vy, List<int> vz)

@@ -382,6 +382,10 @@ export class ChunkRenderer {
             col.lerp(tCol, 0.3); 
         }
 
+        if (this.store.getBlocked(c, r)) {
+            col.lerp(new THREE.Color(0x7f1d1d), 0.75);
+        }
+
         // Calculate Water Y position (World Space)
         // Water is at height 'w'.
         // Terrain is at height 'h'.

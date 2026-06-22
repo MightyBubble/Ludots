@@ -19,7 +19,7 @@ function getNeighbors(c: number, r: number) {
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
     
     // Refs for mutable state in animation loop
     const sceneRef = useRef<THREE.Scene | null>(null);
@@ -412,12 +412,12 @@ export const HexRenderer: React.FC = () => {
         group.name = "bakedNavMesh";
 
         const triMat = new THREE.MeshBasicMaterial({
-            color: 0x00ff66,
             transparent: true,
-            opacity: 0.18,
+            opacity: 0.28,
             side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: false,
+            vertexColors: true,
         });
 
         const portalMat = new THREE.LineBasicMaterial({
@@ -489,8 +489,39 @@ export const HexRenderer: React.FC = () => {
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(buildTileTriangleColors(tile), 3));
         geo.computeVertexNormals();
         return geo;
+    };
+
+    const buildTileTriangleColors = (tile: NavTile) => {
+        const tCount = tile.triA.length;
+        const color = new Float32Array(tCount * 3 * 3);
+        let o = 0;
+        for (let i = 0; i < tCount; i++) {
+            const c = getAreaColor(tile.triAreaIds[i] ?? 0);
+            for (let v = 0; v < 3; v++) {
+                color[o++] = c.r;
+                color[o++] = c.g;
+                color[o++] = c.b;
+            }
+        }
+        return color;
+    };
+
+    const getAreaColor = (areaId: number) => {
+        switch (areaId) {
+            case 0: return new THREE.Color(0x00ff66);
+            case 1: return new THREE.Color(0x9ca3af);
+            case 2: return new THREE.Color(0x22c55e);
+            case 3: return new THREE.Color(0x84cc16);
+            case 4: return new THREE.Color(0x3b82f6);
+            case 5: return new THREE.Color(0xf59e0b);
+            default: {
+                const hue = ((areaId * 47) % 360) / 360;
+                return new THREE.Color().setHSL(hue, 0.72, 0.55);
+            }
+        }
     };
 
     const buildTilePortalLines = (tile: NavTile, mat: THREE.LineBasicMaterial) => {
@@ -850,6 +881,22 @@ export const HexRenderer: React.FC = () => {
                         case 'Biome':
                             if (activeMode === 'Set') terrain.setBiome(tc, tr, brushValue);
                             break;
+                        case 'Area':
+                            if (activeMode === 'Set') terrain.setAreaId(tc, tr, brushValue);
+                            else if (activeMode === 'Raise') terrain.setAreaId(tc, tr, Math.min(255, terrain.getAreaId(tc, tr) + 1));
+                            else if (activeMode === 'Lower') terrain.setAreaId(tc, tr, Math.max(0, terrain.getAreaId(tc, tr) - 1));
+                            break;
+                        case 'Blocked':
+                            {
+                                let blocked = terrain.getBlocked(tc, tr);
+                                if (activeMode === 'Set') blocked = brushValue > 0;
+                                else if (activeMode === 'Raise') blocked = true;
+                                else if (activeMode === 'Lower') blocked = false;
+                                if (blocked !== terrain.getBlocked(tc, tr)) {
+                                    terrain.setBlocked(tc, tr, blocked);
+                                }
+                            }
+                            break;
                         case 'Vegetation':
                              if (activeMode === 'Set') terrain.setVeg(tc, tr, brushValue);
                              break;
@@ -901,6 +948,9 @@ export const HexRenderer: React.FC = () => {
                 if (activeMode === 'Set') placeEntityAt(cell.c, cell.r);
                 else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
                 else if (activeMode === 'Raise') selectEntityAt(cell.c, cell.r);
+            } else if (activeCategory === 'Obstacle') {
+                if (activeMode === 'Set' || activeMode === 'Raise') placeObstacleAt(cell.c, cell.r);
+                else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
             } else {
                 applyBrush(cell.c, cell.r);
             }
@@ -927,6 +977,9 @@ export const HexRenderer: React.FC = () => {
             if (!lastDragCellRef.current || lastDragCellRef.current.c !== cell.c || lastDragCellRef.current.r !== cell.r) {
                 if (activeCategory === 'Entities') {
                     if (activeMode === 'Set') placeEntityAt(cell.c, cell.r);
+                    else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
+                } else if (activeCategory === 'Obstacle') {
+                    if (activeMode === 'Set' || activeMode === 'Raise') placeObstacleAt(cell.c, cell.r);
                     else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
                 } else {
                     applyBrush(cell.c, cell.r);

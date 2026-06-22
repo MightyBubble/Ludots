@@ -7,8 +7,8 @@ export const CHUNK_BYTE_SIZE = CHUNK_SIZE * CHUNK_SIZE * CELL_STRIDE; // 16384 b
 // Offsets (Logical Bit Packing - 4 Byte Layout)
 // Byte 0: [Height:4 (7-4)][Water:4 (3-0)]
 // Byte 1: [Biome:4 (7-4)][Veg:4 (3-0)]
-// Byte 2: [Ramp:1 (7)][Snow:1 (6)][Mud:1 (5)][Ice:1 (4)][Reserved:4]
-// Byte 3: [Territory:8 (0-255)] -> 0 = Neutral, 1-255 = Factions
+// Byte 2: [Ramp:1 (7)][Snow:1 (6)][Mud:1 (5)][Ice:1 (4)][Blocked:1 (3)][Reserved:3]
+// Byte 3: [AreaId:8 (0-255)] -> topology-neutral terrain classification for nav/gameplay consumers
 
 
 export type ChunkKey = string; // "col,row"
@@ -177,6 +177,27 @@ export class TerrainStore {
         }
     }
 
+    // Blocked: Byte 2, Bit 3. This is the logic-terrain walkability blocker used by nav bake.
+    getBlocked(col: number, row: number): boolean {
+        const loc = this.getCellIndex(col, row);
+        if (!loc) return false;
+        return ((loc.chunk[loc.index + 2] >> 3) & 0x01) === 1;
+    }
+
+    setBlocked(col: number, row: number, val: boolean) {
+        const loc = this.getCellIndex(col, row);
+        if (!loc) return;
+        const bit = val ? 1 : 0;
+
+        const oldByte = loc.chunk[loc.index + 2];
+        const newByte = (oldByte & 0xF7) | (bit << 3);
+
+        if (oldByte !== newByte) {
+            loc.chunk[loc.index + 2] = newByte;
+            this.dirtyChunks.add(`${loc.cx},${loc.cy}`);
+        }
+    }
+
     // --- Dynamic Flags ---
 
     // Snow: Byte 2, Bit 6
@@ -236,16 +257,14 @@ export class TerrainStore {
         }
     }
 
-    // --- Territory (Byte 3) ---
-    // 0 = Neutral
-    // 1-255 = Faction IDs
-    getTerritory(col: number, row: number): number {
+    // --- AreaId (Byte 3) ---
+    getAreaId(col: number, row: number): number {
         const loc = this.getCellIndex(col, row);
         if (!loc) return 0;
         return loc.chunk[loc.index + 3];
     }
 
-    setTerritory(col: number, row: number, val: number) {
+    setAreaId(col: number, row: number, val: number) {
         const loc = this.getCellIndex(col, row);
         if (!loc) return;
         val = Math.max(0, Math.min(255, Math.floor(val)));
@@ -255,6 +274,14 @@ export class TerrainStore {
             loc.chunk[loc.index + 3] = val;
             this.dirtyChunks.add(`${loc.cx},${loc.cy}`);
         }
+    }
+
+    getTerritory(col: number, row: number): number {
+        return this.getAreaId(col, row);
+    }
+
+    setTerritory(col: number, row: number, val: number) {
+        this.setAreaId(col, row, val);
     }
 
     // Serialization

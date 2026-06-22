@@ -5,7 +5,10 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
+using Ludots.Tool;
 using NUnit.Framework;
+using System;
+using System.IO;
 
 namespace Ludots.Tests.Architecture
 {
@@ -69,6 +72,86 @@ namespace Ludots.Tests.Architecture
             Assert.That(projected.GetCell(32, 32).HeightLevel, Is.GreaterThan(terrain.GetCell(32, 32).HeightLevel));
         }
 
+        [Test]
+        public void ReactStride4Converter_PreservesBiomeAreaAndBlockedAsSeparateLogicChannels()
+        {
+            string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-terrain-" + Guid.NewGuid().ToString("N") + ".bin");
+            try
+            {
+                WriteReactStride4Map(
+                    reactPath,
+                    height: 3,
+                    water: 0,
+                    biome: 4,
+                    vegetation: 2,
+                    blocked: true,
+                    areaId: 9);
+
+                using var converted = new MemoryStream();
+                ReactMapDataBinConverter.ConvertToVertexMapBinary(reactPath, converted);
+                converted.Position = 0;
+                VertexMap map = VertexMapBinary.Read(converted);
+                var terrain = new VertexMapLogicTerrainField(map);
+                LogicTerrainCell cell = terrain.GetCell(0, 0);
+
+                Assert.That(map.GetBiome(0, 0), Is.EqualTo(4), "Visual biome must remain separate from terrain area.");
+                Assert.That(map.GetChunk(0, 0, false)!.GetExtraByte(0, 0, 0), Is.EqualTo(9));
+                Assert.That(map.IsBlocked(0, 0), Is.True);
+                Assert.That(cell.AreaId, Is.EqualTo(9));
+                Assert.That(cell.IsBlocked, Is.True);
+                Assert.That(cell.HeightLevel, Is.EqualTo(3));
+            }
+            finally
+            {
+                if (File.Exists(reactPath))
+                {
+                    File.Delete(reactPath);
+                }
+            }
+        }
+
+        [Test]
+        public void ReactStride4GridLoader_ProvidesProductionGridLogicTerrainWithoutHexVertexMap()
+        {
+            string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-grid-terrain-" + Guid.NewGuid().ToString("N") + ".bin");
+            try
+            {
+                WriteReactStride4Map(
+                    reactPath,
+                    height: 2,
+                    water: 0,
+                    biome: 1,
+                    vegetation: 0,
+                    blocked: false,
+                    areaId: 7);
+
+                MutableGridLogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                    reactPath,
+                    cellSizeCm: 125);
+                LogicTerrainCell cell = terrain.GetCell(0, 0);
+
+                Assert.That(terrain.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+                Assert.That(terrain.HorizontalStepCm, Is.EqualTo(125));
+                Assert.That(terrain.VerticalStepCm, Is.EqualTo(125));
+                Assert.That(cell.HeightLevel, Is.EqualTo(2));
+                Assert.That(cell.AreaId, Is.EqualTo(7));
+                Assert.That(cell.IsBlocked, Is.False);
+
+                var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
+                bool ok = NavTileBuilder.TryBuildTile(terrain, 0, 0, 1, config, out NavTile tile, out NavBakeArtifact artifact);
+
+                Assert.That(ok, Is.True, artifact.Message);
+                Assert.That(tile.TriangleCount, Is.GreaterThan(0));
+            }
+            finally
+            {
+                if (File.Exists(reactPath))
+                {
+                    File.Delete(reactPath);
+                }
+            }
+        }
+
         private static VertexMap CreateFlatVertexMap()
         {
             var map = new VertexMap();
@@ -104,6 +187,29 @@ namespace Ludots.Tests.Architecture
                 samples,
                 interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
             return new VisualHeightmapRuntime(asset);
+        }
+
+        private static void WriteReactStride4Map(
+            string path,
+            byte height,
+            byte water,
+            byte biome,
+            byte vegetation,
+            bool blocked,
+            byte areaId)
+        {
+            using var stream = File.Create(path);
+            using var writer = new BinaryWriter(stream);
+            writer.Write(1);
+            writer.Write(1);
+            writer.Write((byte)4);
+
+            var chunk = new byte[VertexChunk.TotalCells * 4];
+            chunk[0] = (byte)(((height & 0x0F) << 4) | (water & 0x0F));
+            chunk[1] = (byte)(((biome & 0x0F) << 4) | (vegetation & 0x0F));
+            chunk[2] = blocked ? (byte)0b0000_1000 : (byte)0;
+            chunk[3] = areaId;
+            writer.Write(chunk);
         }
     }
 }

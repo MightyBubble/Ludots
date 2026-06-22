@@ -1,6 +1,6 @@
 # NavBakeContext And Unified Bake Service
 
-Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Primary subissue: [NAV-5 #287](https://github.com/MightyBubble/Ludots/issues/287). Runtime incremental follow-up: [NAV-10 #304](https://github.com/MightyBubble/Ludots/issues/304). Related vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282), [NAV-2 #284](https://github.com/MightyBubble/Ludots/issues/284), [NAV-3 #285](https://github.com/MightyBubble/Ludots/issues/285), [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286).
+Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Primary subissue: [NAV-5 #287](https://github.com/MightyBubble/Ludots/issues/287). Runtime incremental follow-up: [NAV-10 #304](https://github.com/MightyBubble/Ludots/issues/304). Related vocabulary: [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282), [NAV-2 #284](https://github.com/MightyBubble/Ludots/issues/284), [NAV-3 #285](https://github.com/MightyBubble/Ludots/issues/285), [NAV-4 #286](https://github.com/MightyBubble/Ludots/issues/286). Bake planning: [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md). Authoring toolchain: [Navmesh Authoring Bake Toolchain](navmesh-authoring-bake-toolchain.md).
 
 ## Background
 
@@ -19,6 +19,8 @@ The result was drift between headed and headless bakes, path strings could degra
 ## Target
 
 `NavBakeContext` is the single bake request object and `NavBakeService` is the single execution entry. CLI and editor Bridge adapters only translate command or multipart input into the same context.
+
+Before running a large bake, use the budget model in [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md). The estimate must be built from the same terrain, obstacle, layer, profile, target, mode, and algorithm inputs that `NavBakeContext` will use for the real bake.
 
 In scope:
 

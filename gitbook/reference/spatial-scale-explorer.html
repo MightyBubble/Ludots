@@ -1,0 +1,1894 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots 空间尺度交互图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --panel-strong: #f0f5ff;
+      --text: #172033;
+      --muted: #617086;
+      --line: #d6deeb;
+      --line-strong: #8aa1c2;
+      --blue: #2867d8;
+      --green: #127a58;
+      --amber: #946200;
+      --red: #b93838;
+      --violet: #6f45c8;
+      --cyan: #087990;
+      --shadow: 0 18px 50px rgba(24, 37, 60, 0.10);
+      --radius: 8px;
+      --focus: 0 0 0 3px rgba(40, 103, 216, 0.18);
+      font-family:
+        "Inter", "Segoe UI", "Microsoft YaHei", "PingFang SC",
+        "Noto Sans CJK SC", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(180deg, #f8fbff 0%, #f2f4f8 44%, #f7f8fb 100%);
+      color: var(--text);
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1440px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 18px;
+    }
+
+    .title-block h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.12;
+      font-weight: 750;
+    }
+
+    .title-block p {
+      max-width: 860px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .doc-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .doc-links a,
+    .doc-links button,
+    .segmented button,
+    .preset-row button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 7px 11px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .doc-links a:hover,
+    .doc-links button:hover,
+    .segmented button:hover,
+    .preset-row button:hover {
+      border-color: var(--line-strong);
+      text-decoration: none;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: minmax(680px, 1fr) 400px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.92);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .graph-panel {
+      min-height: 780px;
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(250, 252, 255, 0.86);
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 720;
+    }
+
+    .segmented {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f5f7fb;
+    }
+
+    .segmented button {
+      border: 0;
+      min-height: 30px;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .segmented button.active {
+      background: var(--panel);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgba(24, 37, 60, 0.12);
+    }
+
+    .graph-wrap {
+      position: relative;
+      width: 100%;
+      height: 710px;
+      background:
+        linear-gradient(90deg, rgba(214, 222, 235, 0.42) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(214, 222, 235, 0.42) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
+
+    .edges {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .edge {
+      stroke: #9aaecb;
+      stroke-width: 2.4;
+      fill: none;
+      marker-end: url(#arrow);
+      opacity: 0.82;
+      transition: opacity 160ms ease, stroke 160ms ease, stroke-width 160ms ease;
+    }
+
+    .edge.soft {
+      stroke-dasharray: 8 7;
+      opacity: 0.55;
+    }
+
+    .edge.active {
+      stroke: var(--blue);
+      stroke-width: 3.8;
+      opacity: 1;
+    }
+
+    .edge.dim {
+      opacity: 0.12;
+    }
+
+    .node {
+      position: absolute;
+      left: calc(var(--x) * 1%);
+      top: calc(var(--y) * 1%);
+      width: var(--w);
+      min-height: var(--h);
+      transform: translate(-50%, -50%);
+      display: grid;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.96);
+      color: var(--text);
+      padding: 10px 11px;
+      text-align: left;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(24, 37, 60, 0.11);
+      transition:
+        transform 160ms ease,
+        border-color 160ms ease,
+        box-shadow 160ms ease,
+        opacity 160ms ease;
+    }
+
+    .node:hover,
+    .node:focus-visible,
+    .node.active {
+      outline: none;
+      transform: translate(-50%, -50%) translateY(-2px);
+      border-color: var(--blue);
+      box-shadow: 0 16px 34px rgba(40, 103, 216, 0.20);
+    }
+
+    .node.dim {
+      opacity: 0.32;
+      box-shadow: none;
+    }
+
+    .node[data-group="base"] {
+      border-left-color: var(--blue);
+    }
+
+    .node[data-group="world"] {
+      border-left-color: var(--green);
+    }
+
+    .node[data-group="chunk"] {
+      border-left-color: var(--amber);
+    }
+
+    .node[data-group="flow"] {
+      border-left-color: var(--violet);
+    }
+
+    .node[data-group="physics"] {
+      border-left-color: var(--cyan);
+    }
+
+    .node[data-group="height"] {
+      border-left-color: #767d88;
+    }
+
+    .node-title {
+      font-size: 14px;
+      line-height: 1.25;
+      font-weight: 760;
+      overflow-wrap: anywhere;
+    }
+
+    .node-meta {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 21px;
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 700;
+      border: 1px solid transparent;
+      background: #eef4ff;
+      color: #1f55b6;
+      white-space: nowrap;
+    }
+
+    .badge.required {
+      background: #eef4ff;
+      color: #1f55b6;
+      border-color: #cbdcff;
+    }
+
+    .badge.configurable {
+      background: #eaf8f2;
+      color: #086543;
+      border-color: #bfe7d5;
+    }
+
+    .badge.fixed {
+      background: #fff5dc;
+      color: #7a4e00;
+      border-color: #f1d99d;
+    }
+
+    .badge.derived {
+      background: #f1ecff;
+      color: #5a37a7;
+      border-color: #d9cdfc;
+    }
+
+    .badge.system {
+      background: #e8f7fb;
+      color: #056675;
+      border-color: #bfe7ee;
+    }
+
+    .detail-panel {
+      position: sticky;
+      top: 16px;
+      overflow: hidden;
+    }
+
+    .detail-body {
+      padding: 18px;
+    }
+
+    .detail-kicker {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .detail-body h2 {
+      margin: 8px 0 8px;
+      font-size: 24px;
+      line-height: 1.15;
+      font-weight: 760;
+    }
+
+    .detail-summary {
+      margin: 10px 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.62;
+    }
+
+    .detail-grid {
+      display: grid;
+      gap: 9px;
+      margin: 16px 0;
+    }
+
+    .detail-row {
+      display: grid;
+      grid-template-columns: 100px minmax(0, 1fr);
+      gap: 10px;
+      padding: 9px 0;
+      border-bottom: 1px solid #edf1f7;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .detail-row dt {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .detail-row dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .relation-lists {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .mini-list {
+      min-height: 112px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+    }
+
+    .mini-list h3 {
+      margin: 0 0 9px;
+      font-size: 13px;
+    }
+
+    .mini-list ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .calc-panel {
+      margin-top: 16px;
+      padding: 16px;
+    }
+
+    .calc-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .calc-head h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 760;
+    }
+
+    .calc-head p {
+      max-width: 760px;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .calc-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 14px;
+    }
+
+    .calc-card h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      font-weight: 730;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .field input:focus {
+      border-color: var(--blue);
+      outline: none;
+      box-shadow: var(--focus);
+    }
+
+    .field input[readonly] {
+      background: #eef2f7;
+      color: #4f5d70;
+    }
+
+    .results {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      min-height: 70px;
+      border: 1px solid #e4eaf4;
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 6px;
+      font-size: 18px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 12px;
+      border-radius: 8px;
+      padding: 10px 11px;
+      font-size: 13px;
+      line-height: 1.45;
+      background: #eaf8f2;
+      color: #086543;
+      border: 1px solid #bfe7d5;
+    }
+
+    .status.bad {
+      background: #fff0f0;
+      color: #9a2828;
+      border-color: #f1c5c5;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .legend-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 11px;
+      background: var(--panel);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .legend-item strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .legend-item span {
+      color: var(--muted);
+    }
+
+    .footnote {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .board-panel {
+      margin-top: 16px;
+      padding: 16px;
+    }
+
+    .board-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .board-head h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 760;
+    }
+
+    .board-head p {
+      max-width: 850px;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .layer-toggles {
+      display: grid;
+      grid-template-columns: repeat(2, max-content);
+      gap: 7px 10px;
+      align-content: start;
+      justify-content: end;
+    }
+
+    .layer-toggles label {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 6px 9px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .layer-toggles input {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+      accent-color: var(--blue);
+    }
+
+    .board-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .board-canvas-card {
+      min-height: 560px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, #ffffff 0%, #f7faff 100%);
+      overflow: hidden;
+    }
+
+    .scale-board {
+      display: block;
+      width: 100%;
+      min-height: 560px;
+    }
+
+    .board-layer {
+      cursor: pointer;
+    }
+
+    .board-layer:hover .board-outline,
+    .board-layer.active .board-outline {
+      stroke-width: 4;
+      filter: drop-shadow(0 4px 10px rgba(40, 103, 216, 0.18));
+    }
+
+    .board-label {
+      font-size: 13px;
+      font-weight: 760;
+      fill: var(--text);
+    }
+
+    .board-note {
+      font-size: 11px;
+      fill: var(--muted);
+    }
+
+    .board-readout {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 14px;
+    }
+
+    .board-readout h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      font-weight: 760;
+    }
+
+    .board-readout p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .board-stats {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .board-stat {
+      border: 1px solid #e4eaf4;
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 9px 10px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .board-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .board-legend {
+      display: grid;
+      gap: 7px;
+    }
+
+    .board-legend button {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr);
+      gap: 8px;
+      align-items: start;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .board-legend button.active {
+      border-color: var(--blue);
+      box-shadow: var(--focus);
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      margin-top: 3px;
+      border-radius: 50%;
+      background: var(--line-strong);
+    }
+
+    .legend-copy strong {
+      display: block;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .legend-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.4;
+      margin-top: 3px;
+    }
+
+    @media (max-width: 1160px) {
+      .app-grid,
+      .calc-grid,
+      .board-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .detail-panel {
+        position: static;
+      }
+
+      .graph-panel {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100vw - 20px, 720px);
+        padding-top: 14px;
+      }
+
+      .topbar,
+      .panel-head,
+      .calc-head,
+      .board-head {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .doc-links {
+        justify-content: start;
+      }
+
+      .segmented {
+        overflow-x: auto;
+      }
+
+      .graph-wrap {
+        height: 980px;
+      }
+
+      .node {
+        width: min(var(--w), 42vw);
+      }
+
+      .relation-lists,
+      .field-grid,
+      .results,
+      .legend,
+      .layer-toggles {
+        grid-template-columns: 1fr;
+      }
+
+      .board-canvas-card,
+      .scale-board {
+        min-height: 440px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>Ludots 空间尺度交互图</h1>
+        <p>
+          这页是空间尺度 SSOT 的可视化入口：点击节点查看单位来源、owner、是否必需、是否可配置，以及它被谁作为单位继续派生。
+          Markdown 正本仍是架构 SSOT；本页只做解释和校验演算。
+        </p>
+      </div>
+      <nav class="doc-links" aria-label="文档入口">
+        <a href="spatial-scale-configuration.md">查表 Markdown</a>
+        <a href="../architecture/spatial-scale-and-resolution-ssot.md">架构 SSOT</a>
+      </nav>
+    </header>
+
+    <section class="app-grid" aria-label="空间尺度关系">
+      <section class="panel graph-panel">
+        <div class="panel-head">
+          <h2>单位依赖图</h2>
+          <div class="segmented" aria-label="节点筛选">
+            <button type="button" data-filter="all" class="active">全部</button>
+            <button type="button" data-filter="required">必需</button>
+            <button type="button" data-filter="configurable">可配置</button>
+            <button type="button" data-filter="fixed">固定</button>
+            <button type="button" data-filter="derived">派生</button>
+          </div>
+        </div>
+        <div class="graph-wrap" id="graph" aria-label="空间尺度单位依赖图">
+          <svg class="edges" viewBox="0 0 1000 710" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#8aa1c2"></path>
+              </marker>
+            </defs>
+            <path class="edge" data-from="cellCm" data-to="macroTile" d="M 110 104 C 190 90, 220 93, 300 110"></path>
+            <path class="edge" data-from="macroTile" data-to="worldExtent" d="M 394 110 C 468 120, 520 124, 590 120"></path>
+            <path class="edge" data-from="macroCount" data-to="worldExtent" d="M 406 218 C 482 194, 536 163, 594 138"></path>
+            <path class="edge" data-from="cellCm" data-to="worldExtent" d="M 130 118 C 304 176, 430 182, 590 145"></path>
+            <path class="edge" data-from="worldExtent" data-to="worldSize" d="M 747 125 C 806 124, 838 124, 894 124"></path>
+            <path class="edge" data-from="cellCm" data-to="partitionChunk" d="M 110 133 C 182 230, 218 304, 308 349"></path>
+            <path class="edge" data-from="cellCm" data-to="terrainChunk" d="M 120 130 C 228 266, 382 296, 500 354"></path>
+            <path class="edge" data-from="terrainChunk" data-to="navFootprint" d="M 612 354 C 686 348, 754 346, 826 354"></path>
+            <path class="edge" data-from="partitionChunk" data-to="streamingChunk" d="M 400 368 C 468 412, 544 438, 612 462"></path>
+            <path class="edge" data-from="terrainChunk" data-to="streamingChunk" d="M 590 380 C 615 406, 636 426, 660 452"></path>
+            <path class="edge soft" data-from="cellCm" data-to="flowCell" d="M 92 145 C 180 478, 246 536, 326 585"></path>
+            <path class="edge soft" data-from="cellCm" data-to="avoidanceHashCell" d="M 112 146 C 286 526, 454 552, 560 586"></path>
+            <path class="edge" data-from="cellCm" data-to="flowWindow" d="M 94 140 C 184 430, 528 500, 810 544"></path>
+            <path class="edge" data-from="flowCell" data-to="flowWindow" d="M 424 590 C 548 582, 668 568, 796 555"></path>
+            <path class="edge" data-from="avoidanceHashCell" data-to="flowWindow" d="M 678 590 C 728 582, 766 572, 806 558"></path>
+            <path class="edge soft" data-from="cellCm" data-to="physicsBroadphase" d="M 80 145 C 132 562, 128 644, 210 664"></path>
+          </svg>
+        </div>
+      </section>
+
+      <aside class="panel detail-panel" aria-label="选中尺度详情">
+        <div class="detail-body">
+          <div class="detail-kicker" id="detailScope">Scale Node</div>
+          <h2 id="detailTitle">CellCm</h2>
+          <div class="badges" id="detailBadges"></div>
+          <p class="detail-summary" id="detailSummary"></p>
+          <dl class="detail-grid" id="detailGrid"></dl>
+          <div class="relation-lists">
+            <section class="mini-list">
+              <h3>依赖的单位</h3>
+              <ul id="dependsList"></ul>
+            </section>
+            <section class="mini-list">
+              <h3>被谁使用</h3>
+              <ul id="usedByList"></ul>
+            </section>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel calc-panel" aria-label="尺度演算">
+      <div class="calc-head">
+        <div>
+          <h2>配置到行为联动</h2>
+          <p>
+            这里用当前 taxonomy 做演算：左边是 board/world/chunk 链路，右边是 MassFlow 滑窗链路。
+            数值演算只解释单位关系，真实配置仍由对应 owner 和 loader fail-fast 负责。
+          </p>
+        </div>
+        <div class="preset-row" aria-label="演算 preset">
+          <button type="button" data-preset="default">默认</button>
+          <button type="button" data-preset="dense-flow">细流场</button>
+          <button type="button" data-preset="invalid-flow">错误演示</button>
+        </div>
+      </div>
+
+      <div class="calc-grid">
+        <section class="calc-card">
+          <h3>WorldExtent / Chunk 演算</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="cellCm">CellCm</label>
+              <input id="cellCm" type="number" min="1" step="1" value="100">
+            </div>
+            <div class="field">
+              <label for="macroTileCells">MacroTileCells</label>
+              <input id="macroTileCells" type="number" value="256" readonly>
+            </div>
+            <div class="field">
+              <label for="widthMacro">WidthInMacroTiles</label>
+              <input id="widthMacro" type="number" min="1" step="1" value="64">
+            </div>
+            <div class="field">
+              <label for="heightMacro">HeightInMacroTiles</label>
+              <input id="heightMacro" type="number" min="1" step="1" value="64">
+            </div>
+            <div class="field">
+              <label for="partitionChunk">PartitionChunkCells</label>
+              <input id="partitionChunk" type="number" min="1" step="1" value="64">
+            </div>
+            <div class="field">
+              <label for="terrainChunk">TerrainChunkCells</label>
+              <input id="terrainChunk" type="number" value="64" readonly>
+            </div>
+          </div>
+          <div class="results">
+            <div class="metric"><span>WorldExtent cells</span><strong id="worldCells">-</strong></div>
+            <div class="metric"><span>WorldExtent meters</span><strong id="worldMeters">-</strong></div>
+            <div class="metric"><span>Partition chunks</span><strong id="partitionChunks">-</strong></div>
+            <div class="metric"><span>NavTile footprint</span><strong id="navFootprint">-</strong></div>
+          </div>
+          <div class="status" id="worldStatus">-</div>
+        </section>
+
+        <section class="calc-card">
+          <h3>MassFlow / Avoidance 演算</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="fieldWidthCm">fieldWidthCm</label>
+              <input id="fieldWidthCm" type="number" min="1" step="1" value="6400">
+            </div>
+            <div class="field">
+              <label for="fieldHeightCm">fieldHeightCm</label>
+              <input id="fieldHeightCm" type="number" min="1" step="1" value="6400">
+            </div>
+            <div class="field">
+              <label for="flowCellSizeCm">flowCellSizeCm</label>
+              <input id="flowCellSizeCm" type="number" min="1" step="1" value="100">
+            </div>
+            <div class="field">
+              <label for="separationHashCellSizeCm">separationHashCellSizeCm</label>
+              <input id="separationHashCellSizeCm" type="number" min="1" step="1" value="100">
+            </div>
+            <div class="field">
+              <label for="hardResolveHashCellSizeCm">hardResolveHashCellSizeCm</label>
+              <input id="hardResolveHashCellSizeCm" type="number" min="1" step="1" value="50">
+            </div>
+            <div class="field">
+              <label for="physicsBroadphaseCellCm">PhysicsBroadphaseCellCm</label>
+              <input id="physicsBroadphaseCellCm" type="number" min="1" step="1" value="100">
+            </div>
+          </div>
+          <div class="results">
+            <div class="metric"><span>Flow grid</span><strong id="flowGrid">-</strong></div>
+            <div class="metric"><span>Separation hash grid</span><strong id="sepGrid">-</strong></div>
+            <div class="metric"><span>Hard resolve grid</span><strong id="hardGrid">-</strong></div>
+            <div class="metric"><span>Broadphase relation</span><strong id="broadphaseRelation">-</strong></div>
+          </div>
+          <div class="status" id="flowStatus">-</div>
+        </section>
+      </div>
+
+      <div class="legend" aria-label="必需与可配置说明">
+        <div class="legend-item">
+          <strong>必需</strong>
+          <span>链路启用时不可省略，缺失应 fail-fast；不是“随便给默认值”。</span>
+        </div>
+        <div class="legend-item">
+          <strong>可配置</strong>
+          <span>配置入口允许改变值，但 owner、单位和约束固定。</span>
+        </div>
+        <div class="legend-item">
+          <strong>固定</strong>
+          <span>尺寸 owner 已钉死，其他模块只能引用，不能复制新 owner。</span>
+        </div>
+        <div class="legend-item">
+          <strong>派生</strong>
+          <span>由上游单位算出，不应作为第二套配置源保存。</span>
+        </div>
+      </div>
+      <p class="footnote">
+        Source of truth: `gitbook/architecture/spatial-scale-and-resolution-ssot.md` and `src/Core/Spatial/SpatialScaleDefaults.cs`.
+        `NavTile footprint` 是 `TerrainChunk` 的用途，`FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。
+      </p>
+    </section>
+
+    <section class="panel board-panel" aria-label="尺度板模拟">
+      <div class="board-head">
+        <div>
+          <h2>尺度板模拟</h2>
+          <p>
+            主板子用一个 256 x 256 cells 的 MacroTile 当样本，叠加展示各类颗粒度的代表足迹。
+            右下角放大镜展示 4 x 4 cells 的厘米级局部，用来对比 Cell、FlowCell、AvoidanceHashCell 和 PhysicsBroadphaseCell。
+          </p>
+        </div>
+        <div class="layer-toggles" aria-label="板子图层开关">
+          <label><input type="checkbox" data-layer-toggle="cellSample" checked>Cell 抽样</label>
+          <label><input type="checkbox" data-layer-toggle="partitionChunk" checked>PartitionChunk</label>
+          <label><input type="checkbox" data-layer-toggle="terrainChunk" checked>Terrain/NavTile</label>
+          <label><input type="checkbox" data-layer-toggle="macroTile" checked>MacroTile</label>
+          <label><input type="checkbox" data-layer-toggle="flowCell" checked>FlowCell</label>
+          <label><input type="checkbox" data-layer-toggle="avoidanceHashCell" checked>AvoidanceHashCell</label>
+          <label><input type="checkbox" data-layer-toggle="physicsBroadphase" checked>PhysicsBroadphase</label>
+          <label><input type="checkbox" data-layer-toggle="heightLevels" checked>Height levels</label>
+        </div>
+      </div>
+
+      <div class="board-layout">
+        <div class="board-canvas-card">
+          <svg class="scale-board" id="scaleBoard" viewBox="0 0 900 560" role="img" aria-label="空间尺度板示意图">
+            <defs>
+              <pattern id="cellSamplePattern" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#c8d4e6" stroke-width="1"/>
+              </pattern>
+              <pattern id="partitionPattern" width="120" height="120" patternUnits="userSpaceOnUse">
+                <rect width="120" height="120" fill="none" stroke="#946200" stroke-width="2"/>
+              </pattern>
+              <pattern id="terrainPattern" width="120" height="120" patternUnits="userSpaceOnUse">
+                <path d="M 0 0 L 120 120 M 120 0 L 0 120" stroke="#b56f00" stroke-width="1.4" opacity="0.45"/>
+              </pattern>
+              <pattern id="flowPattern" width="30" height="30" patternUnits="userSpaceOnUse">
+                <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#6f45c8" stroke-width="1.2"/>
+              </pattern>
+              <pattern id="avoidPattern" width="15" height="15" patternUnits="userSpaceOnUse">
+                <path d="M 15 0 L 0 0 0 15" fill="none" stroke="#8e5be1" stroke-width="0.8" opacity="0.78"/>
+              </pattern>
+              <pattern id="physicsPattern" width="30" height="30" patternUnits="userSpaceOnUse">
+                <circle cx="15" cy="15" r="3" fill="#087990" opacity="0.45"/>
+              </pattern>
+              <linearGradient id="heightGradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stop-color="#525c6b"/>
+                <stop offset="100%" stop-color="#c5ccd7"/>
+              </linearGradient>
+            </defs>
+
+            <rect x="0" y="0" width="900" height="560" fill="#f8fbff"/>
+            <text x="40" y="38" class="board-label">1 个 MacroTile 样本板</text>
+            <text x="40" y="58" class="board-note">默认 256 x 256 cells；内部可看到 4 x 4 个 64-cell chunk。</text>
+
+            <g id="boardLayer-macroTile" class="board-layer" data-board-layer="macroTile">
+              <rect class="board-outline" x="40" y="80" width="480" height="480" rx="4" fill="#ffffff" stroke="#127a58" stroke-width="3"/>
+              <text x="52" y="106" class="board-label" fill="#127a58">MacroTile</text>
+            </g>
+
+            <g id="boardLayer-cellSample" class="board-layer" data-board-layer="cellSample">
+              <rect x="40" y="80" width="480" height="480" fill="url(#cellSamplePattern)" opacity="0.62"/>
+              <text x="52" y="544" class="board-note">Cell 抽样线：每 16 cells 画一条，避免把 65,536 个 cell 全画出来。</text>
+            </g>
+
+            <g id="boardLayer-partitionChunk" class="board-layer" data-board-layer="partitionChunk">
+              <rect x="40" y="80" width="480" height="480" fill="url(#partitionPattern)" opacity="0.92"/>
+              <rect class="board-outline" x="40" y="80" width="120" height="120" fill="rgba(148, 98, 0, 0.08)" stroke="#946200" stroke-width="3"/>
+              <text x="50" y="196" class="board-label" fill="#7a4e00">PartitionChunk</text>
+            </g>
+
+            <g id="boardLayer-terrainChunk" class="board-layer" data-board-layer="terrainChunk">
+              <rect x="280" y="320" width="120" height="120" fill="rgba(181, 111, 0, 0.13)" stroke="#b56f00" stroke-width="3"/>
+              <rect x="280" y="320" width="120" height="120" fill="url(#terrainPattern)"/>
+              <text x="292" y="384" class="board-label" fill="#7a4e00">TerrainChunk</text>
+              <text x="292" y="402" class="board-note">= NavTile footprint</text>
+            </g>
+
+            <g id="boardLayer-flowCell" class="board-layer" data-board-layer="flowCell">
+              <rect x="545" y="80" width="160" height="160" rx="4" fill="#ffffff" stroke="#6f45c8" stroke-width="2"/>
+              <rect x="545" y="80" width="160" height="160" fill="url(#flowPattern)" opacity="0.78"/>
+              <text x="555" y="106" class="board-label" fill="#5a37a7">FlowCell</text>
+              <text x="555" y="224" class="board-note">局部 4 x 4 cells 放大镜</text>
+            </g>
+
+            <g id="boardLayer-avoidanceHashCell" class="board-layer" data-board-layer="avoidanceHashCell">
+              <rect x="545" y="280" width="160" height="160" rx="4" fill="#ffffff" stroke="#8e5be1" stroke-width="2"/>
+              <rect x="545" y="280" width="160" height="160" fill="url(#avoidPattern)" opacity="0.88"/>
+              <text x="555" y="306" class="board-label" fill="#5a37a7">AvoidanceHashCell</text>
+              <text x="555" y="424" class="board-note">hard resolve 默认 50cm，可小于 CellCm</text>
+            </g>
+
+            <g id="boardLayer-physicsBroadphase" class="board-layer" data-board-layer="physicsBroadphase">
+              <rect x="725" y="80" width="135" height="160" rx="4" fill="#ffffff" stroke="#087990" stroke-width="2"/>
+              <rect x="725" y="80" width="135" height="160" fill="url(#physicsPattern)" opacity="0.95"/>
+              <text x="735" y="106" class="board-label" fill="#056675">PhysicsBroadphase</text>
+              <text x="735" y="224" class="board-note">默认等于 CellCm，owner 独立</text>
+            </g>
+
+            <g id="boardLayer-heightLevels" class="board-layer" data-board-layer="heightLevels">
+              <rect x="725" y="280" width="135" height="160" rx="4" fill="#ffffff" stroke="#767d88" stroke-width="2"/>
+              <g id="heightBars"></g>
+              <text x="735" y="306" class="board-label">Height levels</text>
+              <text x="735" y="424" class="board-note">16 档垂直值，不参与平面尺度换算</text>
+            </g>
+          </svg>
+        </div>
+
+        <aside class="board-readout" aria-label="尺度板当前图层说明">
+          <h3 id="boardLayerTitle">MacroTile</h3>
+          <p id="boardLayerSummary">-</p>
+          <div class="board-stats" id="boardStats"></div>
+          <div class="board-legend" id="boardLegend"></div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const nodes = {
+      cellCm: {
+        title: "CellCm",
+        group: "base",
+        scope: "全局基准",
+        x: 10,
+        y: 15,
+        w: "168px",
+        h: "86px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "100",
+        owner: "SpatialScaleDefaults.CellCm / BoardConfig.GridCellSizeCm",
+        configurable: "是，必须 > 0",
+        constraint: "唯一基准单位；所有 cm/cells 换算必须从这里解释。",
+        summary: "sim 原子 cell 的厘米边长。它是 board 世界尺寸、nav bake 厘米换算、默认 flow/hash/broadphase 尺度的共同参照。",
+        dependsOn: [],
+        usedBy: ["macroTile", "worldExtent", "partitionChunk", "terrainChunk", "streamingChunk", "flowWindow", "flowCell", "avoidanceHashCell", "physicsBroadphase"]
+      },
+      macroTile: {
+        title: "MacroTileCells",
+        group: "world",
+        scope: "世界 authoring",
+        x: 34,
+        y: 15,
+        w: "184px",
+        h: "92px",
+        badges: ["required", "fixed"],
+        unit: "cells",
+        defaultValue: "MapTile.Size = 256",
+        owner: "MapTile.Size",
+        configurable: "尺寸不可配；数量 Width/HeightInMacroTiles 可配",
+        constraint: "常量模块只能引用 MapTile.Size，不能复制第二个 256 owner。",
+        summary: "256-cell IO/寻址宏块。世界宽高配置不是 TerrainChunk 个数，而是 MacroTile 个数。",
+        dependsOn: ["cellCm"],
+        usedBy: ["worldExtent"]
+      },
+      macroCount: {
+        title: "Width/HeightInMacroTiles",
+        group: "world",
+        scope: "世界 authoring",
+        x: 34,
+        y: 30,
+        w: "198px",
+        h: "86px",
+        badges: ["required", "configurable"],
+        unit: "macro tiles",
+        defaultValue: "64 x 64",
+        owner: "BoardConfig",
+        configurable: "是；旧 WidthInTiles / HeightInTiles fail-fast",
+        constraint: "只表示 MacroTile 数量，不表示 TerrainChunk、PartitionChunk 或 NavTile 数量。",
+        summary: "世界范围的 authoring 数量。它和 MacroTileCells、CellCm 一起计算 WorldExtentSpec。",
+        dependsOn: ["macroTile"],
+        usedBy: ["worldExtent"]
+      },
+      worldExtent: {
+        title: "WorldExtentSpec",
+        group: "world",
+        scope: "派生对象",
+        x: 68,
+        y: 17,
+        w: "190px",
+        h: "98px",
+        badges: ["required", "derived"],
+        unit: "cells / cm",
+        defaultValue: "derived",
+        owner: "WorldExtentSpec",
+        configurable: "否；由 MacroTile 数量、MacroTileCells、CellCm 计算",
+        constraint: "产出 WorldSizeSpec，不替换 WorldSizeSpec。",
+        summary: "board/world 的计算对象。公式是 WidthInMacroTiles * MacroTileCells * CellCm。",
+        dependsOn: ["cellCm", "macroTile", "macroCount"],
+        usedBy: ["worldSize"]
+      },
+      worldSize: {
+        title: "WorldSizeSpec",
+        group: "world",
+        scope: "runtime 边界",
+        x: 94,
+        y: 17,
+        w: "170px",
+        h: "82px",
+        badges: ["required", "derived"],
+        unit: "cm bounds",
+        defaultValue: "derived",
+        owner: "src/Core/Spatial/WorldSizeSpec.cs",
+        configurable: "否；由 WorldExtentSpec 产出",
+        constraint: "runtime 消费既有 WorldSizeSpec，不新增平行世界范围对象。",
+        summary: "运行时世界边界。它是计算结果，不是新的配置源。",
+        dependsOn: ["worldExtent"],
+        usedBy: []
+      },
+      partitionChunk: {
+        title: "PartitionChunkCells",
+        group: "chunk",
+        scope: "空间分区",
+        x: 36,
+        y: 52,
+        w: "186px",
+        h: "92px",
+        badges: ["required", "configurable"],
+        unit: "cells",
+        defaultValue: "64",
+        owner: "BoardConfig.ChunkSizeCells / SpatialScaleDefaults.PartitionChunkCells",
+        configurable: "是，必须 > 0 且为 2 的幂",
+        constraint: "只用于 spatial partition、AOI、query；不要解释 terrain/navmesh tile。",
+        summary: "查询分区块边长。改它会改变 spatial query/AOI 粒度，但不改变世界范围。",
+        dependsOn: ["cellCm"],
+        usedBy: ["streamingChunk"]
+      },
+      terrainChunk: {
+        title: "TerrainChunkCells",
+        group: "chunk",
+        scope: "逻辑地形",
+        x: 58,
+        y: 52,
+        w: "176px",
+        h: "92px",
+        badges: ["required", "fixed"],
+        unit: "cells",
+        defaultValue: "64",
+        owner: "VertexChunk.ChunkSize / SpatialScaleDefaults.TerrainChunkCells",
+        configurable: "当前不可配",
+        constraint: "当前固定 64；grid/hex 共用抽象在 #286 落地。",
+        summary: "逻辑地形块边长。当前 navmesh tile footprint 直接复用 TerrainChunk footprint。",
+        dependsOn: ["cellCm"],
+        usedBy: ["navFootprint", "streamingChunk"]
+      },
+      navFootprint: {
+        title: "NavTile footprint",
+        group: "chunk",
+        scope: "nav bake 产物",
+        x: 87,
+        y: 52,
+        w: "184px",
+        h: "92px",
+        badges: ["required", "derived"],
+        unit: "TerrainChunk footprint",
+        defaultValue: "64 cells footprint",
+        owner: "NavMesh bake pipeline",
+        configurable: "否；复用 TerrainChunk",
+        constraint: "不是独立尺度 owner，不要把 NavTile 当第二个 chunk 尺度。",
+        summary: "navmesh .ntil 的 tile 覆盖一个 TerrainChunk。它是用途，不是新的尺寸名字。",
+        dependsOn: ["terrainChunk"],
+        usedBy: []
+      },
+      streamingChunk: {
+        title: "StreamingChunk",
+        group: "chunk",
+        scope: "加载窗口",
+        x: 70,
+        y: 67,
+        w: "190px",
+        h: "90px",
+        badges: ["required", "configurable", "derived"],
+        unit: "cells / cm",
+        defaultValue: "derived / explicit",
+        owner: "streaming / loaded graph owner",
+        configurable: "是；必须显式配置或由 board 分区推导",
+        constraint: "禁止私有 loader fallback；不要用 MacroTile 或 TerrainChunk 偷换。",
+        summary: "流式加载和 loaded graph rebuild 的空间窗口。它可以从分区推导，也可以由正式配置显式给出。",
+        dependsOn: ["partitionChunk", "terrainChunk", "cellCm"],
+        usedBy: []
+      },
+      flowWindow: {
+        title: "FlowWindow",
+        group: "flow",
+        scope: "MassFlow",
+        x: 88,
+        y: 78,
+        w: "184px",
+        h: "92px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "preset explicit",
+        owner: "MassFlowSolverConfig.fieldWidthCm / fieldHeightCm",
+        configurable: "是，宽高必须 > 0",
+        constraint: "必须被 FlowCell 和 AvoidanceHashCell 整除。",
+        summary: "MassFlow 执行层滑窗/工作区。它不以 MacroTile 或 TerrainChunk 为单位，而是直接用 cm。",
+        dependsOn: ["cellCm", "flowCell", "avoidanceHashCell"],
+        usedBy: []
+      },
+      flowCell: {
+        title: "FlowCell",
+        group: "flow",
+        scope: "MassFlow",
+        x: 38,
+        y: 84,
+        w: "176px",
+        h: "86px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "100",
+        owner: "MassFlowSolverConfig.flowCellSizeCm / SpatialScaleDefaults.FlowCellCm",
+        configurable: "是，必须 > 0",
+        constraint: "默认可等于 CellCm，但 owner 独立；FlowWindow 宽高必须整除它。",
+        summary: "MassFlow 流场网格分辨率。不要和 board CellCm 混成同一个配置 owner。",
+        dependsOn: ["cellCm"],
+        usedBy: ["flowWindow"]
+      },
+      avoidanceHashCell: {
+        title: "AvoidanceHashCell",
+        group: "flow",
+        scope: "MassFlow",
+        x: 62,
+        y: 84,
+        w: "190px",
+        h: "92px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "100 / 50",
+        owner: "MassFlowSolverConfig separation/hardResolve hash",
+        configurable: "是，必须 > 0",
+        constraint: "属于 avoidance，不属于 navmesh bake；FlowWindow 宽高必须整除它。",
+        summary: "分离邻居哈希和硬解析候选哈希的 cell 尺度。它可以小于 CellCm，但必须显式给出。",
+        dependsOn: ["cellCm"],
+        usedBy: ["flowWindow"]
+      },
+      physicsBroadphase: {
+        title: "PhysicsBroadphaseCell",
+        group: "physics",
+        scope: "Physics2D",
+        x: 24,
+        y: 94,
+        w: "198px",
+        h: "86px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "100",
+        owner: "Physics2D / SpatialScaleDefaults.PhysicsBroadphaseCellCm",
+        configurable: "是；必须显式配置或引用命名常量",
+        constraint: "禁止缺失时静默 fallback。",
+        summary: "Physics2D broadphase spatial hash 的 cell 尺度。默认可等于 CellCm，但不是 CellCm 的别名。",
+        dependsOn: ["cellCm"],
+        usedBy: []
+      },
+      heightLevels: {
+        title: "LogicTerrainHeightLevels",
+        group: "height",
+        scope: "垂直维度",
+        x: 13,
+        y: 44,
+        w: "196px",
+        h: "90px",
+        badges: ["required", "fixed"],
+        unit: "levels",
+        defaultValue: "16",
+        owner: "SpatialScaleDefaults.LogicTerrainHeightLevels",
+        configurable: "当前不可配",
+        constraint: "不参与 cm/cells 换算；最大高度档位是 LogicTerrainMaxHeightLevel。",
+        summary: "逻辑地形高度档位数量，当前为 4-bit 高度域。它是垂直离散级别，不是空间长度单位。",
+        dependsOn: [],
+        usedBy: []
+      }
+    };
+
+    const badgeText = {
+      required: "必需",
+      configurable: "可配置",
+      fixed: "固定",
+      derived: "派生",
+      system: "系统内"
+    };
+
+    const graph = document.getElementById("graph");
+    const edgeElements = Array.from(document.querySelectorAll(".edge"));
+    const filterButtons = Array.from(document.querySelectorAll("[data-filter]"));
+    const boardLayers = {
+      cellSample: {
+        title: "Cell 抽样",
+        nodeId: "cellCm",
+        color: "#2867d8",
+        summary: "Cell 是所有平面尺度换算的原子单位。主板子只抽样画线，比例代表 256 x 256 cells 的 MacroTile。",
+        stats: () => {
+          const cellCm = value("cellCm");
+          return [
+            ["单位", `1 cell = ${cellCm} cm`],
+            ["主板子", `${value("macroTileCells")} x ${value("macroTileCells")} cells`],
+            ["注意", "CellCm 可配置，但必须 > 0"]
+          ];
+        }
+      },
+      partitionChunk: {
+        title: "PartitionChunk",
+        nodeId: "partitionChunk",
+        color: "#946200",
+        summary: "PartitionChunk 只代表空间分区、AOI 和 query backend 的颗粒度。它不是地形块，也不是 navmesh tile。",
+        stats: () => {
+          const chunk = value("partitionChunk");
+          const macro = value("macroTileCells");
+          return [
+            ["边长", `${chunk} cells = ${formatMeters(chunk * value("cellCm"))}`],
+            ["每 MacroTile", `${formatNumber(macro / chunk)} x ${formatNumber(macro / chunk)} chunks`],
+            ["约束", "必须为 2 的幂并整除世界 cells"]
+          ];
+        }
+      },
+      terrainChunk: {
+        title: "TerrainChunk / NavTile footprint",
+        nodeId: "terrainChunk",
+        color: "#b56f00",
+        summary: "TerrainChunk 是逻辑地形块；当前 NavTile footprint 复用它的足迹。NavTile 不再作为独立尺度 owner。",
+        stats: () => {
+          const chunk = value("terrainChunk");
+          const macro = value("macroTileCells");
+          return [
+            ["边长", `${chunk} cells = ${formatMeters(chunk * value("cellCm"))}`],
+            ["每 MacroTile", `${formatNumber(macro / chunk)} x ${formatNumber(macro / chunk)} terrain chunks`],
+            ["是否可配", "当前固定，owner 是 VertexChunk.ChunkSize"]
+          ];
+        }
+      },
+      macroTile: {
+        title: "MacroTile",
+        nodeId: "macroTile",
+        color: "#127a58",
+        summary: "MacroTile 是 256-cell IO/寻址宏块。WidthInMacroTiles/HeightInMacroTiles 统计的是它的数量。",
+        stats: () => {
+          const macro = value("macroTileCells");
+          return [
+            ["边长", `${macro} cells = ${formatMeters(macro * value("cellCm"))}`],
+            ["owner", "MapTile.Size"],
+            ["约束", "MacroTileCells 不可另起第二个 256 owner"]
+          ];
+        }
+      },
+      flowCell: {
+        title: "FlowCell",
+        nodeId: "flowCell",
+        color: "#6f45c8",
+        summary: "FlowCell 是 MassFlow 流场网格分辨率，单位是 cm。默认可等于 CellCm，但配置 owner 独立。",
+        stats: () => {
+          const flow = value("flowCellSizeCm");
+          return [
+            ["边长", `${flow} cm = ${formatNumber(flow / value("cellCm"))} CellCm`],
+            ["FlowWindow", `${formatNumber(value("fieldWidthCm") / flow)} x ${formatNumber(value("fieldHeightCm") / flow)} cells`],
+            ["约束", "FlowWindow 宽高必须整除 FlowCell"]
+          ];
+        }
+      },
+      avoidanceHashCell: {
+        title: "AvoidanceHashCell",
+        nodeId: "avoidanceHashCell",
+        color: "#8e5be1",
+        summary: "AvoidanceHashCell 是 MassFlow 分离/硬解析哈希颗粒度，属于 avoidance，不属于 navmesh bake。",
+        stats: () => {
+          const sep = value("separationHashCellSizeCm");
+          const hard = value("hardResolveHashCellSizeCm");
+          return [
+            ["separation", `${sep} cm = ${formatNumber(sep / value("cellCm"))} CellCm`],
+            ["hard resolve", `${hard} cm = ${formatNumber(hard / value("cellCm"))} CellCm`],
+            ["约束", "FlowWindow 宽高必须同时整除两个 hash cell"]
+          ];
+        }
+      },
+      physicsBroadphase: {
+        title: "PhysicsBroadphaseCell",
+        nodeId: "physicsBroadphase",
+        color: "#087990",
+        summary: "Physics broadphase spatial hash 的颗粒度。它可默认等于 CellCm，但不是 CellCm 的别名，也不能静默 fallback。",
+        stats: () => {
+          const physics = value("physicsBroadphaseCellCm");
+          return [
+            ["边长", `${physics} cm = ${formatNumber(physics / value("cellCm"))} CellCm`],
+            ["owner", "Physics2D / SpatialScaleDefaults.PhysicsBroadphaseCellCm"],
+            ["约束", "必须显式配置或引用命名常量"]
+          ];
+        }
+      },
+      heightLevels: {
+        title: "LogicTerrainHeightLevels",
+        nodeId: "heightLevels",
+        color: "#767d88",
+        summary: "HeightLevels 是垂直离散档位，不是平面长度单位。它放在板子旁边，是为了提醒不要参与 cm/cells 换算。",
+        stats: () => [
+          ["单位", "levels"],
+          ["默认", "16 档，最大值为 15"],
+          ["关系", "不参与 MacroTile、Chunk、FlowCell 换算"]
+        ]
+      }
+    };
+    const boardLayerElements = Array.from(document.querySelectorAll("[data-board-layer]"));
+    const boardLayerToggles = Array.from(document.querySelectorAll("[data-layer-toggle]"));
+    let activeBoardLayer = "macroTile";
+    let selectedId = "cellCm";
+    let activeFilter = "all";
+
+    function createNodeButton(id, node) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "node";
+      button.dataset.id = id;
+      button.dataset.group = node.group;
+      button.style.setProperty("--x", node.x);
+      button.style.setProperty("--y", node.y);
+      button.style.setProperty("--w", node.w);
+      button.style.setProperty("--h", node.h);
+      button.innerHTML = `
+        <span class="node-title">${node.title}</span>
+        <span class="node-meta">${node.unit} · ${node.defaultValue}</span>
+        <span class="badges">${node.badges.map((badge) => `<span class="badge ${badge}">${badgeText[badge]}</span>`).join("")}</span>
+      `;
+      button.addEventListener("click", () => selectNode(id));
+      return button;
+    }
+
+    function renderGraph() {
+      Object.entries(nodes).forEach(([id, node]) => {
+        graph.appendChild(createNodeButton(id, node));
+      });
+      const bars = document.getElementById("heightBars");
+      if (bars) {
+        for (let index = 0; index < 16; index += 1) {
+          const bar = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          const height = 5 + index * 4.8;
+          bar.setAttribute("x", String(735 + index * 7));
+          bar.setAttribute("y", String(396 - height));
+          bar.setAttribute("width", "5");
+          bar.setAttribute("height", String(height));
+          bar.setAttribute("rx", "1.5");
+          bar.setAttribute("fill", "url(#heightGradient)");
+          bar.setAttribute("opacity", String(0.36 + index * 0.035));
+          bars.appendChild(bar);
+        }
+      }
+      selectNode(selectedId);
+    }
+
+    function renderList(elementId, ids) {
+      const element = document.getElementById(elementId);
+      element.innerHTML = "";
+      if (!ids.length) {
+        const item = document.createElement("li");
+        item.textContent = "无上游依赖";
+        element.appendChild(item);
+        return;
+      }
+
+      ids.forEach((id) => {
+        const item = document.createElement("li");
+        item.textContent = nodes[id]?.title || id;
+        element.appendChild(item);
+      });
+    }
+
+    function selectNode(id) {
+      selectedId = id;
+      const node = nodes[id];
+      document.getElementById("detailScope").textContent = node.scope;
+      document.getElementById("detailTitle").textContent = node.title;
+      document.getElementById("detailSummary").textContent = node.summary;
+      document.getElementById("detailBadges").innerHTML = node.badges
+        .map((badge) => `<span class="badge ${badge}">${badgeText[badge]}</span>`)
+        .join("");
+      document.getElementById("detailGrid").innerHTML = [
+        ["单位", node.unit],
+        ["当前默认", node.defaultValue],
+        ["owner", node.owner],
+        ["是否可配", node.configurable],
+        ["约束", node.constraint]
+      ].map(([label, value]) => `<div class="detail-row"><dt>${label}</dt><dd>${value}</dd></div>`).join("");
+      renderList("dependsList", node.dependsOn);
+      renderList("usedByList", node.usedBy);
+      applyGraphState();
+    }
+
+    function applyGraphState() {
+      const activeNode = nodes[selectedId];
+      const related = new Set([selectedId, ...activeNode.dependsOn, ...activeNode.usedBy]);
+      document.querySelectorAll(".node").forEach((button) => {
+        const id = button.dataset.id;
+        const node = nodes[id];
+        const matchesFilter = activeFilter === "all" || node.badges.includes(activeFilter);
+        button.classList.toggle("active", id === selectedId);
+        button.classList.toggle("dim", !matchesFilter || !related.has(id));
+      });
+
+      edgeElements.forEach((edge) => {
+        const from = edge.dataset.from;
+        const to = edge.dataset.to;
+        const active = from === selectedId || to === selectedId;
+        const visibleByFilter =
+          activeFilter === "all" ||
+          nodes[from].badges.includes(activeFilter) ||
+          nodes[to].badges.includes(activeFilter);
+        edge.classList.toggle("active", active);
+        edge.classList.toggle("dim", !active && (!visibleByFilter || !related.has(from) || !related.has(to)));
+      });
+    }
+
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+        filterButtons.forEach((item) => item.classList.toggle("active", item === button));
+        applyGraphState();
+      });
+    });
+
+    boardLayerElements.forEach((element) => {
+      element.addEventListener("click", () => selectBoardLayer(element.dataset.boardLayer));
+    });
+
+    boardLayerToggles.forEach((toggle) => {
+      toggle.addEventListener("change", () => {
+        if (toggle.checked) {
+          selectBoardLayer(toggle.dataset.layerToggle);
+        } else {
+          updateBoard();
+        }
+      });
+    });
+
+    const fields = [
+      "cellCm",
+      "macroTileCells",
+      "widthMacro",
+      "heightMacro",
+      "partitionChunk",
+      "terrainChunk",
+      "fieldWidthCm",
+      "fieldHeightCm",
+      "flowCellSizeCm",
+      "separationHashCellSizeCm",
+      "hardResolveHashCellSizeCm",
+      "physicsBroadphaseCellCm"
+    ];
+
+    function value(id) {
+      return Number(document.getElementById(id).value);
+    }
+
+    function formatInt(number) {
+      return new Intl.NumberFormat("zh-CN").format(number);
+    }
+
+    function formatNumber(number) {
+      if (!Number.isFinite(number)) {
+        return "-";
+      }
+
+      if (Number.isInteger(number)) {
+        return formatInt(number);
+      }
+
+      return new Intl.NumberFormat("zh-CN", {
+        maximumFractionDigits: 2
+      }).format(number);
+    }
+
+    function formatMeters(cm) {
+      return `${formatNumber(cm / 100)} m`;
+    }
+
+    function selectBoardLayer(layerId) {
+      activeBoardLayer = layerId;
+      const layer = boardLayers[layerId];
+      if (layer?.nodeId) {
+        selectNode(layer.nodeId);
+      }
+      updateBoard();
+    }
+
+    function updateBoard() {
+      boardLayerElements.forEach((element) => {
+        const layerId = element.dataset.boardLayer;
+        const toggle = document.querySelector(`[data-layer-toggle="${layerId}"]`);
+        const isVisible = toggle?.checked ?? true;
+        element.style.display = isVisible ? "" : "none";
+        element.classList.toggle("active", layerId === activeBoardLayer);
+      });
+
+      boardLayerToggles.forEach((toggle) => {
+        toggle.closest("label")?.classList.toggle("active", toggle.dataset.layerToggle === activeBoardLayer);
+      });
+
+      const layer = boardLayers[activeBoardLayer] || boardLayers.macroTile;
+      document.getElementById("boardLayerTitle").textContent = layer.title;
+      document.getElementById("boardLayerSummary").textContent = layer.summary;
+      document.getElementById("boardStats").innerHTML = layer.stats()
+        .map(([label, valueText]) => `<div class="board-stat"><span>${label}</span>${valueText}</div>`)
+        .join("");
+      document.getElementById("boardLegend").innerHTML = Object.entries(boardLayers)
+        .map(([id, item]) => `
+          <button type="button" data-board-legend="${id}" class="${id === activeBoardLayer ? "active" : ""}">
+            <span class="legend-swatch" style="background:${item.color}"></span>
+            <span class="legend-copy"><strong>${item.title}</strong><span>${item.summary}</span></span>
+          </button>
+        `)
+        .join("");
+      document.querySelectorAll("[data-board-legend]").forEach((button) => {
+        button.addEventListener("click", () => selectBoardLayer(button.dataset.boardLegend));
+      });
+    }
+
+    function setStatus(id, ok, text) {
+      const element = document.getElementById(id);
+      element.classList.toggle("bad", !ok);
+      element.textContent = text;
+    }
+
+    function isPowerOfTwo(number) {
+      return Number.isInteger(number) && number > 0 && (number & (number - 1)) === 0;
+    }
+
+    function updateCalculations() {
+      const cellCm = value("cellCm");
+      const macroTileCells = value("macroTileCells");
+      const widthMacro = value("widthMacro");
+      const heightMacro = value("heightMacro");
+      const partitionChunk = value("partitionChunk");
+      const terrainChunk = value("terrainChunk");
+
+      const widthCells = widthMacro * macroTileCells;
+      const heightCells = heightMacro * macroTileCells;
+      const widthCm = widthCells * cellCm;
+      const heightCm = heightCells * cellCm;
+      document.getElementById("worldCells").textContent = `${formatInt(widthCells)} x ${formatInt(heightCells)}`;
+      document.getElementById("worldMeters").textContent = `${formatMeters(widthCm)} x ${formatMeters(heightCm)}`;
+      document.getElementById("partitionChunks").textContent =
+        `${formatInt(widthCells / partitionChunk)} x ${formatInt(heightCells / partitionChunk)}`;
+      document.getElementById("navFootprint").textContent =
+        `${terrainChunk} cells = ${formatMeters(terrainChunk * cellCm)}`;
+
+      const worldValid =
+        cellCm > 0 &&
+        widthMacro > 0 &&
+        heightMacro > 0 &&
+        macroTileCells === 256 &&
+        partitionChunk > 0 &&
+        isPowerOfTwo(partitionChunk) &&
+        widthCells % partitionChunk === 0 &&
+        heightCells % partitionChunk === 0;
+      setStatus(
+        "worldStatus",
+        worldValid,
+        worldValid
+          ? "OK：WorldExtent 由 MacroTile 数量派生；PartitionChunk 只改变分区粒度。"
+          : "Fail-fast：CellCm/宏块数量必须 > 0，MacroTileCells 必须引用 256，PartitionChunkCells 必须为 2 的幂并整除世界 cells。"
+      );
+
+      const fieldWidthCm = value("fieldWidthCm");
+      const fieldHeightCm = value("fieldHeightCm");
+      const flowCellSizeCm = value("flowCellSizeCm");
+      const separationHashCellSizeCm = value("separationHashCellSizeCm");
+      const hardResolveHashCellSizeCm = value("hardResolveHashCellSizeCm");
+      const physicsBroadphaseCellCm = value("physicsBroadphaseCellCm");
+
+      document.getElementById("flowGrid").textContent =
+        `${formatInt(fieldWidthCm / flowCellSizeCm)} x ${formatInt(fieldHeightCm / flowCellSizeCm)}`;
+      document.getElementById("sepGrid").textContent =
+        `${formatInt(fieldWidthCm / separationHashCellSizeCm)} x ${formatInt(fieldHeightCm / separationHashCellSizeCm)}`;
+      document.getElementById("hardGrid").textContent =
+        `${formatInt(fieldWidthCm / hardResolveHashCellSizeCm)} x ${formatInt(fieldHeightCm / hardResolveHashCellSizeCm)}`;
+      document.getElementById("broadphaseRelation").textContent =
+        physicsBroadphaseCellCm === cellCm ? "默认等于 CellCm，owner 独立" : `${physicsBroadphaseCellCm / cellCm} x CellCm`;
+
+      const flowValid =
+        fieldWidthCm > 0 &&
+        fieldHeightCm > 0 &&
+        flowCellSizeCm > 0 &&
+        separationHashCellSizeCm > 0 &&
+        hardResolveHashCellSizeCm > 0 &&
+        physicsBroadphaseCellCm > 0 &&
+        fieldWidthCm % flowCellSizeCm === 0 &&
+        fieldHeightCm % flowCellSizeCm === 0 &&
+        fieldWidthCm % separationHashCellSizeCm === 0 &&
+        fieldHeightCm % separationHashCellSizeCm === 0 &&
+        fieldWidthCm % hardResolveHashCellSizeCm === 0 &&
+        fieldHeightCm % hardResolveHashCellSizeCm === 0;
+      setStatus(
+        "flowStatus",
+        flowValid,
+        flowValid
+          ? "OK：FlowWindow 可被 FlowCell 与两个 AvoidanceHashCell 整除。"
+          : "Fail-fast：MassFlow fieldWidth/fieldHeight 必须被 flow/hash cell 整除，不能靠 fallback 修正。"
+      );
+      updateBoard();
+    }
+
+    fields.forEach((id) => {
+      const input = document.getElementById(id);
+      input.addEventListener("input", updateCalculations);
+    });
+
+    const presets = {
+      default: {
+        cellCm: 100,
+        widthMacro: 64,
+        heightMacro: 64,
+        partitionChunk: 64,
+        fieldWidthCm: 6400,
+        fieldHeightCm: 6400,
+        flowCellSizeCm: 100,
+        separationHashCellSizeCm: 100,
+        hardResolveHashCellSizeCm: 50,
+        physicsBroadphaseCellCm: 100
+      },
+      "dense-flow": {
+        cellCm: 100,
+        widthMacro: 32,
+        heightMacro: 32,
+        partitionChunk: 64,
+        fieldWidthCm: 4800,
+        fieldHeightCm: 4800,
+        flowCellSizeCm: 50,
+        separationHashCellSizeCm: 100,
+        hardResolveHashCellSizeCm: 50,
+        physicsBroadphaseCellCm: 100
+      },
+      "invalid-flow": {
+        cellCm: 100,
+        widthMacro: 64,
+        heightMacro: 64,
+        partitionChunk: 48,
+        fieldWidthCm: 6500,
+        fieldHeightCm: 6400,
+        flowCellSizeCm: 96,
+        separationHashCellSizeCm: 100,
+        hardResolveHashCellSizeCm: 50,
+        physicsBroadphaseCellCm: 100
+      }
+    };
+
+    document.querySelectorAll("[data-preset]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const preset = presets[button.dataset.preset];
+        Object.entries(preset).forEach(([id, nextValue]) => {
+          document.getElementById(id).value = nextValue;
+        });
+        updateCalculations();
+      });
+    });
+
+    renderGraph();
+    updateCalculations();
+  </script>
+</body>
+</html>

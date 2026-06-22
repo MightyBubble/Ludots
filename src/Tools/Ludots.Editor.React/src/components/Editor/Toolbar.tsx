@@ -1,7 +1,69 @@
 import React from 'react';
 import { useEditorStore, ToolCategory, ToolMode } from './EditorStore';
-import { Download, Upload, Mountain, Droplets, TreePine, Map as MapIcon, ArrowUp, ArrowDown, Type, Layers, PaintBucket, Grid, BoxSelect, Footprints, Flag } from 'lucide-react';
+import { Download, Upload, Mountain, Droplets, TreePine, Map as MapIcon, ArrowUp, ArrowDown, Type, Layers, PaintBucket, Grid, BoxSelect, Footprints, Flag, Ban, Shapes, Circle, Square, Save, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
+
+type NavBakeBudgetStatusText = 'ok' | 'large' | 'reject';
+
+type NavBakeProfileEstimate = {
+    profileId: string;
+    agentRadiusCm: number;
+    agentHeightCm: number;
+    maxClimbCm: number;
+    maxSlopeDeg: number;
+    minWalkableUpDot: number;
+    recastCellSizeCm: number;
+    recastCellHeightCm: number;
+    recastColumnsPerAxis: number;
+    recastColumnBudgetPerTile: number;
+    walkableHeightVoxels: number;
+    walkableClimbVoxels: number;
+};
+
+type NavBakeEstimateReport = {
+    mapId: string;
+    sourceUri: string;
+    mode: string;
+    algorithm: string;
+    estimateHash: string;
+    terrainWidthCells: number;
+    terrainHeightCells: number;
+    terrainChunkCells: number;
+    tileWorldWidthCm: number;
+    tileWorldHeightCm: number;
+    fullTileCountX: number;
+    fullTileCountY: number;
+    fullTileCount: number;
+    targetTileCount: number;
+    layerCount: number;
+    profileCount: number;
+    bakeOperationCount: number;
+    obstacleCount: number;
+    terrainContentHash: string;
+    terrainCellSampleCount: number;
+    recastColumnBudgetTotal: number;
+    budgetWorkUnitCount: number;
+    estimatedTileBytesLow: number;
+    estimatedTileBytesHigh: number;
+    effectiveWorkers: number;
+    estimatedSerialSecondsLow: number;
+    estimatedSerialSecondsHigh: number;
+    estimatedSecondsLow: number;
+    estimatedSecondsHigh: number;
+    budgetStatus: 0 | 1 | 2;
+    budgetStatusText: NavBakeBudgetStatusText;
+    budgetMessage: string;
+    requiresExplicitLargeBakeApproval: boolean;
+    profiles: NavBakeProfileEstimate[];
+};
+
+type NavigationConfigPayload = {
+    agentProfiles: any[];
+    navmesh: any;
+    sources?: any;
+    paths?: any;
+    validated?: any;
+};
 
 export const Toolbar: React.FC = () => {
     const { 
@@ -14,7 +76,9 @@ export const Toolbar: React.FC = () => {
         bridgeBaseUrl,
         mods, selectedModId, maps, selectedMapId,
         refreshMods, selectMod, selectMap, loadSelectedMap, saveSelectedMap,
+        loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
         templates, selectedTemplateId, selectTemplate,
+        obstacleTemplateId, setObstacleTemplate, obstacleShape, setObstacleShape, obstacleRadiusCm, setObstacleRadiusCm, obstacleHalfWidthCm, obstacleHalfHeightCm, setObstacleHalfSizeCm,
         spawnEntities, selectedEntityIndex, updateSelectedEntityOverridesJson, deleteSelectedEntityOverride,
         showGrid, toggleGrid,
         showChunkBorders, toggleChunkBorders,
@@ -37,6 +101,13 @@ export const Toolbar: React.FC = () => {
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
     const [navParallel, setNavParallel] = React.useState(true);
     const [navTileVersion, setNavTileVersion] = React.useState(1);
+    const [navHeightScale, setNavHeightScale] = React.useState(2.0);
+    const [navMinUpDot, setNavMinUpDot] = React.useState(0.6);
+    const [navCliffThreshold, setNavCliffThreshold] = React.useState(1);
+    const [navMaxDegree, setNavMaxDegree] = React.useState(Math.max(1, (navigator as any).hardwareConcurrency ?? 4));
+    const [navEstimate, setNavEstimate] = React.useState<NavBakeEstimateReport | null>(null);
+    const [navEstimateError, setNavEstimateError] = React.useState<string | null>(null);
+    const [allowLargeBake, setAllowLargeBake] = React.useState(false);
     const navAbortRef = React.useRef<AbortController | null>(null);
 
     React.useEffect(() => {
@@ -59,6 +130,12 @@ export const Toolbar: React.FC = () => {
     React.useEffect(() => {
         if (selectedMapId) setMapId(selectedMapId);
     }, [selectedMapId]);
+
+    React.useEffect(() => {
+        setNavEstimate(null);
+        setNavEstimateError(null);
+        setAllowLargeBake(false);
+    }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, navigationConfigVersion]);
 
     const downloadBlob = (filename: string, blob: Blob) => {
         const url = URL.createObjectURL(blob);
@@ -83,12 +160,14 @@ export const Toolbar: React.FC = () => {
     const categories: { id: ToolCategory, icon: React.ReactNode, label: string }[] = [
         { id: 'Height', icon: <Mountain size={18} />, label: 'Height' },
         { id: 'Water', icon: <Droplets size={18} />, label: 'Water' },
+        { id: 'Area', icon: <Shapes size={18} />, label: 'Area' },
+        { id: 'Blocked', icon: <Ban size={18} />, label: 'Block' },
         { id: 'Biome', icon: <MapIcon size={18} />, label: 'Biome' },
         { id: 'Vegetation', icon: <TreePine size={18} />, label: 'Veg' },
         { id: 'Ramp', icon: <Type size={18} />, label: 'Ramp' },
         { id: 'Layers', icon: <Layers size={18} />, label: 'Layers' },
-        { id: 'Territory', icon: <Flag size={18} />, label: 'Territory' },
         { id: 'Entities', icon: <BoxSelect size={18} />, label: 'Ent' },
+        { id: 'Obstacle', icon: <Circle size={18} />, label: 'Obs' },
     ];
 
     const modes: { id: ToolMode, icon: React.ReactNode, label: string }[] = [
@@ -106,7 +185,7 @@ export const Toolbar: React.FC = () => {
         const view = new DataView(header.buffer);
         view.setInt32(0, terrain.widthChunks, true);
         view.setInt32(4, terrain.heightChunks, true);
-        view.setUint8(8, 2); // Stride 2
+        view.setUint8(8, 4); // Stride 4
 
         return new Blob([header, data], { type: 'application/octet-stream' });
     };
@@ -131,11 +210,17 @@ export const Toolbar: React.FC = () => {
         const cmd = [
             'dotnet run --project .\\src\\Tools\\Ludots.Tool\\Ludots.Tool.csproj -- nav bake-recast-react',
             `  --mapId ${mapId}`,
+            selectedModId ? `  --modId ${selectedModId}` : null,
             `  --in ${mapFile}`,
             `  --dirty ${dirtyFile}`,
+            `  --heightScale ${navHeightScale}`,
+            `  --minUpDot ${navMinUpDot}`,
+            `  --cliffThreshold ${navCliffThreshold}`,
+            `  --maxDegree ${navMaxDegree}`,
+            `  --tileVersion ${navTileVersion}`,
             '  --artifact true',
             '  --parallel true'
-        ].join('\r\n');
+        ].filter(Boolean).join('\r\n');
 
         try {
             await navigator.clipboard.writeText(cmd);
@@ -152,20 +237,119 @@ export const Toolbar: React.FC = () => {
         return bytes.buffer;
     };
 
-    const handleBakeNavTilesLocal = async () => {
-        const endpoint = `${bridgeBaseUrl}/api/nav/bake-recast-react`;
-        const form = new FormData();
+    const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value ?? null));
+
+    const mutateNavigationConfig = (mutator: (draft: NavigationConfigPayload) => void) => {
+        const current = (navigationConfig ?? { agentProfiles: [], navmesh: {} }) as NavigationConfigPayload;
+        const draft: NavigationConfigPayload = cloneJson({
+            ...current,
+            agentProfiles: Array.isArray(current.agentProfiles) ? current.agentProfiles : [],
+            navmesh: current.navmesh && typeof current.navmesh === 'object' ? current.navmesh : {},
+        });
+        mutator(draft);
+        setNavigationConfig(draft);
+    };
+
+    const updateAgentProfileField = (index: number, field: string, value: string, numeric = true) => {
+        mutateNavigationConfig((draft) => {
+            const profiles = Array.isArray(draft.agentProfiles) ? draft.agentProfiles : [];
+            if (!profiles[index]) return;
+            profiles[index][field] = numeric ? Number(value) : value;
+            draft.agentProfiles = profiles;
+        });
+    };
+
+    const updateBakeProfileField = (index: number, field: string, value: string, numeric = true) => {
+        mutateNavigationConfig((draft) => {
+            const profiles = Array.isArray(draft.navmesh.profiles) ? draft.navmesh.profiles : [];
+            if (!profiles[index]) return;
+            profiles[index][field] = numeric ? Number(value) : value;
+            draft.navmesh.profiles = profiles;
+        });
+    };
+
+    const updateNavLayerField = (index: number, field: string, value: string, numeric = true) => {
+        mutateNavigationConfig((draft) => {
+            const layers = Array.isArray(draft.navmesh.layers) ? draft.navmesh.layers : [];
+            if (!layers[index]) return;
+            layers[index][field] = numeric ? Number(value) : value;
+            draft.navmesh.layers = layers;
+        });
+    };
+
+    const updateNavAreaField = (index: number, field: string, value: string, numeric = true) => {
+        mutateNavigationConfig((draft) => {
+            const areas = Array.isArray(draft.navmesh.areas) ? draft.navmesh.areas : [];
+            if (!areas[index]) return;
+            areas[index][field] = numeric ? Number(value) : value;
+            draft.navmesh.areas = areas;
+        });
+    };
+
+    const updateRuntimeIncrementalField = (field: string, value: string | boolean, numeric = true) => {
+        mutateNavigationConfig((draft) => {
+            draft.navmesh.runtimeIncremental = draft.navmesh.runtimeIncremental ?? {};
+            draft.navmesh.runtimeIncremental[field] = typeof value === 'boolean' ? value : (numeric ? Number(value) : value);
+        });
+    };
+
+    const addAgentProfile = () => mutateNavigationConfig((draft) => {
+        const profiles = Array.isArray(draft.agentProfiles) ? draft.agentProfiles : [];
+        profiles.push({ id: `agent_${profiles.length + 1}`, radiusCm: 30, heightCm: 180, clearanceCm: 40, mass: 1, layer: 0 });
+        draft.agentProfiles = profiles;
+    });
+
+    const addBakeProfile = () => mutateNavigationConfig((draft) => {
+        const agentProfiles = Array.isArray(draft.agentProfiles) ? draft.agentProfiles : [];
+        const profiles = Array.isArray(draft.navmesh.profiles) ? draft.navmesh.profiles : [];
+        profiles.push({ id: String(agentProfiles[0]?.id ?? `agent_${profiles.length + 1}`), maxClimbCm: 40, maxSlopeDeg: 45 });
+        draft.navmesh.profiles = profiles;
+    });
+
+    const addNavLayer = () => mutateNavigationConfig((draft) => {
+        const layers = Array.isArray(draft.navmesh.layers) ? draft.navmesh.layers : [];
+        layers.push({ id: `Layer${layers.length}`, layer: layers.length });
+        draft.navmesh.layers = layers;
+    });
+
+    const addNavArea = () => mutateNavigationConfig((draft) => {
+        const areas = Array.isArray(draft.navmesh.areas) ? draft.navmesh.areas : [];
+        areas.push({ id: `Area${areas.length + 1}`, areaId: areas.length + 1, cost: 1 });
+        draft.navmesh.areas = areas;
+    });
+
+    const handleSaveNavigationConfig = async () => {
+        try {
+            setLoading(true, 'Saving Navigation Config...', 40);
+            await saveNavigationConfig();
+            setNavEstimate(null);
+        } catch (err: any) {
+            alert(`Navigation config 保存失败：${err?.message ?? err}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleReloadNavigationConfig = async () => {
+        try {
+            setLoading(true, 'Loading Navigation Config...', 30);
+            await loadNavigationConfig();
+            setNavEstimate(null);
+        } catch (err: any) {
+            alert(`Navigation config 加载失败：${err?.message ?? err}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const appendNavBakeFormFields = (form: FormData, dirtySet: Set<string>, dirtyCount: number) => {
         form.append('map', buildMapBlob(), 'map_data.bin');
         form.append('mapId', mapId);
+        if (selectedModId) form.append('modId', selectedModId);
 
-        const dirtySet = new Set<string>();
-        for (const k of navDirtyChunks.values()) dirtySet.add(k);
-        for (const k of terrain.dirtyChunks.values()) dirtySet.add(k);
-        const dirtyCount = dirtySet.size;
         if (navScope === 'dirty') {
             if (dirtyCount === 0) {
-                alert(`没有 dirty chunks（nav=${navDirtyChunks.size} render=${terrain.dirtyChunks.size}），不会触发全量 bake。请先修改地形，或把策略切到 Full。`);
-                return;
+                throw new Error(`没有 dirty chunks（nav=${navDirtyChunks.size} render=${terrain.dirtyChunks.size}），不会触发全量操作。请先修改地形，或把策略切到 Full。`);
             }
             const dirtyChunks = Array.from(dirtySet.values());
             form.append('dirty', JSON.stringify(dirtyChunks));
@@ -174,11 +358,85 @@ export const Toolbar: React.FC = () => {
 
         form.append('includeNeighbors', navIncludeNeighbors ? 'true' : 'false');
         form.append('parallel', navParallel ? 'true' : 'false');
-        form.append('artifact', 'false');
         form.append('tileVersion', String(navTileVersion));
+        form.append('heightScale', String(navHeightScale));
+        form.append('minUpDot', String(navMinUpDot));
+        form.append('cliffThreshold', String(navCliffThreshold));
+        form.append('maxDegree', String(navMaxDegree));
+    };
+
+    const collectDirtyChunks = () => {
+        const dirtySet = new Set<string>();
+        for (const k of navDirtyChunks.values()) dirtySet.add(k);
+        for (const k of terrain.dirtyChunks.values()) dirtySet.add(k);
+        return dirtySet;
+    };
+
+    const fetchNavEstimate = async () => {
+        const endpoint = `${bridgeBaseUrl}/api/nav/estimate-recast-react`;
+        const form = new FormData();
+        const dirtySet = collectDirtyChunks();
+        const dirtyCount = dirtySet.size;
+
+        appendNavBakeFormFields(form, dirtySet, dirtyCount);
+        const res = await fetch(endpoint, { method: 'POST', body: form });
+        if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`Bridge error ${res.status}: ${text}`);
+        }
+        const json = await res.json();
+        return json.estimate as NavBakeEstimateReport;
+    };
+
+    const handleEstimateNavTilesLocal = async () => {
+        try {
+            setNavEstimateError(null);
+            setLoading(true, 'Estimating NavTiles...', 45);
+            const estimate = await fetchNavEstimate();
+            setNavEstimate(estimate);
+            setAllowLargeBake(false);
+        } catch (err: any) {
+            const message = err?.message ?? String(err);
+            setNavEstimate(null);
+            setNavEstimateError(message);
+            alert(`Nav estimate 失败。\n\n请先运行：\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\n错误：${message}`);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleBakeNavTilesLocal = async () => {
+        const endpoint = `${bridgeBaseUrl}/api/nav/bake-recast-react`;
+        const form = new FormData();
+        const dirtySet = collectDirtyChunks();
+        const dirtyCount = dirtySet.size;
+
+        try {
+            appendNavBakeFormFields(form, dirtySet, dirtyCount);
+        } catch (err: any) {
+            alert(err?.message ?? err);
+            return;
+        }
+        form.append('artifact', 'false');
 
         let timeoutId: number | null = null;
         try {
+            const estimate = await fetchNavEstimate();
+            setNavEstimate(estimate);
+            setNavEstimateError(null);
+            if (estimate.requiresExplicitLargeBakeApproval && !allowLargeBake) {
+                alert(`Bake 被预算门禁拦截：${estimate.budgetStatusText}\n\n${estimate.budgetMessage}\n\n请先查看估算结果，并勾选 Allow large bake。`);
+                return;
+            }
+            if (estimate.budgetStatusText === 'reject') {
+                alert(`Bake 被拒绝：${estimate.budgetMessage}`);
+                return;
+            }
+            if (estimate.budgetStatusText === 'large') {
+                form.append('largeBake', 'true');
+                form.append('estimateHash', estimate.estimateHash);
+            }
+
             navAbortRef.current?.abort();
             navAbortRef.current = new AbortController();
             const scopeLabel = navScope === 'dirty' ? `Dirty(${dirtyCount})${navIncludeNeighbors ? '+N' : ''}` : 'Full';
@@ -210,6 +468,7 @@ export const Toolbar: React.FC = () => {
             if (!showNavMesh) toggleNavMesh();
             terrain.clearDirty();
             clearNavDirty();
+            setAllowLargeBake(false);
             setLoading(false);
         } catch (err: any) {
             setLoading(false);
@@ -254,8 +513,8 @@ export const Toolbar: React.FC = () => {
             const h = view.getInt32(4, true);
             const stride = view.getUint8(8);
             
-            if (stride !== 2) {
-                alert(`Invalid map stride. Expected 2, got ${stride}. Please recreate map.`);
+            if (stride !== 4) {
+                alert(`Invalid map stride. Expected 4, got ${stride}. Please recreate map.`);
                 return;
             }
 
@@ -264,6 +523,14 @@ export const Toolbar: React.FC = () => {
         };
         reader.readAsArrayBuffer(file);
     };
+
+    const navEditorConfig = (navigationConfig ?? null) as NavigationConfigPayload | null;
+    const navmeshConfig = navEditorConfig?.navmesh ?? {};
+    const agentProfiles = Array.isArray(navEditorConfig?.agentProfiles) ? navEditorConfig!.agentProfiles : [];
+    const bakeProfiles = Array.isArray(navmeshConfig.profiles) ? navmeshConfig.profiles : [];
+    const navLayers = Array.isArray(navmeshConfig.layers) ? navmeshConfig.layers : [];
+    const navAreas = Array.isArray(navmeshConfig.areas) ? navmeshConfig.areas : [];
+    const runtimeIncremental = navmeshConfig.runtimeIncremental ?? {};
 
     return (
         <div className="absolute top-4 left-4 bg-gray-900/95 text-white p-4 rounded-xl shadow-2xl backdrop-blur-md flex flex-col gap-5 w-72 border border-gray-700/50">
@@ -409,12 +676,280 @@ export const Toolbar: React.FC = () => {
                 </select>
                 <button 
                     onClick={handleBakeNavTilesLocal} 
-                    className="p-2 rounded bg-orange-700 text-white hover:bg-orange-600"
+                    className="p-2 rounded bg-orange-700 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Bake NavTiles via local bridge and load into editor"
+                    disabled={navEstimate?.budgetStatusText === 'reject'}
                 >
                     <span className="text-xs font-bold">BAKE</span>
                 </button>
+                <button
+                    onClick={handleEstimateNavTilesLocal}
+                    className="p-2 rounded bg-blue-700 text-white hover:bg-blue-600"
+                    title="Estimate NavTiles via local bridge"
+                >
+                    <span className="text-xs font-bold">EST</span>
+                </button>
             </div>
+
+            <div className="border-b border-gray-700/50 pb-4 space-y-3">
+                <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Bake Params</label>
+                    <SlidersHorizontal size={14} className="text-gray-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                    <label className="text-[10px] text-gray-400">
+                        Height
+                        <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            value={navHeightScale}
+                            onChange={(e) => setNavHeightScale(Number(e.target.value) || 0.1)}
+                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                        />
+                    </label>
+                    <label className="text-[10px] text-gray-400">
+                        Up Dot
+                        <input
+                            type="number"
+                            step="0.05"
+                            min="-1"
+                            max="1"
+                            value={navMinUpDot}
+                            onChange={(e) => setNavMinUpDot(Number(e.target.value))}
+                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                        />
+                    </label>
+                    <label className="text-[10px] text-gray-400">
+                        Cliff
+                        <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={navCliffThreshold}
+                            onChange={(e) => setNavCliffThreshold(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
+                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                        />
+                    </label>
+                    <label className="text-[10px] text-gray-400">
+                        Workers
+                        <input
+                            type="number"
+                            step="1"
+                            min="1"
+                            value={navMaxDegree}
+                            onChange={(e) => setNavMaxDegree(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
+                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                        />
+                    </label>
+                </div>
+            </div>
+
+            <div className="border-b border-gray-700/50 pb-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Navigation Config</label>
+                    <div className="flex gap-1">
+                        <button
+                            onClick={handleReloadNavigationConfig}
+                            className="p-1.5 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700"
+                            title="Reload navigation config"
+                            disabled={!selectedModId}
+                        >
+                            <RefreshCw size={13} />
+                        </button>
+                        <button
+                            onClick={handleSaveNavigationConfig}
+                            className="p-1.5 rounded bg-emerald-700 text-white hover:bg-emerald-600"
+                            title="Save navigation config"
+                            disabled={!selectedModId || !navEditorConfig}
+                        >
+                            <Save size={13} />
+                        </button>
+                    </div>
+                </div>
+
+                {navEditorConfig ? (
+                    <div className="max-h-80 overflow-auto pr-1 space-y-3 text-xs">
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className="text-[10px] text-gray-400">
+                                Mode
+                                <select
+                                    value={String(navmeshConfig.mode ?? 'offline')}
+                                    onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.mode = e.target.value; })}
+                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                >
+                                    <option value="offline">offline</option>
+                                    <option value="runtime-incremental">runtime-incremental</option>
+                                </select>
+                            </label>
+                            <label className="text-[10px] text-gray-400">
+                                Algorithm
+                                <select
+                                    value={String(navmeshConfig.algorithm ?? 'recast')}
+                                    onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.algorithm = e.target.value; })}
+                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                >
+                                    <option value="recast">recast</option>
+                                    <option value="cdt">cdt</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        {navEditorConfig.validated && (
+                            <div className="grid grid-cols-4 gap-1 text-[10px] text-gray-400">
+                                <span>A {navEditorConfig.validated.profileCount}</span>
+                                <span>P {navEditorConfig.validated.bakeProfileCount}</span>
+                                <span>L {navEditorConfig.validated.layerCount}</span>
+                                <span>R {navEditorConfig.validated.areaCount}</span>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Agents</div>
+                                <button onClick={addAgentProfile} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                            </div>
+                            {agentProfiles.map((p: any, i: number) => (
+                                <div key={`${p.id ?? i}-agent`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
+                                    <input value={p.id ?? ''} onChange={(e) => updateAgentProfileField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="radiusCm" type="number" value={p.radiusCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'radiusCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="heightCm" type="number" value={p.heightCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'heightCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="layer" type="number" value={p.layer ?? 0} onChange={(e) => updateAgentProfileField(i, 'layer', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="clearanceCm" type="number" value={p.clearanceCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'clearanceCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="mass" type="number" step="0.1" value={p.mass ?? 1} onChange={(e) => updateAgentProfileField(i, 'mass', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Profiles</div>
+                                <button onClick={addBakeProfile} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                            </div>
+                            {bakeProfiles.map((p: any, i: number) => (
+                                <div key={`${p.id ?? i}-profile`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
+                                    <input value={p.id ?? ''} onChange={(e) => updateBakeProfileField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="maxClimbCm" type="number" value={p.maxClimbCm ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxClimbCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="maxSlopeDeg" type="number" step="0.5" value={p.maxSlopeDeg ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxSlopeDeg', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Layers</div>
+                                <button onClick={addNavLayer} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                            </div>
+                            {navLayers.map((l: any, i: number) => (
+                                <div key={`${l.id ?? i}-layer`} className="grid grid-cols-2 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
+                                    <input value={l.id ?? ''} onChange={(e) => updateNavLayerField(i, 'id', e.target.value, false)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input type="number" value={l.layer ?? 0} onChange={(e) => updateNavLayerField(i, 'layer', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Areas</div>
+                                <button onClick={addNavArea} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                            </div>
+                            {navAreas.map((a: any, i: number) => (
+                                <div key={`${a.id ?? i}-area`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
+                                    <input value={a.id ?? ''} onChange={(e) => updateNavAreaField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="areaId" type="number" value={a.areaId ?? 0} onChange={(e) => updateNavAreaField(i, 'areaId', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                    <input title="cost" type="number" step="0.05" value={a.cost ?? 1} onChange={(e) => updateNavAreaField(i, 'cost', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 rounded bg-gray-800/60 border border-gray-700 p-2">
+                            <label className="text-[10px] text-gray-400">
+                                Tick Tiles
+                                <input type="number" value={runtimeIncremental.tileBudgetPerFixedTick ?? 1} onChange={(e) => updateRuntimeIncrementalField('tileBudgetPerFixedTick', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                            </label>
+                            <label className="text-[10px] text-gray-400">
+                                Height
+                                <input type="number" step="0.1" value={runtimeIncremental.heightScaleMeters ?? 1} onChange={(e) => updateRuntimeIncrementalField('heightScaleMeters', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                            </label>
+                            <label className="text-[10px] text-gray-400">
+                                Up Dot
+                                <input type="number" step="0.05" value={runtimeIncremental.minWalkableUpDot ?? 0.6} onChange={(e) => updateRuntimeIncrementalField('minWalkableUpDot', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                            </label>
+                            <label className="text-[10px] text-gray-400">
+                                Cliff
+                                <input type="number" value={runtimeIncremental.cliffHeightThreshold ?? 1} onChange={(e) => updateRuntimeIncrementalField('cliffHeightThreshold', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
+                            </label>
+                            <label className="col-span-2 flex items-center gap-2 text-[10px] text-gray-300">
+                                <input type="checkbox" checked={!!runtimeIncremental.includeNeighborTiles} onChange={(e) => updateRuntimeIncrementalField('includeNeighborTiles', e.target.checked, false)} />
+                                <span>Neighbor tiles</span>
+                            </label>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded border border-gray-800 bg-gray-900/60 p-3 text-xs text-gray-500">
+                        No config loaded.
+                    </div>
+                )}
+            </div>
+
+            {(navEstimate || navEstimateError) && (
+                <div className="border-b border-gray-700/50 pb-4">
+                    {navEstimate && (
+                        <div className={`rounded border p-3 text-xs ${
+                            navEstimate.budgetStatusText === 'ok'
+                                ? 'bg-emerald-950/40 border-emerald-700/70 text-emerald-100'
+                                : navEstimate.budgetStatusText === 'large'
+                                    ? 'bg-amber-950/40 border-amber-700/70 text-amber-100'
+                                    : 'bg-red-950/40 border-red-700/70 text-red-100'
+                        }`}>
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="font-semibold uppercase tracking-wide">{navEstimate.budgetStatusText}</div>
+                                <div>{navEstimate.estimatedSecondsLow.toFixed(1)}s - {navEstimate.estimatedSecondsHigh.toFixed(1)}s</div>
+                            </div>
+                            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-gray-200">
+                                <div>tiles {navEstimate.targetTileCount}/{navEstimate.fullTileCount}</div>
+                                <div>ops {navEstimate.bakeOperationCount}</div>
+                                <div>layers {navEstimate.layerCount}</div>
+                                <div>profiles {navEstimate.profileCount}</div>
+                                <div>obstacles {navEstimate.obstacleCount}</div>
+                                <div>workers {navEstimate.effectiveWorkers}</div>
+                                <div>work {navEstimate.budgetWorkUnitCount.toLocaleString()}</div>
+                                <div>columns {navEstimate.recastColumnBudgetTotal.toLocaleString()}</div>
+                                <div>tile {navEstimate.tileWorldWidthCm}x{navEstimate.tileWorldHeightCm}cm</div>
+                                <div>{(navEstimate.estimatedTileBytesLow / 1048576).toFixed(1)}-{(navEstimate.estimatedTileBytesHigh / 1048576).toFixed(1)}MB</div>
+                            </div>
+                            <div className="mt-2 font-mono text-[10px] text-gray-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
+                            <div className="font-mono text-[10px] text-gray-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
+                            <div className="mt-2 text-gray-300">{navEstimate.budgetMessage}</div>
+                            {navEstimate.profiles.length > 0 && (
+                                <div className="mt-2 max-h-24 overflow-auto rounded bg-black/20 p-2">
+                                    {navEstimate.profiles.map((profile) => (
+                                        <div key={profile.profileId} className="flex justify-between gap-2 text-gray-300">
+                                            <span>{profile.profileId}</span>
+                                            <span>{profile.recastCellSizeCm.toFixed(1)}cm vox · {profile.maxSlopeDeg}deg</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {navEstimate.requiresExplicitLargeBakeApproval && navEstimate.budgetStatusText !== 'reject' && (
+                                <label className="mt-2 flex items-center gap-2 text-amber-100">
+                                    <input
+                                        type="checkbox"
+                                        checked={allowLargeBake}
+                                        onChange={(e) => setAllowLargeBake(e.target.checked)}
+                                    />
+                                    <span>Allow large bake</span>
+                                </label>
+                            )}
+                        </div>
+                    )}
+                    {navEstimateError && (
+                        <div className="rounded border border-red-800 bg-red-950/40 p-3 text-xs text-red-100">
+                            {navEstimateError}
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* File Ops */}
             <div className="flex gap-2 border-b border-gray-700/50 pb-4">
@@ -566,16 +1101,84 @@ export const Toolbar: React.FC = () => {
                 <div className="flex justify-between text-sm text-gray-400">
                     <span>
                         {activeCategory === 'Biome' ? 'Biome Type' : 
+                         activeCategory === 'Area' ? 'Area ID' :
+                         activeCategory === 'Blocked' ? 'Blocked' :
                          activeCategory === 'Vegetation' ? 'Veg Type' : 
                          activeCategory === 'Layers' ? 'Layer Type' :
                          activeCategory === 'Territory' ? 'Faction ID' :
                          activeCategory === 'Entities' ? 'Template' :
+                         activeCategory === 'Obstacle' ? 'Obstacle' :
                          'Value'}
                     </span>
                     <span className="text-xs text-gray-500">{brushValue}</span>
                 </div>
 
-                {activeCategory === 'Biome' ? (
+                {activeCategory === 'Area' ? (
+                     <div className="grid grid-cols-2 gap-2">
+                         {[
+                             { id: 0, label: '0 Default', color: 'bg-[#8B4513]' },
+                             { id: 1, label: '1 Road', color: 'bg-[#9ca3af]' },
+                             { id: 2, label: '2 Forest', color: 'bg-[#256d3b]' },
+                             { id: 3, label: '3 Swamp', color: 'bg-[#4d5f2f]' },
+                             { id: 4, label: '4 Waterbank', color: 'bg-[#2563eb]' },
+                             { id: 5, label: '5 Hazard', color: 'bg-[#b45309]' },
+                         ].map(a => (
+                             <button
+                                 key={a.id}
+                                 onClick={() => {
+                                     setBrushValue(a.id);
+                                     setMode('Set');
+                                 }}
+                                 className={`p-2 rounded text-xs font-bold border transition-all ${
+                                     brushValue === a.id
+                                     ? 'border-white scale-105 shadow-md'
+                                     : 'border-transparent opacity-70 hover:opacity-100'
+                                 } ${a.color}`}
+                             >
+                                 {a.label}
+                             </button>
+                         ))}
+                         <input
+                             type="range"
+                             min="0"
+                             max="15"
+                             value={brushValue}
+                             onChange={(e) => setBrushValue(parseInt(e.target.value))}
+                             className="col-span-2 w-full accent-purple-500"
+                         />
+                         <div className="col-span-2 text-[10px] text-gray-400">
+                            Area ID is stored in logic terrain and propagated to baked NavTile triangle areas.
+                         </div>
+                     </div>
+                ) : activeCategory === 'Blocked' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            onClick={() => {
+                                setBrushValue(1);
+                                setMode('Set');
+                            }}
+                            className={`p-2 rounded text-xs font-bold border transition-all ${
+                                brushValue > 0 ? 'bg-red-700/70 border-red-300 text-red-50' : 'bg-gray-800 border-gray-700 text-gray-400'
+                            }`}
+                        >
+                            Block
+                        </button>
+                        <button
+                            onClick={() => {
+                                setBrushValue(0);
+                                setMode('Set');
+                            }}
+                            className={`p-2 rounded text-xs font-bold border transition-all ${
+                                brushValue === 0 ? 'bg-emerald-700/70 border-emerald-300 text-emerald-50' : 'bg-gray-800 border-gray-700 text-gray-400'
+                            }`}
+                        >
+                            Clear
+                        </button>
+                        <div className="col-span-2 text-[10px] text-gray-400">
+                            Raise paints blocked; Lower clears. Baked navmesh excludes blocked cells.
+                        </div>
+                    </div>
+                ) : activeCategory === 'Biome' ? (
                      <div className="grid grid-cols-2 gap-2">
                          {[
                              { id: 0, label: 'Dirt', color: 'bg-[#8B4513]' },
@@ -669,6 +1272,73 @@ export const Toolbar: React.FC = () => {
                             <button onClick={() => setBrushValue(255)} className="hover:text-white">F255</button>
                         </div>
                     </div>
+                ) : activeCategory === 'Obstacle' ? (
+                    <div className="flex flex-col gap-2">
+                        <select
+                            value={obstacleTemplateId ?? ''}
+                            onChange={(e) => setObstacleTemplate(e.target.value.length > 0 ? e.target.value : null)}
+                            className="w-full px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
+                            title="Obstacle template"
+                        >
+                            {templates.map((t: any, i: number) => {
+                                const id = String(t?.Id ?? t?.id ?? `template_${i}`);
+                                return <option key={id} value={id}>{id}</option>;
+                            })}
+                        </select>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={() => setObstacleShape('Circle')}
+                                className={`p-2 rounded text-xs font-bold border flex items-center justify-center gap-1 ${obstacleShape === 'Circle' ? 'bg-orange-700/70 border-orange-300 text-orange-50' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                            >
+                                <Circle size={14} /> Circle
+                            </button>
+                            <button
+                                onClick={() => setObstacleShape('Box')}
+                                className={`p-2 rounded text-xs font-bold border flex items-center justify-center gap-1 ${obstacleShape === 'Box' ? 'bg-orange-700/70 border-orange-300 text-orange-50' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
+                            >
+                                <Square size={14} /> Box
+                            </button>
+                        </div>
+                        {obstacleShape === 'Circle' ? (
+                            <label className="text-[10px] text-gray-400">
+                                Radius cm
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={obstacleRadiusCm}
+                                    onChange={(e) => setObstacleRadiusCm(Number(e.target.value))}
+                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                />
+                            </label>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="text-[10px] text-gray-400">
+                                    Half W
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={obstacleHalfWidthCm}
+                                        onChange={(e) => setObstacleHalfSizeCm(Number(e.target.value), obstacleHalfHeightCm)}
+                                        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                    />
+                                </label>
+                                <label className="text-[10px] text-gray-400">
+                                    Half H
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={obstacleHalfHeightCm}
+                                        onChange={(e) => setObstacleHalfSizeCm(obstacleHalfWidthCm, Number(e.target.value))}
+                                        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                    />
+                                </label>
+                            </div>
+                        )}
+                        <div className="text-[10px] text-gray-400">
+                            Set: Place / Replace<br/>
+                            Lower: Erase
+                        </div>
+                    </div>
                 ) : activeCategory === 'Entities' ? (
                     <div className="flex flex-col gap-2">
                         <select
@@ -736,7 +1406,7 @@ export const Toolbar: React.FC = () => {
             <div className="text-xs text-gray-500 mt-2">
                 Middle Click: Pan<br/>
                 Right Click: Rotate<br/>
-                Left Click: {activeCategory === 'Entities' ? 'Place/Erase/Select' : 'Paint'}
+                Left Click: {activeCategory === 'Entities' ? 'Place/Erase/Select' : activeCategory === 'Obstacle' ? 'Place/Erase' : 'Paint'}
             </div>
         </div>
     );

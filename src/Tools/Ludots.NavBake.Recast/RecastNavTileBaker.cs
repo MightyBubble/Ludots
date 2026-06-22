@@ -209,6 +209,7 @@ namespace Ludots.NavBake.Recast
             var triA = new List<int>(detail.ntris);
             var triB = new List<int>(detail.ntris);
             var triC = new List<int>(detail.ntris);
+            var triAreaIds = new List<byte>(detail.ntris);
 
             for (int m = 0; m < detail.nmeshes; m++)
             {
@@ -232,6 +233,7 @@ namespace Ludots.NavBake.Recast
                     triA.Add(ia);
                     triB.Add(ib);
                     triC.Add(ic);
+                    triAreaIds.Add(ResolveAreaIdFromBaseTile(baseTile, vx[ia], vz[ia], vx[ib], vz[ib], vx[ic], vz[ic]));
                 }
             }
 
@@ -259,12 +261,80 @@ namespace Ludots.NavBake.Recast
                 n0,
                 n1,
                 n2,
+                triAreaIds.ToArray(),
                 baseTile.Portals);
 
             using var ms = new System.IO.MemoryStream();
             NavTileBinary.Write(ms, tmp);
             ms.Position = 0;
             tile = NavTileBinary.Read(ms);
+        }
+
+        private static byte ResolveAreaIdFromBaseTile(
+            NavTile baseTile,
+            int ax,
+            int az,
+            int bx,
+            int bz,
+            int cx,
+            int cz)
+        {
+            float px = (ax + bx + cx) / 3f;
+            float pz = (az + bz + cz) / 3f;
+
+            for (int i = 0; i < baseTile.TriangleCount; i++)
+            {
+                int ia = baseTile.TriA[i];
+                int ib = baseTile.TriB[i];
+                int ic = baseTile.TriC[i];
+                if (PointInTriangle2D(
+                    px,
+                    pz,
+                    baseTile.VertexXcm[ia],
+                    baseTile.VertexZcm[ia],
+                    baseTile.VertexXcm[ib],
+                    baseTile.VertexZcm[ib],
+                    baseTile.VertexXcm[ic],
+                    baseTile.VertexZcm[ic]))
+                {
+                    return baseTile.TriAreaIds[i];
+                }
+            }
+
+            return 0;
+        }
+
+        private static bool PointInTriangle2D(
+            float px,
+            float pz,
+            float ax,
+            float az,
+            float bx,
+            float bz,
+            float cx,
+            float cz)
+        {
+            float v0x = cx - ax;
+            float v0z = cz - az;
+            float v1x = bx - ax;
+            float v1z = bz - az;
+            float v2x = px - ax;
+            float v2z = pz - az;
+
+            float dot00 = v0x * v0x + v0z * v0z;
+            float dot01 = v0x * v1x + v0z * v1z;
+            float dot02 = v0x * v2x + v0z * v2z;
+            float dot11 = v1x * v1x + v1z * v1z;
+            float dot12 = v1x * v2x + v1z * v2z;
+
+            float denom = dot00 * dot11 - dot01 * dot01;
+            if (MathF.Abs(denom) <= 1e-5f) return false;
+
+            float invDenom = 1f / denom;
+            float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+            const float epsilon = 0.001f;
+            return u >= -epsilon && v >= -epsilon && u + v <= 1f + epsilon;
         }
 
         private static int GetOrAddVertex(

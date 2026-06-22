@@ -4,9 +4,11 @@ using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Hosting;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
 {
@@ -71,10 +73,13 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         public static NavMeshBakeConfig LoadFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
-            return LoadContextFromRepoRoot(repoRoot, relativePath).Config;
+            return LoadContextFromRepoRoot(repoRoot, targetModId: null, relativePath: relativePath).Config;
         }
 
-        public static NavMeshBakeConfigContext LoadContextFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
+        public static NavMeshBakeConfigContext LoadContextFromRepoRoot(
+            string repoRoot,
+            string? targetModId = null,
+            string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
             if (string.IsNullOrWhiteSpace(repoRoot))
             {
@@ -90,11 +95,90 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", assetsRoot);
 
-            var pipeline = new ConfigPipeline(vfs, modLoader: null);
+            ModLoader? modLoader = null;
+            if (!string.IsNullOrWhiteSpace(targetModId))
+            {
+                modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                modLoader.LoadResolvedPlan(ResolveModLoadPlan(repoRoot, targetModId));
+            }
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var agentProfiles = new AgentProfileConfigLoader(pipeline).Load(catalog);
             var config = new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog, relativePath: relativePath);
             return new NavMeshBakeConfigContext(config, agentProfiles);
+        }
+
+        private static IReadOnlyList<ResolvedModLoadEntry> ResolveModLoadPlan(string repoRoot, string targetModId)
+        {
+            string modsRoot = Path.Combine(Path.GetFullPath(repoRoot), "mods");
+            if (!Directory.Exists(modsRoot))
+            {
+                throw new DirectoryNotFoundException($"Repo root is missing mods/: {repoRoot}");
+            }
+
+            List<DiscoveredMod> discovered = ModDiscovery.DiscoverMods(new[] { modsRoot });
+            var byId = new Dictionary<string, DiscoveredMod>(StringComparer.Ordinal);
+            for (int i = 0; i < discovered.Count; i++)
+            {
+                DiscoveredMod mod = discovered[i];
+                if (!byId.TryAdd(mod.Manifest.Name, mod))
+                {
+                    throw new InvalidOperationException($"Duplicate mod id '{mod.Manifest.Name}' in repo mods/.");
+                }
+            }
+
+            if (!byId.ContainsKey(targetModId))
+            {
+                throw new InvalidOperationException($"Unknown mod '{targetModId}'.");
+            }
+
+            var required = new HashSet<string>(StringComparer.Ordinal);
+            void AddRequired(string modId)
+            {
+                if (!required.Add(modId))
+                {
+                    return;
+                }
+
+                if (!byId.TryGetValue(modId, out DiscoveredMod mod))
+                {
+                    throw new InvalidOperationException($"Missing mod dependency '{modId}'.");
+                }
+
+                foreach (string dependencyId in mod.Manifest.Dependencies.Keys)
+                {
+                    AddRequired(dependencyId);
+                }
+            }
+
+            AddRequired(targetModId);
+
+            var nodes = new List<DependencyResolver.ModNode>(required.Count);
+            for (int i = 0; i < discovered.Count; i++)
+            {
+                DiscoveredMod mod = discovered[i];
+                if (!required.Contains(mod.Manifest.Name))
+                {
+                    continue;
+                }
+
+                nodes.Add(new DependencyResolver.ModNode
+                {
+                    Manifest = mod.Manifest,
+                    CreationIndex = i
+                });
+            }
+
+            List<ModManifest> sorted = new DependencyResolver().Resolve(nodes);
+            var result = new List<ResolvedModLoadEntry>(sorted.Count);
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                ModManifest manifest = sorted[i];
+                result.Add(new ResolvedModLoadEntry(manifest.Name, byId[manifest.Name].DirectoryPath));
+            }
+
+            return result;
         }
 
         private void ValidateRaw(JsonObject root, string relativePath)

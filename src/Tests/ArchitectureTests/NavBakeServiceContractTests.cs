@@ -251,6 +251,161 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavBakeEstimator_UsesRealContextAndReportsBudgetFromTargetsLayersProfiles()
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast);
+            config.Profiles.Add(new NavMeshAgentProfileConfig { Id = "Large", MaxClimbCm = 75, MaxSlopeDeg = 30 });
+            config.Layers.Add(new NavLayerConfig { Id = "Bridge", Layer = 1 });
+            var context = new NavBakeContext
+            {
+                MapId = "nav_estimate_contract",
+                SourceUri = "Core:Maps/nav_estimate_contract.vtxm",
+                Terrain = new FlatGridLogicTerrainField(8, 4, chunkSizeCells: 4),
+                Obstacles = new NavObstacleSet
+                {
+                    Obstacles =
+                    {
+                        new NavObstacle
+                        {
+                            Id = "estimate-blocker",
+                            Enabled = true,
+                            Kind = NavObstacleKind.Circle,
+                            LayerId = GroundLayerId,
+                            Center = new NavPointCm(150, 150),
+                            RadiusCm = 35
+                        }
+                    }
+                },
+                Config = config,
+                AgentProfiles = CreateAgentProfiles(
+                    new AgentProfileConfig
+                    {
+                        Id = "Large",
+                        RadiusCm = 90,
+                        HeightCm = 240,
+                        ClearanceCm = 60,
+                        Mass = 3,
+                        Layer = 0
+                    }),
+                Targets = new[] { new NavBakeTileCoord(0, 0), new NavBakeTileCoord(1, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = true, MaxDegreeOfParallelism = 4 }
+            };
+
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+
+            Assert.That(estimate.TargetTileCount, Is.EqualTo(2));
+            Assert.That(estimate.LayerCount, Is.EqualTo(2));
+            Assert.That(estimate.ProfileCount, Is.EqualTo(2));
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(8));
+            Assert.That(estimate.ObstacleCount, Is.EqualTo(1));
+            Assert.That(estimate.EffectiveWorkers, Is.EqualTo(4));
+            Assert.That(estimate.EstimateHash, Is.Not.Empty);
+            Assert.That(estimate.TerrainContentHash, Is.Not.Empty);
+            Assert.That(estimate.CellCm, Is.EqualTo(100));
+            Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
+            Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
+            Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
+            Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
+            Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
+            Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
+            Assert.That(estimate.EstimatedSecondsLow, Is.EqualTo(0.16d).Within(0.0001d));
+            Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Ok));
+            Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.False);
+            Assert.DoesNotThrow(() => NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved: false, acceptedEstimateHash: null));
+
+            NavBakeProfileEstimate small = estimate.Profiles[0];
+            Assert.That(small.ProfileId, Is.EqualTo("Small"));
+            Assert.That(small.RecastCellSizeCm, Is.EqualTo(10f).Within(0.0001f));
+            Assert.That(small.RecastCellHeightCm, Is.EqualTo(5f).Within(0.0001f));
+            Assert.That(small.RecastColumnsPerAxis, Is.EqualTo(40));
+            Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
+            Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
+            Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
+        }
+
+        [Test]
+        public void NavBakeEstimator_RejectsInvalidProfileSlopeInsteadOfClamping()
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast);
+            config.Profiles[0].MaxSlopeDeg = 90f;
+            var context = new NavBakeContext
+            {
+                MapId = "nav_estimate_invalid_slope",
+                SourceUri = "Core:Maps/nav_estimate_invalid_slope.vtxm",
+                Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                Obstacles = new NavObstacleSet(),
+                Config = config,
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 8 }
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.Estimate(context))!;
+            Assert.That(ex.Message, Does.Contain("maxSlopeDeg"));
+        }
+
+        [Test]
+        public void NavBakeEstimator_HashChangesWhenTargetTerrainContentChanges()
+        {
+            var terrain = new MutableGridLogicTerrainField(8, 4, chunkSizeCells: 4);
+            NavBakeContext first = CreateEstimateContext(terrain, new[] { new NavBakeTileCoord(0, 0) });
+            NavBakeEstimateReport firstEstimate = NavBakeEstimator.Estimate(first);
+
+            terrain.SetCell(1, 1, new LogicTerrainCell(3, 0, LogicTerrainSurfaceFlags.Ramp, areaId: 7));
+            NavBakeContext second = CreateEstimateContext(terrain, new[] { new NavBakeTileCoord(0, 0) });
+            NavBakeEstimateReport secondEstimate = NavBakeEstimator.Estimate(second);
+
+            Assert.That(secondEstimate.TerrainContentHash, Is.Not.EqualTo(firstEstimate.TerrainContentHash));
+            Assert.That(secondEstimate.EstimateHash, Is.Not.EqualTo(firstEstimate.EstimateHash));
+        }
+
+        [Test]
+        public void NavBakeEstimator_LargeBakeRequiresExplicitApprovalAndMatchingHash()
+        {
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 2);
+
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(2048));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(3_276_800));
+            Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Large));
+            Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.True);
+            Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved: false, acceptedEstimateHash: null));
+            Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved: true, acceptedEstimateHash: "wrong"));
+            Assert.DoesNotThrow(
+                () => NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved: true, acceptedEstimateHash: estimate.EstimateHash));
+        }
+
+        [Test]
+        public void NavBakeEstimator_RejectsOversizedBakeEvenWithApproval()
+        {
+            NavBakeContext context = CreateEstimateBudgetContext(widthCells: 128, heightCells: 128, chunkSizeCells: 4, layerCount: 123);
+
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+
+            Assert.That(estimate.BakeOperationCount, Is.EqualTo(125952));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(201_523_200));
+            Assert.That(estimate.BudgetStatus, Is.EqualTo(NavBakeBudgetStatus.Reject));
+            Assert.That(estimate.RequiresExplicitLargeBakeApproval, Is.False);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved: true, acceptedEstimateHash: estimate.EstimateHash))!;
+            Assert.That(ex.Message, Does.Contain("reject"));
+        }
+
+        [Test]
         public void NavMeshBakeConfig_RequiresExplicitAlgorithmAndStrictCase()
         {
             var profiles = CreateAgentProfiles();
@@ -352,6 +507,134 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void NavMeshBakeConfigLoader_ModContextMergesNavigationConfigsThroughOfficialPipeline()
+        {
+            string repoRoot = CreateTempRepoNavigationConfig();
+            try
+            {
+                string depRoot = Path.Combine(repoRoot, "mods", "DepNavMod");
+                string targetRoot = Path.Combine(repoRoot, "mods", "TargetNavMod");
+                WriteModManifest(depRoot, "DepNavMod", dependenciesJson: "{}");
+                WriteModManifest(targetRoot, "TargetNavMod", dependenciesJson: """{ "DepNavMod": "*" }""");
+
+                WriteNavigationAgentProfiles(depRoot,
+                    """
+                    [
+                      { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "mass": 1, "layer": 0 },
+                      { "id": "DepScout", "radiusCm": 22, "heightCm": 140, "clearanceCm": 25, "mass": 0.7, "layer": 0 }
+                    ]
+                    """);
+                WriteNavigationAgentProfiles(targetRoot,
+                    """
+                    [
+                      { "id": "Small", "radiusCm": 42, "heightCm": 190, "clearanceCm": 45, "mass": 1.25, "layer": 1 },
+                      { "id": "ModHeavy", "radiusCm": 80, "heightCm": 240, "clearanceCm": 70, "mass": 3.5, "layer": 1 }
+                    ]
+                    """);
+                WriteNavigationNavmesh(targetRoot,
+                    """
+                    {
+                      "profiles": [
+                        { "id": "Small", "maxClimbCm": 55, "maxSlopeDeg": 38 },
+                        { "id": "ModHeavy", "maxClimbCm": 65, "maxSlopeDeg": 30 }
+                      ],
+                      "layers": [
+                        { "id": "Ground", "layer": 0 },
+                        { "id": "Air", "layer": 1 }
+                      ],
+                      "areas": [
+                        { "id": "Road", "areaId": 1, "cost": 0.75 }
+                      ]
+                    }
+                    """);
+
+                NavMeshBakeConfigContext context = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, "TargetNavMod");
+
+                Assert.That(context.AgentProfiles.Count, Is.EqualTo(3));
+                Assert.That(context.AgentProfiles.Require("Small", "test").RadiusCm, Is.EqualTo(42f).Within(0.0001f));
+                Assert.That(context.AgentProfiles.Require("Small", "test").Layer, Is.EqualTo(1));
+                Assert.That(context.AgentProfiles.Require("DepScout", "test").RadiusCm, Is.EqualTo(22f).Within(0.0001f));
+                Assert.That(context.AgentProfiles.Require("ModHeavy", "test").Mass, Is.EqualTo(3.5f).Within(0.0001f));
+                Assert.That(context.Config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmRecast));
+                Assert.That(context.Config.Profiles.Count, Is.EqualTo(2));
+                Assert.That(context.Config.Profiles[0].Id, Is.EqualTo("Small"));
+                Assert.That(context.Config.Profiles[0].MaxClimbCm, Is.EqualTo(55));
+                Assert.That(context.Config.Layers.Count, Is.EqualTo(2));
+                Assert.That(context.Config.Areas.Count, Is.EqualTo(1));
+                Assert.That(context.Config.RuntimeIncremental.TileBudgetPerFixedTick, Is.EqualTo(4));
+            }
+            finally
+            {
+                Directory.Delete(repoRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_UnknownModFailsFast()
+        {
+            string repoRoot = CreateTempRepoNavigationConfig();
+            try
+            {
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                    () => NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, "missing_mod"))!;
+                Assert.That(ex.Message, Does.Contain("Unknown mod"));
+            }
+            finally
+            {
+                Directory.Delete(repoRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_LoadFromRepoRootPreservesRelativePathParameter()
+        {
+            string repoRoot = CreateTempRepoNavigationConfig();
+            try
+            {
+                string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+                File.WriteAllText(Path.Combine(navigationDir, "alt_navmesh.json"),
+                    """
+                    {
+                      "mode": "offline",
+                      "algorithm": "cdt",
+                      "profiles": [
+                        { "id": "Small", "maxClimbCm": 12, "maxSlopeDeg": 20 }
+                      ],
+                      "layers": [
+                        { "id": "Ground", "layer": 0 }
+                      ],
+                      "areas": [],
+                      "runtimeIncremental": {
+                        "tileBudgetPerFixedTick": 2,
+                        "includeNeighborTiles": false,
+                        "heightScaleMeters": 1,
+                        "minWalkableUpDot": 0.5,
+                        "cliffHeightThreshold": 1
+                      }
+                    }
+                    """);
+                string catalogPath = Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json");
+                string catalog = File.ReadAllText(catalogPath).TrimEnd();
+                catalog = catalog.Substring(0, catalog.Length - 1) +
+                    "," + Environment.NewLine +
+                    """  { "Path": "Navigation/alt_navmesh.json", "Policy": "DeepObject" }""" +
+                    Environment.NewLine +
+                    "]";
+                File.WriteAllText(catalogPath, catalog);
+
+                NavMeshBakeConfig config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot, "Navigation/alt_navmesh.json");
+
+                Assert.That(config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmCdt));
+                Assert.That(config.Profiles[0].MaxClimbCm, Is.EqualTo(12));
+                Assert.That(config.RuntimeIncremental.TileBudgetPerFixedTick, Is.EqualTo(2));
+            }
+            finally
+            {
+                Directory.Delete(repoRoot, recursive: true);
+            }
+        }
+
+        [Test]
         public void NavBakeContext_RejectsAbsoluteFilesystemSourceUri()
         {
             var context = new NavBakeContext
@@ -448,9 +731,9 @@ namespace Ludots.Tests.Architecture
             };
         }
 
-        private static AgentProfileRegistry CreateAgentProfiles()
+        private static AgentProfileRegistry CreateAgentProfiles(params AgentProfileConfig[] additionalProfiles)
         {
-            return new AgentProfileRegistry(new[]
+            var profiles = new List<AgentProfileConfig>
             {
                 new AgentProfileConfig
                 {
@@ -461,7 +744,9 @@ namespace Ludots.Tests.Architecture
                     Mass = 1,
                     Layer = 0
                 }
-            });
+            };
+            profiles.AddRange(additionalProfiles);
+            return new AgentProfileRegistry(profiles);
         }
 
         private static NavBakeContext CreateRuntimeIncrementalContext(
@@ -482,6 +767,67 @@ namespace Ludots.Tests.Architecture
                 TileVersion = 11,
                 Mode = NavBakeMode.RuntimeIncremental,
                 Algorithm = algorithm,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+        }
+
+        private static NavBakeContext CreateEstimateBudgetContext(
+            int widthCells,
+            int heightCells,
+            int chunkSizeCells,
+            int layerCount)
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast);
+            config.Layers.Clear();
+            for (int i = 0; i < layerCount; i++)
+            {
+                config.Layers.Add(new NavLayerConfig { Id = $"Layer{i}", Layer = i });
+            }
+
+            var terrain = new FlatGridLogicTerrainField(widthCells, heightCells, chunkSizeCells: chunkSizeCells);
+            var targets = new List<NavBakeTileCoord>(terrain.WidthChunks * terrain.HeightChunks);
+            for (int y = 0; y < terrain.HeightChunks; y++)
+            {
+                for (int x = 0; x < terrain.WidthChunks; x++)
+                {
+                    targets.Add(new NavBakeTileCoord(x, y));
+                }
+            }
+
+            return new NavBakeContext
+            {
+                MapId = "nav_estimate_budget_contract",
+                SourceUri = "Core:Maps/nav_estimate_budget_contract.vtxm",
+                Terrain = terrain,
+                Obstacles = new NavObstacleSet(),
+                Config = config,
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = targets,
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = true, MaxDegreeOfParallelism = 8 }
+            };
+        }
+
+        private static NavBakeContext CreateEstimateContext(
+            LogicTerrainField terrain,
+            IReadOnlyList<NavBakeTileCoord> targets)
+        {
+            return new NavBakeContext
+            {
+                MapId = "nav_estimate_hash_contract",
+                SourceUri = "Core:Maps/nav_estimate_hash_contract.vtxm",
+                Terrain = terrain,
+                Obstacles = new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = targets,
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
         }
@@ -508,6 +854,76 @@ namespace Ludots.Tests.Architecture
                 """);
             File.WriteAllText(Path.Combine(configs, "Navigation", "navmesh.json"), navmeshJson);
             return tempRoot;
+        }
+
+        private static string CreateTempRepoNavigationConfig()
+        {
+            string repoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
+            string navigationDir = Path.Combine(repoRoot, "assets", "Configs", "Navigation");
+            Directory.CreateDirectory(navigationDir);
+            Directory.CreateDirectory(Path.Combine(repoRoot, "mods"));
+            File.WriteAllText(Path.Combine(repoRoot, "assets", "Configs", "config_catalog.json"),
+                """
+                [
+                  { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
+                  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" }
+                ]
+                """);
+            File.WriteAllText(Path.Combine(navigationDir, "agent_profiles.json"),
+                """
+                [
+                  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "mass": 1, "layer": 0 }
+                ]
+                """);
+            File.WriteAllText(Path.Combine(navigationDir, "navmesh.json"),
+                """
+                {
+                  "mode": "offline",
+                  "algorithm": "recast",
+                  "profiles": [
+                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
+                  ],
+                  "layers": [
+                    { "id": "Ground", "layer": 0 }
+                  ],
+                  "areas": [],
+                  "runtimeIncremental": {
+                    "tileBudgetPerFixedTick": 4,
+                    "includeNeighborTiles": true,
+                    "heightScaleMeters": 1,
+                    "minWalkableUpDot": 0.6,
+                    "cliffHeightThreshold": 1
+                  }
+                }
+                """);
+            return repoRoot;
+        }
+
+        private static void WriteModManifest(string modRoot, string id, string dependenciesJson)
+        {
+            Directory.CreateDirectory(modRoot);
+            File.WriteAllText(Path.Combine(modRoot, "mod.json"),
+                $$"""
+                {
+                  "name": "{{id}}",
+                  "version": "1.0.0",
+                  "dependencies": {{dependenciesJson}}
+                }
+                """);
+        }
+
+        private static void WriteNavigationAgentProfiles(string modRoot, string json)
+        {
+            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "agent_profiles.json"), json);
+        }
+
+        private static void WriteNavigationNavmesh(string modRoot, string json)
+        {
+            string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
+            Directory.CreateDirectory(dir);
+            File.WriteAllText(Path.Combine(dir, "navmesh.json"), json);
         }
     }
 }

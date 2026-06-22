@@ -6,6 +6,8 @@ using System.Text.Json;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Ludots.Core.Config;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
@@ -170,6 +172,8 @@ namespace Ludots.Tool
             var navParallelOption = new Option<bool>("--parallel", () => true, "Bake tiles in parallel");
             var navMaxDegreeOption = new Option<int>("--maxDegree", () => Math.Max(1, Environment.ProcessorCount), "Max degree of parallelism");
             var navTileVersionOption = new Option<int>("--tileVersion", () => 1, "TileVersion written into each NavTile");
+            var navLargeBakeOption = new Option<bool>("--large-bake", () => false, "Allow a large nav bake after reviewing the matching estimate");
+            var navEstimateHashOption = new Option<string?>("--estimateHash", () => null, "Estimate hash returned by nav estimate-recast-react");
             bakeNavCommand.AddOption(navInOption);
             bakeNavCommand.AddOption(navOutDirOption);
             bakeNavCommand.AddOption(navHeightScaleOption);
@@ -228,7 +232,9 @@ namespace Ludots.Tool
 
             var bakeRecastReactNavCommand = new Command("bake-recast-react", "Bake NavTiles from React editor map_data.bin using Recast");
             var mapIdOption = new Option<string>("--mapId", "Target mapId (used for output paths)") { IsRequired = true };
+            var navModIdOption = new Option<string?>("--modId", () => null, "Optional mod id when mapId is authored by a mod");
             bakeRecastReactNavCommand.AddOption(mapIdOption);
+            bakeRecastReactNavCommand.AddOption(navModIdOption);
             bakeRecastReactNavCommand.AddOption(reactInOption);
             bakeRecastReactNavCommand.AddOption(reactDirtyOption);
             bakeRecastReactNavCommand.AddOption(reactIncludeNeighborsOption);
@@ -240,9 +246,12 @@ namespace Ludots.Tool
             bakeRecastReactNavCommand.AddOption(navParallelOption);
             bakeRecastReactNavCommand.AddOption(navMaxDegreeOption);
             bakeRecastReactNavCommand.AddOption(navTileVersionOption);
+            bakeRecastReactNavCommand.AddOption(navLargeBakeOption);
+            bakeRecastReactNavCommand.AddOption(navEstimateHashOption);
             bakeRecastReactNavCommand.SetHandler((InvocationContext ctx) =>
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
                 var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
                 var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
                 var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
@@ -254,9 +263,42 @@ namespace Ludots.Tool
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
                 var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
-                ctx.ExitCode = BakeNavFromReactRecast(mapId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion);
+                var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
+                var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
+                ctx.ExitCode = BakeNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
+
+            var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from React editor map_data.bin");
+            estimateRecastReactNavCommand.AddOption(mapIdOption);
+            estimateRecastReactNavCommand.AddOption(navModIdOption);
+            estimateRecastReactNavCommand.AddOption(reactInOption);
+            estimateRecastReactNavCommand.AddOption(reactDirtyOption);
+            estimateRecastReactNavCommand.AddOption(reactIncludeNeighborsOption);
+            estimateRecastReactNavCommand.AddOption(navOutDirOption);
+            estimateRecastReactNavCommand.AddOption(navHeightScaleOption);
+            estimateRecastReactNavCommand.AddOption(navMinUpDotOption);
+            estimateRecastReactNavCommand.AddOption(navCliffThresholdOption);
+            estimateRecastReactNavCommand.AddOption(navParallelOption);
+            estimateRecastReactNavCommand.AddOption(navMaxDegreeOption);
+            estimateRecastReactNavCommand.AddOption(navTileVersionOption);
+            estimateRecastReactNavCommand.SetHandler((InvocationContext ctx) =>
+            {
+                var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
+                var modId = ctx.ParseResult.GetValueForOption(navModIdOption);
+                var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
+                var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
+                var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
+                var outDir = ctx.ParseResult.GetValueForOption(navOutDirOption);
+                var heightScale = ctx.ParseResult.GetValueForOption(navHeightScaleOption);
+                var minUpDot = ctx.ParseResult.GetValueForOption(navMinUpDotOption);
+                var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
+                var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
+                var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
+                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
+            });
+            navCommand.AddCommand(estimateRecastReactNavCommand);
             rootCommand.AddCommand(navCommand);
 
             return await rootCommand.InvokeAsync(args);
@@ -682,84 +724,188 @@ namespace {modId}
             return BakeTiles(map, targets, cfg, tilesDir, artifactsDir, writeArtifact, parallel, maxDegree, tileVersion, logPrefix: "BakeNavReact", outDirRoot: root);
         }
 
-        static int BakeNavFromReactRecast(string mapId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)
+        static int BakeNavFromReactRecast(
+            string mapId,
+            string? modId,
+            string inputReactBinPath,
+            string? dirtyChunksPath,
+            bool includeNeighbors,
+            string? outDir,
+            float heightScale,
+            float minUpDot,
+            int cliffThreshold,
+            bool writeArtifact,
+            bool parallel,
+            int maxDegree,
+            int tileVersion,
+            bool largeBakeApproved,
+            string? acceptedEstimateHash)
         {
-            if (string.IsNullOrWhiteSpace(mapId))
-            {
-                Console.WriteLine("mapId is required.");
-                return 2;
-            }
-            if (!File.Exists(inputReactBinPath))
-            {
-                Console.WriteLine($"Input not found: {inputReactBinPath}");
-                return 2;
-            }
-
-            string repoRoot = string.IsNullOrWhiteSpace(outDir) ? FindAssetsRoot() : Path.GetFullPath(outDir);
-            if (!Directory.Exists(Path.Combine(repoRoot, "assets")))
-            {
-                Console.WriteLine($"Invalid repo root (missing assets/): {repoRoot}");
-                return 2;
-            }
-            NavMeshBakeConfigContext bakeConfigContext;
             try
             {
-                bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
+                NavBakeContext context = BuildReactRecastNavBakeContext(
+                    mapId,
+                    modId,
+                    inputReactBinPath,
+                    dirtyChunksPath,
+                    includeNeighbors,
+                    outDir,
+                    heightScale,
+                    minUpDot,
+                    cliffThreshold,
+                    parallel,
+                    maxDegree,
+                    tileVersion,
+                    out string repoRoot,
+                    out LogicTerrainField terrain);
+
+                Console.WriteLine($"BakeNavRecastReact: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.Obstacles.Count}");
+                NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+                Console.WriteLine($"BakeNavRecastReact estimate: status={estimate.BudgetStatusText} hash={estimate.EstimateHash} terrainHash={estimate.TerrainContentHash} targets={estimate.TargetTileCount} operations={estimate.BakeOperationCount} workUnits={estimate.BudgetWorkUnitCount} seconds={estimate.EstimatedSecondsLow:F1}-{estimate.EstimatedSecondsHigh:F1}");
+                NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
+
+                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                if (result.FailureCount > 0)
+                {
+                    PrintNavBakeFailures(result, "BakeNavRecastReact");
+                    Console.WriteLine("BakeNavRecastReact failed; no NavTile artifacts were written.");
+                    return 1;
+                }
+
+                WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavRecastReact");
+                Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
+                return result.FailureCount == 0 ? 0 : 1;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}");
+                Console.WriteLine(ex.Message);
                 return 2;
             }
+        }
 
-            NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
-            var profiles = bakeConfig.Profiles;
+        static int EstimateNavFromReactRecast(string mapId, string? modId, string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool parallel, int maxDegree, int tileVersion)
+        {
+            try
+            {
+                NavBakeContext context = BuildReactRecastNavBakeContext(
+                    mapId,
+                    modId,
+                    inputReactBinPath,
+                    dirtyChunksPath,
+                    includeNeighbors,
+                    outDir,
+                    heightScale,
+                    minUpDot,
+                    cliffThreshold,
+                    parallel,
+                    maxDegree,
+                    tileVersion,
+                    out _,
+                    out _);
+                NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+                var json = JsonSerializer.Serialize(estimate, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine(json);
+                return estimate.BudgetStatus == NavBakeBudgetStatus.Reject ? 1 : 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                return 2;
+            }
+        }
+
+        static NavBakeContext BuildReactRecastNavBakeContext(
+            string mapId,
+            string? modId,
+            string inputReactBinPath,
+            string? dirtyChunksPath,
+            bool includeNeighbors,
+            string? outDir,
+            float heightScale,
+            float minUpDot,
+            int cliffThreshold,
+            bool parallel,
+            int maxDegree,
+            int tileVersion,
+            out string repoRoot,
+            out LogicTerrainField terrain)
+        {
+            terrain = null!;
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new InvalidOperationException("mapId is required.");
+            }
+
+            if (!File.Exists(inputReactBinPath))
+            {
+                throw new InvalidOperationException($"Input not found: {inputReactBinPath}");
+            }
+
+            repoRoot = string.IsNullOrWhiteSpace(outDir) ? FindAssetsRoot() : Path.GetFullPath(outDir);
+            if (!Directory.Exists(Path.Combine(repoRoot, "assets")))
+            {
+                throw new InvalidOperationException($"Invalid repo root (missing assets/): {repoRoot}");
+            }
+
+            MapConfig mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+            BoardConfig boardConfig = ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig);
+            if (boardConfig == null)
+            {
+                throw new InvalidOperationException($"Map '{mapId}' has no navigation-enabled board.");
+            }
+
+            NavMeshBakeConfigContext bakeConfigContext;
+            try
+            {
+                bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}", ex);
+            }
 
             NavObstacleSet obstacles;
             try
             {
-                obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId);
+                obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}");
-                return 2;
+                throw new InvalidOperationException($"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}", ex);
             }
 
-            VertexMap map;
-            using (var ms = new MemoryStream())
-            {
-                _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
-                ms.Position = 0;
-                map = VertexMapBinary.Read(ms);
-            }
+            terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
 
             IReadOnlyList<NavBakeTileCoord> targets;
-            if (!string.IsNullOrWhiteSpace(dirtyChunksPath) && File.Exists(dirtyChunksPath))
+            if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
             {
+                if (!File.Exists(dirtyChunksPath))
+                {
+                    throw new InvalidOperationException($"Dirty chunks file not found: {dirtyChunksPath}");
+                }
+
                 var json = File.ReadAllText(dirtyChunksPath);
-                targets = NavBakeTileSelection.Resolve(new VertexMapLogicTerrainField(map), json, includeNeighbors, dirtyOnly: true);
+                targets = NavBakeTileSelection.Resolve(terrain, json, includeNeighbors, dirtyOnly: true);
             }
             else
             {
-                targets = NavBakeTileSelection.AllTiles(new VertexMapLogicTerrainField(map));
+                targets = NavBakeTileSelection.AllTiles(terrain);
             }
 
-            var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-            Console.WriteLine($"BakeNavRecastReact: mapId={mapId} map {map.WidthInChunks}x{map.HeightInChunks} chunks obstacles={obstacles.Obstacles.Count}");
-            string sourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath);
-            var context = new NavBakeContext
+            NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+            return new NavBakeContext
             {
                 MapId = mapId,
-                SourceUri = sourceUri,
-                Terrain = new VertexMapLogicTerrainField(map),
+                ModId = modId ?? string.Empty,
+                SourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath),
+                Terrain = terrain,
                 Obstacles = obstacles,
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,
                 Targets = targets,
-                BuildConfig = legacyCfg,
+                BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
                 TileVersion = (uint)tileVersion,
-                Mode = NavBakeMode.Offline,
+                Mode = bakeConfig.ParsedMode,
                 Algorithm = bakeConfig.ParsedAlgorithm,
                 Execution = new NavBakeExecutionOptions
                 {
@@ -767,11 +913,39 @@ namespace {modId}
                     MaxDegreeOfParallelism = Math.Max(1, maxDegree)
                 }
             };
+        }
 
-            var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
-            WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavRecastReact");
-            Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
-            return result.FailureCount == 0 ? 0 : 1;
+        static LogicTerrainField CreateReactEditorLogicTerrain(string inputReactBinPath, BoardConfig boardConfig)
+        {
+            if (boardConfig == null) throw new ArgumentNullException(nameof(boardConfig));
+            string spatialType = (boardConfig.SpatialType ?? "Grid").Trim();
+
+            if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+            {
+                return ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                    inputReactBinPath,
+                    boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm);
+            }
+
+            if (spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) ||
+                spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
+                spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
+            {
+                using var ms = new MemoryStream();
+                _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
+                ms.Position = 0;
+                VertexMap map = VertexMapBinary.Read(ms);
+                return new VertexMapLogicTerrainField(map);
+            }
+
+            if (spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Map board '{boardConfig.Name}' is NodeGraph; NodeGraph boards use graph data and do not bake navmesh.");
+            }
+
+            throw new InvalidOperationException(
+                $"Map board '{boardConfig.Name}' has unsupported SpatialType '{boardConfig.SpatialType}'. Expected Grid, HexGrid, or NodeGraph.");
         }
 
         static int BakeTiles(VertexMap map, List<(int cx, int cy)> targets, NavBuildConfig cfg, string tilesDir, string artifactsDir, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, string logPrefix, string outDirRoot)
@@ -782,6 +956,12 @@ namespace {modId}
 
         static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)
         {
+            if (result.FailureCount > 0)
+            {
+                PrintNavBakeFailures(result, logPrefix);
+                throw new InvalidOperationException($"{logPrefix} refuses to publish partial NavTile output when any bake entry failed.");
+            }
+
             for (int i = 0; i < result.Entries.Count; i++)
             {
                 NavBakeResultEntry entry = result.Entries[i];
@@ -807,6 +987,20 @@ namespace {modId}
                     var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
                     File.WriteAllText(artFile, json);
                 }
+            }
+        }
+
+        static void PrintNavBakeFailures(NavBakeResult result, string logPrefix)
+        {
+            for (int i = 0; i < result.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = result.Entries[i];
+                if (entry.Success)
+                {
+                    continue;
+                }
+
+                Console.WriteLine($"{logPrefix} failed: tile {entry.Target.ChunkX},{entry.Target.ChunkY} layer={entry.Layer} profile={entry.ProfileId} stage={entry.Artifact.Stage} code={entry.Artifact.ErrorCode} msg={entry.Artifact.Message}");
             }
         }
 
@@ -869,7 +1063,7 @@ namespace {modId}
             using var bw = new BinaryWriter(fs);
             bw.Write(widthChunks);
             bw.Write(heightChunks);
-            bw.Write((byte)2);
+            bw.Write((byte)4);
 
             for (int cy = 0; cy < heightChunks; cy++)
             {

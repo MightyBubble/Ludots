@@ -4,7 +4,7 @@ import { hexToWorldCm, worldCmToHex } from '../../Core/Map/HexMetrics';
 import type { Camera, PerspectiveCamera } from 'three';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
-export type ToolCategory = 'Height' | 'Water' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities';
+export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
 
 export interface EditorState {
@@ -18,7 +18,14 @@ export interface EditorState {
     mapConfig: any | null;
     templates: any[];
     performers: any[];
+    navigationConfig: any | null;
+    navigationConfigVersion: number;
     selectedTemplateId: string | null;
+    obstacleTemplateId: string | null;
+    obstacleShape: 'Circle' | 'Box';
+    obstacleRadiusCm: number;
+    obstacleHalfWidthCm: number;
+    obstacleHalfHeightCm: number;
     spawnEntities: Array<{ template: string; position: { x: number; y: number }; overrides: Record<string, any> }>;
     selectedEntityIndex: number | null;
     entitiesVersion: number;
@@ -58,8 +65,16 @@ export interface EditorState {
     selectMap: (mapId: string) => void;
     loadSelectedMap: () => Promise<void>;
     saveSelectedMap: () => Promise<void>;
+    loadNavigationConfig: () => Promise<void>;
+    saveNavigationConfig: () => Promise<void>;
+    setNavigationConfig: (config: any | null) => void;
     selectTemplate: (templateId: string | null) => void;
+    setObstacleTemplate: (templateId: string | null) => void;
+    setObstacleShape: (shape: 'Circle' | 'Box') => void;
+    setObstacleRadiusCm: (radiusCm: number) => void;
+    setObstacleHalfSizeCm: (halfWidthCm: number, halfHeightCm: number) => void;
     placeEntityAt: (c: number, r: number) => void;
+    placeObstacleAt: (c: number, r: number) => void;
     removeEntityAt: (c: number, r: number) => void;
     selectEntityAt: (c: number, r: number) => void;
     updateSelectedEntityOverridesJson: (componentName: string, jsonText: string) => void;
@@ -98,7 +113,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     mapConfig: null,
     templates: [],
     performers: [],
+    navigationConfig: null,
+    navigationConfigVersion: 0,
     selectedTemplateId: null,
+    obstacleTemplateId: null,
+    obstacleShape: 'Circle',
+    obstacleRadiusCm: 300,
+    obstacleHalfWidthCm: 300,
+    obstacleHalfHeightCm: 300,
     spawnEntities: [],
     selectedEntityIndex: null,
     entitiesVersion: 0,
@@ -192,7 +214,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             mapConfig: null,
             templates: [],
             performers: [],
+            navigationConfig: null,
+            navigationConfigVersion: Date.now(),
             selectedTemplateId: null,
+            obstacleTemplateId: null,
             spawnEntities: [],
             selectedEntityIndex: null,
             entitiesVersion: Date.now(),
@@ -213,13 +238,37 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const performers = pJson.performers ?? [];
 
         const defaultTemplateId = templates.length > 0 ? String(templates[0]?.Id ?? templates[0]?.id ?? '') : null;
+        const obstacleTemplate = templates.find((t: any) => {
+            const components = t?.Components ?? t?.components ?? {};
+            return components?.ManifestationObstacleIntent2D || components?.manifestationObstacleIntent2D;
+        });
+        const fallbackBlocker = templates.find((t: any) => {
+            const id = String(t?.Id ?? t?.id ?? '');
+            return id.toLowerCase().includes('blocker') || id.toLowerCase().includes('obstacle');
+        });
+        const obstacleTemplateId = String(
+            obstacleTemplate?.Id ?? obstacleTemplate?.id ??
+            fallbackBlocker?.Id ?? fallbackBlocker?.id ??
+            defaultTemplateId ?? '');
+
+        let navigationConfig: any | null = null;
+        try {
+            const navRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/navigation-config`);
+            if (!navRes.ok) throw new Error(`Bridge error ${navRes.status}`);
+            navigationConfig = await navRes.json();
+        } catch {
+            navigationConfig = null;
+        }
 
         set({
             maps,
             selectedMapId: maps.length > 0 ? maps[0] : null,
             templates,
             performers,
+            navigationConfig,
+            navigationConfigVersion: Date.now(),
             selectedTemplateId: defaultTemplateId && defaultTemplateId.length > 0 ? defaultTemplateId : null,
+            obstacleTemplateId: obstacleTemplateId.length > 0 ? obstacleTemplateId : null,
         });
     },
 
@@ -293,7 +342,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const w = view.getInt32(0, true);
         const h = view.getInt32(4, true);
         const stride = view.getUint8(8);
-        if (stride !== 2) throw new Error(`Invalid terrain stride ${stride}`);
+        if (stride !== 4) throw new Error(`Invalid terrain stride ${stride}`);
         const data = new Uint8Array(buf.slice(9));
         loadMap(data, w, h);
         setLoading(false);
@@ -352,7 +401,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const view = new DataView(header.buffer);
         view.setInt32(0, terrain.widthChunks, true);
         view.setInt32(4, terrain.heightChunks, true);
-        view.setUint8(8, 2);
+        view.setUint8(8, 4);
         const blob = new Blob([header, terrain.serialize()], { type: 'application/octet-stream' });
 
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react`, {
@@ -363,7 +412,50 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         setLoading(false);
     },
 
+    loadNavigationConfig: async () => {
+        const { bridgeBaseUrl, selectedModId } = get();
+        if (!selectedModId) return;
+        const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/navigation-config`);
+        if (!res.ok) throw new Error(`Bridge error ${res.status}`);
+        const json = await res.json();
+        set({ navigationConfig: json, navigationConfigVersion: Date.now() });
+    },
+
+    saveNavigationConfig: async () => {
+        const { bridgeBaseUrl, selectedModId, navigationConfig } = get();
+        if (!selectedModId || !navigationConfig) return;
+        const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/navigation-config`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                agentProfiles: navigationConfig.agentProfiles ?? [],
+                navmesh: navigationConfig.navmesh ?? {},
+            }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok === false) {
+            throw new Error(json?.error ?? `Bridge error ${res.status}`);
+        }
+        set({
+            navigationConfig: {
+                ...navigationConfig,
+                paths: json?.paths,
+                validated: json?.validated,
+            },
+            navigationConfigVersion: Date.now(),
+        });
+    },
+
+    setNavigationConfig: (config) => set({ navigationConfig: config, navigationConfigVersion: Date.now() }),
+
     selectTemplate: (templateId) => set({ selectedTemplateId: templateId }),
+    setObstacleTemplate: (templateId) => set({ obstacleTemplateId: templateId }),
+    setObstacleShape: (shape) => set({ obstacleShape: shape }),
+    setObstacleRadiusCm: (radiusCm) => set({ obstacleRadiusCm: Math.max(1, Math.floor(radiusCm || 1)) }),
+    setObstacleHalfSizeCm: (halfWidthCm, halfHeightCm) => set({
+        obstacleHalfWidthCm: Math.max(1, Math.floor(halfWidthCm || 1)),
+        obstacleHalfHeightCm: Math.max(1, Math.floor(halfHeightCm || 1)),
+    }),
 
     placeEntityAt: (c, r) => set((state) => {
         if (!state.selectedTemplateId) return state;
@@ -374,6 +466,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             WorldPositionCm: { Value: { X: cm.xCm, Y: cm.yCm } },
         };
         const entity = { template: state.selectedTemplateId, position: { x: c, y: r }, overrides };
+        if (idx >= 0) next[idx] = entity;
+        else next.push(entity);
+        return { spawnEntities: next, selectedEntityIndex: idx >= 0 ? idx : next.length - 1, entitiesVersion: Date.now() };
+    }),
+
+    placeObstacleAt: (c, r) => set((state) => {
+        const template = state.obstacleTemplateId || state.selectedTemplateId;
+        if (!template) return state;
+        const next = state.spawnEntities.slice();
+        const idx = next.findIndex((e) => e.position.x === c && e.position.y === r);
+        const cm = hexToWorldCm(c, r);
+        const radius = Math.max(1, Math.floor(state.obstacleRadiusCm));
+        const halfWidth = Math.max(1, Math.floor(state.obstacleHalfWidthCm));
+        const halfHeight = Math.max(1, Math.floor(state.obstacleHalfHeightCm));
+        const intent = state.obstacleShape === 'Box'
+            ? {
+                shape: 'Box',
+                sinkPhysicsCollider: false,
+                sinkNavigationObstacle: true,
+                navRadiusCm: Math.max(halfWidth, halfHeight),
+                halfWidthCm: halfWidth,
+                halfHeightCm: halfHeight,
+                localOffsetXCm: 0,
+                localOffsetYCm: 0,
+            }
+            : {
+                shape: 'Circle',
+                sinkPhysicsCollider: false,
+                sinkNavigationObstacle: true,
+                navRadiusCm: radius,
+                radiusCm: radius,
+                localOffsetXCm: 0,
+                localOffsetYCm: 0,
+            };
+        const overrides: Record<string, any> = {
+            WorldPositionCm: { Value: { X: cm.xCm, Y: cm.yCm } },
+            ManifestationObstacleIntent2D: intent,
+        };
+        const entity = {
+            template,
+            position: { x: c, y: r },
+            overrides,
+        };
         if (idx >= 0) next[idx] = entity;
         else next.push(entity);
         return { spawnEntities: next, selectedEntityIndex: idx >= 0 ? idx : next.length - 1, entitiesVersion: Date.now() };

@@ -147,7 +147,7 @@ namespace Ludots.Core.Navigation.Terrain
             if (chunk.GetRamp(lx, ly)) flags |= LogicTerrainSurfaceFlags.Ramp;
             if (chunk.GetFlag(lx, ly)) flags |= LogicTerrainSurfaceFlags.Blocked;
             if (water > height) flags |= LogicTerrainSurfaceFlags.Water;
-            return new LogicTerrainCell(height, water, flags, chunk.GetBiome(lx, ly));
+            return new LogicTerrainCell(height, water, flags, chunk.GetExtraByte(lx, ly, 0));
         }
 
         public override bool TryGetCliffStraightenEdge(int col, int row, int edgeIndex, out bool value)
