@@ -212,10 +212,10 @@ export class ChunkRenderer {
         const group = new THREE.Group();
         group.name = `chunk_${cx}_${cy}`;
 
-        this.createMesh(this.pointPositions, 0xffffff, 'point', group);
-        this.createMesh(this.edgeFlatPos, 0x44aa44, 'line', group, 0.3); // Faint green for flat edges
-        this.createMesh(this.edgeRampPos, 0xaaaa44, 'line', group, 0.5);
-        this.createMesh(this.edgeCliffPos, 0xaa4444, 'line', group, 0.4); // Z-Verticals
+        this.createNamedMesh(this.pointPositions, 0xffffff, 'point', group, 'CellPoints');
+        this.createNamedMesh(this.edgeFlatPos, 0x44aa44, 'line', group, 'CellGrid', 0.3); // Faint green for flat edges
+        this.createNamedMesh(this.edgeRampPos, 0xaaaa44, 'line', group, 'TerrainRampEdges', 0.5);
+        this.createNamedMesh(this.edgeCliffPos, 0xaa4444, 'line', group, 'TerrainCliffEdges', 0.4); // Z-Verticals
         // this.createMesh(this.edgeCreasePos, 0xff3333, 'line', group, 1.0); // Crease Line (DISABLED as per user request)
 
         this.createFaceMesh(this.faceFlatPos, this.faceFlatColor, group);
@@ -369,6 +369,7 @@ export class ChunkRenderer {
         const maxR = this.store.heightChunks * chunkSize;
         const cellSizeM = this.metrics.cellSizeCm / 100.0;
         const dummy = new THREE.Object3D();
+        const chunkBorderPos: number[] = [];
 
         for (let r = startR; r < endR; r++) {
             for (let c = startC; c < endC; c++) {
@@ -396,13 +397,6 @@ export class ChunkRenderer {
                     this.waterFacePos.push(x0, w * hScale, z0, x1, w * hScale, z0, x1, w * hScale, z1);
                     this.waterFacePos.push(x0, w * hScale, z0, x1, w * hScale, z1, x0, w * hScale, z1);
                     this.stats.facesWater += 2;
-                }
-
-                if (this.isGridCellNavWalkable(c, r)) {
-                    const yOffset = 0.05;
-                    this.navMeshPos.push(x0, y + yOffset, z0, x1, y + yOffset, z0, x1, y + yOffset, z1);
-                    this.navMeshPos.push(x0, y + yOffset, z0, x1, y + yOffset, z1, x0, y + yOffset, z1);
-                    this.stats.facesNav += 2;
                 }
 
                 if (this.store.getVeg(c, r) > 0) {
@@ -434,8 +428,17 @@ export class ChunkRenderer {
 
         this.createFaceMesh(this.faceFlatPos, this.faceFlatColor, group);
         this.createWaterMesh(this.waterFacePos, group);
-        this.createNavMesh(this.navMeshPos, group);
-        this.createMesh(this.edgeFlatPos, 0x2f4f5f, 'line', group, 0.18);
+        this.createNamedMesh(this.edgeFlatPos, 0x9fb37c, 'line', group, 'CellGrid', 0.38);
+        const bx0 = startC * cellSizeM + offsetX;
+        const bx1 = Math.min(endC, maxC) * cellSizeM + offsetX;
+        const bz0 = startR * cellSizeM + offsetZ;
+        const bz1 = Math.min(endR, maxR) * cellSizeM + offsetZ;
+        const by = 0.08;
+        chunkBorderPos.push(bx0, by, bz0, bx1, by, bz0);
+        chunkBorderPos.push(bx1, by, bz0, bx1, by, bz1);
+        chunkBorderPos.push(bx1, by, bz1, bx0, by, bz1);
+        chunkBorderPos.push(bx0, by, bz1, bx0, by, bz0);
+        this.createNamedMesh(chunkBorderPos, 0x00e5ff, 'line', group, 'ChunkBorder', 0.85);
         this.addVegetationMeshes(group);
         return group;
     }
@@ -765,6 +768,10 @@ export class ChunkRenderer {
     
     // Original createMesh adapted to support single color fallback or ignore mode
     private createMesh(posArr: number[], color: number, mode: 'point'|'line'|'tri', parent: THREE.Group, opacity: number = 1.0) {
+        this.createNamedMesh(posArr, color, mode, parent, '', opacity);
+    }
+
+    private createNamedMesh(posArr: number[], color: number, mode: 'point'|'line'|'tri', parent: THREE.Group, name: string, opacity: number = 1.0) {
         if (posArr.length === 0) return;
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
@@ -782,6 +789,7 @@ export class ChunkRenderer {
             mesh = new THREE.LineSegments(geo, mat);
         } 
         // Tri mode handled by createFaceMesh now for colors
+        if (mesh && name.length > 0) mesh.name = name;
         parent.add(mesh);
     }
 

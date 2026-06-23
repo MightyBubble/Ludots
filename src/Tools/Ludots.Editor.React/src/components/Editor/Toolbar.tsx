@@ -75,7 +75,7 @@ export const Toolbar: React.FC = () => {
         activeLayer, setActiveLayer,
         terrain, loadMap, initMap,
         bridgeBaseUrl,
-        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, boardMetrics,
+        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, loadedModId, loadedMapId, loadedMapInfo, boardMetrics,
         refreshMods, selectMod, selectMap, loadSelectedMap, saveSelectedMap,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
         templates, selectedTemplateId, selectTemplate,
@@ -112,10 +112,34 @@ export const Toolbar: React.FC = () => {
     const [allowLargeBake, setAllowLargeBake] = React.useState(false);
     const navAbortRef = React.useRef<AbortController | null>(null);
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
-    const selectedNavReady = Boolean(selectedMapInfo?.canBake && mapId === selectedMapId);
+    const canvasMapLoaded = Boolean(selectedModId && selectedMapId && loadedModId === selectedModId && loadedMapId === selectedMapId);
+    const selectedNavReady = Boolean(canvasMapLoaded && loadedMapInfo?.canBake && mapId === loadedMapId);
     const navDisabledReason = !selectedMapId ? 'Select a map first.' :
-        mapId !== selectedMapId ? 'The bake mapId must match the selected map.' :
-        selectedMapInfo?.reason ?? 'Selected map is not bakeable.';
+        !canvasMapLoaded ? `Click Load Repo before baking '${selectedMapId}'.` :
+        mapId !== loadedMapId ? 'The bake mapId must match the loaded canvas map.' :
+        loadedMapInfo?.reason ?? 'Loaded map is not bakeable.';
+    const estimateStatusLabel = navEstimate?.budgetStatusText === 'ok'
+        ? 'Estimate OK'
+        : navEstimate?.budgetStatusText === 'large'
+            ? 'Large bake approval needed'
+            : 'Estimate rejected';
+    const estimateStatusHint = navEstimate?.budgetStatusText === 'large'
+        ? 'This is an approval gate, not a failure. The bake is above the safe auto-run budget.'
+        : navEstimate?.budgetStatusText === 'reject'
+            ? 'This bake exceeds the configured hard budget and will not run.'
+            : 'This bake is inside the safe auto-run budget.';
+    const formatEstimateBudgetDetail = (estimate: NavBakeEstimateReport) => {
+        const statusDetail = estimate.budgetStatusText === 'ok'
+            ? 'This bake can run directly.'
+            : estimate.budgetStatusText === 'large'
+                ? 'Review the estimate, then enable the large-bake approval checkbox before running.'
+                : 'This bake exceeds the hard budget and must use a profiled bake-farm flow.';
+        return [
+            statusDetail,
+            `Operations: ${estimate.bakeOperationCount.toLocaleString()}`,
+            `Work units: ${estimate.budgetWorkUnitCount.toLocaleString()}`,
+        ].join('\n');
+    };
 
     React.useEffect(() => {
         let cancelled = false;
@@ -142,7 +166,7 @@ export const Toolbar: React.FC = () => {
         setNavEstimate(null);
         setNavEstimateError(null);
         setAllowLargeBake(false);
-    }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, navigationConfigVersion]);
+    }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, loadedMapId, navigationConfigVersion]);
 
     const downloadBlob = (filename: string, blob: Blob) => {
         const url = URL.createObjectURL(blob);
@@ -439,11 +463,11 @@ export const Toolbar: React.FC = () => {
             setNavEstimate(estimate);
             setNavEstimateError(null);
             if (estimate.requiresExplicitLargeBakeApproval && !allowLargeBake) {
-                alert(`Bake 被预算门禁拦截：${estimate.budgetStatusText}\n\n${estimate.budgetMessage}\n\n请先查看估算结果，并勾选 Allow large bake。`);
+                alert(`Large bake approval needed\n\n${formatEstimateBudgetDetail(estimate)}`);
                 return;
             }
             if (estimate.budgetStatusText === 'reject') {
-                alert(`Bake 被拒绝：${estimate.budgetMessage}`);
+                alert(`Bake rejected\n\n${formatEstimateBudgetDetail(estimate)}`);
                 return;
             }
             if (estimate.budgetStatusText === 'large') {
@@ -608,6 +632,9 @@ export const Toolbar: React.FC = () => {
                         {selectedMapInfo.spatialType ?? 'No board'} | {selectedMapInfo.reason}
                     </div>
                 ) : null}
+                <div className={`text-[10px] px-1 ${canvasMapLoaded ? 'text-sky-300' : 'text-gray-500'}`}>
+                    Canvas: {canvasMapLoaded ? `${loadedMapId} (${boardMetrics.topology}, ${terrain.widthChunks}x${terrain.heightChunks} chunks)` : 'not loaded'}
+                </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => loadSelectedMap().catch((err: any) => alert(err?.message ?? err))}
@@ -925,9 +952,10 @@ export const Toolbar: React.FC = () => {
                                     : 'bg-red-950/40 border-red-700/70 text-red-100'
                         }`}>
                             <div className="flex items-center justify-between gap-2">
-                                <div className="font-semibold uppercase tracking-wide">{navEstimate.budgetStatusText}</div>
+                                <div className="font-semibold tracking-wide">{estimateStatusLabel}</div>
                                 <div>{navEstimate.estimatedSecondsLow.toFixed(1)}s - {navEstimate.estimatedSecondsHigh.toFixed(1)}s</div>
                             </div>
+                            <div className="mt-1 text-[11px] text-gray-200">{estimateStatusHint}</div>
                             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-gray-200">
                                 <div>tiles {navEstimate.targetTileCount}/{navEstimate.fullTileCount}</div>
                                 <div>ops {navEstimate.bakeOperationCount}</div>
@@ -942,7 +970,7 @@ export const Toolbar: React.FC = () => {
                             </div>
                             <div className="mt-2 font-mono text-[10px] text-gray-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
                             <div className="font-mono text-[10px] text-gray-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
-                            <div className="mt-2 text-gray-300">{navEstimate.budgetMessage}</div>
+                            <div className="mt-2 whitespace-pre-line text-gray-300">{formatEstimateBudgetDetail(navEstimate)}</div>
                             {navEstimate.profiles.length > 0 && (
                                 <div className="mt-2 max-h-24 overflow-auto rounded bg-black/20 p-2">
                                     {navEstimate.profiles.map((profile) => (
@@ -960,7 +988,7 @@ export const Toolbar: React.FC = () => {
                                         checked={allowLargeBake}
                                         onChange={(e) => setAllowLargeBake(e.target.checked)}
                                     />
-                                    <span>Allow large bake</span>
+                                    <span>I reviewed this estimate; allow large bake</span>
                                 </label>
                             )}
                         </div>

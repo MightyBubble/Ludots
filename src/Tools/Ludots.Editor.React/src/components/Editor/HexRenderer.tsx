@@ -36,6 +36,12 @@ export const HexRenderer: React.FC = () => {
     // because the animation loop closure captures the initial terrain instance.
     const terrainRef = useRef(terrain);
     const boardMetricsRef = useRef(boardMetrics);
+    const viewStateRef = useRef({
+        showGrid,
+        showChunkBorders,
+        showNavMesh,
+        hasBakedNavTiles: bakedNavTiles.size > 0,
+    });
     // Track initialization progress
     const totalInitChunksRef = useRef(0);
 
@@ -55,6 +61,18 @@ export const HexRenderer: React.FC = () => {
     useEffect(() => {
         boardMetricsRef.current = boardMetrics;
     }, [boardMetrics]);
+
+    useEffect(() => {
+        viewStateRef.current = {
+            showGrid,
+            showChunkBorders,
+            showNavMesh,
+            hasBakedNavTiles: bakedNavTiles.size > 0,
+        };
+        if (terrainGroupRef.current) {
+            applyChunkLayerVisibility(terrainGroupRef.current);
+        }
+    }, [showGrid, showChunkBorders, showNavMesh, bakedNavTiles.size]);
 
     // Interaction State
     const isDraggingRef = useRef(false);
@@ -367,11 +385,7 @@ export const HexRenderer: React.FC = () => {
             // Generate new
             const newChunk = renderer.generateChunk(cx, cy, 0, 0, 2.0); 
 
-            const fastNavVisible = showNavMesh && bakedNavTiles.size === 0;
-            newChunk.traverse((obj) => {
-                if (obj.name === "NavMesh") obj.visible = fastNavVisible;
-                if (obj.type === 'Points') obj.visible = !(showNavMesh && bakedNavTiles.size > 0);
-            });
+            applyChunkLayerVisibility(newChunk);
             group.add(newChunk);
 
             processedKeys.push(key);
@@ -523,6 +537,16 @@ export const HexRenderer: React.FC = () => {
                 return new THREE.Color().setHSL(hue, 0.72, 0.55);
             }
         }
+    };
+
+    const applyChunkLayerVisibility = (chunk: THREE.Object3D) => {
+        const view = viewStateRef.current;
+        const fastNavVisible = view.showNavMesh && !view.hasBakedNavTiles;
+        chunk.traverse((obj) => {
+            if (obj.name === 'NavMesh') obj.visible = fastNavVisible;
+            if (obj.name === 'CellGrid' || obj.name === 'CellPoints') obj.visible = view.showGrid;
+            if (obj.name === 'ChunkBorder') obj.visible = view.showChunkBorders;
+        });
     };
 
     const buildTilePortalLines = (tile: NavTile, mat: THREE.LineBasicMaterial) => {

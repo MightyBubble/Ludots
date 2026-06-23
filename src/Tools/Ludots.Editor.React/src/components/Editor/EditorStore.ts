@@ -47,6 +47,9 @@ export interface EditorState {
     mapInfos: MapInfo[];
     selectedMapId: string | null;
     selectedMapInfo: MapInfo | null;
+    loadedModId: string | null;
+    loadedMapId: string | null;
+    loadedMapInfo: MapInfo | null;
     mapConfig: any | null;
     templates: any[];
     performers: any[];
@@ -145,6 +148,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     mapInfos: [],
     selectedMapId: null,
     selectedMapInfo: null,
+    loadedModId: null,
+    loadedMapId: null,
+    loadedMapInfo: null,
     mapConfig: null,
     templates: [],
     performers: [],
@@ -166,7 +172,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     brushValue: 1,
     activeLayer: 'Snow', // Default layer
 
-    showGrid: false,
+    showGrid: true,
     showChunkBorders: true,
     showNavMesh: false, // Default Off
     navMeshBakeVersion: 0,
@@ -208,6 +214,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     initMap: (w, h, metrics) => set({
         terrain: new TerrainStore(w, h), 
         boardMetrics: normalizeBoardMetrics(metrics ?? get().boardMetrics),
+        loadedModId: null,
+        loadedMapId: null,
+        loadedMapInfo: null,
         minimapDirtyChunks: new Set(),
         navDirtyChunks: new Set(),
         bakedNavTiles: new Map(),
@@ -225,6 +234,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({ 
             terrain: newTerrain, 
             boardMetrics,
+            loadedModId: null,
+            loadedMapId: null,
+            loadedMapInfo: null,
             minimapDirtyChunks: allChunks,
             navDirtyChunks: new Set(),
             bakedNavTiles: new Map(),
@@ -255,6 +267,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             mapInfos: [],
             selectedMapId: null,
             selectedMapInfo: null,
+            loadedModId: null,
+            loadedMapId: null,
+            loadedMapInfo: null,
             mapConfig: null,
             templates: [],
             performers: [],
@@ -325,6 +340,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     selectMap: (mapId: string) => set((state) => ({
         selectedMapId: mapId,
         selectedMapInfo: state.mapInfos.find((m) => m.id === mapId) ?? null,
+        loadedModId: null,
+        loadedMapId: null,
+        loadedMapInfo: null,
         mapConfig: null,
         spawnEntities: [],
         selectedEntityIndex: null,
@@ -406,13 +424,21 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (stride !== 4) throw new Error(`Invalid terrain stride ${stride}`);
         const data = new Uint8Array(buf.slice(9));
         loadMap(data, w, h, boardMetrics);
+        set({
+            loadedModId: selectedModId,
+            loadedMapId: selectedMapId,
+            loadedMapInfo: selectedMapInfo,
+        });
         setLoading(false);
     },
 
     saveSelectedMap: async () => {
-        const { bridgeBaseUrl, selectedModId, selectedMapId, mapConfig, terrain, setLoading, spawnEntities, boardMetrics } = get();
+        const { bridgeBaseUrl, selectedModId, selectedMapId, loadedModId, loadedMapId, mapConfig, terrain, setLoading, spawnEntities, boardMetrics } = get();
         if (!selectedModId || !selectedMapId) return;
         if (!mapConfig) throw new Error('No MapConfig loaded.');
+        if (loadedModId !== selectedModId || loadedMapId !== selectedMapId) {
+            throw new Error(`Selected map '${selectedMapId}' is not loaded on the canvas. Click Load Repo before saving.`);
+        }
 
         setLoading(true, 'Saving MapConfig...', 20);
         mapConfig.Id = selectedMapId;
@@ -470,6 +496,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             body: blob,
         });
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
+        set({
+            loadedModId: selectedModId,
+            loadedMapId: selectedMapId,
+            loadedMapInfo: get().selectedMapInfo,
+        });
         setLoading(false);
     },
 
