@@ -78,13 +78,29 @@ namespace Ludots.Core.Presentation.Systems
                                     LogicTickStamp = tick,
                                     Kind = PresentationEventKind.EffectApplied,
                                     KeyId = ge.EffectTemplateId,
-                                    Source = ge.Actor,
-                                    Target = ge.Target,
+                                    Source = ge.Target,
+                                    Target = ge.Actor,
                                     Magnitude = ge.Delta,
                                     PayloadA = ge.AttributeId,
                                     PayloadB = ge.AbilitySlot,
                                 },
                                 nameof(GasPresentationEventKind.EffectApplied));
+                            break;
+                        case GasPresentationEventKind.EffectActivated:
+                            AddEventOrThrow(
+                                _stream,
+                                new PresentationEvent
+                                {
+                                    LogicTickStamp = tick,
+                                    Kind = PresentationEventKind.EffectActivated,
+                                    KeyId = ge.EffectTemplateId,
+                                    Source = ge.Target,
+                                    Target = ge.Actor,
+                                    Magnitude = ge.Delta,
+                                    PayloadA = ge.AttributeId,
+                                    PayloadB = ge.AbilitySlot,
+                                },
+                                nameof(GasPresentationEventKind.EffectActivated));
                             break;
                         case GasPresentationEventKind.CastCommitted:
                             AddEventOrThrow(

@@ -798,6 +798,76 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
+        public bool TryGetUniqueActiveScopedInstanceByScope(
+            int defId,
+            Entity owner,
+            int scopeId,
+            out Entity entity)
+        {
+            entity = Entity.Null;
+            if (owner == Entity.Null ||
+                scopeId <= 0 ||
+                !_byScope.TryGetValue(scopeId, out EntityBucket scoped) ||
+                scoped.Count == 0)
+            {
+                return false;
+            }
+
+            Entity match = Entity.Null;
+            int matchCount = 0;
+            for (int i = 0; i < scoped.Count; i++)
+            {
+                if (!TryMatchScopedInstance(scoped.GetAt(i), defId, owner, scopeId, out Entity candidate))
+                {
+                    continue;
+                }
+
+                match = candidate;
+                matchCount++;
+            }
+
+            if (matchCount == 0)
+            {
+                return false;
+            }
+
+            if (matchCount > 1)
+            {
+                throw new InvalidOperationException(
+                    $"DestroyScopedPerformer matched {matchCount} active performers for defId={defId}, owner={owner.Id}, scopeTag={scopeId}; scoped destroy requires a unique def/owner/scope match.");
+            }
+
+            entity = match;
+            return true;
+        }
+
+        public bool UpdateWorldPosition(Entity performer, in Vector3 worldPosition)
+        {
+            if (!(_world.IsAlive(performer) &&
+                  _world.Has<PerformerState>(performer) &&
+                  _world.Has<PerformerWorldPosition>(performer)))
+            {
+                return false;
+            }
+
+            ref PerformerWorldPosition position = ref _world.Get<PerformerWorldPosition>(performer);
+            if (position.Value == worldPosition)
+            {
+                return false;
+            }
+
+            position.Value = worldPosition;
+            if (_world.Has<PerformerWorldPlanePosition>(performer))
+            {
+                _world.Get<PerformerWorldPlanePosition>(performer).ValueCm = WorldPlane2D.VisualMetersToLogicCm(in worldPosition);
+            }
+
+            ref PerformerState state = ref _world.Get<PerformerState>(performer);
+            state.Version++;
+            MarkTransformDrivenEmitDirty(performer);
+            return true;
+        }
+
         private bool TryGetEntityAnchoredScopedInstance(int defId, Entity owner, int scopeId, out Entity entity)
         {
             entity = Entity.Null;
@@ -826,6 +896,16 @@ namespace Ludots.Core.Presentation.Performers
 
         private bool TryMatchEntityAnchoredScopedInstance(Entity performer, int defId, int scopeId, out Entity entity)
         {
+            if (!TryMatchScopedInstance(performer, defId, Entity.Null, scopeId, out entity, requireOwner: false))
+            {
+                return false;
+            }
+
+            return _world.Get<PerformerState>(entity).AnchorKind == PresentationAnchorKind.Entity;
+        }
+
+        private bool TryMatchScopedInstance(Entity performer, int defId, Entity owner, int scopeId, out Entity entity, bool requireOwner = true)
+        {
             entity = Entity.Null;
             if (!_world.IsAlive(performer) || !_world.Has<PerformerState>(performer))
             {
@@ -835,7 +915,7 @@ namespace Ludots.Core.Presentation.Performers
             ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
             if (state.DefId != defId ||
                 state.ScopeId != scopeId ||
-                state.AnchorKind != PresentationAnchorKind.Entity ||
+                (requireOwner && state.OwnerEntity != owner) ||
                 state.DefaultLifetime > 0f)
             {
                 return false;
@@ -3450,13 +3530,12 @@ namespace Ludots.Core.Presentation.Performers
 
             if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
             {
-                Vector3 position = _world.Get<PerformerWorldPosition>(performer).Value;
                 _scopedInstances[new ScopedOwnerKey(
                     state.DefId,
                     state.OwnerEntity,
                     state.ScopeId,
                     state.AnchorKind,
-                    position)] = performer;
+                    default)] = performer;
             }
         }
 
@@ -3472,15 +3551,12 @@ namespace Ludots.Core.Presentation.Performers
 
             if (state.ScopeId > 0 && state.DefaultLifetime <= 0f)
             {
-                Vector3 position = _world.Has<PerformerWorldPosition>(performer)
-                    ? _world.Get<PerformerWorldPosition>(performer).Value
-                    : Vector3.Zero;
                 _scopedInstances.Remove(new ScopedOwnerKey(
                     state.DefId,
                     state.OwnerEntity,
                     state.ScopeId,
                     state.AnchorKind,
-                    position));
+                    default));
             }
         }
 
@@ -4428,7 +4504,7 @@ namespace Ludots.Core.Presentation.Performers
                 _ownerVersion = owner.Version;
                 _scopeId = scopeId;
                 _anchorKind = anchorKind;
-                _worldPosition = anchorKind == PresentationAnchorKind.WorldPosition ? worldPosition : Vector3.Zero;
+                _worldPosition = Vector3.Zero;
             }
 
             public bool Equals(ScopedOwnerKey other)
@@ -4795,6 +4871,16 @@ namespace Ludots.Core.Presentation.Performers
                 }
 
                 Many!.CopyTo(target, 0);
+            }
+
+            public readonly Entity GetAt(int index)
+            {
+                if ((uint)index >= (uint)Count)
+                {
+                    return Entity.Null;
+                }
+
+                return Count == 1 ? Single : Many![index];
             }
         }
     }

@@ -159,10 +159,10 @@ namespace Ludots.Tests.GAS
             var registry = new AbilityDefinitionRegistry();
             registry.Register(TestAbilityId, new AbilityDefinition
             {
-                HasIndicator = true,
-                Indicator = new AbilityIndicatorConfig
+                HasTargeting = true,
+                Targeting = new AbilityTargetingConfig
                 {
-                    Range = rangeCm
+                    CastRangeCm = rangeCm
                 }
             });
             return registry;

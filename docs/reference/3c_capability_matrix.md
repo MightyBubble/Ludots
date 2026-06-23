@@ -65,7 +65,7 @@
 ### 未实现
 
 - [ ] 手柄 / Gamepad 支持
-- [ ] HoveredEntity 悬停检测
+- [ ] collection-backed hover 悬停检测
 - [ ] 输入录制 / 回放
 - [ ] 触屏适配
 

@@ -83,15 +83,15 @@ namespace CoreInputMod.Triggers
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterPresentationSystem(new SelectionBoxOverlaySystem(engine.World, engine.GlobalContext));
-            engine.RegisterPresentationSystem(new AbilityAimOverlayPresentationSystem(engine.World, engine.GlobalContext));
-            engine.RegisterPresentationSystem(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
+            engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
             var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimOverlay, SelectedMovePathOverlay, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimPresentation, SelectedMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
     }

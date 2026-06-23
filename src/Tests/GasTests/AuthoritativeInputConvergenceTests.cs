@@ -258,6 +258,47 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputRuntimeSystem_GroundPointerOverrideWinsUntilNextFixedSnapshot()
+        {
+            var (backend, handler) = BuildSelectionHandler();
+            var accumulator = new AuthoritativeInputAccumulator();
+            var snapshot = new FrozenInputActionReader();
+            var groundOverride = new AuthoritativeGroundPointerOverride();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.AuthoritativeGroundPointerOverride.Name] = groundOverride,
+            };
+
+            var system = new InputRuntimeSystem(globals, accumulator);
+
+            groundOverride.Set("Command", new Vector2(1320f, 720f));
+            backend.MousePosition = new Vector2(12f, 34f);
+            system.Update(1f / 120f);
+
+            backend.MousePosition = new Vector2(99f, 88f);
+            system.Update(1f / 120f);
+
+            accumulator.BuildTickSnapshot(snapshot);
+
+            Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out var worldCm), Is.True);
+            Assert.That(worldCm.X, Is.EqualTo(1320));
+            Assert.That(worldCm.Y, Is.EqualTo(720));
+
+            backend.MousePosition = new Vector2(99f, 88f);
+            system.Update(1f / 120f);
+            accumulator.BuildTickSnapshot(snapshot);
+
+            Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out worldCm), Is.True);
+            Assert.That(worldCm.X, Is.EqualTo(9900));
+            Assert.That(worldCm.Y, Is.EqualTo(8800));
+        }
+
+        [Test]
         public void InputRuntimeSystem_CapturesPointerButtonPressAndReleaseScreenPositionsWithinOneLogicTick()
         {
             var (backend, handler) = BuildSelectionHandler();

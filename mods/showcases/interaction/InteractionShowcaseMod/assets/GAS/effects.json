@@ -25,6 +25,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 520,
       "totalDurationTicks": 2,
       "overrideNavigation": true
@@ -117,6 +118,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 320,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -144,7 +146,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Arcweaver.Guarding"
+      "tag": "State.Arcweaver.Guarding",
+      "sense": "Effective"
     }
   },
   {
@@ -228,6 +231,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 460,
       "totalDurationTicks": 10,
       "overrideNavigation": true
@@ -321,6 +325,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 300,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -348,7 +353,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Vanguard.IronWall"
+      "tag": "State.Vanguard.IronWall",
+      "sense": "Effective"
     }
   },
   {
@@ -363,7 +369,8 @@
       "kind": "BuiltinSpatial",
       "shape": "Rectangle",
       "halfWidth": 130,
-      "halfHeight": 260
+      "halfHeight": 260,
+      "rotation": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -416,6 +423,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 560,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -491,6 +499,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 320,
       "totalDurationTicks": 7,
       "overrideNavigation": true
@@ -518,7 +527,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Commander.ShieldNet"
+      "tag": "State.Commander.ShieldNet",
+      "sense": "Effective"
     }
   },
   {
@@ -578,7 +588,14 @@
       "range": 5200,
       "arcHeight": 0,
       "impactEffect": "Effect.Interaction.Stress.FireballHit",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.Interaction.Stress.FireballHit",
+      "presentationEffect": "Effect.Interaction.Stress.FireballHit",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {

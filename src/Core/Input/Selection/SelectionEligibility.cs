@@ -66,12 +66,12 @@ namespace Ludots.Core.Input.Selection
                 return true;
             }
 
-            if (!KnowledgeProjectionConsumer.TryResolveViewer(world, globals, viewer, out Entity resolvedViewer))
+            if (!TryResolveExplicitViewer(world, viewer, out Entity resolvedViewer))
             {
                 return false;
             }
 
-            return KnowledgeProjectionConsumer.CanReadPosition(
+            return KnowledgeProjectionConsumer.CanReadPositionForViewer(
                        world,
                        globals,
                        resolvedViewer,
@@ -98,18 +98,24 @@ namespace Ludots.Core.Input.Selection
                 return true;
             }
 
-            if (!KnowledgeProjectionConsumer.TryResolveViewer(world, globals, viewer, out Entity resolvedViewer))
+            if (!TryResolveExplicitViewer(world, viewer, out Entity resolvedViewer))
             {
                 return false;
             }
 
-            return KnowledgeProjectionConsumer.CanReadPosition(
+            return KnowledgeProjectionConsumer.CanReadPositionForViewer(
                 world,
                 globals,
                 resolvedViewer,
                 candidate,
                 requiredPosition,
                 out _);
+        }
+
+        private static bool TryResolveExplicitViewer(World world, Entity viewer, out Entity resolvedViewer)
+        {
+            resolvedViewer = viewer;
+            return viewer != Entity.Null && world.IsAlive(viewer);
         }
     }
 }

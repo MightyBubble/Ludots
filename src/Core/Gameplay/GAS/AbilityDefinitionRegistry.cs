@@ -1,4 +1,3 @@
-using System.Numerics;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
@@ -60,32 +59,10 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 
-    /// <summary>
-    /// Visual indicator configuration for an ability (range circles, cones, etc.).
-    /// </summary>
-    public struct AbilityIndicatorPreviewConfig
+    public struct AbilityTargetingConfig
     {
-        public string PerformerId;
-        public float ScaleX;
-        public float ScaleY;
-        public float ScaleZ;
-        public float OffsetY;
-
-        public readonly bool IsEnabled => !string.IsNullOrWhiteSpace(PerformerId);
-    }
-
-    public struct AbilityIndicatorConfig
-    {
-        public TargetShape Shape;
-        public float Range;              // cast range (centimeters)
-        public float Radius;             // AOE radius (centimeters)
-        public float InnerRadius;        // ring inner radius (centimeters)
-        public float Angle;              // cone half-angle (radians)
-        public Vector4 ValidColor;       // color when target is valid
-        public Vector4 InvalidColor;     // color when out of range / invalid
-        public Vector4 RangeCircleColor; // range circle fill color
-        public bool ShowRangeCircle;     // whether to show the cast range circle
-        public AbilityIndicatorPreviewConfig Preview;
+        public float CastRangeCm;
+        public int ImpactEffectTemplateId;
     }
 
     /// <summary>
@@ -134,8 +111,8 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityToggleSpec ToggleSpec;
 
         // 鈹€鈹€ Presentation metadata 鈹€鈹€
-        public bool HasIndicator;
-        public AbilityIndicatorConfig Indicator;
+        public bool HasTargeting;
+        public AbilityTargetingConfig Targeting;
         public bool HasPresentation;
         public AbilityPresentationConfig? Presentation;
         public bool HasInputBindingOverride;
@@ -265,4 +242,3 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
-

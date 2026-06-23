@@ -784,7 +784,31 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            if (asset.AssetKind == AssetKind.GroundOverlay)
+            {
+                CollectGroundOverlayParams(floatParams);
+            }
+
             CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
+        }
+
+        private static void CollectGroundOverlayParams(System.Collections.Generic.HashSet<int> floatParams)
+        {
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayRadius);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayInnerRadius);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayAngle);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayRotation);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillR);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillG);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillB);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayFillA);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderR);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderG);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderB);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderA);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderWidth);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayLength);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayWidth);
         }
 
         private static void CollectMaterialCustomDataParams(

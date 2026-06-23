@@ -54,8 +54,8 @@ namespace Ludots.Core.Input.Orders
 
     /// <summary>
     /// Callback fired when the system enters or exits aiming state (AimCast mode).
-    /// Consumers use this to show/hide indicators via IndicatorRequestBuffer.
-    /// The system itself has no knowledge of indicators; it only signals state changes.
+    /// Consumers use this to show/hide aim presentation.
+    /// The system itself has no knowledge of presentation; it only signals state changes.
     /// </summary>
     /// <param name="isAiming">True when entering aiming, false when exiting.</param>
     /// <param name="mapping">The mapping being aimed.</param>
@@ -63,7 +63,7 @@ namespace Ludots.Core.Input.Orders
 
     /// <summary>
     /// Callback fired each frame while aiming (AimCast mode) so the consumer can
-    /// update indicator position/shape. The system has no knowledge of indicators.
+    /// update aim presentation state. The system has no knowledge of presentation.
     /// </summary>
     /// <param name="mapping">The mapping currently being aimed.</param>
     public delegate void AimingUpdateHandler(InputOrderMapping mapping);
@@ -102,23 +102,23 @@ namespace Ludots.Core.Input.Orders
     public delegate bool SkillMappingOverrideProvider(Entity actor, InputOrderMapping mapping, out InputOrderMapping overrideMapping);
 
     /// <summary>
-    /// Callback fired each frame during vector aiming so the consumer can show
-    /// the origin-to-cursor line indicator. The system has no knowledge of indicators.
+    /// Callback fired each frame during vector aiming so the consumer can publish
+    /// origin-to-cursor aim preview state.
     /// </summary>
     /// <param name="mapping">The mapping being vector-aimed.</param>
     /// <param name="origin">The locked-in origin point (world cm).</param>
     /// <param name="cursor">Current cursor ground position (world cm).</param>
-    /// <param name="phase">Current phase of vector aiming.</param>
-    public delegate void VectorAimUpdateHandler(InputOrderMapping mapping, Vector3 origin, Vector3 cursor, VectorAimPhase phase);
+    /// <param name="slot">Current vector aim input slot.</param>
+    public delegate void VectorAimUpdateHandler(InputOrderMapping mapping, Vector3 origin, Vector3 cursor, VectorAimInputSlot slot);
 
     /// <summary>
-    /// Phase of a two-point vector aiming interaction (e.g. Viktor E, Rumble R).
+    /// Input slot of a two-point vector aiming interaction.
     /// </summary>
-    public enum VectorAimPhase : byte
+    public enum VectorAimInputSlot : byte
     {
-        /// <summary>Choosing the origin point. Indicator shows cast range circle.</summary>
+        /// <summary>Choosing the origin point.</summary>
         Origin = 0,
-        /// <summary>Origin is locked; dragging to set direction/endpoint. Indicator shows line.</summary>
+        /// <summary>Origin is locked; dragging to set direction/endpoint.</summary>
         Direction = 1,
     }
     
@@ -193,7 +193,7 @@ namespace Ludots.Core.Input.Orders
         private InputOrderMapping? _pressReleaseAimMapping;
         
         // Vector aim state (two-point targeting)
-        private VectorAimPhase _vectorAimPhase;
+        private VectorAimInputSlot _vectorAimSlot;
         private Vector3 _vectorAimOrigin;
         private bool _isVectorAiming;
 
@@ -224,8 +224,8 @@ namespace Ludots.Core.Input.Orders
         /// <summary>The currently active aiming mapping, including user overrides.</summary>
         public InputOrderMapping? CurrentAimingMapping => _aimingMapping;
 
-        /// <summary>The current vector aim phase. Valid only when <see cref="IsVectorAiming"/> is true.</summary>
-        public VectorAimPhase VectorAimPhase => _vectorAimPhase;
+        /// <summary>The current vector aim input slot. Valid only when <see cref="IsVectorAiming"/> is true.</summary>
+        public VectorAimInputSlot VectorAimSlot => _vectorAimSlot;
 
         /// <summary>The locked origin for vector aiming. Valid only during direction phase.</summary>
         public Vector3 VectorAimOrigin => _vectorAimOrigin;
@@ -450,7 +450,7 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case InteractionModeType.SmartCastWithIndicator:
-                    // Press -> enter aiming (show indicator)
+                    // Press -> enter aiming and publish aim preview.
                     // Release is handled in the aiming state.
                     EnterAimingState(actionId, mapping);
                     _smartCastWithIndicatorActive = true;
@@ -505,7 +505,7 @@ namespace Ludots.Core.Input.Orders
             if (mapping.SelectionType == OrderSelectionType.Vector)
             {
                 _isVectorAiming = true;
-                _vectorAimPhase = VectorAimPhase.Origin;
+                _vectorAimSlot = VectorAimInputSlot.Origin;
                 _vectorAimOrigin = default;
             }
             
@@ -522,7 +522,7 @@ namespace Ludots.Core.Input.Orders
             _aimingMapping = null;
             _smartCastWithIndicatorActive = false;
             _isVectorAiming = false;
-            _vectorAimPhase = VectorAimPhase.Origin;
+            _vectorAimSlot = VectorAimInputSlot.Origin;
             _vectorAimOrigin = default;
             _aimingStateChangedHandler?.Invoke(false, mapping);
         }
@@ -606,7 +606,7 @@ namespace Ludots.Core.Input.Orders
                     return;
                 }
                 
-                // Signal aiming update (for indicator refresh)
+                // Signal aiming update for presentation refresh.
                 _aimingUpdateHandler?.Invoke(_aimingMapping);
                 return;
             }
@@ -645,7 +645,7 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // Signal aiming update (for indicator refresh)
+            // Signal aiming update for presentation refresh.
             _aimingUpdateHandler?.Invoke(_aimingMapping);
         }
 
@@ -667,28 +667,28 @@ namespace Ludots.Core.Input.Orders
             Vector3 cursorPos = default;
             bool hasCursor = _groundPositionProvider != null && _groundPositionProvider(out cursorPos);
 
-            switch (_vectorAimPhase)
+            switch (_vectorAimSlot)
             {
-                case VectorAimPhase.Origin:
-                    // Signal update: show origin indicator (range circle at cursor)
+                case VectorAimInputSlot.Origin:
+                    // Signal update for origin-slot preview.
                     if (hasCursor)
                     {
-                        _vectorAimUpdateHandler?.Invoke(_aimingMapping!, cursorPos, cursorPos, VectorAimPhase.Origin);
+                        _vectorAimUpdateHandler?.Invoke(_aimingMapping!, cursorPos, cursorPos, VectorAimInputSlot.Origin);
                     }
                     
                     // Confirm origin with left-click
                     if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
                     {
                         _vectorAimOrigin = cursorPos;
-                        _vectorAimPhase = VectorAimPhase.Direction;
+                        _vectorAimSlot = VectorAimInputSlot.Direction;
                     }
                     break;
 
-                case VectorAimPhase.Direction:
+                case VectorAimInputSlot.Direction:
                     // Signal update: show line from origin to cursor
                     if (hasCursor)
                     {
-                        _vectorAimUpdateHandler?.Invoke(_aimingMapping!, _vectorAimOrigin, cursorPos, VectorAimPhase.Direction);
+                        _vectorAimUpdateHandler?.Invoke(_aimingMapping!, _vectorAimOrigin, cursorPos, VectorAimInputSlot.Direction);
                     }
                     
                     // Confirm direction with left-click -> build and submit vector order
@@ -711,7 +711,7 @@ namespace Ludots.Core.Input.Orders
                 Vector3 cursorPos = default;
                 if (_groundPositionProvider != null && _groundPositionProvider(out cursorPos))
                 {
-                    _vectorAimUpdateHandler?.Invoke(mapping, cursorPos, cursorPos, VectorAimPhase.Origin);
+                    _vectorAimUpdateHandler?.Invoke(mapping, cursorPos, cursorPos, VectorAimInputSlot.Origin);
                 }
 
                 return;
@@ -1433,5 +1433,3 @@ namespace Ludots.Core.Input.Orders
 
     }
 }
-
-

@@ -983,7 +983,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (engine.TryGetService(CoreServiceKeys.HoveredEntity, out Entity hovered) &&
+            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";

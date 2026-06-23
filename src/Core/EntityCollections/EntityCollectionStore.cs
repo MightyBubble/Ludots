@@ -72,6 +72,27 @@ namespace Ludots.Core.EntityCollections
         public int CollectionCount => _collections.ActiveCount;
         public int RowCapacity => _rowEntities.Length;
 
+        public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < _active.Length && written < destination.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                destination[written++] = new EntityCollectionHandle(slot, _revisions[slot]);
+            }
+
+            return written;
+        }
+
         public EntityCollectionHandle Replace(
             Entity owner,
             in EntityCollectionDescriptor descriptor,

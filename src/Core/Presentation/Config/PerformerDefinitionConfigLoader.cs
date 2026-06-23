@@ -33,6 +33,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAnimationProfileId;
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveSelectionSetKeyId;
+        private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
 
         public PerformerDefinitionConfigLoader(
@@ -48,7 +49,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveAnimationProfileId = null,
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
             Func<string, int> resolveSelectionSetKeyId = null,
-            Func<string, int> resolveInstancedBatchAssetId = null)
+            Func<string, int> resolveInstancedBatchAssetId = null,
+            Func<string, int> resolveEntityCollectionKeyId = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -62,6 +64,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveSelectionSetKeyId = resolveSelectionSetKeyId ?? (_ => 0);
+            _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
         }
 
@@ -531,8 +534,21 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.ProjectileSpawned => ResolveRequired(_resolveEffectTemplateId(key), kind, "effect template", key),
                 PresentationEventKind.TagEffectiveChanged => TagRegistry.Register(key),
                 PresentationEventKind.GameplayEvent => TagRegistry.Register(key),
+                PresentationEventKind.EffectApplied => ResolveRequired(_resolveEffectTemplateId(key), kind, "effect template", key),
+                PresentationEventKind.EffectActivated => ResolveRequired(_resolveEffectTemplateId(key), kind, "effect template", key),
+                PresentationEventKind.CastCommitted => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
+                PresentationEventKind.CastFailed => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
                 PresentationEventKind.SelectionMemberAdded => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
                 PresentationEventKind.SelectionMemberRemoved => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
+                PresentationEventKind.EntityCollectionMemberAdded => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
+                PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
+                PresentationEventKind.AbilityAimBegun => TagRegistry.Register(key),
+                PresentationEventKind.AbilityAimSlotAdvanced => TagRegistry.Register(key),
+                PresentationEventKind.AbilityAimUpdated => TagRegistry.Register(key),
+                PresentationEventKind.AbilityAimEnded => TagRegistry.Register(key),
+                PresentationEventKind.MovePathBegun => TagRegistry.Register(key),
+                PresentationEventKind.MovePathUpdated => TagRegistry.Register(key),
+                PresentationEventKind.MovePathEnded => TagRegistry.Register(key),
                 _ => throw new InvalidOperationException($"Presentation event kind '{kind}' does not support string key '{key}'."),
             };
         }
@@ -559,6 +575,8 @@ namespace Ludots.Core.Presentation.Config
             PerformerCommandValueSource valueSource = ParseCommandValueSource(obj, commandKind, context);
             int paramGraphProgramId = ParseCommandParamGraphProgramId(obj, commandKind, valueSource, context);
             int performerDefinitionId = ParseCommandDefinitionId(obj, commandKind, context);
+            bool hasVectorSources = HasCommandVectorSources(obj);
+            bool hasParamPayload = HasCommandParamPayload(obj, commandKind);
             return new PerformerCommand
             {
                 CommandKind = commandKind,
@@ -566,19 +584,80 @@ namespace Ludots.Core.Presentation.Config
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(obj["scopeTag"]),
                 ScopeSource = ParseCommandScopeSource(obj, commandKind, context),
-                ParamKey = commandKind == PerformerCommandKind.SetParam
+                OwnerSource = ParseCommandOwnerSource(obj, commandKind, context),
+                UseEventPosition = ParseCommandUseEventPosition(obj, commandKind, context),
+                HasParamPayload = hasParamPayload,
+                ParamKey = commandKind == PerformerCommandKind.SetParam || hasParamPayload
                     ? ParseRequiredParamKey(obj["paramKey"], "Performer command paramKey")
                     : ParseOptionalCommandParamKey(obj["paramKey"], "Performer command paramKey"),
                 ParamLane = paramLane,
                 ParamValue = ParseCommandParamValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
                 IntValue = ParseCommandIntValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
-                VectorValue = ParseCommandVectorValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
+                VectorValue = ParseCommandVectorValue(obj, commandKind, paramLane, valueSource, hasVectorSources, paramGraphProgramId, context),
                 ValueSource = valueSource,
+                VectorXSource = ParseCommandVectorSource(obj["vectorXSource"], commandKind, paramLane, hasVectorSources, $"{context}.vectorXSource"),
+                VectorYSource = ParseCommandVectorSource(obj["vectorYSource"], commandKind, paramLane, hasVectorSources, $"{context}.vectorYSource"),
+                VectorZSource = ParseCommandVectorSource(obj["vectorZSource"], commandKind, paramLane, hasVectorSources, $"{context}.vectorZSource"),
+                VectorWSource = ParseCommandVectorSource(obj["vectorWSource"], commandKind, paramLane, hasVectorSources, $"{context}.vectorWSource"),
                 ParamGraphProgramId = paramGraphProgramId,
                 TargetBehaviorSlot = commandKind is PerformerCommandKind.ActivateBehavior or PerformerCommandKind.DeactivateBehavior
                     ? ParseRequiredBehaviorSlot(obj["targetBehaviorSlot"], "Performer command targetBehaviorSlot")
                     : ParseOptionalBehaviorSlot(obj["targetBehaviorSlot"], "Performer command targetBehaviorSlot"),
             };
+        }
+
+        private static bool HasCommandParamPayload(JsonObject obj, PerformerCommandKind commandKind)
+        {
+            if (commandKind == PerformerCommandKind.SetParam)
+            {
+                return true;
+            }
+
+            if (obj["paramKey"] == null &&
+                obj["paramLane"] == null &&
+                obj["valueSource"] == null &&
+                obj["paramValue"] == null &&
+                obj["intValue"] == null &&
+                obj["vectorValue"] == null &&
+                obj["paramGraphProgramId"] == null &&
+                obj["vectorXSource"] == null &&
+                obj["vectorYSource"] == null &&
+                obj["vectorZSource"] == null &&
+                obj["vectorWSource"] == null)
+            {
+                return false;
+            }
+
+            if (commandKind != PerformerCommandKind.CreatePerformer)
+            {
+                throw new InvalidOperationException($"{nameof(PerformerCommand)} param payload fields are only valid for CreatePerformer and SetParam commands.");
+            }
+
+            return true;
+        }
+
+        private static PerformerCommandEntitySource ParseCommandOwnerSource(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            string context)
+        {
+            JsonNode? node = obj["ownerSource"];
+            if (node == null)
+            {
+                return PerformerCommandEntitySource.EventSource;
+            }
+
+            if (commandKind is not (
+                    PerformerCommandKind.CreatePerformer or
+                    PerformerCommandKind.SetParam or
+                    PerformerCommandKind.DestroyScopedPerformer or
+                    PerformerCommandKind.DestroyPerformerScope))
+            {
+                throw new InvalidOperationException(
+                    $"{context}.ownerSource is only valid for scoped performer commands.");
+            }
+
+            return ParseRequiredEnum<PerformerCommandEntitySource>(node, $"{context}.ownerSource");
         }
 
         private static PerformerCommandScopeSource ParseCommandScopeSource(
@@ -587,6 +666,13 @@ namespace Ludots.Core.Presentation.Config
             string context)
         {
             JsonNode? node = obj["scopeSource"];
+            if (commandKind == PerformerCommandKind.SetParam &&
+                obj["definitionId"] != null &&
+                node == null)
+            {
+                throw new InvalidOperationException($"{context}.scopeSource is required for scoped SetParam commands with definitionId.");
+            }
+
             if (CommandRequiresScopeSource(commandKind) || node != null)
             {
                 return ParseRequiredEnum<PerformerCommandScopeSource>(node, $"{context}.scopeSource");
@@ -595,10 +681,29 @@ namespace Ludots.Core.Presentation.Config
             return PerformerCommandScopeSource.Fixed;
         }
 
+        private static bool ParseCommandUseEventPosition(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            string context)
+        {
+            JsonNode? node = obj["useEventPosition"];
+            if (node == null)
+            {
+                return false;
+            }
+
+            if (commandKind is not (PerformerCommandKind.CreatePerformer or PerformerCommandKind.SetParam or PerformerCommandKind.DestroyScopedPerformer))
+            {
+                throw new InvalidOperationException($"{context}.useEventPosition is only valid for CreatePerformer, SetParam, and DestroyScopedPerformer commands.");
+            }
+
+            return ParseRequiredBool(node, $"{context}.useEventPosition");
+        }
+
         private static ParamLane ParseCommandParamLane(JsonObject obj, PerformerCommandKind commandKind, string context)
         {
             JsonNode? node = obj["paramLane"];
-            if (commandKind == PerformerCommandKind.SetParam || node != null)
+            if (commandKind == PerformerCommandKind.SetParam || HasCommandParamPayload(obj, commandKind))
             {
                 return ParseRequiredEnum<ParamLane>(node, $"{context}.paramLane");
             }
@@ -612,7 +717,7 @@ namespace Ludots.Core.Presentation.Config
             string context)
         {
             JsonNode? node = obj["valueSource"];
-            if (commandKind == PerformerCommandKind.SetParam || node != null)
+            if (commandKind == PerformerCommandKind.SetParam || HasCommandParamPayload(obj, commandKind))
             {
                 return ParseRequiredEnum<PerformerCommandValueSource>(node, $"{context}.valueSource");
             }
@@ -632,9 +737,9 @@ namespace Ludots.Core.Presentation.Config
                 return 0;
             }
 
-            if (commandKind != PerformerCommandKind.SetParam)
+            if (commandKind is not (PerformerCommandKind.SetParam or PerformerCommandKind.CreatePerformer))
             {
-                throw new InvalidOperationException($"{context}.paramGraphProgramId is only valid for SetParam commands.");
+                throw new InvalidOperationException($"{context}.paramGraphProgramId is only valid for CreatePerformer and SetParam commands.");
             }
 
             if (valueSource != PerformerCommandValueSource.Fixed)
@@ -662,7 +767,7 @@ namespace Ludots.Core.Presentation.Config
             JsonNode? node = obj["paramValue"];
             if (node == null)
             {
-                if (commandKind == PerformerCommandKind.SetParam &&
+                if ((commandKind == PerformerCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
                     valueSource == PerformerCommandValueSource.Fixed &&
                     lane == ParamLane.Float &&
                     paramGraphProgramId == 0)
@@ -687,7 +792,7 @@ namespace Ludots.Core.Presentation.Config
             JsonNode? node = obj["intValue"];
             if (node == null)
             {
-                if (commandKind == PerformerCommandKind.SetParam &&
+                if ((commandKind == PerformerCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
                     valueSource == PerformerCommandValueSource.Fixed &&
                     lane == ParamLane.Int &&
                     paramGraphProgramId == 0)
@@ -706,15 +811,17 @@ namespace Ludots.Core.Presentation.Config
             PerformerCommandKind commandKind,
             ParamLane lane,
             PerformerCommandValueSource valueSource,
+            bool hasVectorSources,
             int paramGraphProgramId,
             string context)
         {
             JsonNode? node = obj["vectorValue"];
             if (node == null)
             {
-                if (commandKind == PerformerCommandKind.SetParam &&
+                if ((commandKind == PerformerCommandKind.SetParam || HasCommandParamPayload(obj, commandKind)) &&
                     lane == ParamLane.Vector &&
-                    paramGraphProgramId == 0)
+                    paramGraphProgramId == 0 &&
+                    !hasVectorSources)
                 {
                     if (valueSource != PerformerCommandValueSource.Fixed)
                     {
@@ -728,6 +835,39 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredVector4(node, $"{context}.vectorValue");
+        }
+
+        private static bool HasCommandVectorSources(JsonObject obj)
+        {
+            return obj["vectorXSource"] != null ||
+                   obj["vectorYSource"] != null ||
+                   obj["vectorZSource"] != null ||
+                   obj["vectorWSource"] != null;
+        }
+
+        private static PerformerCommandValueSource ParseCommandVectorSource(
+            JsonNode? node,
+            PerformerCommandKind commandKind,
+            ParamLane lane,
+            bool hasVectorSources,
+            string context)
+        {
+            if (node == null)
+            {
+                if (hasVectorSources)
+                {
+                    throw new InvalidOperationException($"{context} is required when any vector source is declared.");
+                }
+
+                return PerformerCommandValueSource.Fixed;
+            }
+
+            if (commandKind is not (PerformerCommandKind.SetParam or PerformerCommandKind.CreatePerformer) || lane != ParamLane.Vector)
+            {
+                throw new InvalidOperationException($"{context} is only valid for Vector CreatePerformer and SetParam commands.");
+            }
+
+            return ParseRequiredEnum<PerformerCommandValueSource>(node, context);
         }
 
         private static bool CommandRequiresScopeSource(PerformerCommandKind commandKind)
@@ -747,8 +887,13 @@ namespace Ludots.Core.Presentation.Config
 
             if (node != null)
             {
+                if (commandKind == PerformerCommandKind.SetParam)
+                {
+                    return ResolveRequiredPerformerDefinitionId(node, $"{context}.definitionId");
+                }
+
                 throw new InvalidOperationException(
-                    $"{context}.definitionId is only valid for CreatePerformer and DestroyScopedPerformer commands.");
+                    $"{context}.definitionId is only valid for CreatePerformer, SetParam, and DestroyScopedPerformer commands.");
             }
 
             return 0;
@@ -1071,7 +1216,8 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < rules.Length; i++)
             {
                 ref readonly PerformerRule rule = ref rules[i];
-                if (!CommandRequiresDefinitionId(rule.Command.CommandKind))
+                if (!CommandRequiresDefinitionId(rule.Command.CommandKind) &&
+                    rule.Command.PerformerDefinitionId <= 0)
                 {
                     continue;
                 }
@@ -2439,6 +2585,16 @@ namespace Ludots.Core.Presentation.Config
             if (node is not JsonValue value || !value.TryGetValue<int>(out int parsed))
             {
                 throw new InvalidOperationException($"{context} requires an explicit integer field.");
+            }
+
+            return parsed;
+        }
+
+        private static bool ParseRequiredBool(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<bool>(out bool parsed))
+            {
+                throw new InvalidOperationException($"{context} requires an explicit boolean field.");
             }
 
             return parsed;

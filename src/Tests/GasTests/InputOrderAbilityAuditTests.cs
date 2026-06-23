@@ -266,11 +266,12 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecLoader_CompileAbility_ParsesToggleSpecAndIndicator()
+        public void AbilityExecLoader_CompileAbility_ParsesToggleSpecAndTargeting()
         {
             TagRegistry.Clear();
             EffectTemplateIdRegistry.Clear();
             EffectTemplateIdRegistry.Register("Effect.Toggle.GuardAura");
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
 
             var obj = JsonNode.Parse(
                 """
@@ -291,15 +292,9 @@ namespace Ludots.Tests.GAS
                       ]
                     }
                   },
-                  "indicator": {
-                    "shape": "Ring",
-                    "range": 620,
-                    "radius": 180,
-                    "innerRadius": 90,
-                    "angleDeg": 45,
-                    "showRangeCircle": true,
-                    "validColor": "#33CC66AA",
-                    "invalidColor": [1.0, 0.2, 0.2, 0.5]
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
                   }
                 }
                 """)!.AsObject();
@@ -314,13 +309,74 @@ namespace Ludots.Tests.GAS
                 That(def.ToggleSpec.ActiveEffectTemplateIds[0], Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Toggle.GuardAura")));
             }
 
-            That(def.HasIndicator, Is.True);
-            That(def.Indicator.Shape, Is.EqualTo(TargetShape.Ring));
-            That(def.Indicator.Range, Is.EqualTo(620f));
-            That(def.Indicator.Radius, Is.EqualTo(180f));
-            That(def.Indicator.InnerRadius, Is.EqualTo(90f));
-            That(def.Indicator.Angle, Is.EqualTo(MathF.PI / 4f).Within(0.0001f));
-            That(def.Indicator.ShowRangeCircle, Is.True);
+            That(def.HasTargeting, Is.True);
+            That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
+            That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedIndicatorField()
+        {
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "indicator": {
+                    "shape": "Ring",
+                    "radius": 180
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyIndicator", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTargetingAimVisualField()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact",
+                    "aimVisual": {
+                      "areaPerformerId": "performer.aim.area"
+                    }
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyAimVisual", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'targeting.aimVisual' is removed"));
+        }
+
+        [Test]
+        public void AbilityExecLoader_CompileAbility_RejectsRemovedTopLevelPreviewPerformerField()
+        {
+            EffectTemplateIdRegistry.Clear();
+            EffectTemplateIdRegistry.Register("Effect.Guard.Impact");
+            var obj = JsonNode.Parse(
+                """
+                {
+                  "previewPerformerId": "performer.aim.preview",
+                  "targeting": {
+                    "castRangeCm": 620,
+                    "impactEffect": "Effect.Guard.Impact"
+                  }
+                }
+                """)!.AsObject();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
+
+            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
         }
 
         [Test]
@@ -1125,6 +1181,3 @@ namespace Ludots.Tests.GAS
 
     }
 }
-
-
-

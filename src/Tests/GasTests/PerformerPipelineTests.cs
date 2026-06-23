@@ -650,6 +650,76 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void DestroyScopedPerformerCommand_DestroysUniqueScopedWorldPositionInstanceWithoutEventPosition()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.world_scope_destroy", new PerformerDefinition
+            {
+                DefaultLifetime = -1f,
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 91,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.WorldPosition,
+                Position = new Vector3(3f, 0.03f, 0f),
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+            _commands.Clear();
+
+            Assert.That(_instances.ActiveCount, Is.EqualTo(1));
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.DestroyScopedPerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 91,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+
+            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CreatePerformerCommand_AppliesInitialParamPayloadToCreatedInstance()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.initial_param", new PerformerDefinition
+            {
+                DefaultLifetime = 1f,
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 9,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+                HasParamPayload = true,
+                ParamKey = WellKnownPerformerParamKeys.TextValue0,
+                ParamLane = ParamLane.Float,
+                ParamValue = -33f,
+            });
+
+            TickAndFlush(0.016f);
+
+            Entity performer = Entity.Null;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(_instances.ResolveFloat(performer, WellKnownPerformerParamKeys.TextValue0, 0f), Is.EqualTo(-33f).Within(0.001f));
+        }
+
+        [Test]
         public void CreatePerformerCommand_WithParentHandle_LinksChildAndInheritsDefaults()
         {
             var owner = _world.Create();
@@ -815,11 +885,13 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void EffectApplied_ProjectedToStream()
         {
-            var actor = _world.Create();
+            var attacker = _world.Create();
+            var defender = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.EffectApplied,
-                Actor = actor,
+                Actor = attacker,
+                Target = defender,
                 Delta = -25f,
                 AttributeId = 1,
                 EffectTemplateId = 10,
@@ -840,11 +912,52 @@ namespace Ludots.Tests.Presentation
                 Assert.That(span[i].Magnitude, Is.EqualTo(-25f));
                 Assert.That(span[i].PayloadA, Is.EqualTo(1));
                 Assert.That(span[i].KeyId, Is.EqualTo(10));
+                Assert.That(span[i].Source, Is.EqualTo(defender));
+                Assert.That(span[i].Target, Is.EqualTo(attacker));
                 found = true;
                 break;
             }
 
             Assert.That(found, Is.True, "EffectApplied event not projected");
+        }
+
+        [Test]
+        public void EffectActivated_ProjectedToStream_ReceiverSide()
+        {
+            var attacker = _world.Create();
+            var defender = _world.Create();
+            _gasEvents.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.EffectActivated,
+                Actor = attacker,
+                Target = defender,
+                Delta = 1f,
+                AttributeId = 3,
+                EffectTemplateId = 12,
+            });
+
+            _projection.Update(0.016f);
+
+            var span = _stream.GetSpan();
+            Assert.That(span.Length, Is.GreaterThanOrEqualTo(1));
+            bool found = false;
+            for (int i = 0; i < span.Length; i++)
+            {
+                if (span[i].Kind != PresentationEventKind.EffectActivated)
+                {
+                    continue;
+                }
+
+                Assert.That(span[i].Magnitude, Is.EqualTo(1f));
+                Assert.That(span[i].PayloadA, Is.EqualTo(3));
+                Assert.That(span[i].KeyId, Is.EqualTo(12));
+                Assert.That(span[i].Source, Is.EqualTo(defender));
+                Assert.That(span[i].Target, Is.EqualTo(attacker));
+                found = true;
+                break;
+            }
+
+            Assert.That(found, Is.True, "EffectActivated event not projected receiver-side");
         }
 
         [Test]

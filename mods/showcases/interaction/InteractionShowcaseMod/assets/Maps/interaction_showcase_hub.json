@@ -1,5 +1,6 @@
 {
   "Id": "interaction_showcase_hub",
+  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
   "Tags": ["interaction.showcase", "interaction.showcase.hub"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
@@ -57,7 +58,7 @@
       "Template": "interaction_enemy_bruiser",
       "Overrides": {
         "Name": { "Value": "EnemyBruiserA" },
-        "WorldPositionCm": { "Value": { "X": 1770, "Y": 470 } }
+        "WorldPositionCm": { "Value": { "X": 1770, "Y": 630 } }
       }
     },
     {

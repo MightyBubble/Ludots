@@ -139,13 +139,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             lifetimeKind = ParseLifetimeKind(cfg.Lifetime, cfg.Id, relativePath);
             if (cfg.Duration != null)
             {
-                durationTicks = RequireInt(cfg.Duration.DurationTicks, cfg.Id, relativePath, "duration.durationTicks");
-                periodTicks = RequireInt(cfg.Duration.PeriodTicks, cfg.Id, relativePath, "duration.periodTicks");
-                clockId = ParseClockId(RequireString(cfg.Duration.ClockId, cfg.Id, relativePath, "duration.clockId"));
+                durationTicks = cfg.Duration.DurationTicks ?? 0;
+                periodTicks = cfg.Duration.PeriodTicks ?? 0;
+                if (!string.IsNullOrWhiteSpace(cfg.Duration.ClockId))
+                {
+                    clockId = ParseClockId(RequireString(cfg.Duration.ClockId, cfg.Id, relativePath, "duration.clockId"));
+                }
             }
             else
             {
-                if (lifetimeKind != EffectLifetimeKind.Instant)
+                if (lifetimeKind == EffectLifetimeKind.After)
                 {
                     throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' requires an explicit duration block.");
                 }
@@ -1122,15 +1125,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (desc.Kind == TargetResolverKind.BuiltinSpatial)
             {
                 desc.Spatial.Shape = ParseSpatialShape(RequireString(cfg.Shape, effectId, path, "targetQuery.shape"), effectId, path);
-                desc.Spatial.RadiusCm = RequireInt(cfg.Radius, effectId, path, "targetQuery.radius");
-                desc.Spatial.InnerRadiusCm = RequireInt(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius");
-                desc.Spatial.HalfAngleDeg = RequireInt(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle");
-                desc.Spatial.HalfWidthCm = RequireInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
-                desc.Spatial.HalfHeightCm = RequireInt(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight");
-                desc.Spatial.RotationDeg = RequireInt(cfg.Rotation, effectId, path, "targetQuery.rotation");
-                desc.Spatial.LengthCm = RequireInt(cfg.Length, effectId, path, "targetQuery.length");
+                switch (desc.Spatial.Shape)
+                {
+                    case SpatialShape.Circle:
+                        desc.Spatial.RadiusCm = RequireInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                        break;
+                    case SpatialShape.Cone:
+                        desc.Spatial.RadiusCm = RequireInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                        desc.Spatial.HalfAngleDeg = RequireInt(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle");
+                        break;
+                    case SpatialShape.Rectangle:
+                        desc.Spatial.HalfWidthCm = RequireInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
+                        desc.Spatial.HalfHeightCm = RequireInt(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight");
+                        desc.Spatial.RotationDeg = RequireInt(cfg.Rotation, effectId, path, "targetQuery.rotation");
+                        break;
+                    case SpatialShape.Line:
+                        desc.Spatial.LengthCm = RequireInt(cfg.Length, effectId, path, "targetQuery.length");
+                        desc.Spatial.HalfWidthCm = RequireInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
+                        break;
+                    case SpatialShape.Ring:
+                        desc.Spatial.RadiusCm = RequireInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                        desc.Spatial.InnerRadiusCm = RequireInt(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius");
+                        break;
+                }
             }
-            desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
+            else
+            {
+                desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
+            }
             return desc;
         }
 
@@ -1249,8 +1271,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
             else
             {
-                throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping.");
+                desc.ContextMapping = TargetResolverContextMapping.Default;
             }
             return desc;
         }
@@ -1319,7 +1340,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 };
 
                 int amount = RequireInt(cfg.Amount, effectId, path, $"grantedTags[{i}].amount");
-                int baseValue = RequireInt(cfg.Base, effectId, path, $"grantedTags[{i}].base");
+                int baseValue = 0;
+                if (formula == Components.TagContributionFormula.LinearPlusBase)
+                {
+                    baseValue = RequireInt(cfg.Base, effectId, path, $"grantedTags[{i}].base");
+                }
+                else if (cfg.Base.HasValue)
+                {
+                    baseValue = cfg.Base.Value;
+                }
                 result.Add(new Components.TagContribution
                 {
                     TagId = tagId,

@@ -12,12 +12,12 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -27,6 +27,7 @@ namespace ChampionSkillSandboxMod.Runtime
     {
         private static readonly QueryDescription StressSelectableQuery = new QueryDescription().WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
         private static readonly QueryDescription StressOrderBufferQuery = new QueryDescription().WithAll<Team, MapEntity, OrderBuffer>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
         private static readonly Vector4 SelectionPanelFill = new(0.05f, 0.08f, 0.11f, 0.88f);
         private static readonly Vector4 SelectionPanelBorder = new(0.41f, 0.74f, 0.89f, 0.95f);
         private static readonly Vector4 SelectionPanelTitle = new(0.94f, 0.83f, 0.47f, 1f);
@@ -35,9 +36,6 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private EntityCommandPanelHandle _focusPanelHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastPanelTarget = Entity.Null;
-        private Entity _selectionIndicatorTarget = Entity.Null;
-        private Entity _hoverIndicatorTarget = Entity.Null;
-        private Entity _aimHoverIndicatorTarget = Entity.Null;
         private Entity _teamBViewer = Entity.Null;
         private Entity _debugViewer = Entity.Null;
         private string _lastMapId = string.Empty;
@@ -46,6 +44,18 @@ namespace ChampionSkillSandboxMod.Runtime
         private readonly List<Entity> _teamAFormation = new();
         private readonly List<Entity> _teamBFormation = new();
         private readonly List<Entity> _teamBTargets = new();
+
+        public void PrepareInput(GameEngine engine)
+        {
+            if (!ChampionSkillSandboxIds.IsSandboxMap(engine.CurrentMapSession?.MapId.Value))
+            {
+                return;
+            }
+
+            EnsureMode(engine);
+            EnsureScenarioState(engine);
+            SyncSelectionViews(engine, drawOverlay: false);
+        }
 
         public Task HandleMapFocusedAsync(ScriptContext context)
         {
@@ -91,12 +101,10 @@ namespace ChampionSkillSandboxMod.Runtime
 
             EnsureMode(engine);
             EnsureScenarioState(engine);
-            SyncSelectionViews(engine);
+            SyncSelectionViews(engine, drawOverlay: true);
             ConsumeResetCameraRequest(engine);
             SyncCameraFollow(engine);
             SyncFocusPanel(engine);
-            SyncHoverIndicator(engine);
-            SyncAimHoverIndicator(engine);
         }
 
         private void EnsureScenarioState(GameEngine engine)
@@ -140,7 +148,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
         }
 
-        private void SyncSelectionViews(GameEngine engine)
+        private void SyncSelectionViews(GameEngine engine, bool drawOverlay)
         {
             SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
             Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
@@ -151,6 +159,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
             if (!ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value))
             {
+                PublishSelectableKnowledge(engine, playerViewer, aiViewer: Entity.Null, debugViewer: Entity.Null);
                 ApplySelectionViewChoice(engine, playerViewer, aiViewer: Entity.Null, debugViewer: Entity.Null);
                 return;
             }
@@ -163,9 +172,71 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             CollectStressSelectionState(engine);
+            PublishSelectableKnowledge(engine, playerViewer, _teamBViewer, _debugViewer);
             BindStressSelectionViews(engine, selection, playerViewer, _teamBViewer, _debugViewer);
             ApplySelectionViewChoice(engine, playerViewer, _teamBViewer, _debugViewer);
-            DrawStressSelectionOverlay(engine, selection);
+            if (drawOverlay)
+            {
+                DrawStressSelectionOverlay(engine, selection);
+            }
+        }
+
+        private static void PublishSelectableKnowledge(
+            GameEngine engine,
+            Entity playerViewer,
+            Entity aiViewer,
+            Entity debugViewer)
+        {
+            string activeMapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(activeMapId))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
+            var empty = KnowledgeIdMask256.Empty;
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            {
+                if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                UpsertLiveKnowledge(engine.World, knowledge, playerViewer, target, in empty, observedTick);
+                UpsertLiveKnowledge(engine.World, knowledge, aiViewer, target, in empty, observedTick);
+                UpsertLiveKnowledge(engine.World, knowledge, debugViewer, target, in empty, observedTick);
+            });
+        }
+
+        private static void UpsertLiveKnowledge(
+            World world,
+            KnowledgeProjectionStore knowledge,
+            Entity viewer,
+            Entity target,
+            in KnowledgeIdMask256 empty,
+            int observedTick)
+        {
+            if (viewer == Entity.Null || !world.IsAlive(viewer) || target == Entity.Null || !world.IsAlive(target))
+            {
+                return;
+            }
+
+            knowledge.Upsert(
+                viewer,
+                target,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    empty,
+                    empty,
+                    empty,
+                    viewer,
+                    observedTick,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 0));
         }
 
         private void CollectStressSelectionState(GameEngine engine)
@@ -362,6 +433,7 @@ namespace ChampionSkillSandboxMod.Runtime
             Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (engine.World.IsAlive(local))
             {
+                PublishLocalPlayerBinding(engine, local);
                 return local;
             }
 
@@ -370,10 +442,37 @@ namespace ChampionSkillSandboxMod.Runtime
                 : ResolveFirstControllableChampion(engine);
             if (resolved != Entity.Null)
             {
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = resolved;
+                PublishLocalPlayerBinding(engine, resolved);
             }
 
             return resolved;
+        }
+
+        private static void PublishLocalPlayerBinding(GameEngine engine, Entity localPlayer)
+        {
+            if (localPlayer == Entity.Null ||
+                !engine.World.IsAlive(localPlayer) ||
+                !engine.World.TryGet(localPlayer, out PlayerOwner owner) ||
+                owner.PlayerId <= 0)
+            {
+                return;
+            }
+
+            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
+                lookup == null ||
+                (lookup.TryGet(owner.PlayerId, out Entity existing) && existing != localPlayer))
+            {
+                lookup = new PlayerEntityLookup();
+                engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
+            }
+
+            if (!lookup.TryGet(owner.PlayerId, out _))
+            {
+                lookup.Register(owner.PlayerId, localPlayer);
+            }
+
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
         }
 
         private static void ApplyInitialTag(GameEngine engine, string entityName, string tagName)
@@ -549,7 +648,6 @@ namespace ChampionSkillSandboxMod.Runtime
             service.SetAnchor(_focusPanelHandle, ResolvePanelAnchor(engine));
             service.SetSize(_focusPanelHandle, ResolvePanelSize(engine));
             service.SetVisible(_focusPanelHandle, visible);
-            SyncSelectionIndicator(engine, visible ? target : Entity.Null);
         }
 
         private static EntityCommandPanelAnchor ResolvePanelAnchor(GameEngine engine)
@@ -776,9 +874,6 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void Disable(GameEngine engine)
         {
-            DestroySelectionIndicator(engine);
-            DestroyHoverIndicator(engine);
-
             if (_focusPanelHandle.IsValid &&
                 engine.GetService(CoreServiceKeys.EntityCommandPanelService) is IEntityCommandPanelService service)
             {
@@ -793,9 +888,6 @@ namespace ChampionSkillSandboxMod.Runtime
 
             _focusPanelHandle = EntityCommandPanelHandle.Invalid;
             _lastPanelTarget = Entity.Null;
-            _selectionIndicatorTarget = Entity.Null;
-            _hoverIndicatorTarget = Entity.Null;
-            _aimHoverIndicatorTarget = Entity.Null;
             _scenarioTagsApplied = false;
             _initialSelectionApplied = false;
             _lastMapId = string.Empty;
@@ -819,178 +911,6 @@ namespace ChampionSkillSandboxMod.Runtime
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);
             engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
             engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
-        }
-
-        private void SyncSelectionIndicator(GameEngine engine, Entity target)
-        {
-            SyncIndicator(
-                engine,
-                target,
-                ref _selectionIndicatorTarget,
-                ChampionSkillSandboxIds.SelectionIndicatorPerformerKey,
-                ChampionSkillSandboxIds.SelectionIndicatorScopeId);
-        }
-
-        private void DestroySelectionIndicator(GameEngine engine)
-        {
-            DestroyIndicator(engine, ChampionSkillSandboxIds.SelectionIndicatorScopeId);
-        }
-
-        private void SyncHoverIndicator(GameEngine engine)
-        {
-            SyncIndicator(
-                engine,
-                ResolveHoverIndicatorTarget(engine),
-                ref _hoverIndicatorTarget,
-                ChampionSkillSandboxIds.HoverIndicatorPerformerKey,
-                ChampionSkillSandboxIds.HoverIndicatorScopeId);
-        }
-
-        private void SyncAimHoverIndicator(GameEngine engine)
-        {
-            SyncIndicator(
-                engine,
-                ResolveAimHoverIndicatorTarget(engine),
-                ref _aimHoverIndicatorTarget,
-                ChampionSkillSandboxIds.HoverIndicatorPerformerKey,
-                ChampionSkillSandboxIds.AimHoverIndicatorScopeId);
-        }
-
-        private static Entity ResolveHoverIndicatorTarget(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) ||
-                hoveredObj is not Entity hovered ||
-                hovered == Entity.Null ||
-                !engine.World.IsAlive(hovered))
-            {
-                return Entity.Null;
-            }
-
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
-                ? current
-                : Entity.Null;
-            if (selected == hovered)
-            {
-                return Entity.Null;
-            }
-
-            return hovered;
-        }
-
-        private static Entity ResolveAimHoverIndicatorTarget(GameEngine engine)
-        {
-            if (engine.GetService(CoreServiceKeys.ActiveInputOrderMapping) is not InputOrderMappingSystem mapping ||
-                !mapping.IsAiming)
-            {
-                return Entity.Null;
-            }
-
-            Entity hovered = ResolveHoveredEntity(engine);
-            if (hovered == Entity.Null)
-            {
-                return Entity.Null;
-            }
-
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
-                ? current
-                : Entity.Null;
-            return selected == hovered ? Entity.Null : hovered;
-        }
-
-        private static Entity ResolveHoveredEntity(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) ||
-                hoveredObj is not Entity hovered ||
-                hovered == Entity.Null ||
-                !engine.World.IsAlive(hovered))
-            {
-                return Entity.Null;
-            }
-
-            return hovered;
-        }
-
-        private void DestroyHoverIndicator(GameEngine engine)
-        {
-            DestroyIndicator(engine, ChampionSkillSandboxIds.HoverIndicatorScopeId);
-        }
-
-        private void DestroyAimHoverIndicator(GameEngine engine)
-        {
-            DestroyIndicator(engine, ChampionSkillSandboxIds.AimHoverIndicatorScopeId);
-        }
-
-        private void SyncIndicator(
-            GameEngine engine,
-            Entity target,
-            ref Entity currentTarget,
-            string performerKey,
-            int scopeId)
-        {
-            if (currentTarget == target)
-            {
-                return;
-            }
-
-            PerformerCommandBuffer commands = RequirePerformerCommandBuffer(engine);
-            EnqueueDestroyPerformerScope(commands, scopeId);
-            if (target == Entity.Null)
-            {
-                currentTarget = Entity.Null;
-                return;
-            }
-
-            PerformerDefinitionRegistry performers = RequirePerformerDefinitionRegistry(engine);
-            int definitionId = performers.GetId(performerKey);
-            if (definitionId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Performer '{performerKey}' is required by ChampionSkillSandboxMod.");
-            }
-
-            EnqueuePerformerCommand(commands, new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.CreatePerformer,
-                PerformerDefinitionId = definitionId,
-                ScopeTag = scopeId,
-                Source = target,
-            });
-            currentTarget = target;
-        }
-
-        private static void DestroyIndicator(GameEngine engine, int scopeId)
-        {
-            EnqueueDestroyPerformerScope(RequirePerformerCommandBuffer(engine), scopeId);
-        }
-
-        private static PerformerCommandBuffer RequirePerformerCommandBuffer(GameEngine engine)
-        {
-            return engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
-                ?? throw new InvalidOperationException("ChampionSkillSandboxMod requires PerformerCommandBuffer.");
-        }
-
-        private static PerformerDefinitionRegistry RequirePerformerDefinitionRegistry(GameEngine engine)
-        {
-            return engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-                ?? throw new InvalidOperationException("ChampionSkillSandboxMod requires PerformerDefinitionRegistry.");
-        }
-
-        private static void EnqueueDestroyPerformerScope(PerformerCommandBuffer commands, int scopeId)
-        {
-            EnqueuePerformerCommand(commands, new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                ScopeTag = scopeId,
-            });
-        }
-
-        private static void EnqueuePerformerCommand(PerformerCommandBuffer commands, in PerformerCommand command)
-        {
-            if (!commands.TryAdd(in command))
-            {
-                throw new InvalidOperationException(
-                    $"ChampionSkillSandboxMod performer command buffer overflowed while enqueuing {command.CommandKind}.");
-            }
         }
     }
 }

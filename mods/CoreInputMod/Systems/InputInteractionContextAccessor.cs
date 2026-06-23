@@ -2,16 +2,20 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
-using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 
 namespace CoreInputMod.Systems
 {
@@ -104,6 +108,15 @@ namespace CoreInputMod.Systems
             return default;
         }
 
+        public Entity GetLocalPlayerEntityOrNull()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                   localObj is Entity local &&
+                   _world.IsAlive(local)
+                ? local
+                : Entity.Null;
+        }
+
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
@@ -154,26 +167,75 @@ namespace CoreInputMod.Systems
             return entities.Count > 0;
         }
 
-        public bool TryCreateAbilityIndicatorBridge(out AbilityIndicatorOverlayBridge bridge)
+        public bool TryGetHoveredEntity(out Entity entity)
         {
-            bridge = default!;
+            return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out entity);
+        }
+
+        public bool TryCreateAbilityAimPresentationRuntime(out AbilityAimPresentationRuntime runtime)
+        {
+            runtime = default!;
             if (!_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) ||
                 abilitiesObj is not AbilityDefinitionRegistry abilities ||
-                !_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var overlaysObj) ||
-                overlaysObj is not GroundOverlayBuffer overlays)
+                !_globals.TryGetValue(CoreServiceKeys.EffectTemplateRegistry.Name, out var effectsObj) ||
+                effectsObj is not EffectTemplateRegistry effects ||
+                !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
+                collectionsObj is not EntityCollectionStore collections ||
+                !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
+                spatialObj is not ISpatialQueryService spatialQueries ||
+                !_globals.TryGetValue(CoreServiceKeys.PresentationEventStream.Name, out var eventsObj) ||
+                eventsObj is not PresentationEventStream events)
             {
                 return false;
             }
 
-            _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var performerDefinitionsObj);
-            _globals.TryGetValue(CoreServiceKeys.PerformerEntityRuntime.Name, out var performerRuntimeObj);
-            bridge = new AbilityIndicatorOverlayBridge(
+            GameSession? session = _globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
+                                   sessionObj is GameSession resolvedSession
+                ? resolvedSession
+                : null;
+            GraphProgramRegistry? graphPrograms = _globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphProgramsObj) &&
+                                                   graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
+                ? resolvedGraphPrograms
+                : null;
+            GasGraphRuntimeApi? graphApi = null;
+            if (graphPrograms != null &&
+                _globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) &&
+                coordsObj is ISpatialCoordinateConverter spatialCoords &&
+                HasProductionGraphServices())
+            {
+                graphApi = GasGraphRuntimeApi.CreateProduction(
+                    _world,
+                    spatialQueries,
+                    spatialCoords,
+                    eventBus: null,
+                    effectRequests: null,
+                    _globals);
+            }
+
+            runtime = new AbilityAimPresentationRuntime(
                 _world,
                 abilities,
-                overlays,
-                performerDefinitionsObj as PerformerDefinitionRegistry,
-                performerRuntimeObj as PerformerEntityRuntime);
+                effects,
+                collections,
+                spatialQueries,
+                events,
+                session,
+                graphPrograms,
+                graphApi);
             return true;
+        }
+
+        private bool HasProductionGraphServices()
+        {
+            return _globals.ContainsKey(CoreServiceKeys.TagOps.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.RelationshipRuntime.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.RelationshipTypeRegistry.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.RelationshipMetricRegistry.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.RelationshipFlagRegistry.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.RelationshipReasonRegistry.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.TargetDispatchPresetRegistry.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.EntityCollectionStore.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.EntitySetQueryRuntime.Name);
         }
     }
 }

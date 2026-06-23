@@ -1322,6 +1322,37 @@ namespace Ludots.Tests.GAS
             That(second.Amount, Is.EqualTo(1));
         }
 
+        [Test]
+        public void GrantedTags_Loader_AllowsBaseOnlyForLinearPlusBase()
+        {
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var pipeline = CreateMinimalPipeline(
+                @"{
+                    ""id"": ""test_tags_without_base"",
+                    ""tags"": [""Test.Tags""],
+                    ""presetType"": ""None"",
+                    ""lifetime"": ""After"",
+                    ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
+                    ""grantedTags"": [
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
+                    ]
+                }");
+
+            var loader = new EffectTemplateLoader(pipeline, templates, conditions);
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
+
+            int tplId = EffectTemplateIdRegistry.GetId("test_tags_without_base");
+            That(tplId, Is.GreaterThan(0));
+            That(templates.TryGetRef(tplId, out int idx), Is.True);
+            ref readonly var tpl = ref templates.GetRef(idx);
+            That(tpl.GrantedTags.Count, Is.EqualTo(2));
+            That(tpl.GrantedTags.Get(0).Base, Is.EqualTo(0));
+            That(tpl.GrantedTags.Get(1).Base, Is.EqualTo(0));
+        }
+
         // ════════════════════════════════════════════════════════════════════
         //  9. Stack Config Parsing
         // ════════════════════════════════════════════════════════════════════

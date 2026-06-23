@@ -9,6 +9,7 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
+      "fixedDirectionDeg": 0,
       "totalDistanceCm": 440,
       "totalDurationTicks": 4,
       "overrideNavigation": true
@@ -26,6 +27,7 @@
       "speed": 2200,
       "range": 760,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
       "hitEffect": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
       "presentationEffect": "Effect.Champion.Ezreal.ArcaneShiftBolt",
       "travelMode": "TrackTarget",
@@ -64,6 +66,7 @@
       "speed": 1700,
       "range": 760,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.EssenceFluxHit",
       "hitEffect": "Effect.Champion.Ezreal.EssenceFluxHit",
       "presentationEffect": "Effect.Champion.Ezreal.EssenceFlux",
       "travelMode": "Direction",
@@ -103,23 +106,26 @@
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.MysticShotHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.TrueshotBarrageHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       }
     ]
   },
@@ -151,6 +157,7 @@
       "speed": 2100,
       "range": 840,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.MysticShotHit",
       "hitEffect": "Effect.Champion.Ezreal.MysticShotHit",
       "presentationEffect": "Effect.Champion.Ezreal.MysticShot",
       "travelMode": "Direction",
@@ -189,6 +196,7 @@
       "speed": 1800,
       "range": 20000,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrageHit",
       "hitEffect": "Effect.Champion.Ezreal.TrueshotBarrageHit",
       "presentationEffect": "Effect.Champion.Ezreal.TrueshotBarrage",
       "travelMode": "Direction",
@@ -237,7 +245,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Champion.Garen.Courage"
+      "tag": "State.Champion.Garen.Courage",
+      "sense": "Effective"
     }
   },
   {
@@ -349,6 +358,11 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_runic_beacon",
       "count": 1,
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -366,6 +380,11 @@
       "templateId": "champion_skill_sandbox_rune_field",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.Geomancer.RuneFieldPersistent",
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -425,6 +444,11 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_stone_pillar",
       "count": 1,
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -524,7 +548,14 @@
       "range": 880,
       "arcHeight": 0,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "presentationEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -733,7 +764,14 @@
       "range": 1400,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.FireMage.FireballResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "presentationEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 100,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -787,7 +825,14 @@
       "range": 1500,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "presentationEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 70,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -856,6 +901,11 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_spell_beacon",
       "count": 1,
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -873,6 +923,11 @@
       "templateId": "champion_skill_sandbox_gravity_well",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GravityWellPersistent",
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -932,6 +987,7 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_barrier_segment",
       "count": 10,
+      "offsetRadius": 280,
       "placementPattern": "Circle",
       "facingPattern": "TangentCounterClockwise",
       "placementRadiusCm": 280,
@@ -953,6 +1009,11 @@
       "templateId": "champion_skill_sandbox_guided_laser",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
+      "offsetRadius": 0,
+      "placementPattern": "Circle",
+      "facingPattern": "PreserveTemplate",
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }

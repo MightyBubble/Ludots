@@ -1,5 +1,6 @@
 {
   "startupMapId": "champion_skill_sandbox",
+  "startupInputContexts": ["Default_Gameplay", "ChampionSkillSandbox.Controls"],
   "navigation2D": {
     "enabled": true,
     "steering": {

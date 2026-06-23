@@ -306,10 +306,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetHovered(out Entity target)
         {
             target = default;
-            if (!_globals.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var obj) || obj is not Entity e) return false;
-            if (!_world.IsAlive(e)) return false;
-            target = e;
-            return true;
+            return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out target);
         }
 
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)
@@ -378,4 +375,3 @@ namespace MobaDemoMod.Systems
         public void Dispose() { }
     }
 }
-

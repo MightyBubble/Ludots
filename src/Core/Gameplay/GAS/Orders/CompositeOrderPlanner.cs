@@ -144,12 +144,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (slot.AbilityId <= 0 ||
                 !_abilities!.TryGet(slot.AbilityId, out var definition) ||
-                !definition.HasIndicator)
+                !definition.HasTargeting)
             {
                 return false;
             }
 
-            rangeCm = definition.Indicator.Range;
+            rangeCm = definition.Targeting.CastRangeCm;
             return rangeCm > 0f;
         }
 

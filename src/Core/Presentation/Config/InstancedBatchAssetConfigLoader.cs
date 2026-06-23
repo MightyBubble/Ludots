@@ -514,10 +514,14 @@ namespace Ludots.Core.Presentation.Config
                 $"Instanced batch '{batchKey}' behavior '{behaviorKey}' source.eventKind");
             if (sourceKind == InstancedBatchSourceKind.GasEvent)
             {
-                if (eventKind is not (PresentationEventKind.EffectApplied or PresentationEventKind.CastCommitted or PresentationEventKind.CastFailed))
+                if (eventKind is not (
+                    PresentationEventKind.EffectApplied or
+                    PresentationEventKind.EffectActivated or
+                    PresentationEventKind.CastCommitted or
+                    PresentationEventKind.CastFailed))
                 {
                     throw new InvalidOperationException(
-                        $"Instanced batch '{batchKey}' behavior '{behaviorKey}' GasEvent source.eventKind must be EffectApplied, CastCommitted, or CastFailed.");
+                        $"Instanced batch '{batchKey}' behavior '{behaviorKey}' GasEvent source.eventKind must be EffectApplied, EffectActivated, CastCommitted, or CastFailed.");
                 }
 
                 return eventKind;

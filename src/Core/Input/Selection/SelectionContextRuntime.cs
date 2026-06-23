@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Selection
@@ -92,6 +93,19 @@ namespace Ludots.Core.Input.Selection
                    SelectionViewRuntime.TryResolveViewedSelection(world, globals, selection, out _, out _, out container);
         }
 
+        public static bool TryGetCurrentHovered(World world, Dictionary<string, object> globals, out Entity hovered)
+        {
+            hovered = default;
+            if (!TryGetHoveredOwner(world, globals, out Entity owner) ||
+                !TryGetEntityCollectionStore(globals, out EntityCollectionStore collections) ||
+                !collections.TryGet(owner, EntityCollectionKeys.HoveredEntity, out EntityCollectionHandle handle))
+            {
+                return false;
+            }
+
+            return collections.TryGetEntityAt(handle, 0, out hovered);
+        }
+
         public static bool TryDescribeCurrentView(World world, Dictionary<string, object> globals, out SelectionViewDescriptor descriptor)
         {
             descriptor = default;
@@ -142,6 +156,23 @@ namespace Ludots.Core.Input.Selection
             return globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
                    selectionObj is SelectionRuntime runtime &&
                    (selection = runtime) != null;
+        }
+
+        private static bool TryGetHoveredOwner(World world, Dictionary<string, object> globals, out Entity owner)
+        {
+            owner = default;
+            return globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var ownerObj) &&
+                   ownerObj is Entity local &&
+                   world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
+        }
+
+        private static bool TryGetEntityCollectionStore(Dictionary<string, object> globals, out EntityCollectionStore collections)
+        {
+            collections = default!;
+            return globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var storeObj) &&
+                   storeObj is EntityCollectionStore store &&
+                   (collections = store) != null;
         }
     }
 }

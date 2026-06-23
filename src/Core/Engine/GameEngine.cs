@@ -136,6 +136,7 @@ namespace Ludots.Core.Engine
         private GraphProgramLoader _graphProgramLoader;
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
+        private System.Threading.SynchronizationContext? _previousSyncContext;
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
@@ -341,124 +342,147 @@ namespace Ludots.Core.Engine
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
             Diagnostics.Log.Info(in LogChannels.Engine, "Initializing with ConfigPipeline...");
 
-            // Setup Async Context
+            _previousSyncContext = System.Threading.SynchronizationContext.Current;
             SyncContext = new GameSynchronizationContext();
             System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
+            bool initializationCompleted = false;
 
-            // Setup conflict report for mod registration tracing
-            ConflictReport = new RegistrationConflictReport();
-            Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
-            SetService(CoreServiceKeys.Engine, this);
-            SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
-            if (modPlan != null)
+            try
             {
-                SetService(CoreServiceKeys.ModLoadPlan, modPlan);
-            }
-            else
-            {
-                RemoveService(CoreServiceKeys.ModLoadPlan);
-            }
-
-            // 1. Setup Infrastructure (VFS, ModLoader)
-            VFS = new VirtualFileSystem();
-            VFS.Mount("Core", assetsRoot); // Mount Core Assets
-
-            FunctionRegistry = new FunctionRegistry();
-            FunctionRegistry.SetConflictReport(ConflictReport);
-            TriggerManager = new TriggerManager();
-            SystemFactoryRegistry = new SystemFactoryRegistry();
-            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-            ModLoader.MapManager = MapManager;
-            SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
-            SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
-            OrderBlackboardKeyRegistry.ResetToBuiltins();
-
-            // 2. Load Mods first (so ConfigPipeline can access their game.json)
-            if (modPlan != null && modPlan.OrderedMods.Count > 0)
-            {
-                if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                // Setup conflict report for mod registration tracing
+                ConflictReport = new RegistrationConflictReport();
+                Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
+                SetService(CoreServiceKeys.Engine, this);
+                SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
+                if (modPlan != null)
                 {
-                    Diagnostics.Log.Info(
-                        in LogChannels.Engine,
-                        $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    SetService(CoreServiceKeys.ModLoadPlan, modPlan);
                 }
                 else
                 {
-                    Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    RemoveService(CoreServiceKeys.ModLoadPlan);
                 }
 
-                ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
+                // 1. Setup Infrastructure (VFS, ModLoader)
+                VFS = new VirtualFileSystem();
+                VFS.Mount("Core", assetsRoot); // Mount Core Assets
+
+                FunctionRegistry = new FunctionRegistry();
+                FunctionRegistry.SetConflictReport(ConflictReport);
+                TriggerManager = new TriggerManager();
+                SystemFactoryRegistry = new SystemFactoryRegistry();
+                TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
+                ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
+                MapManager = new MapManager(VFS, TriggerManager, ModLoader);
+                ModLoader.MapManager = MapManager;
+                SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
+                SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+
+                // 2. Load Mods first (so ConfigPipeline can access their game.json)
+                if (modPlan != null && modPlan.OrderedMods.Count > 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                    {
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    }
+                    else
+                    {
+                        Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    }
+
+                    ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
+                }
+                else if (modPaths != null && modPaths.Count > 0)
+                {
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
+                    ModLoader.LoadMods(modPaths);
+                }
+
+                // 3. Create ConfigPipeline and merge all game.json files
+                ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
+                ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
+                MergedConfig = ConfigPipeline.MergeGameConfig();
+                (MergedConfig.Presentation
+                    ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
+
+                ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
+                ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+
+                // Apply log config from merged game.json
+                LogConfigApplier.Apply(MergedConfig.Logging);
+
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
+
+                // Store merged config in GlobalContext for access throughout the engine
+                SetService(CoreServiceKeys.GameConfig, MergedConfig);
+                SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+                SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+                SetService(CoreServiceKeys.AiRuntime, AiRuntime);
+
+                // 4. Setup ECS & Session using merged config values
+                InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+                SetService(CoreServiceKeys.World, World);
+                WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+                SetService(CoreServiceKeys.WorldMap, WorldMap);
+                GameSession = new GameSession();
+                SetService(CoreServiceKeys.GameSession, GameSession);
+                int gridCellSizeCm = MergedConfig.GridCellSizeCm;
+                int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
+                int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
+                WorldSizeSpec = new WorldSizeSpec(
+                    new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
+                    gridCellSizeCm: gridCellSizeCm);
+                SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
+                _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
+                SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
+                WireUpPositionProvider();
+                SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
+                SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
+                SetService(CoreServiceKeys.SpatialQueryService, SpatialQueries);
+
+                // 4b. Create HexGridAOI as ILoadedChunks SSOT
+                HexGridAOI = new HexGridAOI();
+                SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)HexGridAOI);
+
+                // 5. Setup Data Loaders
+                MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
+                MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
+                SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
+
+                // 6. Initialize Core Systems with merged config
+                InitializeCoreSystems(MergedConfig);
+
+                TriggerManager.RegisterTrigger(new Ludots.Core.Config.ReloadConfigTrigger(this));
+
+                SimulationBudgetMsPerFrame = MergedConfig.SimulationBudgetMsPerFrame;
+                SimulationMaxSlicesPerLogicFrame = MergedConfig.SimulationMaxSlicesPerLogicFrame;
+            
+                // 7. Print registration conflict summary
+                ConflictReport?.PrintSummary();
+                initializationCompleted = true;
             }
-            else if (modPaths != null && modPaths.Count > 0)
+            finally
             {
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
-                ModLoader.LoadMods(modPaths);
+                if (!initializationCompleted)
+                {
+                    try
+                    {
+                        ModLoader?.UnloadAll();
+                    }
+                    catch (Exception unloadEx)
+                    {
+                        Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to unload partially initialized mod state: {unloadEx}");
+                    }
+
+                    SyncContext = null;
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(_previousSyncContext);
+                    _previousSyncContext = null;
+                }
             }
-            
-            // 3. Create ConfigPipeline and merge all game.json files
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-            ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
-            MergedConfig = ConfigPipeline.MergeGameConfig();
-            (MergedConfig.Presentation
-                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
-
-            ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
-            ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
-
-            // Apply log config from merged game.json
-            LogConfigApplier.Apply(MergedConfig.Logging);
-
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
-            
-            // Store merged config in GlobalContext for access throughout the engine
-            SetService(CoreServiceKeys.GameConfig, MergedConfig);
-            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
-            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
-            SetService(CoreServiceKeys.AiRuntime, AiRuntime);
-
-            // 4. Setup ECS & Session using merged config values
-            InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
-            SetService(CoreServiceKeys.World, World);
-            WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
-            SetService(CoreServiceKeys.WorldMap, WorldMap);
-            GameSession = new GameSession();
-            SetService(CoreServiceKeys.GameSession, GameSession);
-            int gridCellSizeCm = MergedConfig.GridCellSizeCm;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
-            SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
-            _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
-            SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
-            WireUpPositionProvider();
-            SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
-            SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
-            SetService(CoreServiceKeys.SpatialQueryService, SpatialQueries);
-
-            // 4b. Create HexGridAOI as ILoadedChunks SSOT
-            HexGridAOI = new HexGridAOI();
-            SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)HexGridAOI);
-
-            // 5. Setup Data Loaders
-            MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-            MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
-            SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
-
-            // 6. Initialize Core Systems with merged config
-            InitializeCoreSystems(MergedConfig);
-
-            TriggerManager.RegisterTrigger(new Ludots.Core.Config.ReloadConfigTrigger(this));
-
-            SimulationBudgetMsPerFrame = MergedConfig.SimulationBudgetMsPerFrame;
-            SimulationMaxSlicesPerLogicFrame = MergedConfig.SimulationMaxSlicesPerLogicFrame;
-            
-            // 7. Print registration conflict summary
-            ConflictReport?.PrintSummary();
         }
 
         public void RebuildAiRuntime()
@@ -831,7 +855,7 @@ namespace Ludots.Core.Engine
                 entityQueries: entitySetQueryRuntime);
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
             {
-                return eventKind == PresentationEventKind.EffectApplied
+                return eventKind is PresentationEventKind.EffectApplied or PresentationEventKind.EffectActivated
                     ? EffectTemplateIdRegistry.GetId(key)
                     : AbilityIdRegistry.GetId(key);
             }
@@ -846,10 +870,13 @@ namespace Ludots.Core.Engine
                     PresentationEventKind.TagEffectiveChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GameplayEvent => TagRegistry.GetId(key),
                     PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
+                    PresentationEventKind.EffectActivated => EffectTemplateIdRegistry.GetId(key),
                     PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
                     PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
                     PresentationEventKind.SelectionMemberAdded => selectionSetKeyRegistry.GetId(key),
                     PresentationEventKind.SelectionMemberRemoved => selectionSetKeyRegistry.GetId(key),
+                    PresentationEventKind.EntityCollectionMemberAdded => entityCollectionKeyRegistry.GetId(key),
+                    PresentationEventKind.EntityCollectionMemberRemoved => entityCollectionKeyRegistry.GetId(key),
                     PresentationEventKind.GlobalDayNight => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalRegionChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalWeather => TagRegistry.GetId(key),
@@ -964,7 +991,8 @@ namespace Ludots.Core.Engine
                     _ => 0,
                 },
                 selectionSetKeyRegistry.Register,
-                instancedBatchAssets.GetId).Load(ConfigCatalog, ConfigConflictReport);
+                instancedBatchAssets.GetId,
+                entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
             performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
@@ -1399,6 +1427,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);
             RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
+            RegisterPresentationSystem(new EntityCollectionPresentationEventSystem(World, entityCollectionStore, presentationEventStream, GameSession));
             RegisterPresentationSystem(new InstancedBatchBehaviorSystem(
                 World,
                 performerDefinitions,
@@ -2578,6 +2607,12 @@ namespace Ludots.Core.Engine
                 _jobScheduler.Dispose();
                 _jobScheduler = null;
                 World.SharedJobScheduler = null;
+            }
+
+            if (_previousSyncContext != null)
+            {
+                System.Threading.SynchronizationContext.SetSynchronizationContext(_previousSyncContext);
+                _previousSyncContext = null;
             }
             
             if (World != null)

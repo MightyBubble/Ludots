@@ -310,7 +310,6 @@ namespace Ludots.Core.Scripting
         // --- Entity Selection (presentation-layer) ---
         public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
-        public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
         public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
         public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");
@@ -326,4 +325,3 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
     }
 }
-

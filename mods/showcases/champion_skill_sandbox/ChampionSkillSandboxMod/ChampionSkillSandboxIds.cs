@@ -37,12 +37,6 @@ namespace ChampionSkillSandboxMod
         public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
         public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
         public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
-        public const string SelectionIndicatorPerformerKey = "champion_skill_sandbox.selection_indicator";
-        public const string HoverIndicatorPerformerKey = "champion_skill_sandbox.hover_indicator";
-        public const int SelectionIndicatorScopeId = 4101;
-        public const int HoverIndicatorScopeId = 4102;
-        public const int AimHoverIndicatorScopeId = 4103;
-
         public const string EzrealAlphaName = "Ezreal Alpha";
         public const string EzrealCooldownName = "Ezreal Cooldown";
         public const string GarenAlphaName = "Garen Alpha";

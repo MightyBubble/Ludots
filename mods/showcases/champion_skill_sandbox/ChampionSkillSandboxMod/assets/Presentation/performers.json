@@ -1,5 +1,245 @@
 [
   {
+    "id": "champion_skill_sandbox.event_rules",
+    "rules": [
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.ArcaneShift" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.EssenceFlux" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.MysticShot" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.TrueshotBarrage" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.DecisiveStrike" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_decisive_strike", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.Courage" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_courage", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.Judgment" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_judgment", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.DemacianJustice" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.RunicBeacon" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_runic_beacon", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.RuneField" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.StonePillar" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_stone_pillar", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.PrismaticBeam" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.AccelerationGate" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_acceleration_gate", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.HyperCharge" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hyper_charge", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.ShockBlast" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.LightningField" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.ThunderingBlow" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.ToTheSkies" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Transform.Cannon" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_transform_cannon", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Transform.Hammer" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_transform_hammer", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.Warrior.Cleave" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.FireMage.Fireball" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_fireball_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.LaserMage.Laser" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_laser_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.Priest.Heal" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.SpellBeacon" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.GravityWell" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.CataclysmRing" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.GuidedLaser" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.ArcaneShiftBoltHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectActivated", "key": "Effect.Champion.Ezreal.EssenceFluxHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.EssenceFluxPop" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.MysticShotHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.TrueshotBarrageHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Garen.JudgmentHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_judgment_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Garen.DemacianJusticeHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Geomancer.RuneFieldHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Geomancer.PrismaticBeamHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Cannon.ShockBlastHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.LightningFieldHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.Warrior.CleaveHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.FireMage.FireballHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_fireball_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.LaserMage.LaserHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_laser_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.Priest.Heal" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.SpellEngineer.GravityWellHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit", "scopeSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "EffectApplied", "key": "Effect.Champion.SpellEngineer.GuidedLaserHit" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit", "scopeSource": "Fixed" }
+      }
+    ]
+  },
+  {
     "id": "champion_skill_sandbox.selection_indicator",
     "defaultColor": [
       0.28,
@@ -12,6 +252,33 @@
       0,
       0.04,
       0
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "SelectionMemberAdded",
+          "key": "selection.live.primary"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.selection_indicator",
+          "scopeSource": "SourceStableId"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "SelectionMemberRemoved",
+          "key": "selection.live.primary"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.selection_indicator",
+          "scopeSource": "SourceStableId"
+        }
+      }
     ],
     "bindings": [
       {
@@ -78,6 +345,62 @@
       0.06,
       0
     ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.selection.hover"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.selection.hover"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ability.aim.hover"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ability.aim.hover"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.hover_indicator",
+          "scopeSource": "EventPayloadA",
+          "ownerSource": "EventSource"
+        }
+      }
+    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -130,6 +453,69 @@
     ]
   },
   {
+    "id": "champion_skill_sandbox.mark.ezreal_essence_flux",
+    "defaultColor": [
+      1,
+      0.78,
+      0.28,
+      0.9
+    ],
+    "defaultLifetime": -1,
+    "positionOffset": [
+      0,
+      1.08,
+      0
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "State.Champion.Ezreal.WMark"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.mark.ezreal_essence_flux",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "State.Champion.Ezreal.WMark"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "champion_skill_sandbox.mark.ezreal_essence_flux",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.18,
+            0.18,
+            0.18
+          ]
+        }
+      }
+    ]
+  },
+  {
     "id": "champion_skill_sandbox.projectile.ezreal_e",
     "defaultColor": [
       0.44,
@@ -138,6 +524,32 @@
       0.92
     ],
     "defaultLifetime": -1,
+    "rules": [
+      {
+        "event": {
+          "kind": "ProjectileSpawned",
+          "key": "Effect.Champion.Ezreal.ArcaneShiftBolt"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.projectile.ezreal_e"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -166,6 +578,32 @@
       0.92
     ],
     "defaultLifetime": -1,
+    "rules": [
+      {
+        "event": {
+          "kind": "ProjectileSpawned",
+          "key": "Effect.Champion.Ezreal.EssenceFlux"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.projectile.ezreal_w"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -194,6 +632,32 @@
       0.92
     ],
     "defaultLifetime": -1,
+    "rules": [
+      {
+        "event": {
+          "kind": "ProjectileSpawned",
+          "key": "Effect.Champion.Ezreal.MysticShot"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.projectile.ezreal_q"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -222,6 +686,32 @@
       0.94
     ],
     "defaultLifetime": -1,
+    "rules": [
+      {
+        "event": {
+          "kind": "ProjectileSpawned",
+          "key": "Effect.Champion.Ezreal.TrueshotBarrage"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "champion_skill_sandbox.projectile.ezreal_r"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
     "behaviors": [
       {
         "slot": "body",

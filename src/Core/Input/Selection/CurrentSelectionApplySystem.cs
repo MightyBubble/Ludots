@@ -209,14 +209,34 @@ namespace Ludots.Core.Input.Selection
 
         private void UpdateHoveredEntity(Entity hovered)
         {
+            SelectionAcquisitionConfig acquisition = _selection.Config.Acquisition
+                ?? throw new InvalidOperationException("selection.acquisition must be explicitly configured.");
+            Entity owner = _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var ownerObj) && ownerObj is Entity local && _world.IsAlive(local)
+                ? local
+                : Entity.Null;
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.HoveredEntity,
+                EntityCollectionSourceKind.UiHover,
+                EntityCollectionRoleKind.Display,
+                owner,
+                _world.IsAlive(hovered) ? hovered : Entity.Null,
+                string.IsNullOrWhiteSpace(acquisition.Title) ? "Hover target" : $"{acquisition.Title} hover",
+                _world.IsAlive(hovered) ? "hover" : "hover-empty");
+
             if (_world.IsAlive(hovered))
             {
-                _globals[CoreServiceKeys.HoveredEntity.Name] = hovered;
+                Span<Entity> single = stackalloc Entity[1];
+                single[0] = hovered;
+                _entityCollections.Replace(owner, descriptor, single);
+                return;
             }
-            else
-            {
-                _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
-            }
+
+            _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
         private void ApplyClickSelection(Entity owner, Entity clicked, SelectionAcquisitionMode acquisitionMode)
@@ -296,7 +316,12 @@ namespace Ludots.Core.Input.Selection
 
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (!cull.IsVisible || !SelectionEligibility.CanInspectLive(_world, _globals, owner, entity))
+                if (!cull.IsVisible)
+                {
+                    return;
+                }
+
+                if (!SelectionEligibility.CanInspectLive(_world, _globals, owner, entity))
                 {
                     return;
                 }

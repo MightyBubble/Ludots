@@ -36,7 +36,8 @@ namespace Ludots.Core.Input.Runtime
                     new Vector3(overrideWorldCm.X, 0f, overrideWorldCm.Y),
                     isDown: true,
                     pressedThisFrame: false,
-                    releasedThisFrame: false);
+                    releasedThisFrame: false,
+                    preserveValueUntilSnapshot: true);
                 return;
             }
 

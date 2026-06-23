@@ -240,7 +240,7 @@ namespace CoreInputMod.Systems
         private bool TryResolveHoveredCommandTarget(out Entity entity)
         {
             entity = Entity.Null;
-            if (!_context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out Entity candidate))
+            if (!_context.TryGetHoveredEntity(out Entity candidate))
             {
                 return false;
             }

@@ -25,7 +25,7 @@ InputOrderMapping:
 ```
 InputOrderMapping:
   selectionType: Vector
-  // VectorAimPhase: Origin → Direction
+  // Targeting input slots: origin point → direction point
   // Two clicks: origin stored in Spatial[0], endpoint in Spatial[1]
 ```
 
