@@ -155,7 +155,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
                     "host",
                     $"Host ack received {DateTime.Now:HH:mm:ss}: {message.Payload}"));
             };
-            await surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
+            await surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Root)).ConfigureAwait(false);
             await surface.Messages.PostMessageAsync(new BrowserScriptMessage(
                 "host",
                 "CEF browser surface is live inside Raylib with transparent background enabled.")).ConfigureAwait(false);

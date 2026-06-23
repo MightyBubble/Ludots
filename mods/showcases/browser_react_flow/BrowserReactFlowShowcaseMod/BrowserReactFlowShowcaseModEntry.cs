@@ -92,8 +92,8 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         root.IsDirty = true;
 
         Uri navigationUri = _perfBaselineMode
-            ? new Uri("ludots-app://app/?perf=baseline")
-            : new Uri("ludots-app://app/");
+            ? BrowserLocalAppUri.Create("/", "perf=baseline")
+            : BrowserLocalAppUri.Root;
         await _surface.NavigateAsync(new BrowserNavigationRequest(navigationUri)).ConfigureAwait(false);
     }
 
