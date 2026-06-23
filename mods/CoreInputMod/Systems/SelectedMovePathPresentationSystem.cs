@@ -13,8 +13,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Events;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
@@ -28,7 +26,6 @@ namespace CoreInputMod.Systems
         public const string LineEventKey = "core_input.move_path.line";
         public const string WaypointEventKey = "core_input.move_path.waypoint";
 
-        private const string DebugEnvironmentVariable = "LUDOTS_DEBUG_SELECTED_MOVE_PATH";
         private const int MaxSelectedEntities = 4;
         private const int MaxScopesPerActor = OrderSpatial.MaxPoints + 1;
         private const int LineScopeBase = 52000;
@@ -37,14 +34,10 @@ namespace CoreInputMod.Systems
         private const float PrimaryLineWidthCm = 28f;
         private const float SecondaryLineWidthCm = 18f;
         private const float WaypointRadiusCm = 26f;
-        private static readonly Vector4 DebugTextColor = new(0.92f, 0.97f, 1.0f, 1.0f);
-        private static readonly Vector4 DebugPanelFill = new(0.04f, 0.08f, 0.12f, 0.92f);
-        private static readonly Vector4 DebugPanelBorder = new(0.30f, 0.58f, 0.78f, 0.96f);
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
-        private readonly bool _debugEnabled;
         private readonly Dictionary<ActorKey, ActorScopeState> _activeScopesByActor = new();
         private readonly List<ActorKey> _actorRemovalScratch = new(16);
         private Entity[] _selected = new Entity[16];
@@ -52,7 +45,6 @@ namespace CoreInputMod.Systems
         private bool _moveOrderTypeIdsResolved;
         private PresentationEventStream? _events;
         private GameSession? _session;
-        private GroundOverlayBuffer? _groundOverlays;
         private int _lineEventKeyId;
         private int _waypointEventKeyId;
         private string _lastProjectionSummary = "projection=uninitialized";
@@ -99,7 +91,6 @@ namespace CoreInputMod.Systems
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
-            _debugEnabled = IsDebugEnabled();
         }
 
         public void Initialize() { }
@@ -117,8 +108,6 @@ namespace CoreInputMod.Systems
                 ? primary
                 : Entity.Null;
 
-            int lineCountBefore = CountOverlayShape(GroundOverlayShape.Line);
-            int circleCountBefore = CountOverlayShape(GroundOverlayShape.Circle);
             int emittedLines = 0;
             int emittedWaypoints = 0;
 
@@ -128,8 +117,6 @@ namespace CoreInputMod.Systems
                     selectionCount: 0,
                     emittedLines: 0,
                     emittedWaypoints: 0,
-                    overlayLineDelta: 0,
-                    overlayCircleDelta: 0,
                     selectionViewer,
                     selectionViewKey,
                     viewedContainer,
@@ -165,8 +152,6 @@ namespace CoreInputMod.Systems
                 selectionCount: count,
                 emittedLines,
                 emittedWaypoints,
-                overlayLineDelta: CountOverlayShape(GroundOverlayShape.Line) - lineCountBefore,
-                overlayCircleDelta: CountOverlayShape(GroundOverlayShape.Circle) - circleCountBefore,
                 selectionViewer,
                 selectionViewKey,
                 viewedContainer,
@@ -522,8 +507,6 @@ namespace CoreInputMod.Systems
             int selectionCount,
             int emittedLines,
             int emittedWaypoints,
-            int overlayLineDelta,
-            int overlayCircleDelta,
             Entity selectionViewer,
             string selectionViewKey,
             Entity viewedContainer,
@@ -533,36 +516,17 @@ namespace CoreInputMod.Systems
                 selectionCount,
                 emittedLines,
                 emittedWaypoints,
-                overlayLineDelta,
-                overlayCircleDelta,
                 selectionViewer,
                 selectionViewKey,
                 viewedContainer,
                 primaryViewed);
             _globals[DebugSummaryKey] = summary;
-            if (!_debugEnabled)
-            {
-                return;
-            }
-
-            if (_globals.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) &&
-                overlayObj is ScreenOverlayBuffer overlay)
-            {
-                overlay.AddRect(8, 8, 980, 118, DebugPanelFill, DebugPanelBorder, stableId: 31001, dirtySerial: 1);
-                string[] lines = BuildDebugLines(summary);
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    overlay.AddText(18, 16 + (i * 18), lines[i], 14, DebugTextColor, stableId: 31010 + i, dirtySerial: 1);
-                }
-            }
         }
 
         private string BuildDebugSummary(
             int selectionCount,
             int emittedLines,
             int emittedWaypoints,
-            int overlayLineDelta,
-            int overlayCircleDelta,
             Entity selectionViewer,
             string selectionViewKey,
             Entity viewedContainer,
@@ -613,28 +577,7 @@ namespace CoreInputMod.Systems
                 $"selCount={selectionCount} primary={DescribeEntity(primaryViewed)} " +
                 $"inspect={DescribeEntity(inspected)} orderBuf={hasOrderBuffer} activeMove={activeMoveCount} queuedMove={queuedMoveCount} " +
                 $"pos2D={hasPosition2D} {positionSummary} {worldSummary} " +
-                $"events+line={emittedLines} events+waypoint={emittedWaypoints} " +
-                $"overlay+line={overlayLineDelta} overlay+circle={overlayCircleDelta}";
-        }
-
-        private string[] BuildDebugLines(string summary)
-        {
-            return new[]
-            {
-                "MovePath Debug",
-                summary,
-                $"selectionView={DescribeSelectionViewContext()}",
-                $"overlayTotals=line={CountOverlayShape(GroundOverlayShape.Line)} circle={CountOverlayShape(GroundOverlayShape.Circle)} ring={CountOverlayShape(GroundOverlayShape.Ring)}",
-                $"env:{DebugEnvironmentVariable}=1",
-            };
-        }
-
-        private string DescribeSelectionViewContext()
-        {
-            bool hasView = SelectionViewRuntime.TryResolveViewedSelection(_world, _globals, _selection, out var viewer, out var viewKey, out var container);
-            return hasView
-                ? $"viewer={DescribeEntity(viewer)} view={viewKey} container={DescribeEntity(container)}"
-                : "viewer=(none)";
+                $"events+line={emittedLines} events+waypoint={emittedWaypoints}";
         }
 
         private bool TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds)
@@ -658,15 +601,22 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
+            SelectionRuntimeConfig? selectionConfig = config.Selection;
+            if (selectionConfig == null)
+            {
+                throw new InvalidOperationException(
+                    "game.selection must be configured before SelectedMovePathPresentationSystem resolves move path preview order types.");
+            }
+
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(selectionConfig, orderTypes);
             _moveOrderTypeIds = moveOrderTypeIds;
             _moveOrderTypeIdsResolved = true;
             return moveOrderTypeIds.Length > 0;
         }
 
-        private static int[] ResolveMoveOrderTypeIds(GameConfig config, OrderTypeRegistry orderTypes)
+        private static int[] ResolveMoveOrderTypeIds(SelectionRuntimeConfig config, OrderTypeRegistry orderTypes)
         {
-            string[] orderTypeKeys = config.Selection.MovePathPreviewOrderTypeKeys;
+            string[] orderTypeKeys = config.MovePathPreviewOrderTypeKeys;
             if (orderTypeKeys.Length == 0)
             {
                 throw new InvalidOperationException(
@@ -734,34 +684,6 @@ namespace CoreInputMod.Systems
             return false;
         }
 
-        private int CountOverlayShape(GroundOverlayShape shape)
-        {
-            if (_groundOverlays == null)
-            {
-                if (_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var overlaysObj) &&
-                    overlaysObj is GroundOverlayBuffer overlays)
-                {
-                    _groundOverlays = overlays;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-
-            int count = 0;
-            ReadOnlySpan<GroundOverlayItem> span = _groundOverlays.GetSpan();
-            for (int i = 0; i < span.Length; i++)
-            {
-                if (span[i].Shape == shape)
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
         private string DescribeEntity(Entity entity)
         {
             if (entity == Entity.Null)
@@ -800,20 +722,6 @@ namespace CoreInputMod.Systems
                 int scope = (owner.Id * 100000) + offset;
                 return scope <= 0 ? offset : scope;
             }
-        }
-
-        private static bool IsDebugEnabled()
-        {
-            string? raw = Environment.GetEnvironmentVariable(DebugEnvironmentVariable);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return false;
-            }
-
-            return raw == "1" ||
-                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
         private void EnsureSelectedCapacity(int required)

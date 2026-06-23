@@ -10,6 +10,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Mathematics;
@@ -29,6 +30,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -1625,6 +1627,7 @@ namespace Ludots.Tests.GAS
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
+            GetInputBackend(engine).SetMousePosition(view.Resolution * 0.5f);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new CoreScreenRayProvider(engine.GameSession.Camera, view));
             engine.SetService(CoreServiceKeys.ScreenProjector, new CoreScreenProjector(engine.GameSession.Camera, view));
 
@@ -1639,6 +1642,7 @@ namespace Ludots.Tests.GAS
             engine.LoadMap(mapId);
             Assert.That(engine.CurrentMapSession, Is.Not.Null, $"{mapId} should create a live map session.");
             Tick(engine, frames);
+            AssertInitialPlayableCameraTarget(engine);
         }
 
         private static void InstallPlayableInput(GameEngine engine)
@@ -1663,6 +1667,17 @@ namespace Ludots.Tests.GAS
             {
                 engine.Tick(1f / 60f);
             }
+        }
+
+        private static void AssertInitialPlayableCameraTarget(GameEngine engine)
+        {
+            Entity vanguard = FindEntityByName(engine.World, "Blue Vanguard");
+            Assert.That(vanguard, Is.Not.EqualTo(Entity.Null), "Blue Vanguard should exist before validating the playable camera.");
+            var expected = engine.World.Get<WorldPositionCm>(vanguard).Value.ToVector2();
+            Assert.That(
+                Vector2.Distance(engine.GameSession.Camera.State.TargetCm, expected),
+                Is.LessThan(1f),
+                BuildPlayableMoveDiagnostics(engine, "Blue Vanguard", "Blue North Column", "Blue South Column"));
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames = 60, string? failureMessage = null)
@@ -1721,19 +1736,38 @@ namespace Ludots.Tests.GAS
             var gestureDiagnostics = new StringBuilder();
 
             backend.SetMousePosition(dragStart);
-            Tick(engine, 1);
+            TickUntil(
+                engine,
+                () => IsAuthoritativePointerAt(engine, dragStart),
+                maxFrames: 12,
+                failureMessage: BuildSelectionScreenDiagnostics(engine, dragStart, dragEnd, names));
             gestureDiagnostics.Append("phase0=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
+
             backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2);
+            TickUntil(
+                engine,
+                () => IsSelectionDragAt(engine, dragStart, dragStart),
+                maxFrames: 16,
+                failureMessage: BuildSelectionScreenDiagnostics(engine, dragStart, dragEnd, names));
             gestureDiagnostics.Append(" || phase1=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
+
             backend.SetMousePosition(dragEnd);
-            Tick(engine, 2);
+            TickUntil(
+                engine,
+                () => IsSelectionDragAt(engine, dragStart, dragEnd),
+                maxFrames: 16,
+                failureMessage: BuildSelectionScreenDiagnostics(engine, dragStart, dragEnd, names));
             gestureDiagnostics.Append(" || phase2=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
+
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2);
+            TickUntil(
+                engine,
+                () => !IsSelectionDragActive(engine),
+                maxFrames: 16,
+                failureMessage: BuildSelectionScreenDiagnostics(engine, dragStart, dragEnd, names));
             gestureDiagnostics.Append(" || phase3=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
 
@@ -1742,6 +1776,38 @@ namespace Ludots.Tests.GAS
                 () => GetSelectionCount(engine) == names.Length,
                 maxFrames: 16,
                 failureMessage: $"{BuildSelectionScreenDiagnostics(engine, dragStart, dragEnd, names)} || {gestureDiagnostics}");
+        }
+
+        private static bool IsAuthoritativePointerAt(GameEngine engine, Vector2 expected)
+        {
+            if (!PointerInteractionSnapshotReader.TryRead(engine.GlobalContext, out var pointer))
+            {
+                return false;
+            }
+
+            return Vector2.Distance(pointer.Pointer, expected) <= 0.5f;
+        }
+
+        private static bool IsSelectionDragActive(GameEngine engine)
+        {
+            Entity owner = GetLocalPlayer(engine);
+            return owner != Entity.Null &&
+                   engine.World.Has<SelectionDragState>(owner) &&
+                   engine.World.Get<SelectionDragState>(owner).Active;
+        }
+
+        private static bool IsSelectionDragAt(GameEngine engine, Vector2 expectedStart, Vector2 expectedCurrent)
+        {
+            Entity owner = GetLocalPlayer(engine);
+            if (owner == Entity.Null || !engine.World.Has<SelectionDragState>(owner))
+            {
+                return false;
+            }
+
+            ref readonly SelectionDragState drag = ref engine.World.Get<SelectionDragState>(owner);
+            return drag.Active &&
+                   Vector2.Distance(drag.StartScreen, expectedStart) <= 0.5f &&
+                   Vector2.Distance(drag.CurrentScreen, expectedCurrent) <= 0.5f;
         }
 
         private static Vector2 GetEntityScreen(GameEngine engine, string name)
@@ -1988,6 +2054,12 @@ namespace Ludots.Tests.GAS
 
                 sb.Append(" selectable=");
                 sb.Append(engine.World.Has<SelectionSelectableTag>(entity));
+                if (engine.GetService(CoreServiceKeys.ScreenProjector) is IScreenProjector projector)
+                {
+                    ScreenRect marquee = ScreenRect.FromPoints(dragStart, dragEnd);
+                    sb.Append(" boxHit=");
+                    sb.Append(SpatialBoundsUtility.EntityIntersectsScreenRect(engine.World, entity, projector, in marquee));
+                }
             }
 
             return sb.ToString();

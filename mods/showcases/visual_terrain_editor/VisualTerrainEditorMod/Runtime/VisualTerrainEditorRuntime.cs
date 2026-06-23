@@ -174,7 +174,7 @@ internal sealed class VisualTerrainEditorRuntime
 
         bool terrainChanged = _document.Update();
         SyncRenderedChunks(engine);
-        EmitBrushOverlay(engine);
+        PublishBrushWorldFact(engine);
 
         if (_panelDirty)
         {
@@ -699,7 +699,7 @@ internal sealed class VisualTerrainEditorRuntime
         _renderedChunks.Clear();
     }
 
-    private void EmitBrushOverlay(GameEngine engine)
+    private void PublishBrushWorldFact(GameEngine engine)
     {
         if (!_pointerWorldValid ||
             !PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out PresentationWorldFactPublisher facts) ||

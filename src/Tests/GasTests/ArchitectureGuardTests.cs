@@ -408,6 +408,40 @@ namespace GasTests
         }
 
         [Test]
+        public void Epic322_SelectedMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
+        {
+            var repoRoot = FindRepoRoot();
+            string file = Path.Combine(
+                repoRoot,
+                "mods",
+                "CoreInputMod",
+                "Systems",
+                "SelectedMovePathPresentationSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 selected move path source {file}");
+
+            string[] forbidden =
+            {
+                "GroundOverlayBuffer",
+                "ScreenOverlayBuffer",
+                "GroundOverlayItem",
+                ".AddRect(",
+                ".AddText(",
+                ".TryAddLine(",
+                ".TryAdd(new GroundOverlayItem"
+            };
+
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Epic322_ShowcasePresentationSystems_PublishWorldFactsInsteadOfWritingRenderBuffers()
         {
             var repoRoot = FindRepoRoot();
