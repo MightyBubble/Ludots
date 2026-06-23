@@ -1,0 +1,81 @@
+{
+  "Id": "rts_empire_like",
+  "Tags": ["rts", "rts_showcase", "rts_production", "empire_like", "war3"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 7600,
+    "TargetYCm": 5200,
+    "Yaw": 172,
+    "Pitch": 48,
+    "DistanceCm": 11200,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "war3_forest.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_war3_peasant",
+      "InstanceId": "rome_villager_1",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6500, "Y": 4700 } },
+        "Name": { "Value": "Rome Villager Primitive" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "InstanceId": "rome_villager_2",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6900, "Y": 5100 } },
+        "Name": { "Value": "Rome Villager Builder" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_barracks",
+      "InstanceId": "rome_barracks",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7600, "Y": 5200 } },
+        "Name": { "Value": "Rome Barracks" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "InstanceId": "rome_town_center_proxy",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 5850, "Y": 5600 } },
+        "Name": { "Value": "Rome Town Center Primitive" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "InstanceId": "han_villager",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 11800, "Y": 7800 } },
+        "Name": { "Value": "Han Villager Primitive" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "rts_war3_barracks",
+      "InstanceId": "han_barracks",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 12500, "Y": 8200 } },
+        "Name": { "Value": "Han Barracks" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "InstanceId": "han_scout",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 11200, "Y": 8400 } },
+        "Name": { "Value": "Han Scout Primitive" },
+        "Team": { "Id": 2 }
+      }
+    }
+  ]
+}

@@ -808,6 +808,70 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_UiCaptureClearsActiveDragWithoutClearingSelection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var selected = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var next = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.UiCaptured.Name] = false,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedLivePrimarySelection(world, globals, local, selected);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            SetConfirmSnapshot(globals, new Vector2(1100f, 900f), pressedThisFrame: true, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1100, 900));
+            input.InjectAction("PointerPos", new Vector3(1100f, 900f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            SetConfirmSnapshot(globals, new Vector2(2200f, 1700f), pressedThisFrame: false, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(2200, 1700));
+            input.InjectAction("PointerPos", new Vector3(2200f, 1700f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            That(world.TryGet(local, out SelectionDragState dragBeforeCapture), Is.True);
+            That(dragBeforeCapture.Active, Is.True);
+            That(dragBeforeCapture.ExceedsThreshold(selectionRuntime.Config.DragThresholdPixels), Is.True);
+
+            globals[CoreServiceKeys.UiCaptured.Name] = true;
+            SetConfirmSnapshot(globals, new Vector2(2200f, 1700f), pressedThisFrame: false, isDown: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(2200, 1700));
+            input.InjectAction("PointerPos", new Vector3(2200f, 1700f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            ref readonly SelectionDragState dragAfterCapture = ref world.Get<SelectionDragState>(local);
+            That(dragAfterCapture.Active, Is.False, "UI pointer capture should clear the Skia selection rectangle state.");
+            AssertSelection(selectionRuntime, local, selected);
+
+            globals[CoreServiceKeys.UiCaptured.Name] = false;
+            SetConfirmSnapshot(globals, new Vector2(2200f, 1700f), pressedThisFrame: false, isDown: false);
+            input.InjectAction("PointerPos", new Vector3(2200f, 1700f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            Click(system, globals, input, new Vector2(2600f, 1600f));
+
+            AssertSelection(selectionRuntime, local, next);
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_ClickEmptyGround_ClearsSelection()
         {
             using var world = World.Create();

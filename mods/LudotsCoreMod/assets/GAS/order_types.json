@@ -8,7 +8,7 @@
       "sameTypePolicy": "Queue",
       "queueFullPolicy": "DropOldest",
       "priority": 100,
-      "bufferWindowMs": 500,
+      "bufferWindowMs": 0,
       "pendingBufferWindowMs": 400,
       "canInterruptSelf": false,
       "queuedModeMaxSize": 8,
@@ -17,6 +17,7 @@
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
       "intArg0BlackboardKey": "Cast.SlotIndex",
+      "intArg1BlackboardKey": "Cast.AbilityId",
       "validationGraph": "none"
     },
     "castAbility.Start": {
@@ -26,7 +27,7 @@
       "sameTypePolicy": "Queue",
       "queueFullPolicy": "DropOldest",
       "priority": 100,
-      "bufferWindowMs": 500,
+      "bufferWindowMs": 0,
       "pendingBufferWindowMs": 400,
       "canInterruptSelf": false,
       "queuedModeMaxSize": 8,
@@ -35,6 +36,7 @@
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
       "intArg0BlackboardKey": "Cast.SlotIndex",
+      "intArg1BlackboardKey": "Cast.AbilityId",
       "validationGraph": "none"
     },
     "castAbility.End": {
@@ -53,6 +55,7 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "Cast.SlotIndex",
+      "intArg1BlackboardKey": "Cast.AbilityId",
       "validationGraph": "none"
     },
     "moveTo": {

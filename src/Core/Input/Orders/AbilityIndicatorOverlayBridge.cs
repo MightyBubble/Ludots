@@ -393,13 +393,32 @@ namespace Ludots.Core.Input.Orders
                 _previewDefinitionId = definitionId;
             }
 
+            bool transformChanged = false;
             ref var pos = ref _world.Get<PerformerWorldPosition>(_previewEntity);
-            pos.Value = worldPosition;
+            if (pos.Value != worldPosition)
+            {
+                pos.Value = worldPosition;
+                transformChanged = true;
+            }
+
+            if (_world.Has<PerformerWorldPlanePosition>(_previewEntity))
+            {
+                ref var plane = ref _world.Get<PerformerWorldPlanePosition>(_previewEntity);
+                Vector2 planePosition = WorldPlane2D.VisualMetersToLogicCm(in worldPosition);
+                if (plane.ValueCm.X != planePosition.X || plane.ValueCm.Y != planePosition.Y)
+                {
+                    plane.ValueCm = planePosition;
+                    transformChanged = true;
+                }
+            }
+
             ref var previewState = ref _world.Get<PerformerState>(_previewEntity);
             previewState.OwnerEntity = actor;
 
             var color = ResolvePreviewColor(indicator, definition, valid);
             Vector3 scale = ResolvePreviewScale(selectionType, indicator);
+            float uniformScale = MathF.Max(0.001f, MathF.Max(scale.X, scale.Z));
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScale, ParamLane.Float, uniformScale, 0, default);
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, ParamLane.Float, scale.X, 0, default);
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleY, ParamLane.Float, scale.Y, 0, default);
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleZ, ParamLane.Float, scale.Z, 0, default);
@@ -407,6 +426,10 @@ namespace Ludots.Core.Input.Orders
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorG, ParamLane.Float, color.Y, 0, default);
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorB, ParamLane.Float, color.Z, 0, default);
             _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorA, ParamLane.Float, color.W, 0, default);
+            if (transformChanged)
+            {
+                _performers.MarkTransformDrivenEmitDirty(_previewEntity);
+            }
         }
 
         private int ResolvePreviewDefinitionId(string performerId)

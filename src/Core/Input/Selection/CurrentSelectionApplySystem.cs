@@ -67,21 +67,22 @@ namespace Ludots.Core.Input.Selection
             }
 
             bool selectionSuppressed = IsSelectionSuppressed();
+            bool worldPointerCapturedByUi = IsWorldPointerCapturedByUi();
 
-            if (selectionSuppressed && pointer.Confirm.PressedThisFrame)
+            if ((selectionSuppressed || worldPointerCapturedByUi) && pointer.Confirm.PressedThisFrame)
             {
                 _suppressConfirmRelease = true;
             }
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
-            Entity hovered = hasOwner
+            Entity hovered = hasOwner && !worldPointerCapturedByUi
                 ? FindNearestEntity(owner, pointer.Pointer, _selection.Config.ClickPickRadiusPixels)
                 : Entity.Null;
             UpdateHoveredEntity(hovered);
 
             if (!hasOwner)
             {
-                if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
+                if (_suppressConfirmRelease && (pointer.Confirm.ReleasedThisFrame || !pointer.Confirm.IsDown))
                 {
                     _suppressConfirmRelease = false;
                     return;
@@ -93,14 +94,14 @@ namespace Ludots.Core.Input.Selection
             EnsureSelectionComponents(owner);
             ref var drag = ref _world.Get<SelectionDragState>(owner);
 
-            if (selectionSuppressed || _suppressConfirmRelease)
+            if (worldPointerCapturedByUi || selectionSuppressed || _suppressConfirmRelease)
             {
                 if (drag.Active)
                 {
                     drag.Clear();
                 }
 
-                if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
+                if (_suppressConfirmRelease && (pointer.Confirm.ReleasedThisFrame || !pointer.Confirm.IsDown))
                 {
                     _suppressConfirmRelease = false;
                 }
@@ -167,6 +168,13 @@ namespace Ludots.Core.Input.Selection
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
                    mapping.IsAiming;
+        }
+
+        private bool IsWorldPointerCapturedByUi()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) &&
+                   capturedObj is bool captured &&
+                   captured;
         }
 
         private void EnsureSelectionComponents(Entity owner)

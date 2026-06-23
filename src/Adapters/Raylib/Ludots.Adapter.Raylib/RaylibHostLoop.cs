@@ -141,9 +141,72 @@ namespace Ludots.Adapter.Raylib
         internal static bool ShouldCaptureWorldPointer(
             bool pointerCaptured,
             bool wheelCaptured,
-            bool inputHandled)
+            bool inputHandled,
+            bool worldSelectionReleasePending = false)
         {
+            if (worldSelectionReleasePending && !wheelCaptured)
+            {
+                return false;
+            }
+
             return pointerCaptured || wheelCaptured || inputHandled;
+        }
+
+        internal static bool ShouldReleaseUiPointerCapture(
+            bool windowFocused,
+            bool capturedPointerButtonHasValue,
+            bool capturedButtonDown,
+            bool capturedButtonReleased)
+        {
+            if (!windowFocused)
+            {
+                return true;
+            }
+
+            if (capturedPointerButtonHasValue)
+            {
+                return capturedButtonReleased || !capturedButtonDown;
+            }
+
+            return !capturedButtonDown && !capturedButtonReleased;
+        }
+
+        internal static bool ShouldForwardUiPointerUp(
+            bool windowFocused,
+            bool capturedPointerButtonHasValue,
+            bool capturedButtonDown,
+            bool capturedButtonReleased)
+        {
+            return windowFocused &&
+                capturedPointerButtonHasValue &&
+                (capturedButtonReleased || !capturedButtonDown);
+        }
+
+        internal static bool HasWorldSelectionReleasePending(
+            bool selectionDragActive,
+            bool anyMouseButtonReleased,
+            bool anyMouseButtonDown)
+        {
+            return selectionDragActive && (anyMouseButtonReleased || !anyMouseButtonDown);
+        }
+
+        internal static void BuildOverlaySceneAndClearConsumedBuffer(
+            PresentationOverlaySceneBuilder builder,
+            PresentationOverlayScene scene,
+            ScreenOverlayBuffer? screenOverlayBuffer)
+        {
+            if (builder == null)
+            {
+                throw new ArgumentNullException(nameof(builder));
+            }
+
+            if (scene == null)
+            {
+                throw new ArgumentNullException(nameof(scene));
+            }
+
+            builder.Build(scene);
+            screenOverlayBuffer?.Clear();
         }
 
         public static void Run(RaylibHostSetup setup)
@@ -400,12 +463,15 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
+                        bool worldSelectionReleasePending = HasWorldSelectionReleasePending(engine);
+                        bool worldPointerCaptured = ShouldCaptureWorldPointer(
+                            uiCaptured,
+                            uiWheelCaptured,
+                            uiInputHandled,
+                            worldSelectionReleasePending);
                         engine.SetService(
                             CoreServiceKeys.UiCaptured,
-                            ShouldCaptureWorldPointer(
-                                uiCaptured,
-                                uiWheelCaptured,
-                                uiInputHandled));
+                            worldPointerCaptured);
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
@@ -428,7 +494,10 @@ namespace Ludots.Adapter.Raylib
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
-                            overlaySceneBuilder.Build(overlayScene);
+                            BuildOverlaySceneAndClearConsumedBuffer(
+                                overlaySceneBuilder,
+                                overlayScene,
+                                screenOverlayBuffer);
                             presentationTiming?.ObserveScreenOverlayBuild(
                                 ElapsedMs(overlayBuildStart),
                                 overlayScene.DirtyLaneCount,
@@ -1081,21 +1150,31 @@ namespace Ludots.Adapter.Raylib
 
             if (_uiPointerCaptured)
             {
-                bool capturedButtonDown = _uiCapturedPointerButton.HasValue &&
-                    Rl.IsMouseButtonDown(ToMouseButton(_uiCapturedPointerButton.Value));
-                bool capturedButtonReleased = _uiCapturedPointerButton.HasValue &&
-                    Rl.IsMouseButtonReleased(ToMouseButton(_uiCapturedPointerButton.Value));
+                bool capturedPointerButtonHasValue = _uiCapturedPointerButton.HasValue;
+                PointerButton capturedPointerButton = _uiCapturedPointerButton.GetValueOrDefault();
+                bool capturedButtonDown = capturedPointerButtonHasValue &&
+                    Rl.IsMouseButtonDown(ToMouseButton(capturedPointerButton));
+                bool capturedButtonReleased = capturedPointerButtonHasValue &&
+                    Rl.IsMouseButtonReleased(ToMouseButton(capturedPointerButton));
 
-                if (!windowFocused || (!_uiCapturedPointerButton.HasValue && !capturedButtonDown && !capturedButtonReleased) || capturedButtonReleased)
+                if (ShouldReleaseUiPointerCapture(
+                        windowFocused,
+                        capturedPointerButtonHasValue,
+                        capturedButtonDown,
+                        capturedButtonReleased))
                 {
-                    if (windowFocused && _uiCapturedPointerButton.HasValue && capturedButtonReleased)
+                    if (ShouldForwardUiPointerUp(
+                            windowFocused,
+                            capturedPointerButtonHasValue,
+                            capturedButtonDown,
+                            capturedButtonReleased))
                     {
                         uiInputHandled |= uiRoot.HandleInput(new PointerEvent
                         {
                             DeviceType = InputDeviceType.Mouse,
                             PointerId = 0,
                             Action = PointerAction.Up,
-                            Button = _uiCapturedPointerButton.Value,
+                            Button = capturedPointerButton,
                             X = mousePos.X,
                             Y = mousePos.Y
                         });
@@ -1134,7 +1213,7 @@ namespace Ludots.Adapter.Raylib
                 });
             }
 
-            bool shouldRouteMouseDownToUi = hitInteractiveUi || uiRoot.HasFocusedCanvas || _uiPointerCaptured;
+            bool shouldRouteMouseDownToUi = ShouldRouteMouseDownToUi(hitInteractiveUi, _uiPointerCaptured);
             foreach (MouseButton mouseButton in MouseButtonsInPriorityOrder)
             {
                 if (!Rl.IsMouseButtonPressed(mouseButton))
@@ -1171,6 +1250,31 @@ namespace Ludots.Adapter.Raylib
             return new UiInputFrameResult(Handled: uiInputHandled, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
         }
 
+        private static bool HasWorldSelectionReleasePending(GameEngine engine)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity local) ||
+                !engine.World.IsAlive(local) ||
+                !engine.World.Has<SelectionDragState>(local) ||
+                !engine.World.Get<SelectionDragState>(local).Active)
+            {
+                return false;
+            }
+
+            bool anyMouseButtonReleased = false;
+            bool anyMouseButtonDown = false;
+            for (int i = 0; i < MouseButtonsInPriorityOrder.Length; i++)
+            {
+                MouseButton button = MouseButtonsInPriorityOrder[i];
+                anyMouseButtonReleased |= Rl.IsMouseButtonReleased(button);
+                anyMouseButtonDown |= Rl.IsMouseButtonDown(button);
+            }
+
+            return HasWorldSelectionReleasePending(
+                selectionDragActive: true,
+                anyMouseButtonReleased,
+                anyMouseButtonDown);
+        }
+
         private static bool ShouldForwardUiPointerMove(float x, float y)
         {
             if (!_hasLastUiPointerMove ||
@@ -1184,6 +1288,11 @@ namespace Ludots.Adapter.Raylib
             }
 
             return false;
+        }
+
+        internal static bool ShouldRouteMouseDownToUi(bool hitInteractiveUi, bool uiPointerCaptured)
+        {
+            return hitInteractiveUi || uiPointerCaptured;
         }
 
         private static void ResetUiPointerMoveCache()

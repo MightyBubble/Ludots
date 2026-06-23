@@ -32,7 +32,7 @@ namespace RtsDemoMod.Runtime
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
 
-        public bool IsVisible => IsRtsMapActive();
+        public bool IsVisible => !RtsDemoRuntimeKeys.AreNativeCommandPanelsSuppressed(_engine) && IsRtsMapActive();
 
         public uint Revision
         {

@@ -27,6 +27,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using RtsDemoMod.Runtime;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -112,6 +113,31 @@ namespace Ludots.Tests.GAS.Production
             var poseRequest = (Ludots.Core.Gameplay.Camera.CameraPoseRequest)poseRequestObj;
             Assert.That(poseRequest.TargetCm, Is.EqualTo(ReadWorldPosition(engine.World, barracks)));
             Assert.That(poseRequest.DistanceCm, Is.EqualTo(10080f).Within(0.01f));
+        }
+
+        [Test]
+        public void RtsNativeCommandPanels_WhenSuppressed_KeepGasPanelSourceButHideToolbar()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+
+            var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
+                ?? throw new InvalidOperationException("EntityCommandPanelToolbarProvider service is missing.");
+            IEntityCommandPanelSource panelSource = ResolveGasPanelSource(engine);
+            Entity constructionYard = FindEntity(engine.World, "Construction Yard");
+
+            var slots = new EntityCommandPanelSlotView[8];
+            int visibleSlotCount = panelSource.CopySlots(constructionYard, 0, slots);
+            Assert.That(toolbar.IsVisible, Is.True);
+            Assert.That(visibleSlotCount, Is.GreaterThan(0), "The browser showcase must still reuse the GAS command panel source.");
+
+            engine.GlobalContext[RtsDemoRuntimeKeys.SuppressNativeCommandPanels] = true;
+
+            var buttons = new EntityCommandPanelToolbarButtonView[12];
+            Assert.That(toolbar.IsVisible, Is.False);
+            Assert.That(toolbar.CopyButtons(buttons), Is.EqualTo(0));
+            Assert.That(panelSource.CopySlots(constructionYard, 0, slots), Is.EqualTo(visibleSlotCount));
         }
 
         [Test]

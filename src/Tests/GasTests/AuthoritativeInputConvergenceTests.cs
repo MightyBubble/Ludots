@@ -302,6 +302,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputRuntimeSystem_CapturesGroundPointerOnFlatWorldWhenVisualHeightmapIsMissing()
+        {
+            var (backend, handler) = BuildCameraHandler();
+            var accumulator = new AuthoritativeInputAccumulator();
+            var snapshot = new FrozenInputActionReader();
+            backend.MousePosition = new Vector2(12.5f, 34.75f);
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.ScreenRayProvider.Name] = new VerticalScreenRayProvider(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100),
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+
+            var system = new InputRuntimeSystem(globals, accumulator);
+            system.Update(1f / 60f);
+            accumulator.BuildTickSnapshot(snapshot);
+
+            Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out var worldCm), Is.True);
+            Assert.That(worldCm.X, Is.EqualTo(1250));
+            Assert.That(worldCm.Y, Is.EqualTo(3475));
+        }
+
+        [Test]
         public void InputRuntimeSystem_CapturesPointerButtonPressAndReleaseScreenPositionsWithinOneLogicTick()
         {
             var (backend, handler) = BuildSelectionHandler();

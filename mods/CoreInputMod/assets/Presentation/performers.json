@@ -25,9 +25,10 @@
           "assetId": "cube",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
+          "scaleParamKey": "marker3d.scale",
           "localScale": [
             1,
-            1,
+            0.16,
             1
           ]
         }

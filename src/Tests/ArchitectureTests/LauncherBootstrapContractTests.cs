@@ -628,6 +628,57 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesRtsProductionBrowserShowcases_WithCefRuntimeAndFlavorRoot()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-rts-production-browser-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                AssertRtsProductionBrowserPreset(
+                    launcher,
+                    "rts_red_alert_like_cef_raylib",
+                    "RtsRedAlertLikeShowcaseMod",
+                    "rts_red_alert_like");
+                AssertRtsProductionBrowserPreset(
+                    launcher,
+                    "rts_starcraft_like_cef_raylib",
+                    "RtsStarCraftLikeShowcaseMod",
+                    "rts_starcraft_like");
+                AssertRtsProductionBrowserPreset(
+                    launcher,
+                    "rts_empire_like_cef_raylib",
+                    "RtsEmpireLikeShowcaseMod",
+                    "rts_empire_like");
+                AssertRtsProductionBrowserPreset(
+                    launcher,
+                    "rts_fourx_like_cef_raylib",
+                    "RtsFourXLikeShowcaseMod",
+                    "rts_fourx_like");
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
         {
             var repoRoot = FindRepoRoot();
@@ -1055,6 +1106,32 @@ namespace Ludots.Tests.Architecture
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
             Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
+        }
+
+        private static void AssertRtsProductionBrowserPreset(
+            LauncherService launcher,
+            string presetId,
+            string expectedFlavorRoot,
+            string expectedStartupMapId)
+        {
+            var plan = launcher.Resolve(
+                new[] { $"preset:{presetId}" },
+                LauncherPlatformIds.Raylib,
+                LauncherBuildMode.Never).Plan;
+
+            Assert.That(plan.Adapter.Id, Is.EqualTo(LauncherPlatformIds.Raylib));
+            Assert.That(plan.RootModIds, Is.EquivalentTo(new[] { "BrowserCefRuntimeMod", "BrowserRtsProductionShowcaseMod", expectedFlavorRoot }));
+            Assert.That(plan.OrderedModIds, Does.Contain("BrowserCefRuntimeMod"));
+            Assert.That(plan.OrderedModIds, Does.Contain("BrowserRtsProductionShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedFlavorRoot));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsDemoMod"));
+            Assert.That(plan.OrderedModIds, Does.Contain("EntityCommandPanelMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("BrowserUiShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("BrowserReactFlowShowcaseMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedFlavorRoot));
         }
 
         private static FileSnapshot CaptureFile(string path)

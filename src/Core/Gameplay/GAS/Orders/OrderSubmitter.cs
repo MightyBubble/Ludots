@@ -221,6 +221,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ref var ints = ref world.Get<BlackboardIntBuffer>(entity);
                 ints.Set(config.IntArg0BlackboardKey, order.Args.I0);
             }
+
+            if (config.IntArg1BlackboardKey >= 0 && world.Has<BlackboardIntBuffer>(entity))
+            {
+                ref var ints = ref world.Get<BlackboardIntBuffer>(entity);
+                ints.Set(config.IntArg1BlackboardKey, order.Args.I1);
+            }
         }
 
         private static void ClearOrderBlackboard(World world, Entity entity, in OrderTypeConfig config)
@@ -241,6 +247,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 ref var ints = ref world.Get<BlackboardIntBuffer>(entity);
                 ints.Remove(config.IntArg0BlackboardKey);
+            }
+
+            if (config.IntArg1BlackboardKey >= 0 && world.Has<BlackboardIntBuffer>(entity))
+            {
+                ref var ints = ref world.Get<BlackboardIntBuffer>(entity);
+                ints.Remove(config.IntArg1BlackboardKey);
             }
         }
 

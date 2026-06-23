@@ -1,0 +1,16 @@
+{
+  "name": "RtsEmpireLikeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Thin root mod for the Age of Empires style RTS production browser showcase.",
+  "main": "bin/net8.0/RtsEmpireLikeShowcaseMod.dll",
+  "priority": 220,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0",
+    "BrowserRtsProductionShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "rts", "production", "empire-like"]
+}

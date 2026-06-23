@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -11,6 +12,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -149,7 +151,9 @@ namespace Ludots.Core.Gameplay.Spawning
             var entity = World.Create(
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
-                VisualTransform.Default,
+                CreateInitialVisualTransform(
+                    in request.WorldPositionCm,
+                    request.HasFacing != 0 ? request.FacingAngleRad : 0f),
                 new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new AttributeBuffer());
             EnsurePresentationStableId(entity);
@@ -185,7 +189,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (request.HasWorldPosition != 0)
             {
-                ApplyWorldPosition(entity, request.WorldPositionCm);
+                ApplyWorldPosition(entity, request.WorldPositionCm, ResolveInitialFacingAngle(in request, entity));
             }
             else
             {
@@ -457,7 +461,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (request.HasWorldPosition != 0)
             {
-                ApplyWorldPosition(entity, request.WorldPositionCm);
+                ApplyWorldPosition(entity, request.WorldPositionCm, ResolveInitialFacingAngle(in request, entity));
             }
 
             TryApplyFacing(in request, entity);
@@ -522,7 +526,7 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void ApplyWorldPosition(Entity entity, in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm)
+        private void ApplyWorldPosition(Entity entity, in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm, float facingAngleRad)
         {
             var position = new WorldPositionCm { Value = worldPositionCm };
             var previous = new PreviousWorldPositionCm { Value = worldPositionCm };
@@ -545,9 +549,16 @@ namespace Ludots.Core.Gameplay.Spawning
                 World.Add(entity, previous);
             }
 
-            if (!World.Has<VisualTransform>(entity))
+            VisualTransform visual = CreateInitialVisualTransform(in worldPositionCm, facingAngleRad);
+            if (World.Has<VisualTransform>(entity))
             {
-                World.Add(entity, VisualTransform.Default);
+                VisualTransform existing = World.Get<VisualTransform>(entity);
+                visual.Scale = existing.Scale == Vector3.Zero ? Vector3.One : existing.Scale;
+                World.Set(entity, visual);
+            }
+            else
+            {
+                World.Add(entity, visual);
             }
 
             if (!World.Has<CullState>(entity))
@@ -556,6 +567,30 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsurePresentationStableId(entity);
+        }
+
+        private float ResolveInitialFacingAngle(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (request.HasFacing != 0)
+            {
+                return request.FacingAngleRad;
+            }
+
+            return World.IsAlive(entity) && World.Has<FacingDirection>(entity)
+                ? World.Get<FacingDirection>(entity).AngleRad
+                : 0f;
+        }
+
+        private static VisualTransform CreateInitialVisualTransform(
+            in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm,
+            float facingAngleRad)
+        {
+            return new VisualTransform
+            {
+                Position = WorldUnits.WorldCmToVisualMeters(in worldPositionCm, yMeters: 0f),
+                Rotation = WorldPlane2D.FacingRadToVisualYRotation(facingAngleRad),
+                Scale = Vector3.One,
+            };
         }
 
         private void EnsurePresentationStableId(Entity entity)

@@ -1241,6 +1241,41 @@ namespace Ludots.Core.Input.Orders
             if (template.F3.HasValue) args.F3 = template.F3.Value;
         }
 
+        private static InputOrderMapping WithProgrammaticOverrides(
+            InputOrderMapping mapping,
+            OrderSubmitMode? submitModeOverride,
+            OrderArgsTemplate? argsTemplateOverride)
+        {
+            if (!submitModeOverride.HasValue && argsTemplateOverride == null)
+            {
+                return mapping;
+            }
+
+            return new InputOrderMapping
+            {
+                ActionId = mapping.ActionId,
+                Trigger = mapping.Trigger,
+                DoubleTapWindowSeconds = mapping.DoubleTapWindowSeconds,
+                OrderTypeKey = mapping.OrderTypeKey,
+                ArgsTemplate = argsTemplateOverride ?? mapping.ArgsTemplate,
+                RequireSelection = mapping.RequireSelection,
+                SelectionSetKey = mapping.SelectionSetKey,
+                SelectionType = mapping.SelectionType,
+                ModifierBehavior = submitModeOverride.HasValue
+                    ? submitModeOverride.Value == OrderSubmitMode.Queued
+                        ? ModifierSubmitBehavior.AlwaysQueued
+                        : ModifierSubmitBehavior.AlwaysImmediate
+                    : mapping.ModifierBehavior,
+                IsSkillMapping = mapping.IsSkillMapping,
+                HeldPolicy = mapping.HeldPolicy,
+                CastModeOverride = mapping.CastModeOverride,
+                AutoTargetPolicy = mapping.AutoTargetPolicy,
+                AutoTargetRangeCm = mapping.AutoTargetRangeCm,
+                CursorTargetPolicy = mapping.CursorTargetPolicy,
+                CursorTargetRangeCm = mapping.CursorTargetRangeCm
+            };
+        }
+
         // Public API (Remap, Save, Load - unchanged)
         
         public void Remap(string actionId, string orderTypeKey, OrderArgsTemplate? argsTemplate = null)
@@ -1338,7 +1373,11 @@ namespace Ludots.Core.Input.Orders
         /// Activates a mapped action programmatically.
         /// UI callers may prefer aiming over hold/release semantics when no key lifecycle exists.
         /// </summary>
-        public bool TryActivateMappedAction(string actionId, bool preferUiAiming = false)
+        public bool TryActivateMappedAction(
+            string actionId,
+            bool preferUiAiming = false,
+            OrderSubmitMode? submitModeOverride = null,
+            OrderArgsTemplate? argsTemplateOverride = null)
         {
             if (string.IsNullOrWhiteSpace(actionId) ||
                 _orderSubmitHandler == null ||
@@ -1353,6 +1392,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out var resolvedActor);
+            effectiveMapping = WithProgrammaticOverrides(effectiveMapping, submitModeOverride, argsTemplateOverride);
 
             if (effectiveMapping.Trigger == InputTriggerType.Held && effectiveMapping.HeldPolicy == HeldPolicy.StartEnd)
             {
@@ -1485,5 +1525,4 @@ namespace Ludots.Core.Input.Orders
 
     }
 }
-
 

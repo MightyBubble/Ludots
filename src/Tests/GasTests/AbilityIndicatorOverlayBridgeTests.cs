@@ -30,6 +30,7 @@ namespace Ludots.Tests.GAS
             _overlays = new GroundOverlayBuffer();
             _performerDefinitions = new PerformerDefinitionRegistry();
             _performers = new PerformerEntityRuntime(_world);
+            _performers.BindDefinitions(_performerDefinitions);
             _bridge = new AbilityIndicatorOverlayBridge(_world, _abilities, _overlays, _performerDefinitions, _performers);
         }
 
@@ -168,8 +169,8 @@ namespace Ludots.Tests.GAS
                             Mobility = VisualMobility.Movable,
                             LocalOffset = Vector3.Zero,
                             LocalRotation = Quaternion.Identity,
-                            LocalScale = Vector3.One,
-                            ScaleParamKey = -1,
+                            LocalScale = new Vector3(1f, 0.16f, 1f),
+                            ScaleParamKey = WellKnownPerformerParamKeys.MarkerScale,
                             ColorParamKey = -1,
                             MaterialParamKey = -1,
                             AssetSwapParamKey = -1,
@@ -220,10 +221,30 @@ namespace Ludots.Tests.GAS
             Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.X, Is.EqualTo(2.5f).Within(0.001f));
             Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.Y, Is.EqualTo(0.43f).Within(0.001f));
             Assert.That(_performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, -1f), Is.Not.EqualTo(-1f));
+            float uniformScale = _performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerScale, -1f);
+            Assert.That(uniformScale, Is.EqualTo(3.5f).Within(0.001f));
             float scaleX = _performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, -1f);
             Assert.That(scaleX, Is.EqualTo(3.5f).Within(0.001f));
             float alpha = _performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerColorA, -1f);
             Assert.That(alpha, Is.GreaterThanOrEqualTo(0.3f));
+            Assert.That(_world.Has<PerfHasEmitWork>(previewEntity), Is.True);
+
+            _world.Remove<PerfHasEmitWork>(previewEntity);
+            _bridge.UpdateAiming(
+                actor,
+                new InputOrderMapping
+                {
+                    ActionId = "SkillQ",
+                    SelectionType = OrderSelectionType.Position,
+                    ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
+                },
+                hasCursorWorldCm: true,
+                cursorWorldCm: new Vector3(450f, 0f, 500f),
+                hoveredEntity: Entity.Null);
+
+            Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.X, Is.EqualTo(4.5f).Within(0.001f));
+            Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.Z, Is.EqualTo(5f).Within(0.001f));
+            Assert.That(_world.Has<PerfHasEmitWork>(previewEntity), Is.True);
 
             _bridge.ClearPreview();
 

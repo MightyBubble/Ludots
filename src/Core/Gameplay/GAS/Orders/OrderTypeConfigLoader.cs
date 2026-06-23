@@ -35,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public JsonNode? SpatialBlackboardKey { get; set; }
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
+            public JsonNode? IntArg1BlackboardKey { get; set; }
             public JsonNode? ValidationGraph { get; set; }
         }
 
@@ -178,6 +179,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
                 EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
                 IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
+                IntArg1BlackboardKey = ResolveOptionalBlackboardKey(json.IntArg1BlackboardKey, key, path, "intArg1BlackboardKey"),
                 ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path)
             };
         }
@@ -422,6 +424,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be an exact semantic string.");
+        }
+
+        private static int ResolveOptionalBlackboardKey(JsonNode? node, string key, string path, string fieldName)
+        {
+            return node == null
+                ? -1
+                : ResolveBlackboardKey(node, key, path, fieldName);
         }
 
         private static int ResolveValidationGraph(JsonNode? graphNode, string key, string path)

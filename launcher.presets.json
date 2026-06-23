@@ -200,6 +200,50 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "rts_red_alert_like_cef_raylib",
+      "name": "RTS Red Alert Like CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_rts_production_showcase",
+        "$rts_red_alert_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_starcraft_like_cef_raylib",
+      "name": "RTS StarCraft Like CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_rts_production_showcase",
+        "$rts_starcraft_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_empire_like_cef_raylib",
+      "name": "RTS Empire Like CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_rts_production_showcase",
+        "$rts_empire_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "rts_fourx_like_cef_raylib",
+      "name": "RTS 4X Like CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_rts_production_showcase",
+        "$rts_fourx_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

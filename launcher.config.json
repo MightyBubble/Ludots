@@ -184,6 +184,46 @@
         "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
         "projectPath": "CombatStanceShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "browser_rts_production_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_rts_production/BrowserRtsProductionShowcaseMod",
+        "projectPath": "BrowserRtsProductionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_red_alert_like",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_red_alert_like/RtsRedAlertLikeShowcaseMod",
+        "projectPath": "RtsRedAlertLikeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_starcraft_like",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_starcraft_like/RtsStarCraftLikeShowcaseMod",
+        "projectPath": "RtsStarCraftLikeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_empire_like",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_empire_like/RtsEmpireLikeShowcaseMod",
+        "projectPath": "RtsEmpireLikeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "rts_fourx_like",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/rts_fourx_like/RtsFourXLikeShowcaseMod",
+        "projectPath": "RtsFourXLikeShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

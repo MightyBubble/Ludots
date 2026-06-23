@@ -184,7 +184,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
-                DrawInstancedBucket(bucket, meshes, scaleMul);
+                DrawInstancedBucket(bucket, meshes, scaleMul, camera, in finalizationContext);
             }
         }
 
@@ -1688,6 +1688,17 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f)
         {
+            var finalizationContext = new PrefabFinalizationContext(null);
+            DrawInstancedBucket(bucket, meshes, scaleMul, default, in finalizationContext);
+        }
+
+        private void DrawInstancedBucket(
+            RaylibIsmRenderBridge.Bucket bucket,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            Camera3D camera,
+            in PrefabFinalizationContext finalizationContext)
+        {
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
@@ -1726,9 +1737,9 @@ namespace Ludots.Client.Raylib.Rendering
                             item.Rotation,
                             item.Scale * scaleMul,
                             item.Color,
-                            default,
+                            camera,
                             meshes,
-                            new PrefabFinalizationContext(null));
+                            in finalizationContext);
                         break;
                 }
             }

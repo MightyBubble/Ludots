@@ -31,8 +31,7 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },
@@ -53,8 +52,7 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },
@@ -75,8 +73,7 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },
@@ -97,8 +94,7 @@
       {
         "tag": "State.Rts.Warping",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },
@@ -397,17 +393,11 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 0,
-      "periodTicks": 0,
-      "clockId": "FixedFrame"
-    },
     "grantedTags": [
       {
         "tag": "Progression.Rts.WarpGate",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },

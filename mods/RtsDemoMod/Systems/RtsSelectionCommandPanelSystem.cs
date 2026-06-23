@@ -44,6 +44,13 @@ namespace RtsDemoMod.Systems
                 return;
             }
 
+            if (RtsDemoRuntimeKeys.AreNativeCommandPanelsSuppressed(_engine))
+            {
+                ClosePanel(service);
+                _seededDefaultSelection = false;
+                return;
+            }
+
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);

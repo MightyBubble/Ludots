@@ -38,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int SpatialBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetPosition;
         public int EntityBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetEntity;
         public int IntArg0BlackboardKey { get; set; } = -1;
+        public int IntArg1BlackboardKey { get; set; } = -1;
         public int ValidationGraphId { get; set; }
     }
 }

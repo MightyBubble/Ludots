@@ -688,7 +688,31 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
+            AbilitySlotState slot = ResolveEffectiveSlot(target, in _engine.World.Get<AbilityStateBuffer>(target), slotIndex);
+            var argsOverride = new OrderArgsTemplate
+            {
+                I0 = slotIndex,
+                I1 = slot.AbilityId > 0 ? slot.AbilityId : null
+            };
+            OrderSubmitMode submitMode = ShouldQueueProgrammaticActivation(target)
+                ? OrderSubmitMode.Queued
+                : OrderSubmitMode.Immediate;
+
+            return inputMapping.TryActivateMappedAction(
+                actionId,
+                preferUiAiming: true,
+                submitModeOverride: submitMode,
+                argsTemplateOverride: argsOverride);
+        }
+
+        private bool ShouldQueueProgrammaticActivation(Entity target)
+        {
+            if (!_engine.World.TryGet(target, out OrderBuffer orders))
+            {
+                return false;
+            }
+
+            return orders.HasActive || orders.HasQueued;
         }
 
         private bool CanActivateProgressionRequirement(Entity target, int slotIndex)
@@ -918,13 +942,28 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
+            if (order.Args.I1 > 0)
+            {
+                if (_abilityDefinitions == null ||
+                    !_abilityDefinitions.TryGet(order.Args.I1, out var lockedDefinition))
+                {
+                    return false;
+                }
+
+                string lockedFallbackLabel = ResolveFallbackLabel(order.Args.I1, 0);
+                label = lockedDefinition.HasPresentation && lockedDefinition.Presentation != null
+                    ? lockedDefinition.Presentation.ResolveDisplayName(lockedFallbackLabel)
+                    : lockedFallbackLabel;
+                return !string.IsNullOrWhiteSpace(label);
+            }
+
             ref var slots = ref _engine.World.Get<AbilityStateBuffer>(order.Actor);
             if ((uint)order.Args.I0 >= AbilityStateBuffer.CAPACITY)
             {
                 return false;
             }
 
-            AbilitySlotState slot = slots.Get(order.Args.I0);
+            AbilitySlotState slot = ResolveEffectiveSlot(order.Actor, in slots, order.Args.I0);
             if (slot.AbilityId <= 0 ||
                 _abilityDefinitions == null ||
                 !_abilityDefinitions.TryGet(slot.AbilityId, out var definition))
@@ -1009,12 +1048,20 @@ namespace EntityCommandPanelMod.Runtime
 
         private string ResolveOrderActionDetail(in Order order)
         {
-            return _orderTypes != null &&
-                   _orderTypes.TryGet(order.OrderTypeId, out var config) &&
-                   string.Equals(config.Key, "castAbility", StringComparison.OrdinalIgnoreCase) &&
-                   order.Args.I0 >= 0
-                ? $"slot {order.Args.I0}"
-                : string.Empty;
+            if (_orderTypes == null ||
+                !_orderTypes.TryGet(order.OrderTypeId, out var config) ||
+                !string.Equals(config.Key, "castAbility", StringComparison.OrdinalIgnoreCase) ||
+                order.Args.I0 < 0)
+            {
+                return string.Empty;
+            }
+
+            if (TryResolveCastAbilityLabel(in order, out string label))
+            {
+                return $"slot {order.Args.I0} - {label}";
+            }
+
+            return $"slot {order.Args.I0}";
         }
 
         private static string ResolveExecStateLabel(AbilityExecRunState state)

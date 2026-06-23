@@ -1,0 +1,84 @@
+{
+  "Id": "rts_fourx_like",
+  "Tags": ["rts", "rts_showcase", "rts_production", "fourx_like", "war3"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 9000,
+    "TargetYCm": 7600,
+    "Yaw": 168,
+    "Pitch": 50,
+    "DistanceCm": 13800,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "war3_forest.vtxm" }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "InstanceId": "aurora_capital",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6500, "Y": 5600 } },
+        "Name": { "Value": "Aurora Capital City Primitive" },
+        "Team": { "Id": 1 },
+        "AttributeBuffer": { "base": { "Health": 1600, "Gold": 620, "Science": 42, "Production": 55, "Food": 120 } }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "InstanceId": "aurora_settler",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7200, "Y": 6200 } },
+        "Name": { "Value": "Aurora Settler Primitive" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "InstanceId": "aurora_warrior",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7800, "Y": 5800 } },
+        "Name": { "Value": "Aurora Warrior Primitive" },
+        "Team": { "Id": 1 }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "InstanceId": "boreal_capital",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 11600, "Y": 8200 } },
+        "Name": { "Value": "Boreal Capital City Primitive" },
+        "Team": { "Id": 2 },
+        "AttributeBuffer": { "base": { "Health": 1600, "Gold": 480, "Science": 36, "Production": 62, "Food": 100 } }
+      }
+    },
+    {
+      "Template": "rts_war3_footman",
+      "InstanceId": "boreal_warrior",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 10900, "Y": 7800 } },
+        "Name": { "Value": "Boreal Warrior Primitive" },
+        "Team": { "Id": 2 }
+      }
+    },
+    {
+      "Template": "rts_war3_guard_tower_site",
+      "InstanceId": "cygnus_capital",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9300, "Y": 11200 } },
+        "Name": { "Value": "Cygnus Capital City Primitive" },
+        "Team": { "Id": 3 },
+        "AttributeBuffer": { "base": { "Health": 1600, "Gold": 520, "Science": 58, "Production": 41, "Food": 90 } }
+      }
+    },
+    {
+      "Template": "rts_war3_peasant",
+      "InstanceId": "cygnus_settler",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9800, "Y": 10600 } },
+        "Name": { "Value": "Cygnus Settler Primitive" },
+        "Team": { "Id": 3 }
+      }
+    }
+  ]
+}

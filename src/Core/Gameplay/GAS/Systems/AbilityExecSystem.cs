@@ -169,6 +169,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     bool hasGranted = World.Has<GrantedSlotBuffer>(actor);
                     GrantedSlotBuffer grantedSlots = hasGranted ? World.Get<GrantedSlotBuffer>(actor) : default;
                     var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
+                    if (bbInts.TryGet(OrderBlackboardKeys.Cast_AbilityId, out int abilityOverrideId) &&
+                        abilityOverrideId > 0)
+                    {
+                        slot = new AbilitySlotState { AbilityId = abilityOverrideId };
+                    }
                     
                     // Read target from Blackboard (Cast_TargetEntity = 111)
                     Entity targetEntity = default;
@@ -449,9 +454,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 bool hasOnActivate = false;
 
                 AbilityDefinition def = default;
-                bool hasDefinition = slot.AbilityId > 0 &&
+                bool hasDefinition;
+                if (instance.AbilityId > 0 &&
                     _abilityDefinitions != null &&
-                    _abilityDefinitions.TryGet(slot.AbilityId, out def);
+                    _abilityDefinitions.TryGet(instance.AbilityId, out def))
+                {
+                    // Execution is locked at Phase 1; later form routing must not swap the running spec.
+                    slot = new AbilitySlotState { AbilityId = instance.AbilityId };
+                    hasDefinition = true;
+                }
+                else
+                {
+                    hasDefinition = slot.AbilityId > 0 &&
+                        _abilityDefinitions != null &&
+                        _abilityDefinitions.TryGet(slot.AbilityId, out def);
+                }
                 Entity templateEntity = default;
                 bool hasTemplateEntity = false;
                 if (slot.TemplateEntityId > 0)
@@ -1304,6 +1321,4 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
-
-
 

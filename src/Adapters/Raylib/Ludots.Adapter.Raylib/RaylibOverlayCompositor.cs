@@ -135,6 +135,7 @@ namespace Ludots.Adapter.Raylib
                 (currentTopOverlayVersion != _topOverlayLayerVersion ||
                  hasTopOverlay != _overlayHadContent ||
                  (framebufferDirectTopOverlay && hasTopOverlay));
+            bool topOverlayHadContentBeforeRefresh = _overlayHadContent;
             if (refreshTopOverlay)
             {
                 long topOverlayRenderStart = Stopwatch.GetTimestamp();
@@ -184,10 +185,14 @@ namespace Ludots.Adapter.Raylib
             }
 
             bool hasCompositeContent = hasUnderlay || hasUiLayer || rasterTopOverlay;
-            bool refreshComposite = underlayCanvasChanged ||
-                refreshUiLayer ||
-                (refreshTopOverlay && rasterTopOverlay) ||
-                hasCompositeContent != _compositeHadContent;
+            bool refreshComposite = ShouldRefreshComposite(
+                underlayCanvasChanged,
+                refreshUiLayer,
+                refreshTopOverlay,
+                rasterTopOverlay,
+                topOverlayHadContentBeforeRefresh,
+                hasCompositeContent,
+                _compositeHadContent);
 
             if (framebufferDirectUnderlay || gpuDirectUnderlay)
             {
@@ -278,6 +283,22 @@ namespace Ludots.Adapter.Raylib
                 FinalDrawMs: finalDrawMs,
                 RefreshComposite: refreshComposite,
                 UiRenderMs: uiRenderMs);
+        }
+
+        internal static bool ShouldRefreshComposite(
+            bool underlayCanvasChanged,
+            bool refreshUiLayer,
+            bool refreshTopOverlay,
+            bool rasterTopOverlay,
+            bool topOverlayHadContentBeforeRefresh,
+            bool hasCompositeContent,
+            bool compositeHadContent)
+        {
+            bool topOverlayAffectsComposite = rasterTopOverlay || topOverlayHadContentBeforeRefresh;
+            return underlayCanvasChanged ||
+                refreshUiLayer ||
+                (refreshTopOverlay && topOverlayAffectsComposite) ||
+                hasCompositeContent != compositeHadContent;
         }
 
         public void Dispose()
