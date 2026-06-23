@@ -21,8 +21,8 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 		int chunkSize = 64 * 1024)
 	{
 		_bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-		_capabilities = capabilities ?? WebUiTransportCapabilities.StringBridge();
 		_chunkSize = Math.Max(1, chunkSize);
+		_capabilities = capabilities ?? WebUiTransportCapabilities.MessageBridge(chunkSize: _chunkSize);
 		_bridge.MessageReceived += OnMessageReceived;
 	}
 

@@ -82,6 +82,25 @@ public sealed class BrowserMessageBridgeDataTransportTests
 	}
 
 	[Test]
+	public async Task DefaultCapabilities_DeclareMessageBridgeBase64ChunkMode()
+	{
+		var bridge = new FakeBrowserMessageBridge();
+		await using var transport = new BrowserMessageBridgeDataTransport(bridge, chunkSize: 2048);
+
+		WebUiTransportCapabilities capabilities = transport.Capabilities;
+
+		Assert.That(capabilities.ModeName, Is.EqualTo("message"));
+		Assert.That(capabilities.SupportsBinary, Is.False);
+		Assert.That(capabilities.SupportsSharedMemory, Is.False);
+		Assert.That(capabilities.SupportsBase64Chunks, Is.True);
+		Assert.That(capabilities.SupportsChunking, Is.True);
+		Assert.That(capabilities.ChunkSize, Is.EqualTo(2048));
+		Assert.That(capabilities.ExpectedManagedCopiesPerPayload, Is.EqualTo(2));
+		Assert.That(capabilities.Satisfies("binary.base64"), Is.True);
+		Assert.That(capabilities.Satisfies("shared-memory"), Is.False);
+	}
+
+	[Test]
 	public async Task Dispose_DetachesBridgeAndRepeatDisposeDoesNotThrow()
 	{
 		var bridge = new FakeBrowserMessageBridge();

@@ -17,35 +17,22 @@ const CLIENT_CAPABILITIES = Object.freeze([
 
 export function ensureLudotsDataPlaneTransport(options = {}) {
   const root = options.root ?? globalThis;
+  const mode = options.mode ?? 'standard';
 
-  if (root.ludotsDataplane && options.forceFake !== true) {
-    return { transport: root.ludotsDataplane, installedFake: false };
+  if (root.ludotsDataplane && mode !== 'mock') {
+    return { transport: root.ludotsDataplane, installedFake: false, mode: 'standard' };
   }
 
-  if (root.CefSharp?.PostMessage && options.forceFake !== true) {
-    const cefTransport = {
-      name: 'cefsharp.ludots-dataplane',
-      windowBacked: true,
-      postMessage(message) {
-        root.CefSharp.PostMessage(message);
-      },
-      addEventListener(type, listener, listenerOptions) {
-        root.addEventListener(type, listener, listenerOptions);
-      },
-      removeEventListener(type, listener, listenerOptions) {
-        root.removeEventListener(type, listener, listenerOptions);
-      }
-    };
-    root.ludotsDataplane = cefTransport;
-    return { transport: cefTransport, installedFake: false };
+  if (mode !== 'mock') {
+    throw new Error('window.ludotsDataplane is required outside explicit mock preview mode.');
   }
 
-  const fakeTransport = createFakeLudotsDataPlaneTransport({
+  const mockTransport = createMockLudotsDataPlaneTransport({
     intervalMs: options.intervalMs,
     latencyMs: options.latencyMs
   });
-  root.ludotsDataplane = fakeTransport;
-  return { transport: fakeTransport, installedFake: true };
+  root.ludotsDataplane = mockTransport;
+  return { transport: mockTransport, installedFake: true, mode: 'mock' };
 }
 
 export function createLudotsDataPlaneClient(options = {}) {
@@ -101,8 +88,11 @@ export function createLudotsDataPlaneClient(options = {}) {
     });
     updateStatus({
       phase: 'connected',
-      sessionId: response.sessionId ?? response.payload?.sessionId ?? sessionId,
-      transportName: response.payload?.transportName ?? response.transportName ?? status.transportName
+      sessionId: response.payload?.sessionId ?? response.sessionId ?? sessionId,
+      transportName: response.payload?.transportName ??
+        response.payload?.transportMode ??
+        response.transportName ??
+        status.transportName
     });
     emitDiagnostic('info', 'handshake', 'DataPlane handshake acknowledged.', response);
     return response;
@@ -201,17 +191,11 @@ export function createLudotsDataPlaneClient(options = {}) {
   }
 
   function sendEnvelope(envelope) {
-    if (transport?.postMessage) {
-      transport.postMessage(envelope);
-      return;
+    if (!transport || typeof transport.postMessage !== 'function') {
+      throw new Error('No Ludots DataPlane transport is available.');
     }
 
-    if (root.CefSharp?.PostMessage) {
-      root.CefSharp.PostMessage(envelope);
-      return;
-    }
-
-    throw new Error('No Ludots DataPlane transport is available.');
+    transport.postMessage(envelope);
   }
 
   function handleMessage(rawMessage) {
@@ -358,17 +342,18 @@ export function decodeEntityColumnarPacket(bytes) {
   return { kind, schemaId, removedStableIds, stableIds, generations, x, y, hp, team, state };
 }
 
-export function createFakeLudotsDataPlaneTransport(options = {}) {
+export function createMockLudotsDataPlaneTransport(options = {}) {
   const eventTarget = new EventTarget();
   const intervalMs = options.intervalMs ?? 1200;
   const latencyMs = options.latencyMs ?? 60;
-  const sessionId = createId('fake-session');
+  const sessionId = createId('mock-session');
   const subscriptions = new Map();
-  const state = createInitialFakeWorldState();
+  const state = createInitialMockWorldState();
   let timer = 0;
 
   return {
-    name: 'window.ludotsDataplane.fake',
+    name: 'window.ludotsDataplane.mock',
+    mode: 'mock',
     postMessage(message) {
       const envelope = normalizeClientEnvelope(message);
       globalThis.setTimeout(() => handleClientEnvelope(envelope), latencyMs);
@@ -393,7 +378,7 @@ export function createFakeLudotsDataPlaneTransport(options = {}) {
     if (envelope.kind === 'handshake') {
       emitHostControl('handshakeAck', envelope, {
         sessionId,
-        transportName: 'fake',
+        transportName: 'mock',
         capabilities: { supportsBinary: false, supportsReliableOrdered: true, supportsLatestWins: true }
       });
       return;
@@ -417,7 +402,7 @@ export function createFakeLudotsDataPlaneTransport(options = {}) {
     }
 
     if (envelope.kind === 'command') {
-      applyFakeCommand(state, envelope.payload);
+      applyMockCommand(state, envelope.payload);
       emitHostControl('commandAck', envelope, { clientSeq: envelope.payload?.clientSeq ?? 0 });
       emitDelta({ reason: envelope.payload?.name ?? 'command' });
     }
@@ -440,7 +425,7 @@ export function createFakeLudotsDataPlaneTransport(options = {}) {
 
   function emitDelta(extra) {
     state.tick += 1;
-    advanceFakeWorld(state);
+    advanceMockWorld(state);
     for (const subscription of subscriptions.values()) {
       emitHostData('Delta', {
         sessionId,
@@ -594,7 +579,7 @@ function normalizeKind(kind) {
   return text.charAt(0).toLowerCase() + text.slice(1);
 }
 
-function createInitialFakeWorldState() {
+function createInitialMockWorldState() {
   return {
     tick: 1,
     selectedEntityId: 'unit.scout',
@@ -624,7 +609,7 @@ function snapshotPayload(state) {
     selectedEntityId: state.selectedEntityId,
     entityCount: state.entities.length,
     entities: state.entities.map(copyEntity),
-    diagnostics: fakeDiagnostics(state, 'snapshot')
+    diagnostics: mockDiagnostics(state, 'snapshot')
   };
 }
 
@@ -634,12 +619,12 @@ function deltaPayload(state, extra) {
     selectedEntityId: state.selectedEntityId,
     entityCount: state.entities.length,
     entityPatches: state.entities.map(copyEntity),
-    diagnostics: fakeDiagnostics(state, extra.reason),
+    diagnostics: mockDiagnostics(state, extra.reason),
     reason: extra.reason
   };
 }
 
-function applyFakeCommand(state, command) {
+function applyMockCommand(state, command) {
   const payload = command?.payload ?? {};
   if (command?.name === 'inspectEntity') {
     state.selectedEntityId = payload.nodeId ?? state.selectedEntityId;
@@ -653,13 +638,13 @@ function applyFakeCommand(state, command) {
   }
 }
 
-function advanceFakeWorld(state) {
+function advanceMockWorld(state) {
   for (const entity of state.entities) {
     entity.signal = clampNumber(entity.signal + (Math.random() - 0.5) * 0.08, 0.35, 0.98);
   }
 }
 
-function fakeDiagnostics(state, reason) {
+function mockDiagnostics(state, reason) {
   return {
     reason,
     hostFps: 60,

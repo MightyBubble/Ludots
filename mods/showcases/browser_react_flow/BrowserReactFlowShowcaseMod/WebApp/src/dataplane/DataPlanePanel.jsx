@@ -207,7 +207,7 @@ export function DataPlanePanel() {
           <strong>{connection.phase}</strong>
         </div>
         <span className={`dataplane-status dataplane-status-${resolveStatusTone(connection)}`}>
-          {connection.subscribed ? 'streaming' : connection.installedFake ? 'fake transport' : 'host'}
+          {connection.subscribed ? 'streaming' : connection.installedFake ? 'mock transport' : 'host'}
         </span>
       </header>
 

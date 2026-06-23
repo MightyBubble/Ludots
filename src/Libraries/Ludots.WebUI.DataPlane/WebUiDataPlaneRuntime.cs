@@ -152,18 +152,7 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		switch (envelope.Kind)
 		{
 			case "handshake":
-				session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
-					session.SessionId,
-					envelope.RequestId,
-					"handshakeAck",
-					envelope.Topic,
-					new
-					{
-						session.SessionId,
-						capabilities = session.Transport.Capabilities,
-						protocol = WebUiDataPlaneProtocol.CurrentSchemaVersion
-					}));
-				await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+				await HandleHandshakeAsync(session, envelope, cancellationToken).ConfigureAwait(false);
 				break;
 			case "subscribe":
 				await SubscribeAsync(session, envelope, cancellationToken).ConfigureAwait(false);
@@ -190,6 +179,74 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 				await HandleCommandAsync(session, commandPacket, cancellationToken).ConfigureAwait(false);
 				break;
 		}
+	}
+
+	private static async ValueTask HandleHandshakeAsync(
+		WebUiDataPlaneSession session,
+		WebUiControlEnvelope envelope,
+		CancellationToken cancellationToken)
+	{
+		string[] missing = GetMissingRequiredCapabilities(envelope.Payload, session.Transport.Capabilities);
+		if (missing.Length > 0)
+		{
+			session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
+				session.SessionId,
+				envelope.RequestId,
+				"error",
+				envelope.Topic,
+				new
+				{
+					code = "transport_capability_mismatch",
+					message = "The requested WebUI DataPlane transport capabilities are not available.",
+					requiredCapabilities = missing,
+					capabilities = session.Transport.Capabilities
+				}));
+			await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+			return;
+		}
+
+		session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
+			session.SessionId,
+			envelope.RequestId,
+			"handshakeAck",
+			envelope.Topic,
+			new
+			{
+				session.SessionId,
+				transportMode = session.Transport.Capabilities.ModeName,
+				capabilities = session.Transport.Capabilities,
+				protocol = WebUiDataPlaneProtocol.CurrentSchemaVersion
+			}));
+		await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+	}
+
+	private static string[] GetMissingRequiredCapabilities(
+		JsonElement payload,
+		WebUiTransportCapabilities capabilities)
+	{
+		if (payload.ValueKind != JsonValueKind.Object ||
+			!payload.TryGetProperty("requiredCapabilities", out JsonElement required) ||
+			required.ValueKind != JsonValueKind.Array)
+		{
+			return Array.Empty<string>();
+		}
+
+		var missing = new List<string>();
+		foreach (JsonElement item in required.EnumerateArray())
+		{
+			if (item.ValueKind != JsonValueKind.String)
+			{
+				continue;
+			}
+
+			string? capability = item.GetString();
+			if (!string.IsNullOrWhiteSpace(capability) && !capabilities.Satisfies(capability))
+			{
+				missing.Add(capability.Trim());
+			}
+		}
+
+		return missing.ToArray();
 	}
 
 	private async ValueTask SubscribeAsync(

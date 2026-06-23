@@ -50,6 +50,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		_browser.Paint += OnPaint;
 		_browser.JavascriptMessageReceived += OnJavascriptMessageReceived;
 		_browser.BrowserInitialized += OnBrowserInitialized;
+		_browser.FrameLoadEnd += OnFrameLoadEnd;
 		if (_browser.IsBrowserInitialized)
 		{
 			_browserInitialized.TrySetResult();
@@ -201,6 +202,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		_browser.Paint -= OnPaint;
 		_browser.JavascriptMessageReceived -= OnJavascriptMessageReceived;
 		_browser.BrowserInitialized -= OnBrowserInitialized;
+		_browser.FrameLoadEnd -= OnFrameLoadEnd;
 
 		_browser.Dispose();
 		return ValueTask.CompletedTask;
@@ -247,6 +249,30 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		mainFrame.ExecuteJavaScriptAsync(script);
 	}
 
+	private ValueTask InjectDataPlaneFacadeAsync(CancellationToken cancellationToken)
+	{
+		return ExecuteScriptAsync(CefDataPlaneFacadeScript.Create(), cancellationToken);
+	}
+
+	private void QueueDataPlaneFacadeInjection()
+	{
+		_ = InjectDataPlaneFacadeAndObserveFailureAsync();
+	}
+
+	private async Task InjectDataPlaneFacadeAndObserveFailureAsync()
+	{
+		try
+		{
+			await InjectDataPlaneFacadeAsync(CancellationToken.None).ConfigureAwait(false);
+		}
+		catch (ObjectDisposedException) when (_disposed)
+		{
+		}
+		catch (InvalidOperationException) when (_disposed)
+		{
+		}
+	}
+
 	private void OnAfterBrowserCreated(IBrowser browser)
 	{
 		_browserIdentifier = browser.Identifier;
@@ -261,6 +287,16 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 			host.WasResized();
 			host.SetFocus(true);
 			host.Invalidate(PaintElementType.View);
+		}
+
+		QueueDataPlaneFacadeInjection();
+	}
+
+	private void OnFrameLoadEnd(object? sender, FrameLoadEndEventArgs e)
+	{
+		if (e.Frame.IsMain)
+		{
+			QueueDataPlaneFacadeInjection();
 		}
 	}
 

@@ -90,6 +90,14 @@ function resolveShowcaseMode() {
     : 'react-flow';
 }
 
+function resolveDataPlaneTransportMode() {
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('dataplane') ?? params.get('mode');
+  return mode === 'mock' || mode === 'preview'
+    ? 'mock'
+    : 'standard';
+}
+
 function buildInitialGraph() {
   const nodes = [];
   const edges = [];
@@ -204,7 +212,26 @@ function useLudotsDataPlane() {
 
   React.useEffect(() => {
     let active = true;
-    const { transport, installedFake } = ensureLudotsDataPlaneTransport();
+    let resolvedTransport;
+
+    try {
+      resolvedTransport = ensureLudotsDataPlaneTransport({
+        mode: resolveDataPlaneTransportMode()
+      });
+    } catch (error) {
+      React.startTransition(() => {
+        setState((current) => ({
+          ...current,
+          phase: 'unavailable',
+          error: error instanceof Error ? error.message : String(error)
+        }));
+      });
+      return () => {
+        active = false;
+      };
+    }
+
+    const { transport, installedFake, mode } = resolvedTransport;
     const client = createLudotsDataPlaneClient({
       transport,
       installedFake,
@@ -228,7 +255,7 @@ function useLudotsDataPlane() {
       setState((current) => ({
         ...current,
         phase: 'connecting',
-        transport: transport?.name ?? 'unknown',
+        transport: transport?.name ?? mode ?? 'unknown',
         error: ''
       }));
     });
@@ -245,7 +272,10 @@ function useLudotsDataPlane() {
             ...current,
             phase: 'connected',
             sessionId: handshake.sessionId ?? handshake.payload?.sessionId ?? current.sessionId,
-            transport: handshake.payload?.transportName ?? transport?.name ?? current.transport
+            transport: handshake.payload?.transportName ??
+              handshake.payload?.transportMode ??
+              transport?.name ??
+              current.transport
           }));
         });
         return client.subscribe(DATA_PLANE_DEFAULT_TOPIC, (event) => {
@@ -369,21 +399,6 @@ function FlowShowcase() {
 
   const publishInteraction = useCallback((next, important = false) => {
     window.__LUDOTS_REACT_FLOW_INTERACTION__ = next;
-    if (important && window.CefSharp?.PostMessage) {
-      window.CefSharp.PostMessage({
-        source: 'browser-react-flow-showcase',
-        type: 'interaction',
-        dragEvents: next.dragEvents,
-        dragStops: next.dragStops,
-        moveEvents: next.moveEvents,
-        wheelEvents: next.wheelEvents,
-        paneClicks: next.paneClicks,
-        lastEvent: next.lastEvent,
-        lastNode: next.lastNode,
-        lastPosition: next.lastPosition,
-        viewport: next.viewport
-      });
-    }
   }, []);
 
   const flushInteractionPanel = useCallback(() => {
@@ -626,19 +641,6 @@ function FlowShowcase() {
 
       rawInputRef.current = next;
       window.__LUDOTS_REACT_FLOW_RAW_INPUT__ = next;
-      if ((eventName === 'down' || eventName === 'up' || eventName === 'wheel') && window.CefSharp?.PostMessage) {
-        window.CefSharp.PostMessage({
-          source: 'browser-react-flow-showcase',
-          type: 'raw-input',
-          event: eventName,
-          x: next.x,
-          y: next.y,
-          down: next.down,
-          move: next.move,
-          up: next.up,
-          wheel: next.wheel
-        });
-      }
 
       scheduleRawInputPanel();
     };
@@ -680,10 +682,6 @@ function FlowShowcase() {
       alpha: 'transparent-body'
     };
 
-    if (window.CefSharp?.PostMessage) {
-      window.CefSharp.PostMessage(message);
-    }
-
     window.__LUDOTS_REACT_FLOW_READY__ = message;
   }, [initialGraph]);
 
@@ -697,9 +695,6 @@ function FlowShowcase() {
         devicePixelRatio: window.devicePixelRatio || 1
       };
       window.__LUDOTS_REACT_FLOW_VIEWPORT__ = payload;
-      if (window.CefSharp?.PostMessage) {
-        window.CefSharp.PostMessage(payload);
-      }
     };
 
     publishResize();
