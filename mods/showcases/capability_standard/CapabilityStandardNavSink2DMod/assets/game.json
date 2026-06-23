@@ -1,0 +1,55 @@
+{
+  "startupMapId": "capability_standard_nav_sink2d",
+  "windowTitle": "Ludots Engine - Capability Standard Nav Sink 2D",
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "physics2D": {
+    "enabled": true
+  },
+  "navigation2D": {
+    "enabled": true,
+    "maxAgents": 64,
+    "flowIterationsPerTick": 512,
+    "steering": {
+      "mode": "Hybrid",
+      "queryBudget": {
+        "maxNeighborsPerAgent": 8,
+        "maxCandidateChecksPerAgent": 32
+      },
+      "temporalCoherence": {
+        "enabled": true,
+        "requireSteadyStateWorld": false
+      }
+    },
+    "spatial": {
+      "cellSizeCm": 200
+    },
+    "flowStreaming": {
+      "maxActiveTilesPerFlow": 32
+    }
+  },
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 64,
+    "runtimeEntitySpawnReceiptQueueCapacity": 64,
+    "performerInstanceCapacity": 64,
+    "presentationEventStreamCapacity": 128,
+    "presentationOwnerChangeCapacity": 128,
+    "performerCommandCapacity": 128,
+    "primitiveDrawBufferCapacity": 128,
+    "visualSnapshotBufferCapacity": 128,
+    "visualProxyBufferCapacity": 128,
+    "presentationRequestCapacity": 128,
+    "groundOverlayCapacity": 64,
+    "worldHudCapacity": 128,
+    "screenHudCapacity": 128,
+    "skinnedVisualBatchCapacity": 128,
+    "minimapMarkerCapacity": 128,
+    "cameraCulling": {
+      "highLodDistanceCm": 5000,
+      "mediumLodDistanceCm": 12000,
+      "lowLodDistanceCm": 24000
+    }
+  }
+}

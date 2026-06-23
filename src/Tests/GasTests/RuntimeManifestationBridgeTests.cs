@@ -19,23 +19,22 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public sealed class RuntimeManifestationBridgeTests
     {
+        private ShapeDataStorage2D _shapeStorage = null!;
+        private ComponentAuthoringContext _authoringContext = null!;
+
         [SetUp]
         public void SetUp()
         {
-            ShapeDataStorage2D.Clear();
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            ShapeDataStorage2D.Clear();
+            _shapeStorage = new ShapeDataStorage2D();
+            _authoringContext = new ComponentAuthoringContext();
+            _authoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, _shapeStorage);
         }
 
         [Test]
         public void ManifestationObstacleBridge2D_BoxIntent_CreatesPhysicsAndNavigationObstacle()
         {
             using var world = World.Create();
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             var entity = world.Create(
                 WorldPositionCm.FromCm(1200, 3400),
                 new FacingDirection { AngleRad = MathF.PI / 2f },
@@ -57,7 +56,7 @@ namespace Ludots.Tests.GAS
 
             var collider = world.Get<Collider2D>(entity);
             That(collider.Type, Is.EqualTo(ColliderType2D.Box));
-            That(ShapeDataStorage2D.TryGetBox(collider.ShapeDataIndex, out var box), Is.True);
+            That(_shapeStorage.TryGetBox(collider.ShapeDataIndex, out var box), Is.True);
             That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(240)));
             That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(30)));
 
@@ -81,7 +80,7 @@ namespace Ludots.Tests.GAS
         public void ManifestationObstacleBridge2D_SingleSinkTogglesRemoveDerivedState()
         {
             using var world = World.Create();
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             var entity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 new ManifestationObstacleIntent2D
@@ -120,7 +119,7 @@ namespace Ludots.Tests.GAS
         public void ManifestationObstacleBridge2D_DisabledInitialSinksDoNotRemoveAuthoredRuntimeComponents()
         {
             using var world = World.Create();
-            int authoredShapeIndex = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
+            int authoredShapeIndex = _shapeStorage.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
             var authoredVelocity = Velocity2D.FromCmPerSec(7f, 8f, 0.5f);
             var authoredMass = Mass2D.FromFloat(1f, 2f);
             var authoredNav = new NavKinematics2D
@@ -149,7 +148,7 @@ namespace Ludots.Tests.GAS
                     NavRadiusCm = 50,
                 });
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Get<Collider2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
@@ -179,7 +178,8 @@ namespace Ludots.Tests.GAS
                   "navRadiusCm": 160,
                   "localOffsetCm": { "x": 0, "y": 0 }
                 }
-                """)!);
+                """)!,
+                _authoringContext);
             Ludots.Core.Config.ComponentRegistry.Apply(
                 entity,
                 "ManifestationObstaclePolygon2D",
@@ -191,16 +191,17 @@ namespace Ludots.Tests.GAS
                     { "x": 40, "y": 160 }
                   ]
                 }
-                """)!);
+                """)!,
+                _authoringContext);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Has<ManifestationObstaclePolygon2D>(entity), Is.True);
 
             var collider = world.Get<Collider2D>(entity);
             That(collider.Type, Is.EqualTo(ColliderType2D.Polygon));
-            That(ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var polygon), Is.True);
+            That(_shapeStorage.TryGetPolygon(collider.ShapeDataIndex, out var polygon), Is.True);
             That(polygon.VertexCount, Is.EqualTo(3));
 
             var obstacle = world.Get<NavObstacle2D>(entity);
@@ -208,6 +209,7 @@ namespace Ludots.Tests.GAS
             That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
         }
 
+        [Test]
         public void ComponentRegistry_ParsesCompoundObstacle_AndBridgeCreatesCompoundStateOnSameEntity()
         {
             using var world = World.Create();
@@ -240,9 +242,10 @@ namespace Ludots.Tests.GAS
                     }
                   ]
                 }
-                """)!);
+                """)!,
+                _authoringContext);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Has<CompoundObstacle2D>(entity), Is.True);
@@ -257,10 +260,10 @@ namespace Ludots.Tests.GAS
             That(state.PieceCount, Is.EqualTo(2));
             That(state.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
             That(state.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
-            That(ShapeDataStorage2D.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
+            That(_shapeStorage.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
             That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(100)));
             That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(40)));
-            That(ShapeDataStorage2D.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
+            That(_shapeStorage.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
             That(polygon.VertexCount, Is.EqualTo(3));
             That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
@@ -282,8 +285,8 @@ namespace Ludots.Tests.GAS
                     HalfHeightCm = 20
                 });
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -344,7 +347,7 @@ namespace Ludots.Tests.GAS
                 navRadiusCm: 10);
             world.Add(entity, compound);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
             That(ex.Message, Does.Contain("must not author both ManifestationObstacleIntent2D and CompoundObstacle2D"));
@@ -368,7 +371,8 @@ namespace Ludots.Tests.GAS
                 Ludots.Core.Config.ComponentRegistry.Apply(
                     invalid,
                     "SpatialBounds",
-                    JsonNode.Parse("""{ "kind": "footprint2d" }""")!))!;
+                    JsonNode.Parse("""{ "kind": "footprint2d" }""")!,
+                    _authoringContext))!;
             That(ex.Message, Does.Contain("Unsupported SpatialBounds kind"));
         }
 

@@ -1,24 +1,51 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
     public sealed class SleepingSystem : BaseSystem<World, float>
     {
-        private const int TimeToSleep = 60;
+        private readonly struct SleepCandidate
+        {
+            public readonly Entity Entity;
+            public readonly int IslandId;
 
-        private readonly Dictionary<int, List<Entity>> _islands = new();
+            public SleepCandidate(Entity entity, int islandId)
+            {
+                Entity = entity;
+                IslandId = islandId;
+            }
+        }
+
+        private struct IslandAccumulator
+        {
+            public int IslandId;
+            public int EntityCount;
+            public int ReadyCount;
+        }
+
+        private readonly Dictionary<int, int> _islandToAccumulatorIndex = new();
+        private readonly List<IslandAccumulator> _islandAccumulators = new();
+        private readonly List<SleepCandidate> _sleepCandidates = new();
         private readonly HashSet<int> _islandsToWake = new();
+        private readonly CommandBuffer _commandBuffer = new();
+        private readonly Physics2DSolverConfig _config;
+        private readonly Physics2DTickPolicy _tickPolicy;
 
         private readonly QueryDescription _activeEntitiesQuery;
         private readonly QueryDescription _sleepingEntitiesQuery;
         private readonly QueryDescription _collisionPairQuery;
 
-        public SleepingSystem(World world) : base(world)
+        public SleepingSystem(World world, Physics2DSolverConfig config, Physics2DTickPolicy tickPolicy) : base(world)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _tickPolicy = tickPolicy ?? throw new ArgumentNullException(nameof(tickPolicy));
             _activeEntitiesQuery = new QueryDescription().WithAll<Island, Motion, Mass2D>().WithNone<SleepingTag>();
             _sleepingEntitiesQuery = new QueryDescription().WithAll<Island, SleepingTag>();
             _collisionPairQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
@@ -26,97 +53,187 @@ namespace Ludots.Core.Physics2D.Systems
 
         public override void Update(in float deltaTime)
         {
-            foreach (var list in _islands.Values)
-            {
-                list.Clear();
-            }
+            _islandToAccumulatorIndex.Clear();
+            _islandAccumulators.Clear();
+            _sleepCandidates.Clear();
 
-            World.Query(in _activeEntitiesQuery, (Entity entity, ref Island island, ref Mass2D mass) =>
+            var collectJob = new CollectActiveIslandEntitiesJob
             {
-                if (mass.IsStatic) return;
+                IslandToAccumulatorIndex = _islandToAccumulatorIndex,
+                IslandAccumulators = _islandAccumulators,
+                SleepCandidates = _sleepCandidates,
+                SleepFrameThreshold = SleepFrameThreshold
+            };
+            World.InlineEntityQuery<CollectActiveIslandEntitiesJob, Island, Motion, Mass2D>(in _activeEntitiesQuery, ref collectJob);
 
-                if (!_islands.TryGetValue(island.IslandId, out var entityList))
+            for (int i = 0; i < _sleepCandidates.Count; i++)
+            {
+                SleepCandidate candidate = _sleepCandidates[i];
+                if (!_islandToAccumulatorIndex.TryGetValue(candidate.IslandId, out int accumulatorIndex))
                 {
-                    entityList = new List<Entity>();
-                    _islands[island.IslandId] = entityList;
+                    continue;
                 }
 
-                entityList.Add(entity);
-            });
-
-            foreach (var kvp in _islands)
-            {
-                var entities = kvp.Value;
-                if (entities.Count == 0) continue;
-
-                bool canSleep = true;
-                for (int i = 0; i < entities.Count; i++)
+                IslandAccumulator accumulator = _islandAccumulators[accumulatorIndex];
+                if (accumulator.EntityCount != accumulator.ReadyCount)
                 {
-                    var entity = entities[i];
-                    if (!World.TryGet(entity, out Motion motion) || motion.SleepTimer < TimeToSleep)
-                    {
-                        canSleep = false;
-                        break;
-                    }
+                    continue;
                 }
 
-                if (!canSleep) continue;
-
-                for (int i = 0; i < entities.Count; i++)
+                if (World.IsAlive(candidate.Entity))
                 {
-                    var entity = entities[i];
-                    if (!World.Has<SleepingTag>(entity))
-                    {
-                        World.Add<SleepingTag>(entity);
-                    }
+                    _commandBuffer.Add(candidate.Entity, new SleepingTag());
                 }
             }
 
             _islandsToWake.Clear();
 
-            World.Query(in _collisionPairQuery, (ref CollisionPair pair) =>
+            var wakeIslandJob = new CollectWakeIslandsJob
             {
-                if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB)) return;
+                IslandsToWake = _islandsToWake
+            };
+            World.InlineQuery<CollectWakeIslandsJob, CollisionPair>(in _collisionPairQuery, ref wakeIslandJob);
+
+            if (_islandsToWake.Count > 0)
+            {
+                foreach (ref var chunk in World.Query(in _sleepingEntitiesQuery))
+                {
+                    var wakeEntitiesJob = new WakeSleepingEntitiesChunkJob
+                    {
+                        World = World,
+                        CommandBuffer = _commandBuffer,
+                        IslandsToWake = _islandsToWake
+                    };
+                    wakeEntitiesJob.Execute(ref chunk);
+                }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        private int SleepFrameThreshold
+        {
+            get
+            {
+                if (_config.SleepTimeSeconds <= 0f)
+                {
+                    return 0;
+                }
+
+                int physicsHz = Math.Max(0, _tickPolicy.TargetHz);
+                if (physicsHz == 0)
+                {
+                    return int.MaxValue;
+                }
+
+                return Math.Max(1, (int)MathF.Ceiling(_config.SleepTimeSeconds * physicsHz));
+            }
+        }
+
+        private struct CollectActiveIslandEntitiesJob : IForEachWithEntity<Island, Motion, Mass2D>
+        {
+            public Dictionary<int, int> IslandToAccumulatorIndex;
+            public List<IslandAccumulator> IslandAccumulators;
+            public List<SleepCandidate> SleepCandidates;
+            public int SleepFrameThreshold;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Island island, ref Motion motion, ref Mass2D mass)
+            {
+                if (mass.IsStatic) return;
+
+                if (!IslandToAccumulatorIndex.TryGetValue(island.IslandId, out int accumulatorIndex))
+                {
+                    accumulatorIndex = IslandAccumulators.Count;
+                    IslandToAccumulatorIndex[island.IslandId] = accumulatorIndex;
+                    IslandAccumulators.Add(new IslandAccumulator
+                    {
+                        IslandId = island.IslandId,
+                        EntityCount = 0,
+                        ReadyCount = 0
+                    });
+                }
+
+                IslandAccumulator accumulator = IslandAccumulators[accumulatorIndex];
+                accumulator.EntityCount++;
+                if (motion.SleepTimer >= SleepFrameThreshold)
+                {
+                    accumulator.ReadyCount++;
+                    SleepCandidates.Add(new SleepCandidate(entity, island.IslandId));
+                }
+
+                IslandAccumulators[accumulatorIndex] = accumulator;
+            }
+        }
+
+        private struct CollectWakeIslandsJob : IForEach<CollisionPair>
+        {
+            public HashSet<int> IslandsToWake;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
+            {
                 if (pair.ContactCount == 0) return;
 
-                bool isASleeping = World.Has<SleepingTag>(pair.EntityA);
-                bool isBSleeping = World.Has<SleepingTag>(pair.EntityB);
+                bool isASleeping = pair.IsSleepingA != 0;
+                bool isBSleeping = pair.IsSleepingB != 0;
 
                 if (isASleeping && isBSleeping)
                 {
                     return;
                 }
 
-                if (!isASleeping && isBSleeping)
+                if (!isASleeping && isBSleeping && pair.IslandB >= 0)
                 {
-                    if (World.TryGet(pair.EntityB, out Island islandB))
-                    {
-                        _islandsToWake.Add(islandB.IslandId);
-                    }
+                    IslandsToWake.Add(pair.IslandB);
                 }
-                else if (isASleeping && !isBSleeping)
+                else if (isASleeping && !isBSleeping && pair.IslandA >= 0)
                 {
-                    if (World.TryGet(pair.EntityA, out Island islandA))
-                    {
-                        _islandsToWake.Add(islandA.IslandId);
-                    }
+                    IslandsToWake.Add(pair.IslandA);
                 }
-            });
+            }
+        }
 
-            if (_islandsToWake.Count == 0) return;
+        private struct WakeSleepingEntitiesChunkJob
+        {
+            public World World;
+            public CommandBuffer CommandBuffer;
+            public HashSet<int> IslandsToWake;
 
-            World.Query(in _sleepingEntitiesQuery, (Entity entity, ref Island island) =>
+            public void Execute(ref Chunk chunk)
             {
-                if (!_islandsToWake.Contains(island.IslandId)) return;
-
-                World.Remove<SleepingTag>(entity);
-
-                if (World.TryGet(entity, out Motion motion))
+                if (chunk.Count <= 0)
                 {
-                    motion.SleepTimer = 0;
-                    World.Set(entity, motion);
+                    return;
                 }
-            });
+
+                var islands = chunk.GetSpan<Island>();
+                bool hasMotion = chunk.Has<Motion>();
+                Span<Motion> motions = hasMotion ? chunk.GetSpan<Motion>() : default;
+                ref Entity entityFirst = ref chunk.Entity(0);
+
+                foreach (int index in chunk)
+                {
+                    if (!IslandsToWake.Contains(islands[index].IslandId)) continue;
+
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    CommandBuffer.Remove<SleepingTag>(in entity);
+
+                    if (hasMotion)
+                    {
+                        motions[index].SleepTimer = 0;
+                    }
+                }
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

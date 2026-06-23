@@ -6,6 +6,7 @@ using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -50,6 +51,8 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly PerformerCommandBuffer _performerCommands;
         private readonly PerformerDefinitionRegistry _performerDefinitions;
+        private readonly ShapeDataStorage2D _shapeStorage;
+        private readonly Physics2DSolverConfig _solverConfig;
 
         private Entity _chainDemoEntity;
         private bool _chainDemoInited;
@@ -70,11 +73,17 @@ namespace Physics2DPlaygroundMod.Systems
         private bool _prevK9;
         private int _spawnedBoxDefinitionId;
 
-        public Physics2DPlaygroundInteractionSystem(GameEngine engine, Physics2DSimulationSystem sim)
+        public Physics2DPlaygroundInteractionSystem(
+            GameEngine engine,
+            Physics2DSimulationSystem sim,
+            ShapeDataStorage2D shapeStorage,
+            Physics2DSolverConfig solverConfig)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _sim = sim ?? throw new ArgumentNullException(nameof(sim));
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
+            _solverConfig = solverConfig ?? throw new ArgumentNullException(nameof(solverConfig));
             _stableIds = engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
                 ?? throw new InvalidOperationException("Physics2DPlayground requires PresentationStableIdAllocator.");
             _performerCommands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
@@ -100,7 +109,7 @@ namespace Physics2DPlaygroundMod.Systems
 
             if (_boxShapeIndex < 0)
             {
-                _boxShapeIndex = ShapeDataStorage2D.RegisterBox(50f, 50f);
+                _boxShapeIndex = _shapeStorage.RegisterBox(50f, 50f);
             }
 
             if (!TryGetInput(out var input))
@@ -378,7 +387,12 @@ namespace Physics2DPlaygroundMod.Systems
                 new Velocity2D { Linear = velocityCmPerSec, Angular = Fix64.Zero },
                 Mass2D.FromFloat(1f, 1f),
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = _boxShapeIndex },
-                PhysicsMaterial2D.Default,
+                new PhysicsMaterial2D
+                {
+                    Friction = _solverConfig.DefaultFrictionFix64,
+                    Restitution = _solverConfig.DefaultRestitutionFix64,
+                    BaseDamping = _solverConfig.DefaultBaseDampingFix64
+                },
                 new WorldPositionCm { Value = worldCm },
                 new PreviousWorldPositionCm { Value = worldCm },
                 new VisualTransform

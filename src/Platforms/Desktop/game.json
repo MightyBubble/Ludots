@@ -12,7 +12,7 @@
     "../../../../../../mods/MobaDemoMod",
     "../../../../../../mods/PerformanceVisualizationMod",
     "../../../../../../mods/TerrainBenchmarkMod",
-    "../../../../../../mods/Physics2DPlaygroundMod",
+    "../../../../../../mods/showcases/capability_standard/CapabilityStandardPhysics2DPlaygroundV2Mod",
     "../../../../../../mods/Navigation2DPlaygroundMod"
   ]
 }

@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.Spawning
@@ -48,6 +49,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly ISpatialPartitionWorld? _spatialPartition;
         private readonly WorldSizeSpec _worldSizeSpec;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly ComponentAuthoringContext _authoringContext;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -62,7 +64,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PresentationEventStream? presentationEvents = null,
             ISpatialPartitionWorld? spatialPartition = null,
             WorldSizeSpec worldSizeSpec = default,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            ComponentAuthoringContext? authoringContext = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -70,7 +73,8 @@ namespace Ludots.Core.Gameplay.Spawning
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
-            _builder = new EntityBuilder(world, _cachedTemplates);
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
+            _builder = new EntityBuilder(world, _cachedTemplates, _authoringContext);
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
             _spatialPartition = spatialPartition;
             _worldSizeSpec = worldSizeSpec;
@@ -543,6 +547,16 @@ namespace Ludots.Core.Gameplay.Spawning
             else
             {
                 World.Add(entity, previous);
+            }
+
+            if (World.Has<Position2D>(entity))
+            {
+                World.Set(entity, new Position2D { Value = worldPositionCm });
+            }
+
+            if (World.Has<PreviousPosition2D>(entity))
+            {
+                World.Set(entity, new PreviousPosition2D { Value = worldPositionCm });
             }
 
             if (!World.Has<VisualTransform>(entity))

@@ -1,0 +1,64 @@
+{
+  "mapId": "capability_standard_physics2d_playground_v2",
+  "spawnScratchCapacity": 96,
+  "primaryPhysicsTemplateId": "capability_standard_physics2d_playground_v2_physics_body",
+  "primaryNavTemplateId": "capability_standard_physics2d_playground_v2_nav_agent",
+  "primaryObstacleTemplateId": "capability_standard_physics2d_playground_v2_nav_obstacle",
+  "navTargetXCm": 980,
+  "navTargetYCm": 0,
+  "physicsImpulseXCmPerSec": 420,
+  "physicsImpulseYCmPerSec": 0,
+  "displacementDistanceCm": 160,
+  "displacementTicks": 4,
+  "benchmarkBodyTemplateId": "capability_standard_physics2d_playground_v2_benchmark_body",
+  "benchmarkDefaultSpawnCount": 10,
+  "benchmarkSpawnRadiusCm": 320,
+  "benchmarkInitialSpeedCmPerSec": 420,
+  "benchmarkForceXCmPerSec2": 1400,
+  "benchmarkForceYCmPerSec2": 0,
+  "staticPolygonTemplateId": "capability_standard_physics2d_playground_v2_static_polygon",
+  "frictionZoneLowTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_low",
+  "frictionZoneMediumTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_medium",
+  "frictionZoneHighTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_high",
+  "frictionZoneSpacingCm": 340,
+  "explosionRadiusCm": 520,
+  "explosionForceCmPerSec2": 7200,
+  "explosionQueryCapacity": 512,
+  "spawns": [
+    {
+      "id": "physics_body",
+      "templateId": "capability_standard_physics2d_playground_v2_physics_body",
+      "worldXCm": -720,
+      "worldYCm": -260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "physics_wall",
+      "templateId": "capability_standard_physics2d_playground_v2_physics_wall",
+      "worldXCm": -120,
+      "worldYCm": -260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "nav_agent",
+      "templateId": "capability_standard_physics2d_playground_v2_nav_agent",
+      "worldXCm": -900,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "nav_obstacle",
+      "templateId": "capability_standard_physics2d_playground_v2_nav_obstacle",
+      "worldXCm": -80,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "nav_target",
+      "templateId": "capability_standard_physics2d_playground_v2_nav_target",
+      "worldXCm": 980,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    }
+  ]
+}

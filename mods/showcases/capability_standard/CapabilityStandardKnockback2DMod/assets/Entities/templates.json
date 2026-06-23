@@ -1,0 +1,185 @@
+[
+  {
+    "id": "capability_standard_knockback2d_source",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.Source" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": -620, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 20,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_moving_target",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.MovingTarget" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": -420, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 120, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 24,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.2,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_static_source",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.StaticSource" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": 0, "y": -420 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 20,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_static_target",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.StaticTarget" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": 140, "y": -420 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 24,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.2,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_blocker_source",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.BlockerSource" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": -80, "y": 260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 20,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_blocker_target",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.BlockerTarget" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": 100, "y": 260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 24,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.2,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_knockback2d_blocker_wall",
+    "components": {
+      "Name": { "Value": "CapabilityStandardKnockback2D.BlockerWall" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardKnockback2D.RigidBody": {
+        "positionCm": { "x": 230, "y": 260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 42,
+          "halfHeightCm": 80,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.4,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  }
+]

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -15,27 +16,47 @@ namespace Ludots.Core.Physics2D.Systems
     /// </summary>
     public sealed class BuildPhysicsWorldSystem2D : BaseSystem<World, float>
     {
+        public struct BodySnapshot
+        {
+            public Entity Entity;
+            public byte ShapeSlot;
+            public Position2D Position;
+            public Rotation2D Rotation;
+            public Collider2D Collider;
+            public Velocity2D Velocity;
+            public Mass2D Mass;
+            public PhysicsMaterial2D Material;
+            public byte HasMaterial;
+            public byte IsSleeping;
+            public int IslandId;
+        }
+
         private readonly QueryDescription _singleRigidBodyQuery;
         private readonly QueryDescription _compoundRigidBodyQuery;
         private readonly QueryDescription _staticDirtyQuery;
         private readonly QueryDescription _trackedStaticBodyQuery;
+        private readonly ShapeDataStorage2D _shapeStorage;
 
         private readonly List<Entity> _dynamicEntities;
         private readonly List<byte> _dynamicShapeSlots;
+        private readonly List<BodySnapshot> _dynamicSnapshots;
         private readonly List<Entity> _staticEntities;
         private readonly List<byte> _staticShapeSlots;
+        private readonly List<BodySnapshot> _staticSnapshots;
 
         public List<RigidBodyDesc> RigidBodyDescriptors { get; }
         public List<RigidBodyDesc> DynamicRigidBodyDescriptors { get; }
         public List<RigidBodyDesc> StaticRigidBodyDescriptors { get; }
         public List<Entity> Entities { get; }
         public List<byte> ShapeSlots { get; }
+        public List<BodySnapshot> BodySnapshots { get; }
 
         public int StaticBodyVersion { get; private set; }
         public int DirtyStaticBodyCountLastUpdate { get; private set; }
 
-        public BuildPhysicsWorldSystem2D(World world) : base(world)
+        public BuildPhysicsWorldSystem2D(World world, ShapeDataStorage2D shapeStorage) : base(world)
         {
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
             _singleRigidBodyQuery = new QueryDescription()
                 .WithAll<Position2D, Collider2D, Mass2D>()
                 .WithNone<CompoundObstacle2DState, Physics2DStaticBodyState>();
@@ -52,10 +73,13 @@ namespace Ludots.Core.Physics2D.Systems
             StaticRigidBodyDescriptors = new List<RigidBodyDesc>(1024);
             Entities = new List<Entity>(1024);
             ShapeSlots = new List<byte>(1024);
+            BodySnapshots = new List<BodySnapshot>(1024);
             _dynamicEntities = new List<Entity>(1024);
             _dynamicShapeSlots = new List<byte>(1024);
+            _dynamicSnapshots = new List<BodySnapshot>(1024);
             _staticEntities = new List<Entity>(1024);
             _staticShapeSlots = new List<byte>(1024);
+            _staticSnapshots = new List<BodySnapshot>(1024);
         }
 
         public override void Update(in float deltaTime)
@@ -64,53 +88,21 @@ namespace Ludots.Core.Physics2D.Systems
             DynamicRigidBodyDescriptors.Clear();
             _dynamicEntities.Clear();
             _dynamicShapeSlots.Clear();
+            _dynamicSnapshots.Clear();
 
             bool staticCacheDirty = ConsumeStaticDirtyMarkers();
 
-            World.Query(in _singleRigidBodyQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
-            {
-                if (mass.IsStatic)
-                {
-                    MaterializeNewStaticBody(entity);
-                    staticCacheDirty = true;
-                    return;
-                }
+            var collectSingleJob = new CollectSingleBodiesJob { Owner = this };
+            World.InlineEntityQuery<CollectSingleBodiesJob, Position2D, Collider2D, Mass2D>(
+                in _singleRigidBodyQuery,
+                ref collectSingleJob);
+            staticCacheDirty |= collectSingleJob.StaticCacheDirty;
 
-                Fix64 rotation = ResolveRotation(entity);
-                Aabb aabb = CalculateAabb(position.Value, rotation, in collider);
-                AddBody(
-                    DynamicRigidBodyDescriptors,
-                    _dynamicEntities,
-                    _dynamicShapeSlots,
-                    entity,
-                    shapeSlot: 0,
-                    in aabb,
-                    isStatic: false);
-            });
-
-            World.Query(in _compoundRigidBodyQuery, (Entity entity, ref Position2D position, ref CompoundObstacle2DState state, ref Mass2D mass) =>
-            {
-                if (state.SinkPhysicsCollider == 0)
-                {
-                    return;
-                }
-
-                if (mass.IsStatic)
-                {
-                    MaterializeNewStaticBody(entity);
-                    staticCacheDirty = true;
-                    return;
-                }
-
-                AddCompoundBodies(
-                    DynamicRigidBodyDescriptors,
-                    _dynamicEntities,
-                    _dynamicShapeSlots,
-                    entity,
-                    in position,
-                    in state,
-                    isStatic: false);
-            });
+            var collectCompoundJob = new CollectCompoundBodiesJob { Owner = this };
+            World.InlineEntityQuery<CollectCompoundBodiesJob, Position2D, CompoundObstacle2DState, Mass2D>(
+                in _compoundRigidBodyQuery,
+                ref collectCompoundJob);
+            staticCacheDirty |= collectCompoundJob.StaticCacheDirty;
 
             if (staticCacheDirty)
             {
@@ -147,21 +139,11 @@ namespace Ludots.Core.Physics2D.Systems
 
         private bool ConsumeStaticDirtyMarkers()
         {
-            bool staticCacheDirty = false;
-            World.Query(in _staticDirtyQuery, (Entity entity, ref Physics2DStaticBodyDirty dirty) =>
-            {
-                DirtyStaticBodyCountLastUpdate++;
-                staticCacheDirty = true;
-
-                if (!CanMaterializeStaticBody(entity))
-                {
-                    RemoveIfPresent<Physics2DStaticBodyState>(entity);
-                }
-
-                RemoveIfPresent<Physics2DStaticBodyDirty>(entity);
-            });
-
-            return staticCacheDirty;
+            var job = new ConsumeStaticDirtyJob { Owner = this };
+            World.InlineEntityQuery<ConsumeStaticDirtyJob, Physics2DStaticBodyDirty>(
+                in _staticDirtyQuery,
+                ref job);
+            return job.StaticCacheDirty;
         }
 
         private bool CanMaterializeStaticBody(Entity entity)
@@ -197,60 +179,26 @@ namespace Ludots.Core.Physics2D.Systems
             StaticRigidBodyDescriptors.Clear();
             _staticEntities.Clear();
             _staticShapeSlots.Clear();
+            _staticSnapshots.Clear();
 
-            World.Query(in _trackedStaticBodyQuery, (Entity entity, ref Position2D position, ref Mass2D mass, ref Physics2DStaticBodyState state) =>
-            {
-                if (!mass.IsStatic)
-                {
-                    return;
-                }
-
-                if (World.TryGet(entity, out CompoundObstacle2DState compoundState))
-                {
-                    if (compoundState.SinkPhysicsCollider == 0)
-                    {
-                        return;
-                    }
-
-                    AddCompoundBodies(
-                        StaticRigidBodyDescriptors,
-                        _staticEntities,
-                        _staticShapeSlots,
-                        entity,
-                        in position,
-                        in compoundState,
-                        isStatic: true);
-                    return;
-                }
-
-                if (!World.TryGet(entity, out Collider2D collider))
-                {
-                    return;
-                }
-
-                Fix64 rotation = ResolveRotation(entity);
-                Aabb aabb = CalculateAabb(position.Value, rotation, in collider);
-                AddBody(
-                    StaticRigidBodyDescriptors,
-                    _staticEntities,
-                    _staticShapeSlots,
-                    entity,
-                    shapeSlot: 0,
-                    in aabb,
-                    isStatic: true);
-            });
+            var job = new RebuildStaticBodiesJob { Owner = this };
+            World.InlineEntityQuery<RebuildStaticBodiesJob, Position2D, Mass2D, Physics2DStaticBodyState>(
+                in _trackedStaticBodyQuery,
+                ref job);
         }
 
         private void AddCompoundBodies(
             List<RigidBodyDesc> descriptors,
             List<Entity> entities,
             List<byte> shapeSlots,
+            List<BodySnapshot> snapshots,
             Entity entity,
             in Position2D position,
             in CompoundObstacle2DState state,
             bool isStatic)
         {
             Fix64 rotation = ResolveRotation(entity);
+            var mass = World.Get<Mass2D>(entity);
             for (int i = 0; i < state.PieceCount; i++)
             {
                 var collider = new Collider2D
@@ -258,11 +206,14 @@ namespace Ludots.Core.Physics2D.Systems
                     Type = ToColliderType(state.GetShape(i)),
                     ShapeDataIndex = state.GetShapeDataIndex(i)
                 };
+                var snapshot = CreateSnapshot(entity, checked((byte)i), in position, in collider, in mass);
                 Aabb aabb = CalculateAabb(position.Value, rotation, in collider);
                 AddBody(
                     descriptors,
                     entities,
                     shapeSlots,
+                    snapshots,
+                    in snapshot,
                     entity,
                     checked((byte)i),
                     in aabb,
@@ -274,6 +225,8 @@ namespace Ludots.Core.Physics2D.Systems
             List<RigidBodyDesc> descriptors,
             List<Entity> entities,
             List<byte> shapeSlots,
+            List<BodySnapshot> snapshots,
+            in BodySnapshot snapshot,
             Entity entity,
             byte shapeSlot,
             in Aabb aabb,
@@ -288,6 +241,7 @@ namespace Ludots.Core.Physics2D.Systems
             });
             entities.Add(entity);
             shapeSlots.Add(shapeSlot);
+            snapshots.Add(snapshot);
         }
 
         private void BuildCombinedBodySnapshot()
@@ -295,15 +249,17 @@ namespace Ludots.Core.Physics2D.Systems
             RigidBodyDescriptors.Clear();
             Entities.Clear();
             ShapeSlots.Clear();
+            BodySnapshots.Clear();
 
-            AddCombinedBodies(DynamicRigidBodyDescriptors, _dynamicEntities, _dynamicShapeSlots);
-            AddCombinedBodies(StaticRigidBodyDescriptors, _staticEntities, _staticShapeSlots);
+            AddCombinedBodies(DynamicRigidBodyDescriptors, _dynamicEntities, _dynamicShapeSlots, _dynamicSnapshots);
+            AddCombinedBodies(StaticRigidBodyDescriptors, _staticEntities, _staticShapeSlots, _staticSnapshots);
         }
 
         private void AddCombinedBodies(
             List<RigidBodyDesc> descriptors,
             List<Entity> entities,
-            List<byte> shapeSlots)
+            List<byte> shapeSlots,
+            List<BodySnapshot> snapshots)
         {
             for (int i = 0; i < descriptors.Count; i++)
             {
@@ -312,7 +268,44 @@ namespace Ludots.Core.Physics2D.Systems
                 RigidBodyDescriptors.Add(descriptor);
                 Entities.Add(entities[i]);
                 ShapeSlots.Add(shapeSlots[i]);
+                BodySnapshots.Add(snapshots[i]);
             }
+        }
+
+        public bool TryGetSnapshot(int bodyIndex, out BodySnapshot snapshot)
+        {
+            if ((uint)bodyIndex < (uint)BodySnapshots.Count)
+            {
+                snapshot = BodySnapshots[bodyIndex];
+                return true;
+            }
+
+            snapshot = default;
+            return false;
+        }
+
+        private BodySnapshot CreateSnapshot(
+            Entity entity,
+            byte shapeSlot,
+            in Position2D position,
+            in Collider2D collider,
+            in Mass2D mass)
+        {
+            bool hasMaterial = World.TryGet(entity, out PhysicsMaterial2D material);
+            return new BodySnapshot
+            {
+                Entity = entity,
+                ShapeSlot = shapeSlot,
+                Position = position,
+                Rotation = new Rotation2D { Value = ResolveRotation(entity) },
+                Collider = collider,
+                Velocity = World.TryGet(entity, out Velocity2D velocity) ? velocity : Velocity2D.Zero,
+                Mass = mass,
+                Material = hasMaterial ? material : default,
+                HasMaterial = hasMaterial ? (byte)1 : (byte)0,
+                IsSleeping = World.Has<SleepingTag>(entity) ? (byte)1 : (byte)0,
+                IslandId = World.TryGet(entity, out Island island) ? island.IslandId : -1
+            };
         }
 
         private Fix64 ResolveRotation(Entity entity)
@@ -320,7 +313,7 @@ namespace Ludots.Core.Physics2D.Systems
             return World.TryGet(entity, out Rotation2D rot) ? rot.Value : Fix64.Zero;
         }
 
-        private static Aabb CalculateAabb(Fix64Vec2 worldPos, Fix64 rotation, in Collider2D collider)
+        private Aabb CalculateAabb(Fix64Vec2 worldPos, Fix64 rotation, in Collider2D collider)
         {
             return collider.Type switch
             {
@@ -331,9 +324,9 @@ namespace Ludots.Core.Physics2D.Systems
             };
         }
 
-        private static Aabb CalculateCircleAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
+        private Aabb CalculateCircleAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
         {
-            if (!ShapeDataStorage2D.TryGetCircle(shapeIndex, out var circleData))
+            if (!_shapeStorage.TryGetCircle(shapeIndex, out var circleData))
             {
                 throw new InvalidOperationException($"Circle shape not found: {shapeIndex}");
             }
@@ -348,9 +341,9 @@ namespace Ludots.Core.Physics2D.Systems
             };
         }
 
-        private static Aabb CalculateBoxAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
+        private Aabb CalculateBoxAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
         {
-            if (!ShapeDataStorage2D.TryGetBox(shapeIndex, out var boxData))
+            if (!_shapeStorage.TryGetBox(shapeIndex, out var boxData))
             {
                 throw new InvalidOperationException($"Box shape not found: {shapeIndex}");
             }
@@ -379,9 +372,9 @@ namespace Ludots.Core.Physics2D.Systems
             };
         }
 
-        private static Aabb CalculatePolygonAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
+        private Aabb CalculatePolygonAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
         {
-            if (!ShapeDataStorage2D.TryGetPolygon(shapeIndex, out var polygonData) ||
+            if (!_shapeStorage.TryGetPolygon(shapeIndex, out var polygonData) ||
                 polygonData.Vertices == null ||
                 polygonData.VertexCount == 0)
             {
@@ -448,6 +441,135 @@ namespace Ludots.Core.Physics2D.Systems
             if (World.Has<T>(entity))
             {
                 World.Remove<T>(entity);
+            }
+        }
+
+        private struct CollectSingleBodiesJob : IForEachWithEntity<Position2D, Collider2D, Mass2D>
+        {
+            public BuildPhysicsWorldSystem2D Owner;
+            public bool StaticCacheDirty;
+
+            public void Update(Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass)
+            {
+                if (mass.IsStatic)
+                {
+                    Owner.MaterializeNewStaticBody(entity);
+                    StaticCacheDirty = true;
+                    return;
+                }
+
+                var snapshot = Owner.CreateSnapshot(entity, shapeSlot: 0, in position, in collider, in mass);
+                Aabb aabb = Owner.CalculateAabb(position.Value, snapshot.Rotation.Value, in collider);
+                AddBody(
+                    Owner.DynamicRigidBodyDescriptors,
+                    Owner._dynamicEntities,
+                    Owner._dynamicShapeSlots,
+                    Owner._dynamicSnapshots,
+                    in snapshot,
+                    entity,
+                    shapeSlot: 0,
+                    in aabb,
+                    isStatic: false);
+            }
+        }
+
+        private struct CollectCompoundBodiesJob : IForEachWithEntity<Position2D, CompoundObstacle2DState, Mass2D>
+        {
+            public BuildPhysicsWorldSystem2D Owner;
+            public bool StaticCacheDirty;
+
+            public void Update(Entity entity, ref Position2D position, ref CompoundObstacle2DState state, ref Mass2D mass)
+            {
+                if (state.SinkPhysicsCollider == 0)
+                {
+                    return;
+                }
+
+                if (mass.IsStatic)
+                {
+                    Owner.MaterializeNewStaticBody(entity);
+                    StaticCacheDirty = true;
+                    return;
+                }
+
+                Owner.AddCompoundBodies(
+                    Owner.DynamicRigidBodyDescriptors,
+                    Owner._dynamicEntities,
+                    Owner._dynamicShapeSlots,
+                    Owner._dynamicSnapshots,
+                    entity,
+                    in position,
+                    in state,
+                    isStatic: false);
+            }
+        }
+
+        private struct ConsumeStaticDirtyJob : IForEachWithEntity<Physics2DStaticBodyDirty>
+        {
+            public BuildPhysicsWorldSystem2D Owner;
+            public bool StaticCacheDirty;
+
+            public void Update(Entity entity, ref Physics2DStaticBodyDirty dirty)
+            {
+                Owner.DirtyStaticBodyCountLastUpdate++;
+                StaticCacheDirty = true;
+
+                if (!Owner.CanMaterializeStaticBody(entity))
+                {
+                    Owner.RemoveIfPresent<Physics2DStaticBodyState>(entity);
+                }
+
+                Owner.RemoveIfPresent<Physics2DStaticBodyDirty>(entity);
+            }
+        }
+
+        private struct RebuildStaticBodiesJob : IForEachWithEntity<Position2D, Mass2D, Physics2DStaticBodyState>
+        {
+            public BuildPhysicsWorldSystem2D Owner;
+
+            public void Update(Entity entity, ref Position2D position, ref Mass2D mass, ref Physics2DStaticBodyState state)
+            {
+                if (!mass.IsStatic)
+                {
+                    return;
+                }
+
+                if (Owner.World.TryGet(entity, out CompoundObstacle2DState compoundState))
+                {
+                    if (compoundState.SinkPhysicsCollider == 0)
+                    {
+                        return;
+                    }
+
+                    Owner.AddCompoundBodies(
+                        Owner.StaticRigidBodyDescriptors,
+                        Owner._staticEntities,
+                        Owner._staticShapeSlots,
+                        Owner._staticSnapshots,
+                        entity,
+                        in position,
+                        in compoundState,
+                        isStatic: true);
+                    return;
+                }
+
+                if (!Owner.World.TryGet(entity, out Collider2D collider))
+                {
+                    return;
+                }
+
+                var snapshot = Owner.CreateSnapshot(entity, shapeSlot: 0, in position, in collider, in mass);
+                Aabb aabb = Owner.CalculateAabb(position.Value, snapshot.Rotation.Value, in collider);
+                AddBody(
+                    Owner.StaticRigidBodyDescriptors,
+                    Owner._staticEntities,
+                    Owner._staticShapeSlots,
+                    Owner._staticSnapshots,
+                    in snapshot,
+                    entity,
+                    shapeSlot: 0,
+                    in aabb,
+                    isStatic: true);
             }
         }
     }

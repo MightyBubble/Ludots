@@ -166,6 +166,8 @@ namespace Ludots.Tests.GAS
                 ref var force = ref world.Get<ForceInput2D>(target);
                 That(force.Force.X.ToFloat(), Is.EqualTo(12.5f).Within(0.001f));
                 That(force.Force.Y.ToFloat(), Is.EqualTo(-7.0f).Within(0.001f));
+                That(world.Get<AttributeBuffer>(target).GetCurrent(fxId), Is.EqualTo(0f).Within(0.001f));
+                That(world.Get<AttributeBuffer>(target).GetCurrent(fyId), Is.EqualTo(0f).Within(0.001f));
             }
             finally
             {
@@ -192,4 +194,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

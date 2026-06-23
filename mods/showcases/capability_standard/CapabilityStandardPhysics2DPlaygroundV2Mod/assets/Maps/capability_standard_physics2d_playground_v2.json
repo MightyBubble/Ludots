@@ -1,0 +1,20 @@
+{
+  "Id": "capability_standard_physics2d_playground_v2",
+  "Tags": [
+    "showcase",
+    "capability_standard",
+    "physics2d",
+    "navigation2d",
+    "playground_v2"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 40,
+    "TargetYCm": -120,
+    "DistanceCm": 2600,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

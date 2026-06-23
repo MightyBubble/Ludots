@@ -8,6 +8,8 @@
   "TargetFps": 60,
   "ModPaths": [
     "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/Physics2DPlaygroundMod"
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/capabilities/camera/CameraProfilesMod",
+    "../../../../../../../mods/showcases/capability_standard/CapabilityStandardPhysics2DPlaygroundV2Mod"
   ]
 }

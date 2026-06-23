@@ -8,6 +8,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Physics2D.Ticking;
+using Ludots.Core.Physics2D;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -50,12 +51,16 @@ namespace Physics2DPlaygroundMod.Triggers
 
                     var clock = context.Get(CoreServiceKeys.Clock);
                     var tickPolicy = context.Get(CoreServiceKeys.Physics2DTickPolicy);
+                    var solverConfig = context.Get(CoreServiceKeys.Physics2DSolverConfig)
+                        ?? throw new System.InvalidOperationException("Physics2DPlaygroundMod requires Physics2DSolverConfig.");
+                    var shapeStorage = context.Get(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                        ?? throw new System.InvalidOperationException("Physics2DPlaygroundMod requires Physics2D shape storage.");
 
-                    _sim = new Physics2DSimulationSystem(engine.World, clock, tickPolicy);
+                    _sim = new Physics2DSimulationSystem(engine.World, clock, tickPolicy, solverConfig, shapeStorage);
                     engine.RegisterSystem(_sim, SystemGroup.InputCollection);
                     engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
-                    engine.RegisterSystem(new Physics2DPlaygroundInteractionSystem(engine, _sim), SystemGroup.InputCollection);
-                    engine.RegisterPresentationSystem(new Physics2DDebugDrawSystem(engine.World, debugDrawBuffer));
+                    engine.RegisterSystem(new Physics2DPlaygroundInteractionSystem(engine, _sim, shapeStorage, solverConfig), SystemGroup.InputCollection);
+                    engine.RegisterPresentationSystem(new Physics2DDebugDrawSystem(engine.World, debugDrawBuffer, shapeStorage));
 
                     _installed = true;
                     _ctx.Log("[Physics2DPlaygroundMod] Installed simulation, interaction, and debug presentation systems.");

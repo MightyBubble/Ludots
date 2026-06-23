@@ -1,0 +1,19 @@
+{
+  "Id": "capability_standard_nav_sink2d",
+  "Tags": [
+    "showcase",
+    "capability_standard",
+    "navigation2d",
+    "physics2d"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 5400,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

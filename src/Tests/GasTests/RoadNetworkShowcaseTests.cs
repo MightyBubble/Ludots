@@ -26,6 +26,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Scripting;
@@ -1277,7 +1278,7 @@ namespace Ludots.Tests.GAS
                     SleepTimer = 99
                 });
 
-            var steering = new Navigation2DSteeringSystem2D(world, runtime);
+            var steering = new Navigation2DSteeringSystem2D(world, runtime, new ShapeDataStorage2D());
             steering.Update(1f / 60f);
 
             Assert.That(world.Has<SleepingTag>(actor), Is.False, "Point-goal navigation should wake a sleeping body before physics integration, otherwise the first movement command can stall and timeout.");

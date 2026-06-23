@@ -1,0 +1,55 @@
+{
+  "mapId": "capability_standard_knockback2d",
+  "spawnScratchCapacity": 8,
+  "spawns": [
+    {
+      "id": "source",
+      "templateId": "capability_standard_knockback2d_source",
+      "worldXCm": -620,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "moving_target",
+      "templateId": "capability_standard_knockback2d_moving_target",
+      "worldXCm": -420,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "static_source",
+      "templateId": "capability_standard_knockback2d_static_source",
+      "worldXCm": 0,
+      "worldYCm": -420,
+      "facingRad": 0.0
+    },
+    {
+      "id": "static_target",
+      "templateId": "capability_standard_knockback2d_static_target",
+      "worldXCm": 140,
+      "worldYCm": -420,
+      "facingRad": 0.0
+    },
+    {
+      "id": "blocker_source",
+      "templateId": "capability_standard_knockback2d_blocker_source",
+      "worldXCm": -80,
+      "worldYCm": 260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "blocker_target",
+      "templateId": "capability_standard_knockback2d_blocker_target",
+      "worldXCm": 100,
+      "worldYCm": 260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "blocker_wall",
+      "templateId": "capability_standard_knockback2d_blocker_wall",
+      "worldXCm": 230,
+      "worldYCm": 260,
+      "facingRad": 0.0
+    }
+  ]
+}

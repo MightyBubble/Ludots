@@ -218,6 +218,16 @@ namespace Ludots.Tests.GAS
                 Assert.That(config.StartupMapId, Is.EqualTo("canonical_map"));
                 Assert.That(config.WindowWidth, Is.EqualTo(1440));
                 Assert.That(config.Navigation2D.Enabled, Is.True);
+                Assert.That(config.Physics2D.Enabled, Is.False);
+
+                File.WriteAllText(
+                    Path.Combine(core, "Configs", "game.json"),
+                    "{ \"startupMapId\": \"physics_map\", \"physics2D\": { \"enabled\": true } }");
+
+                config = pipeline.MergeGameConfig();
+                Assert.That(config.StartupMapId, Is.EqualTo("physics_map"));
+                Assert.That(config.Physics2D.Enabled, Is.True);
+                Assert.That(config.Navigation2D.Enabled, Is.False);
 
                 File.WriteAllText(
                     Path.Combine(core, "Configs", "game.json"),

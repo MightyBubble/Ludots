@@ -20,7 +20,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: true);
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var kinematics = new NavKinematics2D
             {
                 MaxSpeedCmPerSec = Fix64.FromInt(250),
@@ -55,7 +55,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
 
             world.Create(
                 new NavAgent2D(),
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
 
             for (int i = 0; i < 256; i++)
             {
@@ -120,12 +120,45 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
+        public void SteeringUpdate_LimitsSubmittedVelocityDelta_ByMaxAcceleration()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Sonar, smartStopEnabled: false);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
+
+            var actor = world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(10_000, 0), RadiusCm = Fix64.Zero },
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(600),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(60),
+                    RadiusCm = Fix64.FromInt(30),
+                    NeighborDistCm = Fix64.Zero,
+                    TimeHorizonSec = Fix64.FromInt(2),
+                    MaxNeighbors = 0
+                },
+                Position2D.Zero,
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+
+            var desired = world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec;
+            Assert.That(desired.X.ToFloat(), Is.EqualTo(1f).Within(0.02f));
+            Assert.That(desired.Y.ToFloat(), Is.EqualTo(0f).Within(0.02f));
+            Assert.That(world.Has<ForceInput2D>(actor), Is.False, "Navigation steering submits velocity, not ForceInput2D.");
+        }
+
+        [Test]
         public void SteeringUpdate_RespectsPerAgentMaxNeighbors_InOrcaMode()
         {
             var desiredWithoutNeighbors = RunDesiredVelocity(maxNeighbors: 0, Navigation2DAvoidanceMode.Orca);
             var desiredWithNeighbors = RunDesiredVelocity(maxNeighbors: 1, Navigation2DAvoidanceMode.Orca);
 
-            Assert.That(desiredWithoutNeighbors.X.ToFloat(), Is.EqualTo(100f).Within(0.01f));
+            Assert.That(desiredWithoutNeighbors.X.ToFloat(), Is.EqualTo(5000f / 60f).Within(0.02f));
             Assert.That(desiredWithoutNeighbors.Y.ToFloat(), Is.EqualTo(0f).Within(0.01f));
 
             bool changedByAvoidance =
@@ -146,7 +179,7 @@ namespace Ludots.Tests.Navigation2D
             runtime.Config.Steering.SmartStop.GoalToleranceCm = 20;
             runtime.Config.Steering.SmartStop.ArrivedSlackCm = 10;
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var kin = new NavKinematics2D
             {
                 MaxSpeedCmPerSec = Fix64.FromInt(100),
@@ -197,7 +230,7 @@ namespace Ludots.Tests.Navigation2D
             runtime.Config.Steering.SmartStop.GoalToleranceCm = 20;
             runtime.Config.Steering.SmartStop.ArrivedSlackCm = 10;
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var kin = new NavKinematics2D
             {
                 MaxSpeedCmPerSec = Fix64.FromInt(100),
@@ -331,7 +364,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = CreateRuntime(mode, smartStopEnabled: false);
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var actorKin = new NavKinematics2D
             {
                 MaxSpeedCmPerSec = Fix64.FromInt(100),
@@ -385,7 +418,7 @@ namespace Ludots.Tests.Navigation2D
             runtime.Config.Steering.Separation.RadiusCm = 120;
             runtime.Config.Steering.Separation.Weight = 0.75f;
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var kin = new NavKinematics2D
             {
                 MaxSpeedCmPerSec = Fix64.FromInt(100),

@@ -92,9 +92,10 @@ namespace Ludots.Tests.Navigation2D
             DragSelect(engine, inputBackend, selectionMin, selectionMax, frameTimesMs);
             TickUntil(engine, frameTimesMs, () => GetSelectedEntities(engine).Count == AcceptanceAgentsPerTeam, maxTicks: 12);
 
-            Entity local = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
-            Assert.That(selection.Count, Is.EqualTo(AcceptanceAgentsPerTeam), BuildSelectionDiagnostics(engine, mapping, selectionMin, selectionMax));
+            Assert.That(
+                SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext),
+                Is.EqualTo(AcceptanceAgentsPerTeam),
+                BuildSelectionDiagnostics(engine, mapping, selectionMin, selectionMax));
             Assert.That(ReadActiveModeId(engine), Is.EqualTo(CommandModeId));
 
             string selectedSceneText = ExtractUiSceneText(uiRoot.Scene!);
@@ -452,12 +453,11 @@ namespace Ludots.Tests.Navigation2D
 
         private static IReadOnlyList<Entity> GetSelectedEntities(GameEngine engine)
         {
-            Entity local = GetLocalPlayer(engine);
-            ref var selection = ref engine.World.Get<SelectionBuffer>(local);
-            var entities = new List<Entity>(selection.Count);
-            for (int i = 0; i < selection.Count; i++)
+            Entity[] selection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            var entities = new List<Entity>(selection.Length);
+            for (int i = 0; i < selection.Length; i++)
             {
-                Entity entity = selection.Get(i);
+                Entity entity = selection[i];
                 if (engine.World.IsAlive(entity))
                 {
                     entities.Add(entity);
