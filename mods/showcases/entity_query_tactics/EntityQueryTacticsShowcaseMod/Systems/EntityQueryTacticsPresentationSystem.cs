@@ -6,7 +6,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Scripting;
 using NarrativeFrontendMod;
 using NarrativeFrontendMod.Runtime;
@@ -16,9 +16,16 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 {
     internal sealed class EntityQueryTacticsPresentationSystem : ISystem<float>
     {
+        private const string AllyHighlightKey = "entityquery.tactics.highlight.ally";
+        private const string EnemyHighlightKey = "entityquery.tactics.highlight.enemy";
+        private const string SelectedBestHighlightKey = "entityquery.tactics.highlight.selected_best";
+        private const string ThreatBestHighlightKey = "entityquery.tactics.highlight.threat_best";
+        private const string FormationBestHighlightKey = "entityquery.tactics.highlight.formation_best";
+
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly EntityQueryTacticsScenarioState _state;
+        private readonly PresentationWorldFactPublisher _facts;
         private readonly NarrativeFrontendSurfaceModel[] _surfaces = new NarrativeFrontendSurfaceModel[5];
         private readonly NarrativeFrontendSurfaceItem[] _selectionItems = new NarrativeFrontendSurfaceItem[3];
         private readonly NarrativeFrontendSurfaceItem[] _queryItems = new NarrativeFrontendSurfaceItem[4];
@@ -27,6 +34,10 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private PresentationSignature _lastSignature;
         private bool _hasLastSignature;
         private bool _frontendVisible;
+        private readonly Dictionary<int, Entity> _activeHighlightOwners = new();
+        private readonly Dictionary<int, string> _activeHighlightKeys = new();
+        private readonly HashSet<int> _currentHighlightScopes = new();
+        private readonly List<int> _staleHighlightScopes = new();
 
         private EntityQueryTacticsShowcaseConfig Config => _state.Config;
         private EntityQueryTacticsFrontendConfig Frontend => _state.FrontendConfig;
@@ -37,6 +48,10 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _world = engine.World;
             _state = state ?? throw new ArgumentNullException(nameof(state));
+            if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+            {
+                throw new InvalidOperationException("Entity query tactics presentation requires PresentationEventStream.");
+            }
         }
 
         public void Initialize()
@@ -52,14 +67,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             if (!IsShowcaseMap() || ScenarioContext == null)
             {
                 ClearFrontend();
+                EndAllWorldHighlights();
                 return;
             }
 
             PublishFrontend();
-            if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is GroundOverlayBuffer ground)
-            {
-                DrawWorldHighlights(ground);
-            }
+            PublishWorldHighlights();
         }
 
         public void AfterUpdate(in float dt)
@@ -246,47 +259,51 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 signature.LastLog);
         }
 
-        private void DrawWorldHighlights(GroundOverlayBuffer ground)
+        private void PublishWorldHighlights()
         {
             if (ScenarioContext == null)
             {
                 return;
             }
 
+            _currentHighlightScopes.Clear();
             for (int i = 0; i < ScenarioContext.Allies.Length; i++)
             {
-                AddRing(ground, ScenarioContext.Allies[i], new Vector4(0.1f, 0.55f, 1f, 0.12f), new Vector4(0.38f, 0.68f, 1f, 0.92f), 2.1f, 1.68f);
+                PublishRing(AllyHighlightKey, ScenarioContext.Allies[i], discriminator: i, radius: 2.1f, innerRadius: 1.68f, borderWidth: 0.055f);
             }
 
             for (int i = 0; i < ScenarioContext.Enemies.Length; i++)
             {
-                AddRing(ground, ScenarioContext.Enemies[i], new Vector4(1f, 0.2f, 0.26f, 0.08f), new Vector4(1f, 0.43f, 0.5f, 0.78f), 2.0f, 1.62f);
+                PublishRing(EnemyHighlightKey, ScenarioContext.Enemies[i], discriminator: i, radius: 2.0f, innerRadius: 1.62f, borderWidth: 0.055f);
             }
 
-            AddRing(ground, _state.SelectedBest, new Vector4(0.17f, 0.95f, 0.65f, 0.16f), new Vector4(0.43f, 0.91f, 0.72f, 0.96f), 2.55f, 2.06f);
-            AddRing(ground, _state.ThreatBest, new Vector4(1f, 0.18f, 0.2f, 0.18f), new Vector4(1f, 0.3f, 0.42f, 1f), 2.7f, 2.2f);
-            AddRing(ground, _state.FormationBest, new Vector4(0.52f, 0.38f, 1f, 0.13f), new Vector4(0.66f, 0.55f, 0.98f, 0.9f), 2.4f, 1.96f);
+            PublishRing(SelectedBestHighlightKey, _state.SelectedBest, discriminator: 0, radius: 2.55f, innerRadius: 2.06f, borderWidth: 0.055f);
+            PublishRing(ThreatBestHighlightKey, _state.ThreatBest, discriminator: 0, radius: 2.7f, innerRadius: 2.2f, borderWidth: 0.055f);
+            PublishRing(FormationBestHighlightKey, _state.FormationBest, discriminator: 0, radius: 2.4f, innerRadius: 1.96f, borderWidth: 0.055f);
+            EndStaleWorldHighlights();
         }
 
-        private void AddRing(GroundOverlayBuffer ground, Entity entity, Vector4 fill, Vector4 border, float radius, float innerRadius)
+        private void PublishRing(string key, Entity entity, int discriminator, float radius, float innerRadius, float borderWidth)
         {
             if (entity == Entity.Null || !_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
             {
                 return;
             }
 
+            int scope = PresentationWorldFactPublisher.ComposeScope(key, entity, discriminator);
+            _currentHighlightScopes.Add(scope);
             Vector3 center = _world.Get<VisualTransform>(entity).Position;
             center.Y = 0.08f;
-            ground.TryAdd(new GroundOverlayItem
-            {
-                Shape = GroundOverlayShape.Ring,
-                Center = center,
-                Radius = radius,
-                InnerRadius = innerRadius,
-                FillColor = fill,
-                BorderColor = border,
-                BorderWidth = 0.055f,
-            });
+            _activeHighlightOwners[scope] = entity;
+            _activeHighlightKeys[scope] = key;
+            _facts.PublishWorldOverlayUpdated(
+                key,
+                entity,
+                scope,
+                center,
+                radius,
+                innerRadius,
+                borderWidth: borderWidth);
         }
 
         private string ReadName(Entity entity)
@@ -307,6 +324,62 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             _frontendVisible = false;
+        }
+
+        private void EndStaleWorldHighlights()
+        {
+            if (_activeHighlightOwners.Count == 0)
+            {
+                return;
+            }
+
+            _staleHighlightScopes.Clear();
+            foreach (int scope in _activeHighlightOwners.Keys)
+            {
+                if (!_currentHighlightScopes.Contains(scope))
+                {
+                    _staleHighlightScopes.Add(scope);
+                }
+            }
+
+            for (int i = 0; i < _staleHighlightScopes.Count; i++)
+            {
+                EndHighlightScope(_staleHighlightScopes[i]);
+            }
+        }
+
+        private void EndAllWorldHighlights()
+        {
+            if (_activeHighlightOwners.Count == 0)
+            {
+                return;
+            }
+
+            _staleHighlightScopes.Clear();
+            foreach (int scope in _activeHighlightOwners.Keys)
+            {
+                _staleHighlightScopes.Add(scope);
+            }
+
+            for (int i = 0; i < _staleHighlightScopes.Count; i++)
+            {
+                EndHighlightScope(_staleHighlightScopes[i]);
+            }
+        }
+
+        private void EndHighlightScope(int scope)
+        {
+            if (!_activeHighlightOwners.TryGetValue(scope, out Entity owner))
+            {
+                return;
+            }
+
+            string key = _activeHighlightKeys.TryGetValue(scope, out string? activeKey)
+                ? activeKey
+                : AllyHighlightKey;
+            _facts.PublishWorldOverlayEnded(key, owner, scope);
+            _activeHighlightOwners.Remove(scope);
+            _activeHighlightKeys.Remove(scope);
         }
 
         private readonly record struct PresentationSignature(

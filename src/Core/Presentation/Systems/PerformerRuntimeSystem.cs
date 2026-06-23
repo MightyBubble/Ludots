@@ -236,7 +236,7 @@ namespace Ludots.Core.Presentation.Systems
                     $"DestroyScopedPerformer requires a positive scopeTag, got {cmd.ScopeTag}.");
             }
 
-            if (!World.IsAlive(cmd.Source))
+            if (cmd.Source != Entity.Null && !World.IsAlive(cmd.Source))
             {
                 return;
             }

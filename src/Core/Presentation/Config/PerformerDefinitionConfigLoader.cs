@@ -549,6 +549,12 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.MovePathBegun => TagRegistry.Register(key),
                 PresentationEventKind.MovePathUpdated => TagRegistry.Register(key),
                 PresentationEventKind.MovePathEnded => TagRegistry.Register(key),
+                PresentationEventKind.WorldOverlayUpdated => TagRegistry.Register(key),
+                PresentationEventKind.WorldOverlayEnded => TagRegistry.Register(key),
+                PresentationEventKind.WorldHudUpdated => TagRegistry.Register(key),
+                PresentationEventKind.WorldHudEnded => TagRegistry.Register(key),
+                PresentationEventKind.WorldSplineUpdated => TagRegistry.Register(key),
+                PresentationEventKind.WorldSplineEnded => TagRegistry.Register(key),
                 _ => throw new InvalidOperationException($"Presentation event kind '{kind}' does not support string key '{key}'."),
             };
         }

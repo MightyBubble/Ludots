@@ -416,14 +416,28 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             float alpha)
         {
-            float width = asset.ScaleParamKey >= 0
+            Vector3 fallbackScale = ResolveScale(entity, in asset, performerWorldScale);
+            float authoredWidth = asset.ScaleParamKey >= 0
                 ? RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
-                : MathF.Max(ResolveScale(entity, in asset, performerWorldScale).X, 0.001f);
-            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
-            Vector3 p0 = position;
-            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(performerWorldRotation));
-            Vector3 p1 = Vector3.Lerp(p0, p3, 0.33f);
-            Vector3 p2 = Vector3.Lerp(p0, p3, 0.66f);
+                : fallbackScale.X;
+            float width = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.SplineWidth, authoredWidth),
+                0.001f);
+            Vector4 authoredColor = ResolveColor(entity, in asset, definition.DefaultColor);
+            Vector4 fillColor = ApplyAlpha(
+                ResolveOptionalVectorParam(entity, WellKnownPerformerParamKeys.SplineFillColor, authoredColor),
+                alpha);
+            Vector4 borderColor = ApplyAlpha(
+                ResolveOptionalVectorParam(entity, WellKnownPerformerParamKeys.SplineBorderColor, authoredColor),
+                alpha);
+            float borderWidth = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.SplineBorderWidth, 0f),
+                0f);
+            Vector3 p0 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP0, position);
+            Vector3 defaultP3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(performerWorldRotation));
+            Vector3 p3 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP3, defaultP3);
+            Vector3 p1 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP1, Vector3.Lerp(p0, p3, 1f / 3f));
+            Vector3 p2 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP2, Vector3.Lerp(p0, p3, 2f / 3f));
 
             _requests.Add(PresentationRequest.FromRoadSpline(state.OwnerEntity, new RoadSplineRequest
             {
@@ -433,9 +447,9 @@ namespace Ludots.Core.Presentation.Systems
                 P2 = p2,
                 P3 = p3,
                 Width = width,
-                FillColor = color,
-                BorderColor = color,
-                BorderWidth = 0f,
+                FillColor = fillColor,
+                BorderColor = borderColor,
+                BorderWidth = borderWidth,
                 Style = 0,
             }, lod));
         }
@@ -758,6 +772,18 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return value;
+        }
+
+        private Vector4 ResolveOptionalVectorParam(Entity entity, int paramKey, Vector4 fallback)
+        {
+            return _runtime.TryResolveVector(entity, paramKey, out Vector4 value) ? value : fallback;
+        }
+
+        private Vector3 ResolveOptionalVector3Param(Entity entity, int paramKey, Vector3 fallback)
+        {
+            return _runtime.TryResolveVector(entity, paramKey, out Vector4 value)
+                ? new Vector3(value.X, value.Y, value.Z)
+                : fallback;
         }
 
         private AnimatorPackedState ResolveAnimator(Entity entity, VisualRenderPath renderPath)

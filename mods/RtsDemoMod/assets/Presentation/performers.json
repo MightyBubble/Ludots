@@ -345,5 +345,237 @@
         }
       }
     ]
+  },
+  {
+    "_comment": "Selected RTS actor primary ring. The system only publishes a semantic world fact; this performer owns the visual.",
+    "id": "rts.selection.primary_ring",
+    "defaultColor": [0.35, 0.72, 1.0, 1.0],
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 1.42 },
+      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 1.1 },
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.35 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.72 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.088 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.35 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.72 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.22 },
+      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.05 }
+    ],
+    "bindings": [
+      { "paramKey": "groundOverlay.fill.r", "source": "entityColor", "sourceId": 0 },
+      { "paramKey": "groundOverlay.fill.g", "source": "entityColor", "sourceId": 1 },
+      { "paramKey": "groundOverlay.fill.b", "source": "entityColor", "sourceId": 2 },
+      { "paramKey": "groundOverlay.border.r", "source": "entityColor", "sourceId": 0 },
+      { "paramKey": "groundOverlay.border.g", "source": "entityColor", "sourceId": 1 },
+      { "paramKey": "groundOverlay.border.b", "source": "entityColor", "sourceId": 2 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.42, 1.1, 0.05]
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "Selected RTS actor queued-order pulse ring.",
+    "id": "rts.selection.queue_ring",
+    "extends": "rts.selection.primary_ring",
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.04 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.10 }
+    ]
+  },
+  {
+    "_comment": "Selected RTS actor execution/progress bar.",
+    "id": "rts.selection.progress_bar",
+    "defaultColor": [0.35, 0.72, 1.0, 0.95],
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0, 0],
+    "maxVisibilityDistanceCm": 30000,
+    "paramDefaults": [
+      { "paramKey": "worldBar.fillRatio", "lane": "Float", "floatValue": 1 },
+      { "paramKey": "rts.selection.progress.color", "lane": "Vector", "vectorValue": [0.35, 0.72, 1.0, 0.95] }
+    ],
+    "bindings": [
+      { "paramKey": "rts.selection.progress.color", "source": "entityColorVector" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "worldBar.fillRatio",
+          "colorParamKey": "rts.selection.progress.color",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [102, 10, 1]
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "Rules converting RTS selection world facts into performer commands.",
+    "id": "rts.selection.feedback_rules",
+    "rules": [
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.primary_ring" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts.selection.primary_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.primary_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.primary_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.primary_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.primary_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.primary_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.primary_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "rts.selection.primary_ring" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "rts.selection.primary_ring",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.queue_ring" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts.selection.queue_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.queue_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.queue_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.queue_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.queue_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "rts.selection.queue_ring" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.queue_ring",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "rts.selection.queue_ring" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "rts.selection.queue_ring",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "WorldHudUpdated", "key": "rts.selection.progress_bar" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts.selection.progress_bar",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldBar.fillRatio",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldHudUpdated", "key": "rts.selection.progress_bar" },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "rts.selection.progress_bar",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldBar.fillRatio",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": { "kind": "WorldHudEnded", "key": "rts.selection.progress_bar" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "rts.selection.progress_bar",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
   }
 ]

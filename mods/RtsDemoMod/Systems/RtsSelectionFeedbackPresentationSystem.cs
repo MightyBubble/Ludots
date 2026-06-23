@@ -10,27 +10,36 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Systems
 {
     public sealed class RtsSelectionFeedbackPresentationSystem : ISystem<float>
     {
+        private const string PrimaryRingKey = "rts.selection.primary_ring";
+        private const string QueueRingKey = "rts.selection.queue_ring";
+        private const string ProgressBarKey = "rts.selection.progress_bar";
+
         private readonly GameEngine _engine;
-        private readonly GroundOverlayBuffer _overlays;
-        private readonly WorldHudBatchBuffer _worldHud;
+        private readonly PresentationWorldFactPublisher _facts;
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
+        private Entity _activePrimaryOwner = Entity.Null;
+        private Entity _activeQueueOwner = Entity.Null;
+        private Entity _activeProgressOwner = Entity.Null;
+        private int _activePrimaryScope;
+        private int _activeQueueScope;
+        private int _activeProgressScope;
         private float _elapsedSeconds;
 
         public RtsSelectionFeedbackPresentationSystem(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
-            _overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
-                ?? throw new InvalidOperationException("GroundOverlayBuffer service is missing.");
-            _worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
-                ?? throw new InvalidOperationException("PresentationWorldHudBuffer service is missing.");
+            if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+            {
+                throw new InvalidOperationException("PresentationEventStream service is missing.");
+            }
+
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
         }
 
@@ -50,22 +59,30 @@ namespace RtsDemoMod.Systems
                 !_engine.World.IsAlive(selected) ||
                 !TryResolveWorldPosition(selected, out Vector3 center))
             {
+                EndAllActiveFacts();
                 return;
             }
 
-            Vector4 accent = ResolveAccent(selected);
             bool hasQueue = _engine.World.TryGet(selected, out OrderBuffer orders) &&
                             (orders.HasActive || orders.QueuedCount > 0 || orders.HasPending);
 
-            EmitSelectionRing(center, accent, pulseScale: 1f, alpha: 0.22f);
+            EmitSelectionRing(selected, center, PrimaryRingKey, ref _activePrimaryOwner, ref _activePrimaryScope, pulseScale: 1f);
             if (hasQueue)
             {
-                EmitSelectionRing(center, accent, pulseScale: 1.18f, alpha: 0.10f);
+                EmitSelectionRing(selected, center, QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope, pulseScale: 1.18f);
+            }
+            else
+            {
+                EndActiveOverlay(QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope);
             }
 
             if (TryResolveProgress(selected, out float progressRatio))
             {
-                EmitProgressBar(selected, center, accent, progressRatio);
+                EmitProgressBar(selected, center, progressRatio);
+            }
+            else
+            {
+                EndActiveHud(ProgressBarKey, ref _activeProgressOwner, ref _activeProgressScope);
             }
         }
 
@@ -77,43 +94,33 @@ namespace RtsDemoMod.Systems
         {
         }
 
-        private void EmitSelectionRing(Vector3 center, Vector4 accent, float pulseScale, float alpha)
+        private void EmitSelectionRing(Entity owner, Vector3 center, string key, ref Entity activeOwner, ref int activeScope, float pulseScale)
         {
+            EndIfOwnerChanged(key, owner, ref activeOwner, ref activeScope, isHud: false);
             float pulse = 1f + 0.06f * MathF.Sin(_elapsedSeconds * 5.4f);
-            _overlays.TryAdd(new GroundOverlayItem
-            {
-                Shape = GroundOverlayShape.Ring,
-                Center = center + new Vector3(0f, 0.04f, 0f),
-                Radius = 1.42f * pulseScale * pulse,
-                InnerRadius = 1.1f * pulseScale,
-                FillColor = new Vector4(accent.X, accent.Y, accent.Z, alpha * 0.4f),
-                BorderColor = new Vector4(accent.X, accent.Y, accent.Z, alpha),
-                BorderWidth = 0.05f
-            });
+            activeOwner = owner;
+            activeScope = PresentationWorldFactPublisher.ComposeScope(key, owner);
+            _facts.PublishWorldOverlayUpdated(
+                key,
+                owner,
+                activeScope,
+                center + new Vector3(0f, 0.04f, 0f),
+                radiusOrLength: 1.42f * pulseScale * pulse,
+                innerRadiusOrWidth: 1.1f * pulseScale,
+                borderWidth: 0.05f);
         }
 
-        private void EmitProgressBar(Entity owner, Vector3 center, Vector4 accent, float progressRatio)
+        private void EmitProgressBar(Entity owner, Vector3 center, float progressRatio)
         {
-            int stableId = ResolveStableId(owner, WorldHudItemKind.Bar, discriminator: 1);
-            if (stableId <= 0)
-            {
-                return;
-            }
-
-            Vector4 background = new(0.08f, 0.12f, 0.18f, 0.9f);
-            Vector4 fill = new(accent.X, accent.Y, accent.Z, 0.95f);
-            _worldHud.TryAdd(new WorldHudItem
-            {
-                StableId = stableId,
-                DirtySerial = HudItemIdentity.ComposeBarDirtySerial(102f, 10f, progressRatio, in background, in fill),
-                Kind = WorldHudItemKind.Bar,
-                WorldPosition = center + new Vector3(0f, 2.1f, 0f),
-                Width = 102f,
-                Height = 10f,
-                Value0 = progressRatio,
-                Color0 = background,
-                Color1 = fill
-            });
+            EndIfOwnerChanged(ProgressBarKey, owner, ref _activeProgressOwner, ref _activeProgressScope, isHud: true);
+            _activeProgressOwner = owner;
+            _activeProgressScope = PresentationWorldFactPublisher.ComposeScope(ProgressBarKey, owner, discriminator: 1);
+            _facts.PublishWorldHudUpdated(
+                ProgressBarKey,
+                owner,
+                _activeProgressScope,
+                center + new Vector3(0f, 2.1f, 0f),
+                Math.Clamp(progressRatio, 0f, 1f));
         }
 
         private bool TryResolveProgress(Entity selected, out float progressRatio)
@@ -197,38 +204,50 @@ namespace RtsDemoMod.Systems
             return false;
         }
 
-        private int ResolveStableId(Entity owner, WorldHudItemKind kind, int discriminator)
+        private void EndAllActiveFacts()
         {
-            if (!_engine.World.TryGet(owner, out PresentationStableId stable))
-            {
-                return 0;
-            }
-
-            return HudItemIdentity.ComposeStableId(stable.Value, kind, discriminator);
+            EndActiveOverlay(PrimaryRingKey, ref _activePrimaryOwner, ref _activePrimaryScope);
+            EndActiveOverlay(QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope);
+            EndActiveHud(ProgressBarKey, ref _activeProgressOwner, ref _activeProgressScope);
         }
 
-        private Vector4 ResolveAccent(Entity selected)
+        private void EndIfOwnerChanged(string key, Entity owner, ref Entity activeOwner, ref int activeScope, bool isHud)
         {
-            string name = _engine.World.TryGet(selected, out Name entityName)
-                ? entityName.Value ?? string.Empty
-                : string.Empty;
-
-            if (name.Contains("Barracks", StringComparison.OrdinalIgnoreCase))
+            if (activeScope <= 0 || activeOwner == owner)
             {
-                return new Vector4(0.48f, 0.79f, 0.44f, 1f);
+                return;
             }
 
-            if (name.Contains("Factory", StringComparison.OrdinalIgnoreCase))
+            if (isHud)
             {
-                return new Vector4(0.95f, 0.56f, 0.27f, 1f);
+                EndActiveHud(key, ref activeOwner, ref activeScope);
+            }
+            else
+            {
+                EndActiveOverlay(key, ref activeOwner, ref activeScope);
+            }
+        }
+
+        private void EndActiveOverlay(string key, ref Entity activeOwner, ref int activeScope)
+        {
+            if (activeScope > 0 && activeOwner != Entity.Null)
+            {
+                _facts.PublishWorldOverlayEnded(key, activeOwner, activeScope);
             }
 
-            if (name.Contains("Gateway", StringComparison.OrdinalIgnoreCase))
+            activeOwner = Entity.Null;
+            activeScope = 0;
+        }
+
+        private void EndActiveHud(string key, ref Entity activeOwner, ref int activeScope)
+        {
+            if (activeScope > 0 && activeOwner != Entity.Null)
             {
-                return new Vector4(0.23f, 0.78f, 0.96f, 1f);
+                _facts.PublishWorldHudEnded(key, activeOwner, activeScope);
             }
 
-            return new Vector4(0.35f, 0.72f, 1f, 1f);
+            activeOwner = Entity.Null;
+            activeScope = 0;
         }
 
         private bool IsRtsMapActive()

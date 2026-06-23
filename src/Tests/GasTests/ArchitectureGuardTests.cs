@@ -408,6 +408,52 @@ namespace GasTests
         }
 
         [Test]
+        public void Epic322_ShowcasePresentationSystems_PublishWorldFactsInsteadOfWritingRenderBuffers()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsSelectionFeedbackPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod", "Runtime", "TotalWarObstacleOverlayPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod", "Runtime", "TotalWarFormationOutlinePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "capability_standard", "CapabilityStandardTotalWarLikeMod", "Runtime", "CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "capability_standard", "CapabilityStandardTotalWarLikeMod", "Runtime", "CapabilityStandardTotalWarLikeFormationOutlinePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Systems", "RoadSelectedRoutePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Gameplay", "RoadRoutePreviewSplineBuilder.cs")
+            };
+            string[] forbidden =
+            {
+                "GroundOverlayBuffer",
+                "RoadSplineBuffer",
+                "WorldHudBatchBuffer",
+                "new GroundOverlayItem",
+                "new RoadSplineItem",
+                "new WorldHudItem",
+                ".TryAddLine(",
+                ".TryAdd(new GroundOverlayItem",
+                ".TryAdd(new WorldHudItem"
+            };
+
+            var hits = new List<string>();
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                string file = files[fileIndex];
+                Assert.That(File.Exists(file), Is.True, $"Missing epic #322 presentation source {file}");
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 showcase presentation systems must publish semantic world facts and let PerformerRuleSystem/performer emit own render buffers:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue200_KnowledgeHotPaths_DoNotUseLinqOrIteratorBlocks()
         {
             var repoRoot = FindRepoRoot();

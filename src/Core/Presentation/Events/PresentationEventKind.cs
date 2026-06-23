@@ -43,5 +43,13 @@ namespace Ludots.Core.Presentation.Events
         // Entity collection presentation events
         EntityCollectionMemberAdded = 70,
         EntityCollectionMemberRemoved = 71,
+
+        // World presentation fact events
+        WorldOverlayUpdated = 72,
+        WorldOverlayEnded = 73,
+        WorldHudUpdated = 74,
+        WorldHudEnded = 75,
+        WorldSplineUpdated = 76,
+        WorldSplineEnded = 77,
     }
 }

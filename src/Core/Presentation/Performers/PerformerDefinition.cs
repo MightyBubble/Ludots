@@ -788,6 +788,10 @@ namespace Ludots.Core.Presentation.Performers
             {
                 CollectGroundOverlayParams(floatParams);
             }
+            else if (asset.AssetKind == AssetKind.Spline)
+            {
+                CollectSplineParams(floatParams, vectorParams);
+            }
 
             CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
         }
@@ -809,6 +813,20 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayBorderWidth);
             AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayLength);
             AddIfValid(floatParams, WellKnownPerformerParamKeys.OverlayWidth);
+        }
+
+        private static void CollectSplineParams(
+            System.Collections.Generic.HashSet<int> floatParams,
+            System.Collections.Generic.HashSet<int> vectorParams)
+        {
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP0);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP1);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP2);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineP3);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.SplineWidth);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineFillColor);
+            AddIfValid(vectorParams, WellKnownPerformerParamKeys.SplineBorderColor);
+            AddIfValid(floatParams, WellKnownPerformerParamKeys.SplineBorderWidth);
         }
 
         private static void CollectMaterialCustomDataParams(

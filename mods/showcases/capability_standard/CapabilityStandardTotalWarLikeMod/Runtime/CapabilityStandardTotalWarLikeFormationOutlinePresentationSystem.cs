@@ -8,8 +8,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -23,7 +22,7 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
 
     private readonly GameEngine _engine;
     private readonly CapabilityStandardTotalWarLikeRuntime _runtime;
-    private readonly RoadSplineBuffer _splines;
+    private readonly PresentationWorldFactPublisher _facts;
     private readonly IVisualHeightmap _heightmap;
     private readonly int _stableIdCapacity;
     private readonly int _ownerCapacity;
@@ -58,8 +57,11 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
         _currentOwnerStableIds = new HashSet<int>(_ownerCapacity);
         _staleOwnerStableIds = new List<int>(_ownerCapacity);
         _emittedStateByOwnerStableId = new Dictionary<int, OutlineEmissionState>(_ownerCapacity);
-        _splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
-            ?? throw new InvalidOperationException("Total War formation outline requires RoadSplineBuffer.");
+        if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+        {
+            throw new InvalidOperationException("Total War formation outline requires PresentationEventStream.");
+        }
+
         _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
             ?? throw new InvalidOperationException("Total War formation outline requires VisualHeightmap.");
     }
@@ -265,19 +267,17 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
         {
             float t = sample / (float)sampleCount;
             Vector3 current = ProjectToGround(Vector3.Lerp(start, end, t), outline.HeightOffsetM);
-            int stableId = CreateSegmentStableId(ownerStableId, segment, sample - 1, sampleCount);
+            string key = ResolveSplineKey(in outline);
+            int stableId = CreateSegmentStableId(key, ownerStableId, segment, sample - 1, sampleCount);
             RequireStableIdCapacity();
-            if (!_splines.TryAddLine(
-                    stableId,
-                    previous,
-                    current,
-                    widthM,
-                    outline.FillColor,
-                    outline.BorderColor,
-                    widthM))
-            {
-                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War formation outline for entity {entity.Id}.");
-            }
+            _facts.PublishWorldSplineUpdated(
+                key,
+                entity,
+                stableId,
+                previous,
+                current,
+                widthM,
+                widthM);
 
             TrackStableId(stableId);
             previous = current;
@@ -304,19 +304,17 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
             Vector3 current = ProjectToGround(
                 center + new Vector3(MathF.Cos(angle) * radiusM, 0f, MathF.Sin(angle) * radiusM),
                 outline.HeightOffsetM);
-            int stableId = CreateSegmentStableId(ownerStableId, CapabilityStandardTotalWarLikeFormationOutlineSegment.CircleRing, sample - 1, sampleCount);
+            string key = ResolveSplineKey(in outline);
+            int stableId = CreateSegmentStableId(key, ownerStableId, CapabilityStandardTotalWarLikeFormationOutlineSegment.CircleRing, sample - 1, sampleCount);
             RequireStableIdCapacity();
-            if (!_splines.TryAddLine(
-                    stableId,
-                    previous,
-                    current,
-                    widthM,
-                    outline.FillColor,
-                    outline.BorderColor,
-                    widthM))
-            {
-                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War circle formation outline for entity {entity.Id}.");
-            }
+            _facts.PublishWorldSplineUpdated(
+                key,
+                entity,
+                stableId,
+                previous,
+                current,
+                widthM,
+                widthM);
 
             TrackStableId(stableId);
             previous = current;
@@ -330,7 +328,7 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
     {
         for (int i = 0; i < _previousStableIds.Count; i++)
         {
-            _splines.Remove(_previousStableIds[i]);
+            PublishSplineEnded(_previousStableIds[i]);
         }
 
         _previousStableIds.Clear();
@@ -348,7 +346,7 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
             int stableId = _previousStableIds[i];
             if (!_currentStableIdSet.Contains(stableId))
             {
-                _splines.Remove(stableId);
+                PublishSplineEnded(stableId);
             }
         }
 
@@ -404,10 +402,11 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
 
     private void TrackSegmentStableIds(int ownerStableId, CapabilityStandardTotalWarLikeFormationOutlineSegment segment, in CapabilityStandardTotalWarLikeFormationOutline outline)
     {
+        string key = ResolveSplineKey(in outline);
         int sampleCount = outline.CurveSampleCount;
         for (int sample = 0; sample < sampleCount; sample++)
         {
-            int stableId = CreateSegmentStableId(ownerStableId, segment, sample, sampleCount);
+            int stableId = CreateSegmentStableId(key, ownerStableId, segment, sample, sampleCount);
             TrackStableId(stableId);
         }
     }
@@ -467,7 +466,7 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
         return CapabilityStandardTotalWarLikeFormationOutlineSegments.CountSplineSegments(in outline);
     }
 
-    private static int CreateSegmentStableId(int ownerStableId, CapabilityStandardTotalWarLikeFormationOutlineSegment segment, int sampleIndex, int sampleCount)
+    private static int CreateSegmentStableId(string key, int ownerStableId, CapabilityStandardTotalWarLikeFormationOutlineSegment segment, int sampleIndex, int sampleCount)
     {
         if (sampleCount <= 0)
         {
@@ -479,11 +478,32 @@ internal sealed class CapabilityStandardTotalWarLikeFormationOutlinePresentation
             throw new InvalidOperationException($"Total War formation outline sample index {sampleIndex} is outside configured curve samples {sampleCount}.");
         }
 
-        return PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+        return PresentationWorldFactPublisher.ComposeScope(
+            key,
             ownerStableId,
-            ((int)segment * sampleCount) + sampleIndex,
-            AssetKind.Spline,
-            (int)segment);
+            (int)segment,
+            sampleIndex);
+    }
+
+    private static string ResolveSplineKey(in CapabilityStandardTotalWarLikeFormationOutline outline)
+    {
+        bool crimson = outline.BorderColor.X >= 0.9f && outline.BorderColor.Y < 0.7f;
+        return outline.Shape switch
+        {
+            CapabilityStandardTotalWarLikeFormationOutlineShape.Rectangle when crimson => CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.RectangleCrimson,
+            CapabilityStandardTotalWarLikeFormationOutlineShape.Circle when crimson => CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.CircleCrimson,
+            CapabilityStandardTotalWarLikeFormationOutlineShape.Rectangle => CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.RectangleAzure,
+            CapabilityStandardTotalWarLikeFormationOutlineShape.Circle => CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.CircleAzure,
+            _ => throw new InvalidOperationException($"Total War formation outline has unsupported shape {outline.Shape}."),
+        };
+    }
+
+    private void PublishSplineEnded(int stableId)
+    {
+        _facts.PublishWorldSplineEnded(CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.RectangleAzure, Entity.Null, stableId);
+        _facts.PublishWorldSplineEnded(CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.CircleAzure, Entity.Null, stableId);
+        _facts.PublishWorldSplineEnded(CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.RectangleCrimson, Entity.Null, stableId);
+        _facts.PublishWorldSplineEnded(CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys.CircleCrimson, Entity.Null, stableId);
     }
 
     private static Vector3 ResolveCenter(in VisualTransform transform, float heightOffsetM)
@@ -637,4 +657,12 @@ internal enum CapabilityStandardTotalWarLikeFormationOutlineSegment : byte
     RectangleRight = 5,
     FrontIndicator = 6,
     ReservedMax = FrontIndicator,
+}
+
+internal static class CapabilityStandardTotalWarLikeFormationOutlinePresentationKeys
+{
+    public const string RectangleAzure = "mass_navigation.capability_standard.total_war_like.formation_outline.rectangle.azure";
+    public const string CircleAzure = "mass_navigation.capability_standard.total_war_like.formation_outline.circle.azure";
+    public const string RectangleCrimson = "mass_navigation.capability_standard.total_war_like.formation_outline.rectangle.crimson";
+    public const string CircleCrimson = "mass_navigation.capability_standard.total_war_like.formation_outline.circle.crimson";
 }

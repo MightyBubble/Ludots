@@ -11,5 +11,8 @@ namespace Ludots.Core.Presentation.Performers
         EventFloatB = 6,
         EventFloatC = 7,
         EventFloatD = 8,
+        EventPositionX = 9,
+        EventPositionY = 10,
+        EventPositionZ = 11,
     }
 }

@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
@@ -84,7 +85,7 @@ namespace RoadNetworkShowcaseMod.Triggers
                 RoadNavPlanStore plans = engine.GlobalContext.TryGetValue(typeof(RoadNavPlanStore).FullName!, out var planObj) && planObj is RoadNavPlanStore resolvedPlans
                     ? resolvedPlans
                     : new RoadNavPlanStore();
-                engine.RegisterPresentationSystem(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, selectionRuntime, plans));
+                engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RoadSelectedRoutePresentationSystem(engine.World, engine.GlobalContext, selectionRuntime, plans));
             }
             _context.Log("[RoadNetworkShowcaseMod] Road input, order binding, nav selection, movement execution, AI/capture, chunk streaming, and presentation systems registered.");
             return Task.CompletedTask;

@@ -564,6 +564,9 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandValueSource.EventFloatB => evt.FloatB,
                 PerformerCommandValueSource.EventFloatC => evt.FloatC,
                 PerformerCommandValueSource.EventFloatD => evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => evt.Position.Z,
                 _ => cmd.ParamValue,
             };
         }
@@ -580,6 +583,9 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandValueSource.EventFloatB => (int)evt.FloatB,
                 PerformerCommandValueSource.EventFloatC => (int)evt.FloatC,
                 PerformerCommandValueSource.EventFloatD => (int)evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => (int)evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => (int)evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => (int)evt.Position.Z,
                 _ => cmd.IntValue,
             };
         }
@@ -614,6 +620,9 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandValueSource.EventFloatB => evt.FloatB,
                 PerformerCommandValueSource.EventFloatC => evt.FloatC,
                 PerformerCommandValueSource.EventFloatD => evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => evt.Position.Z,
                 _ => fixedValue,
             };
         }

@@ -782,7 +782,7 @@ namespace Ludots.Core.Presentation.Performers
                 return true;
             }
 
-            var key = new ScopedOwnerKey(defId, owner, scopeId, anchorKind, worldPosition);
+            var key = new ScopedOwnerKey(defId, owner, scopeId, anchorKind, default);
             if (!_scopedInstances.TryGetValue(key, out entity))
             {
                 return false;
@@ -805,8 +805,7 @@ namespace Ludots.Core.Presentation.Performers
             out Entity entity)
         {
             entity = Entity.Null;
-            if (owner == Entity.Null ||
-                scopeId <= 0 ||
+            if (scopeId <= 0 ||
                 !_byScope.TryGetValue(scopeId, out EntityBucket scoped) ||
                 scoped.Count == 0)
             {
@@ -815,9 +814,10 @@ namespace Ludots.Core.Presentation.Performers
 
             Entity match = Entity.Null;
             int matchCount = 0;
+            bool requireOwner = owner != Entity.Null;
             for (int i = 0; i < scoped.Count; i++)
             {
-                if (!TryMatchScopedInstance(scoped.GetAt(i), defId, owner, scopeId, out Entity candidate))
+                if (!TryMatchScopedInstance(scoped.GetAt(i), defId, owner, scopeId, out Entity candidate, requireOwner))
                 {
                     continue;
                 }

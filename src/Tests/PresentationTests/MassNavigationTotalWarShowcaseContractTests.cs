@@ -690,9 +690,11 @@ namespace Ludots.Tests.Presentation
                 "Runtime",
                 "TotalWarObstacleOverlayPresentationSystem.cs"));
 
-            Assert.That(source, Does.Contain("PerformerBehaviorRuntimeUtility.ComposeVisualStableId"));
-            Assert.That(source, Does.Contain("AssetKind.GroundOverlay"));
+            Assert.That(source, Does.Contain("PresentationWorldFactPublisher"));
+            Assert.That(source, Does.Contain("PublishWorldOverlayUpdated"));
             Assert.That(source, Does.Contain("overlay.BorderWidthCm"));
+            Assert.That(source, Does.Not.Contain("GroundOverlayBuffer"));
+            Assert.That(source, Does.Not.Contain("new GroundOverlayItem"));
             Assert.That(source, Does.Not.Contain("OverlayStableIdOffset"));
             Assert.That(source, Does.Not.Contain("MathF.Max"));
             Assert.That(source, Does.Not.Contain("0.08f"));
@@ -706,8 +708,9 @@ namespace Ludots.Tests.Presentation
                 "Runtime",
                 "TotalWarFormationOutlinePresentationSystem.cs"));
 
-            Assert.That(outlineSource, Does.Contain("RoadSplineBuffer"));
-            Assert.That(outlineSource, Does.Contain("TryAddLine"));
+            Assert.That(outlineSource, Does.Contain("PresentationWorldFactPublisher"));
+            Assert.That(outlineSource, Does.Contain("PublishWorldSplineUpdated"));
+            Assert.That(outlineSource, Does.Contain("PublishWorldSplineEnded"));
             Assert.That(outlineSource, Does.Contain("ProjectToGround"));
             Assert.That(outlineSource, Does.Contain("CurveSampleCount"));
             Assert.That(outlineSource, Does.Contain("EmissionPositionEpsilonM"));
@@ -720,6 +723,9 @@ namespace Ludots.Tests.Presentation
                 "Formation outlines must cache emitted state so static formations do not resample terrain and upsert splines every frame.");
             Assert.That(outlineSource, Does.Not.Contain("GroundOverlayBuffer"),
                 "Formation outlines must not be long flat GroundOverlay shapes; they need per-segment visual-heightmap samples.");
+            Assert.That(outlineSource, Does.Not.Contain("RoadSplineBuffer"),
+                "Formation outlines publish semantic world spline facts; PerformerRuleSystem and performer emit own the render buffer.");
+            Assert.That(outlineSource, Does.Not.Contain("TryAddLine"));
             Assert.That(outlineSource, Does.Not.Contain("GroundOverlayShape"));
         }
 

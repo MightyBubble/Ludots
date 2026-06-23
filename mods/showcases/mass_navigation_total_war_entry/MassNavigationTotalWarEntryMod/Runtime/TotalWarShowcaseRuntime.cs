@@ -11,11 +11,13 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MassNavigationMod;
@@ -130,8 +132,8 @@ internal sealed class TotalWarShowcaseRuntime
             new TotalWarFormationRuntimeSystem(engine, this, simulation),
             SystemGroup.PostMovement);
         TotalWarShowcaseConfig config = EnsureConfig(engine);
-        engine.RegisterPresentationSystem(new TotalWarFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
+        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new TotalWarFormationOutlinePresentationSystem(engine, this, config));
+        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
         _systemsInstalled = true;
     }
 
@@ -358,6 +360,7 @@ internal sealed class TotalWarShowcaseRuntime
         UpsertComponent(engine.World, entity, SelectionSelectableState.EnabledByDefault);
         UpsertComponent(engine.World, entity, new Team { Id = formation.TeamId });
         UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = formation.OwnerPlayerId });
+        PublishLocalLiveKnowledge(engine, entity);
     }
 
     public void RegisterSpawnedObstacleOverlay(Entity entity, in TotalWarSpawnReceiptBinding binding)
@@ -1263,6 +1266,28 @@ internal sealed class TotalWarShowcaseRuntime
         selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
         selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
         selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
+    }
+
+    private static void PublishLocalLiveKnowledge(GameEngine engine, Entity target)
+    {
+        Entity viewer = ResolveLocalSelectionOwner(engine);
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("Total War showcase requires KnowledgeProjectionStore before publishing selectable formation visibility.");
+        var empty = KnowledgeIdMask256.Empty;
+        knowledge.Upsert(
+            viewer,
+            target,
+            new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                empty,
+                empty,
+                empty,
+                viewer,
+                KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext),
+                expiryTick: 0,
+                confidencePermille: 1000,
+                revision: 0));
     }
 
     private static Entity ResolveLocalSelectionOwner(GameEngine engine)
