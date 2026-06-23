@@ -194,6 +194,7 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 		private readonly MemoryMappedFile _mapping;
 		private readonly MemoryMappedViewStream _stream;
 		private readonly Dictionary<int, SharedMemoryWriteRegion> _regionsByOffset = new();
+		private readonly List<int> _overlappingRegionOffsets = new();
 		private int _writeOffset;
 		private long _sequence;
 		private long _droppedPackets;
@@ -289,7 +290,6 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 				RemoveOverlappingRegions(byteOffset, payload.Length);
 				_stream.Position = byteOffset;
 				_stream.Write(payload);
-				_stream.Flush();
 				_writeOffset += payload.Length;
 				_sequence++;
 				_regionsByOffset[byteOffset] = new SharedMemoryWriteRegion(payload.Length, _sequence);
@@ -353,13 +353,19 @@ public sealed class BrowserSharedMemoryBufferStore : IDisposable, IAsyncDisposab
 		private void RemoveOverlappingRegions(int byteOffset, int byteLength)
 		{
 			int endExclusive = byteOffset + byteLength;
-			foreach (KeyValuePair<int, SharedMemoryWriteRegion> region in _regionsByOffset.ToArray())
+			_overlappingRegionOffsets.Clear();
+			foreach (KeyValuePair<int, SharedMemoryWriteRegion> region in _regionsByOffset)
 			{
 				int regionEndExclusive = region.Key + region.Value.ByteLength;
 				if (byteOffset < regionEndExclusive && region.Key < endExclusive)
 				{
-					_regionsByOffset.Remove(region.Key);
+					_overlappingRegionOffsets.Add(region.Key);
 				}
+			}
+
+			for (int i = 0; i < _overlappingRegionOffsets.Count; i++)
+			{
+				_regionsByOffset.Remove(_overlappingRegionOffsets[i]);
 			}
 		}
 

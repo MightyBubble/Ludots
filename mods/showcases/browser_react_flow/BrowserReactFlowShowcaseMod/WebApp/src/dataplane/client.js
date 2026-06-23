@@ -215,6 +215,7 @@ export function createLudotsDataPlaneClient(options = {}) {
       readSharedBufferEvent(incoming)
         .then((resolved) => {
           if (!closed) {
+            resolvePendingRequest(resolved);
             dispatchDataEvent(resolved);
           }
         })
@@ -232,22 +233,28 @@ export function createLudotsDataPlaneClient(options = {}) {
       return;
     }
 
-    const pending = incoming.requestId ? pendingRequests.get(incoming.requestId) : null;
-    if (pending) {
-      pendingRequests.delete(incoming.requestId);
-      if (pending.timeout) {
-        root.clearTimeout?.(pending.timeout);
-      }
-
-      if (incoming.kind === 'commandError' || incoming.payload?.code || incoming.payload?.error) {
-        pending.reject(new Error(incoming.payload?.message ?? incoming.payload?.error ?? `${pending.kind} failed.`));
-      } else {
-        pending.resolve(incoming);
-      }
-    }
+    resolvePendingRequest(incoming);
 
     if (incoming.kind === 'snapshot' || incoming.kind === 'delta' || incoming.kind === 'diagnostics') {
       dispatchDataEvent(incoming);
+    }
+  }
+
+  function resolvePendingRequest(incoming) {
+    const pending = incoming.requestId ? pendingRequests.get(incoming.requestId) : null;
+    if (!pending) {
+      return;
+    }
+
+    pendingRequests.delete(incoming.requestId);
+    if (pending.timeout) {
+      root.clearTimeout?.(pending.timeout);
+    }
+
+    if (incoming.kind === 'commandError' || incoming.payload?.code || incoming.payload?.error) {
+      pending.reject(new Error(incoming.payload?.message ?? incoming.payload?.error ?? `${pending.kind} failed.`));
+    } else {
+      pending.resolve(incoming);
     }
   }
 
@@ -349,10 +356,44 @@ export function decodeEntityColumnarPacket(bytes) {
     throw new Error('Invalid Ludots entity columnar packet.');
   }
 
-  const kind = view.getUint8(6) === 1 ? 'snapshot' : 'delta';
+  const version = view.getUint16(4, true);
+  if (view.byteLength >= 32 && version === 1 && view.getUint8(6) === 1) {
+    const frameKind = view.getUint8(7);
+    if (frameKind === 1) {
+      return decodeEntitySoaSnapshot(bytes, view);
+    }
+
+    if (frameKind === 2) {
+      return decodeEntitySoaFullDelta(bytes, view);
+    }
+  }
+
+  const kindByte = view.getUint8(6);
+  const kind = kindByte === 1 ? 'snapshot' : kindByte === 3 ? 'indexedDelta' : 'delta';
   const schemaId = view.getInt32(8, true);
   const rowCount = view.getInt32(12, true);
   const removedCount = view.getInt32(16, true);
+  if (kind === 'indexedDelta') {
+    const indices = new Int32Array(rowCount);
+    const generations = new Int32Array(rowCount);
+    const x = new Float32Array(rowCount);
+    const y = new Float32Array(rowCount);
+    const hp = new Uint16Array(rowCount);
+    const state = new Uint8Array(rowCount);
+    let offset = 20;
+    for (let index = 0; index < rowCount; index += 1) {
+      indices[index] = view.getInt32(offset, true);
+      generations[index] = view.getInt32(offset + 4, true);
+      x[index] = view.getFloat32(offset + 8, true);
+      y[index] = view.getFloat32(offset + 12, true);
+      hp[index] = view.getUint16(offset + 16, true);
+      state[index] = view.getUint8(offset + 18);
+      offset += 19;
+    }
+
+    return { kind, schemaId, indices, generations, x, y, hp, state };
+  }
+
   const removedStableIds = new Int32Array(removedCount);
   const stableIds = new Int32Array(rowCount);
   const generations = new Int32Array(rowCount);
@@ -380,6 +421,344 @@ export function decodeEntityColumnarPacket(bytes) {
   }
 
   return { kind, schemaId, removedStableIds, stableIds, generations, x, y, hp, team, state };
+}
+
+function decodeEntitySoaSnapshot(bytes, view) {
+  const schemaId = view.getInt32(8, true);
+  const rowCount = view.getInt32(12, true);
+  const sequence = readInt64AsNumber(view, 16);
+  const tick = readInt64AsNumber(view, 24);
+  let offset = 32;
+  const stableIds = new Int32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const generations = new Int32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const x = new Float32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const y = new Float32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const hp = new Uint16Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 2;
+  const team = new Uint8Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount;
+  const state = new Uint8Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+
+  return {
+    kind: 'soaSnapshot',
+    schemaId,
+    sequence,
+    tick,
+    stableIds,
+    generations,
+    x,
+    y,
+    hp,
+    team,
+    state
+  };
+}
+
+function decodeEntitySoaFullDelta(bytes, view) {
+  const schemaId = view.getInt32(8, true);
+  const rowCount = view.getInt32(12, true);
+  const sequence = readInt64AsNumber(view, 16);
+  const tick = readInt64AsNumber(view, 24);
+  let offset = 32;
+  const generations = new Int32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const x = new Float32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const y = new Float32Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 4;
+  const hp = new Uint16Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+  offset += rowCount * 2;
+  const state = new Uint8Array(bytes.buffer, bytes.byteOffset + offset, rowCount);
+
+  return {
+    kind: 'soaFullDelta',
+    schemaId,
+    sequence,
+    tick,
+    generations,
+    x,
+    y,
+    hp,
+    state
+  };
+}
+
+function readInt64AsNumber(view, offset) {
+  if (typeof view.getBigInt64 === 'function') {
+    return Number(view.getBigInt64(offset, true));
+  }
+
+  const low = view.getUint32(offset, true);
+  const high = view.getInt32(offset + 4, true);
+  return high * 4294967296 + low;
+}
+
+export function createEntitySoAStore(rowCount) {
+  if (!Number.isInteger(rowCount) || rowCount < 0) {
+    throw new TypeError('Entity row count must be a non-negative integer.');
+  }
+
+  return {
+    kind: 'snapshot',
+    schemaId: 0,
+    stableIds: new Int32Array(rowCount),
+    generations: new Int32Array(rowCount),
+    x: new Float32Array(rowCount),
+    y: new Float32Array(rowCount),
+    hp: new Uint16Array(rowCount),
+    team: new Uint8Array(rowCount),
+    state: new Uint8Array(rowCount),
+    version: 0,
+    sequence: 0,
+    tick: 0,
+    lastDeltaRows: 0
+  };
+}
+
+export function applyEntityColumnarPacket(store, packet) {
+  if (packet.kind === 'soaSnapshot') {
+    const target = store ?? createEntitySoAStore(0);
+    target.kind = 'snapshot';
+    target.schemaId = packet.schemaId;
+    target.stableIds = packet.stableIds;
+    target.generations = packet.generations;
+    target.x = packet.x;
+    target.y = packet.y;
+    target.hp = packet.hp;
+    target.team = packet.team;
+    target.state = packet.state;
+    target.version += 1;
+    target.sequence = packet.sequence ?? target.version;
+    target.tick = packet.tick ?? target.tick ?? 0;
+    target.lastDeltaRows = packet.stableIds.length;
+    return target;
+  }
+
+  if (packet.kind === 'snapshot') {
+    const target = store && store.stableIds?.length === packet.stableIds.length
+      ? store
+      : createEntitySoAStore(packet.stableIds.length);
+    target.kind = 'snapshot';
+    target.schemaId = packet.schemaId;
+    target.stableIds.set(packet.stableIds);
+    target.generations.set(packet.generations);
+    target.x.set(packet.x);
+    target.y.set(packet.y);
+    target.hp.set(packet.hp);
+    target.team.set(packet.team);
+    target.state.set(packet.state);
+    target.version += 1;
+    target.sequence = packet.sequence ?? target.version;
+    target.tick = packet.tick ?? target.tick ?? 0;
+    target.lastDeltaRows = packet.stableIds.length;
+    return target;
+  }
+
+  if (!store) {
+    throw new Error('Entity snapshot is required before applying a delta packet.');
+  }
+
+  if (packet.kind === 'soaFullDelta') {
+    if (store.stableIds.length !== packet.generations.length) {
+      throw new Error('SoA full delta row count does not match the current entity snapshot.');
+    }
+
+    store.kind = 'snapshot';
+    store.schemaId = packet.schemaId;
+    store.generations = packet.generations;
+    store.x = packet.x;
+    store.y = packet.y;
+    store.hp = packet.hp;
+    store.state = packet.state;
+    store.version += 1;
+    store.sequence = packet.sequence ?? store.version;
+    store.tick = packet.tick ?? store.tick ?? 0;
+    store.lastDeltaRows = packet.generations.length;
+    return store;
+  }
+
+  if (packet.kind === 'indexedDelta') {
+    for (let row = 0; row < packet.indices.length; row += 1) {
+      const index = packet.indices[row];
+      if (index < 0 || index >= store.stableIds.length) {
+        continue;
+      }
+
+      store.generations[index] = packet.generations[row];
+      store.x[index] = packet.x[row];
+      store.y[index] = packet.y[row];
+      store.hp[index] = packet.hp[row];
+      store.state[index] = packet.state[row];
+    }
+
+    store.kind = 'snapshot';
+    store.schemaId = packet.schemaId;
+    store.version += 1;
+    store.lastDeltaRows = packet.indices.length;
+    return store;
+  }
+
+  if (packet.kind === 'delta') {
+    const firstStableId = store.stableIds[0] ?? 0;
+    for (let row = 0; row < packet.stableIds.length; row += 1) {
+      const index = packet.stableIds[row] - firstStableId;
+      if (index < 0 || index >= store.stableIds.length) {
+        continue;
+      }
+
+      store.generations[index] = packet.generations[row];
+      store.x[index] = packet.x[row];
+      store.y[index] = packet.y[row];
+      store.hp[index] = packet.hp[row];
+      store.team[index] = packet.team[row];
+      store.state[index] = packet.state[row];
+    }
+
+    store.version += 1;
+    store.lastDeltaRows = packet.stableIds.length;
+    return store;
+  }
+
+  return store;
+}
+
+export function createEntityAttributeView(decoded, options = {}) {
+  const stableIds = decoded?.stableIds;
+  if (!stableIds || typeof stableIds.length !== 'number') {
+    throw new TypeError('Decoded entity columnar packet is required.');
+  }
+
+  const entityCount = stableIds.length;
+  const visibleCount = clampInteger(options.visibleCount ?? 32, 0, 256);
+  const maxVisibleStart = Math.max(0, entityCount - visibleCount);
+  const visibleStart = clampInteger(options.visibleStart ?? 0, 0, maxVisibleStart);
+  const bucketCount = clampInteger(options.bucketCount ?? 64, 1, 512);
+  const reuse = options.reuse;
+  const scratch = reuse?.scratch && reuse.buckets?.length === bucketCount
+    ? reuse.scratch
+    : createEntityAttributeViewScratch(bucketCount);
+  const bucketHp = scratch.bucketHp;
+  const bucketCounts = scratch.bucketCounts;
+  const bucketActive = scratch.bucketActive;
+  const teamCounts = scratch.teamCounts;
+  bucketHp.fill(0);
+  bucketCounts.fill(0);
+  bucketActive.fill(0);
+  teamCounts.fill(0);
+  const visibleEnd = Math.min(entityCount, visibleStart + visibleCount);
+  const visibleRows = reuse?.visibleRows ?? [];
+  if (visibleRows.length > visibleCount) {
+    visibleRows.length = visibleCount;
+  }
+  let totalHp = 0;
+  let minHp = entityCount > 0 ? Number.POSITIVE_INFINITY : 0;
+  let maxHp = 0;
+  let activeRows = 0;
+  let damagedRows = 0;
+
+  for (let index = 0; index < entityCount; index += 1) {
+    const hp = decoded.hp[index];
+    const state = decoded.state[index];
+    const bucketIndex = Math.min(bucketCount - 1, Math.floor((index * bucketCount) / entityCount));
+    bucketHp[bucketIndex] += hp;
+    bucketCounts[bucketIndex] += 1;
+    totalHp += hp;
+
+    if (hp < minHp) {
+      minHp = hp;
+    }
+
+    if (hp > maxHp) {
+      maxHp = hp;
+    }
+
+    if (hp < 100) {
+      damagedRows += 1;
+    }
+
+    if (state !== 0) {
+      activeRows += 1;
+      bucketActive[bucketIndex] += 1;
+    }
+
+    teamCounts[decoded.team[index]] += 1;
+  }
+
+  for (let index = visibleStart; index < visibleEnd; index += 1) {
+    const stableId = stableIds[index];
+    const visibleIndex = index - visibleStart;
+    const row = visibleRows[visibleIndex] ?? {};
+    row.id = `entity.${stableId}`;
+    row.stableId = stableId;
+    row.generation = decoded.generations[index];
+    row.hp = decoded.hp[index];
+    row.team = decoded.team[index];
+    row.state = decoded.state[index];
+    row.x = decoded.x[index];
+    row.y = decoded.y[index];
+    visibleRows[visibleIndex] = row;
+  }
+
+  if (visibleRows.length !== visibleEnd - visibleStart) {
+    visibleRows.length = visibleEnd - visibleStart;
+  }
+
+  const buckets = reuse?.buckets && reuse.buckets.length === bucketCount
+    ? reuse.buckets
+    : Array.from({ length: bucketCount }, (_, index) => ({
+      index,
+      count: 0,
+      avgHp: 0,
+      activeRows: 0
+    }));
+  for (let index = 0; index < bucketCount; index += 1) {
+    const count = bucketCounts[index];
+    const bucket = buckets[index];
+    bucket.count = count;
+    bucket.avgHp = count > 0 ? bucketHp[index] / count : 0;
+    bucket.activeRows = bucketActive[index];
+  }
+
+  const summary = reuse?.summary ?? {};
+  summary.avgHp = entityCount > 0 ? totalHp / entityCount : 0;
+  summary.minHp = minHp;
+  summary.maxHp = maxHp;
+  summary.activeRows = activeRows;
+  summary.damagedRows = damagedRows;
+  summary.teamCounts = teamCounts;
+
+  if (reuse && reuse.scratch === scratch) {
+    reuse.entityCount = entityCount;
+    reuse.visibleStart = visibleStart;
+    reuse.visibleCount = visibleRows.length;
+    reuse.visibleRows = visibleRows;
+    reuse.buckets = buckets;
+    reuse.summary = summary;
+    return reuse;
+  }
+
+  return {
+    entityCount,
+    visibleStart,
+    visibleCount: visibleRows.length,
+    visibleRows,
+    buckets,
+    summary,
+    scratch
+  };
+}
+
+function createEntityAttributeViewScratch(bucketCount) {
+  return {
+    bucketHp: new Float64Array(bucketCount),
+    bucketCounts: new Uint32Array(bucketCount),
+    bucketActive: new Uint32Array(bucketCount),
+    teamCounts: new Uint32Array(256)
+  };
 }
 
 export function createMockLudotsDataPlaneTransport(options = {}) {
@@ -536,8 +915,12 @@ function normalizeIncomingMessage(rawMessage) {
   }
 
   if (data.channel === SHARED_BUFFER_CHANNEL) {
+    const rawDescriptorBytes = typeof data.payload === 'string'
+      ? data.payload.length
+      : JSON.stringify(data.payload ?? {}).length;
     const packet = typeof data.payload === 'string' ? parseJsonOrNull(data.payload) : data.payload;
-    return normalizeSharedBufferPacket(packet);
+    const normalized = normalizeSharedBufferPacket(packet);
+    return normalized ? { ...normalized, rawDescriptorBytes } : null;
   }
 
   return normalizeHostEnvelope(data);
@@ -804,6 +1187,11 @@ function createId(prefix) {
 
 function clampNumber(value, min, max) {
   return Math.max(min, Math.min(max, Number(value.toFixed(2))));
+}
+
+function clampInteger(value, min, max) {
+  const number = Number.isFinite(value) ? Math.trunc(value) : min;
+  return Math.max(min, Math.min(max, number));
 }
 
 export const DATA_PLANE_DEFAULT_TOPIC = DEFAULT_TOPIC;

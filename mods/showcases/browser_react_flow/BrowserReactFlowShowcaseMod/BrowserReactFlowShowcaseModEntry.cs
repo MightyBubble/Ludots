@@ -18,7 +18,7 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     private const string AssetIndexPath = "BrowserReactFlowShowcaseMod:Assets/react-flow-app/index.html";
     private const string PerfModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_MODE";
     private const string HitTestModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_HIT_TEST";
-    private const int WorldSharedBufferCapacityBytes = 1024 * 1024;
+    private const int WorldSharedBufferCapacityBytes = 32 * 1024 * 1024;
 
     private IBrowserSurface? _surface;
     private BrowserSurfaceCanvasContent? _browserContent;
@@ -144,16 +144,10 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         BrowserReactFlowShowcaseWorldTopicProducer worldTopic = _worldTopic;
         _publisherTask = Task.Run(async () =>
         {
-            int tick = 0;
-            while (!cancellationToken.IsCancellationRequested)
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(16));
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                await Task.Delay(250, cancellationToken).ConfigureAwait(false);
-                tick++;
-                await runtime.PublishAsync(worldTopic.CreateDeltaPacket(session.SessionId), cancellationToken).ConfigureAwait(false);
-                if (tick % 12 == 0)
-                {
-                    await runtime.PublishAsync(worldTopic.CreateBinarySnapshotPacket(session.SessionId), cancellationToken).ConfigureAwait(false);
-                }
+                await runtime.PublishAsync(worldTopic.CreateFullUpdatePacket(session.SessionId), cancellationToken).ConfigureAwait(false);
             }
         }, cancellationToken);
     }
