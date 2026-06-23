@@ -1,14 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useEditorStore } from './EditorStore';
 import * as THREE from 'three';
-import { HEX_WIDTH, ROW_SPACING } from '../../Core/Map/HexMetrics';
+import { getMapWorldSizeM } from '../../Core/Map/TopologyMetrics';
 
 export const Minimap: React.FC = () => {
     const terrainCanvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     
-    const { terrain, activeCategory, cameraRef, controlsRef } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, cameraRef, controlsRef } = useEditorStore();
     const [isDragging, setIsDragging] = useState(false);
 
     // 1. Terrain Render (Cached)
@@ -26,8 +26,9 @@ export const Minimap: React.FC = () => {
         // But for MVP let's just redraw fully on change for simplicity
         // Ideally we only redraw dirty chunks.
         
-        const mapW = terrain.widthChunks * 64;
-        const mapH = terrain.heightChunks * 64;
+        const chunkCells = boardMetrics.chunkSizeCells;
+        const mapW = terrain.widthChunks * chunkCells;
+        const mapH = terrain.heightChunks * chunkCells;
         const scaleX = w / mapW;
         const scaleY = h / mapH;
 
@@ -73,8 +74,8 @@ export const Minimap: React.FC = () => {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        const chunkW = 64 * scaleX;
-        const chunkH = 64 * scaleY;
+        const chunkW = chunkCells * scaleX;
+        const chunkH = chunkCells * scaleY;
         for(let cy=0; cy<=terrain.heightChunks; cy++) {
             const y = cy * chunkH;
             ctx.moveTo(0, y); ctx.lineTo(w, y);
@@ -85,7 +86,7 @@ export const Minimap: React.FC = () => {
         }
         ctx.stroke();
 
-    }, [terrain, terrain.widthChunks, terrain.heightChunks]); // Redraw on load/resize
+    }, [terrain, terrain.widthChunks, terrain.heightChunks, boardMetrics]); // Redraw on load/resize
 
     // 2. Animation Loop (Overlay: Camera + Dirty + Interaction)
     useEffect(() => {
@@ -101,10 +102,16 @@ export const Minimap: React.FC = () => {
         const w = overlay.width;
         const h = overlay.height;
         
-        const mapWorldW = terrain.widthChunks * 64 * HEX_WIDTH;
-        const mapWorldH = terrain.heightChunks * 64 * ROW_SPACING;
+        const worldSize = getMapWorldSizeM(terrain.widthChunks, terrain.heightChunks, boardMetrics);
+        const mapWorldW = worldSize.width;
+        const mapWorldH = worldSize.height;
         const scaleX = w / mapWorldW;
         const scaleY = h / mapWorldH;
+        const chunkCells = boardMetrics.chunkSizeCells;
+        const mapCellsW = terrain.widthChunks * chunkCells;
+        const mapCellsH = terrain.heightChunks * chunkCells;
+        const cellScaleX = w / mapCellsW;
+        const cellScaleY = h / mapCellsH;
 
         const renderLoop = () => {
             const { minimapDirtyChunks, clearMinimapDirty, cameraRef, controlsRef } = useEditorStore.getState();
@@ -120,10 +127,10 @@ export const Minimap: React.FC = () => {
                     
                     // 1. Update Pixels on Terrain Canvas
                     // Define area on canvas
-                    const cxPx = Math.floor(cx * 64 * HEX_WIDTH * scaleX);
-                    const cyPx = Math.floor(cy * 64 * ROW_SPACING * scaleY);
-                    const cwPx = Math.ceil(64 * HEX_WIDTH * scaleX);
-                    const chPx = Math.ceil(64 * ROW_SPACING * scaleY);
+                    const cxPx = Math.floor(cx * chunkCells * cellScaleX);
+                    const cyPx = Math.floor(cy * chunkCells * cellScaleY);
+                    const cwPx = Math.ceil(chunkCells * cellScaleX);
+                    const chPx = Math.ceil(chunkCells * cellScaleY);
 
                     // We need to re-scan the terrain data for this chunk
                     // Mapping pixels back to terrain cells is tricky due to scaling.
@@ -139,10 +146,10 @@ export const Minimap: React.FC = () => {
                             const py = cyPx + y;
                             
                             // Map to Terrain Coord
-                            const mx = Math.floor(px / scaleX);
-                            const my = Math.floor(py / scaleY);
+                            const mx = Math.floor(px / cellScaleX);
+                            const my = Math.floor(py / cellScaleY);
                             
-                            if (mx >= terrain.widthChunks * 64 || my >= terrain.heightChunks * 64) continue;
+                            if (mx >= mapCellsW || my >= mapCellsH) continue;
 
                             const index = (y * cwPx + x) * 4;
                             
@@ -229,7 +236,7 @@ export const Minimap: React.FC = () => {
         
         frameId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(frameId);
-    }, [terrain]);
+    }, [terrain, boardMetrics]);
 
     // 3. Interaction
     const handlePointer = (e: React.PointerEvent) => {
@@ -246,8 +253,9 @@ export const Minimap: React.FC = () => {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
         
-        const mapWorldW = terrain.widthChunks * 64 * HEX_WIDTH;
-        const mapWorldH = terrain.heightChunks * 64 * ROW_SPACING;
+        const worldSize = getMapWorldSizeM(terrain.widthChunks, terrain.heightChunks, boardMetrics);
+        const mapWorldW = worldSize.width;
+        const mapWorldH = worldSize.height;
         
         // Convert canvas pos to world pos
         const worldX = (x / rect.width) * mapWorldW;

@@ -356,7 +356,12 @@ namespace Ludots.Core.Navigation.NavMesh
             float len = n.Length();
             if (len <= 1e-6f) return;
             n /= len;
-            if (n.Y < 0f) n = -n;
+            if (n.Y < 0f)
+            {
+                (b, c) = (c, b);
+                (wb, wc) = (wc, wb);
+                n = -n;
+            }
             if (n.Y < config.MinWalkableUpDot) return;
 
             int ia = GetOrAddVertex(a, vertexIndex, vx, vy, vz);

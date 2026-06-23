@@ -2,6 +2,7 @@ import React from 'react';
 import { useEditorStore, ToolCategory, ToolMode } from './EditorStore';
 import { Download, Upload, Mountain, Droplets, TreePine, Map as MapIcon, ArrowUp, ArrowDown, Type, Layers, PaintBucket, Grid, BoxSelect, Footprints, Flag, Ban, Shapes, Circle, Square, Save, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
+import type { BoardTopology } from '../../Core/Map/TopologyMetrics';
 
 type NavBakeBudgetStatusText = 'ok' | 'large' | 'reject';
 
@@ -74,7 +75,7 @@ export const Toolbar: React.FC = () => {
         activeLayer, setActiveLayer,
         terrain, loadMap, initMap,
         bridgeBaseUrl,
-        mods, selectedModId, maps, selectedMapId,
+        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, boardMetrics,
         refreshMods, selectMod, selectMap, loadSelectedMap, saveSelectedMap,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
         templates, selectedTemplateId, selectTemplate,
@@ -96,7 +97,8 @@ export const Toolbar: React.FC = () => {
     const [showNewMap, setShowNewMap] = React.useState(false);
     const [newWidth, setNewWidth] = React.useState(8);
     const [newHeight, setNewHeight] = React.useState(8);
-    const [mapId, setMapId] = React.useState('entry');
+    const [newTopology, setNewTopology] = React.useState<BoardTopology>('Grid');
+    const [mapId, setMapId] = React.useState('');
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
     const [navParallel, setNavParallel] = React.useState(true);
@@ -109,6 +111,11 @@ export const Toolbar: React.FC = () => {
     const [navEstimateError, setNavEstimateError] = React.useState<string | null>(null);
     const [allowLargeBake, setAllowLargeBake] = React.useState(false);
     const navAbortRef = React.useRef<AbortController | null>(null);
+    const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
+    const selectedNavReady = Boolean(selectedMapInfo?.canBake && mapId === selectedMapId);
+    const navDisabledReason = !selectedMapId ? 'Select a map first.' :
+        mapId !== selectedMapId ? 'The bake mapId must match the selected map.' :
+        selectedMapInfo?.reason ?? 'Selected map is not bakeable.';
 
     React.useEffect(() => {
         let cancelled = false;
@@ -153,7 +160,7 @@ export const Toolbar: React.FC = () => {
     };
 
     const handleNewMap = () => {
-        initMap(newWidth, newHeight);
+        initMap(newWidth, newHeight, { topology: newTopology, cellSizeCm: 100, chunkSizeCells: 64 });
         setShowNewMap(false);
     };
 
@@ -373,6 +380,9 @@ export const Toolbar: React.FC = () => {
     };
 
     const fetchNavEstimate = async () => {
+        if (!selectedNavReady) {
+            throw new Error(navDisabledReason);
+        }
         const endpoint = `${bridgeBaseUrl}/api/nav/estimate-recast-react`;
         const form = new FormData();
         const dirtySet = collectDirtyChunks();
@@ -406,6 +416,10 @@ export const Toolbar: React.FC = () => {
     };
 
     const handleBakeNavTilesLocal = async () => {
+        if (!selectedNavReady) {
+            alert(navDisabledReason);
+            return;
+        }
         const endpoint = `${bridgeBaseUrl}/api/nav/bake-recast-react`;
         const form = new FormData();
         const dirtySet = collectDirtyChunks();
@@ -519,7 +533,7 @@ export const Toolbar: React.FC = () => {
             }
 
             const data = new Uint8Array(buffer.slice(9));
-            loadMap(data, w, h);
+            loadMap(data, w, h, boardMetrics);
         };
         reader.readAsArrayBuffer(file);
     };
@@ -583,10 +597,17 @@ export const Toolbar: React.FC = () => {
                         title="Map"
                     >
                         {maps.map((id) => (
-                            <option key={id} value={id}>{id}</option>
+                            <option key={id} value={id}>
+                                {id}{mapInfoById.get(id)?.spatialType ? ` (${mapInfoById.get(id)?.spatialType})` : ''}{mapInfoById.get(id)?.canBake ? ' ready' : ''}
+                            </option>
                         ))}
                     </select>
                 </div>
+                {selectedMapInfo ? (
+                    <div className={`text-[10px] px-1 ${selectedMapInfo.canBake ? 'text-emerald-300' : 'text-amber-300'}`}>
+                        {selectedMapInfo.spatialType ?? 'No board'} | {selectedMapInfo.reason}
+                    </div>
+                ) : null}
                 <div className="flex gap-2">
                     <button
                         onClick={() => loadSelectedMap().catch((err: any) => alert(err?.message ?? err))}
@@ -677,15 +698,16 @@ export const Toolbar: React.FC = () => {
                 <button 
                     onClick={handleBakeNavTilesLocal} 
                     className="p-2 rounded bg-orange-700 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Bake NavTiles via local bridge and load into editor"
-                    disabled={navEstimate?.budgetStatusText === 'reject'}
+                    title={selectedNavReady ? "Bake NavTiles via local bridge and load into editor" : navDisabledReason}
+                    disabled={!selectedNavReady || navEstimate?.budgetStatusText === 'reject'}
                 >
                     <span className="text-xs font-bold">BAKE</span>
                 </button>
                 <button
                     onClick={handleEstimateNavTilesLocal}
-                    className="p-2 rounded bg-blue-700 text-white hover:bg-blue-600"
-                    title="Estimate NavTiles via local bridge"
+                    className="p-2 rounded bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={selectedNavReady ? "Estimate NavTiles via local bridge" : navDisabledReason}
+                    disabled={!selectedNavReady}
                 >
                     <span className="text-xs font-bold">EST</span>
                 </button>
@@ -1020,6 +1042,17 @@ export const Toolbar: React.FC = () => {
                                     onChange={e => setNewHeight(parseInt(e.target.value) || 1)}
                                     className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white"
                                 />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-gray-400 mb-1">Topology</label>
+                                <select
+                                    value={newTopology}
+                                    onChange={(e) => setNewTopology(e.target.value as BoardTopology)}
+                                    className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white"
+                                >
+                                    <option value="Grid">Grid</option>
+                                    <option value="HexGrid">HexGrid</option>
+                                </select>
                             </div>
                             
                             <div className="flex gap-2 pt-2">

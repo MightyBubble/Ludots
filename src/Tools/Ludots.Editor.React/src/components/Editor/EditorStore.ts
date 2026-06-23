@@ -1,20 +1,52 @@
 import { create } from 'zustand';
 import { TerrainStore } from '../../Core/Map/TerrainStore';
-import { hexToWorldCm, worldCmToHex } from '../../Core/Map/HexMetrics';
+import {
+    DEFAULT_BOARD_METRICS,
+    type BoardMetrics,
+    type BoardTopology,
+    type SpatialTopology,
+    cellToWorldCm,
+    normalizeBoardMetrics,
+    normalizeSpatialTopology,
+    normalizeTopology,
+    worldCmToCell,
+} from '../../Core/Map/TopologyMetrics';
 import type { Camera, PerspectiveCamera } from 'three';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
 
+export interface MapInfo {
+    id: string;
+    found: boolean;
+    hasBoards: boolean;
+    boardName: string | null;
+    spatialType: SpatialTopology | null;
+    widthChunks: number;
+    heightChunks: number;
+    cellSizeCm: number;
+    chunkSizeCells: number;
+    navigationEnabled: boolean;
+    hasDataFile: boolean;
+    dataFileExists: boolean;
+    dataFile: string | null;
+    canEditTerrain: boolean;
+    canBake: boolean;
+    reason: string;
+}
+
 export interface EditorState {
     terrain: TerrainStore;
+    boardMetrics: BoardMetrics;
 
     bridgeBaseUrl: string;
     mods: Array<{ id: string; name: string; version: string; priority: number }>;
     selectedModId: string | null;
     maps: string[];
+    mapInfos: MapInfo[];
     selectedMapId: string | null;
+    selectedMapInfo: MapInfo | null;
     mapConfig: any | null;
     templates: any[];
     performers: any[];
@@ -58,8 +90,8 @@ export interface EditorState {
     toggleNavMesh: () => void; // Added Action
     
     // Map Actions
-    initMap: (w: number, h: number) => void;
-    loadMap: (data: Uint8Array, w: number, h: number) => void;
+    initMap: (w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
+    loadMap: (data: Uint8Array, w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
     refreshMods: () => Promise<void>;
     selectMod: (modId: string) => Promise<void>;
     selectMap: (mapId: string) => void;
@@ -104,12 +136,15 @@ export interface EditorState {
 
 export const useEditorStore = create<EditorState>((set, get) => ({
     terrain: new TerrainStore(8, 8), // Default 8x8 chunks
+    boardMetrics: DEFAULT_BOARD_METRICS,
 
     bridgeBaseUrl: 'http://localhost:5299',
     mods: [],
     selectedModId: null,
     maps: [],
+    mapInfos: [],
     selectedMapId: null,
+    selectedMapInfo: null,
     mapConfig: null,
     templates: [],
     performers: [],
@@ -170,23 +205,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     clearBakedNavTiles: () => set(() => ({ bakedNavTiles: new Map(), bakedNavTilesVersion: Date.now() })),
 
-    initMap: (w, h) => set({ 
+    initMap: (w, h, metrics) => set({
         terrain: new TerrainStore(w, h), 
+        boardMetrics: normalizeBoardMetrics(metrics ?? get().boardMetrics),
         minimapDirtyChunks: new Set(),
         navDirtyChunks: new Set(),
+        bakedNavTiles: new Map(),
+        bakedNavTilesVersion: Date.now(),
         loadingState: { isLoading: true, message: 'Initializing Map...', progress: 0 }
     }),
-    loadMap: (data, w, h) => {
+    loadMap: (data, w, h, metrics) => {
         const newTerrain = new TerrainStore(w, h);
         newTerrain.loadFromBytes(w, h, data);
+        const boardMetrics = normalizeBoardMetrics(metrics ?? get().boardMetrics);
         // Mark all as dirty for minimap
         const allChunks = new Set<string>();
         for(let y=0; y<h; y++) for(let x=0; x<w; x++) allChunks.add(`${x},${y}`);
         
         set({ 
             terrain: newTerrain, 
+            boardMetrics,
             minimapDirtyChunks: allChunks,
             navDirtyChunks: new Set(),
+            bakedNavTiles: new Map(),
+            bakedNavTilesVersion: Date.now(),
             loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 }
         });
     },
@@ -210,7 +252,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({
             selectedModId: modId,
             maps: [],
+            mapInfos: [],
             selectedMapId: null,
+            selectedMapInfo: null,
             mapConfig: null,
             templates: [],
             performers: [],
@@ -227,6 +271,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!res.ok) throw new Error(`Bridge error ${res.status}`);
         const json = await res.json();
         const maps = (json.maps ?? []).map((x: any) => String(x));
+        const mapInfos = (json.mapInfos ?? []).map(normalizeMapInfo);
         const tRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/entity-templates`);
         if (!tRes.ok) throw new Error(`Bridge error ${tRes.status}`);
         const tJson = await tRes.json();
@@ -260,9 +305,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             navigationConfig = null;
         }
 
+        const defaultMapInfo = mapInfos.find((m) => m.canBake) ?? mapInfos.find((m) => m.canEditTerrain) ?? mapInfos[0] ?? null;
+        const defaultMapId = defaultMapInfo?.id ?? (maps.length > 0 ? maps[0] : null);
+
         set({
             maps,
-            selectedMapId: maps.length > 0 ? maps[0] : null,
+            mapInfos,
+            selectedMapId: defaultMapId,
+            selectedMapInfo: defaultMapInfo,
             templates,
             performers,
             navigationConfig,
@@ -272,16 +322,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
     },
 
-    selectMap: (mapId: string) => set({ selectedMapId: mapId }),
+    selectMap: (mapId: string) => set((state) => ({
+        selectedMapId: mapId,
+        selectedMapInfo: state.mapInfos.find((m) => m.id === mapId) ?? null,
+        mapConfig: null,
+        spawnEntities: [],
+        selectedEntityIndex: null,
+        entitiesVersion: Date.now(),
+        navDirtyChunks: new Set(),
+        bakedNavTiles: new Map(),
+        bakedNavTilesVersion: Date.now(),
+    })),
 
     loadSelectedMap: async () => {
-        const { bridgeBaseUrl, selectedModId, selectedMapId, loadMap, setLoading } = get();
+        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedMapInfo, loadMap, setLoading } = get();
         if (!selectedModId || !selectedMapId) return;
         setLoading(true, 'Loading MapConfig...', 10);
         const mapRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}`);
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
         const mapJson = await mapRes.json();
         const mapCfg = mapJson.map ?? null;
+        const boardMetrics = resolveBoardMetricsFromMapConfig(mapCfg, selectedMapInfo);
         const entities = Array.isArray(mapCfg?.Entities) ? mapCfg.Entities : (Array.isArray(mapCfg?.entities) ? mapCfg.entities : []);
         const spawnEntities = entities.map((e: any) => {
             const template = String(e.Template ?? e.template ?? '');
@@ -289,9 +350,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             const wpcm = overrides?.WorldPositionCm?.Value ?? overrides?.worldPositionCm?.value;
             let posX: number, posY: number;
             if (wpcm && (wpcm.X !== undefined || wpcm.Y !== undefined)) {
-                const hex = worldCmToHex(Number(wpcm.X ?? 0), Number(wpcm.Y ?? 0));
-                posX = hex.col;
-                posY = hex.row;
+                const cell = worldCmToCell(Number(wpcm.X ?? 0), Number(wpcm.Y ?? 0), boardMetrics);
+                posX = cell.col;
+                posY = cell.row;
             } else {
                 posX = Number(e.Position?.X ?? e.position?.x ?? 0);
                 posY = Number(e.Position?.Y ?? e.position?.y ?? 0);
@@ -299,7 +360,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             return { template, position: { x: posX, y: posY }, overrides };
         });
 
-        set({ mapConfig: mapCfg, spawnEntities, selectedEntityIndex: null, entitiesVersion: Date.now() });
+        set({ mapConfig: mapCfg, boardMetrics, spawnEntities, selectedEntityIndex: null, entitiesVersion: Date.now() });
 
         // Apply DefaultCamera from map config to editor camera
         const defCam = mapCfg?.DefaultCamera ?? mapCfg?.defaultCamera;
@@ -344,12 +405,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const stride = view.getUint8(8);
         if (stride !== 4) throw new Error(`Invalid terrain stride ${stride}`);
         const data = new Uint8Array(buf.slice(9));
-        loadMap(data, w, h);
+        loadMap(data, w, h, boardMetrics);
         setLoading(false);
     },
 
     saveSelectedMap: async () => {
-        const { bridgeBaseUrl, selectedModId, selectedMapId, mapConfig, terrain, setLoading, spawnEntities } = get();
+        const { bridgeBaseUrl, selectedModId, selectedMapId, mapConfig, terrain, setLoading, spawnEntities, boardMetrics } = get();
         if (!selectedModId || !selectedMapId) return;
         if (!mapConfig) throw new Error('No MapConfig loaded.');
 
@@ -380,7 +441,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
 
         mapConfig.Entities = spawnEntities.map((e) => {
-            const cm = hexToWorldCm(e.position.x, e.position.y);
+            const cm = cellToWorldCm(e.position.x, e.position.y, boardMetrics);
             const overrides = { ...(e.overrides ?? {}) };
             overrides['WorldPositionCm'] = { Value: { X: cm.xCm, Y: cm.yCm } };
             return {
@@ -461,7 +522,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!state.selectedTemplateId) return state;
         const next = state.spawnEntities.slice();
         const idx = next.findIndex((e) => e.position.x === c && e.position.y === r);
-        const cm = hexToWorldCm(c, r);
+        const cm = cellToWorldCm(c, r, state.boardMetrics);
         const overrides: Record<string, any> = {
             WorldPositionCm: { Value: { X: cm.xCm, Y: cm.yCm } },
         };
@@ -476,7 +537,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!template) return state;
         const next = state.spawnEntities.slice();
         const idx = next.findIndex((e) => e.position.x === c && e.position.y === r);
-        const cm = hexToWorldCm(c, r);
+        const cm = cellToWorldCm(c, r, state.boardMetrics);
         const radius = Math.max(1, Math.floor(state.obstacleRadiusCm));
         const halfWidth = Math.max(1, Math.floor(state.obstacleHalfWidthCm));
         const halfHeight = Math.max(1, Math.floor(state.obstacleHalfHeightCm));
@@ -579,3 +640,76 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         controlsRef.current = controls;
     }
 }));
+
+function normalizeMapInfo(raw: any): MapInfo {
+    const id = String(raw?.id ?? raw?.Id ?? '');
+    const spatialTypeRaw = raw?.spatialType ?? raw?.SpatialType ?? null;
+    const spatialType = spatialTypeRaw == null ? null : normalizeSpatialTopology(spatialTypeRaw);
+    return {
+        id,
+        found: Boolean(raw?.found ?? raw?.Found ?? false),
+        hasBoards: Boolean(raw?.hasBoards ?? raw?.HasBoards ?? false),
+        boardName: stringOrNull(raw?.boardName ?? raw?.BoardName),
+        spatialType,
+        widthChunks: numberOr(raw?.widthChunks ?? raw?.WidthChunks, 0),
+        heightChunks: numberOr(raw?.heightChunks ?? raw?.HeightChunks, 0),
+        cellSizeCm: numberOr(raw?.cellSizeCm ?? raw?.CellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
+        chunkSizeCells: numberOr(raw?.chunkSizeCells ?? raw?.ChunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
+        navigationEnabled: Boolean(raw?.navigationEnabled ?? raw?.NavigationEnabled ?? false),
+        hasDataFile: Boolean(raw?.hasDataFile ?? raw?.HasDataFile ?? false),
+        dataFileExists: Boolean(raw?.dataFileExists ?? raw?.DataFileExists ?? false),
+        dataFile: stringOrNull(raw?.dataFile ?? raw?.DataFile),
+        canEditTerrain: Boolean(raw?.canEditTerrain ?? raw?.CanEditTerrain ?? false),
+        canBake: Boolean(raw?.canBake ?? raw?.CanBake ?? false),
+        reason: String(raw?.reason ?? raw?.Reason ?? ''),
+    };
+}
+
+function resolveBoardMetricsFromMapConfig(mapCfg: any, mapInfo: MapInfo | null): BoardMetrics {
+    const boards = Array.isArray(mapCfg?.Boards) ? mapCfg.Boards : (Array.isArray(mapCfg?.boards) ? mapCfg.boards : []);
+    const selectedBoard = pickPrimaryBoard(boards);
+    return normalizeBoardMetrics({
+        topology: normalizeTopology(
+            selectedBoard?.SpatialType ??
+            selectedBoard?.spatialType ??
+            mapInfo?.spatialType ??
+            DEFAULT_BOARD_METRICS.topology),
+        cellSizeCm: numberOr(
+            selectedBoard?.GridCellSizeCm ??
+            selectedBoard?.gridCellSizeCm ??
+            mapInfo?.cellSizeCm,
+            DEFAULT_BOARD_METRICS.cellSizeCm),
+        chunkSizeCells: numberOr(
+            selectedBoard?.ChunkSizeCells ??
+            selectedBoard?.chunkSizeCells ??
+            mapInfo?.chunkSizeCells,
+            DEFAULT_BOARD_METRICS.chunkSizeCells),
+    });
+}
+
+function pickPrimaryBoard(boards: any[]): any | null {
+    const navigationDefault = boards.find((b) =>
+        isNavigationEnabled(b) && String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
+    if (navigationDefault) return navigationDefault;
+
+    const navigationBoard = boards.find(isNavigationEnabled);
+    if (navigationBoard) return navigationBoard;
+
+    const defaultBoard = boards.find((b) => String(b?.Name ?? b?.name ?? '').toLowerCase() === 'default');
+    return defaultBoard ?? boards[0] ?? null;
+}
+
+function isNavigationEnabled(board: any): boolean {
+    return Boolean(board?.NavigationEnabled ?? board?.navigationEnabled ?? false);
+}
+
+function numberOr(value: unknown, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function stringOrNull(value: unknown): string | null {
+    if (value == null) return null;
+    const text = String(value);
+    return text.length > 0 ? text : null;
+}

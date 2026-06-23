@@ -148,7 +148,7 @@ namespace Ludots.NavBake.Recast
                 6,
                 6f, 1f,
                 true, true, true,
-                new RcAreaModification(0), true);
+                new RcAreaModification(RcRecast.RC_WALKABLE_AREA), true);
         }
 
         private static void BuildRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, string layerId, out List<float> verts, out List<int> tris)

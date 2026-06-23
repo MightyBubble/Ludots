@@ -1,9 +1,16 @@
 import * as THREE from 'three';
 import { TerrainStore } from '../Map/TerrainStore';
-import { HEX_SIZE, HEX_WIDTH, ROW_SPACING, getHexPosition } from '../Map/HexMetrics';
+import { HEX_WIDTH, getHexPosition } from '../Map/HexMetrics';
+import {
+    DEFAULT_BOARD_METRICS,
+    type BoardMetrics,
+    cellToWorldPosition,
+    normalizeBoardMetrics,
+} from '../Map/TopologyMetrics';
 
 export class ChunkRenderer {
     store: TerrainStore;
+    metrics: BoardMetrics;
     
     // Geometry Buffers (Reused)
     pointPositions: number[] = [];
@@ -37,8 +44,9 @@ export class ChunkRenderer {
     // Stats
     stats = { vertices: 0, edgesFlat: 0, edgesRamp: 0, edgesCliff: 0, facesFlat: 0, facesRamp: 0, facesCliff: 0, facesWater: 0, facesNav: 0 };
 
-    constructor(store: TerrainStore) {
+    constructor(store: TerrainStore, metrics: BoardMetrics = DEFAULT_BOARD_METRICS) {
         this.store = store;
+        this.metrics = normalizeBoardMetrics(metrics);
     }
     
     // Biome Color Map
@@ -99,13 +107,18 @@ export class ChunkRenderer {
         this.veg3Instances.length = 0;
         this.veg4Instances.length = 0;
 
-        const startC = cx * 64;
-        const endC = (cx + 1) * 64;
-        const startR = cy * 64;
-        const endR = (cy + 1) * 64;
+        if (this.metrics.topology === 'Grid') {
+            return this.generateGridChunk(cx, cy, offsetX, offsetZ, hScale);
+        }
 
-        const maxC = this.store.widthChunks * 64;
-        const maxR = this.store.heightChunks * 64;
+        const chunkSize = this.metrics.chunkSizeCells;
+        const startC = cx * chunkSize;
+        const endC = (cx + 1) * chunkSize;
+        const startR = cy * chunkSize;
+        const endR = (cy + 1) * chunkSize;
+
+        const maxC = this.store.widthChunks * chunkSize;
+        const maxR = this.store.heightChunks * chunkSize;
         
         const dummy = new THREE.Object3D(); // Helper for matrix calculation
 
@@ -343,11 +356,150 @@ export class ChunkRenderer {
         return group;
     }
 
+    private generateGridChunk(cx: number, cy: number, offsetX: number, offsetZ: number, hScale: number): THREE.Group {
+        const group = new THREE.Group();
+        group.name = `chunk_${cx}_${cy}`;
+
+        const chunkSize = this.metrics.chunkSizeCells;
+        const startC = cx * chunkSize;
+        const endC = (cx + 1) * chunkSize;
+        const startR = cy * chunkSize;
+        const endR = (cy + 1) * chunkSize;
+        const maxC = this.store.widthChunks * chunkSize;
+        const maxR = this.store.heightChunks * chunkSize;
+        const cellSizeM = this.metrics.cellSizeCm / 100.0;
+        const dummy = new THREE.Object3D();
+
+        for (let r = startR; r < endR; r++) {
+            for (let c = startC; c < endC; c++) {
+                if (r >= maxR || c >= maxC) continue;
+
+                const h = this.store.getHeight(c, r);
+                const w = this.store.getWater(c, r);
+                const y = h * hScale;
+                const x0 = c * cellSizeM + offsetX;
+                const x1 = x0 + cellSizeM;
+                const z0 = r * cellSizeM + offsetZ;
+                const z1 = z0 + cellSizeM;
+                const color = this.getCellColor(c, r, h);
+
+                const p00 = { x: x0, y, z: z0, h, w, c, r, isRamp: this.store.isRamp(c, r), color, waterY: w * hScale, veg: this.store.getVeg(c, r) };
+                const p10 = { ...p00, x: x1, z: z0 };
+                const p11 = { ...p00, x: x1, z: z1 };
+                const p01 = { ...p00, x: x0, z: z1 };
+
+                this.pushTriColor(this.faceFlatPos, this.faceFlatColor, p00, p10, p11, color, color, color);
+                this.pushTriColor(this.faceFlatPos, this.faceFlatColor, p00, p11, p01, color, color, color);
+                this.stats.facesFlat += 2;
+
+                if (w > h) {
+                    this.waterFacePos.push(x0, w * hScale, z0, x1, w * hScale, z0, x1, w * hScale, z1);
+                    this.waterFacePos.push(x0, w * hScale, z0, x1, w * hScale, z1, x0, w * hScale, z1);
+                    this.stats.facesWater += 2;
+                }
+
+                if (this.isGridCellNavWalkable(c, r)) {
+                    const yOffset = 0.05;
+                    this.navMeshPos.push(x0, y + yOffset, z0, x1, y + yOffset, z0, x1, y + yOffset, z1);
+                    this.navMeshPos.push(x0, y + yOffset, z0, x1, y + yOffset, z1, x0, y + yOffset, z1);
+                    this.stats.facesNav += 2;
+                }
+
+                if (this.store.getVeg(c, r) > 0) {
+                    const center = cellToWorldPosition(c, r, h, this.metrics, hScale, offsetX, offsetZ);
+                    dummy.position.set(center.x, center.y, center.z);
+                    dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+                    const scaleVar = 0.8 + Math.random() * 0.4;
+                    dummy.scale.set(scaleVar, scaleVar, scaleVar);
+                    dummy.updateMatrix();
+
+                    const veg = this.store.getVeg(c, r);
+                    if (veg === 1) this.veg1Instances.push(dummy.matrix.clone());
+                    else if (veg === 2) {
+                        dummy.scale.multiplyScalar(1.5);
+                        dummy.updateMatrix();
+                        this.veg2Instances.push(dummy.matrix.clone());
+                    }
+                    else if (veg === 3) this.veg3Instances.push(dummy.matrix.clone());
+                    else if (veg === 4) this.veg4Instances.push(dummy.matrix.clone());
+                }
+
+                const gridY = y + 0.03;
+                this.edgeFlatPos.push(x0, gridY, z0, x1, gridY, z0);
+                this.edgeFlatPos.push(x1, gridY, z0, x1, gridY, z1);
+                this.edgeFlatPos.push(x1, gridY, z1, x0, gridY, z1);
+                this.edgeFlatPos.push(x0, gridY, z1, x0, gridY, z0);
+            }
+        }
+
+        this.createFaceMesh(this.faceFlatPos, this.faceFlatColor, group);
+        this.createWaterMesh(this.waterFacePos, group);
+        this.createNavMesh(this.navMeshPos, group);
+        this.createMesh(this.edgeFlatPos, 0x2f4f5f, 'line', group, 0.18);
+        this.addVegetationMeshes(group);
+        return group;
+    }
+
+    private isGridCellNavWalkable(c: number, r: number): boolean {
+        if (this.store.getBlocked(c, r)) return false;
+        if (this.store.getWater(c, r) > this.store.getHeight(c, r)) return false;
+        if (this.isObstacle(this.store.getVeg(c, r))) return false;
+        return true;
+    }
+
+    private addVegetationMeshes(group: THREE.Group) {
+        if (this.veg1Instances.length > 0) {
+             const treeGeo = new THREE.ConeGeometry(0.5, 2.0, 6);
+             treeGeo.translate(0, 1.0, 0);
+             const treeMat = new THREE.MeshStandardMaterial({ color: 0x228B22, flatShading: true });
+             const mesh = new THREE.InstancedMesh(treeGeo, treeMat, this.veg1Instances.length);
+             for(let i=0; i<this.veg1Instances.length; i++) mesh.setMatrixAt(i, this.veg1Instances[i]);
+             mesh.instanceMatrix.needsUpdate = true;
+             group.add(mesh);
+        }
+
+        if (this.veg2Instances.length > 0) {
+             const treeGeo = new THREE.ConeGeometry(0.8, 3.0, 8);
+             treeGeo.translate(0, 1.5, 0);
+             const treeMat = new THREE.MeshStandardMaterial({ color: 0x006400, flatShading: true });
+             const mesh = new THREE.InstancedMesh(treeGeo, treeMat, this.veg2Instances.length);
+             for(let i=0; i<this.veg2Instances.length; i++) mesh.setMatrixAt(i, this.veg2Instances[i]);
+             mesh.instanceMatrix.needsUpdate = true;
+             group.add(mesh);
+        }
+
+        if (this.veg3Instances.length > 0) {
+             const geo = new THREE.CylinderGeometry(1.0, 1.2, 2.0, 5);
+             geo.translate(0, 1.0, 0);
+             const mat = new THREE.MeshStandardMaterial({ color: 0x004400, flatShading: true });
+             const mesh = new THREE.InstancedMesh(geo, mat, this.veg3Instances.length);
+             for(let i=0; i<this.veg3Instances.length; i++) mesh.setMatrixAt(i, this.veg3Instances[i]);
+             mesh.instanceMatrix.needsUpdate = true;
+             group.add(mesh);
+        }
+
+        if (this.veg4Instances.length > 0) {
+             const geo = new THREE.BoxGeometry(1.0, 0.5, 1.0);
+             geo.translate(0, 0.25, 0);
+             const mat = new THREE.MeshStandardMaterial({ color: 0xFFD700, flatShading: true });
+             const mesh = new THREE.InstancedMesh(geo, mat, this.veg4Instances.length);
+             for(let i=0; i<this.veg4Instances.length; i++) mesh.setMatrixAt(i, this.veg4Instances[i]);
+             mesh.instanceMatrix.needsUpdate = true;
+             group.add(mesh);
+        }
+    }
+
     private getVertex(c: number, r: number, offsetX: number, offsetZ: number, hScale: number) {
         const h = this.store.getHeight(c, r);
         const w = this.store.getWater(c, r);
-        const pos = getHexPosition(c, r, h, hScale, offsetX, offsetZ);
-        // Pre-calc color
+        const pos = cellToWorldPosition(c, r, h, this.metrics, hScale, offsetX, offsetZ);
+        const col = this.getCellColor(c, r, h);
+        const waterY = (w * hScale);
+
+        return { ...pos, h, w, c, r, isRamp: this.store.isRamp(c, r), color: col, waterY, veg: this.store.getVeg(c, r) };
+    }
+
+    private getCellColor(c: number, r: number, h: number) {
         const biome = this.store.getBiome(c, r);
         const col = this.getVertexColor(h, biome);
         
@@ -386,14 +538,7 @@ export class ChunkRenderer {
             col.lerp(new THREE.Color(0x7f1d1d), 0.75);
         }
 
-        // Calculate Water Y position (World Space)
-        // Water is at height 'w'.
-        // Terrain is at height 'h'.
-        // We need separate Y for water.
-        // Reuse getHexPosition logic for Y:
-        const waterY = (w * hScale); // Corrected: Match terrain scale 1:1
-        
-        return { ...pos, h, w, c, r, isRamp: this.store.isRamp(c, r), color: col, waterY, veg: this.store.getVeg(c, r) };
+        return col;
     }
 
     private processEdge(v1: any, v2: any, offsetX: number) {

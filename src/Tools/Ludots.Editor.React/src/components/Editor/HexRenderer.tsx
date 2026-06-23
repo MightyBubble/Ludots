@@ -3,23 +3,18 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
 import { useEditorStore } from './EditorStore';
 import { ChunkRenderer } from '../../Core/Render/ChunkRenderer';
-import { HEX_WIDTH, ROW_SPACING, getHexPosition } from '../../Core/Map/HexMetrics';
-import { TerrainStore } from '../../Core/Map/TerrainStore';
+import {
+    cellToWorldPosition,
+    getBrushVisualRadius,
+    getMapWorldSizeM,
+    getTopologyNeighbors,
+    worldPointToCell,
+} from '../../Core/Map/TopologyMetrics';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
-
-// Helper for Neighbors (Axial coords)
-function getNeighbors(c: number, r: number) {
-    const isOdd = (r & 1) === 1;
-    const offsets = isOdd 
-        ? [[1,0], [1,1], [0,1], [-1,0], [0,-1], [1,-1]] 
-        : [[1,0], [0,1], [-1,1], [-1,0], [-1,-1], [0,-1]];
-    
-    return offsets.map(o => ({ c: c + o[0], r: r + o[1] }));
-}
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
     
     // Refs for mutable state in animation loop
     const sceneRef = useRef<THREE.Scene | null>(null);
@@ -40,6 +35,7 @@ export const HexRenderer: React.FC = () => {
     // We need to store current terrain in a ref for the animation loop
     // because the animation loop closure captures the initial terrain instance.
     const terrainRef = useRef(terrain);
+    const boardMetricsRef = useRef(boardMetrics);
     // Track initialization progress
     const totalInitChunksRef = useRef(0);
 
@@ -55,6 +51,10 @@ export const HexRenderer: React.FC = () => {
             setLoading(false); // Clear if small update
         }
     }, [terrain, setLoading]);
+
+    useEffect(() => {
+        boardMetricsRef.current = boardMetrics;
+    }, [boardMetrics]);
 
     // Interaction State
     const isDraggingRef = useRef(false);
@@ -196,7 +196,7 @@ export const HexRenderer: React.FC = () => {
         // Clear old meshes
         terrainGroupRef.current.clear();
         
-        chunkRendererRef.current = new ChunkRenderer(terrain);
+        chunkRendererRef.current = new ChunkRenderer(terrain, boardMetrics);
         
         // Initial Full Render
         terrain.clearDirty(); // Reset dirty flags
@@ -210,14 +210,15 @@ export const HexRenderer: React.FC = () => {
         
         // Update Input Plane Size/Pos
         if (inputPlaneRef.current) {
-            const totalW = terrain.widthChunks * 64 * HEX_WIDTH;
-            const totalH = terrain.heightChunks * 64 * ROW_SPACING;
+            const worldSize = getMapWorldSizeM(terrain.widthChunks, terrain.heightChunks, boardMetrics);
+            const totalW = worldSize.width;
+            const totalH = worldSize.height;
             inputPlaneRef.current.scale.set(totalW, totalH, 1);
             inputPlaneRef.current.position.set(totalW/2, 0, totalH/2);
             inputPlaneRef.current.updateMatrixWorld();
         }
 
-    }, [terrain]); // Re-run when terrain object changes (load map)
+    }, [terrain, boardMetrics]); // Re-run when terrain or topology changes
 
     useEffect(() => {
         if (!navMeshRef.current) return;
@@ -270,7 +271,7 @@ export const HexRenderer: React.FC = () => {
 
             const m = new THREE.Mesh(geo, mat);
             const h = terrain.getHeight(e.position.x, e.position.y);
-            const pos = getHexPosition(e.position.x, e.position.y, h, 2.0);
+            const pos = cellToWorldPosition(e.position.x, e.position.y, h, boardMetrics, 2.0);
             m.position.set(pos.x, pos.y + 1.0, pos.z);
             m.renderOrder = 10;
 
@@ -289,7 +290,7 @@ export const HexRenderer: React.FC = () => {
 
             group.add(m);
         }
-    }, [entitiesVersion, terrain, templates, spawnEntities, selectedEntityIndex]);
+    }, [entitiesVersion, terrain, boardMetrics, templates, spawnEntities, selectedEntityIndex]);
 
     const buildTextSprite = (text: string) => {
         const canvas = document.createElement('canvas');
@@ -770,13 +771,9 @@ export const HexRenderer: React.FC = () => {
         if (intersects.length === 0) return null;
 
         const point = intersects[0].point;
-        
-        // Hex logic from editor_v2
-        // r = Math.round((z - offsetZ) / ROW_SPACING)
-        // c = Math.round((x - offsetX) / HEX_WIDTH - 0.5 * (r & 1))
-        
-        const r = Math.round(point.z / ROW_SPACING);
-        const c = Math.round(point.x / HEX_WIDTH - 0.5 * (r & 1));
+        const cell = worldPointToCell(point.x, point.z, boardMetricsRef.current);
+        const c = cell.col;
+        const r = cell.row;
         
         return { c, r, point };
     };
@@ -851,7 +848,7 @@ export const HexRenderer: React.FC = () => {
                                          terrain.setWater(c, r, targetWaterH);
                                          
                                          // Neighbors
-                                         const neighbors = getNeighbors(c, r);
+                                         const neighbors = getTopologyNeighbors(c, r, boardMetricsRef.current);
                                          for(const n of neighbors) {
                                              if (!visited.has(`${n.c},${n.r}`)) {
                                                  queue.push(n);
@@ -964,9 +961,10 @@ export const HexRenderer: React.FC = () => {
         // Update Cursor
         if (cursorMeshRef.current && cell) {
             const h = terrain.getHeight(cell.c, cell.r);
-            const pos = getHexPosition(cell.c, cell.r, h, 2.0); // hScale=2
+            const pos = cellToWorldPosition(cell.c, cell.r, h, boardMetricsRef.current, 2.0);
             cursorMeshRef.current.position.set(pos.x, pos.y + 0.2, pos.z);
-            cursorMeshRef.current.scale.set(brushSize, brushSize, brushSize);
+            const radius = getBrushVisualRadius(boardMetricsRef.current, brushSize);
+            cursorMeshRef.current.scale.set(radius, radius, radius);
             cursorMeshRef.current.visible = true;
         } else if (cursorMeshRef.current) {
             cursorMeshRef.current.visible = false;

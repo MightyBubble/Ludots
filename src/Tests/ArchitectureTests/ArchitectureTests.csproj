@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Tool\Ludots.Tool.csproj" />
+    <ProjectReference Include="..\..\Tools\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
   </ItemGroup>
 

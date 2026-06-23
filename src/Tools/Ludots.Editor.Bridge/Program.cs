@@ -261,7 +261,8 @@ app.MapGet("/api/mods/{modId}/maps", (string modId) =>
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
         var maps = EditorRepo.DiscoverMaps(ctx);
-        return Results.Ok(new { ok = true, maps });
+        var mapInfos = EditorRepo.DescribeMaps(ctx, maps);
+        return Results.Ok(new { ok = true, maps, mapInfos });
     }
     catch (Exception ex)
     {
@@ -490,7 +491,10 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
         var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-        var dataFile = EditorRepo.ResolvePrimaryBoardDataFile(mapR.Map);
+        var board = EditorRepo.ResolvePrimaryBoard(mapR.Map);
+        if (board == null)
+            return Results.BadRequest(new { ok = false, error = "MapConfig.Boards is empty." });
+        var dataFile = board.DataFile;
         if (string.IsNullOrWhiteSpace(dataFile))
             return Results.BadRequest(new { ok = false, error = "MapConfig.Boards[*].DataFile is empty." });
 
@@ -499,11 +503,27 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
             return Results.NotFound(new { ok = false, error = $"DataFile not found: {dataFile}", checkedPaths });
         }
 
-        using var fs = File.OpenRead(fullPath);
-        using var ms = new MemoryStream();
-        EditorTerrainConverter.ConvertVertexMapBinaryToReactTerrain(fs, ms);
-        ms.Position = 0;
-        return Results.File(ms.ToArray(), "application/octet-stream", fileDownloadName: $"{mapId}_map_data.bin");
+        if (EditorRepo.IsGridBoard(board))
+        {
+            using var validation = File.OpenRead(fullPath);
+            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                fullPath,
+                validation,
+                EditorRepo.RequireGridCellSizeCm(board));
+
+            return Results.File(File.ReadAllBytes(fullPath), "application/octet-stream", fileDownloadName: $"{mapId}_map_data.bin");
+        }
+
+        if (EditorRepo.IsHexGridBoard(board))
+        {
+            using var fs = File.OpenRead(fullPath);
+            using var ms = new MemoryStream();
+            EditorTerrainConverter.ConvertVertexMapBinaryToReactTerrain(fs, ms);
+            ms.Position = 0;
+            return Results.File(ms.ToArray(), "application/octet-stream", fileDownloadName: $"{mapId}_map_data.bin");
+        }
+
+        return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' does not support React terrain editing." });
     }
     catch (Exception ex)
     {
@@ -526,7 +546,10 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
 
     var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
     if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-    var dataFile = EditorRepo.ResolvePrimaryBoardDataFile(mapR.Map);
+    var board = EditorRepo.ResolvePrimaryBoard(mapR.Map);
+    if (board == null)
+        return Results.BadRequest(new { ok = false, error = "MapConfig.Boards is empty." });
+    var dataFile = board.DataFile;
     if (string.IsNullOrWhiteSpace(dataFile))
         return Results.BadRequest(new { ok = false, error = "MapConfig.Boards[*].DataFile is empty." });
 
@@ -541,13 +564,28 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
             await req.Body.CopyToAsync(fs);
         }
 
-        using var vtxmStream = new MemoryStream();
-        _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
-        vtxmStream.Position = 0;
-
-        await using (var outFs = File.Create(outFile))
+        if (EditorRepo.IsGridBoard(board))
         {
+            await using var validation = File.OpenRead(tempPath);
+            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                tempPath,
+                validation,
+                EditorRepo.RequireGridCellSizeCm(board));
+
+            File.Copy(tempPath, outFile, overwrite: true);
+        }
+        else if (EditorRepo.IsHexGridBoard(board))
+        {
+            using var vtxmStream = new MemoryStream();
+            _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
+            vtxmStream.Position = 0;
+
+            await using var outFs = File.Create(outFile);
             await vtxmStream.CopyToAsync(outFs);
+        }
+        else
+        {
+            return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' does not support React terrain editing." });
         }
     }
     finally
@@ -1237,18 +1275,16 @@ static LogicTerrainField CreateReactEditorLogicTerrain(
     Ludots.Core.Map.Board.BoardConfig boardConfig)
 {
     if (boardConfig == null) throw new ArgumentNullException(nameof(boardConfig));
-    string spatialType = (boardConfig.SpatialType ?? "Grid").Trim();
+    string spatialType = EditorRepo.NormalizeSpatialType(boardConfig);
 
-    if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
     {
         return ReactMapDataBinConverter.ReadGridLogicTerrainField(
             inputReactBinPath,
-            boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm);
+            EditorRepo.RequireGridCellSizeCm(boardConfig));
     }
 
-    if (spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) ||
-        spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
-        spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
     {
         using var ms = new MemoryStream();
         _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
@@ -1257,7 +1293,7 @@ static LogicTerrainField CreateReactEditorLogicTerrain(
         return new VertexMapLogicTerrainField(map);
     }
 
-    if (spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
+    if (string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
     {
         throw new InvalidOperationException(
             $"Map board '{boardConfig.Name}' is NodeGraph; NodeGraph boards use graph data and do not bake navmesh.");
@@ -1472,6 +1508,23 @@ static class EditorRepo
     }
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
+    public sealed record MapInfo(
+        string Id,
+        bool Found,
+        bool HasBoards,
+        string? BoardName,
+        string? SpatialType,
+        int WidthChunks,
+        int HeightChunks,
+        int CellSizeCm,
+        int ChunkSizeCells,
+        bool NavigationEnabled,
+        bool HasDataFile,
+        bool DataFileExists,
+        string? DataFile,
+        bool CanEditTerrain,
+        bool CanBake,
+        string Reason);
 
     public static List<ModInfo> DiscoverMods(string repoRoot)
     {
@@ -1540,6 +1593,121 @@ static class EditorRepo
         return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    public static List<MapInfo> DescribeMaps(ModContext ctx, IReadOnlyList<string> mapIds)
+    {
+        var result = new List<MapInfo>(mapIds.Count);
+        for (int i = 0; i < mapIds.Count; i++)
+        {
+            result.Add(DescribeMap(ctx, mapIds[i]));
+        }
+
+        return result;
+    }
+
+    public static MapInfo DescribeMap(ModContext ctx, string mapId)
+    {
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found)
+        {
+            return new MapInfo(
+                mapId,
+                Found: false,
+                HasBoards: false,
+                BoardName: null,
+                SpatialType: null,
+                WidthChunks: 0,
+                HeightChunks: 0,
+                CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
+                NavigationEnabled: false,
+                HasDataFile: false,
+                DataFileExists: false,
+                DataFile: null,
+                CanEditTerrain: false,
+                CanBake: false,
+                Reason: "Map config was discovered but could not be merged.");
+        }
+
+        var board = ResolvePrimaryBoard(mapR.Map);
+        if (board == null)
+        {
+            return new MapInfo(
+                mapId,
+                Found: true,
+                HasBoards: false,
+                BoardName: null,
+                SpatialType: null,
+                WidthChunks: 0,
+                HeightChunks: 0,
+                CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
+                NavigationEnabled: false,
+                HasDataFile: false,
+                DataFileExists: false,
+                DataFile: null,
+                CanEditTerrain: false,
+                CanBake: false,
+                Reason: "Map has no BoardConfig entries.");
+        }
+
+        int chunkSizeCells = board.ChunkSizeCells > 0
+            ? board.ChunkSizeCells
+            : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int widthChunks = checked(board.WidthInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
+        int heightChunks = checked(board.HeightInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
+        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
+        {
+            widthChunks = checked((board.WidthInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
+            heightChunks = checked((board.HeightInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
+        }
+
+        string? spatialType = null;
+        string? topologyError = null;
+        try
+        {
+            spatialType = NormalizeSpatialType(board);
+        }
+        catch (Exception ex)
+        {
+            topologyError = ex.Message;
+        }
+
+        bool supportedTerrainTopology = string.Equals(spatialType, "Grid", StringComparison.Ordinal) ||
+            string.Equals(spatialType, "HexGrid", StringComparison.Ordinal);
+        bool hasDataFile = !string.IsNullOrWhiteSpace(board.DataFile);
+        bool dataFileExists = hasDataFile && TryResolveDataFile(ctx, board.DataFile, out _, out _);
+        bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && dataFileExists;
+        bool canBake = canEditTerrain && board.NavigationEnabled;
+        string reason =
+            topologyError != null ? topologyError :
+            canBake ? "Ready for nav bake." :
+            !board.NavigationEnabled ? "Board NavigationEnabled is false." :
+            !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
+            !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
+            !hasDataFile ? "Board DataFile is empty." :
+            !dataFileExists ? "Board DataFile could not be resolved." :
+            "Not bakeable.";
+
+        return new MapInfo(
+            mapId,
+            Found: true,
+            HasBoards: true,
+            BoardName: board.Name,
+            SpatialType: spatialType,
+            WidthChunks: widthChunks,
+            HeightChunks: heightChunks,
+            CellSizeCm: board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+            ChunkSizeCells: chunkSizeCells,
+            NavigationEnabled: board.NavigationEnabled,
+            HasDataFile: hasDataFile,
+            DataFileExists: dataFileExists,
+            DataFile: hasDataFile ? board.DataFile : null,
+            CanEditTerrain: canEditTerrain,
+            CanBake: canBake,
+            Reason: reason);
+    }
+
     public static MergedMapResult LoadMergedMapConfig(ModContext ctx, string mapId)
     {
         var sources = new List<string>();
@@ -1591,29 +1759,98 @@ static class EditorRepo
         return Path.Combine(mod.RootPath, "assets", "Maps", $"{SanitizeId(mapId)}.json");
     }
 
-    public static string? ResolvePrimaryBoardDataFile(Ludots.Core.Config.MapConfig map)
+    public static Ludots.Core.Map.Board.BoardConfig? ResolvePrimaryBoard(Ludots.Core.Config.MapConfig map)
     {
         if (map?.Boards == null || map.Boards.Count == 0)
             return null;
 
+        Ludots.Core.Map.Board.BoardConfig? firstNavigationBoard = null;
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!string.IsNullOrWhiteSpace(board.DataFile))
-                return board.DataFile;
+            if (!board.NavigationEnabled) continue;
+
+            firstNavigationBoard ??= board;
+            if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
+                return board;
         }
+
+        if (firstNavigationBoard != null)
+            return firstNavigationBoard;
 
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!string.IsNullOrWhiteSpace(board.DataFile))
-                return board.DataFile;
+            if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
+                return board;
+        }
+
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            if (map.Boards[i] != null)
+                return map.Boards[i];
         }
 
         return null;
+    }
+
+    public static string? ResolvePrimaryBoardDataFile(Ludots.Core.Config.MapConfig map)
+    {
+        return ResolvePrimaryBoard(map)?.DataFile;
+    }
+
+    public static bool IsGridBoard(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        return string.Equals(NormalizeSpatialType(board), "Grid", StringComparison.Ordinal);
+    }
+
+    public static bool IsHexGridBoard(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        return string.Equals(NormalizeSpatialType(board), "HexGrid", StringComparison.Ordinal);
+    }
+
+    public static string NormalizeSpatialType(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (board == null) throw new ArgumentNullException(nameof(board));
+        string? raw = board.SpatialType;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            throw new InvalidOperationException(
+                $"Map board '{board.Name}' has empty SpatialType. Expected exact value Grid, HexGrid, or NodeGraph.");
+        }
+
+        string spatialType = raw.Trim();
+        if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
+        {
+            return "Grid";
+        }
+
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+        {
+            return "HexGrid";
+        }
+
+        if (string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
+        {
+            return "NodeGraph";
+        }
+
+        throw new InvalidOperationException(
+            $"Map board '{board.Name}' has unsupported SpatialType '{board.SpatialType}'. Expected exact value Grid, HexGrid, or NodeGraph.");
+    }
+
+    public static int RequireGridCellSizeCm(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (board == null) throw new ArgumentNullException(nameof(board));
+        if (board.GridCellSizeCm <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Map board '{board.Name}' has invalid GridCellSizeCm {board.GridCellSizeCm}; value must be positive.");
+        }
+
+        return board.GridCellSizeCm;
     }
 
     public static bool TryResolveDataFile(ModContext ctx, string dataFile, out string fullPath, out List<string> checkedPaths)
