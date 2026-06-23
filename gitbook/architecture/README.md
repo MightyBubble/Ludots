@@ -28,6 +28,8 @@
 - [Performer 现有基建收尾整合](performer-legacy-consolidation.md)
 - [Performer 开发看板](performer-development-kanban.md)
 - [Performer 编译式执行分层](performer-compiled-lanes.md)
+- Browser UI Runtime：正式 contract 位于 `docs/architecture/browser_ui_runtime.md`，用于把真实 Web App 作为平台无关 browser surface 嵌入 Ludots UI；它不改变 native Markup 无 JS 的边界
+- WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
 
 ## 当前主线重点
 
@@ -48,6 +50,7 @@
 - System 必须归属明确 phase
 - Mod 是功能接入和组合的主要单位
 - 跨层写入优先通过正式 Sink 和 Pipeline
+- 浏览器内核、商业引擎宿主与平台窗口生命周期必须留在 adapter；Core 只定义可复用的 C# contract
 
 ## 深度材料
 

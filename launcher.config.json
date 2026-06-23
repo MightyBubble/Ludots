@@ -186,6 +186,30 @@
       }
     },
     {
+      "name": "browser_ui_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_ui/BrowserUiShowcaseMod",
+        "projectPath": "BrowserUiShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_react_flow_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod",
+        "projectPath": "BrowserReactFlowShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_cef_runtime",
+      "target": {
+        "type": "path",
+        "value": "mods/browser/BrowserCefRuntimeMod",
+        "projectPath": "BrowserCefRuntimeMod.csproj"
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",

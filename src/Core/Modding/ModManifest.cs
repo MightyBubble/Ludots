@@ -34,5 +34,8 @@ namespace Ludots.Core.Modding
 
         [JsonPropertyName("tags")]
         public List<string> Tags { get; set; }
+
+        [JsonPropertyName("processSharedAssemblies")]
+        public List<string> ProcessSharedAssemblies { get; set; }
     }
 }

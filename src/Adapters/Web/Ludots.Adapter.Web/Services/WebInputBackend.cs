@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Input.Runtime;
@@ -60,9 +61,7 @@ namespace Ludots.Adapter.Web.Services
             }
 
             byte rawAction = msg[InputProtocol.PointerActionOffset];
-            PointerAction action = Enum.IsDefined(typeof(PointerAction), (int)rawAction)
-                ? (PointerAction)rawAction
-                : PointerAction.Move;
+            PointerAction action = ParsePointerAction(rawAction);
             int buttonMask = BinaryPrimitives.ReadInt32LittleEndian(msg.Slice(InputProtocol.PointerButtonMaskOffset, 4));
             float x = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerXOffset, 4));
             float y = BinaryPrimitives.ReadSingleLittleEndian(msg.Slice(InputProtocol.PointerYOffset, 4));
@@ -71,6 +70,7 @@ namespace Ludots.Adapter.Web.Services
 
             lock (_lock)
             {
+                int previousButtonMask = _state.ButtonMask;
                 _state.ButtonMask = buttonMask;
                 _state.MouseX = x;
                 _state.MouseY = y;
@@ -81,11 +81,19 @@ namespace Ludots.Adapter.Web.Services
                     EnqueueFrameTransition();
                 }
 
+                PointerButton? pointerButton = ResolvePointerButton(action, previousButtonMask, buttonMask);
+                if ((action is PointerAction.Down or PointerAction.Up) && !pointerButton.HasValue)
+                {
+                    throw new InvalidDataException(
+                        $"Pointer {action} messages must identify exactly one button. PreviousMask={previousButtonMask}, CurrentMask={buttonMask}.");
+                }
+
                 _pointerEvents.Enqueue(new PointerEvent
                 {
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
                     Action = action,
+                    Button = pointerButton,
                     X = x,
                     Y = y,
                     DeltaX = deltaX,
@@ -306,6 +314,47 @@ namespace Ludots.Adapter.Web.Services
                 "HOME" => 57,
                 "END" => 58,
                 _ => -1,
+            };
+        }
+
+        private static PointerAction ParsePointerAction(byte rawAction)
+        {
+            return rawAction switch
+            {
+                (byte)PointerAction.Down => PointerAction.Down,
+                (byte)PointerAction.Move => PointerAction.Move,
+                (byte)PointerAction.Up => PointerAction.Up,
+                (byte)PointerAction.Cancel => PointerAction.Cancel,
+                (byte)PointerAction.Scroll => PointerAction.Scroll,
+                _ => throw new InvalidDataException($"Unsupported pointer action value: {rawAction}.")
+            };
+        }
+
+        private static PointerButton? ResolvePointerButton(PointerAction action, int previousMask, int currentMask)
+        {
+            int changedMask = action switch
+            {
+                PointerAction.Down => currentMask & ~previousMask,
+                PointerAction.Up => previousMask & ~currentMask,
+                _ => 0
+            };
+
+            if (changedMask == 0)
+            {
+                return null;
+            }
+
+            if ((changedMask & (changedMask - 1)) != 0)
+            {
+                return null;
+            }
+
+            return changedMask switch
+            {
+                InputProtocol.ButtonMaskLeft => PointerButton.Left,
+                InputProtocol.ButtonMaskMiddle => PointerButton.Middle,
+                InputProtocol.ButtonMaskRight => PointerButton.Right,
+                _ => null
             };
         }
 

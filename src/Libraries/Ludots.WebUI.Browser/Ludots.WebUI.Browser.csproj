@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Ludots.WebUI.Browser</AssemblyName>
+    <RootNamespace>Ludots.WebUI.Browser</RootNamespace>
+    <Description>Browser-message transport adapter for the Ludots WebUI DataPlane.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+    <ProjectReference Include="..\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
+  </ItemGroup>
+</Project>

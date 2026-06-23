@@ -200,6 +200,35 @@
       "buildMode": "auto"
     },
     {
+      "id": "browser_ui_showcase_raylib",
+      "name": "Browser UI Showcase Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_ui_cef_raylib",
+      "name": "Browser UI CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_react_flow_cef_raylib",
+      "name": "Browser React Flow CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

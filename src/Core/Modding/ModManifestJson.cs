@@ -18,7 +18,8 @@ namespace Ludots.Core.Modding
             "author",
             "url",
             "changelog",
-            "tags"
+            "tags",
+            "processSharedAssemblies"
         };
 
         private static readonly JsonSerializerOptions CanonicalJsonOptions = new JsonSerializerOptions
@@ -127,6 +128,31 @@ namespace Ludots.Core.Modding
                         throw new Exception($"Invalid mod.json ('tags' elements must be strings): {manifestPath}");
                     }
                     manifest.Tags.Add(tagItem.GetString());
+                }
+            }
+
+            if (root.TryGetProperty("processSharedAssemblies", out var processSharedAssembliesEl))
+            {
+                if (processSharedAssembliesEl.ValueKind != JsonValueKind.Array)
+                {
+                    throw new Exception($"Invalid mod.json ('processSharedAssemblies' must be array): {manifestPath}");
+                }
+
+                manifest.ProcessSharedAssemblies = new List<string>();
+                foreach (var assemblyItem in processSharedAssembliesEl.EnumerateArray())
+                {
+                    if (assemblyItem.ValueKind != JsonValueKind.String)
+                    {
+                        throw new Exception($"Invalid mod.json ('processSharedAssemblies' elements must be strings): {manifestPath}");
+                    }
+
+                    string? assemblyName = assemblyItem.GetString();
+                    if (string.IsNullOrWhiteSpace(assemblyName))
+                    {
+                        throw new Exception($"Invalid mod.json ('processSharedAssemblies' elements must not be empty): {manifestPath}");
+                    }
+
+                    manifest.ProcessSharedAssemblies.Add(assemblyName.Trim());
                 }
             }
 

@@ -1,0 +1,13 @@
+{
+  "name": "BrowserUiShowcaseMod",
+  "version": "1.0.0",
+  "description": "Browser-backed showcase mod that can run on Raylib today and attach to browser runtimes when the host provides one.",
+  "main": "bin/net8.0/BrowserUiShowcaseMod.dll",
+  "priority": 190,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "UiShowcaseCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "web"]
+}

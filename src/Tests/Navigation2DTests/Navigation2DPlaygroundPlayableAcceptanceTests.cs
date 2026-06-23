@@ -229,6 +229,7 @@ namespace Ludots.Tests.Navigation2D
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Down,
+                Button = PointerButton.Left,
                 X = 760f,
                 Y = 420f
             });
@@ -238,6 +239,7 @@ namespace Ludots.Tests.Navigation2D
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Down,
+                Button = PointerButton.Left,
                 X = 80f,
                 Y = 80f
             });
