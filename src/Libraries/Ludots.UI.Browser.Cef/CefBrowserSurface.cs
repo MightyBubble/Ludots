@@ -4,16 +4,20 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using CefSharp;
+using CefSharp.Event;
 using CefSharp.OffScreen;
 using Ludots.UI.Browser;
 
 namespace Ludots.UI.Browser.Cef;
 
-internal sealed class CefBrowserSurface : IBrowserSurface
+internal sealed class CefBrowserSurface : IBrowserSurface, IBrowserSharedBufferSurface
 {
+	private const string DataPlaneNativeBridgeObjectName = "ludotsDataplaneNative";
 	private readonly object _sync = new();
 	private readonly ChromiumWebBrowser _browser;
 	private readonly CefBrowserMessageBridge _messages;
+	private readonly BrowserSharedBufferBridge _sharedBuffers = new();
+	private readonly CefDataPlaneNativeBridge _dataPlaneNativeBridge;
 	private readonly IBrowserResourceResolver? _resourceResolver;
 	private readonly CefBrowserSurfaceRegistry _registry;
 	private readonly TaskCompletionSource _browserInitialized = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -33,6 +37,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		_registry = registry ?? throw new ArgumentNullException(nameof(registry));
 		_frameBuffer = new BrowserFrameBuffer(viewport, BrowserPixelFormat.Bgra8888Premultiplied);
 		Id = BrowserSurfaceId.New();
+		_dataPlaneNativeBridge = new CefDataPlaneNativeBridge(_sharedBuffers);
 
 		var browserSettings = new BrowserSettings
 		{
@@ -47,6 +52,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 			automaticallyCreateBrowser: true,
 			onAfterBrowserCreated: OnAfterBrowserCreated);
 		_browser.Size = new Size(viewport.Width, viewport.Height);
+		_browser.JavascriptObjectRepository.ResolveObject += OnResolveJavascriptObject;
 		_browser.Paint += OnPaint;
 		_browser.JavascriptMessageReceived += OnJavascriptMessageReceived;
 		_browser.BrowserInitialized += OnBrowserInitialized;
@@ -75,6 +81,8 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 	}
 
 	public IBrowserMessageBridge Messages => _messages;
+
+	public BrowserSharedBufferBridge SharedBuffers => _sharedBuffers;
 
 	public async ValueTask NavigateAsync(BrowserNavigationRequest request, CancellationToken cancellationToken = default)
 	{
@@ -203,6 +211,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		_browser.JavascriptMessageReceived -= OnJavascriptMessageReceived;
 		_browser.BrowserInitialized -= OnBrowserInitialized;
 		_browser.FrameLoadEnd -= OnFrameLoadEnd;
+		_browser.JavascriptObjectRepository.ResolveObject -= OnResolveJavascriptObject;
 
 		_browser.Dispose();
 		return ValueTask.CompletedTask;
@@ -300,6 +309,19 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 		}
 	}
 
+	private void OnResolveJavascriptObject(object? sender, JavascriptBindingEventArgs e)
+	{
+		if (!string.Equals(e.ObjectName, DataPlaneNativeBridgeObjectName, StringComparison.Ordinal))
+		{
+			return;
+		}
+
+		e.ObjectRepository.Register(
+			DataPlaneNativeBridgeObjectName,
+			_dataPlaneNativeBridge,
+			BindingOptions.DefaultBinder);
+	}
+
 	private unsafe void OnPaint(object? sender, OnPaintEventArgs e)
 	{
 		if (_disposed || e.IsPopup || e.Width <= 0 || e.Height <= 0 || e.BufferHandle == IntPtr.Zero)
@@ -337,8 +359,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 
 	private void OnJavascriptMessageReceived(object? sender, JavascriptMessageReceivedEventArgs e)
 	{
-		string payload = NormalizeMessagePayload(e.Message);
-		_messages.RaiseMessage(new BrowserScriptMessage("cefsharp", payload));
+		_messages.RaiseMessage(CefBrowserMessageNormalizer.Normalize(e.Message));
 	}
 
 	private void SendPointerEvent(IBrowserHost host, BrowserPointerEvent pointer)
@@ -490,21 +511,6 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 	private static string ResolveNavigationUrl(Uri uri)
 	{
 		return uri.ToString();
-	}
-
-	private static string NormalizeMessagePayload(object? message)
-	{
-		if (message == null)
-		{
-			return string.Empty;
-		}
-
-		return message switch
-		{
-			string text => text,
-			JsonElement json => json.GetRawText(),
-			_ => JsonSerializer.Serialize(message)
-		};
 	}
 
 	private static BrowserDirtyRect? TryCreateDirtyRect(CefSharp.Structs.Rect rect, int viewportWidth, int viewportHeight)

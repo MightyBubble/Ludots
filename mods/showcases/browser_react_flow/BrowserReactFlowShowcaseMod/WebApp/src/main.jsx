@@ -21,6 +21,7 @@ import './styles.css';
 import {
   DATA_PLANE_DEFAULT_TOPIC,
   createLudotsDataPlaneClient,
+  decodeEntityColumnarPacket,
   ensureLudotsDataPlaneTransport
 } from './dataplane/client.js';
 
@@ -351,6 +352,27 @@ function useLudotsDataPlane() {
 }
 
 function reduceDataPlaneEvent(current, event) {
+  if (event.bytes) {
+    const decoded = tryDecodeEntityColumnarRows(event.bytes);
+    const descriptor = event.sharedBuffer ?? {};
+    if (decoded) {
+      return {
+        ...current,
+        phase: 'streaming',
+        topic: event.topic ?? current.topic,
+        sessionId: event.sessionId ?? current.sessionId,
+        tick: descriptor.tick ?? current.tick,
+        entityCount: decoded.entityCount,
+        selectedEntityId: decoded.rows[0]?.id ?? current.selectedEntityId,
+        lastPacket: `${event.kind}:shared-memory`,
+        coalescedPackets: descriptor.coalescedPackets ?? current.coalescedPackets,
+        droppedPackets: descriptor.droppedPackets ?? current.droppedPackets,
+        binaryBytes: current.binaryBytes + (event.binaryBytes ?? event.bytes.byteLength ?? 0),
+        rows: decoded.rows
+      };
+    }
+  }
+
   if (event.kind === 'binaryChunk') {
     return {
       ...current,
@@ -380,6 +402,37 @@ function reduceDataPlaneEvent(current, event) {
     droppedPackets: diagnostics.droppedPackets ?? current.droppedPackets,
     rows
   };
+}
+
+function tryDecodeEntityColumnarRows(bytes) {
+  try {
+    const decoded = decodeEntityColumnarPacket(bytes);
+    const rows = [];
+    const previewCount = Math.min(decoded.stableIds.length, 16);
+    for (let index = 0; index < previewCount; index += 1) {
+      const stableId = decoded.stableIds[index];
+      rows.push({
+        id: `entity.${stableId}`,
+        stableId,
+        label: `Entity ${stableId}`,
+        generation: decoded.generations[index],
+        hp: decoded.hp[index],
+        team: decoded.team[index],
+        state: decoded.state[index],
+        position: {
+          x: Math.round(decoded.x[index] * 10) / 10,
+          y: Math.round(decoded.y[index] * 10) / 10
+        }
+      });
+    }
+
+    return {
+      entityCount: decoded.stableIds.length,
+      rows
+    };
+  } catch {
+    return null;
+  }
 }
 
 function FlowShowcase() {

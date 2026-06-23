@@ -1,6 +1,7 @@
 const SCHEMA_VERSION = 1;
 const CONTROL_CHANNEL = 'ludots.dataplane.control';
 const BINARY_CHUNK_CHANNEL = 'ludots.dataplane.binaryChunk';
+const SHARED_BUFFER_CHANNEL = 'ludots.dataplane.sharedBuffer';
 const SDK_VERSION = '0.2.0-showcase';
 const DEFAULT_REQUEST_TIMEOUT_MS = 4000;
 const DEFAULT_TOPIC = 'ludots.showcase.browserReactFlow.world';
@@ -11,6 +12,8 @@ const CLIENT_CAPABILITIES = Object.freeze([
   'unsubscribe',
   'command',
   'binary.base64',
+  'shared-memory',
+  'shared-buffer-descriptor',
   'entity-columnar.v1',
   'diagnostics'
 ]);
@@ -208,6 +211,20 @@ export function createLudotsDataPlaneClient(options = {}) {
       return;
     }
 
+    if (incoming.kind === 'sharedBuffer') {
+      readSharedBufferEvent(incoming)
+        .then((resolved) => {
+          if (!closed) {
+            dispatchDataEvent(resolved);
+          }
+        })
+        .catch((error) => {
+          emitDiagnostic('error', 'shared-buffer-read', error instanceof Error ? error.message : String(error), incoming);
+        });
+      updateStatus({ lastMessageAt: Date.now() });
+      return;
+    }
+
     updateStatus({ lastMessageAt: Date.now() });
 
     if (incoming.kind === 'binaryChunk') {
@@ -232,6 +249,29 @@ export function createLudotsDataPlaneClient(options = {}) {
     if (incoming.kind === 'snapshot' || incoming.kind === 'delta' || incoming.kind === 'diagnostics') {
       dispatchDataEvent(incoming);
     }
+  }
+
+  async function readSharedBufferEvent(event) {
+    if (!transport || typeof transport.readSharedBuffer !== 'function') {
+      throw new Error('Shared-buffer descriptor received but transport cannot read shared buffers.');
+    }
+
+    const descriptor = normalizeSharedBufferDescriptor(event.sharedBuffer);
+    const bytes = await transport.readSharedBuffer(descriptor);
+    const byteView = normalizeByteView(bytes);
+    return {
+      ...event,
+      kind: event.packetKind,
+      payload: event.payload ?? {},
+      sharedBuffer: descriptor,
+      binaryBytes: byteView.byteLength,
+      bytes: byteView,
+      binaryChunks: [{
+        byteLength: byteView.byteLength,
+        descriptor,
+        transport: 'shared-memory'
+      }]
+    };
   }
 
   function dispatchDataEvent(event) {
@@ -495,6 +535,11 @@ function normalizeIncomingMessage(rawMessage) {
     return normalizeBinaryChunk(chunk);
   }
 
+  if (data.channel === SHARED_BUFFER_CHANNEL) {
+    const packet = typeof data.payload === 'string' ? parseJsonOrNull(data.payload) : data.payload;
+    return normalizeSharedBufferPacket(packet);
+  }
+
   return normalizeHostEnvelope(data);
 }
 
@@ -529,6 +574,7 @@ function normalizeHostEnvelope(envelope) {
     kind: packetKind,
     topic: envelope.topic,
     payload: envelope.payload ?? {},
+    binaryChunks: [],
     packetKind,
     delivery: envelope.delivery,
     contentType: envelope.contentType
@@ -550,8 +596,86 @@ function normalizeBinaryChunk(chunk) {
     topic: chunk.topic,
     payload: chunk,
     binaryBytes: bytes.byteLength,
-    bytes
+    bytes,
+    binaryChunks: [{
+      byteLength: bytes.byteLength,
+      byteOffset: chunk.byteOffset ?? 0,
+      totalChunks: chunk.totalChunks ?? 1,
+      transport: 'base64'
+    }]
   };
+}
+
+function normalizeSharedBufferPacket(packet) {
+  if (!packet || typeof packet !== 'object') {
+    return null;
+  }
+
+  const sharedBuffer = normalizeSharedBufferDescriptor(packet.payload?.sharedBuffer ?? packet.sharedBuffer);
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    sessionId: packet.sessionId,
+    requestId: packet.requestId ?? 0,
+    kind: 'sharedBuffer',
+    packetKind: normalizeKind(packet.kind),
+    topic: packet.topic,
+    payload: packet.payload ?? {},
+    delivery: packet.delivery,
+    contentType: packet.contentType,
+    clientSeq: packet.clientSeq ?? 0,
+    sharedBuffer
+  };
+}
+
+export function normalizeSharedBufferDescriptor(descriptor) {
+  if (!descriptor || typeof descriptor !== 'object') {
+    throw new TypeError('Shared-buffer descriptor is required.');
+  }
+
+  const normalized = {
+    bufferId: String(descriptor.bufferId ?? descriptor.BufferId ?? ''),
+    topic: descriptor.topic ?? descriptor.Topic ?? '',
+    schemaId: Number(descriptor.schemaId ?? descriptor.SchemaId ?? 0),
+    layout: descriptor.layout ?? descriptor.Layout ?? 'ring-buffer',
+    capacityBytes: Number(descriptor.capacityBytes ?? descriptor.CapacityBytes ?? 0),
+    headerBytes: Number(descriptor.headerBytes ?? descriptor.HeaderBytes ?? 0),
+    byteOffset: Number(descriptor.byteOffset ?? descriptor.ByteOffset ?? 0),
+    byteLength: Number(descriptor.byteLength ?? descriptor.ByteLength ?? 0),
+    sequence: Number(descriptor.sequence ?? descriptor.Sequence ?? 0),
+    tick: Number(descriptor.tick ?? descriptor.Tick ?? 0),
+    droppedPackets: Number(descriptor.droppedPackets ?? descriptor.DroppedPackets ?? 0),
+    coalescedPackets: Number(descriptor.coalescedPackets ?? descriptor.CoalescedPackets ?? 0)
+  };
+
+  if (!normalized.bufferId) {
+    throw new Error('Shared-buffer descriptor is missing bufferId.');
+  }
+
+  if (normalized.byteOffset < 0 || normalized.byteLength < 0 || normalized.sequence <= 0) {
+    throw new Error('Shared-buffer descriptor has an invalid byte range or sequence.');
+  }
+
+  return normalized;
+}
+
+function normalizeByteView(bytes) {
+  if (bytes instanceof Uint8Array) {
+    return bytes;
+  }
+
+  if (bytes instanceof ArrayBuffer) {
+    return new Uint8Array(bytes);
+  }
+
+  if (Array.isArray(bytes)) {
+    return Uint8Array.from(bytes);
+  }
+
+  if (bytes && typeof bytes.length === 'number') {
+    return Uint8Array.from(bytes);
+  }
+
+  throw new TypeError('Shared-buffer reader did not return bytes.');
 }
 
 function normalizeClientEnvelope(message) {

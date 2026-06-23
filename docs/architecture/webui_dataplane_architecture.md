@@ -96,6 +96,8 @@ Control and data are separate lanes:
 - The control lane carries handshake, subscribe, unsubscribe, command, ack/error, diagnostics, and shared-buffer descriptor messages.
 - The data lane carries high-volume binary payloads. A message transport may carry base64 chunks as a low-capability mode; a shared-memory transport carries a shared-buffer descriptor plus sequence/tick/drop/coalesce counters.
 - A shared-buffer descriptor identifies buffer id, topic, schema id, layout, capacity, header bytes, byte range, sequence, tick, dropped packets, and coalesced packets. The descriptor is DataPlane contract data; native handles and OS mapping details stay inside the concrete provider.
+- The Windows CEF/Raylib slice uses `BrowserSharedMemoryBufferStore` to allocate host-owned named memory-mapped files and registers only buffer-id readers with `BrowserSharedBufferBridge`. Descriptors sent to Web apps never include the OS memory-map name.
+- The CEF provider exposes `window.ludotsDataplane.readSharedBuffer(descriptor)` through a provider-local native bridge. Web apps still call the standard facade and never call CEF/CefSharp objects directly.
 
 No implicit fallback is allowed. Browser hosts must explicitly negotiate capabilities during handshake. If a Web app requires `shared-memory` or `shared-buffer-descriptor` and the host only has message/base64 transport, the session returns a transport capability mismatch error instead of silently downgrading to a slower path.
 
@@ -173,7 +175,7 @@ Use these issue slices when work is split:
 
 ## 10 Acceptance Evidence
 
-Current evidence is architectural and source-aligned:
+Current evidence is architectural, source-aligned, and executable:
 
 - Browser surface boundary: `docs/architecture/browser_ui_runtime.md`
 - Browser ADR: `docs/adr/ADR-0003-browser-ui-runtime-contract.md`
@@ -182,6 +184,13 @@ Current evidence is architectural and source-aligned:
 - Screen marker bucket model: `src/Core/Presentation/Minimap/MinimapScreenMarkerBuffer.cs`
 - WebUI facade: `src/Libraries/Ludots.WebUI/`
 - DataPlane transport contracts: `src/Libraries/Ludots.WebUI.DataPlane/`
+- Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
+- Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
+- Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`
+- CEF native shared-buffer facade: `src/Libraries/Ludots.UI.Browser.Cef/CefDataPlaneNativeBridge.cs`
+- React Flow showcase shared-memory wiring: `mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod/BrowserReactFlowShowcaseModEntry.cs`
 - Benchmark harness: `src/Tests/WebUiDataPlaneTests/WebUiDataPlaneBenchmarkTests.cs`
 
-Future implementation evidence should add focused tests around browser-host input latency, alpha passthrough diagnostics, host-side shared-memory mappings, and transport parity between Ludots-started CEF and UE5 BLUI adapters.
+Executable evidence includes `BrowserSharedMemoryDataTransportTests`, which reopens the named memory-mapped file and verifies payload bytes, rejects stale descriptors after ring overwrite, and proves binary packets for unconfigured topics fail instead of falling back to base64. The benchmark harness records real `BrowserMessageBridgeDataTransport` base64 chunks next to real `BrowserSharedMemoryDataTransport` descriptor messages, with `observedBase64Chunks = 0` for shared memory.
+
+Future implementation evidence should add focused tests around browser-host input latency, alpha passthrough diagnostics, and transport parity between Ludots-started CEF and UE5 BLUI adapters.
