@@ -923,6 +923,68 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudPerformBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                Entity target = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+                Entity hostileAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+                var behavior = new WorldHudPerformBehavior();
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                bool transientTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    ReadOnlySpan<int>.Empty,
+                    out PerformPhaseResult transientTextPhase);
+                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
+                bool attributeTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    requiredAttributes,
+                    out PerformPhaseResult attributeTextPhase);
+
+                Assert.That(transientTextProjected, Is.True);
+                Assert.That(transientTextPhase.IsHostile, Is.True);
+                Assert.That(transientTextPhase.ShouldPresent, Is.True);
+                Assert.That(transientTextPhase.AllowWorldHudProjection, Is.True);
+
+                Assert.That(attributeTextProjected, Is.False);
+                Assert.That(attributeTextPhase.RequiresAttributeProjection, Is.True);
+                Assert.That(attributeTextPhase.AllowWorldHudProjection, Is.False);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
         public void WorldHudPerformBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
         {
             using var world = World.Create();
@@ -2291,4 +2353,3 @@ namespace Ludots.Tests.Presentation
         }
     }
 }
-

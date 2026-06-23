@@ -3,8 +3,13 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -71,6 +76,187 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        [Test]
+        public void EffectApplicationSystem_InstantEffectPublishesEffectApplied_WhenPhaseExecutorAppliesModifiers()
+        {
+            using var world = World.Create();
+
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
+            templates.Register(2002, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                Modifiers = modifiers,
+            });
+
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.InstantDamage,
+                Components = ComponentFlags.ModifierParams,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in preset);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var phaseExecutor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
+            var application = new EffectApplicationSystem(
+                world,
+                effectRequests: null,
+                budget: null,
+                presentationEvents,
+                templates,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer());
+            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Instant);
+            world.Get<EffectModifiers>(effect) = modifiers;
+            world.Add(effect, new EffectTemplateRef { TemplateId = 2002 });
+
+            application.Update(0.016f);
+
+            That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(85f));
+            That(presentationEvents.Count, Is.EqualTo(1));
+            ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
+            That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));
+            That(evt.Actor, Is.EqualTo(source));
+            That(evt.Target, Is.EqualTo(target));
+            That(evt.EffectTemplateId, Is.EqualTo(2002));
+            That(evt.AttributeId, Is.EqualTo(0));
+            That(evt.Delta, Is.EqualTo(-15f));
+        }
+
+        [Test]
+        public void EffectProposalProcessingSystem_PureInstantPublishesEffectApplied()
+        {
+            using var world = World.Create();
+
+            var requests = new EffectRequestQueue();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
+            templates.Register(2003, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                Modifiers = modifiers,
+            });
+
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                presentationEvents: presentationEvents);
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer());
+            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 2003,
+            });
+
+            proposal.Update(0.016f);
+
+            That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(85f));
+            That(presentationEvents.Count, Is.EqualTo(1));
+            ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
+            That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));
+            That(evt.Actor, Is.EqualTo(source));
+            That(evt.Target, Is.EqualTo(target));
+            That(evt.EffectTemplateId, Is.EqualTo(2003));
+            That(evt.AttributeId, Is.EqualTo(0));
+            That(evt.Delta, Is.EqualTo(-15f));
+        }
+
+        [Test]
+        public void EffectProcessingLoopSystem_ParticipatingInstantPublishesEffectApplied()
+        {
+            using var world = World.Create();
+
+            var requests = new EffectRequestQueue();
+            var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -15f);
+            templates.Register(2004, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ParticipatesInResponse = true,
+                Modifiers = modifiers,
+            });
+
+            var loop = new EffectProcessingLoopSystem(
+                world,
+                requests,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                budget: null,
+                templates,
+                inputRequests: null,
+                chainOrders: null,
+                telemetry: new ResponseChainTelemetryBuffer(),
+                orderRequests: new OrderRequestQueue(),
+                presentationEvents: presentationEvents);
+
+            Entity source = world.Create();
+            Entity target = world.Create(new AttributeBuffer());
+            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 2004,
+            });
+
+            loop.Update(0.016f);
+
+            That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(85f));
+            That(requests.Count, Is.EqualTo(0));
+            That(presentationEvents.Count, Is.EqualTo(1));
+            ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
+            That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));
+            That(evt.Actor, Is.EqualTo(source));
+            That(evt.Target, Is.EqualTo(target));
+            That(evt.EffectTemplateId, Is.EqualTo(2004));
+            That(evt.AttributeId, Is.EqualTo(0));
+            That(evt.Delta, Is.EqualTo(-15f));
         }
 
         [Test]

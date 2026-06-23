@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Performers
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Performers
             Dictionary<string, object> globals,
             Entity owner,
             LODLevel defaultLod,
+            WorldHudItemKind itemKind,
             ReadOnlySpan<int> requiredAttributeIds,
             out PerformPhaseResult phaseResult)
         {
@@ -45,9 +47,28 @@ namespace Ludots.Core.Presentation.Performers
                 audience,
                 in projection,
                 requiredAttributeIds);
+            input.AllowVisibleTransientWorldText = itemKind == WorldHudItemKind.Text && requiredAttributeIds.IsEmpty;
             phaseResult = _phaseResolver.Resolve(input);
 
             return phaseResult.AllowWorldHudProjection;
+        }
+
+        public bool TryResolveProjection(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            LODLevel defaultLod,
+            ReadOnlySpan<int> requiredAttributeIds,
+            out PerformPhaseResult phaseResult)
+        {
+            return TryResolveProjection(
+                world,
+                globals,
+                owner,
+                defaultLod,
+                WorldHudItemKind.Bar,
+                requiredAttributeIds,
+                out phaseResult);
         }
 
         public bool TryResolveProjection(
@@ -62,6 +83,7 @@ namespace Ludots.Core.Presentation.Performers
                 globals,
                 owner,
                 defaultLod,
+                WorldHudItemKind.Bar,
                 ReadOnlySpan<int>.Empty,
                 out phaseResult);
         }

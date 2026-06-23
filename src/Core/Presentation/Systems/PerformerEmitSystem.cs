@@ -419,6 +419,7 @@ namespace Ludots.Core.Presentation.Systems
                 _globals,
                 state.OwnerEntity,
                 cull.LOD,
+                kind,
                 definition.RequiredAttributeIds,
                 out PerformPhaseResult phaseResult);
             bool visible = cull.OwnerCullVisible &&

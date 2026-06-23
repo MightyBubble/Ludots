@@ -919,6 +919,7 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(found, Is.True, "EffectApplied event not projected");
+            Assert.That(_gasEvents.Count, Is.EqualTo(0), "Gas presentation events should be cleared only after projection consumes them.");
         }
 
         [Test]

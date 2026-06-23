@@ -136,6 +136,8 @@ namespace Ludots.Core.Presentation.Systems
                             break;
                     }
                 }
+
+                _gasEvents.Clear();
             }
 
             // Project owner fact changes into both the event stream and the owner-change index.

@@ -205,7 +205,8 @@ namespace Ludots.Core.Presentation.Performers
         public PerformPhaseResult Resolve(in PerformPhaseInput input)
         {
             bool revealHidden = input.Audience.RevealHidden;
-            bool hasVision = revealHidden || input.HasVision;
+            bool hasVision = revealHidden || input.HasVision ||
+                             (input.AllowVisibleTransientWorldText && input.IsVisible);
             bool isCulled = !revealHidden && input.IsCulled;
             bool isVisible = revealHidden || (input.IsVisible && hasVision && !isCulled);
             LODLevel lod = revealHidden && input.LOD == LODLevel.Culled
@@ -217,8 +218,15 @@ namespace Ludots.Core.Presentation.Performers
             bool isHostile = input.HasTeamRelationship && input.TeamRelationship == TeamRelationship.Hostile;
             bool shouldPresent = isVisible && !isCulled;
             bool allowWorldHudProjection = shouldPresent &&
-                                           input.HasAttributeProjection &&
-                                           (input.IsOwnedByAudience || isFriendly || input.Audience.RevealHidden);
+                                            input.HasAttributeProjection &&
+                                            (input.IsOwnedByAudience || isFriendly || input.Audience.RevealHidden);
+            if (!allowWorldHudProjection &&
+                shouldPresent &&
+                input.AllowVisibleTransientWorldText &&
+                !input.RequiresAttributeProjection)
+            {
+                allowWorldHudProjection = true;
+            }
 
             return new PerformPhaseResult
             {

@@ -215,7 +215,6 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Requests.SoundRequestBuffer _soundRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
-        private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
@@ -1193,7 +1192,6 @@ namespace Ludots.Core.Engine
             _soundRequestBuffer = soundRequestBuffer;
             _instancedBatchRequestBuffer = instancedBatchRequests;
             _instancedBatchOperationBuffer = instancedBatchOperations;
-            _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _roadSplineBuffer = roadSplineBuffer;
             _worldHudBuffer = worldHudBuffer;
@@ -2733,9 +2731,6 @@ namespace Ludots.Core.Engine
                     _instancedBatchOperationBuffer,
                     capabilities);
             }
-
-            // Clear GAS presentation events AFTER all presentation systems have consumed them
-            _gasPresentationEvents?.Clear();
         }
 
         private void BeginPresentationCameraSnapshotScope()

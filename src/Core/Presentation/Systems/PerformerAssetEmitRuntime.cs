@@ -466,6 +466,7 @@ namespace Ludots.Core.Presentation.Systems
                     _globals,
                     state.OwnerEntity,
                     lod,
+                    WorldHudItemKind.Bar,
                     definition.RequiredAttributeIds,
                     out PerformPhaseResult phaseResult))
             {
@@ -507,6 +508,7 @@ namespace Ludots.Core.Presentation.Systems
                     _globals,
                     state.OwnerEntity,
                     lod,
+                    WorldHudItemKind.Text,
                     definition.RequiredAttributeIds,
                     out PerformPhaseResult phaseResult))
             {

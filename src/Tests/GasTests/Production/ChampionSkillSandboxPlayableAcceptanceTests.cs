@@ -237,22 +237,16 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthBeforeQ),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
-            Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Smart cast hit should emit visible world text feedback.");
+            TickUntilWorldHudText(engine, frameTimesMs, primitives, worldHud, maxFrames: 8, "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
             timeline.Add($"[T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP {dummyHealthBeforeQ:0} -> {dummyHealthAfterQ:0}");
 
             toolbar.Activate(IndicatorModeId);
             Tick(engine, 1, frameTimesMs);
             Assert.That(GetActiveModeId(engine), Is.EqualTo(IndicatorModeId));
-            SetMouseEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
-            (string indicatorHoverEntityName, Vector2 indicatorHoverPoint) = FindAnyHoverableEntityScreenPoint(
-                engine,
-                backend,
-                GetSelectedEntityName(engine),
-                frameTimesMs);
+            Vector2 indicatorHoverPoint = FindHoverScreenPoint(engine, backend, "Target Dummy A", GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             backend.SetMousePosition(indicatorHoverPoint);
             Tick(engine, 1, frameTimesMs);
-            SetMouseEntity(engine, backend, "Target Dummy A", frameTimesMs);
             int baselineIndicatorLines = CountOverlays(overlays, GroundOverlayShape.Line);
             int baselineIndicatorRings = CountOverlays(overlays, GroundOverlayShape.Ring);
             HoldButton(engine, backend, "<Keyboard>/r", holdFrames: 2, frameTimesMs);
@@ -264,13 +258,14 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 frameTimesMs,
                 () => CountOverlays(overlays, GroundOverlayShape.Ring) > baselineIndicatorRings,
-                maxFrames: 8);
+                maxFrames: 8,
+                describeFailure: () => BuildHoverIndicatorDiagnostics(engine, overlays, baselineIndicatorRings, "Target Dummy A", indicatorHoverPoint));
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Ring),
                 Is.GreaterThan(baselineIndicatorRings),
                 "Indicator hover should add a dedicated marker on the hovered target.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_hover_target");
-            timeline.Add($"[T+009] Indicator hover over {indicatorHoverEntityName} shows an extra target marker before release");
+            timeline.Add("[T+009] Indicator hover over Target Dummy A shows an extra target marker before release");
             float dummyHealthBeforeR = ReadHealth(engine.World, "Target Dummy A");
             ReleaseButton(engine, backend, "<Keyboard>/r", frameTimesMs);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeR, maxFrames: 32);
@@ -1194,6 +1189,22 @@ namespace Ludots.Tests.GAS.Production
                 frameTimesMs,
                 () => ReadHealth(engine.World, entityName) < baselineHealth,
                 maxFrames);
+        }
+
+        private static void TickUntilWorldHudText(
+            GameEngine engine,
+            List<double> frameTimesMs,
+            PrimitiveDrawBuffer primitives,
+            WorldHudBatchBuffer worldHud,
+            int maxFrames,
+            string message)
+        {
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => CountWorldHudItems(worldHud, WorldHudItemKind.Text) > 0,
+                maxFrames,
+                describeFailure: () => $"{message} {BuildFeedbackDiagnostics(primitives, worldHud)} | {BuildGasPresentationDiagnostics(engine)} | {BuildEzrealMarkDiagnostics(engine.World, "Target Dummy A")} | {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")}");
         }
 
         private static bool WaitUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
