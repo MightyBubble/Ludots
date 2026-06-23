@@ -12,7 +12,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         public AttributeConstraintsLoader(ConfigPipeline pipeline)
         {
-            _pipeline = pipeline;
+            _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
         public void Load(
@@ -20,17 +20,26 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/attribute_constraints.json")
         {
-            if (_pipeline == null) return;
-
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null) return;
+            if (mergedObject == null)
+            {
+                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
+            }
 
             foreach (var kvp in mergedObject)
             {
-                if (string.IsNullOrWhiteSpace(kvp.Key) || kvp.Value is not JsonObject obj) continue;
+                if (string.IsNullOrWhiteSpace(kvp.Key))
+                {
+                    throw new InvalidOperationException($"Config '{relativePath}' contains an empty attribute constraint key.");
+                }
 
-                bool clampToBase = GetBool(obj, "clampToBase", defaultValue: false);
+                if (kvp.Value is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Config '{relativePath}' attribute constraint '{kvp.Key}' must be an object.");
+                }
+
+                bool clampToBase = GetBool(obj, "clampToBase", attributeName: kvp.Key, relativePath);
                 bool hasMin = TryGetFloat(obj, "min", out var min);
                 bool hasMax = TryGetFloat(obj, "max", out var max);
 
@@ -46,37 +55,31 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        private static bool GetBool(JsonObject obj, string key, bool defaultValue)
+        private static bool GetBool(JsonObject obj, string key, string attributeName, string relativePath)
         {
-            if (!obj.TryGetPropertyValue(key, out var node) || node == null) return defaultValue;
-            try
-            {
-                return node.GetValue<bool>();
-            }
-            catch
-            {
-                return defaultValue;
-            }
+            if (!obj.TryGetPropertyValue(key, out var node) || node == null) return false;
+            return node.GetValue<bool>();
         }
 
         private static bool TryGetFloat(JsonObject obj, string key, out float value)
         {
             value = 0f;
             if (!obj.TryGetPropertyValue(key, out var node) || node == null) return false;
-            try
+            if (node is JsonValue v)
             {
-                value = node.GetValue<float>();
-                return true;
-            }
-            catch
-            {
-                if (node is JsonValue v && v.TryGetValue<string>(out var s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var f))
+                if (v.TryGetValue<float>(out value))
+                {
+                    return true;
+                }
+
+                if (v.TryGetValue<string>(out var s) && float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var f))
                 {
                     value = f;
                     return true;
                 }
-                return false;
             }
+
+            throw new InvalidOperationException($"Attribute constraint field '{key}' must be a number.");
         }
     }
 }

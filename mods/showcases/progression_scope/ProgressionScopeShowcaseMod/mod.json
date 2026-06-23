@@ -1,0 +1,14 @@
+{
+  "name": "ProgressionScopeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused entity-scoped progression requirement showcase.",
+  "main": "bin/net8.0/ProgressionScopeShowcaseMod.dll",
+  "priority": 130,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "progression", "entity-scope"]
+}

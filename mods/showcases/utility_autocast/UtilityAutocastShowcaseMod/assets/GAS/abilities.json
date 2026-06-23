@@ -1,0 +1,38 @@
+[
+  {
+    "id": "Ability.UtilityAutocast.Attack",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.UtilityAutocast.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.UtilityAutocast.AttackHit" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.UtilityAutocast.GCD"] }
+  },
+  {
+    "id": "Ability.UtilityAutocast.HealBurst",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.UtilityAutocast.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.UtilityAutocast.HealBurst" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.UtilityAutocast.GCD"] }
+  },
+  {
+    "id": "Ability.UtilityAutocast.Curse",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.UtilityAutocast.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.UtilityAutocast.CurseHit" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": { "blockedAny": ["Cooldown.UtilityAutocast.GCD"] }
+  }
+]

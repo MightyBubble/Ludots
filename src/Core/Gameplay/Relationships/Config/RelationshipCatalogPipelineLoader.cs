@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Gameplay.Relationships.Config
@@ -11,6 +12,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         private readonly JsonSerializerOptions _options = new()
         {
             PropertyNameCaseInsensitive = true,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public RelationshipCatalogPipelineLoader(ConfigPipeline pipeline)
@@ -46,6 +48,8 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             var callbackOrder = new List<string>();
             var synergies = new Dictionary<string, RelationshipSynergyConfig>(StringComparer.OrdinalIgnoreCase);
             var synergyOrder = new List<string>();
+            var knowledgeGrants = new Dictionary<string, RelationshipKnowledgeGrantConfig>(StringComparer.OrdinalIgnoreCase);
+            var knowledgeGrantOrder = new List<string>();
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -62,6 +66,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 MergeById(fragment.Reasons, reasons, reasonOrder, static item => item.Id);
                 MergeById(fragment.Callbacks, callbacks, callbackOrder, static item => item.Id);
                 MergeById(fragment.Synergies, synergies, synergyOrder, static item => item.Id);
+                MergeById(fragment.KnowledgeGrants, knowledgeGrants, knowledgeGrantOrder, static item => item.Id);
             }
 
             return new RelationshipCatalogConfig
@@ -73,6 +78,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 Reasons = Materialize(reasonOrder, reasons),
                 Callbacks = Materialize(callbackOrder, callbacks),
                 Synergies = Materialize(synergyOrder, synergies),
+                KnowledgeGrants = Materialize(knowledgeGrantOrder, knowledgeGrants),
             };
         }
 

@@ -1,16 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Utils;
 using Arch.Core.Extensions;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.AI.Components;
+using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
@@ -30,6 +36,7 @@ namespace Ludots.Core.Config
         private static readonly Dictionary<string, ComponentType> _componentTypes = new Dictionary<string, ComponentType>(StringComparer.Ordinal);
         private static readonly Dictionary<string, string> _registrationSource = new Dictionary<string, string>(StringComparer.Ordinal);
         private static RegistrationConflictReport _conflictReport;
+        private static UtilityAiAuthoringCatalog _utilityAiAuthoring = UtilityAiAuthoringCatalog.Empty;
 
         static ComponentRegistry()
         {
@@ -48,6 +55,10 @@ namespace Ludots.Core.Config
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
+            Register("ProgressionStateBuffer", SetProgressionStateBuffer);
+            Register("ProgressionScopeHost", SetProgressionScopeHost);
+            Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
@@ -73,6 +84,13 @@ namespace Ludots.Core.Config
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
+            Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
+            Register<UtilityAiState>("UtilityAiState", SetUtilityAiState);
+            Register<UtilityAiDecisionTrace>("UtilityAiDecisionTrace", SetUtilityAiDecisionTrace);
+            Register<UtilityAiTargetPriority>("UtilityAiTargetPriority", SetUtilityAiTargetPriority);
+            Register<UtilityAiCombatMemory>("UtilityAiCombatMemory", SetUtilityAiCombatMemory);
+            Register<ActuatorReadiness>("ActuatorReadiness", SetActuatorReadiness);
+            Register<AimGate>("AimGate", SetAimGate);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -99,9 +117,19 @@ namespace Ludots.Core.Config
             _conflictReport = report;
         }
 
+        public static void SetUtilityAiAuthoringCatalog(UtilityAiAuthoringCatalog authoring)
+        {
+            _utilityAiAuthoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
+        }
+
         public static void Register(string name, ComponentSetter setter, string modId = null)
         {
             Register(name, setter, modId, componentType: null);
+        }
+
+        public static void Register<T>(string name, ComponentSetter setter, string modId = null)
+        {
+            Register(name, setter, modId, Component<T>.ComponentType);
         }
 
         private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
@@ -204,7 +232,13 @@ namespace Ludots.Core.Config
             return _componentTypes.TryGetValue(componentName, out componentType);
         }
 
-        public static void Apply(Entity entity, string componentName, JsonNode data)
+        public static IReadOnlyDictionary<string, ComponentType> GetRegisteredComponentTypes()
+        {
+            var ordered = new SortedDictionary<string, ComponentType>(_componentTypes, StringComparer.Ordinal);
+            return new ReadOnlyDictionary<string, ComponentType>(ordered);
+        }
+
+        public static void Apply(Entity entity, string componentName, JsonNode data, string context = null)
         {
             if (string.IsNullOrWhiteSpace(componentName))
             {
@@ -218,17 +252,142 @@ namespace Ludots.Core.Config
 
             if (_setters.TryGetValue(componentName, out var setter))
             {
-                setter(entity, data);
+                try
+                {
+                    setter(entity, data);
+                }
+                catch (InvalidOperationException ex) when (!string.IsNullOrWhiteSpace(context))
+                {
+                    throw new InvalidOperationException($"{context}: {ex.Message}", ex);
+                }
+
                 return;
             }
 
-            throw new InvalidOperationException($"Unknown component '{componentName}'.");
+            string message = $"Unknown component '{componentName}'.";
+            if (!string.IsNullOrWhiteSpace(context))
+            {
+                message = $"{context}: {message}";
+            }
+
+            throw new InvalidOperationException(message);
         }
 
         private static void SetOrderBuffer(Entity entity, JsonNode data)
         {
             RequireEmptyObject(data, "OrderBuffer");
             entity.Add(OrderBuffer.CreateEmpty());
+        }
+
+        private static void SetUtilityAiAgent(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("UtilityAiAgent requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "UtilityAiAgent", "profileId", "profile");
+            RejectNumericIdAuthoring(obj, "UtilityAiAgent", "ProfileId", "profile");
+            ValidateProperties(obj, "UtilityAiAgent", "profile");
+
+            string profileKey = RequireStringProperty(obj, "profile", "UtilityAiAgent");
+            if (!_utilityAiAuthoring.TryGetProfileId(profileKey, out int profileId) || profileId < 0)
+            {
+                throw new InvalidOperationException($"UtilityAiAgent.profile references unknown Utility AI profile '{profileKey}'.");
+            }
+
+            entity.Add(new UtilityAiAgent { ProfileId = profileId });
+        }
+
+        private static void SetUtilityAiState(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "UtilityAiState");
+            entity.Add(new UtilityAiState { CurrentDecisionId = -1 });
+        }
+
+        private static void SetUtilityAiDecisionTrace(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "UtilityAiDecisionTrace");
+            entity.Add(new UtilityAiDecisionTrace());
+        }
+
+        private static void SetUtilityAiCombatMemory(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "UtilityAiCombatMemory");
+            entity.Add(new UtilityAiCombatMemory());
+        }
+
+        private static void SetUtilityAiTargetPriority(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("UtilityAiTargetPriority requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "UtilityAiTargetPriority", "Bucket", "bucket");
+            ValidateProperties(obj, "UtilityAiTargetPriority", "bucket");
+
+            string bucketKey = RequireStringProperty(obj, "bucket", "UtilityAiTargetPriority");
+            entity.Add(new UtilityAiTargetPriority { Bucket = ParseUtilityAiTargetPriorityBucket(bucketKey, "UtilityAiTargetPriority.bucket") });
+        }
+
+        private static void SetActuatorReadiness(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ActuatorReadiness requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "ActuatorReadiness", "actuatorId", "actuator");
+            RejectNumericIdAuthoring(obj, "ActuatorReadiness", "ActuatorId", "actuator");
+            ValidateProperties(
+                obj,
+                "ActuatorReadiness",
+                "actuator",
+                "initialReady01",
+                "initialBlockReason",
+                "initialEtaSteps",
+                "requiresPreparation");
+
+            int actuatorId = ResolveUtilityAiActuator(RequireStringProperty(obj, "actuator", "ActuatorReadiness"), "ActuatorReadiness.actuator");
+            float ready01 = TryReadFloatProperty(obj, "initialReady01", out float authoredReady)
+                ? authoredReady
+                : 1f;
+            ValidateUnitFloat(ready01, "ActuatorReadiness.initialReady01");
+
+            entity.Add(new ActuatorReadiness
+            {
+                ActuatorId = actuatorId,
+                Ready01 = ready01,
+                BlockReason = TryReadIntProperty(obj, out int blockReason, "initialBlockReason") ? blockReason : 0,
+                EtaSteps = TryReadIntProperty(obj, out int etaSteps, "initialEtaSteps") ? etaSteps : 0,
+                RequiresPreparation = TryReadBooleanByteProperty(obj, "requiresPreparation", out byte requiresPreparation) ? requiresPreparation : (byte)0,
+            });
+        }
+
+        private static void SetAimGate(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AimGate requires an object payload.");
+            }
+
+            RejectNumericIdAuthoring(obj, "AimGate", "actuatorId", "actuator");
+            RejectNumericIdAuthoring(obj, "AimGate", "ActuatorId", "actuator");
+            ValidateProperties(obj, "AimGate", "actuator", "initialReady01", "initialBlockReason");
+
+            int actuatorId = ResolveUtilityAiActuator(RequireStringProperty(obj, "actuator", "AimGate"), "AimGate.actuator");
+            float ready01 = TryReadFloatProperty(obj, "initialReady01", out float authoredReady)
+                ? authoredReady
+                : 1f;
+            ValidateUnitFloat(ready01, "AimGate.initialReady01");
+
+            entity.Add(new AimGate
+            {
+                ActuatorId = actuatorId,
+                Ready01 = ready01,
+                BlockReason = TryReadIntProperty(obj, out int blockReason, "initialBlockReason") ? blockReason : 0,
+            });
         }
 
         private static void SetSelectionSelectableState(Entity entity, JsonNode data)
@@ -401,6 +560,88 @@ namespace Ludots.Core.Config
                 }
             }
             entity.Add(buffer);
+        }
+
+        private static void SetAbilityProgressionRequirements(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AbilityProgressionRequirements requires an object payload.");
+            }
+
+            ValidateProperties(obj, "AbilityProgressionRequirements", "useRequirement", "showRequirement");
+            var requirements = default(AbilityProgressionRequirements);
+            if (obj.TryGetPropertyValue("useRequirement", out JsonNode useNode))
+            {
+                string requirementName = ReadStringNode(useNode, "AbilityProgressionRequirements.useRequirement");
+                requirements.UseRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.useRequirement");
+            }
+
+            if (obj.TryGetPropertyValue("showRequirement", out JsonNode showNode))
+            {
+                string requirementName = ReadStringNode(showNode, "AbilityProgressionRequirements.showRequirement");
+                requirements.ShowRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.showRequirement");
+            }
+
+            entity.Add(requirements);
+        }
+
+        private static void SetProgressionStateBuffer(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "ProgressionStateBuffer");
+            entity.Add(new ProgressionStateBuffer());
+        }
+
+        private static void SetProgressionScopeHost(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<ProgressionStateBuffer>())
+            {
+                entity.Add(new ProgressionStateBuffer());
+            }
+
+            if (!entity.Has<ScopeMembershipRevision>())
+            {
+                entity.Add(new ScopeMembershipRevision());
+            }
+
+            var authoring = entity.Has<ScopeHostAuthoring>()
+                ? entity.Get<ScopeHostAuthoring>()
+                : default;
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeHost");
+            if (entity.Has<ScopeHostAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
+        }
+
+        private static void SetProgressionScopeBinding(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<ScopeRefBuffer>())
+            {
+                entity.Add(new ScopeRefBuffer());
+            }
+
+            if (!entity.Has<ScopeMemberTag>())
+            {
+                entity.Add(new ScopeMemberTag());
+            }
+
+            var authoring = entity.Has<ScopeBindingAuthoring>()
+                ? entity.Get<ScopeBindingAuthoring>()
+                : default;
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeBinding");
+            if (entity.Has<ScopeBindingAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
         }
 
         private static byte ParseSelectionEnabled(JsonNode node, string context)
@@ -920,6 +1161,23 @@ namespace Ludots.Core.Config
             };
         }
 
+        private static bool TryReadBooleanByteProperty(JsonObject obj, string name, out byte value)
+        {
+            if (!obj.TryGetPropertyValue(name, out var node))
+            {
+                value = 0;
+                return false;
+            }
+
+            if (node == null || node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"{name} requires a non-null boolean value.");
+            }
+
+            value = ParseBooleanByte(node, name);
+            return true;
+        }
+
         private static bool TryReadIntProperty(JsonObject obj, out int value, string name)
         {
             if (!obj.TryGetPropertyValue(name, out var node))
@@ -945,6 +1203,193 @@ namespace Ludots.Core.Config
 
             value = node.GetValue<int>();
             return true;
+        }
+
+        private static bool TryReadFloatProperty(JsonObject obj, string name, out float value)
+        {
+            if (!obj.TryGetPropertyValue(name, out var node))
+            {
+                value = 0f;
+                return false;
+            }
+
+            if (node == null)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires a non-null numeric value.");
+            }
+
+            if (node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires a non-null numeric value.");
+            }
+
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires a numeric value.");
+            }
+
+            value = node.GetValue<float>();
+            return true;
+        }
+
+        private static void ValidateUnitFloat(float value, string context)
+        {
+            if (float.IsNaN(value) || value < 0f || value > 1f)
+            {
+                throw new InvalidOperationException($"{context} must be between 0 and 1.");
+            }
+        }
+
+        private static int ResolveUtilityAiActuator(string actuatorKey, string context)
+        {
+            if (!_utilityAiAuthoring.TryGetActuatorId(actuatorKey, out int actuatorId) || actuatorId < 0)
+            {
+                throw new InvalidOperationException($"{context} references unknown Utility AI actuator '{actuatorKey}'.");
+            }
+
+            return actuatorId;
+        }
+
+        private static int ParseUtilityAiTargetPriorityBucket(string raw, string context)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty bucket key.");
+            }
+
+            return raw switch
+            {
+                "None" => (int)UtilityAiTargetPriorityBucket.None,
+                "Low" => (int)UtilityAiTargetPriorityBucket.Low,
+                "Normal" => (int)UtilityAiTargetPriorityBucket.Normal,
+                "High" => (int)UtilityAiTargetPriorityBucket.High,
+                "Critical" => (int)UtilityAiTargetPriorityBucket.Critical,
+                _ => throw new InvalidOperationException($"{context} references unknown target priority bucket '{raw}'.")
+            };
+        }
+
+        private static void RejectNumericIdAuthoring(JsonObject obj, string componentName, string numericProperty, string keyProperty)
+        {
+            if (obj.ContainsKey(numericProperty))
+            {
+                throw new InvalidOperationException($"{componentName} does not support '{numericProperty}'. Use '{keyProperty}' with a string key.");
+            }
+        }
+
+        private static void AddProgressionScopeEntries(ref ScopeHostAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddProgressionScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddProgressionScopeEntries(ref ScopeBindingAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddProgressionScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddProgressionScopeEntry(ref ScopeHostAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeHost capacity.");
+            }
+        }
+
+        private static void AddProgressionScopeEntry(ref ScopeBindingAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeBinding capacity.");
+            }
+        }
+
+        private static int ResolveProgressionRequirementId(string requirementName, string context)
+        {
+            int requirementId = ProgressionRequirementIdRegistry.GetId(requirementName);
+            if (requirementId <= 0)
+            {
+                throw new InvalidOperationException($"{context} references unknown progression requirement '{requirementName}'.");
+            }
+
+            return requirementId;
+        }
+
+        private static string ReadStringNode(JsonNode node, string context)
+        {
+            if (node == null || node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"{context} requires a non-null string value.");
+            }
+
+            if (node.GetValueKind() != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{context} requires a string value.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty string value.");
+            }
+
+            return value;
         }
 
         private static void RequireEmptyObject(JsonNode data, string context)

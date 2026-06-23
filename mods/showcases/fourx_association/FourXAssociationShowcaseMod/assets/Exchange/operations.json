@@ -1,0 +1,20 @@
+[
+  {
+    "id": "fourx_association.trade_supply",
+    "relationshipRequirements": [
+      {
+        "source": "Source",
+        "target": "Target",
+        "type": "FourXAssociation.Diplomacy",
+        "flag": "FourXAssociation.TradePact",
+        "flagValue": true
+      }
+    ],
+    "inputs": [
+      { "kind": "AttributeCost", "actor": "Source", "attribute": "Gold", "quantity": 5 }
+    ],
+    "outputs": [
+      { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "fourx_association_supply", "quantity": 1 }
+    ]
+  }
+]

@@ -8,6 +8,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
@@ -267,9 +268,7 @@ public sealed class SelectionKnowledgeProjectionTests
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
             new RelationshipChangeBuffer(capacity: 4));
-        var collectionKeys = (StringIntRegistry)globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name];
         var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-        int disclosedKeyId = collectionKeys.Register("test.disclosed.live");
         relationships.EnsureLink(viewer, ally, intelTypeId);
         collections.Replace(
             ally,
@@ -278,12 +277,29 @@ public sealed class SelectionKnowledgeProjectionTests
         var store = new KnowledgeProjectionStore();
         store.Upsert(viewer, directLive, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
         store.Upsert(viewer, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer));
-        var grants = new KnowledgeRelationCollectionGrantStore();
-        grants.Upsert(new KnowledgeRelationCollectionGrant(
-            intelTypeId,
-            disclosedKeyId,
-            CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, ally)));
-        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, grants, store);
+        var catalog = RelationshipCatalogRuntime.Compile(
+            new RelationshipCatalogConfig
+            {
+                KnowledgeGrants =
+                {
+                    new RelationshipKnowledgeGrantConfig
+                    {
+                        Id = "test.intel.disclosed.live",
+                        TypeId = "Intel",
+                        CollectionKey = "test.disclosed.live",
+                        Presence = KnowledgePresence.LiveVisible,
+                        Position = KnowledgePositionAccess.Live,
+                        AttributeIds = { 1 },
+                        RelationshipTypeIds = { 2 },
+                        ObservedTick = 1,
+                        ConfidencePermille = 900
+                    }
+                }
+            },
+            relationshipTypes,
+            new RelationshipMetricRegistry(),
+            collections);
+        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, catalog, store);
         globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector);
     }
 

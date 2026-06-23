@@ -10,13 +10,9 @@
     "unitCreation": {
       "unitType": "Unit.Outpost",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
       "offsetRadius": 80,
-      "placementRadiusCm": 80,
-      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
       "onSpawnEffect": "Effect.4X.OutpostComplete"
     }
   },
@@ -65,8 +61,7 @@
       {
         "tag": "Status.Researching",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },
@@ -78,17 +73,11 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 0,
-      "periodTicks": 0,
-      "clockId": "FixedFrame"
-    },
     "grantedTags": [
       {
-        "tag": "Tech.Agriculture",
+        "tag": "Progression.Agriculture",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ],
     "modifiers": [
@@ -107,17 +96,11 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 0,
-      "periodTicks": 0,
-      "clockId": "FixedFrame"
-    },
     "grantedTags": [
       {
         "tag": "Status.Allied",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ]
   },

@@ -1,0 +1,23 @@
+{
+  "mapId": "fog_vision_decay_showcase",
+  "header": "Fog Vision Decay",
+  "summary": "A scout patrol reveals enemy contacts, leaves last-known ghosts, and lets stale records expire under configured maintenance.",
+  "controls": "Space pause | N step | C compact",
+  "targetCount": 320,
+  "liveWindowCount": 18,
+  "patrolStride": 9,
+  "knownTtlTicks": 10,
+  "liveExpiryOffsetTicks": 128,
+  "confidencePermille": 850,
+  "capacityCeiling": 192,
+  "markerColumns": 32,
+  "markerSpacingCm": 900,
+  "originXCm": 2000,
+  "originYCm": 2000,
+  "maintenance": {
+    "expirePeriodTicks": 1,
+    "compactPeriodTicks": 2,
+    "compactInactivePermilleThreshold": 250,
+    "compactInactiveCountThreshold": 24
+  }
+}

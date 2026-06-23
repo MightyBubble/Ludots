@@ -42,6 +42,14 @@
       }
     },
     {
+      "name": "progression_scope",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
+        "projectPath": "ProgressionScopeShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "spatial_bounds_showcase",
       "target": {
         "type": "path",
@@ -159,6 +167,22 @@
         "type": "path",
         "value": "mods/browser/BrowserCefRuntimeMod",
         "projectPath": "BrowserCefRuntimeMod.csproj"
+      }
+    },
+    {
+      "name": "utility_autocast_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod",
+        "projectPath": "UtilityAutocastShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "combat_stance_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
+        "projectPath": "CombatStanceShowcaseMod.csproj"
       }
     }
   ],

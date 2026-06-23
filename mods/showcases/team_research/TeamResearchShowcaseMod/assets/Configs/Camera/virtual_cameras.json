@@ -1,0 +1,14 @@
+[
+  {
+    "id": "TeamResearch.Camera.Overview",
+    "viewMode": "MapDefault",
+    "targetXCm": 6400,
+    "targetYCm": 6400,
+    "yawDeg": 180,
+    "pitchDeg": 48,
+    "distanceCm": 9800,
+    "fovYDeg": 60,
+    "nearCm": 20,
+    "farCm": 400000
+  }
+]

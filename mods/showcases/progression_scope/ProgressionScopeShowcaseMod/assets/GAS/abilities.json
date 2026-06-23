@@ -1,0 +1,66 @@
+[
+  {
+    "id": "Ability.Showcase.TrainMilitia",
+    "useRequirement": "Req.Showcase.CityDrill.Use",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Militia",
+      "iconGlyph": "MI",
+      "accentColor": "#2563EB",
+      "hintText": "City-scoped drill is required by the barracks city binding."
+    }
+  },
+  {
+    "id": "Ability.Showcase.HiddenElite",
+    "showRequirement": "Req.Showcase.FactionMandate.Use",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Raise Elite",
+      "iconGlyph": "EL",
+      "accentColor": "#DC2626",
+      "hintText": "Faction mandate controls visibility, matching SC2 Show Requirement semantics."
+    }
+  },
+  {
+    "id": "Ability.Showcase.RegionStrategist",
+    "useRequirement": "Req.Showcase.RegionStrategist.Use",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Regional Stratagem",
+      "iconGlyph": "ST",
+      "accentColor": "#059669",
+      "hintText": "Unlocked when a strategist-tagged hero belongs to the same region scope."
+    }
+  },
+  {
+    "id": "Ability.Showcase.ProvinceConvoy",
+    "useRequirement": "Req.Showcase.ProvinceLogistics.Use",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Province Convoy",
+      "iconGlyph": "CV",
+      "accentColor": "#9333EA",
+      "hintText": "Named province scope demonstrates declared custom scope keys."
+    }
+  }
+]

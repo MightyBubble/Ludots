@@ -13,6 +13,7 @@ namespace Ludots.Core.Gameplay.AI.Config
         public readonly GoapGoalTable256 GoapGoals;
         public readonly HtnDomainCompiled256 HtnDomain;
         public readonly HtnRootTable HtnRoots;
+        public readonly UtilityAiCompiledRuntime UtilityRuntime;
 
         public AiCompiledRuntime(
             AtomRegistry atoms,
@@ -21,7 +22,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             ActionLibraryCompiled256 actionLibrary,
             GoapGoalTable256 goapGoals,
             HtnDomainCompiled256 htnDomain,
-            HtnRootTable htnRoots)
+            HtnRootTable htnRoots,
+            UtilityAiCompiledRuntime utilityRuntime)
         {
             Atoms = atoms;
             ProjectionTable = projectionTable;
@@ -30,6 +32,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             GoapGoals = goapGoals;
             HtnDomain = htnDomain;
             HtnRoots = htnRoots;
+            UtilityRuntime = utilityRuntime;
         }
     }
 }

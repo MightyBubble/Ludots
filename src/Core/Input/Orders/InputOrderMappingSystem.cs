@@ -243,6 +243,7 @@ namespace Ludots.Core.Input.Orders
         {
             _input = input ?? throw new ArgumentNullException(nameof(input));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            InputOrderMappingLoader.Validate(_config, "InputOrderMappingSystem config");
             
             _mappingsByActionId = new Dictionary<string, InputOrderMapping>();
             _userOverrides = new Dictionary<string, InputOrderMapping>();
@@ -250,16 +251,17 @@ namespace Ludots.Core.Input.Orders
             // Index mappings by action ID
             foreach (var mapping in config.Mappings)
             {
-                if (!string.IsNullOrEmpty(mapping.ActionId))
-                {
-                    _mappingsByActionId[mapping.ActionId] = mapping;
-                }
+                _mappingsByActionId.Add(mapping.ActionId, mapping);
             }
         }
         
         // Callback setters (unchanged API + new ones)
 
-        public void SetOrderTypeKeyResolver(OrderTypeKeyResolver resolver) => _orderTypeKeyResolver = resolver;
+        public void SetOrderTypeKeyResolver(OrderTypeKeyResolver resolver)
+        {
+            _orderTypeKeyResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
+            ValidateAllOrderTypeKeys();
+        }
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
         public void SetSelectedEntityProvider(SelectedEntityProvider provider) => _selectedEntityProvider = provider;
@@ -738,8 +740,7 @@ namespace Ludots.Core.Input.Orders
         {
             order = default;
             if (!HasExplicitLocalPlayer()) return false;
-            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey + orderTypeSuffix);
-            if (orderTypeId <= 0) return false;
+            int orderTypeId = RequireOrderTypeId(mapping, orderTypeSuffix);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
 
@@ -797,6 +798,25 @@ namespace Ludots.Core.Input.Orders
             return true;
         }
 
+        private int RequireOrderTypeId(InputOrderMapping mapping, string orderTypeSuffix = "")
+        {
+            string orderTypeKey = mapping.OrderTypeKey + orderTypeSuffix;
+            if (string.IsNullOrWhiteSpace(orderTypeKey))
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' must define non-empty orderTypeKey.");
+            }
+
+            int orderTypeId = _orderTypeKeyResolver!(orderTypeKey);
+            if (orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' orderTypeKey '{orderTypeKey}' is not registered.");
+            }
+
+            return orderTypeId;
+        }
+
         private InputOrderMapping ResolveEffectiveMapping(string actionId, InputOrderMapping mapping, out Entity resolvedActor)
         {
             var effectiveMapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
@@ -843,11 +863,7 @@ namespace Ludots.Core.Input.Orders
             order = default;
             if (!HasExplicitLocalPlayer()) return false;
 
-            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
-            if (orderTypeId <= 0)
-            {
-                return false;
-            }
+            int orderTypeId = RequireOrderTypeId(mapping);
 
             Entity actor = ResolvePrimaryActor(mapping);
             if (!_contextScoredProvider!(actor, mapping, hoveredEntity, out var resolution))
@@ -877,8 +893,7 @@ namespace Ludots.Core.Input.Orders
             order = default;
             if (!HasExplicitLocalPlayer()) return false;
 
-            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
-            if (orderTypeId <= 0) return false;
+            int orderTypeId = RequireOrderTypeId(mapping);
 
             Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
@@ -991,8 +1006,7 @@ namespace Ludots.Core.Input.Orders
             order = default;
             if (!HasExplicitLocalPlayer()) return false;
             
-            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
-            if (orderTypeId <= 0) return false;
+            int orderTypeId = RequireOrderTypeId(mapping);
             
             Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
@@ -1021,8 +1035,7 @@ namespace Ludots.Core.Input.Orders
             order = default;
             if (!HasExplicitLocalPlayer()) return false;
             
-            int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
-            if (orderTypeId <= 0) return false;
+            int orderTypeId = RequireOrderTypeId(mapping);
             
             Entity actor = ResolvePrimaryActor(mapping);
             
@@ -1250,7 +1263,11 @@ namespace Ludots.Core.Input.Orders
                 CursorTargetPolicy = original.CursorTargetPolicy,
                 CursorTargetRangeCm = original.CursorTargetRangeCm
             };
-            
+
+            InputOrderMappingLoader.Validate(
+                new InputOrderMappingConfig { Mappings = new List<InputOrderMapping> { newMapping } },
+                $"input mapping override '{actionId}'");
+            ValidateOrderTypeKeys(newMapping);
             _userOverrides[actionId] = newMapping;
         }
         
@@ -1418,8 +1435,43 @@ namespace Ludots.Core.Input.Orders
             {
                 if (!string.IsNullOrEmpty(mapping.ActionId))
                 {
+                    if (!_mappingsByActionId.ContainsKey(mapping.ActionId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Input mapping override references unknown actionId '{mapping.ActionId}'.");
+                    }
+
+                    ValidateOrderTypeKeys(mapping);
                     _userOverrides[mapping.ActionId] = mapping;
                 }
+            }
+        }
+
+        private void ValidateAllOrderTypeKeys()
+        {
+            foreach (var mapping in _mappingsByActionId.Values)
+            {
+                ValidateOrderTypeKeys(mapping);
+            }
+
+            foreach (var mapping in _userOverrides.Values)
+            {
+                ValidateOrderTypeKeys(mapping);
+            }
+        }
+
+        private void ValidateOrderTypeKeys(InputOrderMapping mapping)
+        {
+            if (_orderTypeKeyResolver == null)
+            {
+                return;
+            }
+
+            RequireOrderTypeId(mapping);
+            if (mapping.Trigger == InputTriggerType.Held && mapping.HeldPolicy == HeldPolicy.StartEnd)
+            {
+                RequireOrderTypeId(mapping, ".Start");
+                RequireOrderTypeId(mapping, ".End");
             }
         }
 

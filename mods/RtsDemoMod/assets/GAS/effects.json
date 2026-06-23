@@ -31,7 +31,8 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -52,7 +53,8 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -73,7 +75,8 @@
       {
         "tag": "State.Rts.Constructing",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -94,7 +97,8 @@
       {
         "tag": "State.Rts.Warping",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -105,6 +109,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -125,6 +130,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -145,6 +151,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -163,9 +170,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_war3_lumber_mill_site",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -178,9 +186,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_war3_guard_tower_site",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -193,8 +202,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_war3_footman",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 280
+      "offsetRadius": 280,
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -204,6 +215,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Credits",
@@ -219,6 +231,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Credits",
@@ -234,6 +247,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Credits",
@@ -249,6 +263,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Credits",
@@ -267,9 +282,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_ra2_power_plant",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -282,9 +298,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_ra2_refinery",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -297,8 +314,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_ra2_rhino",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 340
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -308,6 +327,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -323,6 +343,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -343,6 +364,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -361,8 +383,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_sc2_zealot",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 260
+      "offsetRadius": 260,
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -373,11 +397,17 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "grantedTags": [
       {
-        "tag": "Tech.Rts.WarpGate",
+        "tag": "Progression.Rts.WarpGate",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -391,9 +421,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_sc2_zealot",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.WarpIn"
+      "onSpawnEffect": "Effect.Rts.Shared.WarpIn",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -403,6 +434,7 @@
     ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "modifiers": [
       {
         "attribute": "Minerals",
@@ -421,9 +453,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "templateId": "rts_zerg_spawning_pool",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 0,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg",
+      "copySourcePlayerOwner": true
     }
   }
 ]

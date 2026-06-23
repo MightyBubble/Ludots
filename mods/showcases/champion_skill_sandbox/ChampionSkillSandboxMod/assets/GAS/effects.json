@@ -103,21 +103,21 @@
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.MysticShotHit",
         "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
         "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.TrueshotBarrageHit",
         "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
       }
@@ -237,7 +237,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Champion.Garen.Courage"
+      "tag": "State.Champion.Garen.Courage",
+      "sense": "Raw"
     }
   },
   {
@@ -350,7 +351,8 @@
       "templateId": "champion_skill_sandbox_runic_beacon",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {
@@ -367,7 +369,8 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.Geomancer.RuneFieldPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {
@@ -426,7 +429,8 @@
       "templateId": "champion_skill_sandbox_stone_pillar",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {
@@ -524,7 +528,9 @@
       "range": 880,
       "arcHeight": 0,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
-      "collisionRelationFilter": "All"
+      "presentationEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "travelMode": "Legacy",
+      "impactPolicy": "Legacy"
     }
   },
   {
@@ -733,7 +739,9 @@
       "range": 1400,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.FireMage.FireballResolve",
-      "collisionRelationFilter": "All"
+      "presentationEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "travelMode": "Legacy",
+      "impactPolicy": "Legacy"
     }
   },
   {
@@ -787,7 +795,9 @@
       "range": 1500,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
-      "collisionRelationFilter": "All"
+      "presentationEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "travelMode": "Legacy",
+      "impactPolicy": "Legacy"
     }
   },
   {
@@ -857,7 +867,8 @@
       "templateId": "champion_skill_sandbox_spell_beacon",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {
@@ -874,7 +885,8 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GravityWellPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {
@@ -954,7 +966,8 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter"
     }
   },
   {

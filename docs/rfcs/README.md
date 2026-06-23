@@ -24,6 +24,10 @@
   * 选择真相改为 selection container 与 relation membership，并已回写到架构文档
 * [RFC-0059 路网移动 Order、Nav Runtime 与多策略路径演示统一方案](RFC-0059-road-order-nav-runtime-unification.md)
   * 提议把玩家 move order、nav runtime path、move sink 和 timeout/arrival 分层，并用 unified showcase 演示
+* [RFC-0060 AI Utility Autocast 契约收敛](RFC-0060-ai-utility-autocast-contract.md)
+  * 定稿 Intent / Behavior / Deliberation 三层、普攻=autocast、AI Order/GAS 边界与加载期 fail-fast 契约
+* [RFC-0060 通用存档系统](RFC-0060-universal-save-system.md)
+  * Epic #292 引用的通用存档 RFC 回写；编号与 AI Utility Autocast 历史文件重叠，正式结论以 `gitbook/architecture/save-system.md` 为准
 
 ## 2 使用规则
 

@@ -26,7 +26,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "InteractionShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
 
             var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "InteractionShowcaseMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" }),
                 assetsRoot);
             engine.Start();
             engine.LoadMap("interaction_showcase_hub");

@@ -4,9 +4,13 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -19,6 +23,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly ExchangeOperationRegistry? _exchangeOperations;
+        private readonly ScopeKeyRegistry? _progressionScopeKeys;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -32,12 +38,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigPipeline pipeline,
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
-            TargetDispatchPresetRegistry targetDispatchPresets = null)
+            TargetDispatchPresetRegistry targetDispatchPresets = null,
+            ExchangeOperationRegistry? exchangeOperations = null,
+            ScopeKeyRegistry? progressionScopeKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _exchangeOperations = exchangeOperations;
+            _progressionScopeKeys = progressionScopeKeys;
         }
 
         public void Load(
@@ -132,14 +142,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 durationTicks = RequireInt(cfg.Duration.DurationTicks, cfg.Id, relativePath, "duration.durationTicks");
                 periodTicks = RequireInt(cfg.Duration.PeriodTicks, cfg.Id, relativePath, "duration.periodTicks");
                 clockId = ParseClockId(RequireString(cfg.Duration.ClockId, cfg.Id, relativePath, "duration.clockId"));
+                if (lifetimeKind == EffectLifetimeKind.After && durationTicks <= 0)
+                {
+                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' requires duration.durationTicks > 0.");
+                }
+                if (lifetimeKind == EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' must omit the duration block.");
+                }
+
+                if (lifetimeKind == EffectLifetimeKind.Infinite &&
+                    durationTicks == 0 &&
+                    periodTicks == 0 &&
+                    clockId == GasClockId.FixedFrame)
+                {
+                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' must omit the default zero duration block.");
+                }
+            }
+            else if (lifetimeKind == EffectLifetimeKind.After)
+            {
+                throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' requires an explicit duration block.");
             }
             else
             {
-                if (lifetimeKind != EffectLifetimeKind.Instant)
-                {
-                    throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' requires an explicit duration block.");
-                }
-
                 durationTicks = 0;
                 periodTicks = 0;
             }
@@ -258,6 +283,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var progressionScope = ScopeKey.Self;
+            var progressionChange = ProgressionLevelChange.Complete;
+            int progressionId = 0;
 
             if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
             {
@@ -295,6 +323,52 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType Relation requires a 'relation' block.");
                 }
+            }
+
+            if (presetType == EffectPresetType.Exchange)
+            if (presetType == EffectPresetType.Exchange)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Exchange requires lifetime=Instant.");
+                }
+
+                if (!configParams.TryGetInt(EffectParamKeys.ExchangeOperationId, out int operationId) || operationId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Exchange requires configParams \"_ep.exchangeOperationId\" with type \"Int\".");
+                }
+            }
+
+            if (cfg.Progression != null && presetType != EffectPresetType.CompleteProgression)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'progression' block is only valid when presetType=CompleteProgression.");
+            }
+            if (presetType == EffectPresetType.CompleteProgression)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires lifetime=Instant.");
+                }
+                if (cfg.Progression == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires a 'progression' block.");
+                }
+
+                string progressionName = RequireString(cfg.Progression.Id, cfg.Id, relativePath, "progression.id");
+                progressionId = ProgressionIdRegistry.GetId(progressionName);
+                if (progressionId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: progression.id '{progressionName}' is not registered.");
+                }
+
+                progressionScope = ResolveProgressionScope(cfg.Progression.Scope, cfg.Id, relativePath);
+                progressionChange = CompileProgressionChange(cfg.Progression, cfg.Id, relativePath);
             }
 
             if (cfg.Projectile != null && presetType != EffectPresetType.LaunchProjectile)
@@ -355,6 +429,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                ProgressionScope = progressionScope,
+                ProgressionChange = progressionChange,
+                ProgressionId = progressionId,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -384,7 +461,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             int totalDistanceCm = RequireInt(cfg.TotalDistanceCm, ownerId, relativePath, "displacement.totalDistanceCm");
             int totalDurationTicks = RequireInt(cfg.TotalDurationTicks, ownerId, relativePath, "displacement.totalDurationTicks");
-            int fixedDirectionDeg = RequireInt(cfg.FixedDirectionDeg, ownerId, relativePath, "displacement.fixedDirectionDeg");
+            int fixedDirectionDeg = directionMode == DisplacementDirectionMode.Fixed
+                ? RequireInt(cfg.FixedDirectionDeg, ownerId, relativePath, "displacement.fixedDirectionDeg")
+                : cfg.FixedDirectionDeg ?? 0;
+            if (directionMode != DisplacementDirectionMode.Fixed)
+            {
+                RequireAbsent(cfg.FixedDirectionDeg, ownerId, relativePath, "displacement.fixedDirectionDeg", $"directionMode={directionMode}");
+            }
             bool overrideNavigation = RequireBool(cfg.OverrideNavigation, ownerId, relativePath, "displacement.overrideNavigation");
 
             if (totalDistanceCm <= 0)
@@ -460,42 +543,30 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             if (cfg == null) return default;
 
-            int impactId = 0;
-            string impactEffect = RequireString(cfg.ImpactEffect, ownerId, relativePath, "projectile.impactEffect");
-            if (!string.IsNullOrWhiteSpace(impactEffect))
-            {
-                impactId = EffectTemplateIdRegistry.GetId(impactEffect);
-                if (impactId <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactEffect references unknown effect template '{impactEffect}'.");
-                }
-            }
-
-            int hitId = 0;
-            string hitEffect = RequireString(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect");
-            if (!string.IsNullOrWhiteSpace(hitEffect))
-            {
-                hitId = EffectTemplateIdRegistry.GetId(hitEffect);
-                if (hitId <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.hitEffect references unknown effect template '{hitEffect}'.");
-                }
-            }
-
-            int presentationId = 0;
-            string presentationEffect = RequireString(cfg.PresentationEffect, ownerId, relativePath, "projectile.presentationEffect");
-            if (!string.IsNullOrWhiteSpace(presentationEffect))
-            {
-                presentationId = EffectTemplateIdRegistry.GetId(presentationEffect);
-                if (presentationId <= 0)
-                {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.presentationEffect references unknown effect template '{presentationEffect}'.");
-                }
-            }
-
             ProjectileTravelMode travelMode = ParseProjectileTravelMode(cfg.TravelMode);
             ProjectileImpactPolicy impactPolicy = ParseProjectileImpactPolicy(cfg.ImpactPolicy);
-            int collisionHalfWidth = RequireInt(cfg.CollisionHalfWidth, ownerId, relativePath, "projectile.collisionHalfWidth");
+            bool isLegacyTravel = travelMode == ProjectileTravelMode.Legacy;
+            bool isLegacyImpact = impactPolicy == ProjectileImpactPolicy.Legacy;
+            if (isLegacyTravel != isLegacyImpact)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode and projectile.impactPolicy must both be Legacy or both be non-Legacy.");
+            }
+
+            int impactId = ResolveOptionalEffectTemplateId(cfg.ImpactEffect, ownerId, relativePath, "projectile.impactEffect");
+            int hitId = ResolveOptionalEffectTemplateId(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect");
+            int presentationId = ResolveOptionalEffectTemplateId(cfg.PresentationEffect, ownerId, relativePath, "projectile.presentationEffect");
+            int collisionHalfWidth = cfg.CollisionHalfWidth ?? 0;
+            RelationshipFilter collisionRelationFilter = RelationshipFilter.All;
+            if (isLegacyImpact)
+            {
+                RequireAbsent(cfg.HitEffect, ownerId, relativePath, "projectile.hitEffect", "impactPolicy=Legacy");
+                RequireAbsent(cfg.CollisionRelationFilter, ownerId, relativePath, "projectile.collisionRelationFilter", "impactPolicy=Legacy");
+                RequireAbsent(cfg.CollisionHalfWidth, ownerId, relativePath, "projectile.collisionHalfWidth", "impactPolicy=Legacy");
+                RequireAbsent(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource", "impactPolicy=Legacy");
+                RequireAbsent(cfg.MaxHitCount, ownerId, relativePath, "projectile.maxHitCount", "impactPolicy=Legacy");
+            }
+
             if (impactPolicy != ProjectileImpactPolicy.Legacy)
             {
                 if (hitId <= 0)
@@ -507,6 +578,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy '{impactPolicy}' requires projectile.collisionHalfWidth > 0.");
                 }
+
+                collisionRelationFilter = ParseRequiredRelationshipFilter(
+                    cfg.CollisionRelationFilter,
+                    ownerId,
+                    "projectile.collisionRelationFilter",
+                    relativePath);
+            }
+            else if (!string.IsNullOrWhiteSpace(cfg.CollisionRelationFilter))
+            {
+                collisionRelationFilter = RelationshipFilterUtil.Parse(cfg.CollisionRelationFilter);
+            }
+
+            RejectOptionalFalse(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource");
+            if (cfg.MaxHitCount is < 0)
+            {
+                throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: projectile.maxHitCount must be non-negative.");
             }
 
             return new ProjectileDescriptor
@@ -520,14 +607,31 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 TravelMode = travelMode,
                 ImpactPolicy = impactPolicy,
                 CollisionHalfWidthCm = collisionHalfWidth,
-                CollisionRelationFilter = ParseRequiredRelationshipFilter(
-                    cfg.CollisionRelationFilter,
-                    ownerId,
-                    "projectile.collisionRelationFilter",
-                    relativePath),
-                CollisionExcludeSource = RequireBool(cfg.CollisionExcludeSource, ownerId, relativePath, "projectile.collisionExcludeSource"),
-                MaxHitCount = RequireInt(cfg.MaxHitCount, ownerId, relativePath, "projectile.maxHitCount")
+                CollisionRelationFilter = collisionRelationFilter,
+                CollisionExcludeSource = cfg.CollisionExcludeSource ?? false,
+                MaxHitCount = cfg.MaxHitCount ?? 0
             };
+        }
+
+        private static int ResolveOptionalEffectTemplateId(string? raw, string effectId, string path, string fieldPath)
+        {
+            if (raw == null)
+            {
+                return 0;
+            }
+
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} must be omitted or a semantic key.");
+            }
+
+            int templateId = EffectTemplateIdRegistry.GetId(raw);
+            if (templateId <= 0)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} references unknown effect template '{raw}'.");
+            }
+
+            return templateId;
         }
 
         private static ProjectileTravelMode ParseProjectileTravelMode(string? raw)
@@ -595,20 +699,53 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
+            UnitCreationPlacementPattern placementPattern = ParseUnitCreationPlacementPattern(cfg.PlacementPattern);
+            UnitCreationFacingPattern facingPattern = string.IsNullOrWhiteSpace(cfg.FacingPattern)
+                ? UnitCreationFacingPattern.PreserveTemplate
+                : ParseUnitCreationFacingPattern(cfg.FacingPattern);
+            int offsetRadius = cfg.OffsetRadius ?? 0;
+            int placementRadiusCm = cfg.PlacementRadiusCm ?? 0;
+            int placementStartAngleDeg = cfg.PlacementStartAngleDeg ?? 0;
+
+            if (placementPattern == UnitCreationPlacementPattern.Scatter)
+            {
+                RequireAbsent(cfg.FacingPattern, ownerId, relativePath, "unitCreation.facingPattern", "placementPattern=Scatter");
+                RequireAbsent(cfg.PlacementRadiusCm, ownerId, relativePath, "unitCreation.placementRadiusCm", "placementPattern=Scatter");
+                RequireAbsent(cfg.PlacementStartAngleDeg, ownerId, relativePath, "unitCreation.placementStartAngleDeg", "placementPattern=Scatter");
+                offsetRadius = cfg.OffsetRadius ?? 0;
+                if (offsetRadius < 0)
+                {
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unitCreation.offsetRadius must be non-negative.");
+                }
+            }
+            else if (placementPattern == UnitCreationPlacementPattern.Circle)
+            {
+                RequireAbsent(cfg.OffsetRadius, ownerId, relativePath, "unitCreation.offsetRadius", "placementPattern=Circle");
+                placementRadiusCm = RequireInt(cfg.PlacementRadiusCm, ownerId, relativePath, "unitCreation.placementRadiusCm");
+                placementStartAngleDeg = RequireInt(cfg.PlacementStartAngleDeg, ownerId, relativePath, "unitCreation.placementStartAngleDeg");
+                if (placementRadiusCm <= 0)
+                {
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unitCreation.placementRadiusCm must be > 0 when placementPattern=Circle.");
+                }
+            }
+
+            RejectOptionalFalse(cfg.CopySourcePlayerOwner, ownerId, relativePath, "unitCreation.copySourcePlayerOwner");
+            RejectOptionalFalse(cfg.LinkSourceAsParent, ownerId, relativePath, "unitCreation.linkSourceAsParent");
+
             return new UnitCreationDescriptor
             {
-                PlacementPattern = ParseUnitCreationPlacementPattern(cfg.PlacementPattern),
-                FacingPattern = ParseUnitCreationFacingPattern(cfg.FacingPattern),
+                PlacementPattern = placementPattern,
+                FacingPattern = facingPattern,
                 UnitTypeId = unitTypeId,
                 TemplateId = hasTemplateId ? cfg.TemplateId : string.Empty,
                 UseTemplateSpawn = hasTemplateId,
                 Count = RequireInt(cfg.Count, ownerId, relativePath, "unitCreation.count"),
-                OffsetRadius = RequireInt(cfg.OffsetRadius, ownerId, relativePath, "unitCreation.offsetRadius"),
-                PlacementRadiusCm = RequireInt(cfg.PlacementRadiusCm, ownerId, relativePath, "unitCreation.placementRadiusCm"),
-                PlacementStartAngleDeg = RequireInt(cfg.PlacementStartAngleDeg, ownerId, relativePath, "unitCreation.placementStartAngleDeg"),
+                OffsetRadius = offsetRadius,
+                PlacementRadiusCm = placementRadiusCm,
+                PlacementStartAngleDeg = placementStartAngleDeg,
                 OnSpawnEffectTemplateId = onSpawnId,
-                CopySourcePlayerOwner = RequireBool(cfg.CopySourcePlayerOwner, ownerId, relativePath, "unitCreation.copySourcePlayerOwner"),
-                LinkSourceAsParent = RequireBool(cfg.LinkSourceAsParent, ownerId, relativePath, "unitCreation.linkSourceAsParent"),
+                CopySourcePlayerOwner = cfg.CopySourcePlayerOwner ?? false,
+                LinkSourceAsParent = cfg.LinkSourceAsParent ?? false,
             };
         }
 
@@ -774,7 +911,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ── Config Params compilation ──
 
-        private static void CompileConfigParams(
+        private void CompileConfigParams(
             Dictionary<string, ConfigParamConfig> configParams,
             ref EffectConfigParams result,
             string ownerId,
@@ -846,9 +983,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
                     }
                 }
+                else if (type == "ExchangeOperation")
+                {
+                    string operationName = paramCfg.Value.ToString()
+                        ?? throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key}.value must convert to a string.");
+                    if (string.IsNullOrWhiteSpace(operationName))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} exchange operation type requires a non-empty operation id.");
+                    }
+
+                    if (_exchangeOperations == null)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: ExchangeOperation config param requires ExchangeOperationRegistry.");
+                    }
+
+                    int operationId = _exchangeOperations.GetId(operationName);
+                    if (operationId <= 0)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} references unknown exchange operation '{operationName}'.");
+                    }
+
+                    if (!result.TryAddInt(keyId, operationId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
+                    }
+                }
                 else
                 {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute.");
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation.");
                 }
             }
         }
@@ -927,7 +1089,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if ((flags & PhaseListenerActionFlags.PublishEvent) != 0 && !string.IsNullOrWhiteSpace(lc.EventTag))
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
-                int priority = RequireInt(lc.Priority, ownerId, relativePath, $"phaseListeners[{i}].priority");
+                int priority = lc.Priority ?? 0;
                 if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");
@@ -950,6 +1112,77 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
 
+        private ScopeKey ResolveProgressionScope(string? rawValue, string effectId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.scope is required. Use 'self', 'explicit', or a named scope declared in Progression/scopes.json.");
+            }
+
+            return ParseProgressionScope(rawValue.Trim(), effectId, path);
+        }
+
+        private ScopeKey ParseProgressionScope(string value, string effectId, string path)
+        {
+            if (_progressionScopeKeys == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.scope requires ScopeKeyRegistry.");
+            }
+
+            switch (value)
+            {
+                case "self":
+                    return ScopeKey.Self;
+                case "explicit":
+                    return new ScopeKey(ScopeKind.Explicit);
+                default:
+                    if (_progressionScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
+                    {
+                        return new ScopeKey(ScopeKind.Named, scopeKeyId);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.scope '{value}' is not registered by Progression config.");
+            }
+        }
+
+        private static ProgressionLevelChange CompileProgressionChange(ProgressionCompletionConfig cfg, string effectId, string path)
+        {
+            if (cfg.Level.HasValue && cfg.Delta.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.level and progression.delta are mutually exclusive.");
+            }
+
+            if (cfg.Level.HasValue)
+            {
+                int level = cfg.Level.Value;
+                if (level <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.level must be greater than zero.");
+                }
+
+                return new ProgressionLevelChange(level, 0);
+            }
+
+            if (cfg.Delta.HasValue)
+            {
+                int delta = cfg.Delta.Value;
+                if (delta <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.delta must be greater than zero.");
+                }
+
+                return new ProgressionLevelChange(0, delta);
+            }
+
+            return ProgressionLevelChange.Complete;
+        }
+
         private static TargetQueryDescriptor CompileTargetQuery(TargetQueryConfig cfg, string effectId, string path)
         {
             var desc = default(TargetQueryDescriptor);
@@ -963,17 +1196,88 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (desc.Kind == TargetResolverKind.BuiltinSpatial)
             {
-                desc.Spatial.Shape = ParseSpatialShape(RequireString(cfg.Shape, effectId, path, "targetQuery.shape"), effectId, path);
-                desc.Spatial.RadiusCm = RequireInt(cfg.Radius, effectId, path, "targetQuery.radius");
-                desc.Spatial.InnerRadiusCm = RequireInt(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius");
-                desc.Spatial.HalfAngleDeg = RequireInt(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle");
-                desc.Spatial.HalfWidthCm = RequireInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
-                desc.Spatial.HalfHeightCm = RequireInt(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight");
-                desc.Spatial.RotationDeg = RequireInt(cfg.Rotation, effectId, path, "targetQuery.rotation");
-                desc.Spatial.LengthCm = RequireInt(cfg.Length, effectId, path, "targetQuery.length");
+                RequireAbsent(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId", "kind=BuiltinSpatial");
+                desc.Spatial = CompileBuiltinSpatialQuery(cfg, effectId, path);
             }
-            desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
+            else
+            {
+                RequireAbsent(cfg.Shape, effectId, path, "targetQuery.shape", "kind=GraphProgram");
+                RequireAbsent(cfg.Radius, effectId, path, "targetQuery.radius", "kind=GraphProgram");
+                RequireAbsent(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius", "kind=GraphProgram");
+                RequireAbsent(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle", "kind=GraphProgram");
+                RequireAbsent(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth", "kind=GraphProgram");
+                RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "kind=GraphProgram");
+                RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "kind=GraphProgram");
+                RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "kind=GraphProgram");
+                desc.GraphProgramId = RequireInt(cfg.GraphProgramId, effectId, path, "targetQuery.graphProgramId");
+                if (desc.GraphProgramId <= 0)
+                {
+                    throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetQuery.graphProgramId must be > 0 when kind=GraphProgram.");
+                }
+            }
+
             return desc;
+        }
+
+        private static BuiltinSpatialDescriptor CompileBuiltinSpatialQuery(TargetQueryConfig cfg, string effectId, string path)
+        {
+            var spatial = default(BuiltinSpatialDescriptor);
+            spatial.Shape = ParseSpatialShape(RequireString(cfg.Shape, effectId, path, "targetQuery.shape"), effectId, path);
+
+            switch (spatial.Shape)
+            {
+                case SpatialShape.Circle:
+                    RequireAbsent(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius", "shape=Circle");
+                    RequireAbsent(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle", "shape=Circle");
+                    RequireAbsent(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth", "shape=Circle");
+                    RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "shape=Circle");
+                    RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "shape=Circle");
+                    RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "shape=Circle");
+                    spatial.RadiusCm = RequirePositiveInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                    break;
+                case SpatialShape.Ring:
+                    RequireAbsent(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle", "shape=Ring");
+                    RequireAbsent(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth", "shape=Ring");
+                    RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "shape=Ring");
+                    RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "shape=Ring");
+                    RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "shape=Ring");
+                    spatial.RadiusCm = RequirePositiveInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                    spatial.InnerRadiusCm = RequireInt(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius");
+                    if (spatial.InnerRadiusCm < 0 || spatial.InnerRadiusCm >= spatial.RadiusCm)
+                    {
+                        throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetQuery.innerRadius must be >= 0 and < targetQuery.radius for shape=Ring.");
+                    }
+                    break;
+                case SpatialShape.Cone:
+                    RequireAbsent(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius", "shape=Cone");
+                    RequireAbsent(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth", "shape=Cone");
+                    RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "shape=Cone");
+                    RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "shape=Cone");
+                    RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "shape=Cone");
+                    spatial.RadiusCm = RequirePositiveInt(cfg.Radius, effectId, path, "targetQuery.radius");
+                    spatial.HalfAngleDeg = RequirePositiveInt(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle");
+                    break;
+                case SpatialShape.Line:
+                    RequireAbsent(cfg.Radius, effectId, path, "targetQuery.radius", "shape=Line");
+                    RequireAbsent(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius", "shape=Line");
+                    RequireAbsent(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle", "shape=Line");
+                    RequireAbsent(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight", "shape=Line");
+                    RequireAbsent(cfg.Rotation, effectId, path, "targetQuery.rotation", "shape=Line");
+                    spatial.LengthCm = RequirePositiveInt(cfg.Length, effectId, path, "targetQuery.length");
+                    spatial.HalfWidthCm = RequirePositiveInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
+                    break;
+                case SpatialShape.Rectangle:
+                    RequireAbsent(cfg.Radius, effectId, path, "targetQuery.radius", "shape=Rectangle");
+                    RequireAbsent(cfg.InnerRadius, effectId, path, "targetQuery.innerRadius", "shape=Rectangle");
+                    RequireAbsent(cfg.HalfAngle, effectId, path, "targetQuery.halfAngle", "shape=Rectangle");
+                    RequireAbsent(cfg.Length, effectId, path, "targetQuery.length", "shape=Rectangle");
+                    spatial.HalfWidthCm = RequirePositiveInt(cfg.HalfWidth, effectId, path, "targetQuery.halfWidth");
+                    spatial.HalfHeightCm = RequirePositiveInt(cfg.HalfHeight, effectId, path, "targetQuery.halfHeight");
+                    spatial.RotationDeg = cfg.Rotation ?? 0;
+                    break;
+            }
+
+            return spatial;
         }
 
         private static TargetFilterDescriptor CompileTargetFilter(TargetFilterConfig cfg, string effectId, string path)
@@ -1025,6 +1329,57 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return value.Value;
         }
 
+        private static int RequirePositiveInt(int? value, string effectId, string path, string fieldPath)
+        {
+            int result = RequireInt(value, effectId, path, fieldPath);
+            if (result <= 0)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} must be > 0.");
+            }
+
+            return result;
+        }
+
+        private static void RequireAbsent(int? value, string effectId, string path, string fieldPath, string when)
+        {
+            if (value.HasValue)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} is not valid when {when}.");
+            }
+        }
+
+        private static void RequireAbsent(bool? value, string effectId, string path, string fieldPath, string when)
+        {
+            if (value.HasValue)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} is not valid when {when}.");
+            }
+        }
+
+        private static void RequireAbsent(string? value, string effectId, string path, string fieldPath, string when)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath} is not valid when {when}.");
+            }
+        }
+
+        private static void RejectOptionalFalse(bool? value, string effectId, string path, string fieldPath)
+        {
+            if (value.HasValue && !value.Value)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath}=false must be omitted.");
+            }
+        }
+
+        private static void RejectOptionalZero(int? value, string effectId, string path, string fieldPath)
+        {
+            if (value.HasValue && value.Value == 0)
+            {
+                throw new InvalidOperationException($"Effect template '{effectId}' in {path}: {fieldPath}=0 must be omitted.");
+            }
+        }
+
         private static float RequireFloat(float? value, string effectId, string path, string fieldPath)
         {
             if (!value.HasValue)
@@ -1048,6 +1403,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private TargetDispatchDescriptor CompileTargetDispatch(TargetDispatchConfig cfg, string effectId, string path)
         {
             var desc = default(TargetDispatchDescriptor);
+            bool hasPreset = !string.IsNullOrWhiteSpace(cfg.Preset);
+            bool hasContextMapping = cfg.ContextMapping != null;
+
             if (!string.IsNullOrWhiteSpace(cfg.PayloadEffect))
             {
                 desc.PayloadEffectTemplateId = EffectTemplateIdRegistry.GetId(cfg.PayloadEffect);
@@ -1055,7 +1413,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetDispatch.payloadEffect '{cfg.PayloadEffect}' not found.");
             }
 
-            if (!string.IsNullOrWhiteSpace(cfg.Preset))
+            if (hasPreset && hasContextMapping)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping, not both.");
+            }
+
+            if (hasPreset)
             {
                 if (_targetDispatchPresets == null)
                 {
@@ -1068,7 +1432,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 return desc;
             }
 
-            if (cfg.ContextMapping != null)
+            if (hasContextMapping)
             {
                 desc.ContextMapping = new TargetResolverContextMapping
                 {
@@ -1091,8 +1455,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
             else
             {
-                throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping.");
+                desc.ContextMapping = TargetResolverContextMapping.Default;
             }
             return desc;
         }
@@ -1160,15 +1523,45 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     _ => throw new InvalidOperationException($"Effect template '{effectId}' in {path}: grantedTags[{i}] unknown formula '{formulaValue}'."),
                 };
 
-                int amount = RequireInt(cfg.Amount, effectId, path, $"grantedTags[{i}].amount");
-                int baseValue = RequireInt(cfg.Base, effectId, path, $"grantedTags[{i}].base");
+                int amount = formula == Components.TagContributionFormula.GraphProgram
+                    ? cfg.Amount ?? 0
+                    : RequireInt(cfg.Amount, effectId, path, $"grantedTags[{i}].amount");
+                int baseValue = formula == Components.TagContributionFormula.LinearPlusBase
+                    ? RequireInt(cfg.Base, effectId, path, $"grantedTags[{i}].base")
+                    : cfg.Base ?? 0;
+                int graphProgramId = 0;
+                switch (formula)
+                {
+                    case Components.TagContributionFormula.Fixed:
+                    case Components.TagContributionFormula.Linear:
+                        RequireAbsent(cfg.Base, effectId, path, $"grantedTags[{i}].base", $"formula={formula}");
+                        RequireAbsent(cfg.GraphProgram, effectId, path, $"grantedTags[{i}].graphProgram", $"formula={formula}");
+                        break;
+                    case Components.TagContributionFormula.LinearPlusBase:
+                        RequireAbsent(cfg.GraphProgram, effectId, path, $"grantedTags[{i}].graphProgram", "formula=LinearPlusBase");
+                        break;
+                    case Components.TagContributionFormula.GraphProgram:
+                        RequireAbsent(cfg.Amount, effectId, path, $"grantedTags[{i}].amount", "formula=GraphProgram");
+                        RequireAbsent(cfg.Base, effectId, path, $"grantedTags[{i}].base", "formula=GraphProgram");
+                        break;
+                }
+
+                if (formula == Components.TagContributionFormula.GraphProgram)
+                {
+                    graphProgramId = ResolveGraphProgram(
+                        RequireString(cfg.GraphProgram, effectId, path, $"grantedTags[{i}].graphProgram"),
+                        effectId,
+                        $"grantedTags[{i}].graphProgram",
+                        path);
+                }
+
                 result.Add(new Components.TagContribution
                 {
                     TagId = tagId,
                     Formula = formula,
                     Amount = (ushort)System.Math.Clamp(amount, 0, ushort.MaxValue),
                     Base = (ushort)System.Math.Clamp(baseValue, 0, ushort.MaxValue),
-                    GraphProgramId = 0, // Resolved later if needed
+                    GraphProgramId = graphProgramId,
                 });
             }
             return result;

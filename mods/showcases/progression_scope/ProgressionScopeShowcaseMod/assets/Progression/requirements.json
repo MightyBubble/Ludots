@@ -1,0 +1,39 @@
+[
+  {
+    "id": "Req.Showcase.CityDrill.Use",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.Showcase.CityDrill",
+      "scope": "city",
+      "entitySource": "ScopeHost"
+    }
+  },
+  {
+    "id": "Req.Showcase.FactionMandate.Use",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.Showcase.FactionMandate",
+      "scope": "faction",
+      "entitySource": "ScopeHost"
+    }
+  },
+  {
+    "id": "Req.Showcase.RegionStrategist.Use",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "region",
+      "entitySource": "ScopeMembers",
+      "count": 1,
+      "tags": ["Hero.Showcase.Strategist"]
+    }
+  },
+  {
+    "id": "Req.Showcase.ProvinceLogistics.Use",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.Showcase.ProvinceLogistics",
+      "scope": "province",
+      "entitySource": "ScopeHost"
+    }
+  }
+]

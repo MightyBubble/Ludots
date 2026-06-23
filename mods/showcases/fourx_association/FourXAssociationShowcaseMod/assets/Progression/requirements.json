@@ -1,0 +1,12 @@
+[
+  {
+    "id": "Req.FourXAssociation.SignalNet.Use",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "fourx.association.team",
+      "entitySource": "ScopeMembers",
+      "count": 2,
+      "tags": ["Role.FourXAssociation.Researcher"]
+    }
+  }
+]

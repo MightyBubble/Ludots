@@ -218,7 +218,7 @@ namespace Ludots.Tests.GAS.Production
             int warpingTagId = EnsureTag("State.Rts.Warping");
             int trainingTagId = EnsureTag("Status.Rts.Training");
             int researchingTagId = EnsureTag("Status.Rts.Researching");
-            int warpGateTechTagId = EnsureTag("Tech.Rts.WarpGate");
+            int warpGateTechTagId = EnsureTag("Progression.Rts.WarpGate");
 
             Entity peasant = FindEntity(world, "Peasant");
             Entity barracks = FindEntity(world, "Barracks");
@@ -408,7 +408,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId), maxFrames: 600, "Warping state should expire.");
             Assert.That(world.Get<SelectionSelectableState>(warpedZealot).Enabled, Is.True);
             trace.Add(CaptureSnapshot(world, engine, "sc2_gateway_tech_and_warp", "Gateway researched Warp Gate and changed its slot 0 output into an instant warp-in.", gateway, trainedZealot, warpedZealot));
-            timeline.Add("[T+010] Protoss tech path: Gateway first trains a Zealot, then researches Warp Gate, gains Tech.Rts.WarpGate, and swaps slot 0 into a point-target warp-in.");
+            timeline.Add("[T+010] Protoss tech path: Gateway first trains a Zealot, then researches Warp Gate, gains Progression.Rts.WarpGate, and swaps slot 0 into a point-target warp-in.");
 
             var spawningPoolIdsBefore = SnapshotEntityIdsByName(world, "Spawning Pool");
             float droneMineralsBefore = ReadAttribute(world, drone, mineralsAttrId);
@@ -747,7 +747,7 @@ namespace Ludots.Tests.GAS.Production
             int warpingTagId = EnsureTag("State.Rts.Warping");
             int trainingTagId = EnsureTag("Status.Rts.Training");
             int researchingTagId = EnsureTag("Status.Rts.Researching");
-            int warpGateTechTagId = EnsureTag("Tech.Rts.WarpGate");
+            int warpGateTechTagId = EnsureTag("Progression.Rts.WarpGate");
 
             var focus = focusEntities
                 .Where(entity => world.IsAlive(entity) && world.Has<Name>(entity))
@@ -774,7 +774,7 @@ namespace Ludots.Tests.GAS.Production
                         ["State.Rts.Warping"] = HasEffectiveTag(world, tagOps, entity, warpingTagId),
                         ["Status.Rts.Training"] = HasEffectiveTag(world, tagOps, entity, trainingTagId),
                         ["Status.Rts.Researching"] = HasEffectiveTag(world, tagOps, entity, researchingTagId),
-                        ["Tech.Rts.WarpGate"] = HasEffectiveTag(world, tagOps, entity, warpGateTechTagId)
+                        ["Progression.Rts.WarpGate"] = HasEffectiveTag(world, tagOps, entity, warpGateTechTagId)
                     }
                 })
                 .ToArray();
@@ -857,7 +857,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine();
             sb.AppendLine("## Expected Outcomes");
             sb.AppendLine("- Primary success condition: every strategic action completes using existing GAS tags, effects, relation parenting, and form-set routing.");
-            sb.AppendLine("- Failure branch condition: builders fail to attach/detach, garrisoned units never release, research never grants `Tech.Rts.WarpGate`, or morphing drones survive completion.");
+            sb.AppendLine("- Failure branch condition: builders fail to attach/detach, garrisoned units never release, research never grants `Progression.Rts.WarpGate`, or morphing drones survive completion.");
             sb.AppendLine("- Key metrics:");
             sb.AppendLine($"  total timeline steps: {timeline.Count}");
             sb.AppendLine($"  average frame time ms: {frameTimesMs.DefaultIfEmpty(0d).Average():F3}");

@@ -1,0 +1,5 @@
+[
+  { "id": "Progression.Showcase.CityDrill", "scope": "city" },
+  { "id": "Progression.Showcase.FactionMandate", "scope": "faction" },
+  { "id": "Progression.Showcase.ProvinceLogistics", "scope": "province" }
+]

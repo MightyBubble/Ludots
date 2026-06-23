@@ -1,0 +1,4 @@
+[
+  { "id": "trade_gate_source_stash", "purpose": "Stash", "width": 4, "height": 2 },
+  { "id": "trade_gate_target_stash", "purpose": "Stash", "width": 4, "height": 2 }
+]

@@ -6,9 +6,12 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -17,7 +20,7 @@ namespace Ludots.Tests.GAS
     public sealed class InputOrderContractTests
     {
         [Test]
-        public void HeldStartEnd_DoesNotFallbackToBaseOrderType()
+        public void HeldStartEnd_UnknownStartOrderType_ThrowsInsteadOfFallingBack()
         {
             var (backend, handler) = BuildHandler();
             var accumulator = new AuthoritativeInputAccumulator();
@@ -41,7 +44,6 @@ namespace Ludots.Tests.GAS
 
             var system = new InputOrderMappingSystem(snapshot, config);
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            system.SetOrderTypeKeyResolver(key => key == "beam" ? 100 : 0);
             system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
 
             using var world = World.Create();
@@ -56,9 +58,125 @@ namespace Ludots.Tests.GAS
             accumulator.CaptureVisualFrame(handler);
 
             accumulator.BuildTickSnapshot(snapshot);
-            system.Update(0f);
 
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => system.SetOrderTypeKeyResolver(key => key == "beam" ? 100 : 0));
+
+            Assert.That(ex!.Message, Does.Contain("beam.Start"));
             Assert.That(orders, Is.Empty);
+        }
+
+        [Test]
+        public void UnknownOrderTypeKey_ThrowsDuringResolverInstall()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Attack", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Attack",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "typoOrder",
+                        SelectionType = OrderSelectionType.None,
+                        RequireSelection = false,
+                        IsSkillMapping = false
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(world.Create(), 1);
+            system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order _) => { });
+
+            var ex = Assert.Throws<InvalidOperationException>(() => system.SetOrderTypeKeyResolver(_ => 0));
+
+            Assert.That(ex!.Message, Does.Contain("typoOrder"));
+            Assert.That(ex.Message, Does.Contain("orderTypeKey"));
+        }
+
+        [Test]
+        public void DuplicateActionId_IsRejectedDuringConstruction()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Attack",
+                        OrderTypeKey = "castAbility"
+                    },
+                    new()
+                    {
+                        ActionId = "Attack",
+                        OrderTypeKey = "stop"
+                    }
+                }
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => new InputOrderMappingSystem(new FrozenInputActionReader(), config));
+
+            Assert.That(ex!.Message, Does.Contain("duplicates"));
+            Assert.That(ex.Message, Does.Contain("Attack"));
+        }
+
+        [Test]
+        public void EmptyActionId_IsRejectedDuringConstruction()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "",
+                        OrderTypeKey = "castAbility"
+                    }
+                }
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(
+                () => new InputOrderMappingSystem(new FrozenInputActionReader(), config));
+
+            Assert.That(ex!.Message, Does.Contain("actionId"));
+            Assert.That(ex.Message, Does.Contain("non-empty"));
+        }
+
+        [Test]
+        public void Loader_MissingInputOrderMappingsConfig_IsRejected()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_InputOrderContractTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = new ConfigCatalog();
+                catalog.Add(new ConfigCatalogEntry("Input/input_order_mappings.json", ConfigMergePolicy.DeepObject));
+                var loader = new InputOrderMappingLoader(pipeline);
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => loader.Load(catalog, relativePath: "Input/input_order_mappings.json"));
+
+                Assert.That(ex!.Message, Does.Contain("Input/input_order_mappings.json"));
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                }
+                catch
+                {
+                }
+            }
         }
 
         [Test]

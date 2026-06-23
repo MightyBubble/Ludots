@@ -1,0 +1,11 @@
+{
+  "types": [
+    { "id": "UtilityAutocast.Participant", "isSymmetric": false }
+  ],
+  "metrics": [],
+  "flags": [],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

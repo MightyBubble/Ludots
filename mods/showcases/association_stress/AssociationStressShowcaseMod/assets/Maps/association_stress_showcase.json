@@ -1,0 +1,14 @@
+{
+  "Id": "association_stress_showcase",
+  "Tags": ["association_stress_showcase", "showcase", "association", "knowledge", "entity_collection"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 12000,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

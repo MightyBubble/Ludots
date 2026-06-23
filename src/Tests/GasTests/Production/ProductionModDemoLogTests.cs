@@ -419,9 +419,9 @@ namespace Ludots.Tests.GAS.Production
                 int healthId = EnsureAttr("Health");
                 int prodId = EnsureAttr("Production");
                 int goldId = EnsureAttr("Gold");
-                int techId = EnsureAttr("TechProgress");
+                int researchId = EnsureAttr("TechProgress");
                 int foodId = EnsureAttr("FoodProduction");
-                int[] govAttrs = { healthId, prodId, goldId, techId, foodId };
+                int[] govAttrs = { healthId, prodId, goldId, researchId, foodId };
                 string[] govNames = { "Health", "Production", "Gold", "TechProgress", "FoodProduction" };
 
                 LogEntityState(sb, "[4X]", "初始状态", world, governor, "Governor", govAttrs, govNames);
@@ -517,7 +517,7 @@ namespace Ludots.Tests.GAS.Production
                 int lumberId = EnsureAttr("Lumber");
                 int creditsId = EnsureAttr("Credits");
                 int gasId = EnsureAttr("Gas");
-                int warpGateTechTagId = EnsureTag("Tech.Rts.WarpGate");
+                int warpGateTechTagId = EnsureTag("Progression.Rts.WarpGate");
 
                 LogEntityState(sb, "[RTS]", "初始状态", world, peasant, "Peasant", new[] { healthId, mineralsId, lumberId }, new[] { "Health", "Minerals", "Lumber" });
                 LogEntityState(sb, "[RTS]", "初始状态", world, barracks, "Barracks", new[] { healthId }, new[] { "Health" });
@@ -598,7 +598,7 @@ namespace Ludots.Tests.GAS.Production
                     () => HasEffectiveTag(world, engine, gateway, warpGateTechTagId),
                     maxFrames: 900,
                     "Gateway should gain WarpGate tech after research completes.");
-                LogTags(sb, "[RTS]", world, engine, gateway, "Gateway", new[] { "Tech.Rts.WarpGate" });
+                LogTags(sb, "[RTS]", world, engine, gateway, "Gateway", new[] { "Progression.Rts.WarpGate" });
                 TickUntil(
                     engine,
                     () => TryGetSlotDisplayLabel(panelSource, gateway, slotIndex: 0, out string label) &&

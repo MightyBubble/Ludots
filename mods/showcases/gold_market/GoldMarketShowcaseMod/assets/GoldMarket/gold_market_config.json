@@ -1,0 +1,17 @@
+{
+  "header": "Gold Market Showcase",
+  "summary": "Spend a GAS Gold attribute to buy items, fail when the wallet is too small, and prove output failures roll everything back.",
+  "controls": "B buy relic | X try expensive bundle | F trigger atomic rollback | R refill gold",
+  "buyerName": "Quartermaster Rhea",
+  "marketName": "Amber Exchange",
+  "buyerLayout": "gold_market_buyer_stash",
+  "marketLayout": "gold_market_market_stash",
+  "goldAttribute": "Gold",
+  "buyOperation": "gold_market.buy_relic",
+  "expensiveOperation": "gold_market.buy_expensive_bundle",
+  "atomicFailureOperation": "gold_market.buy_overloaded_bundle",
+  "relicItem": "gold_market_relic",
+  "bonusItem": "gold_market_bonus",
+  "startingGold": 12,
+  "refillGold": 18
+}

@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "AssociationStress.IncreaseScale", "name": "AssociationStress_IncreaseScale", "type": "Button" },
+    { "id": "AssociationStress.DecreaseScale", "name": "AssociationStress_DecreaseScale", "type": "Button" },
+    { "id": "AssociationStress.TogglePulse", "name": "AssociationStress_TogglePulse", "type": "Button" },
+    { "id": "AssociationStress.Compact", "name": "AssociationStress_Compact", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "AssociationStressShowcase.Controls",
+      "name": "Association Stress Showcase Controls",
+      "priority": 85,
+      "bindings": [
+        { "actionId": "AssociationStress.IncreaseScale", "path": "<Keyboard>/RightBracket" },
+        { "actionId": "AssociationStress.DecreaseScale", "path": "<Keyboard>/LeftBracket" },
+        { "actionId": "AssociationStress.TogglePulse", "path": "<Keyboard>/p" },
+        { "actionId": "AssociationStress.Compact", "path": "<Keyboard>/c" }
+      ]
+    }
+  ]
+}

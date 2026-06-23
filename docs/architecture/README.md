@@ -11,6 +11,7 @@
 - [Entity Collection Query Infrastructure](entity_collection_query_infrastructure.md)
 - [Entity Command Panel Infrastructure](entity_command_panel_infrastructure.md)
 - [Entity Insight Panel Architecture](entity_insight_panel_architecture.md)
+- [Exchange Architecture](exchange_architecture.md)
 - [Item Inventory Equipment Architecture](item_inventory_equipment_architecture.md)
 - [Map, Mod, and Spatial Ownership](map_mod_spatial.md)
 - [Mod Architecture](mod_architecture.md)
@@ -36,6 +37,7 @@
 
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
+- [AI Utility Autocast Contract](../../gitbook/architecture/ai-utility-autocast-contract.md)
 - [Order / Navigation / Movement Architecture](order_navigation_movement.md)
 - [Narrative Quest / Dialogue / Cinematic](narrative_quest_dialogue_cinematic.md)
 - [Narrative Frontend Kit](narrative_frontend_kit.md)

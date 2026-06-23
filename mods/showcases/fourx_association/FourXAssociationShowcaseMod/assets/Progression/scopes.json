@@ -1,0 +1,7 @@
+[
+  {
+    "id": "fourx.association.team",
+    "memberSource": "EntityCollection",
+    "collection": "fourx.association.team.members"
+  }
+]

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Arch.System;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -22,19 +23,18 @@ namespace Ludots.Core.Presentation.Systems
             _ui = ui;
             _chainOrders = chainOrders;
 
-            if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) || configObj is not GameConfig config)
             {
-                _responseChainOrderTypes = new ResponseChainOrderTypes
-                {
-                    ChainPass = config.Constants.ResponseChainOrderTypeIds.GetValueOrDefault("chainPass", 1),
-                    ChainNegate = config.Constants.ResponseChainOrderTypeIds.GetValueOrDefault("chainNegate", 2),
-                    ChainActivateEffect = config.Constants.ResponseChainOrderTypeIds.GetValueOrDefault("chainActivateEffect", 3)
-                };
+                throw new InvalidOperationException(
+                    $"{nameof(ResponseChainHumanOrderSourceSystem)} requires GameConfig constants.responseChainOrderTypeIds (chainPass, chainNegate, chainActivateEffect).");
             }
-            else
+
+            _responseChainOrderTypes = new ResponseChainOrderTypes
             {
-                _responseChainOrderTypes = ResponseChainOrderTypes.Default;
-            }
+                ChainPass = RequireResponseChainOrderTypeId(config, "chainPass"),
+                ChainNegate = RequireResponseChainOrderTypeId(config, "chainNegate"),
+                ChainActivateEffect = RequireResponseChainOrderTypeId(config, "chainActivateEffect")
+            };
         }
 
         public void Initialize() { }
@@ -91,6 +91,20 @@ namespace Ludots.Core.Presentation.Systems
         private InteractionActionBindings ResolveBindings()
         {
             return InteractionActionBindingsResolver.Require(_globals, nameof(ResponseChainHumanOrderSourceSystem));
+        }
+
+        private static int RequireResponseChainOrderTypeId(GameConfig config, string key)
+        {
+            if (config.Constants == null ||
+                config.Constants.ResponseChainOrderTypeIds == null ||
+                !config.Constants.ResponseChainOrderTypeIds.TryGetValue(key, out int orderTypeId) ||
+                orderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(ResponseChainHumanOrderSourceSystem)} requires GameConfig constants.responseChainOrderTypeIds.{key} to be a positive registered order type id.");
+            }
+
+            return orderTypeId;
         }
 
         public void BeforeUpdate(in float dt) { }
