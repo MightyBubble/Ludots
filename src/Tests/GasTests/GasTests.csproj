@@ -38,7 +38,6 @@
     <ProjectReference Include="..\..\..\mods\MissingDepMod\MissingDepMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceMod\PerformanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\PerformanceVisualizationMod\PerformanceVisualizationMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\Physics2DPlaygroundMod\Physics2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ReactiveTestMod\ReactiveTestMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TerrainBenchmarkMod\TerrainBenchmarkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\UiTestMod\UiTestMod.csproj" />
@@ -77,6 +76,11 @@
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\RtsSc2TrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\StaticObstaclePhysicsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\CapabilityStandardParticipantViewsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DMod\CapabilityStandardPhysics2DMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardKnockback2DMod\CapabilityStandardKnockback2DMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardNavSink2DMod\CapabilityStandardNavSink2DMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DPlaygroundV2Mod\CapabilityStandardPhysics2DPlaygroundV2Mod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />

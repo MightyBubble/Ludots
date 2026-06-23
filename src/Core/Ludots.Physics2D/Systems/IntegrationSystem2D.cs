@@ -1,25 +1,17 @@
+using System;
 using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
-    /// <summary>
-    /// 2D 积分系统 — 全定点数确定性物理积分。
-    /// 
-    /// 职责：欧拉积分 + 组合阻尼（固有 × 场阻尼）。
-    /// 执行时机：在 ApplyImpulsesSystem 和 FieldDetectorSystem 之后。
-    /// </summary>
     public sealed class IntegrationSystem2D : BaseSystem<World, float>
     {
-        private static readonly Fix64 DefaultBaseDamping = PhysicsMaterial2D.Default.BaseDamping;
-        private static readonly Fix64 MinVelocitySq = Fix64.FromFloat(0.0001f);
-
         private static readonly QueryDescription _dynamicQuery = new QueryDescription()
             .WithAll<Position2D, Velocity2D, Mass2D>()
             .WithNone<SleepingTag>();
@@ -29,87 +21,120 @@ namespace Ludots.Core.Physics2D.Systems
             .WithNone<SleepingTag, PreviousPosition2D>();
 
         private readonly CommandBuffer _commandBuffer = new();
+        private readonly Physics2DSolverConfig _config;
 
-        public IntegrationSystem2D(World world) : base(world)
+        public IntegrationSystem2D(World world, Physics2DSolverConfig config) : base(world)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public override void Update(in float deltaTime)
         {
-            var dt = Fix64.FromFloat(deltaTime);
-
             InitializeMissingPrevPos();
 
-            var fixedDt = dt;
-
-            World.Query(in _dynamicQuery, (Entity entity,
-                ref Position2D position,
-                ref Velocity2D velocity,
-                ref Mass2D mass) =>
+            var job = new IntegrationJob
             {
-                if (mass.IsStatic) return;
-
-                if (World.TryGet(entity, out ForceInput2D input))
-                {
-                    velocity.Linear = velocity.Linear + input.Force * fixedDt;
-                    World.Set(entity, new ForceInput2D { Force = Fix64Vec2.Zero });
-                }
-
-                // 存储前一帧位置（渲染插值用）
-                if (World.TryGet<PreviousPosition2D>(entity, out var prevPos))
-                {
-                    World.Set(entity, new PreviousPosition2D { Value = position.Value });
-                }
-
-                // 欧拉积分: position += velocity * dt
-                position.Value = position.Value + velocity.Linear * fixedDt;
-
-                if (World.TryGet<Rotation2D>(entity, out var rotation))
-                {
-                    rotation.Value = rotation.Value + velocity.Angular * fixedDt;
-                    World.Set(entity, rotation);
-                }
-
-                // 组合阻尼: baseDamping × fieldDamping（全定点数，无转换）
-                Fix64 baseDamping = DefaultBaseDamping;
-                if (World.TryGet(entity, out PhysicsMaterial2D material))
-                {
-                    baseDamping = material.BaseDamping;
-                }
-
-                Fix64 fieldDamping = Fix64.OneValue;
-                if (World.TryGet(entity, out AppliedDamping appliedDamping))
-                {
-                    fieldDamping = appliedDamping.TotalFieldDamping;
-                }
-
-                Fix64 finalDamping = baseDamping * fieldDamping;
-                velocity.Linear = velocity.Linear * finalDamping;
-                velocity.Angular = velocity.Angular * finalDamping;
-
-                // 速度阈值归零
-                if (velocity.Linear.LengthSquared() < MinVelocitySq)
-                {
-                    velocity.Linear = Fix64Vec2.Zero;
-                }
-
-                if (velocity.Angular * velocity.Angular < MinVelocitySq)
-                {
-                    velocity.Angular = Fix64.Zero;
-                }
-            });
+                FixedDt = Fix64.FromFloat(deltaTime),
+                DefaultBaseDamping = _config.DefaultBaseDampingFix64,
+                MinVelocitySq = _config.MinVelocitySqFix64
+            };
+            foreach (ref var chunk in World.Query(in _dynamicQuery))
+            {
+                job.Execute(ref chunk);
+            }
         }
 
         private void InitializeMissingPrevPos()
         {
-            World.Query(in _needsPrevPosQuery, (Entity entity, ref Position2D position) =>
-            {
-                _commandBuffer.Add(entity, new PreviousPosition2D { Value = position.Value });
-            });
+            var job = new InitializePrevPosJob { CommandBuffer = _commandBuffer };
+            World.InlineEntityQuery<InitializePrevPosJob, Position2D>(in _needsPrevPosQuery, ref job);
 
             if (_commandBuffer.Size > 0)
             {
                 _commandBuffer.Playback(World);
+            }
+        }
+
+        private struct IntegrationJob
+        {
+            public Fix64 FixedDt;
+            public Fix64 DefaultBaseDamping;
+            public Fix64 MinVelocitySq;
+
+            public void Execute(ref Chunk chunk)
+            {
+                if (chunk.Count <= 0)
+                {
+                    return;
+                }
+
+                chunk.GetSpan<Position2D, Velocity2D, Mass2D>(out var positions, out var velocities, out var masses);
+
+                bool hasForceInput = chunk.Has<ForceInput2D>();
+                Span<ForceInput2D> forceInputs = hasForceInput ? chunk.GetSpan<ForceInput2D>() : default;
+                bool hasPreviousPosition = chunk.Has<PreviousPosition2D>();
+                Span<PreviousPosition2D> previousPositions = hasPreviousPosition ? chunk.GetSpan<PreviousPosition2D>() : default;
+                bool hasRotation = chunk.Has<Rotation2D>();
+                Span<Rotation2D> rotations = hasRotation ? chunk.GetSpan<Rotation2D>() : default;
+                bool hasMaterial = chunk.Has<PhysicsMaterial2D>();
+                Span<PhysicsMaterial2D> materials = hasMaterial ? chunk.GetSpan<PhysicsMaterial2D>() : default;
+                bool hasAppliedDamping = chunk.Has<AppliedDamping>();
+                Span<AppliedDamping> appliedDampings = hasAppliedDamping ? chunk.GetSpan<AppliedDamping>() : default;
+
+                foreach (int index in chunk)
+                {
+                    ref Position2D position = ref positions[index];
+                    ref Velocity2D velocity = ref velocities[index];
+                    ref Mass2D mass = ref masses[index];
+
+                    if (mass.IsStatic) continue;
+
+                    if (hasForceInput)
+                    {
+                        ref ForceInput2D input = ref forceInputs[index];
+                        velocity.Linear = velocity.Linear + input.Force * FixedDt;
+                        input.Force = Fix64Vec2.Zero;
+                    }
+
+                    if (hasPreviousPosition)
+                    {
+                        previousPositions[index].Value = position.Value;
+                    }
+
+                    position.Value = position.Value + velocity.Linear * FixedDt;
+
+                    if (hasRotation)
+                    {
+                        rotations[index].Value = rotations[index].Value + velocity.Angular * FixedDt;
+                    }
+
+                    Fix64 baseDamping = hasMaterial ? materials[index].BaseDamping : DefaultBaseDamping;
+                    Fix64 fieldDamping = hasAppliedDamping ? appliedDampings[index].TotalFieldDamping : Fix64.OneValue;
+                    Fix64 finalDamping = baseDamping * fieldDamping;
+                    velocity.Linear = velocity.Linear * finalDamping;
+                    velocity.Angular = velocity.Angular * finalDamping;
+
+                    if (velocity.Linear.LengthSquared() < MinVelocitySq)
+                    {
+                        velocity.Linear = Fix64Vec2.Zero;
+                    }
+
+                    if (velocity.Angular * velocity.Angular < MinVelocitySq)
+                    {
+                        velocity.Angular = Fix64.Zero;
+                    }
+                }
+            }
+        }
+
+        private struct InitializePrevPosJob : IForEachWithEntity<Position2D>
+        {
+            public CommandBuffer CommandBuffer;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Position2D position)
+            {
+                CommandBuffer.Add(entity, new PreviousPosition2D { Value = position.Value });
             }
         }
     }

@@ -43,6 +43,7 @@ namespace Ludots.Core.Systems
         private readonly CullState[] _ownerBatchCulls = new CullState[TemplateBatchScratchCapacity];
         private readonly ParamDefault[][] _ownerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
         private readonly ParamDefault[][] _performerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
+        private ComponentAuthoringContext _authoringContext = ComponentAuthoringContext.Empty;
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
@@ -61,6 +62,11 @@ namespace Ludots.Core.Systems
         public void SetEffectRequestQueue(EffectRequestQueue effectRequests)
         {
             _effectRequests = effectRequests;
+        }
+
+        public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
+        {
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
         }
 
         public void SetPresentationRuntime(
@@ -129,7 +135,7 @@ namespace Ludots.Core.Systems
                 templates[t.Id] = t;
             }
 
-            var builder = new EntityBuilder(_world, templates, _templateSources);
+            var builder = new EntityBuilder(_world, templates, _templateSources, _authoringContext);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
             var entityIndex = new MapLoadEntityIndex();
             var pendingBatchRequests = new List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest>(_templateBatchSpawner.ScratchCapacity);

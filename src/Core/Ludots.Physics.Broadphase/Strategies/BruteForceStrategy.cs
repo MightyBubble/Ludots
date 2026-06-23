@@ -84,19 +84,12 @@ namespace Ludots.Physics.Broadphase.Strategies
             }
         }
 
-        public void Update(int bodyIndex, in Aabb newAabb)
-        {
-        }
-
-        public void Remove(int bodyIndex)
-        {
-        }
-
         public SpatialMetrics GetMetrics()
         {
             return new SpatialMetrics
             {
-                TotalDynamicEntities = _dynamicBodies.Count
+                TotalDynamicEntities = _dynamicBodies.Count,
+                TotalStaticEntities = _staticBodies.Count
             };
         }
 

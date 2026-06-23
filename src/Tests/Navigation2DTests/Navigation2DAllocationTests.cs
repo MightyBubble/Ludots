@@ -20,7 +20,10 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = new Navigation2DRuntime(maxAgents: 4096, gridCellSizeCm: 100, loadedChunks: null);
-            var sys = new Navigation2DSteeringSystem2D(world, runtime);
+            var sys = new Navigation2DSteeringSystem2D(
+                world,
+                runtime,
+                new Ludots.Core.Physics2D.ShapeDataStorage2D());
 
             world.Create(new NavFlowGoal2D
             {

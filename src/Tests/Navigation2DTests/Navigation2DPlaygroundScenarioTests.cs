@@ -138,8 +138,8 @@ namespace Ludots.Tests.Navigation2D
                 using var world = World.Create();
                 using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null);
                 runtime.FlowEnabled = true;
-                var steering = new Navigation2DSteeringSystem2D(world, runtime);
-                var integration = new IntegrationSystem2D(world);
+                var steering = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
+                var integration = new IntegrationSystem2D(world, new Ludots.Core.Engine.Physics2D.Physics2DSolverConfig());
 
                 var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(world, scenario, agentsPerTeam);
                 int dynamicCount = world.CountEntities(in _dynamicAgentsQuery);
@@ -326,7 +326,6 @@ namespace Ludots.Tests.Navigation2D
         }
     }
 }
-
 
 
 

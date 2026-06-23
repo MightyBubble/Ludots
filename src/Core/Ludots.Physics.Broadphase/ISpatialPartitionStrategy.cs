@@ -12,8 +12,6 @@ namespace Ludots.Physics.Broadphase
             bool rebuildStatic);
         void QueryPotentialCollisions(List<(int, int)> bodyPairs);
         void QueryAABB(in Aabb queryArea, List<int> results);
-        void Update(int bodyIndex, in Aabb newAabb);
-        void Remove(int bodyIndex);
         SpatialMetrics GetMetrics();
         void Clear();
     }
@@ -47,12 +45,7 @@ namespace Ludots.Physics.Broadphase
     public struct SpatialMetrics
     {
         public int TotalDynamicEntities;
-        public float SceneDensity;
-        public float UpdateTimeMs;
-        public float QueryTimeMs;
-        public float DistributionVariance;
-        public float EmptyCellRatio;
-        public int TreeDepth;
+        public int TotalStaticEntities;
         public int PotentialPairCount;
     }
 }

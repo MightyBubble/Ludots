@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardNavSink2DMod",
+  "version": "1.0.0",
+  "description": "Capability Standard Navigation2D sink and Physics2D obstacle bridge UAT showcase.",
+  "main": "bin/net8.0/CapabilityStandardNavSink2DMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "navigation2d", "physics2d"]
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "capability_standard_physics2d_stress_dynamic_circle",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DStress.DynamicCircle" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DStress.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 96, "y": 42 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 18,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.12,
+          "restitution": 0.4,
+          "baseDamping": 0.999
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_stress_static_column",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DStress.StaticColumn" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DStress.RigidBody": {
+        "positionCm": { "x": 0, "y": 720 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 22,
+          "halfHeightCm": 90,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.3,
+          "restitution": 0.1,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  }
+]

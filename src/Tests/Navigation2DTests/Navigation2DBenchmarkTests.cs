@@ -157,7 +157,7 @@ namespace Ludots.Tests.Navigation2D
                 FlowIterationsPerTick = 0,
                 FlowEnabled = false
             };
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var anchors = new Vector2[AgentCount];
             var travelDirections = new Vector2[AgentCount];
             var phaseOffsets = new float[AgentCount];

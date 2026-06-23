@@ -146,6 +146,51 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_physics2d_raylib",
+      "name": "Capability Standard Physics2D Raylib",
+      "selectors": [
+        "$capability_standard_physics2d"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_knockback2d_raylib",
+      "name": "Capability Standard Knockback2D Raylib",
+      "selectors": [
+        "$capability_standard_knockback2d"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_stress_raylib",
+      "name": "Capability Standard Physics2D Stress Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_stress"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_nav_sink2d_raylib",
+      "name": "Capability Standard Nav Sink 2D Raylib",
+      "selectors": [
+        "$capability_standard_nav_sink2d"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_playground_v2_raylib",
+      "name": "Capability Standard Physics2D Playground v2 Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_playground_v2"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "entity_query_tactics_raylib",
       "name": "Entity Query Tactics Raylib",
       "selectors": [

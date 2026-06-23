@@ -1,6 +1,9 @@
+using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 
@@ -11,20 +14,36 @@ namespace Ludots.Core.Physics2D.Systems
     /// </summary>
     public sealed class PositionCorrectionSystem2D : BaseSystem<World, float>
     {
-        private static readonly Fix64 CorrectionPercentage = Fix64.FromFloat(0.4f);
-        private static readonly Fix64 Slop = Fix64.FromFloat(0.01f);
-        private static readonly Fix64 Epsilon = Fix64.FromFloat(0.000001f);
-
         private readonly QueryDescription _pairsQuery;
+        private readonly Physics2DSolverConfig _config;
 
-        public PositionCorrectionSystem2D(World world) : base(world)
+        public PositionCorrectionSystem2D(World world, Physics2DSolverConfig config) : base(world)
         {
             _pairsQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public override void Update(in float deltaTime)
         {
-            World.Query(in _pairsQuery, (ref CollisionPair pair) =>
+            var job = new PositionCorrectionJob
+            {
+                World = World,
+                CorrectionPercentage = _config.PositionCorrectionPercentageFix64,
+                Slop = _config.PositionCorrectionSlopFix64,
+                Epsilon = _config.EpsilonFix64
+            };
+            World.InlineQuery<PositionCorrectionJob, CollisionPair>(in _pairsQuery, ref job);
+        }
+
+        private struct PositionCorrectionJob : IForEach<CollisionPair>
+        {
+            public World World;
+            public Fix64 CorrectionPercentage;
+            public Fix64 Slop;
+            public Fix64 Epsilon;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
             {
                 if (pair.ContactCount == 0) return;
 
@@ -38,8 +57,8 @@ namespace Ludots.Core.Physics2D.Systems
                 Fix64 effectivePenetration = pair.Penetration - Slop;
                 Fix64 correctionAmount = effectivePenetration * CorrectionPercentage;
 
-                Fix64 invMassA = World.Has<SleepingTag>(pair.EntityA) ? Fix64.Zero : pair.MassA.InverseMass;
-                Fix64 invMassB = World.Has<SleepingTag>(pair.EntityB) ? Fix64.Zero : pair.MassB.InverseMass;
+                Fix64 invMassA = pair.IsSleepingA != 0 ? Fix64.Zero : pair.MassA.InverseMass;
+                Fix64 invMassB = pair.IsSleepingB != 0 ? Fix64.Zero : pair.MassB.InverseMass;
 
                 Fix64 totalInverseMass = invMassA + invMassB;
                 if (totalInverseMass < Epsilon) return;
@@ -58,7 +77,7 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     positionB.Value = positionB.Value + correction * invMassB;
                 }
-            });
+            }
         }
     }
 }

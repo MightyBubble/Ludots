@@ -46,6 +46,8 @@ namespace Ludots.Core.Config
         public int WorldWidthInTiles { get; set; } = 64;
         public int WorldHeightInTiles { get; set; } = 64;
 
+        public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
+
         public Navigation2DConfig Navigation2D { get; set; } = new Navigation2DConfig();
 
         public SelectionRuntimeConfig? Selection { get; set; }
@@ -59,6 +61,11 @@ namespace Ludots.Core.Config
         /// Contains order type ids, response-chain order type ids, attributes, etc.
         /// </summary>
         public GameConstants Constants { get; set; } = new GameConstants();
+    }
+
+    public sealed class Physics2DConfig
+    {
+        public bool Enabled { get; set; }
     }
 
     /// <summary>

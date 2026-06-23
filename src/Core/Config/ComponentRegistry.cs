@@ -29,10 +29,11 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Config
 {
     public delegate void ComponentSetter(Entity entity, JsonNode data);
+    public delegate void ComponentSetterWithContext(Entity entity, JsonNode data, ComponentAuthoringContext context);
 
     public static class ComponentRegistry
     {
-        private static readonly Dictionary<string, ComponentSetter> _setters = new Dictionary<string, ComponentSetter>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, ComponentSetterWithContext> _setters = new Dictionary<string, ComponentSetterWithContext>(StringComparer.Ordinal);
         private static readonly Dictionary<string, ComponentType> _componentTypes = new Dictionary<string, ComponentType>(StringComparer.Ordinal);
         private static readonly Dictionary<string, string> _registrationSource = new Dictionary<string, string>(StringComparer.Ordinal);
         private static RegistrationConflictReport _conflictReport;
@@ -95,7 +96,7 @@ namespace Ludots.Core.Config
 
         public static void Register<T>(string name, string modId = null)
         {
-            Register(name, (entity, json) =>
+            Register(name, (entity, json, _) =>
             {
                 T component;
                 try
@@ -124,6 +125,16 @@ namespace Ludots.Core.Config
 
         public static void Register(string name, ComponentSetter setter, string modId = null)
         {
+            if (setter == null)
+            {
+                throw new InvalidOperationException($"ComponentRegistry registration '{name}' requires a setter.");
+            }
+
+            Register(name, (entity, json, _) => setter(entity, json), modId, componentType: null);
+        }
+
+        public static void Register(string name, ComponentSetterWithContext setter, string modId = null)
+        {
             Register(name, setter, modId, componentType: null);
         }
 
@@ -133,6 +144,16 @@ namespace Ludots.Core.Config
         }
 
         private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
+        {
+            if (setter == null)
+            {
+                throw new InvalidOperationException($"ComponentRegistry registration '{name}' requires a setter.");
+            }
+
+            Register(name, (entity, json, _) => setter(entity, json), modId, componentType);
+        }
+
+        private static void Register(string name, ComponentSetterWithContext setter, string modId, ComponentType? componentType)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
@@ -173,8 +194,8 @@ namespace Ludots.Core.Config
 
         private static bool IsSameRegistration(
             string name,
-            ComponentSetter existingSetter,
-            ComponentSetter newSetter,
+            ComponentSetterWithContext existingSetter,
+            ComponentSetterWithContext newSetter,
             ComponentType? newComponentType,
             string existingMod,
             string newMod)
@@ -238,7 +259,27 @@ namespace Ludots.Core.Config
             return new ReadOnlyDictionary<string, ComponentType>(ordered);
         }
 
-        public static void Apply(Entity entity, string componentName, JsonNode data, string context = null)
+        public static void Apply(Entity entity, string componentName, JsonNode data)
+        {
+            Apply(entity, componentName, data, ComponentAuthoringContext.Empty, context: null);
+        }
+
+        public static void Apply(Entity entity, string componentName, JsonNode data, string context)
+        {
+            Apply(entity, componentName, data, ComponentAuthoringContext.Empty, context);
+        }
+
+        public static void Apply(Entity entity, string componentName, JsonNode data, ComponentAuthoringContext context)
+        {
+            Apply(entity, componentName, data, context, context: null);
+        }
+
+        public static void Apply(
+            Entity entity,
+            string componentName,
+            JsonNode data,
+            ComponentAuthoringContext authoringContext,
+            string context)
         {
             if (string.IsNullOrWhiteSpace(componentName))
             {
@@ -254,7 +295,7 @@ namespace Ludots.Core.Config
             {
                 try
                 {
-                    setter(entity, data);
+                    setter(entity, data, authoringContext ?? ComponentAuthoringContext.Empty);
                 }
                 catch (InvalidOperationException ex) when (!string.IsNullOrWhiteSpace(context))
                 {

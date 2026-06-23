@@ -67,6 +67,11 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
                             vy = Apply(vy, value, b.Mode);
                             break;
                     }
+
+                    if (b.ResetPolicy == AttributeBindingResetPolicy.ResetToZeroPerLogicFrame)
+                    {
+                        attr.SetCurrent(b.AttributeId, 0f);
+                    }
                 }
 
                 force.Force = new Fix64Vec2(vx, vy);

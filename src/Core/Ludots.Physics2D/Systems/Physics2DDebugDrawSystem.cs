@@ -32,6 +32,7 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly Fix64 DampingThresholdLow = Fix64.FromFloat(0.90f);
 
         private readonly DebugDrawCommandBuffer _buffer;
+        private readonly ShapeDataStorage2D _shapeStorage;
 
         private readonly QueryDescription _rigidBodyWithVisualQuery = new QueryDescription()
             .WithAll<Position2D, Collider2D, Mass2D, VisualTransform>();
@@ -54,9 +55,10 @@ namespace Ludots.Core.Physics2D.Systems
         public float InterpolationAlpha { get; set; } = 1f;
         public float DefaultThickness { get; set; } = 1f;
 
-        public Physics2DDebugDrawSystem(World world, DebugDrawCommandBuffer buffer) : base(world)
+        public Physics2DDebugDrawSystem(World world, DebugDrawCommandBuffer buffer, ShapeDataStorage2D shapeStorage) : base(world)
         {
             _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
         }
 
         public override void Update(in float dt)
@@ -156,7 +158,7 @@ namespace Ludots.Core.Physics2D.Systems
             {
                 case ColliderType2D.Circle:
                 {
-                    if (!ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle)) return;
+                    if (!_shapeStorage.TryGetCircle(collider.ShapeDataIndex, out var circle)) return;
                     // Fix64 → float 渲染边界
                     _buffer.Circles.Add(new DebugDrawCircle2D
                     {
@@ -169,7 +171,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
                 case ColliderType2D.Box:
                 {
-                    if (!ShapeDataStorage2D.TryGetBox(collider.ShapeDataIndex, out var box)) return;
+                    if (!_shapeStorage.TryGetBox(collider.ShapeDataIndex, out var box)) return;
                     _buffer.Boxes.Add(new DebugDrawBox2D
                     {
                         Center = drawPosM + ShapeWorldTransform2D.RotateLocal(box.LocalCenter, rotation).ToVector2() * CmToM,
@@ -183,7 +185,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
                 case ColliderType2D.Polygon:
                 {
-                    if (!ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var poly) || poly.Vertices == null || poly.VertexCount < 3) return;
+                    if (!_shapeStorage.TryGetPolygon(collider.ShapeDataIndex, out var poly) || poly.Vertices == null || poly.VertexCount < 3) return;
                     Fix64 sin = Fix64.Zero;
                     Fix64 cos = Fix64.OneValue;
                     if (rotation != Fix64.Zero)
@@ -243,7 +245,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                 if (pair.ContactCount > 0)
                 {
-                    var p = pair.LocalContactPoint0.ToVector2() * CmToM;
+                    var p = ((pair.PositionA.Value + pair.PositionB.Value) * Fix64.HalfValue).ToVector2() * CmToM;
                     var normal = pair.Normal.ToVector2();
                     float penM = pair.Penetration.ToFloat() * CmToM;
                     _buffer.Lines.Add(new DebugDrawLine2D

@@ -611,10 +611,13 @@ namespace Ludots.Core.Engine
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
+            var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
+            var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
             var navigation2dClockConfig = navigation2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
             _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
+            var componentAuthoringContext = new ComponentAuthoringContext();
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
@@ -1074,6 +1077,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
             SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
+            SetService(CoreServiceKeys.Physics2DSolverConfig, physics2dSolverConfig);
             SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
             SetService(CoreServiceKeys.Physics2DController, _physics2DController);
             SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
@@ -1249,19 +1253,114 @@ namespace Ludots.Core.Engine
                     orderQueue),
                 SystemGroup.PostMovement);
 
+            const string physics2dAssemblyName = "Ludots.Physics2D";
+            const string shapeStorageTypeName = "Ludots.Core.Physics2D.ShapeDataStorage2D";
+            const string physics2dSystemFactoryName = "Physics2D.ProductionSimulation";
+            const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
+            const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
+
+            void EnsurePhysics2DAssemblyLoaded()
+            {
+                AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(physics2dAssemblyName));
+            }
+
+            object EnsurePhysics2DShapeStorage()
+            {
+                object existing = GetService(CoreServiceKeys.Physics2DShapeStorage);
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                var shapeStorageType = Type.GetType($"{shapeStorageTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                if (shapeStorageType == null)
+                {
+                    EnsurePhysics2DAssemblyLoaded();
+                    shapeStorageType = Type.GetType($"{shapeStorageTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                }
+
+                if (shapeStorageType == null)
+                {
+                    throw new InvalidOperationException("Physics2D shape storage type is not loadable.");
+                }
+
+                object shapeStorage = Activator.CreateInstance(shapeStorageType)
+                    ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
+                componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
+                MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
+                SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
+                return shapeStorage;
+            }
+
+            void RegisterPhysics2DSystemFactory()
+            {
+                SystemFactoryRegistry.Register(physics2dSystemFactoryName, SystemGroup.InputCollection, ctx =>
+                {
+                    var physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                    if (physics2dSystemType == null)
+                    {
+                        EnsurePhysics2DAssemblyLoaded();
+                        physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                    }
+
+                    if (physics2dSystemType == null)
+                    {
+                        throw new InvalidOperationException("Physics2D.Enabled=true requires Physics2DSimulationSystem to be loadable.");
+                    }
+
+                    var shapeStorage = EnsurePhysics2DShapeStorage();
+                    var systemObj = Activator.CreateInstance(
+                        physics2dSystemType,
+                        World,
+                        clock,
+                        physics2dTickPolicy,
+                        physics2dSolverConfig,
+                        shapeStorage);
+                    if (systemObj is ISystem<float> system)
+                    {
+                        return system;
+                    }
+
+                    throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
+                });
+            }
+
+            void RegisterPhysics2DWorldSyncSystem()
+            {
+                var worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                if (worldSyncSystemType == null)
+                {
+                    EnsurePhysics2DAssemblyLoaded();
+                    worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
+                }
+
+                if (worldSyncSystemType == null)
+                {
+                    throw new InvalidOperationException("Physics2D.Enabled=true requires Physics2DToWorldPositionSyncSystem to be loadable.");
+                }
+
+                if (Activator.CreateInstance(worldSyncSystemType, World) is ISystem<float> worldSyncSystem)
+                {
+                    RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+                    return;
+                }
+
+                throw new InvalidOperationException($"Failed to create Physics2D world sync system '{worldSyncSystemTypeName}'.");
+            }
+
+            RegisterPhysics2DSystemFactory();
+
+            bool physics2DEnabled = config.Physics2D.Enabled || config.Navigation2D.Enabled;
             if (config.Navigation2D.Enabled)
             {
                 var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
                 SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
 
                 const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
-                const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
-                const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
-                const string physics2dAssemblyName = "Ludots.Physics2D";
                 var nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
                 if (nav2dSystemType == null)
                 {
-                    AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(physics2dAssemblyName));
+                    EnsurePhysics2DAssemblyLoaded();
                     nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
                 }
 
@@ -1271,33 +1370,23 @@ namespace Ludots.Core.Engine
                 }
                 else
                 {
-                    var physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    var worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    if (physics2dSystemType == null || worldSyncSystemType == null)
-                    {
-                        throw new InvalidOperationException("Navigation2D.Enabled=true requires Physics2DSimulationSystem and Physics2DToWorldPositionSyncSystem to be loadable.");
-                    }
+                    var physics2dShapeStorage = EnsurePhysics2DShapeStorage();
 
                     RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavOrderAgentBootstrapSystem(World), SystemGroup.InputCollection);
 
-                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy);
+                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy, physics2dShapeStorage);
                     if (nav2dSystemObj is ISystem<float> nav2dSystem)
                     {
                         RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
                     }
-
-                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy);
-                    if (physics2dSystemObj is ISystem<float> physics2dSystem)
-                    {
-                        RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
-                    }
-
-                    var worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
-                    if (worldSyncSystemObj is ISystem<float> worldSyncSystem)
-                    {
-                        RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
-                    }
                 }
+            }
+
+            if (physics2DEnabled)
+            {
+                EnsurePhysics2DShapeStorage();
+                SystemFactoryRegistry.TryActivate(physics2dSystemFactoryName, CreateContext(), this);
+                RegisterPhysics2DWorldSyncSystem();
             }
             
             // Phase 2: AbilityActivation
@@ -1336,13 +1425,15 @@ namespace Ludots.Core.Engine
                 presentationEventStream,
                 _spatialPartition,
                 WorldSizeSpec,
-                presentationTimingDiagnostics),
+                presentationTimingDiagnostics,
+                componentAuthoringContext),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)
             {
-                if (Activator.CreateInstance(manifestationObstacleBridgeType, World) is ISystem<float> manifestationObstacleBridgeSystem)
+                object shapeStorage = EnsurePhysics2DShapeStorage();
+                if (Activator.CreateInstance(manifestationObstacleBridgeType, World, shapeStorage) is ISystem<float> manifestationObstacleBridgeSystem)
                 {
                     RegisterSystem(manifestationObstacleBridgeSystem, SystemGroup.EffectProcessing);
                 }

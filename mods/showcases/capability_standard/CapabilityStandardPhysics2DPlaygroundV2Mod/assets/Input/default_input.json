@@ -1,0 +1,118 @@
+{
+  "actions": [
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.PointerPos", "name": "Physics2DPlaygroundV2_PointerPos", "type": "Axis2D" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.PrimaryClick", "name": "Physics2DPlaygroundV2_PrimaryClick", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SecondaryClick", "name": "Physics2DPlaygroundV2_SecondaryClick", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.TogglePhysicsOnlyMode", "name": "Physics2DPlaygroundV2_TogglePhysicsOnlyMode", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ToggleNavMode", "name": "Physics2DPlaygroundV2_ToggleNavMode", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ApplyImpulse", "name": "Physics2DPlaygroundV2_ApplyImpulse", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SubmitNavMove", "name": "Physics2DPlaygroundV2_SubmitNavMove", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ApplyDisplacement", "name": "Physics2DPlaygroundV2_ApplyDisplacement", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkForcePulse", "name": "Physics2DPlaygroundV2_BenchmarkForcePulse", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SpawnStaticPolygon", "name": "Physics2DPlaygroundV2_SpawnStaticPolygon", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SpawnFrictionZones", "name": "Physics2DPlaygroundV2_SpawnFrictionZones", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ApplyExplosionForce", "name": "Physics2DPlaygroundV2_ApplyExplosionForce", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount1", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount1", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount2", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount2", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount3", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount3", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount4", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount4", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount5", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount5", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount6", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount6", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount7", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount7", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount8", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount8", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount9", "name": "Physics2DPlaygroundV2_BenchmarkSpawnCount9", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CapabilityStandard_Physics2D_PlaygroundV2",
+      "name": "Physics2D Playground v2",
+      "priority": 10,
+      "bindings": [
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.PointerPos", "path": "<Mouse>/Pos" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.PrimaryClick", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SecondaryClick", "path": "<Mouse>/RightButton" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.TogglePhysicsOnlyMode", "path": "<Keyboard>/1" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ToggleNavMode", "path": "<Keyboard>/2" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ApplyImpulse", "path": "<Keyboard>/I" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SubmitNavMove", "path": "<Keyboard>/N" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ApplyDisplacement", "path": "<Keyboard>/K" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkForcePulse", "path": "<Keyboard>/C" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SpawnStaticPolygon", "path": "<Keyboard>/G" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SpawnFrictionZones", "path": "<Keyboard>/F" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ApplyExplosionForce", "path": "<Keyboard>/X" },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount1",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/q" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount2",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/w" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount3",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/e" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount4",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/r" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount5",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/t" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount6",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/y" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount7",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/u" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount8",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/o" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount9",
+          "compositeType": "ButtonChord",
+          "compositeParts": [
+            { "path": "<Keyboard>/leftShift" },
+            { "path": "<Keyboard>/p" }
+          ]
+        }
+      ]
+    }
+  ]
+}

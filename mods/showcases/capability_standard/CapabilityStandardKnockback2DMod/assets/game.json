@@ -1,0 +1,36 @@
+{
+  "startupMapId": "capability_standard_knockback2d",
+  "windowTitle": "Ludots Engine - Capability Standard Knockback2D",
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "physics2D": {
+    "enabled": true
+  },
+  "navigation2D": {
+    "enabled": false
+  },
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 128,
+    "runtimeEntitySpawnReceiptQueueCapacity": 128,
+    "performerInstanceCapacity": 128,
+    "presentationEventStreamCapacity": 256,
+    "presentationOwnerChangeCapacity": 256,
+    "performerCommandCapacity": 256,
+    "primitiveDrawBufferCapacity": 256,
+    "visualSnapshotBufferCapacity": 256,
+    "visualProxyBufferCapacity": 256,
+    "presentationRequestCapacity": 256,
+    "groundOverlayCapacity": 64,
+    "worldHudCapacity": 256,
+    "screenHudCapacity": 256,
+    "skinnedVisualBatchCapacity": 256,
+    "minimapMarkerCapacity": 128,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000,
+      "mediumLodDistanceCm": 12000,
+      "lowLodDistanceCm": 24000
+    }
+  }
+}

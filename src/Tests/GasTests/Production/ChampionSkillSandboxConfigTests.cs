@@ -137,8 +137,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<NavKinematics2D>(warrior), Is.True);
 
             var collider = engine.World.Get<Collider2D>(warrior);
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
             Assert.That(collider.Type, Is.EqualTo(ColliderType2D.Circle));
-            Assert.That(ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle), Is.True);
+            Assert.That(shapeStorage.TryGetCircle(collider.ShapeDataIndex, out var circle), Is.True);
             Assert.That(circle.Radius.ToFloat(), Is.EqualTo(46f).Within(0.01f));
 
             var physicsMaterial = engine.World.Get<PhysicsMaterial2D>(warrior);
@@ -183,8 +185,10 @@ namespace Ludots.Tests.GAS.Production
                 return counts.TeamA >= 48 && counts.TeamB >= 48;
             }, maxFrames: 240);
 
-            float teamAClearanceCm = ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 1);
-            float teamBClearanceCm = ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 2);
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
+            float teamAClearanceCm = ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 1);
+            float teamBClearanceCm = ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 2);
 
             Assert.That(teamAClearanceCm, Is.GreaterThanOrEqualTo(0f), $"Team A should not spawn overlapped, observed clearance={teamAClearanceCm:0.##}cm.");
             Assert.That(teamBClearanceCm, Is.GreaterThanOrEqualTo(0f), $"Team B should not spawn overlapped, observed clearance={teamBClearanceCm:0.##}cm.");
@@ -1045,6 +1049,8 @@ namespace Ludots.Tests.GAS.Production
             int peakContactPairs = 0;
             int peakActiveCollisionPairs = 0;
             int peakPhysicsStepsLastFixedTick = 0;
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
 
             for (int i = 0; i < frames; i++)
             {
@@ -1055,8 +1061,8 @@ namespace Ludots.Tests.GAS.Production
                 peakContactPairs = Math.Max(peakContactPairs, stats.ContactPairs);
                 peakActiveCollisionPairs = Math.Max(peakActiveCollisionPairs, CountActiveCollisionPairs(engine.World));
                 peakProjectiles = Math.Max(peakProjectiles, CountProjectiles(engine.World));
-                worstTeamAClearanceCm = Math.Min(worstTeamAClearanceCm, ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 1));
-                worstTeamBClearanceCm = Math.Min(worstTeamBClearanceCm, ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 2));
+                worstTeamAClearanceCm = Math.Min(worstTeamAClearanceCm, ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 1));
+                worstTeamBClearanceCm = Math.Min(worstTeamBClearanceCm, ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 2));
             }
 
             return new StressPhysicsTelemetry(
@@ -1228,7 +1234,11 @@ namespace Ludots.Tests.GAS.Production
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
         }
 
-        private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)
+        private static float ComputeMinimumStressTeamClearance(
+            World world,
+            ShapeDataStorage2D shapeStorage,
+            string mapId,
+            int teamId)
         {
             var units = new List<StressBodySample>(128);
             var query = new QueryDescription().WithAll<Team, MapEntity, AbilityStateBuffer, WorldPositionCm, Collider2D>();
@@ -1237,7 +1247,7 @@ namespace Ludots.Tests.GAS.Production
                 if (team.Id != teamId ||
                     !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal) ||
                     collider.Type != ColliderType2D.Circle ||
-                    !ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle))
+                    !shapeStorage.TryGetCircle(collider.ShapeDataIndex, out var circle))
                 {
                     return;
                 }

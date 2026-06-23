@@ -23,13 +23,6 @@ namespace Ludots.Core.Physics2D.Components
         public Fix64 Friction;
         public Fix64 Restitution;
         public Fix64 BaseDamping;
-
-        public static readonly PhysicsMaterial2D Default = new PhysicsMaterial2D
-        {
-            Friction = Fix64.HalfValue,
-            Restitution = Fix64.Zero,
-            BaseDamping = Fix64.FromFloat(0.98f)
-        };
     }
 
     /// <summary>

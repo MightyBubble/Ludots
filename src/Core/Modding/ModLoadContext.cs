@@ -55,6 +55,12 @@ namespace Ludots.Core.Modding
                 return shared;
             }
 
+            if (IsHostSharedAssembly(assemblyName.Name) &&
+                TryLoadDefaultAssembly(assemblyName, out var defaultAssembly))
+            {
+                return defaultAssembly;
+            }
+
             var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
             if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
             {
@@ -82,6 +88,32 @@ namespace Ludots.Core.Modding
             }
 
             return null;
+        }
+
+        private static bool IsHostSharedAssembly(string? assemblyName)
+        {
+            return !string.IsNullOrWhiteSpace(assemblyName) &&
+                (assemblyName.StartsWith("Ludots.", StringComparison.Ordinal) ||
+                 string.Equals(assemblyName, "Arch", StringComparison.Ordinal) ||
+                 string.Equals(assemblyName, "Arch.System", StringComparison.Ordinal));
+        }
+
+        private static bool TryLoadDefaultAssembly(AssemblyName assemblyName, out Assembly assembly)
+        {
+            try
+            {
+                assembly = AssemblyLoadContext.Default.LoadFromAssemblyName(assemblyName);
+                return assembly != null;
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (FileLoadException)
+            {
+            }
+
+            assembly = null!;
+            return false;
         }
 
         protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)

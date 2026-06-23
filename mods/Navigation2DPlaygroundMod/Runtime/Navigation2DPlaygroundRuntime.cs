@@ -55,9 +55,11 @@ namespace Navigation2DPlaygroundMod.Runtime
 
             var debugDrawBuffer = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
+            var solverConfig = engine.GetService(CoreServiceKeys.Physics2DSolverConfig)
+                ?? throw new InvalidOperationException("Navigation2DPlaygroundMod requires Physics2DSolverConfig.");
 
             engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
-            engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
+            engine.RegisterSystem(new IntegrationSystem2D(engine.World, solverConfig), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundControlSystem(engine), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundSelectionFilterSystem(engine), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundCommandSystem(engine), SystemGroup.InputCollection);

@@ -92,7 +92,7 @@ namespace Ludots.Tests.Navigation2D
         {
             using var world = World.Create();
             using var runtime = CreateRuntime(cacheEnabled);
-            var steering = new Navigation2DSteeringSystem2D(world, runtime);
+            var steering = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var agents = CreateOpposingCrowd(world);
             var tickStats = new List<TemporalTickStats>(SimulationTicks);
 
