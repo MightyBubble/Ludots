@@ -9,7 +9,7 @@ namespace Ludots.Core.Navigation.GraphWorld
     /// Map-scoped loaded chunk set for world-space grid chunks keyed by <see cref="GraphChunkKey"/>.
     /// Supports explicit chunk toggles and AOI-style square updates without per-update allocations.
     /// </summary>
-    public sealed class WorldGridLoadedChunks : ILoadedChunks
+    public sealed class WorldGridLoadedChunks : ILoadedChunks, IWorldChunkKeyResolver
     {
         private readonly HashSet<long> _activeChunks;
         private readonly HashSet<long> _nextActiveChunks;
@@ -44,6 +44,13 @@ namespace Ludots.Core.Navigation.GraphWorld
         public bool IsLoaded(long chunkKey)
         {
             return _activeChunks.Contains(chunkKey);
+        }
+
+        public long GetChunkKeyForWorldCm(float worldXCm, float worldYCm)
+        {
+            int chunkX = MathUtil.FloorDiv((int)MathF.Floor(worldXCm), ChunkSizeCm);
+            int chunkY = MathUtil.FloorDiv((int)MathF.Floor(worldYCm), ChunkSizeCm);
+            return GraphChunkKey.Pack(chunkX, chunkY);
         }
 
         public void SetLoaded(long chunkKey, bool loaded)
