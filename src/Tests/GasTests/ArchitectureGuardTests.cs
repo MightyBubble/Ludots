@@ -1106,6 +1106,47 @@ namespace GasTests
             });
         }
 
+        [Test]
+        [Ignore("FOG-1 #306 ADR guard placeholder; enable as FOG-2 through FOG-9 land the Vision domain.")]
+        public void Issue306_WarFogAdr_PendingVisionDomainGuardrails()
+        {
+            var repoRoot = FindRepoRoot();
+            string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
+            string coreServiceKeysPath = Path.Combine(repoRoot, "src", "Core", "Scripting", "CoreServiceKeys.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+            string knowledgeStorePath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionStore.cs");
+            string knowledgeContractsPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionContracts.cs");
+
+            Assert.That(Directory.Exists(visionRoot), Is.True, "FOG-2 starts the cell-keyed Vision domain root.");
+
+            string[] visionFiles = Directory.GetFiles(visionRoot, "*.cs", SearchOption.AllDirectories);
+            string visionSource = string.Join('\n', Array.ConvertAll(visionFiles, File.ReadAllText));
+            string coreServiceKeys = File.ReadAllText(coreServiceKeysPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+            string knowledgeStore = File.ReadAllText(knowledgeStorePath);
+            string knowledgeContracts = File.ReadAllText(knowledgeContractsPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(visionSource, Does.Contain("FogField"), "FOG-1 #306 section 1.1/1.3: fog stores cell-keyed visibility fields.");
+                Assert.That(visionSource, Does.Contain("ScopeKey"), "FOG-1 #306 section 1.4: VisionScope is the existing ScopeKey contract.");
+                Assert.That(visionSource, Does.Not.Contain("EntityKeyedSoaTable"), "FOG-1 #306 section 1.3: FogField must not use the entity-keyed AAC table.");
+                Assert.That(visionSource, Does.Contain("CellVisibility"), "FOG-1 #306 section 1.4: layers carry Unseen/Explored/Visible/Denied states.");
+                Assert.That(visionSource, Does.Contain("VerticalVisionRule"), "FOG-1 #306 section 1.5: vertical vision remains independent.");
+                Assert.That(visionSource, Does.Contain("LineOfSightRule"), "FOG-1 #306 section 1.5: LoS remains an independent switch.");
+                Assert.That(visionSource, Does.Contain("Concealment"), "FOG-1 #306 section 1.5: concealment remains an independent switch.");
+                Assert.That(visionSource, Does.Contain("KnowledgeIdMask256"), "FOG-1 #306 section 1.6: projection uses finite Knowledge masks.");
+                Assert.That(visionSource, Does.Contain("KnowledgeProjectionStore"), "FOG-1 #306 section 1.1: entity disclosure flows through Knowledge.");
+                Assert.That(visionSource, Does.Contain("RelationshipRuntime"), "FOG-1 #306 section 1.7: sharing and cross-scope effects use relationship edges.");
+                Assert.That(visionSource, Does.Not.Contain("PlayerId"), "FOG-1 #306 section 1.2/1.8: Core Vision has no participant business semantics.");
+                Assert.That(visionSource, Does.Not.Contain("TeamId"), "FOG-1 #306 section 1.2/1.8: Core Vision has no team shortcuts.");
+                Assert.That(knowledgeStore, Does.Contain("EntityKeyedSoaTable"), "Knowledge remains the entity-keyed projection SSOT.");
+                Assert.That(knowledgeContracts, Does.Contain("KnowledgeIdMask256"));
+                Assert.That(coreServiceKeys, Does.Contain("Vision"));
+                Assert.That(gameEngine, Does.Contain("Vision"));
+            });
+        }
+
         private static void AssertShowcaseCapability(
             string repoRoot,
             string gasTestsProject,
