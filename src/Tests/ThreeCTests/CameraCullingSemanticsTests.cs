@@ -163,6 +163,39 @@ namespace Ludots.Tests.ThreeC
                 "Camera culling must ask the loaded-chunk source for its world key instead of assuming hex-cell chunk math.");
         }
 
+        [Test]
+        public void Culling_LoadedChunkGate_RequiresWorldKeyResolver()
+        {
+            using World world = World.Create();
+            var camera = new CameraManager();
+            camera.State.TargetCm = Vector2.Zero;
+            camera.State.DistanceCm = 20000f;
+            camera.State.Pitch = 45f;
+            camera.State.FovYDeg = 60f;
+
+            Entity entity = CreateCullableEntity(world, 7000, 100);
+            var spatial = new StubSpatialQueryService(entity);
+            var view = new StubViewController();
+            var loadedChunks = new LoadedChunksWithoutWorldKeyResolver();
+            loadedChunks.SetLoaded(1);
+
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                loadedChunks: loadedChunks,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f));
+            Assert.That(ex!.Message, Does.Contain(nameof(IWorldChunkKeyResolver)));
+        }
+
         private static Entity CreateCullableEntity(World world, int xCm, int yCm)
         {
             return world.Create(
@@ -209,6 +242,32 @@ namespace Ludots.Tests.ThreeC
             public SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => throw new NotSupportedException();
             public SpatialQueryResult QueryHexRange(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
             public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
+        }
+
+        private sealed class LoadedChunksWithoutWorldKeyResolver : ILoadedChunks
+        {
+            private readonly HashSet<long> _active = new();
+
+            public IReadOnlyCollection<long> ActiveChunkKeys => _active;
+
+            public event Action<long> ChunkLoaded
+            {
+                add { }
+                remove { }
+            }
+
+            public event Action<long> ChunkUnloaded
+            {
+                add { }
+                remove { }
+            }
+
+            public bool IsLoaded(long chunkKey) => _active.Contains(chunkKey);
+
+            public void SetLoaded(long chunkKey)
+            {
+                _active.Add(chunkKey);
+            }
         }
     }
 }

@@ -84,7 +84,7 @@ namespace Ludots.Tests.ThreeC
             public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
         }
 
-        private sealed class StubLoadedChunks : Ludots.Core.Spatial.ILoadedChunks
+        private sealed class StubLoadedChunks : Ludots.Core.Spatial.ILoadedChunks, Ludots.Core.Spatial.IWorldChunkKeyResolver
         {
             private readonly HashSet<long> _active = new();
 
@@ -103,6 +103,14 @@ namespace Ludots.Tests.ThreeC
             }
 
             public bool IsLoaded(long chunkKey) => _active.Contains(chunkKey);
+
+            public long GetChunkKeyForWorldCm(float worldXCm, float worldYCm)
+            {
+                Ludots.Core.Map.Hex.HexCoordinates hex = Ludots.Core.Map.Hex.HexCoordinates.FromWorldPositionCm(
+                    new Vector3(worldXCm, 0f, worldYCm));
+                (int col, int row) = hex.ToOffsetCoordinates();
+                return Ludots.Core.Map.Hex.HexCoordinates.GetChunkKey(col >> 6, row >> 6);
+            }
 
             public void SetLoaded(params long[] keys)
             {

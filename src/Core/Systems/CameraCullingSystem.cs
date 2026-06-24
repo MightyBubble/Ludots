@@ -146,6 +146,7 @@ namespace Ludots.Core.Systems
         private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
         private readonly ILoadedChunks? _loadedChunks;
+        private readonly IWorldChunkKeyResolver? _loadedChunkKeyResolver;
         private readonly CameraCullingFocusOverride? _focusOverride;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PerformerEntityRuntime? _performers;
@@ -206,6 +207,7 @@ namespace Ludots.Core.Systems
             _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _loadedChunks = loadedChunks;
+            _loadedChunkKeyResolver = loadedChunks as IWorldChunkKeyResolver;
             _focusOverride = focusOverride;
             _performers = performers;
             _timingDiagnostics = timingDiagnostics;
@@ -1700,12 +1702,13 @@ namespace Ludots.Core.Systems
                 return true;
             }
 
-            if (_loadedChunks is not IWorldChunkKeyResolver resolver)
+            if (_loadedChunkKeyResolver == null)
             {
-                return true;
+                throw new InvalidOperationException(
+                    $"{nameof(CameraCullingSystem)} requires {nameof(IWorldChunkKeyResolver)} when {nameof(ILoadedChunks)} gates visibility.");
             }
 
-            return _loadedChunks.IsLoaded(resolver.GetChunkKeyForWorldCm(worldXCm, worldYCm));
+            return _loadedChunks.IsLoaded(_loadedChunkKeyResolver.GetChunkKeyForWorldCm(worldXCm, worldYCm));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
