@@ -87,6 +87,7 @@ using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Config;
 using Ludots.Core.Gameplay.Progression.Systems;
 using Ludots.Core.Persistence;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Engine
 {
@@ -633,6 +634,13 @@ namespace Ludots.Core.Engine
                 knowledgeProjectionStore,
                 knowledgeRelationCollectionProjector,
                 scopeResolver);
+            var visionFogLayerRegistry = new FogLayerRegistry();
+            var visionFogFieldStore = new FogFieldStore();
+            var visionFogSnapshotStore = new FogSnapshotStore(relationships: relationshipRuntime);
+            var visionResolver = new VisionResolver(
+                visionFogLayerRegistry,
+                visionFogFieldStore,
+                relationships: relationshipRuntime);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -1105,6 +1113,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
             SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);
+            SetService(CoreServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
+            SetService(CoreServiceKeys.VisionFogFieldStore, visionFogFieldStore);
+            SetService(CoreServiceKeys.VisionFogSnapshotStore, visionFogSnapshotStore);
+            SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);

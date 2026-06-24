@@ -1,0 +1,6 @@
+{
+  "capability": "FOG-6",
+  "polarity": "Deny",
+  "denyModes": ["DenyDominates", "RevealDominates"],
+  "relationshipGated": true
+}

@@ -1107,8 +1107,7 @@ namespace GasTests
         }
 
         [Test]
-        [Ignore("FOG-1 #306 ADR guard placeholder; enable as FOG-2 through FOG-9 land the Vision domain.")]
-        public void Issue306_WarFogAdr_PendingVisionDomainGuardrails()
+        public void Issue306_WarFogAdr_VisionDomainGuardrails()
         {
             var repoRoot = FindRepoRoot();
             string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
@@ -1145,6 +1144,134 @@ namespace GasTests
                 Assert.That(coreServiceKeys, Does.Contain("Vision"));
                 Assert.That(gameEngine, Does.Contain("Vision"));
             });
+        }
+
+        [Test]
+        public void Issue314_WarFogGuardrails_CellKeyedKnowledgeOnlyAndShowcasesExist()
+        {
+            var repoRoot = FindRepoRoot();
+            string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
+            string testsProjectPath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj");
+            string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "FogOfWarShowcaseAcceptanceTests.cs");
+            string testsProject = File.ReadAllText(testsProjectPath);
+            string[] visionFiles = Directory.GetFiles(visionRoot, "*.cs", SearchOption.AllDirectories);
+            string[] forbiddenVisionTokens =
+            {
+                "EntityKeyedSoaTable",
+                "PlayerId",
+                "TeamId",
+                "TeamManager",
+                "ra2",
+                "war3",
+                "moba",
+                "commando"
+            };
+            string[] forbiddenHotPathTokens =
+            {
+                "using System.Linq",
+                ".Where(",
+                ".Select(",
+                ".ToArray(",
+                ".ToList(",
+                "yield return",
+                "IEnumerator",
+                "IEnumerable<",
+                "new Dictionary<",
+                "new List<"
+            };
+
+            var hits = new List<string>();
+            for (int i = 0; i < visionFiles.Length; i++)
+            {
+                AppendForbiddenSourceTokens(repoRoot, visionFiles[i], forbiddenVisionTokens, hits);
+                AppendForbiddenSourceTokens(repoRoot, visionFiles[i], forbiddenHotPathTokens, hits);
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "FOG-9 #314 keeps Core Vision cell-keyed, topic-neutral, and allocation-conscious:\n" +
+                string.Join("\n", hits));
+
+            ShowcaseCapabilitySpec[] specs =
+            {
+                new(
+                    Issue: "#307",
+                    ModName: "MultiLayerFogFieldShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "MultiLayerFogFieldShowcaseMod"),
+                    EntryFileName: "MultiLayerFogFieldShowcaseModEntry.cs",
+                    ProjectFileName: "MultiLayerFogFieldShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#308",
+                    ModName: "VisionConeHighGroundShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "VisionConeHighGroundShowcaseMod"),
+                    EntryFileName: "VisionConeHighGroundShowcaseModEntry.cs",
+                    ProjectFileName: "VisionConeHighGroundShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#309",
+                    ModName: "LineOfSightBrushShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "LineOfSightBrushShowcaseMod"),
+                    EntryFileName: "LineOfSightBrushShowcaseModEntry.cs",
+                    ProjectFileName: "LineOfSightBrushShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#310",
+                    ModName: "ExploredMemoryShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "ExploredMemoryShowcaseMod"),
+                    EntryFileName: "ExploredMemoryShowcaseModEntry.cs",
+                    ProjectFileName: "ExploredMemoryShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#311",
+                    ModName: "GapGeneratorShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "GapGeneratorShowcaseMod"),
+                    EntryFileName: "GapGeneratorShowcaseModEntry.cs",
+                    ProjectFileName: "GapGeneratorShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#312",
+                    ModName: "StealthDetectionShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "StealthDetectionShowcaseMod"),
+                    EntryFileName: "StealthDetectionShowcaseModEntry.cs",
+                    ProjectFileName: "StealthDetectionShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#313",
+                    ModName: "SharedVisionSnapshotShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "SharedVisionSnapshotShowcaseMod"),
+                    EntryFileName: "SharedVisionSnapshotShowcaseModEntry.cs",
+                    ProjectFileName: "SharedVisionSnapshotShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#315",
+                    ModName: "FogOfWarShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "FogOfWarShowcaseMod"),
+                    EntryFileName: "FogOfWarShowcaseModEntry.cs",
+                    ProjectFileName: "FogOfWarShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase")
+            };
+
+            var missing = new List<string>();
+            for (int i = 0; i < specs.Length; i++)
+            {
+                AssertShowcaseCapability(repoRoot, testsProject, specs[i], missing);
+            }
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "FOG-9 #314 and FOG-10 #315 require formal War Fog showcase roots and headless acceptance evidence:\n" +
+                string.Join("\n", missing));
         }
 
         private static void AssertShowcaseCapability(

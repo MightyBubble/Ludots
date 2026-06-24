@@ -1,0 +1,5 @@
+{
+  "capability": "FOG-8",
+  "snapshot": ["capture", "restore", "merge", "diff"],
+  "sharedExplored": { "relationshipGated": true }
+}

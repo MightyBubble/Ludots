@@ -90,6 +90,14 @@
     <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\gold_market\GoldMarketShowcaseMod\GoldMarketShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_association\FourXAssociationShowcaseMod\FourXAssociationShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\MultiLayerFogFieldShowcaseMod\MultiLayerFogFieldShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\VisionConeHighGroundShowcaseMod\VisionConeHighGroundShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\LineOfSightBrushShowcaseMod\LineOfSightBrushShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\ExploredMemoryShowcaseMod\ExploredMemoryShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\GapGeneratorShowcaseMod\GapGeneratorShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\StealthDetectionShowcaseMod\StealthDetectionShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\SharedVisionSnapshotShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\FogOfWarShowcaseMod\FogOfWarShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\UtilityAutocastShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />

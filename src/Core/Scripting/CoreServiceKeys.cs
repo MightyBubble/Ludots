@@ -69,6 +69,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Core.UI;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Scripting
@@ -191,6 +192,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
         public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
         public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
+        public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
+        public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
+        public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
