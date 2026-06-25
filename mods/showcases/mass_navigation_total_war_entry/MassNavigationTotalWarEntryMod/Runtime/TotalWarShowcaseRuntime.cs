@@ -1,49 +1,59 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
-using MassNavigationMod;
-using MassNavigationMod.Runtime;
 
 namespace MassNavigationTotalWarEntryMod.Runtime;
 
 internal sealed class TotalWarShowcaseRuntime
 {
+    private const string OwnedFormationKnowledgeRelationshipTypeId = "Owns";
+    private const string LocalFormationVisibilityCollectionKey = "mass_navigation.total_war.local_visible_formations";
     private static readonly float DiscSlotGoldenAngleRadians = MathF.PI * (3f - MathF.Sqrt(5f));
+    private static readonly QueryDescription FormationAnchorCandidateQuery = new QueryDescription()
+        .WithAll<MassCrowdFormationAnchor, MassCrowdAgentIndex>();
+    private static readonly QueryDescription FormationFollowerCandidateQuery = new QueryDescription()
+        .WithAll<MassCrowdFormationFollower, MassCrowdAgentIndex>();
+    private static readonly QueryDescription ObstacleOverlayCandidateQuery = new QueryDescription()
+        .WithAll<EntityTemplateKeyRef, WorldPositionCm>();
 
-    private readonly TotalWarSpawnReceiptRuntime _spawnReceipts = new();
     private TotalWarShowcaseConfig? _config;
-    private MassNavigationAgentSeed[] _agentSeeds = Array.Empty<MassNavigationAgentSeed>();
     private TotalWarSoldierAgentSpawnPlan[] _soldierAgentPlans = Array.Empty<TotalWarSoldierAgentSpawnPlan>();
     private TotalWarFormationPlan[] _formationPlans = Array.Empty<TotalWarFormationPlan>();
     private TotalWarObstacleOverlayPlan[] _obstacleOverlayPlans = Array.Empty<TotalWarObstacleOverlayPlan>();
     private Entity[] _formationEntities = Array.Empty<Entity>();
-    private Entity[] _soldierEntitiesByAgentIndex = Array.Empty<Entity>();
+    private Entity[] _soldierEntitiesByPlanIndex = Array.Empty<Entity>();
     private Entity[] _obstacleOverlayEntities = Array.Empty<Entity>();
     private Entity[] _initialSelectionScratch = Array.Empty<Entity>();
-    private float[] _soldierTargetWorldXCm = Array.Empty<float>();
-    private float[] _soldierTargetWorldYCm = Array.Empty<float>();
-    private byte[] _soldierTargetSnapshotInitialized = Array.Empty<byte>();
+    private Entity[] _localFormationKnowledgeScratch = Array.Empty<Entity>();
+    private readonly List<PendingFormationBinding> _pendingFormationBindings = new();
+    private readonly List<PendingSoldierBinding> _pendingSoldierBindings = new();
+    private readonly List<PendingObstacleOverlayBinding> _pendingObstacleOverlayBindings = new();
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
+    private bool _obstacleOverlaySpawnsQueued;
     private bool _initialSelectionApplied;
-    private int _receiptChannelId;
     private int _observedSceneResetCount;
 
     public TotalWarShowcaseConfig ActiveConfig => _config
@@ -89,8 +99,9 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         _scenarioSpawned = false;
+        _obstacleOverlaySpawnsQueued = false;
         _initialSelectionApplied = false;
-        ResetSpawnReceipts(engine, config);
+        RemovePendingScenarioSpawns(engine, config);
         MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
         simulation.ResetRuntimeState(engine.World);
         ClearFormationCaches();
@@ -123,9 +134,9 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-        engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
-            new TotalWarSpawnReceiptBindingSystem(engine, this, simulation),
-            SystemGroup.PostMovement);
+        engine.RegisterSystem(
+            new TotalWarScenarioBindingSystem(engine, this, simulation),
+            SystemGroup.RuntimeEntityBinding);
         engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
             new TotalWarFormationRuntimeSystem(engine, this, simulation),
             SystemGroup.PostMovement);
@@ -153,8 +164,9 @@ internal sealed class TotalWarShowcaseRuntime
         {
             _observedSceneResetCount = simulation.SceneResetCount;
             _scenarioSpawned = false;
+            _obstacleOverlaySpawnsQueued = false;
             _initialSelectionApplied = false;
-            ResetSpawnReceipts(engine, config);
+            RemovePendingScenarioSpawns(engine, config);
             DestroyShowcaseOwnedEntities(engine);
             ClearFormationCaches();
         }
@@ -165,14 +177,8 @@ internal sealed class TotalWarShowcaseRuntime
             return;
         }
 
-        if (_spawnReceipts.PendingCount != 0)
-        {
-            return;
-        }
-
-            SyncSoldierTargetsFromFormationAgents(engine, simulation, config.SoldierTargetSync);
-            SyncFormationStates(engine, simulation);
-            TryApplyInitialSelection(engine, config);
+        SyncFormationStates(engine, simulation);
+        TryApplyInitialSelection(engine, config);
     }
 
     private void SpawnScenario(GameEngine engine, TotalWarShowcaseConfig config)
@@ -180,29 +186,12 @@ internal sealed class TotalWarShowcaseRuntime
         MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnQueue.");
-        RuntimeEntitySpawnReceiptQueue receiptQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
-            ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnReceiptQueue.");
-        int receiptChannelId = ResolveReceiptChannelId(engine, config);
-        int pendingReceipts = receiptQueue.CountForChannel(receiptChannelId);
-        if (pendingReceipts != 0)
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase requires its runtime spawn receipt channel to be empty before scenario bootstrap; pending={pendingReceipts}.");
-        }
-        int pendingRequests = spawnQueue.CountForReceiptChannel(receiptChannelId);
-        if (pendingRequests != 0)
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase requires its runtime spawn request channel to be empty before scenario bootstrap; pending={pendingRequests}.");
-        }
 
         ClearSelection(engine);
         BuildAgentPlans(engine, simulation, config);
-        simulation.ResetRuntimeState(engine.World, _agentSeeds);
-        BuildObstacleOverlayPlans(simulation);
         DestroyShowcaseOwnedEntities(engine);
 
-        int spawnRequestCount = _soldierAgentPlans.Length + _formationPlans.Length + _obstacleOverlayPlans.Length;
+        int spawnRequestCount = _soldierAgentPlans.Length + _formationPlans.Length;
         if (spawnQueue.FreeCapacity < spawnRequestCount)
         {
             throw new InvalidOperationException(
@@ -229,20 +218,13 @@ internal sealed class TotalWarShowcaseRuntime
                 RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, team.Id, team.Name));
         }
 
-        ResetSpawnReceipts(engine, config);
+        RemovePendingScenarioSpawns(engine, config);
         MapId mapId = RequireCurrentMapId(engine, config.MapId);
-        EnqueueFormationAgentSpawns(engine, config, spawnQueue, mapId, receiptChannelId);
-        EnqueueObstacleOverlaySpawns(engine, config, spawnQueue, mapId, receiptChannelId);
+        EnqueueFormationAgentSpawns(engine, config, spawnQueue, mapId);
         EnsureSoldierEntityCache();
         for (int i = 0; i < _soldierAgentPlans.Length; i++)
         {
             TotalWarSoldierAgentSpawnPlan plan = _soldierAgentPlans[i];
-            int receiptId = _spawnReceipts.Allocate(TotalWarSpawnReceiptBinding.ForSoldier(
-                plan.MassNavAgentIndex,
-                plan.FormationIndex,
-                plan.SlotIndex,
-                plan.TemplateId));
-
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
@@ -252,9 +234,12 @@ internal sealed class TotalWarShowcaseRuntime
                 HasWorldPosition = 1,
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
-                EmitReceipt = 1,
-                ReceiptChannelId = receiptChannelId,
-                ReceiptId = receiptId,
+                TeamIdOverride = plan.TeamId,
+                ComponentPatches = CreateFormationFollowerPatch(
+                    _formationPlans[plan.FormationIndex].Id,
+                    plan.SlotIndex,
+                    plan.SlotOffsetXCm,
+                    plan.SlotOffsetYCm),
             };
 
             if (!spawnQueue.TryEnqueue(in request))
@@ -264,85 +249,73 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         _scenarioSpawned = true;
+        _obstacleOverlaySpawnsQueued = false;
         _initialSelectionApplied = false;
         _observedSceneResetCount = simulation.SceneResetCount;
         simulation.MarkScenarioSpawned();
         simulation.MarkStructuralChange();
     }
 
-    public bool TryConsumeReceipt(int receiptId, out TotalWarSpawnReceiptBinding binding)
+    private static void RemovePendingScenarioSpawns(GameEngine engine, TotalWarShowcaseConfig config)
     {
-        return _spawnReceipts.TryConsume(receiptId, out binding);
-    }
-
-    public int ResolveReceiptChannelId(GameEngine engine, TotalWarShowcaseConfig config)
-    {
-        if (_receiptChannelId > 0)
-        {
-            return _receiptChannelId;
-        }
-
-        RuntimeEntitySpawnReceiptChannelRegistry channels = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
-            ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnReceiptChannelRegistry.");
-        _receiptChannelId = channels.Register(config.RuntimeSpawnReceiptChannelKey);
-        return _receiptChannelId;
-    }
-
-    private void ResetSpawnReceipts(GameEngine engine, TotalWarShowcaseConfig config)
-    {
-        int receiptChannelId = ResolveReceiptChannelId(engine, config);
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnQueue.");
-        spawnQueue.RemoveForReceiptChannel(receiptChannelId);
-        RuntimeEntitySpawnReceiptQueue receiptQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
-            ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnReceiptQueue.");
-        while (receiptQueue.TryDequeueForChannel(receiptChannelId, out _))
-        {
-        }
-
-        _spawnReceipts.Reset();
+        spawnQueue.RemoveForMapAndTemplates(
+            RequireCurrentMapId(engine, config.MapId),
+            BuildPendingSpawnTemplateScratch(config));
     }
 
-    internal void ResetSpawnReceiptsForTests(GameEngine engine, TotalWarShowcaseConfig config)
+    private static string[] BuildPendingSpawnTemplateScratch(TotalWarShowcaseConfig config)
     {
-        ResetSpawnReceipts(engine, config);
-    }
-
-    public void RegisterSpawnedSoldier(Entity entity, in TotalWarSpawnReceiptBinding binding)
-    {
-        if ((uint)binding.MassNavAgentIndex >= (uint)_soldierEntitiesByAgentIndex.Length)
+        int count = 2 + config.Formations.Length;
+        string[] templateIds = new string[count];
+        templateIds[0] = config.FormationAgent.TemplateId;
+        templateIds[1] = config.ObstacleOverlay.TemplateId;
+        for (int i = 0; i < config.Formations.Length; i++)
         {
-            throw new InvalidOperationException($"Total War showcase soldier agent MassNav index {binding.MassNavAgentIndex} exceeds its scenario cache.");
+            templateIds[i + 2] = config.Formations[i].SoldierAgent.TemplateId;
         }
 
-        if (_soldierEntitiesByAgentIndex[binding.MassNavAgentIndex] != Entity.Null)
-        {
-            throw new InvalidOperationException($"Total War showcase soldier agent MassNav index {binding.MassNavAgentIndex} was already bound.");
-        }
-
-        _soldierEntitiesByAgentIndex[binding.MassNavAgentIndex] = entity;
+        return templateIds;
     }
 
-    public void RegisterSpawnedFormationAgent(GameEngine engine, Entity entity, in TotalWarSpawnReceiptBinding binding)
+    private void RegisterSpawnedSoldier(Entity entity, in MassCrowdFormationFollower follower)
     {
-        if ((uint)binding.FormationIndex >= (uint)_formationPlans.Length)
+        int formationIndex = ResolveFormationIndex(MassCrowdFormationRegistry.GetName(follower.FormationId));
+        int planIndex = ResolveSoldierPlanIndex(formationIndex, follower.SlotIndex);
+        if ((uint)planIndex >= (uint)_soldierEntitiesByPlanIndex.Length)
         {
-            throw new InvalidOperationException($"Total War showcase formation index {binding.FormationIndex} exceeds its scenario cache.");
+            throw new InvalidOperationException($"Total War showcase soldier plan index {planIndex} exceeds its scenario cache.");
+        }
+
+        if (_soldierEntitiesByPlanIndex[planIndex] != Entity.Null)
+        {
+            throw new InvalidOperationException($"Total War showcase soldier plan index {planIndex} was already bound.");
+        }
+
+        _soldierEntitiesByPlanIndex[planIndex] = entity;
+    }
+
+    private void RegisterSpawnedFormationAgent(GameEngine engine, Entity entity, int formationIndex)
+    {
+        if ((uint)formationIndex >= (uint)_formationPlans.Length)
+        {
+            throw new InvalidOperationException($"Total War showcase formation index {formationIndex} exceeds its scenario cache.");
         }
 
         if (_formationEntities.Length != _formationPlans.Length)
         {
-            throw new InvalidOperationException("Total War showcase formation entity cache was not initialized before formation agent receipt binding.");
+            throw new InvalidOperationException("Total War showcase formation entity cache was not initialized before formation sidecar binding.");
         }
 
-        if (_formationEntities[binding.FormationIndex] != Entity.Null)
+        if (_formationEntities[formationIndex] != Entity.Null)
         {
-            throw new InvalidOperationException($"Total War showcase formation index {binding.FormationIndex} was already bound.");
+            throw new InvalidOperationException($"Total War showcase formation index {formationIndex} was already bound.");
         }
 
-        TotalWarFormationPlan plan = _formationPlans[binding.FormationIndex];
-        TotalWarFormationConfig formation = ActiveConfig.Formations[binding.FormationIndex];
-        _formationEntities[binding.FormationIndex] = entity;
+        TotalWarFormationPlan plan = _formationPlans[formationIndex];
+        TotalWarFormationConfig formation = ActiveConfig.Formations[formationIndex];
+        _formationEntities[formationIndex] = entity;
         UpsertComponent(engine.World, entity, new TotalWarFormationAgent { FormationIndex = plan.FormationIndex });
         UpsertComponent(engine.World, entity, new TotalWarFormationState
         {
@@ -360,26 +333,206 @@ internal sealed class TotalWarShowcaseRuntime
         UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = formation.OwnerPlayerId });
     }
 
-    public void RegisterSpawnedObstacleOverlay(Entity entity, in TotalWarSpawnReceiptBinding binding)
+    private void RegisterSpawnedObstacleOverlay(GameEngine engine, Entity entity, int overlayIndex)
     {
         if (_obstacleOverlayEntities.Length != _obstacleOverlayPlans.Length)
         {
-            throw new InvalidOperationException("Total War showcase obstacle overlay cache was not initialized before overlay receipt binding.");
+            throw new InvalidOperationException("Total War showcase obstacle overlay cache was not initialized before overlay binding.");
         }
 
-        for (int i = 0; i < _obstacleOverlayEntities.Length; i++)
+        if ((uint)overlayIndex >= (uint)_obstacleOverlayEntities.Length)
+        {
+            throw new InvalidOperationException($"Total War showcase obstacle overlay index {overlayIndex} exceeds planned overlays {_obstacleOverlayEntities.Length}.");
+        }
+
+        if (_obstacleOverlayEntities[overlayIndex] != Entity.Null)
+        {
+            throw new InvalidOperationException($"Total War showcase obstacle overlay index {overlayIndex} was already bound.");
+        }
+
+        _obstacleOverlayEntities[overlayIndex] = entity;
+        UpsertComponent(engine.World, entity, ActiveConfig.ObstacleOverlay.ToComponent(_obstacleOverlayPlans[overlayIndex].RadiusCm));
+    }
+
+    public void BindComponentAuthoredScenarioEntities(
+        GameEngine engine,
+        MassNavigationSimulationRuntime simulation)
+    {
+        TotalWarShowcaseConfig config = EnsureConfig(engine);
+        if (_formationEntities.Length != _formationPlans.Length ||
+            _soldierEntitiesByPlanIndex.Length != _soldierAgentPlans.Length)
+        {
+            return;
+        }
+
+        EnsureObstacleOverlaySpawnsQueued(engine, simulation, config);
+
+        _pendingFormationBindings.Clear();
+        foreach (ref var chunk in engine.World.Query(in FormationAnchorCandidateQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassCrowdFormationAnchor> anchors = chunk.GetSpan<MassCrowdFormationAnchor>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (engine.World.Has<TotalWarFormationAgent>(entity))
+                {
+                    continue;
+                }
+
+                if (engine.World.Has<PresentationDestroyPending>(entity))
+                {
+                    continue;
+                }
+
+                string formationId = MassCrowdFormationRegistry.GetName(anchors[index].FormationId);
+                int formationIndex = ResolveFormationIndex(formationId);
+                _pendingFormationBindings.Add(new PendingFormationBinding(entity, formationIndex));
+            }
+        }
+        for (int i = 0; i < _pendingFormationBindings.Count; i++)
+        {
+            PendingFormationBinding binding = _pendingFormationBindings[i];
+            RegisterSpawnedFormationAgent(engine, binding.Entity, binding.FormationIndex);
+        }
+        if (_pendingFormationBindings.Count > 0)
+        {
+            PublishSelectableFormationKnowledge(engine);
+        }
+
+        _pendingSoldierBindings.Clear();
+        foreach (ref var chunk in engine.World.Query(in FormationFollowerCandidateQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassCrowdFormationFollower> followers = chunk.GetSpan<MassCrowdFormationFollower>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (engine.World.Has<TotalWarFormationSoldier>(entity) ||
+                    engine.World.Has<PresentationDestroyPending>(entity))
+                {
+                    continue;
+                }
+
+                _pendingSoldierBindings.Add(new PendingSoldierBinding(entity, followers[index]));
+            }
+        }
+        for (int i = 0; i < _pendingSoldierBindings.Count; i++)
+        {
+            PendingSoldierBinding binding = _pendingSoldierBindings[i];
+            MassCrowdFormationFollower follower = binding.Follower;
+            UpsertComponent(engine.World, binding.Entity, new TotalWarFormationSoldier
+            {
+                FormationIndex = ResolveFormationIndex(MassCrowdFormationRegistry.GetName(follower.FormationId)),
+                SlotIndex = follower.SlotIndex,
+            });
+            RegisterSpawnedSoldier(binding.Entity, in follower);
+        }
+
+        BindObstacleOverlays(engine, config);
+        simulation.MarkStructuralChange();
+    }
+
+    private void EnsureObstacleOverlaySpawnsQueued(
+        GameEngine engine,
+        MassNavigationSimulationRuntime simulation,
+        TotalWarShowcaseConfig config)
+    {
+        if (_obstacleOverlaySpawnsQueued)
+        {
+            return;
+        }
+
+        int obstacleCount = simulation.NavigationObstacleCount;
+        if (obstacleCount <= 0)
+        {
+            return;
+        }
+
+        BuildObstacleOverlayPlans(simulation);
+        RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("Total War showcase requires RuntimeEntitySpawnQueue.");
+        if (spawnQueue.FreeCapacity < _obstacleOverlayPlans.Length)
+        {
+            throw new InvalidOperationException(
+                $"Total War showcase requires RuntimeEntitySpawnQueue free capacity {_obstacleOverlayPlans.Length}, actual {spawnQueue.FreeCapacity}.");
+        }
+
+        EnqueueObstacleOverlaySpawns(
+            engine,
+            config,
+            spawnQueue,
+            RequireCurrentMapId(engine, config.MapId));
+        _obstacleOverlaySpawnsQueued = true;
+    }
+
+    private void BindObstacleOverlays(GameEngine engine, TotalWarShowcaseConfig config)
+    {
+        if (_obstacleOverlayEntities.Length != _obstacleOverlayPlans.Length)
+        {
+            return;
+        }
+
+        EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            ?? throw new InvalidOperationException("Total War showcase requires EntityTemplateKeyRegistry.");
+        int overlayTemplateKey = templateKeys.GetId(config.ObstacleOverlay.TemplateId);
+        if (overlayTemplateKey <= 0)
+        {
+            throw new InvalidOperationException($"Total War showcase obstacle overlay template '{config.ObstacleOverlay.TemplateId}' was not registered in EntityTemplateKeyRegistry.");
+        }
+
+        _pendingObstacleOverlayBindings.Clear();
+        foreach (ref var chunk in engine.World.Query(in ObstacleOverlayCandidateQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<EntityTemplateKeyRef> templateKeysSpan = chunk.GetSpan<EntityTemplateKeyRef>();
+            Span<WorldPositionCm> worldPositions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                if (engine.World.Has<TotalWarObstacleOverlay>(entity) ||
+                    engine.World.Has<PresentationDestroyPending>(entity))
+                {
+                    continue;
+                }
+
+                if (templateKeysSpan[index].TemplateKeyId != overlayTemplateKey)
+                {
+                    continue;
+                }
+
+                int overlayIndex = ResolveObstacleOverlayPlanIndex(worldPositions[index]);
+                _pendingObstacleOverlayBindings.Add(new PendingObstacleOverlayBinding(entity, overlayIndex));
+            }
+        }
+        for (int i = 0; i < _pendingObstacleOverlayBindings.Count; i++)
+        {
+            PendingObstacleOverlayBinding binding = _pendingObstacleOverlayBindings[i];
+            RegisterSpawnedObstacleOverlay(engine, binding.Entity, binding.OverlayIndex);
+        }
+    }
+
+    private int ResolveObstacleOverlayPlanIndex(in WorldPositionCm worldPosition)
+    {
+        int xCm = worldPosition.Value.X.ToInt();
+        int yCm = worldPosition.Value.Y.ToInt();
+        for (int i = 0; i < _obstacleOverlayPlans.Length; i++)
         {
             if (_obstacleOverlayEntities[i] != Entity.Null)
             {
                 continue;
             }
 
-            _obstacleOverlayEntities[i] = entity;
-            return;
+            TotalWarObstacleOverlayPlan plan = _obstacleOverlayPlans[i];
+            if ((int)MathF.Round(plan.WorldXCm) == xCm &&
+                (int)MathF.Round(plan.WorldYCm) == yCm)
+            {
+                return i;
+            }
         }
 
         throw new InvalidOperationException(
-            $"Total War showcase received more obstacle overlay entities than planned ({_obstacleOverlayEntities.Length}) for template '{binding.TemplateId}'.");
+            $"Total War showcase obstacle overlay at ({xCm},{yCm}) does not match an unbound obstacle overlay plan.");
     }
 
     public bool TryGetFormationEntity(int formationIndex, out Entity entity)
@@ -394,15 +547,15 @@ internal sealed class TotalWarShowcaseRuntime
         return entity != Entity.Null;
     }
 
-    public bool TryGetSoldierEntityByAgentIndex(int soldierAgentIndex, out Entity entity)
+    public bool TryGetSoldierEntityByPlanIndex(int soldierPlanIndex, out Entity entity)
     {
-        if ((uint)soldierAgentIndex >= (uint)_soldierEntitiesByAgentIndex.Length)
+        if ((uint)soldierPlanIndex >= (uint)_soldierEntitiesByPlanIndex.Length)
         {
             entity = Entity.Null;
             return false;
         }
 
-        entity = _soldierEntitiesByAgentIndex[soldierAgentIndex];
+        entity = _soldierEntitiesByPlanIndex[soldierPlanIndex];
         return entity != Entity.Null;
     }
 
@@ -411,18 +564,11 @@ internal sealed class TotalWarShowcaseRuntime
         MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
         config.ValidateAgentProfileReferences(profileSet);
 
-        int agentCount = config.Formations.Length;
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)
         {
             int count = config.Formations[i].SoldierCount;
-            agentCount += count;
             soldierCount += count;
-        }
-
-        if (_agentSeeds.Length != agentCount)
-        {
-            _agentSeeds = new MassNavigationAgentSeed[agentCount];
         }
 
         if (_soldierAgentPlans.Length != soldierCount)
@@ -435,56 +581,28 @@ internal sealed class TotalWarShowcaseRuntime
             _formationPlans = new TotalWarFormationPlan[config.Formations.Length];
         }
 
-        int agentIndex = 0;
-        MassNavigationAgentLayer formationLayer = RequireTemplateLayer(engine, config.FormationAgent.TemplateId);
-        MassNavigationAgentProfileConfig formationProfile = config.ResolveFormationAgentProfile(profileSet);
         for (int formationIndex = 0; formationIndex < config.Formations.Length; formationIndex++)
         {
             TotalWarFormationConfig formation = config.Formations[formationIndex];
             float facingRad = formation.FacingDeg * (MathF.PI / 180f);
-            Vector2 local = simulation.ToLocalCm(new Vector2(formation.CenterXCm, formation.CenterYCm));
-            _agentSeeds[agentIndex] = new MassNavigationAgentSeed(
-                formation.TeamId,
-                local.X,
-                local.Y,
-                formationProfile.Heavy,
-                formationProfile.NavMass,
-                formationProfile.VisualScale,
-                formationProfile.BodyRadiusCm,
-                formationProfile.SpeedCmPerSecond,
-                formationLayer);
             _formationPlans[formationIndex] = new TotalWarFormationPlan(
                 formationIndex,
-                agentIndex,
                 formation.Id,
                 formation.Label,
                 formation.TeamId,
-                firstSoldierAgentIndex: 0,
                 firstSoldierPlanIndex: 0,
                 formation.SoldierCount,
                 formation.CenterXCm,
                 formation.CenterYCm,
-                facingRad,
-                lastTargetCenterWorldXCm: 0f,
-                lastTargetCenterWorldYCm: 0f,
-                lastTargetFacingRad: 0f,
-                lastTargetSnapshotInitialized: false,
-                lastCarrierCenterWorldXCm: formation.CenterXCm,
-                lastCarrierCenterWorldYCm: formation.CenterYCm,
-                carrierSnapshotInitialized: false,
-                targetRevision: 0);
-            agentIndex++;
+                facingRad);
         }
 
         int soldierPlanIndex = 0;
         for (int formationIndex = 0; formationIndex < config.Formations.Length; formationIndex++)
         {
             TotalWarFormationConfig formation = config.Formations[formationIndex];
-            int firstSoldierAgentIndex = agentIndex;
             int firstSoldierPlanIndex = soldierPlanIndex;
             float facingRad = formation.FacingDeg * (MathF.PI / 180f);
-            MassNavigationAgentLayer soldierLayer = RequireTemplateLayer(engine, formation.SoldierAgent.TemplateId);
-            MassNavigationAgentProfileConfig soldierProfile = config.ResolveSoldierAgentProfile(profileSet, formationIndex);
             float forwardX = MathF.Cos(facingRad);
             float forwardY = MathF.Sin(facingRad);
             float lateralX = -forwardY;
@@ -498,57 +616,29 @@ internal sealed class TotalWarShowcaseRuntime
                 float depthOffset = slotOffset.Y;
                 float worldX = formation.CenterXCm + (lateralX * lateralOffset) + (forwardX * depthOffset);
                 float worldY = formation.CenterYCm + (lateralY * lateralOffset) + (forwardY * depthOffset);
-                Vector2 local = simulation.ToLocalCm(new Vector2(worldX, worldY));
-                _agentSeeds[agentIndex] = new MassNavigationAgentSeed(
-                    formation.TeamId,
-                    local.X,
-                    local.Y,
-                    soldierProfile.Heavy,
-                    soldierProfile.NavMass,
-                    soldierProfile.VisualScale,
-                    soldierProfile.BodyRadiusCm,
-                    soldierProfile.SpeedCmPerSecond,
-                    soldierLayer);
                 _soldierAgentPlans[soldierPlanIndex] = new TotalWarSoldierAgentSpawnPlan(
-                    agentIndex,
                     formationIndex,
                     slotIndex,
                     formation.TeamId,
                     formation.SoldierAgent.TemplateId,
-                    soldierProfile.Heavy,
-                    soldierProfile.NavMass,
-                    soldierProfile.VisualScale,
-                    soldierProfile.BodyRadiusCm,
-                    soldierProfile.SpeedCmPerSecond,
                     worldX,
                     worldY,
                     facingRad,
                     slotOffset.X,
                     slotOffset.Y);
-                agentIndex++;
                 soldierPlanIndex++;
             }
 
             _formationPlans[formationIndex] = new TotalWarFormationPlan(
                 formationIndex,
-                _formationPlans[formationIndex].MassNavAgentIndex,
                 formation.Id,
                 formation.Label,
                 formation.TeamId,
-                firstSoldierAgentIndex,
                 firstSoldierPlanIndex,
                 formation.SoldierCount,
                 formation.CenterXCm,
                 formation.CenterYCm,
-                facingRad,
-                lastTargetCenterWorldXCm: 0f,
-                lastTargetCenterWorldYCm: 0f,
-                lastTargetFacingRad: 0f,
-                lastTargetSnapshotInitialized: false,
-                lastCarrierCenterWorldXCm: _formationPlans[formationIndex].LastCarrierCenterWorldXCm,
-                lastCarrierCenterWorldYCm: _formationPlans[formationIndex].LastCarrierCenterWorldYCm,
-                carrierSnapshotInitialized: false,
-                targetRevision: 0);
+                facingRad);
         }
     }
 
@@ -598,33 +688,19 @@ internal sealed class TotalWarShowcaseRuntime
 
     private void EnsureSoldierEntityCache()
     {
-        if (_soldierEntitiesByAgentIndex.Length != _agentSeeds.Length)
+        if (_soldierEntitiesByPlanIndex.Length != _soldierAgentPlans.Length)
         {
-            _soldierEntitiesByAgentIndex = new Entity[_agentSeeds.Length];
+            _soldierEntitiesByPlanIndex = new Entity[_soldierAgentPlans.Length];
         }
 
-        Array.Fill(_soldierEntitiesByAgentIndex, Entity.Null);
-        if (_soldierTargetWorldXCm.Length != _agentSeeds.Length)
-        {
-            _soldierTargetWorldXCm = new float[_agentSeeds.Length];
-            _soldierTargetWorldYCm = new float[_agentSeeds.Length];
-            _soldierTargetSnapshotInitialized = new byte[_agentSeeds.Length];
-        }
-        else
-        {
-            Array.Clear(_soldierTargetWorldXCm);
-            Array.Clear(_soldierTargetWorldYCm);
-            Array.Clear(_soldierTargetSnapshotInitialized);
-        }
-
+        Array.Fill(_soldierEntitiesByPlanIndex, Entity.Null);
     }
 
     private void EnqueueFormationAgentSpawns(
         GameEngine engine,
         TotalWarShowcaseConfig config,
         RuntimeEntitySpawnQueue spawnQueue,
-        MapId mapId,
-        int receiptChannelId)
+        MapId mapId)
     {
         if (_formationEntities.Length != _formationPlans.Length)
         {
@@ -635,10 +711,7 @@ internal sealed class TotalWarShowcaseRuntime
         for (int i = 0; i < _formationPlans.Length; i++)
         {
             TotalWarFormationPlan plan = _formationPlans[i];
-            int receiptId = _spawnReceipts.Allocate(TotalWarSpawnReceiptBinding.ForFormationAgent(
-                plan.MassNavAgentIndex,
-                plan.FormationIndex,
-                config.FormationAgent.TemplateId));
+            TotalWarFormationConfig formation = config.Formations[plan.FormationIndex];
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
@@ -648,9 +721,9 @@ internal sealed class TotalWarShowcaseRuntime
                 HasWorldPosition = 1,
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
-                EmitReceipt = 1,
-                ReceiptChannelId = receiptChannelId,
-                ReceiptId = receiptId,
+                TeamIdOverride = plan.TeamId,
+                PlayerOwnerIdOverride = formation.OwnerPlayerId,
+                ComponentPatches = CreateFormationAnchorPatch(plan.Id, plan.SoldierCount),
             };
 
             if (!spawnQueue.TryEnqueue(in request))
@@ -660,12 +733,45 @@ internal sealed class TotalWarShowcaseRuntime
         }
     }
 
+    private static RuntimeEntitySpawnComponentPatch[] CreateFormationAnchorPatch(string formationId, int slotCount)
+    {
+        return
+        [
+            new RuntimeEntitySpawnComponentPatch(
+                "MassCrowdFormationAnchor",
+                new JsonObject
+                {
+                    ["formationId"] = formationId,
+                    ["slotCount"] = slotCount,
+                }),
+        ];
+    }
+
+    private static RuntimeEntitySpawnComponentPatch[] CreateFormationFollowerPatch(
+        string formationId,
+        int slotIndex,
+        float localOffsetXCm,
+        float localOffsetYCm)
+    {
+        return
+        [
+            new RuntimeEntitySpawnComponentPatch(
+                "MassCrowdFormationFollower",
+                new JsonObject
+                {
+                    ["formationId"] = formationId,
+                    ["slotIndex"] = slotIndex,
+                    ["localOffsetXCm"] = localOffsetXCm,
+                    ["localOffsetYCm"] = localOffsetYCm,
+                }),
+        ];
+    }
+
     private void EnqueueObstacleOverlaySpawns(
         GameEngine engine,
         TotalWarShowcaseConfig config,
         RuntimeEntitySpawnQueue spawnQueue,
-        MapId mapId,
-        int receiptChannelId)
+        MapId mapId)
     {
         if (_obstacleOverlayEntities.Length != _obstacleOverlayPlans.Length)
         {
@@ -677,9 +783,6 @@ internal sealed class TotalWarShowcaseRuntime
         for (int i = 0; i < _obstacleOverlayPlans.Length; i++)
         {
             TotalWarObstacleOverlayPlan plan = _obstacleOverlayPlans[i];
-            int receiptId = _spawnReceipts.Allocate(TotalWarSpawnReceiptBinding.ForObstacleOverlay(
-                plan.RadiusCm,
-                config.ObstacleOverlay.TemplateId));
             var request = new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
@@ -687,9 +790,6 @@ internal sealed class TotalWarShowcaseRuntime
                 MapId = mapId,
                 WorldPositionCm = Fix64Vec2.FromInt((int)MathF.Round(plan.WorldXCm), (int)MathF.Round(plan.WorldYCm)),
                 HasWorldPosition = 1,
-                EmitReceipt = 1,
-                ReceiptChannelId = receiptChannelId,
-                ReceiptId = receiptId,
             };
 
             if (!spawnQueue.TryEnqueue(in request))
@@ -699,184 +799,51 @@ internal sealed class TotalWarShowcaseRuntime
         }
     }
 
-    private void SyncSoldierTargetsFromFormationAgents(
-        GameEngine engine,
-        MassNavigationSimulationRuntime simulation,
-        TotalWarSoldierTargetSyncConfig targetSync)
+    private int ResolveSoldierPlanIndex(int formationIndex, int slotIndex)
     {
-        float targetChangeEpsilonSq = targetSync.TargetChangeEpsilonCm * targetSync.TargetChangeEpsilonCm;
-        for (int formationIndex = 0; formationIndex < _formationPlans.Length; formationIndex++)
-        {
-            TotalWarFormationPlan plan = _formationPlans[formationIndex];
-            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.NavigationAgentCount)
-            {
-                throw new InvalidOperationException(
-                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
-            }
-
-            MassNavigationCarriedRangeSyncResult carrierSync = simulation.SyncCarriedAgentRangeToCarrier(
-                plan.MassNavAgentIndex,
-                plan.FirstSoldierAgentIndex,
-                plan.SoldierCount,
-                plan.CarrierSnapshotInitialized,
-                plan.LastCarrierCenterWorldXCm,
-                plan.LastCarrierCenterWorldYCm);
-            float formationWorldX = carrierSync.CarrierWorldXCm;
-            float formationWorldY = carrierSync.CarrierWorldYCm;
-            if (carrierSync.AppliedDisplacement)
-            {
-                TranslateSoldierTargetCacheRange(
-                    plan.FirstSoldierAgentIndex,
-                    plan.SoldierCount,
-                    carrierSync.DisplacementWorldXCm,
-                    carrierSync.DisplacementWorldYCm);
-            }
-
-            plan = plan.WithCarrierSnapshot(formationWorldX, formationWorldY);
-            float anchorLocalX = carrierSync.CarrierLocalXCm;
-            float anchorLocalY = carrierSync.CarrierLocalYCm;
-
-            float facingRad = ResolveFormationFacing(engine, plan.FormationIndex);
-
-            float forwardX = MathF.Cos(facingRad);
-            float forwardY = MathF.Sin(facingRad);
-            float lateralX = -forwardY;
-            float lateralY = forwardX;
-            float deltaX = formationWorldX - plan.LastTargetCenterWorldXCm;
-            float deltaY = formationWorldY - plan.LastTargetCenterWorldYCm;
-            float facingDelta = MathF.Abs(NormalizeAngleRadians(facingRad - plan.LastTargetFacingRad));
-            bool facingChanged =
-                !plan.LastTargetSnapshotInitialized ||
-                facingDelta >= targetSync.FacingChangeEpsilonRadians;
-            bool targetChanged =
-                !plan.LastTargetSnapshotInitialized ||
-                (deltaX * deltaX) + (deltaY * deltaY) >= targetChangeEpsilonSq ||
-                facingChanged;
-            if (!targetChanged)
-            {
-                _formationPlans[formationIndex] = plan;
-                continue;
-            }
-
-            for (int slotIndex = 0; slotIndex < plan.SoldierCount; slotIndex++)
-            {
-                int soldierAgentIndex = plan.FirstSoldierAgentIndex + slotIndex;
-                if ((uint)soldierAgentIndex >= (uint)simulation.NavigationAgentCount)
-                {
-                    throw new InvalidOperationException(
-                        $"Total War showcase soldier agent MassNav index {soldierAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
-                }
-
-                int soldierPlanIndex = plan.FirstSoldierPlanIndex + slotIndex;
-                if ((uint)soldierPlanIndex >= (uint)_soldierAgentPlans.Length)
-                {
-                    throw new InvalidOperationException(
-                        $"Total War showcase soldier plan index {soldierPlanIndex} exceeds planned soldier agent count {_soldierAgentPlans.Length}.");
-                }
-
-                TotalWarSoldierAgentSpawnPlan soldierAgentPlan = _soldierAgentPlans[soldierPlanIndex];
-                float slotOffsetX = (lateralX * soldierAgentPlan.SlotOffsetXCm) + (forwardX * soldierAgentPlan.SlotOffsetYCm);
-                float slotOffsetY = (lateralY * soldierAgentPlan.SlotOffsetXCm) + (forwardY * soldierAgentPlan.SlotOffsetYCm);
-                MassNavigationCarriedSlotTarget resolvedTarget = simulation.ResolveCarriedAgentSlotTarget(
-                    soldierAgentIndex,
-                    anchorLocalX,
-                    anchorLocalY,
-                    slotOffsetX,
-                    slotOffsetY);
-                if (ShouldWriteSoldierTarget(soldierAgentIndex, resolvedTarget.WorldXCm, resolvedTarget.WorldYCm, targetChangeEpsilonSq))
-                {
-                    simulation.ApplyCarriedAgentSlotTarget(soldierAgentIndex, in resolvedTarget, resetRecovery: targetChanged);
-                }
-
-                if (facingChanged)
-                {
-                    WriteSoldierFacing(engine, soldierAgentIndex, facingRad);
-                }
-            }
-
-            _formationPlans[formationIndex] = plan.WithTargetSnapshot(
-                formationWorldX,
-                formationWorldY,
-                facingRad,
-                plan.TargetRevision + 1);
-        }
-    }
-
-    private void TranslateSoldierTargetCacheRange(
-        int firstSoldierAgentIndex,
-        int soldierCount,
-        float deltaXCm,
-        float deltaYCm)
-    {
-        if (soldierCount <= 0 || (deltaXCm == 0f && deltaYCm == 0f))
-        {
-            return;
-        }
-
-        int end = firstSoldierAgentIndex + soldierCount;
-        if (firstSoldierAgentIndex < 0 ||
-            end < firstSoldierAgentIndex ||
-            end > _soldierTargetSnapshotInitialized.Length ||
-            end > _soldierTargetWorldXCm.Length ||
-            end > _soldierTargetWorldYCm.Length)
+        if ((uint)formationIndex >= (uint)_formationPlans.Length)
         {
             throw new InvalidOperationException(
-                $"Total War showcase soldier target cache does not cover carried MassNav agent range [{firstSoldierAgentIndex}, {end}).");
+                $"Total War showcase formation index {formationIndex} exceeds planned formation count {_formationPlans.Length}.");
         }
 
-        for (int agentIndex = firstSoldierAgentIndex; agentIndex < end; agentIndex++)
-        {
-            if (_soldierTargetSnapshotInitialized[agentIndex] == 0)
-            {
-                continue;
-            }
-
-            _soldierTargetWorldXCm[agentIndex] += deltaXCm;
-            _soldierTargetWorldYCm[agentIndex] += deltaYCm;
-        }
-    }
-
-    private bool ShouldWriteSoldierTarget(
-        int soldierAgentIndex,
-        float targetWorldXCm,
-        float targetWorldYCm,
-        float targetChangeEpsilonSq)
-    {
-        if ((uint)soldierAgentIndex >= (uint)_soldierTargetWorldXCm.Length ||
-            (uint)soldierAgentIndex >= (uint)_soldierTargetWorldYCm.Length ||
-            (uint)soldierAgentIndex >= (uint)_soldierTargetSnapshotInitialized.Length)
+        TotalWarFormationPlan plan = _formationPlans[formationIndex];
+        if ((uint)slotIndex >= (uint)plan.SoldierCount)
         {
             throw new InvalidOperationException(
-                $"Total War showcase soldier target cache does not cover MassNav agent index {soldierAgentIndex}.");
+                $"Total War showcase soldier slot index {slotIndex} exceeds formation '{plan.Id}' soldier count {plan.SoldierCount}.");
         }
 
-        bool initialized = _soldierTargetSnapshotInitialized[soldierAgentIndex] != 0;
-        float deltaX = targetWorldXCm - _soldierTargetWorldXCm[soldierAgentIndex];
-        float deltaY = targetWorldYCm - _soldierTargetWorldYCm[soldierAgentIndex];
-        if (initialized && (deltaX * deltaX) + (deltaY * deltaY) < targetChangeEpsilonSq)
-        {
-            return false;
-        }
-
-        _soldierTargetWorldXCm[soldierAgentIndex] = targetWorldXCm;
-        _soldierTargetWorldYCm[soldierAgentIndex] = targetWorldYCm;
-        _soldierTargetSnapshotInitialized[soldierAgentIndex] = 1;
-        return true;
+        return plan.FirstSoldierPlanIndex + slotIndex;
     }
 
-    private static float NormalizeAngleRadians(float angle)
+    private int RequireFormationAgentIndex(GameEngine engine, int formationIndex)
     {
-        while (angle > MathF.PI)
+        if ((uint)formationIndex >= (uint)_formationEntities.Length)
         {
-            angle -= MathF.Tau;
+            throw new InvalidOperationException(
+                $"Total War showcase formation index {formationIndex} exceeds bound formation entity cache {_formationEntities.Length}.");
         }
 
-        while (angle < -MathF.PI)
+        Entity formation = _formationEntities[formationIndex];
+        if (!engine.World.IsAlive(formation))
         {
-            angle += MathF.Tau;
+            throw new InvalidOperationException(
+                $"Total War showcase formation index {formationIndex} was not bound to a live entity before MassCrowd sync.");
         }
 
-        return angle;
+        return RequireMassCrowdAgentIndex(engine, formation, $"formation index {formationIndex}");
+    }
+
+    private static int RequireMassCrowdAgentIndex(GameEngine engine, Entity entity, string label)
+    {
+        if (!engine.World.TryGet(entity, out MassCrowdAgentIndex agentIndex))
+        {
+            throw new InvalidOperationException(
+                $"Total War showcase {label} requires {nameof(MassCrowdAgentIndex)} from the Core MassCrowd runtime before formation sync.");
+        }
+
+        return agentIndex.Value;
     }
 
     private void SyncFormationStates(
@@ -898,13 +865,8 @@ internal sealed class TotalWarShowcaseRuntime
             }
 
             TotalWarFormationPlan plan = _formationPlans[i];
-            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.NavigationAgentCount)
-            {
-                throw new InvalidOperationException(
-                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
-            }
-
-            Vector2 centerWorld = simulation.GetAgentWorldPositionCm(plan.MassNavAgentIndex);
+            int formationAgentIndex = RequireFormationAgentIndex(engine, plan.FormationIndex);
+            Vector2 centerWorld = simulation.GetAgentWorldPositionCm(formationAgentIndex);
             float centerX = centerWorld.X;
             float centerY = centerWorld.Y;
             float facingRad = ResolveFormationFacing(engine, plan.FormationIndex);
@@ -956,37 +918,9 @@ internal sealed class TotalWarShowcaseRuntime
         return engine.World.Get<FacingDirection>(formation).AngleRad;
     }
 
-    private void WriteSoldierFacing(GameEngine engine, int soldierAgentIndex, float facingRad)
-    {
-        if ((uint)soldierAgentIndex >= (uint)_soldierEntitiesByAgentIndex.Length)
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase soldier agent MassNav index {soldierAgentIndex} exceeds bound soldier entity cache {_soldierEntitiesByAgentIndex.Length}.");
-        }
-
-        Entity soldier = _soldierEntitiesByAgentIndex[soldierAgentIndex];
-        if (!engine.World.IsAlive(soldier))
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase soldier agent MassNav index {soldierAgentIndex} was not bound to a live entity before slot sync.");
-        }
-
-        if (!engine.World.Has<FacingDirection>(soldier))
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase soldier entity {soldier.Id} requires {nameof(FacingDirection)} for explicit formation facing.");
-        }
-
-        ref FacingDirection facing = ref engine.World.Get<FacingDirection>(soldier);
-        if (facing.AngleRad != facingRad)
-        {
-            facing.AngleRad = facingRad;
-        }
-    }
-
     private void TryApplyInitialSelection(GameEngine engine, TotalWarShowcaseConfig config)
     {
-        if (_initialSelectionApplied || _spawnReceipts.PendingCount != 0)
+        if (_initialSelectionApplied)
         {
             return;
         }
@@ -1006,11 +940,11 @@ internal sealed class TotalWarShowcaseRuntime
         Entity formation = _formationEntities[formationIndex];
         if (!engine.World.IsAlive(formation))
         {
-            throw new InvalidOperationException(
-                $"Total War showcase initial selection formation '{config.InitialSelectionFormationId}' was not bound to a live entity.");
+            return;
         }
 
-        if (!SelectionEligibility.CanAcquire(engine.World, owner, formation, selection.TargetRelationFilter))
+        bool canAcquire = SelectionEligibility.CanAcquire(engine.World, owner, formation, selection.TargetRelationFilter);
+        if (!canAcquire)
         {
             throw new InvalidOperationException(
                 $"Total War showcase initial selection formation '{config.InitialSelectionFormationId}' must pass selection.targetFilter.relationFilter '{selection.TargetRelationFilter}'.");
@@ -1084,15 +1018,15 @@ internal sealed class TotalWarShowcaseRuntime
             _formationEntities[i] = Entity.Null;
         }
 
-        for (int i = 0; i < _soldierEntitiesByAgentIndex.Length; i++)
+        for (int i = 0; i < _soldierEntitiesByPlanIndex.Length; i++)
         {
-            Entity entity = _soldierEntitiesByAgentIndex[i];
+            Entity entity = _soldierEntitiesByPlanIndex[i];
             if (engine.World.IsAlive(entity))
             {
                 MarkPresentationDestroyPending(engine.World, entity, "soldier agent");
             }
 
-            _soldierEntitiesByAgentIndex[i] = Entity.Null;
+            _soldierEntitiesByPlanIndex[i] = Entity.Null;
         }
 
         for (int i = 0; i < _obstacleOverlayEntities.Length; i++)
@@ -1109,9 +1043,9 @@ internal sealed class TotalWarShowcaseRuntime
 
     private void ClearFormationCaches()
     {
-        if (_soldierEntitiesByAgentIndex.Length > 0)
+        if (_soldierEntitiesByPlanIndex.Length > 0)
         {
-            Array.Fill(_soldierEntitiesByAgentIndex, Entity.Null);
+            Array.Fill(_soldierEntitiesByPlanIndex, Entity.Null);
         }
 
         if (_formationEntities.Length > 0)
@@ -1123,12 +1057,65 @@ internal sealed class TotalWarShowcaseRuntime
         {
             Array.Fill(_obstacleOverlayEntities, Entity.Null);
         }
+    }
 
-        if (_soldierTargetSnapshotInitialized.Length > 0)
+    private void PublishSelectableFormationKnowledge(GameEngine engine)
+    {
+        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+            ?? throw new InvalidOperationException("Total War showcase requires SelectionRuntime before publishing selectable formation knowledge.");
+        Entity owner = ResolveLocalSelectionOwner(engine);
+        Entity teamSource = ResolveLocalSelectionTeamEntity(engine, owner);
+        RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+            ?? throw new InvalidOperationException("Total War showcase requires RelationshipRuntime before publishing selectable formation knowledge.");
+        RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+            ?? throw new InvalidOperationException("Total War showcase requires RelationshipTypeRegistry before publishing selectable formation knowledge.");
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Total War showcase requires EntityCollectionStore before publishing selectable formation knowledge.");
+
+        int ownsTypeId = relationshipTypes.GetId(OwnedFormationKnowledgeRelationshipTypeId);
+        relationships.EnsureLink(owner, teamSource, ownsTypeId);
+
+        EnsureLocalFormationKnowledgeScratch(_formationEntities.Length);
+        int count = 0;
+        for (int i = 0; i < _formationEntities.Length; i++)
         {
-            Array.Clear(_soldierTargetSnapshotInitialized);
+            Entity formation = _formationEntities[i];
+            if (!engine.World.IsAlive(formation) ||
+                !SelectionEligibility.CanAcquire(engine.World, owner, formation, selection.TargetRelationFilter))
+            {
+                continue;
+            }
+
+            _localFormationKnowledgeScratch[count++] = formation;
         }
 
+        collections.Replace(
+            teamSource,
+            EntityCollectionDescriptor.Create(
+                LocalFormationVisibilityCollectionKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.AcquisitionPreview,
+                contextEntity: owner,
+                primaryEntity: owner,
+                title: "Total War selectable formations",
+                summary: "Formations visible to the local Total War selection owner."),
+            _localFormationKnowledgeScratch.AsSpan(0, count));
+    }
+
+    private void EnsureLocalFormationKnowledgeScratch(int required)
+    {
+        if (_localFormationKnowledgeScratch.Length >= required)
+        {
+            return;
+        }
+
+        int nextSize = Math.Max(4, _localFormationKnowledgeScratch.Length);
+        while (nextSize < required)
+        {
+            nextSize *= 2;
+        }
+
+        _localFormationKnowledgeScratch = new Entity[nextSize];
     }
 
     private static void ConfigureScenarioTeams(MassNavigationSimulationRuntime simulation, TotalWarShowcaseConfig config)
@@ -1225,18 +1212,6 @@ internal sealed class TotalWarShowcaseRuntime
         }
     }
 
-    private static MassNavigationAgentLayer RequireTemplateLayer(GameEngine engine, string templateId)
-    {
-        EntityTemplate template = RequireTemplate(engine, templateId);
-        return MassNavigationTemplateLayerResolver.RequireAgentLayer(template, templateId);
-    }
-
-    private static EntityTemplate RequireTemplate(GameEngine engine, string templateId)
-    {
-        EntityTemplate template = engine.MapLoader.TemplateRegistry.Get(templateId);
-        return template ?? throw new InvalidOperationException($"Total War showcase requires configured entity template '{templateId}'.");
-    }
-
     private static void MarkPresentationDestroyPending(World world, Entity entity, string label)
     {
         PresentationEntityLifecycle.RequestDestroy(world, entity, $"Total War showcase {label}");
@@ -1277,6 +1252,23 @@ internal sealed class TotalWarShowcaseRuntime
         return local;
     }
 
+    private static Entity ResolveLocalSelectionTeamEntity(GameEngine engine, Entity owner)
+    {
+        if (!engine.World.TryGet(owner, out Team team))
+        {
+            throw new InvalidOperationException("Total War showcase LocalPlayerEntity must author Team before publishing selectable formation knowledge.");
+        }
+
+        TeamEntityLookup teams = engine.GetService(CoreServiceKeys.TeamEntityLookup)
+            ?? throw new InvalidOperationException("Total War showcase requires TeamEntityLookup before publishing selectable formation knowledge.");
+        if (!teams.TryGet(team.Id, out Entity teamEntity) || !engine.World.IsAlive(teamEntity))
+        {
+            throw new InvalidOperationException($"Total War showcase requires a live team entity for local team {team.Id} before publishing selectable formation knowledge.");
+        }
+
+        return teamEntity;
+    }
+
     private static int ResolveLocalPlayerOwnerId(GameEngine engine)
     {
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
@@ -1298,148 +1290,54 @@ internal sealed class TotalWarShowcaseRuntime
     {
         public TotalWarFormationPlan(
             int formationIndex,
-            int massNavAgentIndex,
             string id,
             string label,
             int teamId,
-            int firstSoldierAgentIndex,
             int firstSoldierPlanIndex,
             int soldierCount,
             float initialCenterXCm,
             float initialCenterYCm,
-            float facingRad,
-            float lastTargetCenterWorldXCm,
-            float lastTargetCenterWorldYCm,
-            float lastTargetFacingRad,
-            bool lastTargetSnapshotInitialized,
-            float lastCarrierCenterWorldXCm,
-            float lastCarrierCenterWorldYCm,
-            bool carrierSnapshotInitialized,
-            int targetRevision)
+            float facingRad)
         {
             FormationIndex = formationIndex;
-            MassNavAgentIndex = massNavAgentIndex;
             Id = id;
             Label = label;
             TeamId = teamId;
-            FirstSoldierAgentIndex = firstSoldierAgentIndex;
             FirstSoldierPlanIndex = firstSoldierPlanIndex;
             SoldierCount = soldierCount;
             InitialCenterXCm = initialCenterXCm;
             InitialCenterYCm = initialCenterYCm;
             FacingRad = facingRad;
-            LastTargetCenterWorldXCm = lastTargetCenterWorldXCm;
-            LastTargetCenterWorldYCm = lastTargetCenterWorldYCm;
-            LastTargetFacingRad = lastTargetFacingRad;
-            LastTargetSnapshotInitialized = lastTargetSnapshotInitialized;
-            LastCarrierCenterWorldXCm = lastCarrierCenterWorldXCm;
-            LastCarrierCenterWorldYCm = lastCarrierCenterWorldYCm;
-            CarrierSnapshotInitialized = carrierSnapshotInitialized;
-            TargetRevision = targetRevision;
         }
 
         public int FormationIndex { get; }
-        public int MassNavAgentIndex { get; }
         public string Id { get; }
         public string Label { get; }
         public int TeamId { get; }
-        public int FirstSoldierAgentIndex { get; }
         public int FirstSoldierPlanIndex { get; }
         public int SoldierCount { get; }
         public float InitialCenterXCm { get; }
         public float InitialCenterYCm { get; }
         public float FacingRad { get; }
-        public float LastTargetCenterWorldXCm { get; }
-        public float LastTargetCenterWorldYCm { get; }
-        public float LastTargetFacingRad { get; }
-        public bool LastTargetSnapshotInitialized { get; }
-        public float LastCarrierCenterWorldXCm { get; }
-        public float LastCarrierCenterWorldYCm { get; }
-        public bool CarrierSnapshotInitialized { get; }
-        public int TargetRevision { get; }
-
-        public TotalWarFormationPlan WithTargetSnapshot(
-            float centerWorldXCm,
-            float centerWorldYCm,
-            float facingRad,
-            int targetRevision)
-        {
-            return new TotalWarFormationPlan(
-                FormationIndex,
-                MassNavAgentIndex,
-                Id,
-                Label,
-                TeamId,
-                FirstSoldierAgentIndex,
-                FirstSoldierPlanIndex,
-                SoldierCount,
-                InitialCenterXCm,
-                InitialCenterYCm,
-                FacingRad,
-                centerWorldXCm,
-                centerWorldYCm,
-                facingRad,
-                lastTargetSnapshotInitialized: true,
-                LastCarrierCenterWorldXCm,
-                LastCarrierCenterWorldYCm,
-                CarrierSnapshotInitialized,
-                targetRevision);
-        }
-
-        public TotalWarFormationPlan WithCarrierSnapshot(float centerWorldXCm, float centerWorldYCm)
-        {
-            return new TotalWarFormationPlan(
-                FormationIndex,
-                MassNavAgentIndex,
-                Id,
-                Label,
-                TeamId,
-                FirstSoldierAgentIndex,
-                FirstSoldierPlanIndex,
-                SoldierCount,
-                InitialCenterXCm,
-                InitialCenterYCm,
-                FacingRad,
-                LastTargetCenterWorldXCm,
-                LastTargetCenterWorldYCm,
-                LastTargetFacingRad,
-                LastTargetSnapshotInitialized,
-                centerWorldXCm,
-                centerWorldYCm,
-                carrierSnapshotInitialized: true,
-                TargetRevision);
-        }
     }
 
     private readonly struct TotalWarSoldierAgentSpawnPlan
     {
         public TotalWarSoldierAgentSpawnPlan(
-            int massNavAgentIndex,
             int formationIndex,
             int slotIndex,
             int teamId,
             string templateId,
-            bool heavy,
-            float navMass,
-            float visualScale,
-            float bodyRadiusCm,
-            float speedCmPerSecond,
             float worldXCm,
             float worldYCm,
             float facingRad,
             float slotOffsetXCm,
             float slotOffsetYCm)
         {
-            MassNavAgentIndex = massNavAgentIndex;
             FormationIndex = formationIndex;
             SlotIndex = slotIndex;
             TeamId = teamId;
             TemplateId = templateId;
-            Heavy = heavy;
-            NavMass = navMass;
-            VisualScale = visualScale;
-            BodyRadiusCm = bodyRadiusCm;
-            SpeedCmPerSecond = speedCmPerSecond;
             WorldXCm = worldXCm;
             WorldYCm = worldYCm;
             FacingRad = facingRad;
@@ -1447,16 +1345,10 @@ internal sealed class TotalWarShowcaseRuntime
             SlotOffsetYCm = slotOffsetYCm;
         }
 
-        public int MassNavAgentIndex { get; }
         public int FormationIndex { get; }
         public int SlotIndex { get; }
         public int TeamId { get; }
         public string TemplateId { get; }
-        public bool Heavy { get; }
-        public float NavMass { get; }
-        public float VisualScale { get; }
-        public float BodyRadiusCm { get; }
-        public float SpeedCmPerSecond { get; }
         public float WorldXCm { get; }
         public float WorldYCm { get; }
         public float FacingRad { get; }
@@ -1477,4 +1369,10 @@ internal sealed class TotalWarShowcaseRuntime
         public float WorldYCm { get; }
         public float RadiusCm { get; }
     }
+
+    private readonly record struct PendingFormationBinding(Entity Entity, int FormationIndex);
+
+    private readonly record struct PendingSoldierBinding(Entity Entity, MassCrowdFormationFollower Follower);
+
+    private readonly record struct PendingObstacleOverlayBinding(Entity Entity, int OverlayIndex);
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
 using Arch.Core;
-using MassNavigationMod.Runtime;
+using Ludots.Core.MassCrowd.Runtime;
 using NUnit.Framework;
 using Schedulers;
 using Ludots.Core.Gameplay.Teams;
@@ -122,7 +122,7 @@ namespace Ludots.Tests.Presentation
             group.FormationRotationSpeedRadiansPerSecond = 6.75f;
 
             var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationGroupSemantics massFlowGroup = runtime.MassFlow.Semantics.Group;
+            MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
 
             Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
             Assert.That(massFlowGroup.FormationSquareSpacingCm, Is.EqualTo(group.FormationSquareSpacingCm));

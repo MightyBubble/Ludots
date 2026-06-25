@@ -12,7 +12,8 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
-using MassNavigationMod.Runtime;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
 
 namespace MassNavigationMod.UI;
 

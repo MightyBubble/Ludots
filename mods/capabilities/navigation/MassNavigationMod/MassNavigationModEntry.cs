@@ -1,7 +1,9 @@
 using System.Threading.Tasks;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
-using MassNavigationMod.Runtime;
+using MassNavigationMod.Systems;
+using MassNavigationMod.UI;
 
 namespace MassNavigationMod;
 
@@ -9,25 +11,45 @@ public sealed class MassNavigationModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        MassNavigationComponentAuthoring.Register(context.ModId);
         var runtime = new MassNavigationRuntime(context);
+        var panelPresenter = new MassNavigationPanelPresenter();
+        bool panelSystemInstalled = false;
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             if (ctx.GetEngine() is { } engine)
             {
-                runtime.EnsureSystemsInstalled(engine);
+                if (!panelSystemInstalled)
+                {
+                    engine.RegisterPresentationSystem(new MassNavigationPanelPresentationSystem(engine, panelPresenter));
+                    panelSystemInstalled = true;
+                }
             }
 
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
         context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
-        context.OnEvent(GameEvents.MapSuspended, runtime.HandleMapSuspendedAsync);
-        context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
+        context.OnEvent(GameEvents.MapSuspended, ctx =>
+        {
+            if (ctx.GetEngine() is { } engine)
+            {
+                panelPresenter.ClearPanelIfOwned(engine);
+            }
+
+            return runtime.HandleMapSuspendedAsync(ctx);
+        });
+        context.OnEvent(GameEvents.MapUnloaded, ctx =>
+        {
+            if (ctx.GetEngine() is { } engine)
+            {
+                panelPresenter.ClearPanelIfOwned(engine);
+            }
+
+            return runtime.HandleMapUnloadedAsync(ctx);
+        });
     }
 
     public void OnUnload()
     {
     }
 }
-
