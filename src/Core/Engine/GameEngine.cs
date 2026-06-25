@@ -1646,6 +1646,7 @@ namespace Ludots.Core.Engine
                 }
                 _mapLoadStatuses[mid] = GetInitialMapLoadStatus();
                 SetCurrentMapSession(session);
+                bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus);
 
                 // Apply primary board spatial config to engine-level services
                 var primaryBoard = session.PrimaryBoard;
@@ -1680,7 +1681,7 @@ namespace Ludots.Core.Engine
                     TriggerManager.RegisterMapTriggers(mid, triggers);
                 }
 
-                if (TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus))
+                if (pendingMapLoadStarted)
                 {
                     Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for '{mapId}'.");
                     return;
@@ -1799,6 +1800,7 @@ namespace Ludots.Core.Engine
             }
             _mapLoadStatuses[inner] = GetInitialMapLoadStatus();
             SetCurrentMapSession(session);
+            bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus);
 
             var primaryBoard = session.PrimaryBoard;
             if (primaryBoard != null)
@@ -1838,7 +1840,7 @@ namespace Ludots.Core.Engine
                 TriggerManager.RegisterMapTriggers(inner, triggers);
             }
 
-            if (TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus))
+            if (pendingMapLoadStarted)
             {
                 Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for pushed map '{innerMapId}'.");
                 return;
