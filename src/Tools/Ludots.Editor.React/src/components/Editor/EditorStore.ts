@@ -16,12 +16,16 @@ import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | 'Vegetation' | 'Ramp' | 'Layers' | 'Territory' | 'Entities' | 'Obstacle';
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
+export type NavPanelTab = 'bake' | 'simulation' | 'config';
+export type CanvasSessionKind = 'empty' | 'local' | 'repo';
 
-export interface MapInfo {
-    id: string;
-    found: boolean;
-    hasBoards: boolean;
-    boardName: string | null;
+export interface NavQueryCell {
+    col: number;
+    row: number;
+}
+
+export interface BoardInfo {
+    name: string;
     spatialType: SpatialTopology | null;
     widthChunks: number;
     heightChunks: number;
@@ -36,6 +40,53 @@ export interface MapInfo {
     reason: string;
 }
 
+export interface BoardCreateRequest {
+    name: string;
+    spatialType: BoardTopology;
+    widthInMacroTiles: number;
+    heightInMacroTiles: number;
+    cellSizeCm: number;
+    hexEdgeLengthCm?: number;
+    navigationEnabled: boolean;
+}
+
+export interface MapInfo extends BoardInfo {
+    id: string;
+    found: boolean;
+    hasBoards: boolean;
+    boardName: string | null;
+    boards: BoardInfo[];
+}
+
+export interface BakedNavTilePayload {
+    key: string;
+    layer: number;
+    profileId: string | null;
+    base64: string;
+    detourBase64: string | null;
+    source?: string | null;
+}
+
+export interface BakedNavTileVisual {
+    key: string;
+    layer: number;
+    profileId: string | null;
+    tile: NavTile;
+}
+
+export interface NavSimulationState {
+    status: string;
+    points: Array<{ xCm: number; zCm: number }>;
+    travelCost: number;
+    elapsedMs: number;
+    engine: string;
+    algorithmSource: string;
+    profileId: string;
+    layer: number;
+    tileSource: string;
+    warning?: string | null;
+}
+
 export interface EditorState {
     terrain: TerrainStore;
     boardMetrics: BoardMetrics;
@@ -47,9 +98,15 @@ export interface EditorState {
     mapInfos: MapInfo[];
     selectedMapId: string | null;
     selectedMapInfo: MapInfo | null;
+    selectedBoardName: string | null;
+    selectedBoardInfo: BoardInfo | null;
     loadedModId: string | null;
     loadedMapId: string | null;
     loadedMapInfo: MapInfo | null;
+    loadedBoardName: string | null;
+    loadedBoardInfo: BoardInfo | null;
+    canvasSessionKind: CanvasSessionKind;
+    canvasSessionLabel: string | null;
     mapConfig: any | null;
     templates: any[];
     performers: any[];
@@ -79,8 +136,16 @@ export interface EditorState {
     showChunkBorders: boolean;
     showNavMesh: boolean; // Added NavMesh Toggle
     navMeshBakeVersion: number;
-    bakedNavTiles: Map<string, NavTile>;
+    bakedNavTiles: Map<string, BakedNavTileVisual>;
+    bakedNavTilePayloads: BakedNavTilePayload[];
     bakedNavTilesVersion: number;
+    navSimulation: NavSimulationState | null;
+    navSimulationVersion: number;
+    navPanelTab: NavPanelTab;
+    navQueryProfileId: string;
+    navQueryLayer: number;
+    navQueryStartCell: NavQueryCell;
+    navQueryGoalCell: NavQueryCell;
     
     // Actions
     setCategory: (c: ToolCategory) => void;
@@ -98,6 +163,9 @@ export interface EditorState {
     refreshMods: () => Promise<void>;
     selectMod: (modId: string) => Promise<void>;
     selectMap: (mapId: string) => void;
+    selectBoard: (boardName: string) => void;
+    createBoard: (request: BoardCreateRequest) => Promise<void>;
+    deleteSelectedBoard: () => Promise<void>;
     loadSelectedMap: () => Promise<void>;
     saveSelectedMap: () => Promise<void>;
     loadNavigationConfig: () => Promise<void>;
@@ -119,6 +187,7 @@ export interface EditorState {
     minimapDirtyChunks: Set<string>;
     navDirtyChunks: Set<string>;
     reportDirtyChunks: (keys: Iterable<string>) => void;
+    reportMinimapDirtyChunks: (keys: Iterable<string>) => void;
     clearMinimapDirty: () => void;
     clearNavDirty: () => void;
 
@@ -133,8 +202,16 @@ export interface EditorState {
 
     // NavMesh Actions
     bakeNavMesh: () => void;
-    setBakedNavTiles: (tiles: NavTile[]) => void;
+    setBakedNavTiles: (tiles: NavTile[], payloads?: BakedNavTilePayload[]) => void;
+    mergeBakedNavTiles: (tiles: NavTile[], payloads?: BakedNavTilePayload[]) => void;
     clearBakedNavTiles: () => void;
+    setNavSimulation: (simulation: NavSimulationState | null) => void;
+    clearNavSimulation: () => void;
+    setNavPanelTab: (tab: NavPanelTab) => void;
+    setNavQueryProfileId: (profileId: string) => void;
+    setNavQueryLayer: (layer: number) => void;
+    setNavQueryStartCell: (cell: NavQueryCell) => void;
+    setNavQueryGoalCell: (cell: NavQueryCell) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -148,9 +225,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     mapInfos: [],
     selectedMapId: null,
     selectedMapInfo: null,
+    selectedBoardName: null,
+    selectedBoardInfo: null,
     loadedModId: null,
     loadedMapId: null,
     loadedMapInfo: null,
+    loadedBoardName: null,
+    loadedBoardInfo: null,
+    canvasSessionKind: 'empty',
+    canvasSessionLabel: null,
     mapConfig: null,
     templates: [],
     performers: [],
@@ -177,7 +260,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     showNavMesh: false, // Default Off
     navMeshBakeVersion: 0,
     bakedNavTiles: new Map(),
+    bakedNavTilePayloads: [],
     bakedNavTilesVersion: 0,
+    navSimulation: null,
+    navSimulationVersion: 0,
+    navPanelTab: 'bake',
+    navQueryProfileId: '',
+    navQueryLayer: 0,
+    navQueryStartCell: { col: 4, row: 4 },
+    navQueryGoalCell: { col: 28, row: 28 },
     
     minimapDirtyChunks: new Set(),
     navDirtyChunks: new Set(),
@@ -200,27 +291,105 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set((state) => ({ navMeshBakeVersion: state.navMeshBakeVersion + 1 }));
     },
 
-    setBakedNavTiles: (tiles) => set(() => {
-        const map = new Map<string, NavTile>();
+    setBakedNavTiles: (tiles, payloads = []) => set(() => {
+        const map = new Map<string, BakedNavTileVisual>();
         for (let i = 0; i < tiles.length; i++) {
             const t = tiles[i];
-            map.set(`${t.tileId.chunkX},${t.tileId.chunkY},${t.tileId.layer}`, t);
+            const payload = payloads[i];
+            const profileId = payload?.profileId ?? null;
+            const layer = Number(payload?.layer ?? t.tileId.layer);
+            const key = payload?.key ?? `${t.tileId.chunkX},${t.tileId.chunkY},${layer},${profileId ?? ''}`;
+            map.set(key, { key, layer, profileId, tile: t });
         }
-        return { bakedNavTiles: map, bakedNavTilesVersion: Date.now() };
+        return {
+            bakedNavTiles: map,
+            bakedNavTilePayloads: payloads.slice(),
+            bakedNavTilesVersion: Date.now(),
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+        };
     }),
 
-    clearBakedNavTiles: () => set(() => ({ bakedNavTiles: new Map(), bakedNavTilesVersion: Date.now() })),
+    mergeBakedNavTiles: (tiles, payloads = []) => set((state) => {
+        const map = new Map(state.bakedNavTiles);
+        const payloadMap = new Map(state.bakedNavTilePayloads.map((payload) => [payload.key, payload]));
+        for (let i = 0; i < tiles.length; i++) {
+            const t = tiles[i];
+            const payload = payloads[i];
+            const profileId = payload?.profileId ?? null;
+            const layer = Number(payload?.layer ?? t.tileId.layer);
+            const key = payload?.key ?? `${t.tileId.chunkX},${t.tileId.chunkY},${layer},${profileId ?? ''}`;
+            map.set(key, { key, layer, profileId, tile: t });
+            if (payload) {
+                payloadMap.set(key, { ...payload, key, layer, profileId });
+            }
+        }
+        return {
+            bakedNavTiles: map,
+            bakedNavTilePayloads: Array.from(payloadMap.values()),
+            bakedNavTilesVersion: Date.now(),
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+        };
+    }),
+
+    clearBakedNavTiles: () => set(() => ({
+        bakedNavTiles: new Map(),
+        bakedNavTilePayloads: [],
+        bakedNavTilesVersion: Date.now(),
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
+    })),
+
+    setNavSimulation: (simulation) => set({ navSimulation: simulation, navSimulationVersion: Date.now() }),
+
+    clearNavSimulation: () => set({ navSimulation: null, navSimulationVersion: Date.now() }),
+
+    setNavPanelTab: (tab) => set({
+        navPanelTab: tab,
+    }),
+
+    setNavQueryProfileId: (profileId) => set({
+        navQueryProfileId: profileId,
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
+    }),
+
+    setNavQueryLayer: (layer) => set({
+        navQueryLayer: Math.floor(Number(layer) || 0),
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
+    }),
+
+    setNavQueryStartCell: (cell) => set((state) => ({
+        navQueryStartCell: clampNavQueryCell(cell, state),
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
+    })),
+
+    setNavQueryGoalCell: (cell) => set((state) => ({
+        navQueryGoalCell: clampNavQueryCell(cell, state),
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
+    })),
 
     initMap: (w, h, metrics) => set({
         terrain: new TerrainStore(w, h), 
         boardMetrics: normalizeBoardMetrics(metrics ?? get().boardMetrics),
+        canvasSessionKind: 'local',
+        canvasSessionLabel: `New ${w}x${h} terrain`,
         loadedModId: null,
         loadedMapId: null,
         loadedMapInfo: null,
+        loadedBoardName: null,
+        loadedBoardInfo: null,
         minimapDirtyChunks: new Set(),
         navDirtyChunks: new Set(),
         bakedNavTiles: new Map(),
+        bakedNavTilePayloads: [],
         bakedNavTilesVersion: Date.now(),
+        navSimulation: null,
+        navSimulationVersion: Date.now(),
         loadingState: { isLoading: true, message: 'Initializing Map...', progress: 0 }
     }),
     loadMap: (data, w, h, metrics) => {
@@ -234,13 +403,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({ 
             terrain: newTerrain, 
             boardMetrics,
+            canvasSessionKind: 'local',
+            canvasSessionLabel: `Local ${w}x${h} terrain`,
             loadedModId: null,
             loadedMapId: null,
             loadedMapInfo: null,
+            loadedBoardName: null,
+            loadedBoardInfo: null,
             minimapDirtyChunks: allChunks,
             navDirtyChunks: new Set(),
             bakedNavTiles: new Map(),
+            bakedNavTilePayloads: [],
             bakedNavTilesVersion: Date.now(),
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
             loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 }
         });
     },
@@ -267,9 +443,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             mapInfos: [],
             selectedMapId: null,
             selectedMapInfo: null,
+            selectedBoardName: null,
+            selectedBoardInfo: null,
             loadedModId: null,
             loadedMapId: null,
             loadedMapInfo: null,
+            loadedBoardName: null,
+            loadedBoardInfo: null,
+            canvasSessionKind: 'empty',
+            canvasSessionLabel: null,
             mapConfig: null,
             templates: [],
             performers: [],
@@ -281,6 +463,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             selectedEntityIndex: null,
             entitiesVersion: Date.now(),
             navDirtyChunks: new Set(),
+            bakedNavTiles: new Map(),
+            bakedNavTilePayloads: [],
+            bakedNavTilesVersion: Date.now(),
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
         });
         const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(modId)}/maps`);
         if (!res.ok) throw new Error(`Bridge error ${res.status}`);
@@ -322,12 +509,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         const defaultMapInfo = mapInfos.find((m) => m.canBake) ?? mapInfos.find((m) => m.canEditTerrain) ?? mapInfos[0] ?? null;
         const defaultMapId = defaultMapInfo?.id ?? (maps.length > 0 ? maps[0] : null);
+        const defaultBoardInfo = pickDefaultBoardInfo(defaultMapInfo);
 
         set({
             maps,
             mapInfos,
             selectedMapId: defaultMapId,
             selectedMapInfo: defaultMapInfo,
+            selectedBoardName: defaultBoardInfo?.name ?? null,
+            selectedBoardInfo: defaultBoardInfo,
             templates,
             performers,
             navigationConfig,
@@ -337,30 +527,104 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         });
     },
 
-    selectMap: (mapId: string) => set((state) => ({
-        selectedMapId: mapId,
-        selectedMapInfo: state.mapInfos.find((m) => m.id === mapId) ?? null,
-        loadedModId: null,
-        loadedMapId: null,
-        loadedMapInfo: null,
-        mapConfig: null,
-        spawnEntities: [],
-        selectedEntityIndex: null,
-        entitiesVersion: Date.now(),
-        navDirtyChunks: new Set(),
-        bakedNavTiles: new Map(),
-        bakedNavTilesVersion: Date.now(),
-    })),
+    selectMap: (mapId: string) => set((state) => {
+        const selectedMapInfo = state.mapInfos.find((m) => m.id === mapId) ?? null;
+        const selectedBoardInfo = pickDefaultBoardInfo(selectedMapInfo);
+        return {
+            selectedMapId: mapId,
+            selectedMapInfo,
+            selectedBoardName: selectedBoardInfo?.name ?? null,
+            selectedBoardInfo,
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+        };
+    }),
+
+    selectBoard: (boardName: string) => set((state) => {
+        const selectedBoardInfo = findBoardInfo(state.selectedMapInfo, boardName);
+        return {
+            selectedBoardName: selectedBoardInfo?.name ?? boardName,
+            selectedBoardInfo,
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+        };
+    }),
+
+    createBoard: async (request) => {
+        const { bridgeBaseUrl, selectedModId, selectedMapId } = get();
+        if (!selectedModId || !selectedMapId) return;
+        const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/boards`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: request.name,
+                spatialType: request.spatialType,
+                widthInMacroTiles: request.widthInMacroTiles,
+                heightInMacroTiles: request.heightInMacroTiles,
+                cellSizeCm: request.cellSizeCm,
+                hexEdgeLengthCm: request.hexEdgeLengthCm ?? 400,
+                chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
+                navigationEnabled: request.navigationEnabled,
+            }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok === false) throw new Error(json?.error ?? `Bridge error ${res.status}`);
+
+        const mapInfo = normalizeMapInfo(json.mapInfo);
+        const boardInfo = findBoardInfo(mapInfo, request.name) ?? pickDefaultBoardInfo(mapInfo);
+        set((state) => ({
+            maps: state.maps.includes(selectedMapId) ? state.maps : [...state.maps, selectedMapId],
+            mapInfos: replaceMapInfo(state.mapInfos, mapInfo),
+            selectedMapInfo: mapInfo,
+            selectedBoardName: boardInfo?.name ?? null,
+            selectedBoardInfo: boardInfo,
+            mapConfig: state.loadedMapId === selectedMapId ? (json.map ?? state.mapConfig) : state.mapConfig,
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+        }));
+    },
+
+    deleteSelectedBoard: async () => {
+        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName } = get();
+        if (!selectedModId || !selectedMapId || !selectedBoardName) return;
+        if (loadedModId === selectedModId && loadedMapId === selectedMapId && loadedBoardName === selectedBoardName) {
+            throw new Error(`Board '${selectedMapId}/${selectedBoardName}' is open on the canvas. Open another board before deleting it.`);
+        }
+
+        const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/boards/${encodeURIComponent(selectedBoardName)}`, {
+            method: 'DELETE',
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok === false) throw new Error(json?.error ?? `Bridge error ${res.status}`);
+
+        const mapInfo = normalizeMapInfo(json.mapInfo);
+        set((state) => {
+            const loadedBoardStillExists = state.loadedModId === selectedModId && state.loadedMapId === selectedMapId && state.loadedBoardName
+                ? findBoardInfo(mapInfo, state.loadedBoardName)
+                : null;
+            const nextBoard = loadedBoardStillExists ?? pickDefaultBoardInfo(mapInfo);
+            return {
+                mapInfos: replaceMapInfo(state.mapInfos, mapInfo),
+                selectedMapInfo: mapInfo,
+                selectedBoardName: nextBoard?.name ?? null,
+                selectedBoardInfo: nextBoard,
+                mapConfig: state.loadedMapId === selectedMapId ? (json.map ?? state.mapConfig) : state.mapConfig,
+                navSimulation: null,
+                navSimulationVersion: Date.now(),
+            };
+        });
+    },
 
     loadSelectedMap: async () => {
-        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedMapInfo, loadMap, setLoading } = get();
-        if (!selectedModId || !selectedMapId) return;
+        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, setLoading } = get();
+        if (!selectedModId || !selectedMapId || !selectedBoardName) return;
+        if (!selectedBoardInfo) throw new Error(`Selected board '${selectedBoardName}' was not found in map '${selectedMapId}'.`);
         setLoading(true, 'Loading MapConfig...', 10);
         const mapRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}`);
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
         const mapJson = await mapRes.json();
         const mapCfg = mapJson.map ?? null;
-        const boardMetrics = resolveBoardMetricsFromMapConfig(mapCfg, selectedMapInfo);
+        const boardMetrics = resolveBoardMetricsFromMapConfig(mapCfg, selectedMapInfo, selectedBoardName, selectedBoardInfo);
         const entities = Array.isArray(mapCfg?.Entities) ? mapCfg.Entities : (Array.isArray(mapCfg?.entities) ? mapCfg.entities : []);
         const spawnEntities = entities.map((e: any) => {
             const template = String(e.Template ?? e.template ?? '');
@@ -414,7 +678,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
 
         setLoading(true, 'Loading Terrain...', 40);
-        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react`);
+        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`);
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
         const buf = await terrRes.arrayBuffer();
         const view = new DataView(buf);
@@ -423,25 +687,48 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const stride = view.getUint8(8);
         if (stride !== 4) throw new Error(`Invalid terrain stride ${stride}`);
         const data = new Uint8Array(buf.slice(9));
-        loadMap(data, w, h, boardMetrics);
+        const newTerrain = new TerrainStore(w, h);
+        newTerrain.loadFromBytes(w, h, data);
+        const allChunks = new Set<string>();
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) allChunks.add(`${x},${y}`);
+        }
         set({
+            terrain: newTerrain,
+            boardMetrics,
+            canvasSessionKind: 'repo',
+            canvasSessionLabel: null,
             loadedModId: selectedModId,
             loadedMapId: selectedMapId,
             loadedMapInfo: selectedMapInfo,
+            loadedBoardName: selectedBoardName,
+            loadedBoardInfo: selectedBoardInfo,
+            minimapDirtyChunks: allChunks,
+            navDirtyChunks: new Set(),
+            bakedNavTiles: new Map(),
+            bakedNavTilePayloads: [],
+            bakedNavTilesVersion: Date.now(),
+            navSimulation: null,
+            navSimulationVersion: Date.now(),
+            loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 },
         });
         setLoading(false);
     },
 
     saveSelectedMap: async () => {
-        const { bridgeBaseUrl, selectedModId, selectedMapId, loadedModId, loadedMapId, mapConfig, terrain, setLoading, spawnEntities, boardMetrics } = get();
-        if (!selectedModId || !selectedMapId) return;
+        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, mapConfig, terrain, setLoading, spawnEntities, boardMetrics } = get();
+        if (!selectedModId || !selectedMapId || !selectedBoardName) return;
         if (!mapConfig) throw new Error('No MapConfig loaded.');
-        if (loadedModId !== selectedModId || loadedMapId !== selectedMapId) {
-            throw new Error(`Selected map '${selectedMapId}' is not loaded on the canvas. Click Load Repo before saving.`);
+        if (loadedModId !== selectedModId || loadedMapId !== selectedMapId || loadedBoardName !== selectedBoardName) {
+            throw new Error(`Selected board '${selectedMapId}/${selectedBoardName}' is not loaded on the canvas. Click Open before saving.`);
         }
 
         setLoading(true, 'Saving MapConfig...', 20);
-        mapConfig.Id = selectedMapId;
+        const mapPayload = JSON.parse(JSON.stringify(mapConfig));
+        delete mapPayload.Id;
+        delete mapPayload.DefaultCamera;
+        delete mapPayload.Entities;
+        mapPayload.id = selectedMapId;
 
         // Save current editor camera as DefaultCamera
         const cam = get().cameraRef.current;
@@ -456,30 +743,30 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             const hDist = Math.sqrt(dx * dx + dz * dz);
             const pitch = Math.atan2(dy, hDist) * 180 / Math.PI;
             const yaw = Math.atan2(dx, -dz) * 180 / Math.PI;
-            mapConfig.DefaultCamera = {
-                TargetXCm: Math.round(target.x * 100),
-                TargetYCm: Math.round(target.z * 100),
-                Yaw: Math.round(yaw * 10) / 10,
-                Pitch: Math.round(pitch * 10) / 10,
-                DistanceCm: Math.round(dist * 100),
-                FovYDeg: (cam as PerspectiveCamera).fov,
+            mapPayload.defaultCamera = {
+                targetXCm: Math.round(target.x * 100),
+                targetYCm: Math.round(target.z * 100),
+                yaw: Math.round(yaw * 10) / 10,
+                pitch: Math.round(pitch * 10) / 10,
+                distanceCm: Math.round(dist * 100),
+                fovYDeg: (cam as PerspectiveCamera).fov,
             };
         }
 
-        mapConfig.Entities = spawnEntities.map((e) => {
+        mapPayload.entities = spawnEntities.map((e) => {
             const cm = cellToWorldCm(e.position.x, e.position.y, boardMetrics);
             const overrides = { ...(e.overrides ?? {}) };
             overrides['WorldPositionCm'] = { Value: { X: cm.xCm, Y: cm.yCm } };
             return {
-                Template: e.template,
-                Position: { X: e.position.x, Y: e.position.y },
-                Overrides: overrides,
+                template: e.template,
+                position: { x: e.position.x, y: e.position.y },
+                overrides,
             };
         });
         const mapRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(mapConfig),
+            body: JSON.stringify(mapPayload),
         });
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
 
@@ -491,16 +778,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         view.setUint8(8, 4);
         const blob = new Blob([header, terrain.serialize()], { type: 'application/octet-stream' });
 
-        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react`, {
+        const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`, {
             method: 'PUT',
             body: blob,
         });
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
         set({
+            canvasSessionKind: 'repo',
+            canvasSessionLabel: null,
             loadedModId: selectedModId,
             loadedMapId: selectedMapId,
             loadedMapInfo: get().selectedMapInfo,
+            loadedBoardName: selectedBoardName,
+            loadedBoardInfo: get().selectedBoardInfo,
+            mapConfig: mapPayload,
+            minimapDirtyChunks: new Set(),
+            navDirtyChunks: new Set(),
         });
+        terrain.clearDirty();
         setLoading(false);
     },
 
@@ -603,12 +898,20 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         };
         if (idx >= 0) next[idx] = entity;
         else next.push(entity);
-        return { spawnEntities: next, selectedEntityIndex: idx >= 0 ? idx : next.length - 1, entitiesVersion: Date.now() };
+        const navDirtyChunks = new Set(state.navDirtyChunks);
+        addObstacleFootprintDirtyChunks(navDirtyChunks, c, r, state.boardMetrics, state.terrain.widthChunks, state.terrain.heightChunks, intent.navRadiusCm);
+        return { spawnEntities: next, selectedEntityIndex: idx >= 0 ? idx : next.length - 1, entitiesVersion: Date.now(), navDirtyChunks };
     }),
 
     removeEntityAt: (c, r) => set((state) => {
+        const removed = state.spawnEntities.filter((e) => e.position.x === c && e.position.y === r);
         const next = state.spawnEntities.filter((e) => !(e.position.x === c && e.position.y === r));
-        return { spawnEntities: next, selectedEntityIndex: null, entitiesVersion: Date.now() };
+        const navDirtyChunks = new Set(state.navDirtyChunks);
+        for (let i = 0; i < removed.length; i++) {
+            const radiusCm = readObstacleNavRadiusCm(removed[i].overrides);
+            if (radiusCm != null) addObstacleFootprintDirtyChunks(navDirtyChunks, c, r, state.boardMetrics, state.terrain.widthChunks, state.terrain.heightChunks, radiusCm);
+        }
+        return { spawnEntities: next, selectedEntityIndex: null, entitiesVersion: Date.now(), navDirtyChunks };
     }),
 
     selectEntityAt: (c, r) => set((state) => {
@@ -657,6 +960,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
         return { minimapDirtyChunks: minimapSet, navDirtyChunks: navSet };
     }),
+
+    reportMinimapDirtyChunks: (keys) => set((state) => {
+        const minimapSet = new Set(state.minimapDirtyChunks);
+        for (const k of keys) minimapSet.add(k);
+        return { minimapDirtyChunks: minimapSet };
+    }),
     
     clearMinimapDirty: () => set({ minimapDirtyChunks: new Set() }),
     clearNavDirty: () => set({ navDirtyChunks: new Set() }),
@@ -672,15 +981,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
 }));
 
-function normalizeMapInfo(raw: any): MapInfo {
-    const id = String(raw?.id ?? raw?.Id ?? '');
+function normalizeBoardInfo(raw: any): BoardInfo {
     const spatialTypeRaw = raw?.spatialType ?? raw?.SpatialType ?? null;
     const spatialType = spatialTypeRaw == null ? null : normalizeSpatialTopology(spatialTypeRaw);
     return {
-        id,
-        found: Boolean(raw?.found ?? raw?.Found ?? false),
-        hasBoards: Boolean(raw?.hasBoards ?? raw?.HasBoards ?? false),
-        boardName: stringOrNull(raw?.boardName ?? raw?.BoardName),
+        name: String(raw?.name ?? raw?.Name ?? ''),
         spatialType,
         widthChunks: numberOr(raw?.widthChunks ?? raw?.WidthChunks, 0),
         heightChunks: numberOr(raw?.heightChunks ?? raw?.HeightChunks, 0),
@@ -696,26 +1001,91 @@ function normalizeMapInfo(raw: any): MapInfo {
     };
 }
 
-function resolveBoardMetricsFromMapConfig(mapCfg: any, mapInfo: MapInfo | null): BoardMetrics {
+function normalizeMapInfo(raw: any): MapInfo {
+    const id = String(raw?.id ?? raw?.Id ?? '');
+    const primary = normalizeBoardInfo({
+        Name: raw?.boardName ?? raw?.BoardName ?? '',
+        SpatialType: raw?.spatialType ?? raw?.SpatialType ?? null,
+        WidthChunks: raw?.widthChunks ?? raw?.WidthChunks,
+        HeightChunks: raw?.heightChunks ?? raw?.HeightChunks,
+        CellSizeCm: raw?.cellSizeCm ?? raw?.CellSizeCm,
+        ChunkSizeCells: raw?.chunkSizeCells ?? raw?.ChunkSizeCells,
+        NavigationEnabled: raw?.navigationEnabled ?? raw?.NavigationEnabled,
+        HasDataFile: raw?.hasDataFile ?? raw?.HasDataFile,
+        DataFileExists: raw?.dataFileExists ?? raw?.DataFileExists,
+        DataFile: raw?.dataFile ?? raw?.DataFile,
+        CanEditTerrain: raw?.canEditTerrain ?? raw?.CanEditTerrain,
+        CanBake: raw?.canBake ?? raw?.CanBake,
+        Reason: raw?.reason ?? raw?.Reason,
+    });
+    const boardsRaw = Array.isArray(raw?.boards) ? raw.boards : (Array.isArray(raw?.Boards) ? raw.Boards : []);
+    const boards = boardsRaw.map(normalizeBoardInfo).filter((b: BoardInfo) => b.name.length > 0);
+    const mergedBoards = boards.length > 0 ? boards : (primary.name.length > 0 ? [primary] : []);
+    return {
+        ...primary,
+        id,
+        found: Boolean(raw?.found ?? raw?.Found ?? false),
+        hasBoards: Boolean(raw?.hasBoards ?? raw?.HasBoards ?? false),
+        boardName: stringOrNull(raw?.boardName ?? raw?.BoardName),
+        boards: mergedBoards,
+    };
+}
+
+function resolveBoardMetricsFromMapConfig(
+    mapCfg: any,
+    mapInfo: MapInfo | null,
+    boardName: string | null,
+    boardInfo: BoardInfo | null,
+): BoardMetrics {
     const boards = Array.isArray(mapCfg?.Boards) ? mapCfg.Boards : (Array.isArray(mapCfg?.boards) ? mapCfg.boards : []);
-    const selectedBoard = pickPrimaryBoard(boards);
+    const selectedBoard = boardName
+        ? boards.find((b) => String(b?.Name ?? b?.name ?? '') === boardName)
+        : pickPrimaryBoard(boards);
     return normalizeBoardMetrics({
         topology: normalizeTopology(
             selectedBoard?.SpatialType ??
             selectedBoard?.spatialType ??
+            boardInfo?.spatialType ??
             mapInfo?.spatialType ??
             DEFAULT_BOARD_METRICS.topology),
         cellSizeCm: numberOr(
             selectedBoard?.GridCellSizeCm ??
             selectedBoard?.gridCellSizeCm ??
+            boardInfo?.cellSizeCm ??
             mapInfo?.cellSizeCm,
             DEFAULT_BOARD_METRICS.cellSizeCm),
         chunkSizeCells: numberOr(
             selectedBoard?.ChunkSizeCells ??
             selectedBoard?.chunkSizeCells ??
+            boardInfo?.chunkSizeCells ??
             mapInfo?.chunkSizeCells,
             DEFAULT_BOARD_METRICS.chunkSizeCells),
     });
+}
+
+function pickDefaultBoardInfo(mapInfo: MapInfo | null): BoardInfo | null {
+    if (!mapInfo) return null;
+    return mapInfo.boards.find((b) => b.canBake) ??
+        mapInfo.boards.find((b) => b.canEditTerrain) ??
+        (mapInfo.boardName ? findBoardInfo(mapInfo, mapInfo.boardName) : null) ??
+        mapInfo.boards[0] ??
+        null;
+}
+
+function findBoardInfo(mapInfo: MapInfo | null, boardName: string): BoardInfo | null {
+    if (!mapInfo) return null;
+    return mapInfo.boards.find((b) => b.name === boardName) ?? null;
+}
+
+function replaceMapInfo(mapInfos: MapInfo[], next: MapInfo): MapInfo[] {
+    let replaced = false;
+    const result = mapInfos.map((info) => {
+        if (info.id !== next.id) return info;
+        replaced = true;
+        return next;
+    });
+    if (!replaced) result.push(next);
+    return result;
 }
 
 function pickPrimaryBoard(boards: any[]): any | null {
@@ -732,6 +1102,46 @@ function pickPrimaryBoard(boards: any[]): any | null {
 
 function isNavigationEnabled(board: any): boolean {
     return Boolean(board?.NavigationEnabled ?? board?.navigationEnabled ?? false);
+}
+
+function addObstacleFootprintDirtyChunks(
+    dst: Set<string>,
+    col: number,
+    row: number,
+    metrics: BoardMetrics,
+    widthChunks: number,
+    heightChunks: number,
+    radiusCm: number,
+) {
+    const radiusCells = Math.max(1, Math.ceil(Math.max(1, radiusCm) / Math.max(1, metrics.cellSizeCm)));
+    const minCol = col - radiusCells;
+    const maxCol = col + radiusCells;
+    const minRow = row - radiusCells;
+    const maxRow = row + radiusCells;
+    for (let y = minRow; y <= maxRow; y++) {
+        for (let x = minCol; x <= maxCol; x++) {
+            const cx = Math.floor(x / metrics.chunkSizeCells);
+            const cy = Math.floor(y / metrics.chunkSizeCells);
+            if (cx >= 0 && cx < widthChunks && cy >= 0 && cy < heightChunks) dst.add(`${cx},${cy}`);
+        }
+    }
+}
+
+function readObstacleNavRadiusCm(overrides: Record<string, any> | null | undefined): number | null {
+    const intent = overrides?.ManifestationObstacleIntent2D ?? overrides?.manifestationObstacleIntent2D;
+    if (!intent || typeof intent !== 'object') return null;
+    const raw = intent.navRadiusCm ?? intent.NavRadiusCm ?? intent.radiusCm ?? intent.RadiusCm;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function clampNavQueryCell(cell: NavQueryCell, state: EditorState): NavQueryCell {
+    const maxCol = Math.max(0, state.terrain.widthChunks * state.boardMetrics.chunkSizeCells - 1);
+    const maxRow = Math.max(0, state.terrain.heightChunks * state.boardMetrics.chunkSizeCells - 1);
+    return {
+        col: Math.max(0, Math.min(Math.floor(cell.col || 0), maxCol)),
+        row: Math.max(0, Math.min(Math.floor(cell.row || 0), maxRow)),
+    };
 }
 
 function numberOr(value: unknown, fallback: number): number {

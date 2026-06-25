@@ -8,6 +8,31 @@ import {
     normalizeBoardMetrics,
 } from '../Map/TopologyMetrics';
 
+type TerrainVertex = {
+    x: number;
+    y: number;
+    z: number;
+    h: number;
+    w: number;
+    c: number;
+    r: number;
+    isRamp: boolean;
+    color: THREE.Color;
+    normal: THREE.Vector3;
+    waterY: number;
+    veg: number;
+    cornerC: number;
+    cornerR: number;
+};
+
+type GridSurfaceBuffers = {
+    positions: number[];
+    colors: number[];
+    normals: number[];
+    indices: number[];
+    vertexCache: Map<string, number>;
+};
+
 export class ChunkRenderer {
     store: TerrainStore;
     metrics: BoardMetrics;
@@ -33,7 +58,6 @@ export class ChunkRenderer {
     veg1Instances: THREE.Matrix4[] = []; // Small Tree
     veg2Instances: THREE.Matrix4[] = []; // Big Tree
     veg3Instances: THREE.Matrix4[] = []; // Dense
-    veg4Instances: THREE.Matrix4[] = []; // Crop
     
     // Water
     waterFacePos: number[] = [];
@@ -105,7 +129,6 @@ export class ChunkRenderer {
         this.veg1Instances.length = 0;
         this.veg2Instances.length = 0;
         this.veg3Instances.length = 0;
-        this.veg4Instances.length = 0;
 
         if (this.metrics.topology === 'Grid') {
             return this.generateGridChunk(cx, cy, offsetX, offsetZ, hScale);
@@ -149,7 +172,6 @@ export class ChunkRenderer {
                          this.veg2Instances.push(dummy.matrix.clone()); 
                     }
                     else if (veg === 3) this.veg3Instances.push(dummy.matrix.clone()); // Dense
-                    else if (veg === 4) this.veg4Instances.push(dummy.matrix.clone()); // Crop
                 }
 
                 const isOdd = (r & 1) === 1;
@@ -300,9 +322,7 @@ export class ChunkRenderer {
         // I will leave it or use it.
         
         // Let's use `cdt2d` to triangulate the "Water" surface? No.
-        // Let's just finalize the Red Line removal.
-        
-        this.createNavMesh(this.navMeshPos, group);
+        // Baked nav debug is rendered from serialized Recast NavTile triangles in HexRenderer.
 
         // Vegetation Meshes
         // Type 1: Small Tree
@@ -341,18 +361,6 @@ export class ChunkRenderer {
              group.add(mesh);
         }
 
-        // Type 4: Crop
-        if (this.veg4Instances.length > 0) {
-             const geo = new THREE.BoxGeometry(1.0, 0.5, 1.0); 
-             geo.translate(0, 0.25, 0);
-             const mat = new THREE.MeshStandardMaterial({ color: 0xFFD700, flatShading: true });
-             const mesh = new THREE.InstancedMesh(geo, mat, this.veg4Instances.length);
-             
-             for(let i=0; i<this.veg4Instances.length; i++) mesh.setMatrixAt(i, this.veg4Instances[i]);
-             mesh.instanceMatrix.needsUpdate = true;
-             group.add(mesh);
-        }
-
         return group;
     }
 
@@ -370,27 +378,28 @@ export class ChunkRenderer {
         const cellSizeM = this.metrics.cellSizeCm / 100.0;
         const dummy = new THREE.Object3D();
         const chunkBorderPos: number[] = [];
+        const surface: GridSurfaceBuffers = { positions: [], colors: [], normals: [], indices: [], vertexCache: new Map() };
+        const cornerHeights = new Map<string, number>();
+        const cornerColors = new Map<string, THREE.Color>();
+        const cornerNormals = new Map<string, THREE.Vector3>();
 
         for (let r = startR; r < endR; r++) {
             for (let c = startC; c < endC; c++) {
                 if (r >= maxR || c >= maxC) continue;
 
-                const h = this.store.getHeight(c, r);
-                const w = this.store.getWater(c, r);
-                const y = h * hScale;
                 const x0 = c * cellSizeM + offsetX;
                 const x1 = x0 + cellSizeM;
                 const z0 = r * cellSizeM + offsetZ;
                 const z1 = z0 + cellSizeM;
-                const color = this.getCellColor(c, r, h);
+                const h = this.store.getHeight(c, r);
+                const w = this.store.getWater(c, r);
 
-                const p00 = { x: x0, y, z: z0, h, w, c, r, isRamp: this.store.isRamp(c, r), color, waterY: w * hScale, veg: this.store.getVeg(c, r) };
-                const p10 = { ...p00, x: x1, z: z0 };
-                const p11 = { ...p00, x: x1, z: z1 };
-                const p01 = { ...p00, x: x0, z: z1 };
+                const p00 = this.makeGridVertex(c, r, h, w, c, r, hScale, cellSizeM, offsetX, offsetZ, maxC, maxR, cornerHeights, cornerColors, cornerNormals);
+                const p10 = this.makeGridVertex(c + 1, r, h, w, c, r, hScale, cellSizeM, offsetX, offsetZ, maxC, maxR, cornerHeights, cornerColors, cornerNormals);
+                const p11 = this.makeGridVertex(c + 1, r + 1, h, w, c, r, hScale, cellSizeM, offsetX, offsetZ, maxC, maxR, cornerHeights, cornerColors, cornerNormals);
+                const p01 = this.makeGridVertex(c, r + 1, h, w, c, r, hScale, cellSizeM, offsetX, offsetZ, maxC, maxR, cornerHeights, cornerColors, cornerNormals);
 
-                this.pushTriColor(this.faceFlatPos, this.faceFlatColor, p00, p10, p11, color, color, color);
-                this.pushTriColor(this.faceFlatPos, this.faceFlatColor, p00, p11, p01, color, color, color);
+                this.addGridTopQuad(surface, p00, p10, p11, p01);
                 this.stats.facesFlat += 2;
 
                 if (w > h) {
@@ -400,8 +409,8 @@ export class ChunkRenderer {
                 }
 
                 if (this.store.getVeg(c, r) > 0) {
-                    const center = cellToWorldPosition(c, r, h, this.metrics, hScale, offsetX, offsetZ);
-                    dummy.position.set(center.x, center.y, center.z);
+                    const centerY = (p00.y + p10.y + p11.y + p01.y) * 0.25;
+                    dummy.position.set((x0 + x1) * 0.5, centerY, (z0 + z1) * 0.5);
                     dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
                     const scaleVar = 0.8 + Math.random() * 0.4;
                     dummy.scale.set(scaleVar, scaleVar, scaleVar);
@@ -415,19 +424,19 @@ export class ChunkRenderer {
                         this.veg2Instances.push(dummy.matrix.clone());
                     }
                     else if (veg === 3) this.veg3Instances.push(dummy.matrix.clone());
-                    else if (veg === 4) this.veg4Instances.push(dummy.matrix.clone());
                 }
 
-                const gridY = y + 0.03;
-                this.edgeFlatPos.push(x0, gridY, z0, x1, gridY, z0);
-                this.edgeFlatPos.push(x1, gridY, z0, x1, gridY, z1);
-                this.edgeFlatPos.push(x1, gridY, z1, x0, gridY, z1);
-                this.edgeFlatPos.push(x0, gridY, z1, x0, gridY, z0);
+                this.addGridNavQuad(p00, p10, p11, p01);
+                this.pushGridLine(p00, p10);
+                this.pushGridLine(p10, p11);
+                this.pushGridLine(p11, p01);
+                this.pushGridLine(p01, p00);
             }
         }
 
-        this.createFaceMesh(this.faceFlatPos, this.faceFlatColor, group);
+        this.createGridSurfaceMesh(surface, group);
         this.createWaterMesh(this.waterFacePos, group);
+        // Baked nav debug is rendered from serialized Recast NavTile triangles in HexRenderer.
         this.createNamedMesh(this.edgeFlatPos, 0x9fb37c, 'line', group, 'CellGrid', 0.38);
         const bx0 = startC * cellSizeM + offsetX;
         const bx1 = Math.min(endC, maxC) * cellSizeM + offsetX;
@@ -441,6 +450,183 @@ export class ChunkRenderer {
         this.createNamedMesh(chunkBorderPos, 0x00e5ff, 'line', group, 'ChunkBorder', 0.85);
         this.addVegetationMeshes(group);
         return group;
+    }
+
+    private makeGridVertex(
+        cornerC: number,
+        cornerR: number,
+        ownerHeight: number,
+        ownerWater: number,
+        ownerC: number,
+        ownerR: number,
+        hScale: number,
+        cellSizeM: number,
+        offsetX: number,
+        offsetZ: number,
+        maxC: number,
+        maxR: number,
+        cornerHeights: Map<string, number>,
+        cornerColors: Map<string, THREE.Color>,
+        cornerNormals: Map<string, THREE.Vector3>,
+    ): TerrainVertex {
+        const visualHeight = this.getGridCornerHeight(cornerC, cornerR, maxC, maxR, cornerHeights);
+        const color = this.getGridCornerColor(cornerC, cornerR, maxC, maxR, cornerColors);
+        const normal = this.getGridCornerNormal(cornerC, cornerR, maxC, maxR, hScale, cellSizeM, cornerHeights, cornerNormals);
+        return {
+            x: cornerC * cellSizeM + offsetX,
+            y: visualHeight * hScale,
+            z: cornerR * cellSizeM + offsetZ,
+            h: ownerHeight,
+            w: ownerWater,
+            c: ownerC,
+            r: ownerR,
+            isRamp: this.store.isRamp(ownerC, ownerR),
+            color,
+            normal,
+            waterY: ownerWater * hScale,
+            veg: this.store.getVeg(ownerC, ownerR),
+            cornerC,
+            cornerR,
+        };
+    }
+
+    private addGridTopQuad(surface: GridSurfaceBuffers, p00: TerrainVertex, p10: TerrainVertex, p11: TerrainVertex, p01: TerrainVertex) {
+        this.addGridQuadSurface(surface, p00, p10, p11, p01, p00.color, p10.color, p11.color, p01.color);
+    }
+
+    private addGridQuadSurface(
+        surface: GridSurfaceBuffers,
+        p00: TerrainVertex,
+        p10: TerrainVertex,
+        p11: TerrainVertex,
+        p01: TerrainVertex,
+        c00: THREE.Color,
+        c10: THREE.Color,
+        c11: THREE.Color,
+        c01: THREE.Color,
+    ) {
+        const i00 = this.pushGridSurfaceVertex(surface, p00, c00);
+        const i10 = this.pushGridSurfaceVertex(surface, p10, c10);
+        const i11 = this.pushGridSurfaceVertex(surface, p11, c11);
+        const i01 = this.pushGridSurfaceVertex(surface, p01, c01);
+        surface.indices.push(i00, i10, i11, i00, i11, i01);
+    }
+
+    private pushGridSurfaceVertex(surface: GridSurfaceBuffers, p: TerrainVertex, color: THREE.Color): number {
+        const key = `${p.cornerC},${p.cornerR}`;
+        const cached = surface.vertexCache.get(key);
+        if (cached !== undefined) return cached;
+
+        const index = surface.positions.length / 3;
+        surface.positions.push(p.x, p.y, p.z);
+        surface.colors.push(color.r, color.g, color.b);
+        surface.normals.push(p.normal.x, p.normal.y, p.normal.z);
+        surface.vertexCache.set(key, index);
+        return index;
+    }
+
+    private getGridCornerHeight(
+        cornerC: number,
+        cornerR: number,
+        maxC: number,
+        maxR: number,
+        cache: Map<string, number>,
+    ): number {
+        const key = `${cornerC},${cornerR}`;
+        const cached = cache.get(key);
+        if (cached !== undefined) return cached;
+
+        let sum = 0;
+        let count = 0;
+        for (let dr = -1; dr <= 0; dr++) {
+            for (let dc = -1; dc <= 0; dc++) {
+                const c = cornerC + dc;
+                const r = cornerR + dr;
+                if (c < 0 || r < 0 || c >= maxC || r >= maxR) continue;
+                sum += this.store.getHeight(c, r);
+                count++;
+            }
+        }
+
+        if (count === 0) {
+            throw new Error(`Grid terrain corner (${cornerC},${cornerR}) has no owning cells.`);
+        }
+
+        const height = sum / count;
+        cache.set(key, height);
+        return height;
+    }
+
+    private getGridCornerColor(
+        cornerC: number,
+        cornerR: number,
+        maxC: number,
+        maxR: number,
+        cache: Map<string, THREE.Color>,
+    ): THREE.Color {
+        const key = `${cornerC},${cornerR}`;
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        const color = new THREE.Color(0, 0, 0);
+        let count = 0;
+        for (let dr = -1; dr <= 0; dr++) {
+            for (let dc = -1; dc <= 0; dc++) {
+                const c = cornerC + dc;
+                const r = cornerR + dr;
+                if (c < 0 || r < 0 || c >= maxC || r >= maxR) continue;
+                color.add(this.getCellColor(c, r, this.store.getHeight(c, r)));
+                count++;
+            }
+        }
+
+        if (count === 0) {
+            throw new Error(`Grid terrain corner (${cornerC},${cornerR}) has no color owning cells.`);
+        }
+
+        color.multiplyScalar(1 / count);
+        cache.set(key, color);
+        return color;
+    }
+
+    private getGridCornerNormal(
+        cornerC: number,
+        cornerR: number,
+        maxC: number,
+        maxR: number,
+        hScale: number,
+        cellSizeM: number,
+        heightCache: Map<string, number>,
+        cache: Map<string, THREE.Vector3>,
+    ): THREE.Vector3 {
+        const key = `${cornerC},${cornerR}`;
+        const cached = cache.get(key);
+        if (cached) return cached;
+
+        const leftC = Math.max(0, cornerC - 1);
+        const rightC = Math.min(maxC, cornerC + 1);
+        const topR = Math.max(0, cornerR - 1);
+        const bottomR = Math.min(maxR, cornerR + 1);
+        const hLeft = this.getGridCornerHeight(leftC, cornerR, maxC, maxR, heightCache) * hScale;
+        const hRight = this.getGridCornerHeight(rightC, cornerR, maxC, maxR, heightCache) * hScale;
+        const hTop = this.getGridCornerHeight(cornerC, topR, maxC, maxR, heightCache) * hScale;
+        const hBottom = this.getGridCornerHeight(cornerC, bottomR, maxC, maxR, heightCache) * hScale;
+        const dx = Math.max(cellSizeM, (rightC - leftC) * cellSizeM);
+        const dz = Math.max(cellSizeM, (bottomR - topR) * cellSizeM);
+        const normal = new THREE.Vector3(-(hRight - hLeft) / dx, 1, -(hBottom - hTop) / dz).normalize();
+        cache.set(key, normal);
+        return normal;
+    }
+
+    private pushGridLine(a: TerrainVertex, b: TerrainVertex) {
+        const yBias = 0.03;
+        this.edgeFlatPos.push(a.x, a.y + yBias, a.z, b.x, b.y + yBias, b.z);
+    }
+
+    private addGridNavQuad(p00: TerrainVertex, p10: TerrainVertex, p11: TerrainVertex, p01: TerrainVertex) {
+        if (!this.isGridCellNavWalkable(p00.c, p00.r)) return;
+        this.addNavTri(p00, p10, p11);
+        this.addNavTri(p00, p11, p01);
     }
 
     private isGridCellNavWalkable(c: number, r: number): boolean {
@@ -481,15 +667,6 @@ export class ChunkRenderer {
              group.add(mesh);
         }
 
-        if (this.veg4Instances.length > 0) {
-             const geo = new THREE.BoxGeometry(1.0, 0.5, 1.0);
-             geo.translate(0, 0.25, 0);
-             const mat = new THREE.MeshStandardMaterial({ color: 0xFFD700, flatShading: true });
-             const mesh = new THREE.InstancedMesh(geo, mat, this.veg4Instances.length);
-             for(let i=0; i<this.veg4Instances.length; i++) mesh.setMatrixAt(i, this.veg4Instances[i]);
-             mesh.instanceMatrix.needsUpdate = true;
-             group.add(mesh);
-        }
     }
 
     private getVertex(c: number, r: number, offsetX: number, offsetZ: number, hScale: number) {
@@ -746,7 +923,7 @@ export class ChunkRenderer {
         colArr.push(cC.r, cC.g, cC.b);
     }
     
-    private createFaceMesh(posArr: number[], colArr: number[], parent: THREE.Group) {
+    private createFaceMesh(posArr: number[], colArr: number[], parent: THREE.Group, flatShading: boolean = true) {
         if (posArr.length === 0) return;
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
@@ -755,7 +932,7 @@ export class ChunkRenderer {
         const mat = new THREE.MeshStandardMaterial({
             vertexColors: true, // Enable Vertex Colors
             side: THREE.DoubleSide,
-            flatShading: true,
+            flatShading,
             transparent: false, // Opaque
             opacity: 1.0,
             polygonOffset: true,
@@ -763,6 +940,29 @@ export class ChunkRenderer {
             polygonOffsetUnits: 1
         });
         const mesh = new THREE.Mesh(geo, mat);
+        parent.add(mesh);
+    }
+
+    private createGridSurfaceMesh(surface: GridSurfaceBuffers, parent: THREE.Group) {
+        if (surface.positions.length === 0 || surface.indices.length === 0) return;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(surface.positions, 3));
+        geo.setAttribute('color', new THREE.Float32BufferAttribute(surface.colors, 3));
+        geo.setAttribute('normal', new THREE.Float32BufferAttribute(surface.normals, 3));
+        geo.setIndex(surface.indices);
+
+        const mat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            side: THREE.DoubleSide,
+            flatShading: false,
+            roughness: 0.82,
+            metalness: 0.0,
+            polygonOffset: true,
+            polygonOffsetFactor: 1,
+            polygonOffsetUnits: 1,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.name = 'GridTerrainSurface';
         parent.add(mesh);
     }
     
@@ -988,10 +1188,7 @@ export class ChunkRenderer {
         // If ANY vertex is inside an Obstacle Hex, the triangle is blocked?
         // Or if ALL? 
         // Safer: If any vertex is an obstacle, it clips the navmesh.
-        // Obstacles: 2 (Big Tree), 3 (Dense), 2 (Rock/Bush - wait, veg=2 is Big Tree).
-        // Let's check definitions:
-        // 0: None, 1: Small Tree, 2: Big Tree, 3: Dense, 4: Crop
-        // Assume 2 and 3 are blockers.
+        // Vegetation blockers: 2 (Big Tree), 3 (Dense).
         
         if (this.isObstacle(p1.veg) || this.isObstacle(p2.veg) || this.isObstacle(p3.veg)) return;
         

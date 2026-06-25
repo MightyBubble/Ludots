@@ -19,6 +19,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             NavMeshAgentProfileConfig navProfile,
             AgentProfileConfig agentProfile,
             out NavTile tile,
+            out byte[] detourTileBytes,
             out NavBakeArtifact artifact);
     }
 
@@ -33,6 +34,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             NavMeshAgentProfileConfig navProfile,
             AgentProfileConfig agentProfile,
             out NavTile tile,
+            out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
             BakePipelineResult result = BakePipeline.Execute(
@@ -47,6 +49,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (!result.Success || result.Tile == null)
             {
                 tile = null!;
+                detourTileBytes = Array.Empty<byte>();
                 artifact = result.Artifact;
                 return false;
             }
@@ -54,6 +57,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             tile = result.Tile.TileId.Layer == layer.Layer
                 ? result.Tile
                 : NavTileLayerRewriter.WithLayer(result.Tile, layer.Layer);
+            detourTileBytes = Array.Empty<byte>();
             artifact = result.Artifact.TileId.Layer == layer.Layer
                 ? result.Artifact
                 : NavTileLayerRewriter.WithLayer(result.Artifact, layer.Layer);
@@ -69,6 +73,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int layer,
             bool success,
             NavTile tile,
+            byte[] detourTileBytes,
             NavBakeArtifact artifact)
         {
             Target = target;
@@ -76,6 +81,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             Layer = layer;
             Success = success;
             Tile = tile;
+            DetourTileBytes = detourTileBytes ?? Array.Empty<byte>();
             Artifact = artifact;
         }
 
@@ -88,6 +94,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public bool Success { get; }
 
         public NavTile Tile { get; }
+
+        public byte[] DetourTileBytes { get; }
 
         public NavBakeArtifact Artifact { get; }
 
@@ -185,9 +193,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     {
                         NavMeshAgentProfileConfig navProfile = context.Config.Profiles[pi];
                         AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
-                        bool success = algorithm.TryBake(context, target, layer, navProfile, agentProfile, out NavTile tile, out NavBakeArtifact artifact);
+                        bool success = algorithm.TryBake(context, target, layer, navProfile, agentProfile, out NavTile tile, out byte[] detourTileBytes, out NavBakeArtifact artifact);
                         int index = Interlocked.Increment(ref cursor);
-                        entries[index] = new NavBakeResultEntry(target, navProfile.Id, layer.Layer, success, tile, artifact);
+                        entries[index] = new NavBakeResultEntry(target, navProfile.Id, layer.Layer, success, tile, detourTileBytes, artifact);
                     }
                 }
             }

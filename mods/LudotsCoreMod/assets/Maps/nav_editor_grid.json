@@ -11,6 +11,17 @@
       "ChunkSizeCells": 64,
       "DataFile": "nav_editor_grid.bin",
       "NavigationEnabled": true
+    },
+    {
+      "Name": "board_2",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 16,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "nav_editor_grid_board_2.bin",
+      "NavigationEnabled": true
     }
   ],
   "Entities": [],

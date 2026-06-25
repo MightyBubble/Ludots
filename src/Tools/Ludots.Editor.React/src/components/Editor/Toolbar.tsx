@@ -1,8 +1,44 @@
 import React from 'react';
-import { useEditorStore, ToolCategory, ToolMode } from './EditorStore';
-import { Download, Upload, Mountain, Droplets, TreePine, Map as MapIcon, ArrowUp, ArrowDown, Type, Layers, PaintBucket, Grid, BoxSelect, Footprints, Flag, Ban, Shapes, Circle, Square, Save, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import {
+    ArrowDown,
+    ArrowUp,
+    Ban,
+    BoxSelect,
+    Circle,
+    Crosshair,
+    Download,
+    Droplets,
+    Eye,
+    Footprints,
+    FolderOpen,
+    Grid,
+    HardDrive,
+    Layers,
+    Map as MapIcon,
+    MapPin,
+    Mountain,
+    PaintBucket,
+    Play,
+    Plus,
+    RefreshCw,
+    Route,
+    Save,
+    Settings2,
+    Shapes,
+    SlidersHorizontal,
+    Square,
+    TreePine,
+    Trash2,
+    Type,
+    Upload,
+} from 'lucide-react';
+import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type BoardInfo, type BakedNavTilePayload, type NavPanelTab } from './EditorStore';
+import { Minimap } from './Minimap';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
-import type { BoardTopology } from '../../Core/Map/TopologyMetrics';
+import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
+
+const FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline-v2';
+const LEGACY_FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline';
 
 type NavBakeBudgetStatusText = 'ok' | 'large' | 'reject';
 
@@ -66,17 +102,55 @@ type NavigationConfigPayload = {
     validated?: any;
 };
 
+type NavBakePhase = 'idle' | 'estimating' | 'estimated' | 'baking' | 'complete' | 'blocked' | 'error' | 'cancelled';
+
+type NavBakeState = {
+    phase: NavBakePhase;
+    title: string;
+    message: string;
+    progress: number;
+};
+
+type NavQueryPhase = 'idle' | 'querying' | 'complete' | 'error';
+
+type NavQueryUiState = {
+    phase: NavQueryPhase;
+    title: string;
+    message: string;
+};
+
+const panelClass = 'pointer-events-auto rounded-lg border border-slate-700/80 bg-slate-950/90 text-slate-100 shadow-2xl backdrop-blur-md';
+const sectionTitleClass = 'text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500';
+const fieldLabelClass = 'text-[10px] text-slate-400';
+const inputClass = 'mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-sky-500';
+const compactInputClass = 'rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-sky-500';
+const darkButtonClass = 'inline-flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45';
+const iconToggleClass = 'inline-flex h-9 w-9 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800';
+const idleNavBakeState: NavBakeState = {
+    phase: 'idle',
+    title: 'Bake idle',
+    message: 'Run Estimate to preview cost, or Bake to estimate and execute in one pass.',
+    progress: 0,
+};
+
+const idleNavQueryState: NavQueryUiState = {
+    phase: 'idle',
+    title: 'Path idle',
+    message: 'Choose a profile/layer and run a C# query. Grid boards auto-create flat baseline tiles; other topologies require Bake.',
+};
+
 export const Toolbar: React.FC = () => {
-    const { 
-        activeCategory, setCategory, 
-        activeMode, setMode, 
-        brushSize, setBrushSize, 
+    const {
+        activeCategory, setCategory,
+        activeMode, setMode,
+        brushSize, setBrushSize,
         brushValue, setBrushValue,
         activeLayer, setActiveLayer,
         terrain, loadMap, initMap,
         bridgeBaseUrl,
-        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, loadedModId, loadedMapId, loadedMapInfo, boardMetrics,
-        refreshMods, selectMod, selectMap, loadSelectedMap, saveSelectedMap,
+        mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics,
+        refreshMods, selectMod, selectMap, selectBoard, loadSelectedMap, saveSelectedMap,
+        createBoard, deleteSelectedBoard,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
         templates, selectedTemplateId, selectTemplate,
         obstacleTemplateId, setObstacleTemplate, obstacleShape, setObstacleShape, obstacleRadiusCm, setObstacleRadiusCm, obstacleHalfWidthCm, obstacleHalfHeightCm, setObstacleHalfSizeCm,
@@ -84,20 +158,41 @@ export const Toolbar: React.FC = () => {
         showGrid, toggleGrid,
         showChunkBorders, toggleChunkBorders,
         showNavMesh, toggleNavMesh,
-        bakeNavMesh, // Added
         setBakedNavTiles,
+        mergeBakedNavTiles,
         clearBakedNavTiles,
         bakedNavTiles,
+        bakedNavTilePayloads,
+        navSimulation,
+        setNavSimulation,
+        clearNavSimulation,
+        navPanelTab,
+        setNavPanelTab,
+        navQueryProfileId,
+        setNavQueryProfileId,
+        navQueryLayer,
+        setNavQueryLayer,
+        navQueryStartCell,
+        navQueryGoalCell,
         navDirtyChunks,
         clearNavDirty,
         setLoading,
-        loadingState 
+        loadingState,
+        cameraRef,
+        controlsRef,
     } = useEditorStore();
 
     const [showNewMap, setShowNewMap] = React.useState(false);
+    const [showAddBoard, setShowAddBoard] = React.useState(false);
     const [newWidth, setNewWidth] = React.useState(8);
     const [newHeight, setNewHeight] = React.useState(8);
     const [newTopology, setNewTopology] = React.useState<BoardTopology>('Grid');
+    const [newBoardName, setNewBoardName] = React.useState('board_2');
+    const [newBoardTopology, setNewBoardTopology] = React.useState<BoardTopology>('Grid');
+    const [newBoardWidthMacroTiles, setNewBoardWidthMacroTiles] = React.useState(1);
+    const [newBoardHeightMacroTiles, setNewBoardHeightMacroTiles] = React.useState(1);
+    const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(100);
+    const [newBoardNavigationEnabled, setNewBoardNavigationEnabled] = React.useState(true);
     const [mapId, setMapId] = React.useState('');
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
@@ -109,30 +204,97 @@ export const Toolbar: React.FC = () => {
     const [navMaxDegree, setNavMaxDegree] = React.useState(Math.max(1, (navigator as any).hardwareConcurrency ?? 4));
     const [navEstimate, setNavEstimate] = React.useState<NavBakeEstimateReport | null>(null);
     const [navEstimateError, setNavEstimateError] = React.useState<string | null>(null);
-    const [allowLargeBake, setAllowLargeBake] = React.useState(false);
+    const [navBakeState, setNavBakeState] = React.useState<NavBakeState>(idleNavBakeState);
+    const [navQueryState, setNavQueryState] = React.useState<NavQueryUiState>(idleNavQueryState);
+    const [navQueryMaxPortals, setNavQueryMaxPortals] = React.useState(256);
     const navAbortRef = React.useRef<AbortController | null>(null);
+
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
-    const canvasMapLoaded = Boolean(selectedModId && selectedMapId && loadedModId === selectedModId && loadedMapId === selectedMapId);
-    const selectedNavReady = Boolean(canvasMapLoaded && loadedMapInfo?.canBake && mapId === loadedMapId);
+    const selectedBoards = selectedMapInfo?.boards ?? [];
+    const boardOptionsLabel = selectedBoards.length > 0 ? `${selectedBoards.length} board${selectedBoards.length === 1 ? '' : 's'}` : 'no boards';
+    const canvasHasRepoSession = Boolean(canvasSessionKind === 'repo' && loadedModId && loadedMapId && loadedBoardName);
+    const canvasHasLocalSession = canvasSessionKind === 'local';
+    const canvasHasAnySession = canvasHasRepoSession || canvasHasLocalSession;
+    const canvasMapLoaded = Boolean(canvasHasRepoSession && selectedModId && selectedMapId && selectedBoardName && loadedModId === selectedModId && loadedMapId === selectedMapId && loadedBoardName === selectedBoardName);
+    const canvasCanEdit = Boolean(canvasHasLocalSession || (canvasMapLoaded && loadedBoardInfo?.canEditTerrain));
+    const brushInspectorLocked = !canvasCanEdit || navPanelTab === 'simulation';
+    const selectedDiffersFromCanvas = Boolean(canvasHasRepoSession && !canvasMapLoaded);
+    const bakeMapId = canvasMapLoaded ? loadedMapId : null;
+    const bakeBoardName = canvasMapLoaded ? loadedBoardName : null;
+    const selectedTargetLabel = `${selectedMapId ?? 'no map'} / ${selectedBoardName ?? 'no board'}`;
+    const loadedTargetLabel = canvasHasLocalSession
+        ? (canvasSessionLabel ?? 'local draft')
+        : canvasHasRepoSession
+            ? `${loadedMapId} / ${loadedBoardName}${canvasMapLoaded ? '' : ' (different selection)'}`
+            : 'not loaded';
+    const selectedNavReady = Boolean(canvasMapLoaded && loadedBoardInfo?.canBake);
+    const dirtyChunkCount = React.useMemo(() => {
+        return navDirtyChunks.size;
+    }, [navDirtyChunks, navDirtyChunks.size]);
     const navDisabledReason = !selectedMapId ? 'Select a map first.' :
-        !canvasMapLoaded ? `Click Load Repo before baking '${selectedMapId}'.` :
-        mapId !== loadedMapId ? 'The bake mapId must match the loaded canvas map.' :
-        loadedMapInfo?.reason ?? 'Loaded map is not bakeable.';
+        !selectedBoardName ? 'Select a board first.' :
+        !canvasMapLoaded ? `Open '${selectedMapId}/${selectedBoardName}' from Map And Board before baking.` :
+        loadedBoardInfo?.reason ?? 'Loaded board is not bakeable.';
     const estimateStatusLabel = navEstimate?.budgetStatusText === 'ok'
-        ? 'Estimate OK'
+        ? 'Budget OK'
         : navEstimate?.budgetStatusText === 'large'
-            ? 'Large bake approval needed'
-            : 'Estimate rejected';
+            ? 'Budget Large'
+            : 'Budget Rejected';
     const estimateStatusHint = navEstimate?.budgetStatusText === 'large'
-        ? 'This is an approval gate, not a failure. The bake is above the safe auto-run budget.'
+        ? 'This job is above the automatic safe budget. Pressing Bake is the explicit run action; no extra checkbox is required.'
         : navEstimate?.budgetStatusText === 'reject'
             ? 'This bake exceeds the configured hard budget and will not run.'
             : 'This bake is inside the safe auto-run budget.';
+    const loadedCanvasLabel = canvasMapLoaded
+        ? `${loadedMapId}/${loadedBoardName} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} chunks`
+        : canvasHasLocalSession
+            ? `${canvasSessionLabel ?? 'local draft'} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} chunks`
+            : canvasHasRepoSession
+                ? `${loadedMapId}/${loadedBoardName} / locked until selected`
+                : 'not loaded';
+    const boardSessionTone = canvasMapLoaded || canvasHasLocalSession
+        ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+        : selectedDiffersFromCanvas
+            ? 'border-amber-800/70 bg-amber-950/25 text-amber-100'
+            : 'border-slate-800 bg-slate-900/60 text-slate-400';
+    const boardSessionMessage = canvasHasLocalSession
+        ? 'Local terrain draft. It can be edited and exported; repo save requires opening a board.'
+        : canvasMapLoaded
+            ? 'Selected board is open on the canvas.'
+            : selectedDiffersFromCanvas
+                ? 'Selected board is only a candidate. Open it before editing, saving, baking, or simulating.'
+                : 'No board is open on the canvas.';
+    const boardOpenDisabled = !selectedModId || !selectedMapId || !selectedBoardName || !selectedBoardInfo?.canEditTerrain;
+    const boardOpenTitle = selectedBoardInfo?.canEditTerrain
+        ? 'Open selected map board from repo via Bridge'
+        : (selectedBoardInfo?.reason ?? 'Select an editable board first.');
+    const deleteBoardDisabled = !selectedMapId || !selectedBoardName || selectedBoards.length <= 1 || canvasMapLoaded;
+    const deleteBoardTitle = selectedBoards.length <= 1
+        ? 'Cannot delete the last board from a map'
+        : canvasMapLoaded
+            ? 'Open another board before deleting the loaded board'
+            : 'Delete selected board from MapConfig; terrain data file is kept';
+    const boardPropertyTopology = canvasMapLoaded
+        ? boardMetrics.topology
+        : (selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? boardMetrics.topology);
+    const boardPropertyChunks = canvasMapLoaded
+        ? `${terrain.widthChunks} x ${terrain.heightChunks}`
+        : selectedBoardInfo
+            ? `${selectedBoardInfo.widthChunks} x ${selectedBoardInfo.heightChunks}`
+            : `${terrain.widthChunks} x ${terrain.heightChunks}`;
+    const boardPropertyCellSizeCm = canvasMapLoaded
+        ? boardMetrics.cellSizeCm
+        : (selectedBoardInfo?.cellSizeCm ?? selectedMapInfo?.cellSizeCm ?? boardMetrics.cellSizeCm);
+    const boardPropertyChunkSizeCells = canvasMapLoaded
+        ? boardMetrics.chunkSizeCells
+        : (selectedBoardInfo?.chunkSizeCells ?? selectedMapInfo?.chunkSizeCells ?? boardMetrics.chunkSizeCells);
+    const bakeButtonDisabled = !selectedNavReady || navBakeState.phase === 'estimating' || navBakeState.phase === 'baking';
+
     const formatEstimateBudgetDetail = (estimate: NavBakeEstimateReport) => {
         const statusDetail = estimate.budgetStatusText === 'ok'
             ? 'This bake can run directly.'
             : estimate.budgetStatusText === 'large'
-                ? 'Review the estimate, then enable the large-bake approval checkbox before running.'
+                ? 'This is a large budget job. Bake will pass the backend large-budget token for this estimate hash.'
                 : 'This bake exceeds the hard budget and must use a profiled bake-farm flow.';
         return [
             statusDetail,
@@ -145,27 +307,42 @@ export const Toolbar: React.FC = () => {
         let cancelled = false;
         const run = async () => {
             try {
-                await useEditorStore.getState().refreshMods();
+                await refreshMods();
                 if (cancelled) return;
                 const s = useEditorStore.getState();
                 if (!s.selectedModId && s.mods.length > 0) {
                     await s.selectMod(s.mods[0].id);
                 }
             } catch {
+                // Bridge health is surfaced in the dev status strip.
             }
         };
         run();
         return () => { cancelled = true; };
-    }, []);
+    }, [refreshMods]);
 
     React.useEffect(() => {
         if (selectedMapId) setMapId(selectedMapId);
     }, [selectedMapId]);
 
     React.useEffect(() => {
+        const existing = new Set(selectedBoards.map((board) => board.name));
+        let index = selectedBoards.length + 1;
+        let candidate = `board_${index}`;
+        while (existing.has(candidate)) {
+            index++;
+            candidate = `board_${index}`;
+        }
+        setNewBoardName(candidate);
+    }, [selectedMapId, selectedBoards.length]);
+
+    React.useEffect(() => {
         setNavEstimate(null);
         setNavEstimateError(null);
-        setAllowLargeBake(false);
+        setNavBakeState((state) =>
+            state.phase === 'baking' || state.phase === 'estimating' || state.phase === 'complete'
+                ? state
+                : idleNavBakeState);
     }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, loadedMapId, navigationConfigVersion]);
 
     const downloadBlob = (filename: string, blob: Blob) => {
@@ -188,60 +365,87 @@ export const Toolbar: React.FC = () => {
         setShowNewMap(false);
     };
 
+    const handleCreateBoard = async () => {
+        const request: BoardCreateRequest = {
+            name: newBoardName.trim(),
+            spatialType: newBoardTopology,
+            widthInMacroTiles: Math.max(1, Math.floor(newBoardWidthMacroTiles || 1)),
+            heightInMacroTiles: Math.max(1, Math.floor(newBoardHeightMacroTiles || 1)),
+            cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCm || 1)),
+            hexEdgeLengthCm: Math.max(1, Math.floor(newBoardCellSizeCm || 1)),
+            navigationEnabled: newBoardNavigationEnabled,
+        };
+        try {
+            await createBoard(request);
+            setShowAddBoard(false);
+        } catch (err: any) {
+            alert(`Create board failed: ${err?.message ?? err}`);
+        }
+    };
+
+    const handleDeleteSelectedBoard = async () => {
+        if (!selectedBoardName) return;
+        try {
+            await deleteSelectedBoard();
+        } catch (err: any) {
+            alert(`Delete board failed: ${err?.message ?? err}`);
+        }
+    };
+
     const categories: { id: ToolCategory, icon: React.ReactNode, label: string }[] = [
-        { id: 'Height', icon: <Mountain size={18} />, label: 'Height' },
-        { id: 'Water', icon: <Droplets size={18} />, label: 'Water' },
-        { id: 'Area', icon: <Shapes size={18} />, label: 'Area' },
-        { id: 'Blocked', icon: <Ban size={18} />, label: 'Block' },
-        { id: 'Biome', icon: <MapIcon size={18} />, label: 'Biome' },
-        { id: 'Vegetation', icon: <TreePine size={18} />, label: 'Veg' },
-        { id: 'Ramp', icon: <Type size={18} />, label: 'Ramp' },
-        { id: 'Layers', icon: <Layers size={18} />, label: 'Layers' },
-        { id: 'Entities', icon: <BoxSelect size={18} />, label: 'Ent' },
-        { id: 'Obstacle', icon: <Circle size={18} />, label: 'Obs' },
+        { id: 'Height', icon: <Mountain size={16} />, label: 'Height' },
+        { id: 'Water', icon: <Droplets size={16} />, label: 'Water' },
+        { id: 'Area', icon: <Shapes size={16} />, label: 'Area' },
+        { id: 'Blocked', icon: <Ban size={16} />, label: 'Block' },
+        { id: 'Biome', icon: <MapIcon size={16} />, label: 'Biome' },
+        { id: 'Vegetation', icon: <TreePine size={16} />, label: 'Veg' },
+        { id: 'Ramp', icon: <Type size={16} />, label: 'Ramp' },
+        { id: 'Layers', icon: <Layers size={16} />, label: 'Layers' },
+        { id: 'Entities', icon: <BoxSelect size={16} />, label: 'Ent' },
+        { id: 'Obstacle', icon: <Circle size={16} />, label: 'Obs' },
     ];
 
     const modes: { id: ToolMode, icon: React.ReactNode, label: string }[] = [
-        { id: 'Set', icon: <div className="w-4 h-4 bg-current rounded-full" />, label: 'Set' },
-        { id: 'Raise', icon: <ArrowUp size={18} />, label: 'Raise' },
-        { id: 'Lower', icon: <ArrowDown size={18} />, label: 'Lower' },
-        { id: 'Bucket', icon: <PaintBucket size={18} />, label: 'Bucket' }, // Added Bucket
+        { id: 'Set', icon: <div className="h-3.5 w-3.5 rounded-full bg-current" />, label: 'Set' },
+        { id: 'Raise', icon: <ArrowUp size={16} />, label: 'Raise' },
+        { id: 'Lower', icon: <ArrowDown size={16} />, label: 'Lower' },
+        { id: 'Bucket', icon: <PaintBucket size={16} />, label: 'Bucket' },
     ];
 
     const buildMapBlob = () => {
         const data = terrain.serialize();
-        // Header: width(4), height(4), stride(1)
-        
         const header = new Uint8Array(9);
         const view = new DataView(header.buffer);
         view.setInt32(0, terrain.widthChunks, true);
         view.setInt32(4, terrain.heightChunks, true);
-        view.setUint8(8, 4); // Stride 4
-
+        view.setUint8(8, 4);
         return new Blob([header, data], { type: 'application/octet-stream' });
     };
 
     const handleDownload = () => {
+        if (!canvasHasAnySession) return;
         downloadBlob('map_data.bin', buildMapBlob());
     };
 
     const handleBakeNavTiles = async () => {
+        if (!canvasMapLoaded) {
+            alert(navDisabledReason);
+            return;
+        }
         const ts = formatTimestamp();
         const mapFile = `map_data_${ts}.bin`;
         const dirtyFile = `dirty_chunks_${ts}.json`;
 
         downloadBlob(mapFile, buildMapBlob());
 
-        const dirtySet = new Set<string>();
-        for (const k of navDirtyChunks.values()) dirtySet.add(k);
-        for (const k of terrain.dirtyChunks.values()) dirtySet.add(k);
-        const dirtyChunks = Array.from(dirtySet.values());
+        const dirtyChunks = Array.from(navDirtyChunks.values());
         downloadBlob(dirtyFile, new Blob([JSON.stringify(dirtyChunks, null, 2)], { type: 'application/json' }));
 
         const cmd = [
             'dotnet run --project .\\src\\Tools\\Ludots.Tool\\Ludots.Tool.csproj -- nav bake-recast-react',
-            `  --mapId ${mapId}`,
+            `  --mapId ${bakeMapId}`,
             selectedModId ? `  --modId ${selectedModId}` : null,
+            bakeBoardName ? `  --boardName ${bakeBoardName}` : null,
             `  --in ${mapFile}`,
             `  --dirty ${dirtyFile}`,
             `  --heightScale ${navHeightScale}`,
@@ -250,14 +454,14 @@ export const Toolbar: React.FC = () => {
             `  --maxDegree ${navMaxDegree}`,
             `  --tileVersion ${navTileVersion}`,
             '  --artifact true',
-            '  --parallel true'
+            '  --parallel true',
         ].filter(Boolean).join('\r\n');
 
         try {
             await navigator.clipboard.writeText(cmd);
-            alert('已导出 map_data.bin + dirty_chunks.json，并复制了 bake 命令到剪贴板。');
+            alert('Exported map data and dirty chunks. CLI bake command copied to clipboard.');
         } catch {
-            alert(`已导出 map_data.bin + dirty_chunks.json。\n\n在仓库根目录运行：\n${cmd}`);
+            alert(`Exported map data and dirty chunks.\n\nRun from repo root:\n${cmd}`);
         }
     };
 
@@ -266,6 +470,130 @@ export const Toolbar: React.FC = () => {
         const bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
         return bytes.buffer;
+    };
+
+    const navPayloadKey = (cx: number, cy: number, layer: number, profileId: string) => `${cx},${cy},${layer},${profileId}`;
+
+    const getQueryablePayloads = (profileId: string, layer: number) => {
+        return useEditorStore.getState().bakedNavTilePayloads.filter((tile) =>
+            tile.profileId === profileId &&
+            tile.layer === layer &&
+            tile.base64.length > 0 &&
+            !!tile.detourBase64 &&
+            tile.detourBase64.length > 0 &&
+            tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
+    };
+
+    const collectRouteChunkRequests = (
+        startCell: { col: number; row: number },
+        goalCell: { col: number; row: number }) => {
+        const chunkSize = Math.max(1, boardMetrics.chunkSizeCells);
+        const startCx = Math.floor(startCell.col / chunkSize);
+        const startCy = Math.floor(startCell.row / chunkSize);
+        const goalCx = Math.floor(goalCell.col / chunkSize);
+        const goalCy = Math.floor(goalCell.row / chunkSize);
+        const dx = Math.abs(goalCx - startCx);
+        const dy = Math.abs(goalCy - startCy);
+        const steps = Math.max(dx, dy, 1);
+        const keys = new Set<string>();
+        const add = (cx: number, cy: number) => {
+            if (cx < 0 || cy < 0 || cx >= terrain.widthChunks || cy >= terrain.heightChunks) return;
+            keys.add(`${cx},${cy}`);
+        };
+
+        for (let i = 0; i <= steps; i++) {
+            const t = steps === 0 ? 0 : i / steps;
+            const cx = Math.round(startCx + (goalCx - startCx) * t);
+            const cy = Math.round(startCy + (goalCy - startCy) * t);
+            for (let oy = -1; oy <= 1; oy++) {
+                for (let ox = -1; ox <= 1; ox++) {
+                    add(cx + ox, cy + oy);
+                }
+            }
+        }
+
+        return Array.from(keys, (key) => {
+            const [cx, cy] = key.split(',').map(Number);
+            return { cx, cy };
+        });
+    };
+
+    const ensureFlatGridBaselineForRoute = async (
+        startCell: { col: number; row: number },
+        goalCell: { col: number; row: number }) => {
+        const profileId = navQueryProfileId.trim();
+        if (!canvasMapLoaded || !loadedMapId || !loadedBoardName || !profileId || boardMetrics.topology !== 'Grid') {
+            return getQueryablePayloads(profileId, navQueryLayer);
+        }
+
+        const routeChunks = collectRouteChunkRequests(startCell, goalCell);
+        const existing = new Set(
+            useEditorStore.getState().bakedNavTilePayloads
+                .filter((tile) => {
+                    const source = tile.source ?? null;
+                    return tile.profileId === profileId &&
+                        tile.layer === navQueryLayer &&
+                        !!tile.detourBase64 &&
+                        tile.detourBase64.length > 0 &&
+                        source !== LEGACY_FLAT_GRID_BASELINE_SOURCE;
+                })
+                .map((tile) => tile.key));
+        const missingChunks = routeChunks.filter((chunk) => !existing.has(navPayloadKey(chunk.cx, chunk.cy, navQueryLayer, profileId)));
+        if (missingChunks.length === 0) {
+            return getQueryablePayloads(profileId, navQueryLayer);
+        }
+
+        setNavQueryState({
+            phase: 'querying',
+            title: 'Preparing Grid baseline',
+            message: `Requesting ${missingChunks.length} missing flat two-triangle Detour tile(s) before the C# path query.`,
+        });
+
+        const res = await fetch(`${bridgeBaseUrl}/api/nav/bootstrap-flat-grid-react`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                modId: selectedModId,
+                mapId: loadedMapId,
+                boardName: loadedBoardName,
+                profileId,
+                layer: navQueryLayer,
+                tileVersion: navTileVersion,
+                chunks: missingChunks,
+            }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok === false) {
+            throw new Error(json?.error ?? `Bridge error ${res.status}`);
+        }
+
+        const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; base64: string; detourBase64?: string; source?: string }> = json.tiles ?? [];
+        const tiles = [];
+        const payloads: BakedNavTilePayload[] = [];
+        for (let i = 0; i < tilesRaw.length; i++) {
+            const raw = tilesRaw[i];
+            const buf = base64ToArrayBuffer(raw.base64);
+            const tile = readNavTile(buf);
+            const rawProfileId = raw.profileId == null ? profileId : String(raw.profileId);
+            const layer = Number(raw.layer ?? tile.tileId.layer);
+            const detourBase64 = raw.detourBase64 == null ? null : String(raw.detourBase64);
+            tiles.push(tile);
+            payloads.push({
+                key: navPayloadKey(tile.tileId.chunkX, tile.tileId.chunkY, layer, rawProfileId),
+                layer,
+                profileId: rawProfileId,
+                base64: raw.base64,
+                detourBase64,
+                source: raw.source ?? FLAT_GRID_BASELINE_SOURCE,
+            });
+        }
+
+        if (tiles.length > 0) {
+            mergeBakedNavTiles(tiles, payloads);
+            if (!showNavMesh) toggleNavMesh();
+        }
+
+        return getQueryablePayloads(profileId, navQueryLayer);
     };
 
     const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value ?? null));
@@ -354,8 +682,9 @@ export const Toolbar: React.FC = () => {
             setLoading(true, 'Saving Navigation Config...', 40);
             await saveNavigationConfig();
             setNavEstimate(null);
+            setNavBakeState(idleNavBakeState);
         } catch (err: any) {
-            alert(`Navigation config 保存失败：${err?.message ?? err}`);
+            alert(`Navigation config save failed: ${err?.message ?? err}`);
         } finally {
             setLoading(false);
         }
@@ -366,21 +695,48 @@ export const Toolbar: React.FC = () => {
             setLoading(true, 'Loading Navigation Config...', 30);
             await loadNavigationConfig();
             setNavEstimate(null);
+            setNavBakeState(idleNavBakeState);
         } catch (err: any) {
-            alert(`Navigation config 加载失败：${err?.message ?? err}`);
+            alert(`Navigation config load failed: ${err?.message ?? err}`);
         } finally {
             setLoading(false);
         }
     };
 
+    const collectViewportSeedChunks = () => {
+        const seed = new Set<string>();
+        const target = controlsRef.current?.target ?? cameraRef.current?.position ?? null;
+        const chunkSize = boardMetrics.chunkSizeCells;
+        let cx = Math.floor(terrain.widthChunks / 2);
+        let cy = Math.floor(terrain.heightChunks / 2);
+        if (target) {
+            const cell = worldPointToCell(Number(target.x ?? 0), Number(target.z ?? 0), boardMetrics);
+            cx = Math.floor(cell.col / chunkSize);
+            cy = Math.floor(cell.row / chunkSize);
+        }
+
+        cx = Math.max(0, Math.min(terrain.widthChunks - 1, cx));
+        cy = Math.max(0, Math.min(terrain.heightChunks - 1, cy));
+        seed.add(`${cx},${cy}`);
+        return seed;
+    };
+
     const appendNavBakeFormFields = (form: FormData, dirtySet: Set<string>, dirtyCount: number) => {
+        if (!bakeMapId) throw new Error('Open a map board before baking.');
         form.append('map', buildMapBlob(), 'map_data.bin');
-        form.append('mapId', mapId);
+        form.append('mapId', bakeMapId);
         if (selectedModId) form.append('modId', selectedModId);
+        if (bakeBoardName) form.append('boardName', bakeBoardName);
 
         if (navScope === 'dirty') {
             if (dirtyCount === 0) {
-                throw new Error(`没有 dirty chunks（nav=${navDirtyChunks.size} render=${terrain.dirtyChunks.size}），不会触发全量操作。请先修改地形，或把策略切到 Full。`);
+                if (bakedNavTilePayloads.length === 0) {
+                    const seed = collectViewportSeedChunks();
+                    for (const key of seed) dirtySet.add(key);
+                    dirtyCount = dirtySet.size;
+                } else {
+                    throw new Error('No nav dirty chunks. Paint terrain, area, blockers, or obstacles first; otherwise switch scope to Full.');
+                }
             }
             const dirtyChunks = Array.from(dirtySet.values());
             form.append('dirty', JSON.stringify(dirtyChunks));
@@ -399,7 +755,6 @@ export const Toolbar: React.FC = () => {
     const collectDirtyChunks = () => {
         const dirtySet = new Set<string>();
         for (const k of navDirtyChunks.values()) dirtySet.add(k);
-        for (const k of terrain.dirtyChunks.values()) dirtySet.add(k);
         return dirtySet;
     };
 
@@ -425,15 +780,36 @@ export const Toolbar: React.FC = () => {
     const handleEstimateNavTilesLocal = async () => {
         try {
             setNavEstimateError(null);
+            setNavBakeState({
+                phase: 'estimating',
+                title: 'Estimating',
+                message: 'Sending terrain, dirty scope, and nav config to the Bridge estimator.',
+                progress: 35,
+            });
             setLoading(true, 'Estimating NavTiles...', 45);
             const estimate = await fetchNavEstimate();
             setNavEstimate(estimate);
-            setAllowLargeBake(false);
+            setNavBakeState({
+                phase: 'estimated',
+                title: estimate.budgetStatusText === 'large' ? 'Large budget estimated' : estimate.budgetStatusText === 'reject' ? 'Budget rejected' : 'Estimate ready',
+                message: estimate.budgetStatusText === 'large'
+                    ? 'Large means this bake is expensive. Press Bake to run it with the displayed estimate hash.'
+                    : estimate.budgetStatusText === 'reject'
+                        ? 'This bake exceeds the hard budget and will not run from the editor.'
+                        : 'Estimate is inside the normal editor budget.',
+                progress: 100,
+            });
         } catch (err: any) {
             const message = err?.message ?? String(err);
             setNavEstimate(null);
             setNavEstimateError(message);
-            alert(`Nav estimate 失败。\n\n请先运行：\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\n错误：${message}`);
+            setNavBakeState({
+                phase: 'error',
+                title: 'Estimate failed',
+                message,
+                progress: 100,
+            });
+            alert(`Nav estimate failed.\n\nStart Bridge first:\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\nError: ${message}`);
         } finally {
             setLoading(false);
         }
@@ -452,22 +828,36 @@ export const Toolbar: React.FC = () => {
         try {
             appendNavBakeFormFields(form, dirtySet, dirtyCount);
         } catch (err: any) {
-            alert(err?.message ?? err);
+            setNavBakeState({
+                phase: 'blocked',
+                title: 'Bake blocked',
+                message: err?.message ?? String(err),
+                progress: 100,
+            });
             return;
         }
         form.append('artifact', 'false');
+        const effectiveDirtyCount = dirtySet.size;
+        const isIncrementalBake = navScope === 'dirty';
 
         let timeoutId: number | null = null;
         try {
+            setNavBakeState({
+                phase: 'estimating',
+                title: 'Preparing bake',
+                message: 'Estimating budget before submitting the bake request.',
+                progress: 20,
+            });
             const estimate = await fetchNavEstimate();
             setNavEstimate(estimate);
             setNavEstimateError(null);
-            if (estimate.requiresExplicitLargeBakeApproval && !allowLargeBake) {
-                alert(`Large bake approval needed\n\n${formatEstimateBudgetDetail(estimate)}`);
-                return;
-            }
             if (estimate.budgetStatusText === 'reject') {
-                alert(`Bake rejected\n\n${formatEstimateBudgetDetail(estimate)}`);
+                setNavBakeState({
+                    phase: 'blocked',
+                    title: 'Bake rejected',
+                    message: formatEstimateBudgetDetail(estimate),
+                    progress: 100,
+                });
                 return;
             }
             if (estimate.budgetStatusText === 'large') {
@@ -477,7 +867,13 @@ export const Toolbar: React.FC = () => {
 
             navAbortRef.current?.abort();
             navAbortRef.current = new AbortController();
-            const scopeLabel = navScope === 'dirty' ? `Dirty(${dirtyCount})${navIncludeNeighbors ? '+N' : ''}` : 'Full';
+            const scopeLabel = isIncrementalBake ? `Dirty(${effectiveDirtyCount})${navIncludeNeighbors ? '+N' : ''}` : 'Full';
+            setNavBakeState({
+                phase: 'baking',
+                title: estimate.budgetStatusText === 'large' ? 'Baking large budget job' : 'Baking NavTiles',
+                message: `${scopeLabel}: submitted to Bridge. Waiting for baked tiles.`,
+                progress: 55,
+            });
             setLoading(true, `Baking NavTiles: ${scopeLabel}...`, 30);
             timeoutId = window.setTimeout(() => navAbortRef.current?.abort(), 120000);
             const res = await fetch(endpoint, { method: 'POST', body: form, signal: navAbortRef.current.signal });
@@ -486,55 +882,176 @@ export const Toolbar: React.FC = () => {
                 throw new Error(`Bridge error ${res.status}: ${text}`);
             }
             const json = await res.json();
-            const tilesRaw: Array<{ base64: string }> = json.tiles ?? [];
+            setNavBakeState({
+                phase: 'baking',
+                title: 'Decoding NavTiles',
+                message: 'Bridge returned tile payloads. Decoding and installing into the editor.',
+                progress: 85,
+            });
+            const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; base64: string; detourBase64?: string; source?: string }> = json.tiles ?? [];
             if (tilesRaw.length === 0) {
                 const targetsCount = Number(json.targetsCount ?? 0);
                 if (targetsCount === 0) {
-                    alert('没有目标 chunk 需要 bake（dirtyOnly=true 且 dirty 为空）。');
+                    setNavBakeState({
+                        phase: 'complete',
+                        title: 'Nothing to bake',
+                        message: 'No target chunks need baking. Dirty scope is empty.',
+                        progress: 100,
+                    });
                     return;
                 }
                 throw new Error('No tiles returned.');
             }
 
             const tiles = [];
+            const payloads: BakedNavTilePayload[] = [];
             for (let i = 0; i < tilesRaw.length; i++) {
-                const buf = base64ToArrayBuffer(tilesRaw[i].base64);
-                tiles.push(readNavTile(buf));
+                const raw = tilesRaw[i];
+                const buf = base64ToArrayBuffer(raw.base64);
+                const tile = readNavTile(buf);
+                tiles.push(tile);
+                const profileId = raw.profileId == null ? null : String(raw.profileId);
+                const detourBase64 = raw.detourBase64 == null ? null : String(raw.detourBase64);
+                payloads.push({
+                    key: `${tile.tileId.chunkX},${tile.tileId.chunkY},${tile.tileId.layer},${profileId ?? ''}`,
+                    layer: Number(raw.layer ?? tile.tileId.layer),
+                    profileId,
+                    base64: raw.base64,
+                    detourBase64,
+                    source: raw.source ?? 'recast',
+                });
             }
 
-            setBakedNavTiles(tiles);
+            if (isIncrementalBake) {
+                mergeBakedNavTiles(tiles, payloads);
+            } else {
+                setBakedNavTiles(tiles, payloads);
+            }
+            const installedState = useEditorStore.getState();
+            const installedVisualTileCount = installedState.bakedNavTiles.size;
+            const installedPayloadCount = installedState.bakedNavTilePayloads.length;
             if (!showNavMesh) toggleNavMesh();
             terrain.clearDirty();
             clearNavDirty();
-            setAllowLargeBake(false);
+            setNavQueryState(idleNavQueryState);
+            setNavBakeState({
+                phase: 'complete',
+                title: 'Bake complete',
+                message: `${isIncrementalBake ? 'Merged' : 'Loaded'} ${tiles.length} NavTile(s) across ${payloads.length} profile/layer payload(s). Editor now has ${installedVisualTileCount} visual tile(s) and ${installedPayloadCount} query payload(s). Navmesh visualization is enabled.`,
+                progress: 100,
+            });
             setLoading(false);
         } catch (err: any) {
             setLoading(false);
             if (err?.name === 'AbortError') {
-                alert('已取消 NavTiles bake。');
+                setNavBakeState({
+                    phase: 'cancelled',
+                    title: 'Bake cancelled',
+                    message: 'NavTiles bake was cancelled before completion.',
+                    progress: 100,
+                });
                 return;
             }
-            alert(`本地 Bridge 未启动或请求失败。\n\n请先运行：\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\n错误：${err?.message ?? err}`);
+            setNavBakeState({
+                phase: 'error',
+                title: 'Bake failed',
+                message: err?.message ?? String(err),
+                progress: 100,
+            });
+            alert(`Local Bridge is not running or the request failed.\n\nStart Bridge first:\n  dotnet run --project .\\src\\Tools\\Ludots.Editor.Bridge\\Ludots.Editor.Bridge.csproj\n\nError: ${err?.message ?? err}`);
         } finally {
             if (timeoutId !== null) window.clearTimeout(timeoutId);
             navAbortRef.current = null;
         }
     };
 
-    const handleLoadNavTiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files ?? []);
-        e.target.value = '';
-        if (files.length === 0) return;
+    const clampCell = (value: number, maxExclusive: number) => Math.max(0, Math.min(Math.floor(value || 0), Math.max(0, maxExclusive - 1)));
 
-        const tiles = [];
-        for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            if (!f.name.toLowerCase().endsWith('.ntil')) continue;
-            const buf = await f.arrayBuffer();
-            tiles.push(readNavTile(buf));
+    const handleSimulateNavPath = async () => {
+        if (!navQueryReady) {
+            setNavQueryState({
+                phase: 'error',
+                title: 'Path blocked',
+                message: navQueryDisabledReason,
+            });
+            return;
         }
-        if (tiles.length === 0) return;
-        setBakedNavTiles(tiles);
+
+        try {
+            clearNavSimulation();
+            const startCell = {
+                col: clampCell(navQueryStartCell.col, totalCellsX),
+                row: clampCell(navQueryStartCell.row, totalCellsY),
+            };
+            const goalCell = {
+                col: clampCell(navQueryGoalCell.col, totalCellsX),
+                row: clampCell(navQueryGoalCell.row, totalCellsY),
+            };
+            const start = cellToWorldCm(startCell.col, startCell.row, boardMetrics);
+            const goal = cellToWorldCm(goalCell.col, goalCell.row, boardMetrics);
+            const areaCosts = navAreas
+                .map((area: any) => ({
+                    areaId: Number(area?.areaId ?? area?.AreaId ?? NaN),
+                    cost: Number(area?.cost ?? area?.Cost ?? NaN),
+                }))
+                .filter((area: { areaId: number; cost: number }) =>
+                    Number.isFinite(area.areaId) && Number.isFinite(area.cost) && area.areaId >= 0 && area.areaId <= 255 && area.cost > 0);
+
+            const queryPayloads = await ensureFlatGridBaselineForRoute(startCell, goalCell);
+            if (queryPayloads.length === 0) {
+                throw new Error('No Detour tile payloads are available for this profile/layer. Grid boards can create flat baseline tiles automatically; other topology requires Bake.');
+            }
+
+            setNavQueryState({
+                phase: 'querying',
+                title: 'Querying C# nav',
+                message: `Sending ${queryPayloads.length} Detour tile payload(s) to the C# Core query engine.`,
+            });
+            setLoading(true, 'Querying Nav Path...', 60);
+            const res = await fetch(`${bridgeBaseUrl}/api/nav/query-recast-react`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modId: selectedModId,
+                    mapId: loadedMapId,
+                    boardName: loadedBoardName,
+                    profileId: navQueryProfileId,
+                    layer: navQueryLayer,
+                    start: { xCm: start.xCm, zCm: start.yCm },
+                    goal: { xCm: goal.xCm, zCm: goal.yCm },
+                    maxPortals: Math.max(1, Math.floor(navQueryMaxPortals || 256)),
+                    areaCosts,
+                    tiles: queryPayloads.map((tile) => ({
+                        profileId: tile.profileId,
+                        layer: tile.layer,
+                        base64: tile.base64,
+                        detourBase64: tile.detourBase64,
+                        source: tile.source,
+                    })),
+                }),
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || json?.ok === false) {
+                throw new Error(json?.error ?? `Bridge error ${res.status}`);
+            }
+
+            setNavSimulation(json);
+            const status = String(json.status ?? 'Unknown');
+            setNavQueryState({
+                phase: status === 'Ok' ? 'complete' : 'error',
+                title: status === 'Ok' ? 'Path complete' : `Path ${status}`,
+                message: `${json.algorithmSource ?? 'Core query'}\n${Number(json.elapsedMs ?? 0).toFixed(3)} ms, ${json.points?.length ?? 0} point(s), cost ${Number(json.travelCost ?? 0).toFixed(2)}.`,
+            });
+        } catch (err: any) {
+            setNavQueryState({
+                phase: 'error',
+                title: 'Path query failed',
+                message: err?.message ?? String(err),
+            });
+            clearNavSimulation();
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -550,7 +1067,7 @@ export const Toolbar: React.FC = () => {
             const w = view.getInt32(0, true);
             const h = view.getInt32(4, true);
             const stride = view.getUint8(8);
-            
+
             if (stride !== 4) {
                 alert(`Invalid map stride. Expected 4, got ${stride}. Please recreate map.`);
                 return;
@@ -569,530 +1086,1390 @@ export const Toolbar: React.FC = () => {
     const navLayers = Array.isArray(navmeshConfig.layers) ? navmeshConfig.layers : [];
     const navAreas = Array.isArray(navmeshConfig.areas) ? navmeshConfig.areas : [];
     const runtimeIncremental = navmeshConfig.runtimeIncremental ?? {};
+    const selectedBakeProfile = React.useMemo(() => {
+        const id = navQueryProfileId.trim();
+        return bakeProfiles.find((profile: any, i: number) => String(profile?.id ?? profile?.Id ?? `profile_${i}`) === id) ?? null;
+    }, [bakeProfiles, navQueryProfileId]);
+    const selectedAgentProfile = React.useMemo(() => {
+        const id = navQueryProfileId.trim();
+        return agentProfiles.find((profile: any, i: number) => String(profile?.id ?? profile?.Id ?? `profile_${i}`) === id) ?? null;
+    }, [agentProfiles, navQueryProfileId]);
+    const selectedEstimateProfile = React.useMemo(
+        () => navEstimate?.profiles?.find((profile) => profile.profileId === navQueryProfileId) ?? null,
+        [navEstimate, navQueryProfileId]);
+    const selectedAgentRadiusCm = Number(
+        selectedAgentProfile?.radiusCm ??
+        selectedAgentProfile?.RadiusCm ??
+        selectedAgentProfile?.bodyRadiusCm ??
+        selectedEstimateProfile?.agentRadiusCm ??
+        0);
+    const totalCellsX = Math.max(1, terrain.widthChunks * boardMetrics.chunkSizeCells);
+    const totalCellsY = Math.max(1, terrain.heightChunks * boardMetrics.chunkSizeCells);
+    const availableNavPayloads = React.useMemo(() => {
+        const profileId = navQueryProfileId.trim();
+        return bakedNavTilePayloads.filter((tile) =>
+            tile.profileId === profileId &&
+            tile.layer === navQueryLayer &&
+            tile.base64.length > 0 &&
+            !!tile.detourBase64 &&
+            tile.detourBase64.length > 0 &&
+            tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
+    }, [bakedNavTilePayloads, navQueryLayer, navQueryProfileId]);
+    const flatBaselinePayloadCount = React.useMemo(
+        () => bakedNavTilePayloads.filter((tile) => tile.source === FLAT_GRID_BASELINE_SOURCE).length,
+        [bakedNavTilePayloads]);
+    const gridBaselineAvailable = Boolean(canvasMapLoaded && boardMetrics.topology === 'Grid');
+    const navQueryDisabledReason = !canvasMapLoaded
+        ? 'Open the selected board from Map And Board before simulating.'
+        : !navQueryProfileId
+            ? 'Choose a nav profile.'
+            : availableNavPayloads.length === 0 && !gridBaselineAvailable
+                ? bakedNavTiles.size === 0
+                    ? 'Bake NavTiles before simulating this topology.'
+                    : bakedNavTilePayloads.length === 0
+                        ? 'Session NavTiles have no query payload; run Bridge Bake so profile/layer Detour payloads are available.'
+                        : `No Detour tile payloads match profile '${navQueryProfileId}' layer ${navQueryLayer}.`
+                : '';
+    const navQueryReady = navQueryDisabledReason.length === 0;
+
+    React.useEffect(() => {
+        if (!navQueryProfileId && bakeProfiles.length > 0) {
+            setNavQueryProfileId(String(bakeProfiles[0]?.id ?? ''));
+        }
+    }, [bakeProfiles, navQueryProfileId]);
+
+    React.useEffect(() => {
+        if (navLayers.length > 0 && !navLayers.some((layer: any) => Number(layer?.layer ?? 0) === navQueryLayer)) {
+            setNavQueryLayer(Number(navLayers[0]?.layer ?? 0));
+        }
+    }, [navLayers, navQueryLayer]);
+
+    React.useEffect(() => {
+        setNavQueryState(idleNavQueryState);
+    }, [navQueryStartCell.col, navQueryStartCell.row, navQueryGoalCell.col, navQueryGoalCell.row, navQueryProfileId, navQueryLayer]);
+
+    React.useEffect(() => {
+        if (canvasMapLoaded) return;
+        setNavEstimate(null);
+        setNavEstimateError(null);
+        setNavBakeState(idleNavBakeState);
+        setNavQueryState(idleNavQueryState);
+    }, [canvasMapLoaded, selectedMapId, selectedBoardName, loadedMapId, loadedBoardName]);
+
+    const numberField = (
+        label: string,
+        value: number,
+        onChange: (value: number) => void,
+        options: { step?: string; min?: string; max?: string } = {},
+    ) => (
+        <label className={fieldLabelClass}>
+            {label}
+            <input
+                type="number"
+                step={options.step}
+                min={options.min}
+                max={options.max}
+                value={value}
+                onChange={(e) => onChange(Number(e.target.value))}
+                className={inputClass}
+            />
+        </label>
+    );
+
+    const renderBrushValueControls = () => {
+        if (activeCategory === 'Area') {
+            return (
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { id: 0, label: '0 Default', color: 'bg-[#8B4513]' },
+                        { id: 1, label: '1 Road', color: 'bg-[#9ca3af]' },
+                        { id: 2, label: '2 Forest', color: 'bg-[#256d3b]' },
+                        { id: 3, label: '3 Swamp', color: 'bg-[#4d5f2f]' },
+                        { id: 4, label: '4 Waterbank', color: 'bg-[#2563eb]' },
+                        { id: 5, label: '5 Hazard', color: 'bg-[#b45309]' },
+                    ].map((area) => (
+                        <button
+                            key={area.id}
+                            onClick={() => {
+                                setBrushValue(area.id);
+                                setMode('Set');
+                            }}
+                            className={`rounded border p-2 text-xs font-semibold transition ${brushValue === area.id ? 'border-white shadow-md' : 'border-transparent opacity-75 hover:opacity-100'} ${area.color}`}
+                        >
+                            {area.label}
+                        </button>
+                    ))}
+                    <input
+                        type="range"
+                        min="0"
+                        max="15"
+                        value={brushValue}
+                        onChange={(e) => setBrushValue(parseInt(e.target.value))}
+                        className="col-span-2 w-full accent-sky-500"
+                    />
+                    <div className="col-span-2 text-[10px] text-slate-500">Area ID is stored on logic terrain and propagated to baked NavTile triangle areas.</div>
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Blocked') {
+            return (
+                <div className="grid grid-cols-2 gap-2">
+                    <button
+                        onClick={() => {
+                            setBrushValue(1);
+                            setMode('Set');
+                        }}
+                        className={`rounded border p-2 text-xs font-semibold ${brushValue > 0 ? 'border-red-300 bg-red-700/70 text-red-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                    >
+                        Block
+                    </button>
+                    <button
+                        onClick={() => {
+                            setBrushValue(0);
+                            setMode('Set');
+                        }}
+                        className={`rounded border p-2 text-xs font-semibold ${brushValue === 0 ? 'border-emerald-300 bg-emerald-700/70 text-emerald-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                    >
+                        Clear
+                    </button>
+                    <div className="col-span-2 text-[10px] text-slate-500">Baked navmesh excludes blocked cells.</div>
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Biome') {
+            return (
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { id: 0, label: 'Dirt', color: 'bg-[#8B4513]' },
+                        { id: 1, label: 'Sand', color: 'bg-[#F4A460]' },
+                        { id: 2, label: 'Rock', color: 'bg-[#808080]' },
+                        { id: 3, label: 'Grass', color: 'bg-[#3d6c2e]' },
+                        { id: 4, label: 'Wasteland', color: 'bg-[#696969]' },
+                        { id: 5, label: 'Swamp', color: 'bg-[#556B2F]' },
+                    ].map((biome) => (
+                        <button
+                            key={biome.id}
+                            onClick={() => {
+                                setBrushValue(biome.id);
+                                setMode('Set');
+                            }}
+                            className={`rounded border p-2 text-xs font-semibold transition ${brushValue === biome.id ? 'border-white shadow-md' : 'border-transparent opacity-75 hover:opacity-100'} ${biome.color}`}
+                        >
+                            {biome.label}
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Vegetation') {
+            return (
+                <div className="grid grid-cols-2 gap-2">
+                    {[
+                        { id: 0, label: 'None' },
+                        { id: 1, label: 'Small Tree' },
+                        { id: 2, label: 'Big Tree' },
+                        { id: 3, label: 'Dense' },
+                    ].map((veg) => (
+                        <button
+                            key={veg.id}
+                            onClick={() => {
+                                setBrushValue(veg.id);
+                                setMode('Set');
+                            }}
+                            className={`rounded border p-2 text-xs font-semibold transition ${brushValue === veg.id ? 'border-emerald-500 bg-emerald-600/25 text-emerald-200' : 'border-slate-700 bg-slate-900 text-slate-400 hover:bg-slate-800'}`}
+                        >
+                            {veg.label}
+                        </button>
+                    ))}
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Layers') {
+            return (
+                <div className="space-y-2">
+                    {[
+                        { id: 'Snow', label: 'Snow', color: 'bg-white text-black' },
+                        { id: 'Mud', label: 'Mud', color: 'bg-[#5c4033] text-white' },
+                        { id: 'Ice', label: 'Ice', color: 'bg-cyan-200 text-black' },
+                    ].map((layer) => (
+                        <button
+                            key={layer.id}
+                            onClick={() => {
+                                setActiveLayer(layer.id as any);
+                                setBrushValue(1);
+                            }}
+                            className={`flex w-full items-center justify-between rounded border p-2 text-xs font-semibold transition ${activeLayer === layer.id ? 'border-sky-400' : 'border-transparent opacity-75 hover:opacity-100'} ${layer.color}`}
+                        >
+                            <span>{layer.label}</span>
+                            {activeLayer === layer.id ? <span className="rounded bg-black/20 px-1 text-[10px]">Active</span> : null}
+                        </button>
+                    ))}
+                    <div className="text-[10px] text-slate-500">Raise adds the layer; Lower removes it.</div>
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Territory') {
+            return (
+                <div className="space-y-2">
+                    <input
+                        type="range"
+                        min="0"
+                        max="255"
+                        value={brushValue}
+                        onChange={(e) => setBrushValue(parseInt(e.target.value))}
+                        className="w-full accent-sky-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                        <button onClick={() => setBrushValue(0)} className="hover:text-white">Neutral</button>
+                        <button onClick={() => setBrushValue(1)} className="hover:text-white">F1</button>
+                        <button onClick={() => setBrushValue(128)} className="hover:text-white">F128</button>
+                        <button onClick={() => setBrushValue(255)} className="hover:text-white">F255</button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Obstacle') {
+            return (
+                <div className="space-y-2">
+                    <select
+                        value={obstacleTemplateId ?? ''}
+                        onChange={(e) => setObstacleTemplate(e.target.value.length > 0 ? e.target.value : null)}
+                        className={compactInputClass}
+                        title="Obstacle template"
+                    >
+                        {templates.map((template: any, i: number) => {
+                            const id = String(template?.Id ?? template?.id ?? `template_${i}`);
+                            return <option key={id} value={id}>{id}</option>;
+                        })}
+                    </select>
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            onClick={() => setObstacleShape('Circle')}
+                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Circle' ? 'border-orange-300 bg-orange-700/70 text-orange-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        >
+                            <Circle size={14} /> Circle
+                        </button>
+                        <button
+                            onClick={() => setObstacleShape('Box')}
+                            className={`inline-flex items-center justify-center gap-1 rounded border p-2 text-xs font-semibold ${obstacleShape === 'Box' ? 'border-orange-300 bg-orange-700/70 text-orange-50' : 'border-slate-700 bg-slate-900 text-slate-400'}`}
+                        >
+                            <Square size={14} /> Box
+                        </button>
+                    </div>
+                    {obstacleShape === 'Circle' ? (
+                        numberField('Radius cm', obstacleRadiusCm, setObstacleRadiusCm, { min: '1' })
+                    ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                            {numberField('Half W', obstacleHalfWidthCm, (value) => setObstacleHalfSizeCm(value, obstacleHalfHeightCm), { min: '1' })}
+                            {numberField('Half H', obstacleHalfHeightCm, (value) => setObstacleHalfSizeCm(obstacleHalfWidthCm, value), { min: '1' })}
+                        </div>
+                    )}
+                    <div className="text-[10px] text-slate-500">Set places or replaces. Lower erases.</div>
+                </div>
+            );
+        }
+
+        if (activeCategory === 'Entities') {
+            return (
+                <div className="space-y-2">
+                    <select
+                        value={selectedTemplateId ?? ''}
+                        onChange={(e) => selectTemplate(e.target.value.length > 0 ? e.target.value : null)}
+                        className={compactInputClass}
+                        title="Template"
+                    >
+                        {templates.map((template: any, i: number) => {
+                            const id = String(template?.Id ?? template?.id ?? `template_${i}`);
+                            return <option key={id} value={id}>{id}</option>;
+                        })}
+                    </select>
+                    <div className="text-[10px] text-slate-500">Set places. Lower erases. Raise selects.</div>
+                    {selectedEntityIndex != null && selectedEntityIndex >= 0 && selectedEntityIndex < spawnEntities.length ? (
+                        <div className="space-y-2 rounded border border-slate-700 bg-slate-900/70 p-2">
+                            <div className="text-xs text-slate-300">
+                                Selected: {spawnEntities[selectedEntityIndex].template} @ ({spawnEntities[selectedEntityIndex].position.x},{spawnEntities[selectedEntityIndex].position.y})
+                            </div>
+                            <div className="text-[10px] text-slate-500">Overrides (componentName: JSON)</div>
+                            {Object.keys(spawnEntities[selectedEntityIndex].overrides ?? {}).length === 0 ? (
+                                <div className="text-[10px] text-slate-500">No overrides.</div>
+                            ) : (
+                                Object.entries(spawnEntities[selectedEntityIndex].overrides ?? {}).map(([key, value]) => (
+                                    <div key={key} className="space-y-1">
+                                        <div className="flex items-center justify-between">
+                                            <div className="text-[11px] text-slate-200">{key}</div>
+                                            <button
+                                                onClick={() => deleteSelectedEntityOverride(key)}
+                                                className="text-[10px] text-red-300 hover:text-red-200"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            className="h-20 w-full rounded border border-slate-700 bg-slate-950 p-1 font-mono text-[10px] text-slate-200"
+                                            defaultValue={JSON.stringify(value, null, 2)}
+                                            onBlur={(e) => updateSelectedEntityOverridesJson(key, e.target.value)}
+                                        />
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-[10px] text-slate-500">No entity selected.</div>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <input
+                type="range"
+                min="0"
+                max="15"
+                value={brushValue}
+                onChange={(e) => setBrushValue(parseInt(e.target.value))}
+                className="w-full accent-sky-500"
+            />
+        );
+    };
+
+    const estimateCard = (
+        <div className="space-y-2">
+            <div className={`rounded border p-3 text-xs ${
+                navBakeState.phase === 'complete'
+                    ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                    : navBakeState.phase === 'error' || navBakeState.phase === 'blocked'
+                        ? 'border-red-700/70 bg-red-950/40 text-red-100'
+                        : navBakeState.phase === 'baking' || navBakeState.phase === 'estimating'
+                            ? 'border-sky-700/70 bg-sky-950/40 text-sky-100'
+                            : 'border-slate-800 bg-slate-900/60 text-slate-300'
+            }`}>
+                <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold tracking-wide">{navBakeState.title}</div>
+                    <div className="text-[10px] uppercase tracking-wide opacity-70">{navBakeState.phase}</div>
+                </div>
+                <div className="mt-1 whitespace-pre-line text-[11px] opacity-90">{navBakeState.message}</div>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/30">
+                    <div
+                        className={`h-full transition-all duration-200 ${
+                            navBakeState.phase === 'complete'
+                                ? 'bg-emerald-400'
+                                : navBakeState.phase === 'error' || navBakeState.phase === 'blocked'
+                                    ? 'bg-red-400'
+                                    : 'bg-sky-400'
+                        }`}
+                        style={{ width: `${Math.max(0, Math.min(100, navBakeState.progress))}%` }}
+                    />
+                </div>
+            </div>
+            {navEstimate ? (
+                <div className={`rounded border p-3 text-xs ${
+                    navEstimate.budgetStatusText === 'ok'
+                        ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                        : navEstimate.budgetStatusText === 'large'
+                            ? 'border-amber-700/70 bg-amber-950/40 text-amber-100'
+                            : 'border-red-700/70 bg-red-950/40 text-red-100'
+                }`}>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold tracking-wide">{estimateStatusLabel}</div>
+                        <div>{navEstimate.estimatedSecondsLow.toFixed(1)}s - {navEstimate.estimatedSecondsHigh.toFixed(1)}s</div>
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-200">{estimateStatusHint}</div>
+                    <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-slate-200">
+                        <div>tiles {navEstimate.targetTileCount}/{navEstimate.fullTileCount}</div>
+                        <div>ops {navEstimate.bakeOperationCount}</div>
+                        <div>layers {navEstimate.layerCount}</div>
+                        <div>profiles {navEstimate.profileCount}</div>
+                        <div>obstacles {navEstimate.obstacleCount}</div>
+                        <div>workers {navEstimate.effectiveWorkers}</div>
+                        <div>work {navEstimate.budgetWorkUnitCount.toLocaleString()}</div>
+                        <div>columns {navEstimate.recastColumnBudgetTotal.toLocaleString()}</div>
+                        <div>tile {navEstimate.tileWorldWidthCm}x{navEstimate.tileWorldHeightCm}cm</div>
+                        <div>{(navEstimate.estimatedTileBytesLow / 1048576).toFixed(1)}-{(navEstimate.estimatedTileBytesHigh / 1048576).toFixed(1)}MB</div>
+                    </div>
+                    <div className="mt-2 font-mono text-[10px] text-slate-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
+                    <div className="font-mono text-[10px] text-slate-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
+                    <div className="mt-2 whitespace-pre-line text-slate-300">{formatEstimateBudgetDetail(navEstimate)}</div>
+                    {navEstimate.profiles.length > 0 ? (
+                        <div className="mt-2 max-h-24 overflow-auto rounded bg-black/20 p-2">
+                            {navEstimate.profiles.map((profile) => (
+                                <div key={profile.profileId} className="flex justify-between gap-2 text-slate-300">
+                                    <span>{profile.profileId}</span>
+                                    <span>{profile.recastCellSizeCm.toFixed(1)}cm vox / {profile.maxSlopeDeg}deg</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+            ) : null}
+            {navEstimateError ? (
+                <div className="rounded border border-red-800 bg-red-950/40 p-3 text-xs text-red-100">
+                    {navEstimateError}
+                </div>
+            ) : null}
+        </div>
+    );
 
     return (
-        <div className="absolute top-4 left-4 bg-gray-900/95 text-white p-4 rounded-xl shadow-2xl backdrop-blur-md flex flex-col gap-5 w-72 border border-gray-700/50">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent px-1">
-                Ludots Editor
-            </h1>
-
-            {/* Loading Overlay */}
-            {loadingState.isLoading && (
-                <div className="absolute inset-0 bg-black/80 z-50 rounded-xl flex flex-col items-center justify-center p-4">
-                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-                    <div className="text-sm font-medium text-white mb-1">{loadingState.message}</div>
-                    <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
-                        <div 
-                            className="bg-blue-500 h-full transition-all duration-100" 
-                            style={{ width: `${loadingState.progress}%` }}
-                        />
+        <div className="pointer-events-none absolute inset-0 z-40 text-slate-100">
+            {loadingState.isLoading ? (
+                <div className="pointer-events-auto absolute left-1/2 top-24 z-50 w-80 -translate-x-1/2 rounded-lg border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur">
+                    <div className="mb-3 flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-full border-4 border-sky-500 border-t-transparent animate-spin" />
+                        <div>
+                            <div className="text-sm font-semibold text-white">{loadingState.message}</div>
+                            <div className="text-[10px] text-slate-500">{loadingState.progress}%</div>
+                        </div>
                     </div>
-                    {loadingState.message.startsWith('Baking NavTiles') && (
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                        <div className="h-full bg-sky-500 transition-all duration-100" style={{ width: `${loadingState.progress}%` }} />
+                    </div>
+                    {loadingState.message.startsWith('Baking NavTiles') ? (
                         <button
                             onClick={() => {
                                 navAbortRef.current?.abort();
                                 navAbortRef.current = null;
                                 setLoading(false);
                             }}
-                            className="mt-4 px-3 py-1 rounded bg-red-700 text-white text-xs pointer-events-auto"
+                            className="mt-4 w-full rounded bg-red-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600"
                         >
-                            Cancel
+                            Cancel Bake
                         </button>
-                    )}
+                    ) : null}
                 </div>
-            )}
+            ) : null}
 
-            <div className="flex flex-col gap-2 border-b border-gray-700/50 pb-4">
-                <div className="flex gap-2">
-                    <select
-                        value={selectedModId ?? ''}
-                        onChange={(e) => selectMod(e.target.value).catch((err: any) => alert(err?.message ?? err))}
-                        className="flex-1 px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                        title="Mod"
-                    >
-                        {mods.map((m) => (
-                            <option key={m.id} value={m.id}>{m.id}</option>
-                        ))}
-                    </select>
-                    <select
-                        value={selectedMapId ?? ''}
-                        onChange={(e) => selectMap(e.target.value)}
-                        className="flex-1 px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                        title="Map"
-                    >
-                        {maps.map((id) => (
-                            <option key={id} value={id}>
-                                {id}{mapInfoById.get(id)?.spatialType ? ` (${mapInfoById.get(id)?.spatialType})` : ''}{mapInfoById.get(id)?.canBake ? ' ready' : ''}
-                            </option>
-                        ))}
-                    </select>
+            <header className={`${panelClass} absolute left-4 right-4 top-4 flex min-h-16 items-center gap-3 px-3 py-2`}>
+                <div className="mr-1 min-w-36">
+                    <div className="text-sm font-semibold text-white">Ludots Editor</div>
+                    <div className="text-[10px] text-slate-500">Navigation authoring</div>
                 </div>
-                {selectedMapInfo ? (
-                    <div className={`text-[10px] px-1 ${selectedMapInfo.canBake ? 'text-emerald-300' : 'text-amber-300'}`}>
-                        {selectedMapInfo.spatialType ?? 'No board'} | {selectedMapInfo.reason}
-                    </div>
-                ) : null}
-                <div className={`text-[10px] px-1 ${canvasMapLoaded ? 'text-sky-300' : 'text-gray-500'}`}>
-                    Canvas: {canvasMapLoaded ? `${loadedMapId} (${boardMetrics.topology}, ${terrain.widthChunks}x${terrain.heightChunks} chunks)` : 'not loaded'}
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => loadSelectedMap().catch((err: any) => alert(err?.message ?? err))}
-                        className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                        title="Load from repo/mods via Bridge"
-                        disabled={!selectedModId || !selectedMapId}
-                    >
-                        <Upload size={14} className="text-blue-400" /> <span className="text-sm font-medium">Load Repo</span>
-                    </button>
-                    <button
-                        onClick={() => saveSelectedMap().catch((err: any) => alert(err?.message ?? err))}
-                        className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                        title="Save MapConfig + Terrain to selected mod via Bridge"
-                        disabled={!selectedModId || !selectedMapId}
-                    >
-                        <Download size={14} className="text-green-400" /> <span className="text-sm font-medium">Save Repo</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* View Options */}
-            <div className="flex gap-2 justify-end border-b border-gray-700/50 pb-4">
-                <button 
-                    onClick={toggleGrid} 
-                    className={`p-2 rounded ${showGrid ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-750'}`}
-                    title="Toggle Grid"
-                >
-                    <Grid size={16} />
-                </button>
-                <button 
-                    onClick={toggleChunkBorders} 
-                    className={`p-2 rounded ${showChunkBorders ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-750'}`}
-                    title="Toggle Chunk Borders"
-                >
-                    <BoxSelect size={16} />
-                </button>
-                <button 
-                    onClick={toggleNavMesh} 
-                    className={`p-2 rounded ${showNavMesh ? 'bg-green-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-750'}`}
-                    title="Toggle NavMesh Visualization"
-                >
-                    <Footprints size={16} />
-                </button>
-                <input
-                    value={mapId}
-                    onChange={(e) => setMapId(e.target.value)}
-                    className="px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs w-24"
-                    title="mapId"
-                />
                 <select
-                    value={navScope === 'full' ? 'full' : (navIncludeNeighbors ? 'dirtyN' : 'dirty')}
-                    onChange={(e) => {
-                        const v = e.target.value;
-                        if (v === 'full') {
-                            setNavScope('full');
-                            setNavIncludeNeighbors(true);
-                        } else if (v === 'dirtyN') {
-                            setNavScope('dirty');
-                            setNavIncludeNeighbors(true);
-                        } else {
-                            setNavScope('dirty');
-                            setNavIncludeNeighbors(false);
-                        }
-                    }}
-                    className="px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                    title={`Nav bake scope (dirty=${navDirtyChunks.size})`}
+                    value={selectedModId ?? ''}
+                    onChange={(e) => selectMod(e.target.value).catch((err: any) => alert(err?.message ?? err))}
+                    className={`${compactInputClass} min-w-36`}
+                    title="Mod"
                 >
-                    <option value="dirtyN">{`Dirty+N (${navDirtyChunks.size})`}</option>
-                    <option value="dirty">{`Dirty (${navDirtyChunks.size})`}</option>
-                    <option value="full">Full</option>
+                    {mods.map((mod) => (
+                        <option key={mod.id} value={mod.id}>{mod.id}</option>
+                    ))}
                 </select>
+                <select
+                    value={selectedMapId ?? ''}
+                    onChange={(e) => selectMap(e.target.value)}
+                    className={`${compactInputClass} min-w-44 flex-1`}
+                    title="Map"
+                >
+                    {maps.map((id) => (
+                        <option key={id} value={id}>
+                            {id}{mapInfoById.get(id)?.boards?.length ? ` (${mapInfoById.get(id)?.boards.length} boards)` : ''}{mapInfoById.get(id)?.canBake ? ' nav' : ''}
+                        </option>
+                    ))}
+                </select>
+                <select
+                    value={selectedBoardName ?? ''}
+                    onChange={(e) => selectBoard(e.target.value)}
+                    className={`${compactInputClass} min-w-36`}
+                    title={`Board stack: ${boardOptionsLabel}`}
+                    disabled={!selectedMapId || selectedBoards.length === 0}
+                >
+                    {selectedBoards.length === 0 ? <option value="">No board</option> : null}
+                    {selectedBoards.map((board) => (
+                        <option key={board.name} value={board.name}>
+                            {board.name} / {board.spatialType ?? 'Unknown'}{board.canBake ? ' / nav' : ''}{board.canEditTerrain ? ' / edit' : ''}
+                        </option>
+                    ))}
+                </select>
+                <div className={`hidden min-w-60 rounded border px-2 py-1 text-[10px] xl:block ${canvasMapLoaded ? 'border-sky-700/50 bg-sky-950/30 text-sky-200' : 'border-slate-800 bg-slate-900 text-slate-500'}`}>
+                    Canvas: {loadedCanvasLabel}
+                </div>
                 <button
-                    onClick={() => setNavParallel(!navParallel)}
-                    className={`px-2 py-1 rounded border text-xs ${navParallel ? 'bg-gray-800 border-gray-700 text-gray-200' : 'bg-gray-900 border-gray-800 text-gray-400'}`}
-                    title={`Parallel: ${navParallel ? 'on' : 'off'}`}
+                    onClick={() => setShowNewMap(true)}
+                    className={darkButtonClass}
+                    title="Create a new in-editor map"
                 >
-                    P
-                </button>
-                <select
-                    value={String(navTileVersion)}
-                    onChange={(e) => setNavTileVersion(parseInt(e.target.value) || 1)}
-                    className="px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                    title="NavTile tileVersion"
-                >
-                    <option value="1">V1</option>
-                    <option value="2">V2</option>
-                </select>
-                <button 
-                    onClick={handleBakeNavTilesLocal} 
-                    className="p-2 rounded bg-orange-700 text-white hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={selectedNavReady ? "Bake NavTiles via local bridge and load into editor" : navDisabledReason}
-                    disabled={!selectedNavReady || navEstimate?.budgetStatusText === 'reject'}
-                >
-                    <span className="text-xs font-bold">BAKE</span>
+                    <Plus size={14} className="text-yellow-300" />
+                    New
                 </button>
                 <button
-                    onClick={handleEstimateNavTilesLocal}
-                    className="p-2 rounded bg-blue-700 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={selectedNavReady ? "Estimate NavTiles via local bridge" : navDisabledReason}
-                    disabled={!selectedNavReady}
+                    onClick={() => loadSelectedMap().catch((err: any) => alert(err?.message ?? err))}
+                    className={darkButtonClass}
+                    title={boardOpenTitle}
+                    disabled={boardOpenDisabled}
                 >
-                    <span className="text-xs font-bold">EST</span>
+                    <FolderOpen size={14} className="text-sky-300" />
+                    Open
                 </button>
-            </div>
+                <button
+                    onClick={() => saveSelectedMap().catch((err: any) => alert(err?.message ?? err))}
+                    className={darkButtonClass}
+                    title="Save MapConfig and terrain to selected mod via Bridge"
+                    disabled={!canvasMapLoaded}
+                >
+                    <Save size={14} className="text-emerald-300" />
+                    Save
+                </button>
+            </header>
 
-            <div className="border-b border-gray-700/50 pb-4 space-y-3">
-                <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Bake Params</label>
-                    <SlidersHorizontal size={14} className="text-gray-500" />
+            <aside className={`${panelClass} absolute bottom-4 right-4 top-[92px] flex w-[360px] flex-col overflow-hidden`}>
+                <div className="border-b border-slate-800 px-3 py-2">
+                    <div className={sectionTitleClass}>Map And Board</div>
+                    <div className="mt-1 truncate text-xs text-slate-300">{selectedMapId ?? 'No map selected'}</div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                    <label className="text-[10px] text-gray-400">
-                        Height
-                        <input
-                            type="number"
-                            step="0.1"
-                            min="0.1"
-                            value={navHeightScale}
-                            onChange={(e) => setNavHeightScale(Number(e.target.value) || 0.1)}
-                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                        />
-                    </label>
-                    <label className="text-[10px] text-gray-400">
-                        Up Dot
-                        <input
-                            type="number"
-                            step="0.05"
-                            min="-1"
-                            max="1"
-                            value={navMinUpDot}
-                            onChange={(e) => setNavMinUpDot(Number(e.target.value))}
-                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                        />
-                    </label>
-                    <label className="text-[10px] text-gray-400">
-                        Cliff
-                        <input
-                            type="number"
-                            step="1"
-                            min="0"
-                            value={navCliffThreshold}
-                            onChange={(e) => setNavCliffThreshold(Math.max(0, Math.floor(Number(e.target.value) || 0)))}
-                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                        />
-                    </label>
-                    <label className="text-[10px] text-gray-400">
-                        Workers
-                        <input
-                            type="number"
-                            step="1"
-                            min="1"
-                            value={navMaxDegree}
-                            onChange={(e) => setNavMaxDegree(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
-                            className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                        />
-                    </label>
-                </div>
-            </div>
+                <div className="space-y-4 overflow-auto p-3">
+                    <Minimap embedded className="border-slate-800/90 bg-slate-900/60 shadow-none" />
 
-            <div className="border-b border-gray-700/50 pb-4 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Navigation Config</label>
-                    <div className="flex gap-1">
-                        <button
-                            onClick={handleReloadNavigationConfig}
-                            className="p-1.5 rounded bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700"
-                            title="Reload navigation config"
-                            disabled={!selectedModId}
-                        >
-                            <RefreshCw size={13} />
-                        </button>
-                        <button
-                            onClick={handleSaveNavigationConfig}
-                            className="p-1.5 rounded bg-emerald-700 text-white hover:bg-emerald-600"
-                            title="Save navigation config"
-                            disabled={!selectedModId || !navEditorConfig}
-                        >
-                            <Save size={13} />
-                        </button>
-                    </div>
-                </div>
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Map Properties</div>
+                            <HardDrive size={14} className="text-slate-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Topology</div>
+                                <div className="font-medium text-slate-200">{boardPropertyTopology}</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Chunks</div>
+                                <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Cell</div>
+                                <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Chunk</div>
+                                <div className="font-medium text-slate-200">{boardPropertyChunkSizeCells} cells</div>
+                            </div>
+                        </div>
+                        <div className={`rounded border p-2 text-[11px] ${selectedMapInfo?.canBake ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200' : 'border-amber-700/60 bg-amber-950/30 text-amber-200'}`}>
+                            <div>{selectedBoardName ?? 'No board'} / {selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? 'Unknown'} / {selectedBoardInfo?.reason ?? selectedMapInfo?.reason ?? 'Select a map from the top bar.'}</div>
+                            <div className="mt-1 text-slate-400">Nav dirty chunks: {dirtyChunkCount}</div>
+                        </div>
+                    </section>
 
-                {navEditorConfig ? (
-                    <div className="max-h-80 overflow-auto pr-1 space-y-3 text-xs">
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Board Session</div>
+                            <FolderOpen size={14} className="text-slate-500" />
+                        </div>
+                        <div className={`rounded border p-2 text-[11px] ${boardSessionTone}`}>
+                            <div className="grid grid-cols-[64px_1fr] gap-x-2 gap-y-1">
+                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Selected</span>
+                                <span className="truncate font-mono">{selectedTargetLabel}</span>
+                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Canvas</span>
+                                <span className="truncate font-mono">{loadedTargetLabel}</span>
+                            </div>
+                            <div className="mt-2 text-[10px] opacity-90">{boardSessionMessage}</div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <button
+                                onClick={() => loadSelectedMap().catch((err: any) => alert(err?.message ?? err))}
+                                className={darkButtonClass}
+                                title={boardOpenTitle}
+                                disabled={boardOpenDisabled}
+                            >
+                                <FolderOpen size={13} className="text-sky-300" />
+                                Open Selected
+                            </button>
+                            <div className="rounded border border-slate-800 bg-slate-900/45 px-2 py-1.5 text-[10px] text-slate-500">
+                                Repository save is owned by the top bar Save action.
+                            </div>
+                        </div>
+                        <div className="rounded border border-slate-800 bg-slate-900/45 p-2">
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className={sectionTitleClass}>Terrain Files</div>
+                                <span className="text-[10px] text-slate-500">not repo save</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className={darkButtonClass} title="Import local map_data.bin as a local editor draft. Open a repo board and use top bar Save to write it.">
+                                    <Upload size={13} className="text-sky-300" />
+                                    Import Bin
+                                    <input type="file" className="hidden" onChange={handleUpload} />
+                                </label>
+                                <button
+                                    onClick={handleDownload}
+                                    className={darkButtonClass}
+                                    title="Export current canvas terrain as map_data.bin. This downloads a file and does not save the repo."
+                                    disabled={!canvasHasAnySession}
+                                >
+                                    <Download size={13} className="text-emerald-300" />
+                                    Export Bin
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Board Stack</div>
+                            <Layers size={14} className="text-slate-500" />
+                        </div>
                         <div className="grid grid-cols-2 gap-2">
-                            <label className="text-[10px] text-gray-400">
-                                Mode
-                                <select
-                                    value={String(navmeshConfig.mode ?? 'offline')}
-                                    onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.mode = e.target.value; })}
-                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                                >
-                                    <option value="offline">offline</option>
-                                    <option value="runtime-incremental">runtime-incremental</option>
-                                </select>
-                            </label>
-                            <label className="text-[10px] text-gray-400">
-                                Algorithm
-                                <select
-                                    value={String(navmeshConfig.algorithm ?? 'recast')}
-                                    onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.algorithm = e.target.value; })}
-                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                                >
-                                    <option value="recast">recast</option>
-                                    <option value="cdt">cdt</option>
-                                </select>
-                            </label>
+                            <button
+                                onClick={() => setShowAddBoard(true)}
+                                className={darkButtonClass}
+                                title="Add a Grid or HexGrid board to the selected map"
+                                disabled={!selectedMapId}
+                            >
+                                <Plus size={13} className="text-sky-300" />
+                                Add Board
+                            </button>
+                            <button
+                                onClick={handleDeleteSelectedBoard}
+                                className="inline-flex items-center justify-center gap-2 rounded border border-red-900/70 bg-red-950/40 px-2 py-1.5 text-xs font-medium text-red-100 transition hover:bg-red-900/50 disabled:cursor-not-allowed disabled:opacity-40"
+                                title={deleteBoardTitle}
+                                disabled={deleteBoardDisabled}
+                            >
+                                <Trash2 size={13} />
+                                Delete Selected
+                            </button>
                         </div>
-
-                        {navEditorConfig.validated && (
-                            <div className="grid grid-cols-4 gap-1 text-[10px] text-gray-400">
-                                <span>A {navEditorConfig.validated.profileCount}</span>
-                                <span>P {navEditorConfig.validated.bakeProfileCount}</span>
-                                <span>L {navEditorConfig.validated.layerCount}</span>
-                                <span>R {navEditorConfig.validated.areaCount}</span>
+                        {selectedBoards.length > 0 ? (
+                            <div className="space-y-1.5">
+                                {selectedBoards.map((board) => {
+                                    const selected = board.name === selectedBoardName;
+                                    const loaded = canvasMapLoaded && board.name === loadedBoardName;
+                                    return (
+                                        <button
+                                            key={board.name}
+                                            onClick={() => selectBoard(board.name)}
+                                            className={`w-full rounded border p-2 text-left transition ${
+                                                selected
+                                                    ? 'border-sky-600 bg-sky-950/40 text-sky-100'
+                                                    : 'border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-600'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="truncate text-xs font-semibold">{board.name}</span>
+                                                {loaded ? <span className="rounded bg-sky-600/30 px-1.5 py-0.5 text-[9px] text-sky-100">loaded</span> : null}
+                                            </div>
+                                            <div className="mt-1 flex flex-wrap gap-1 text-[9px] text-slate-400">
+                                                <span>{board.spatialType ?? 'Unknown'}</span>
+                                                <span>{board.widthChunks}x{board.heightChunks}</span>
+                                                <span>{board.cellSizeCm}cm</span>
+                                                <span>{board.navigationEnabled ? 'nav' : 'no-nav'}</span>
+                                                <span>{board.canEditTerrain ? 'edit' : 'view'}</span>
+                                                <span>{board.dataFileExists ? 'data' : 'no-data'}</span>
+                                            </div>
+                                            <div className="mt-1 truncate text-[9px] text-slate-500">{board.reason}</div>
+                                        </button>
+                                    );
+                                })}
                             </div>
+                        ) : (
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-xs text-slate-500">No boards declared on this map.</div>
                         )}
+                    </section>
 
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Agents</div>
-                                <button onClick={addAgentProfile} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                    <section className="hidden">
+                        <div className={sectionTitleClass}>Brush Inspector</div>
+                        {!canvasCanEdit ? (
+                            <div className="rounded border border-amber-800/70 bg-amber-950/25 p-2 text-[10px] text-amber-100">
+                                Open the selected board in Board Session before editing the 3D canvas.
                             </div>
-                            {agentProfiles.map((p: any, i: number) => (
-                                <div key={`${p.id ?? i}-agent`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
-                                    <input value={p.id ?? ''} onChange={(e) => updateAgentProfileField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="radiusCm" type="number" value={p.radiusCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'radiusCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="heightCm" type="number" value={p.heightCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'heightCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="layer" type="number" value={p.layer ?? 0} onChange={(e) => updateAgentProfileField(i, 'layer', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="clearanceCm" type="number" value={p.clearanceCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'clearanceCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="mass" type="number" step="0.1" value={p.mass ?? 1} onChange={(e) => updateAgentProfileField(i, 'mass', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                </div>
+                        ) : null}
+                        <div className="grid grid-cols-5 gap-1">
+                            {categories.map((category) => (
+                                <button
+                                    key={category.id}
+                                    onClick={() => canvasCanEdit && setCategory(category.id)}
+                                    disabled={!canvasCanEdit}
+                                    className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
+                                        activeCategory === category.id
+                                            ? 'border-sky-500/70 bg-sky-600/25 text-sky-200'
+                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                    }`}
+                                    title={category.id}
+                                >
+                                    {category.icon}
+                                    <span className="text-[9px] font-medium">{category.label}</span>
+                                </button>
                             ))}
                         </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Profiles</div>
-                                <button onClick={addBakeProfile} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
-                            </div>
-                            {bakeProfiles.map((p: any, i: number) => (
-                                <div key={`${p.id ?? i}-profile`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
-                                    <input value={p.id ?? ''} onChange={(e) => updateBakeProfileField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="maxClimbCm" type="number" value={p.maxClimbCm ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxClimbCm', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="maxSlopeDeg" type="number" step="0.5" value={p.maxSlopeDeg ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxSlopeDeg', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                </div>
+                        <div className="grid grid-cols-4 gap-1">
+                            {modes.map((mode) => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => canvasCanEdit && setMode(mode.id)}
+                                    disabled={!canvasCanEdit}
+                                    className={`flex h-10 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
+                                        activeMode === mode.id
+                                            ? 'border-violet-500/70 bg-violet-600/25 text-violet-200'
+                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                    }`}
+                                    title={mode.id}
+                                >
+                                    {mode.icon}
+                                    <span className="text-[9px] font-medium">{mode.label}</span>
+                                </button>
                             ))}
                         </div>
-
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Layers</div>
-                                <button onClick={addNavLayer} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
+                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                            <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                                <span>{activeCategory} / {activeMode}</span>
+                                <span>Value {brushValue}</span>
                             </div>
-                            {navLayers.map((l: any, i: number) => (
-                                <div key={`${l.id ?? i}-layer`} className="grid grid-cols-2 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
-                                    <input value={l.id ?? ''} onChange={(e) => updateNavLayerField(i, 'id', e.target.value, false)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input type="number" value={l.layer ?? 0} onChange={(e) => updateNavLayerField(i, 'layer', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                </div>
-                            ))}
+                            <label className={fieldLabelClass}>
+                                Brush Size: {brushSize}
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    value={brushSize}
+                                    onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                    disabled={!canvasCanEdit}
+                                    className="mt-2 w-full accent-sky-500"
+                                />
+                            </label>
                         </div>
+                        <fieldset disabled={!canvasCanEdit} className={canvasCanEdit ? '' : 'pointer-events-none'}>
+                            {renderBrushValueControls()}
+                        </fieldset>
+                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] text-slate-500">
+                            {canvasCanEdit
+                                ? `Middle click pans. Right click rotates. Left click ${activeCategory === 'Entities' ? 'places, erases, or selects' : activeCategory === 'Obstacle' ? 'places or erases' : 'paints'}.`
+                                : 'Canvas editing is locked until the selected board is opened.'}
+                        </div>
+                    </section>
 
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="text-[10px] uppercase tracking-wide text-gray-500">Areas</div>
-                                <button onClick={addNavArea} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 border border-gray-700">+</button>
-                            </div>
-                            {navAreas.map((a: any, i: number) => (
-                                <div key={`${a.id ?? i}-area`} className="grid grid-cols-3 gap-1 rounded bg-gray-800/60 border border-gray-700 p-2">
-                                    <input value={a.id ?? ''} onChange={(e) => updateNavAreaField(i, 'id', e.target.value, false)} className="col-span-3 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="areaId" type="number" value={a.areaId ?? 0} onChange={(e) => updateNavAreaField(i, 'areaId', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                    <input title="cost" type="number" step="0.05" value={a.cost ?? 1} onChange={(e) => updateNavAreaField(i, 'cost', e.target.value)} className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                                </div>
-                            ))}
+                    <section className="hidden">
+                        <div className={sectionTitleClass}>View</div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={toggleGrid}
+                                className={`${iconToggleClass} ${showGrid ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
+                                title="Toggle Grid"
+                            >
+                                <Grid size={16} />
+                            </button>
+                            <button
+                                onClick={toggleChunkBorders}
+                                className={`${iconToggleClass} ${showChunkBorders ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
+                                title="Toggle Chunk Borders"
+                            >
+                                <BoxSelect size={16} />
+                            </button>
+                            <button
+                                onClick={toggleNavMesh}
+                                className={`${iconToggleClass} ${showNavMesh ? 'border-emerald-500/70 bg-emerald-600/25 text-emerald-100' : ''}`}
+                                title="Toggle NavMesh Visualization"
+                            >
+                                <Eye size={16} />
+                            </button>
                         </div>
+                    </section>
+                </div>
+            </aside>
 
-                        <div className="grid grid-cols-2 gap-2 rounded bg-gray-800/60 border border-gray-700 p-2">
-                            <label className="text-[10px] text-gray-400">
-                                Tick Tiles
-                                <input type="number" value={runtimeIncremental.tileBudgetPerFixedTick ?? 1} onChange={(e) => updateRuntimeIncrementalField('tileBudgetPerFixedTick', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                            </label>
-                            <label className="text-[10px] text-gray-400">
-                                Height
-                                <input type="number" step="0.1" value={runtimeIncremental.heightScaleMeters ?? 1} onChange={(e) => updateRuntimeIncrementalField('heightScaleMeters', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                            </label>
-                            <label className="text-[10px] text-gray-400">
-                                Up Dot
-                                <input type="number" step="0.05" value={runtimeIncremental.minWalkableUpDot ?? 0.6} onChange={(e) => updateRuntimeIncrementalField('minWalkableUpDot', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                            </label>
-                            <label className="text-[10px] text-gray-400">
-                                Cliff
-                                <input type="number" value={runtimeIncremental.cliffHeightThreshold ?? 1} onChange={(e) => updateRuntimeIncrementalField('cliffHeightThreshold', e.target.value)} className="mt-1 w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[11px]" />
-                            </label>
-                            <label className="col-span-2 flex items-center gap-2 text-[10px] text-gray-300">
-                                <input type="checkbox" checked={!!runtimeIncremental.includeNeighborTiles} onChange={(e) => updateRuntimeIncrementalField('includeNeighborTiles', e.target.checked, false)} />
-                                <span>Neighbor tiles</span>
-                            </label>
+            <aside className={`${panelClass} absolute bottom-4 left-4 top-[92px] flex w-[380px] flex-col overflow-hidden`}>
+                <div className="border-b border-slate-800 px-3 py-2">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className={sectionTitleClass}>Navigation SSOT</div>
+                            <div className="mt-1 text-xs text-slate-300">{canvasMapLoaded ? `${bakeMapId} / ${bakeBoardName}` : 'No loaded board'}</div>
                         </div>
+                        <Footprints size={18} className="text-orange-300" />
                     </div>
-                ) : (
-                    <div className="rounded border border-gray-800 bg-gray-900/60 p-3 text-xs text-gray-500">
-                        No config loaded.
-                    </div>
-                )}
-            </div>
+                </div>
+                <div className="space-y-4 overflow-auto p-3">
+                    <section className="space-y-2">
+                        <div className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/40 p-1">
+                            {[
+                                { id: 'bake' as const, label: 'Bake', icon: <Footprints size={13} /> },
+                                { id: 'simulation' as const, label: 'Sim', icon: <Route size={13} /> },
+                                { id: 'config' as const, label: 'Config', icon: <Settings2 size={13} /> },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setNavPanelTab(tab.id)}
+                                    className={`inline-flex items-center justify-center gap-1 rounded px-2 py-1.5 text-xs font-semibold transition ${
+                                        navPanelTab === tab.id
+                                            ? 'bg-sky-700 text-white'
+                                            : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                                    }`}
+                                >
+                                    {tab.icon}
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="rounded border border-slate-800 bg-slate-900/40 p-2 text-[11px] text-slate-400">
+                            SSOT: this panel owns nav bake, simulation, and navigation config. Map/board plus minimap live in the right panel; brush authoring lives in the bottom rail. Visual overlay is baked Recast NavTile (.ntil) triangles; simulation calls C# Core NavQueryService backed by DotRecast Detour.
+                        </div>
+                    </section>
 
-            {(navEstimate || navEstimateError) && (
-                <div className="border-b border-gray-700/50 pb-4">
-                    {navEstimate && (
-                        <div className={`rounded border p-3 text-xs ${
-                            navEstimate.budgetStatusText === 'ok'
-                                ? 'bg-emerald-950/40 border-emerald-700/70 text-emerald-100'
-                                : navEstimate.budgetStatusText === 'large'
-                                    ? 'bg-amber-950/40 border-amber-700/70 text-amber-100'
-                                    : 'bg-red-950/40 border-red-700/70 text-red-100'
+                    <section className={`space-y-3 ${navPanelTab === 'bake' ? '' : 'hidden'}`}>
+                        <div className={sectionTitleClass}>Bake Controls</div>
+                        <div className={`rounded border px-2 py-1.5 text-xs ${
+                            canvasMapLoaded
+                                ? 'border-sky-700/50 bg-sky-950/30 text-sky-100'
+                                : 'border-amber-800/70 bg-amber-950/20 text-amber-100'
                         }`}>
+                            <div className="grid grid-cols-[72px_1fr] gap-x-2 gap-y-1">
+                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Selected</span>
+                                <span className="truncate font-mono">{selectedTargetLabel}</span>
+                                <span className="text-[10px] uppercase tracking-wide text-slate-500">Loaded</span>
+                                <span className="truncate font-mono">{loadedTargetLabel}</span>
+                            </div>
+                        </div>
+                        {!selectedNavReady ? (
+                            <div className="rounded border border-amber-800/70 bg-amber-950/30 p-2 text-[11px] text-amber-100">
+                                <div>{navDisabledReason}</div>
+                                <div className="mt-1 text-[10px] text-amber-100/75">Board open/save lives in the right Map And Board panel.</div>
+                            </div>
+                        ) : null}
+                        <div className="grid grid-cols-2 gap-2">
+                            <select
+                                value={navScope === 'full' ? 'full' : (navIncludeNeighbors ? 'dirtyN' : 'dirty')}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === 'full') {
+                                        setNavScope('full');
+                                        setNavIncludeNeighbors(true);
+                                    } else if (value === 'dirtyN') {
+                                        setNavScope('dirty');
+                                        setNavIncludeNeighbors(true);
+                                    } else {
+                                        setNavScope('dirty');
+                                        setNavIncludeNeighbors(false);
+                                    }
+                                }}
+                                className={compactInputClass}
+                                title={`Nav bake scope (dirty=${dirtyChunkCount})`}
+                            >
+                                <option value="dirtyN">{`Dirty+N (${dirtyChunkCount})`}</option>
+                                <option value="dirty">{`Dirty (${dirtyChunkCount})`}</option>
+                                <option value="full">Full</option>
+                            </select>
+                            <button
+                                onClick={() => setNavParallel(!navParallel)}
+                                className={`rounded border px-2 py-1 text-xs ${navParallel ? 'border-slate-600 bg-slate-800 text-slate-100' : 'border-slate-800 bg-slate-900 text-slate-500'}`}
+                                title={`Parallel: ${navParallel ? 'on' : 'off'}`}
+                            >
+                                Parallel {navParallel ? 'On' : 'Off'}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <button
+                                onClick={handleEstimateNavTilesLocal}
+                                className="inline-flex items-center justify-center gap-2 rounded bg-sky-700 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                title={selectedNavReady ? 'Estimate NavTiles via local bridge' : navDisabledReason}
+                                disabled={!selectedNavReady}
+                            >
+                                Estimate
+                            </button>
+                            <button
+                                onClick={handleBakeNavTilesLocal}
+                                className="inline-flex items-center justify-center gap-2 rounded bg-orange-700 px-3 py-2 text-xs font-semibold text-white hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                title={selectedNavReady ? 'Bake NavTiles via local bridge and load into editor' : navDisabledReason}
+                                disabled={bakeButtonDisabled}
+                            >
+                                Bake
+                            </button>
+                        </div>
+                        <div className="rounded border border-slate-800 bg-slate-900/45 p-2">
+                            <div className="mb-2 flex items-center justify-between">
+                                <div className={sectionTitleClass}>Nav Artifacts</div>
+                                <span className="text-[10px] text-slate-500">visual/debug</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    onClick={handleBakeNavTiles}
+                                    className={darkButtonClass}
+                                    title={canvasMapLoaded ? 'Export map_data.bin + dirty list, then copy a CLI bake command. This does not save the repo.' : navDisabledReason}
+                                    disabled={!canvasMapLoaded}
+                                >
+                                    <Footprints size={13} className="text-orange-300" />
+                                    CLI
+                                </button>
+                                <button
+                                    onClick={clearBakedNavTiles}
+                                    className={darkButtonClass}
+                                    title={bakedNavTiles.size > 0 ? 'Clear visual/query NavTiles from this editor session. This does not delete repo files.' : 'No NavTiles loaded'}
+                                    disabled={bakedNavTiles.size === 0}
+                                >
+                                    Clear Tiles
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            {estimateCard}
+                        </div>
+                    </section>
+
+                    <section className={`space-y-3 ${navPanelTab === 'bake' ? '' : 'hidden'}`}>
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Bake Params</div>
+                            <SlidersHorizontal size={14} className="text-slate-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            {numberField('Height Scale', navHeightScale, (value) => setNavHeightScale(value || 0.1), { step: '0.1', min: '0.1' })}
+                            {numberField('Min Up Dot', navMinUpDot, setNavMinUpDot, { step: '0.05', min: '-1', max: '1' })}
+                            {numberField('Cliff', navCliffThreshold, (value) => setNavCliffThreshold(Math.max(0, Math.floor(value || 0))), { step: '1', min: '0' })}
+                            {numberField('Workers', navMaxDegree, (value) => setNavMaxDegree(Math.max(1, Math.floor(value || 1))), { step: '1', min: '1' })}
+                            <label className={fieldLabelClass}>
+                                Tile Artifact
+                                <select
+                                    value={String(navTileVersion)}
+                                    onChange={(e) => setNavTileVersion(parseInt(e.target.value) || 1)}
+                                    className={inputClass}
+                                    title="NavTile artifact format version. This is not the agent profile or agent size."
+                                >
+                                    <option value="1">Artifact 1</option>
+                                    <option value="2">Artifact 2</option>
+                                </select>
+                            </label>
+                            <div className="rounded border border-slate-800 bg-slate-900/50 p-2 text-[10px] text-slate-500">
+                                Artifact version controls the `.ntil` payload contract. Agent size comes from the selected profile radius.
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className={`space-y-3 ${navPanelTab === 'simulation' ? '' : 'hidden'}`}>
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Path Simulation</div>
+                            <div className="max-w-44 text-right text-[10px] leading-tight text-slate-500">
+                                {availableNavPayloads.length} query tile(s) for {navQueryProfileId || 'profile'} / L{navQueryLayer}; {flatBaselinePayloadCount} flat baseline
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <label className={fieldLabelClass}>
+                                Profile
+                                <select
+                                    value={navQueryProfileId}
+                                    onChange={(e) => {
+                                        setNavQueryProfileId(e.target.value);
+                                        clearNavSimulation();
+                                        setNavQueryState(idleNavQueryState);
+                                    }}
+                                    className={inputClass}
+                                >
+                                    {bakeProfiles.length === 0 ? <option value="">No profiles</option> : null}
+                                    {bakeProfiles.map((profile: any, i: number) => {
+                                        const id = String(profile?.id ?? profile?.Id ?? `profile_${i}`);
+                                        return <option key={id} value={id}>{id}</option>;
+                                    })}
+                                </select>
+                            </label>
+                            <label className={fieldLabelClass}>
+                                Layer
+                                <select
+                                    value={String(navQueryLayer)}
+                                    onChange={(e) => {
+                                        setNavQueryLayer(Number(e.target.value));
+                                        clearNavSimulation();
+                                        setNavQueryState(idleNavQueryState);
+                                    }}
+                                    className={inputClass}
+                                >
+                                    {navLayers.length === 0 ? <option value="0">0</option> : null}
+                                    {navLayers.map((layer: any, i: number) => {
+                                        const value = Number(layer?.layer ?? layer?.Layer ?? 0);
+                                        const id = String(layer?.id ?? layer?.Id ?? `Layer${i}`);
+                                        return <option key={`${id}-${value}`} value={String(value)}>{id} ({value})</option>;
+                                    })}
+                                </select>
+                            </label>
+                        </div>
+                        <div className="rounded border border-sky-800/60 bg-sky-950/25 p-2 text-[11px] text-sky-100">
                             <div className="flex items-center justify-between gap-2">
-                                <div className="font-semibold tracking-wide">{estimateStatusLabel}</div>
-                                <div>{navEstimate.estimatedSecondsLow.toFixed(1)}s - {navEstimate.estimatedSecondsHigh.toFixed(1)}s</div>
+                                <span className="font-semibold">Shown and queried: {navQueryProfileId || 'no profile'} / layer {navQueryLayer}</span>
+                                <span>{selectedAgentRadiusCm > 0 ? `${selectedAgentRadiusCm} cm radius` : 'radius unknown'}</span>
                             </div>
-                            <div className="mt-1 text-[11px] text-gray-200">{estimateStatusHint}</div>
-                            <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-gray-200">
-                                <div>tiles {navEstimate.targetTileCount}/{navEstimate.fullTileCount}</div>
-                                <div>ops {navEstimate.bakeOperationCount}</div>
-                                <div>layers {navEstimate.layerCount}</div>
-                                <div>profiles {navEstimate.profileCount}</div>
-                                <div>obstacles {navEstimate.obstacleCount}</div>
-                                <div>workers {navEstimate.effectiveWorkers}</div>
-                                <div>work {navEstimate.budgetWorkUnitCount.toLocaleString()}</div>
-                                <div>columns {navEstimate.recastColumnBudgetTotal.toLocaleString()}</div>
-                                <div>tile {navEstimate.tileWorldWidthCm}x{navEstimate.tileWorldHeightCm}cm</div>
-                                <div>{(navEstimate.estimatedTileBytesLow / 1048576).toFixed(1)}-{(navEstimate.estimatedTileBytesHigh / 1048576).toFixed(1)}MB</div>
+                            <div className="mt-1 text-sky-200/75">
+                                Recast erodes the mesh by agent radius/climb/slope
+                                {selectedBakeProfile
+                                    ? ` (climb ${Number(selectedBakeProfile.maxClimbCm ?? selectedBakeProfile.MaxClimbCm ?? 0)} cm, slope ${Number(selectedBakeProfile.maxSlopeDeg ?? selectedBakeProfile.MaxSlopeDeg ?? 0)} deg)`
+                                    : ''}
+                                , so different profile sizes should have different visible navmesh edges.
                             </div>
-                            <div className="mt-2 font-mono text-[10px] text-gray-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
-                            <div className="font-mono text-[10px] text-gray-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
-                            <div className="mt-2 whitespace-pre-line text-gray-300">{formatEstimateBudgetDetail(navEstimate)}</div>
-                            {navEstimate.profiles.length > 0 && (
-                                <div className="mt-2 max-h-24 overflow-auto rounded bg-black/20 p-2">
-                                    {navEstimate.profiles.map((profile) => (
-                                        <div key={profile.profileId} className="flex justify-between gap-2 text-gray-300">
-                                            <span>{profile.profileId}</span>
-                                            <span>{profile.recastCellSizeCm.toFixed(1)}cm vox · {profile.maxSlopeDeg}deg</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="rounded border border-slate-800 bg-slate-900/70 p-2 text-left text-slate-300">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><MapPin size={13} /> Start</span>
+                                    <span className="font-mono text-[10px] text-slate-400">{navQueryStartCell.col},{navQueryStartCell.row}</span>
+                                </div>
+                                <div className="mt-1 text-[10px] text-slate-500">Left-click the canvas in Sim.</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/70 p-2 text-left text-slate-300">
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold"><Crosshair size={13} /> Goal</span>
+                                    <span className="font-mono text-[10px] text-slate-400">{navQueryGoalCell.col},{navQueryGoalCell.row}</span>
+                                </div>
+                                <div className="mt-1 text-[10px] text-slate-500">Right-click the canvas in Sim.</div>
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                            <label className={fieldLabelClass}>
+                                Max Portals
+                                <input type="number" min="1" value={navQueryMaxPortals} onChange={(e) => setNavQueryMaxPortals(Math.max(1, Math.floor(Number(e.target.value) || 1)))} className={inputClass} />
+                            </label>
+                            <button
+                                onClick={handleSimulateNavPath}
+                                className="mt-4 inline-flex h-8 items-center justify-center rounded bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-45"
+                                disabled={!navQueryReady || navQueryState.phase === 'querying'}
+                                title={navQueryReady ? 'Run real C# Core NavQueryService path query' : navQueryDisabledReason}
+                            >
+                                <Play size={13} />
+                                Simulate Path
+                            </button>
+                        </div>
+                        <div className={`rounded border p-3 text-xs ${
+                            navQueryState.phase === 'complete'
+                                ? 'border-emerald-700/70 bg-emerald-950/40 text-emerald-100'
+                                : navQueryState.phase === 'error'
+                                    ? 'border-red-700/70 bg-red-950/40 text-red-100'
+                                    : navQueryState.phase === 'querying'
+                                        ? 'border-sky-700/70 bg-sky-950/40 text-sky-100'
+                                        : 'border-slate-800 bg-slate-900/60 text-slate-300'
+                        }`}>
+                            <div className="flex items-center justify-between">
+                                <span className="font-semibold">{navQueryState.title}</span>
+                                {navSimulation ? <span>{Number(navSimulation.elapsedMs ?? 0).toFixed(3)} ms</span> : null}
+                            </div>
+                            <div className="mt-1 whitespace-pre-line text-[11px] opacity-90">{navQueryState.message}</div>
+                            {navSimulation ? (
+                                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-200">
+                                    <div>Status {navSimulation.status}</div>
+                                    <div>Points {navSimulation.points?.length ?? 0}</div>
+                                    <div>Cost {Number(navSimulation.travelCost ?? 0).toFixed(2)}</div>
+                                    <div>Layer {navSimulation.layer}</div>
+                                    <div className="col-span-2 truncate">Engine {navSimulation.engine}</div>
+                                </div>
+                            ) : null}
+                            {!navQueryReady && navQueryState.phase === 'idle' ? (
+                                <div className="mt-2 text-[10px] text-slate-500">{navQueryDisabledReason}</div>
+                            ) : null}
+                        </div>
+                    </section>
+
+                    <section className={`space-y-3 ${navPanelTab === 'config' ? '' : 'hidden'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                            <div className={sectionTitleClass}>Navigation Config</div>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={handleReloadNavigationConfig}
+                                    className="rounded border border-slate-700 bg-slate-900 p-1.5 text-slate-300 hover:bg-slate-800"
+                                    title="Reload navigation config"
+                                    disabled={!selectedModId}
+                                >
+                                    <RefreshCw size={13} />
+                                </button>
+                                <button
+                                    onClick={handleSaveNavigationConfig}
+                                    className="rounded bg-emerald-700 p-1.5 text-white hover:bg-emerald-600 disabled:opacity-45"
+                                    title="Save navigation config"
+                                    disabled={!selectedModId || !navEditorConfig}
+                                >
+                                    <Save size={13} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {navEditorConfig ? (
+                            <div className="space-y-3 text-xs">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Agent Profiles</div>
+                                        <button onClick={addAgentProfile} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                    </div>
+                                    {agentProfiles.length === 0 ? <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-xs text-slate-500">No agent profiles.</div> : null}
+                                    {agentProfiles.map((profile: any, i: number) => (
+                                        <div key={`${profile.id ?? i}-agent`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                            <input value={profile.id ?? ''} onChange={(e) => updateAgentProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="radiusCm" type="number" value={profile.radiusCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'radiusCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="heightCm" type="number" value={profile.heightCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'heightCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="layer" type="number" value={profile.layer ?? 0} onChange={(e) => updateAgentProfileField(i, 'layer', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="clearanceCm" type="number" value={profile.clearanceCm ?? 0} onChange={(e) => updateAgentProfileField(i, 'clearanceCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="mass" type="number" step="0.1" value={profile.mass ?? 1} onChange={(e) => updateAgentProfileField(i, 'mass', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
                                         </div>
                                     ))}
                                 </div>
-                            )}
-                            {navEstimate.requiresExplicitLargeBakeApproval && navEstimate.budgetStatusText !== 'reject' && (
-                                <label className="mt-2 flex items-center gap-2 text-amber-100">
-                                    <input
-                                        type="checkbox"
-                                        checked={allowLargeBake}
-                                        onChange={(e) => setAllowLargeBake(e.target.checked)}
-                                    />
-                                    <span>I reviewed this estimate; allow large bake</span>
-                                </label>
-                            )}
-                        </div>
-                    )}
-                    {navEstimateError && (
-                        <div className="rounded border border-red-800 bg-red-950/40 p-3 text-xs text-red-100">
-                            {navEstimateError}
-                        </div>
-                    )}
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <label className={fieldLabelClass}>
+                                        Mode
+                                        <select
+                                            value={String(navmeshConfig.mode ?? 'offline')}
+                                            onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.mode = e.target.value; })}
+                                            className={inputClass}
+                                        >
+                                            <option value="offline">offline</option>
+                                            <option value="runtime-incremental">runtime-incremental</option>
+                                        </select>
+                                    </label>
+                                    <label className={fieldLabelClass}>
+                                        Algorithm
+                                        <select
+                                            value={String(navmeshConfig.algorithm ?? 'recast')}
+                                            onChange={(e) => mutateNavigationConfig((draft) => { draft.navmesh.algorithm = e.target.value; })}
+                                            className={inputClass}
+                                        >
+                                            <option value="recast">recast</option>
+                                            <option value="cdt">cdt</option>
+                                        </select>
+                                    </label>
+                                </div>
+
+                                {navEditorConfig.validated ? (
+                                    <div className="grid grid-cols-4 gap-1 text-[10px] text-slate-400">
+                                        <span>A {navEditorConfig.validated.profileCount}</span>
+                                        <span>P {navEditorConfig.validated.bakeProfileCount}</span>
+                                        <span>L {navEditorConfig.validated.layerCount}</span>
+                                        <span>R {navEditorConfig.validated.areaCount}</span>
+                                    </div>
+                                ) : null}
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Bake Profiles</div>
+                                        <button onClick={addBakeProfile} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                    </div>
+                                    {bakeProfiles.map((profile: any, i: number) => (
+                                        <div key={`${profile.id ?? i}-profile`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                            <input value={profile.id ?? ''} onChange={(e) => updateBakeProfileField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="maxClimbCm" type="number" value={profile.maxClimbCm ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxClimbCm', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="maxSlopeDeg" type="number" step="0.5" value={profile.maxSlopeDeg ?? 0} onChange={(e) => updateBakeProfileField(i, 'maxSlopeDeg', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Layers</div>
+                                        <button onClick={addNavLayer} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                    </div>
+                                    {navLayers.map((layer: any, i: number) => (
+                                        <div key={`${layer.id ?? i}-layer`} className="grid grid-cols-2 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                            <input value={layer.id ?? ''} onChange={(e) => updateNavLayerField(i, 'id', e.target.value, false)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input type="number" value={layer.layer ?? 0} onChange={(e) => updateNavLayerField(i, 'layer', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-[10px] uppercase tracking-wide text-slate-500">Areas</div>
+                                        <button onClick={addNavArea} className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-slate-300">+</button>
+                                    </div>
+                                    {navAreas.map((area: any, i: number) => (
+                                        <div key={`${area.id ?? i}-area`} className="grid grid-cols-3 gap-1 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                            <input value={area.id ?? ''} onChange={(e) => updateNavAreaField(i, 'id', e.target.value, false)} className="col-span-3 rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="areaId" type="number" value={area.areaId ?? 0} onChange={(e) => updateNavAreaField(i, 'areaId', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                            <input title="cost" type="number" step="0.05" value={area.cost ?? 1} onChange={(e) => updateNavAreaField(i, 'cost', e.target.value)} className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px]" />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-900/60 p-2">
+                                    <label className={fieldLabelClass}>
+                                        Tick Tiles
+                                        <input type="number" value={runtimeIncremental.tileBudgetPerFixedTick ?? 1} onChange={(e) => updateRuntimeIncrementalField('tileBudgetPerFixedTick', e.target.value)} className={inputClass} />
+                                    </label>
+                                    <label className={fieldLabelClass}>
+                                        Height
+                                        <input type="number" step="0.1" value={runtimeIncremental.heightScaleMeters ?? 1} onChange={(e) => updateRuntimeIncrementalField('heightScaleMeters', e.target.value)} className={inputClass} />
+                                    </label>
+                                    <label className={fieldLabelClass}>
+                                        Up Dot
+                                        <input type="number" step="0.05" value={runtimeIncremental.minWalkableUpDot ?? 0.6} onChange={(e) => updateRuntimeIncrementalField('minWalkableUpDot', e.target.value)} className={inputClass} />
+                                    </label>
+                                    <label className={fieldLabelClass}>
+                                        Cliff
+                                        <input type="number" value={runtimeIncremental.cliffHeightThreshold ?? 1} onChange={(e) => updateRuntimeIncrementalField('cliffHeightThreshold', e.target.value)} className={inputClass} />
+                                    </label>
+                                    <label className="col-span-2 flex items-center gap-2 text-[10px] text-slate-300">
+                                        <input type="checkbox" checked={!!runtimeIncremental.includeNeighborTiles} onChange={(e) => updateRuntimeIncrementalField('includeNeighborTiles', e.target.checked, false)} />
+                                        <span>Neighbor tiles</span>
+                                    </label>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-3 text-xs text-slate-500">
+                                No config loaded.
+                            </div>
+                        )}
+                    </section>
                 </div>
-            )}
+            </aside>
 
-            {/* File Ops */}
-            <div className="flex gap-2 border-b border-gray-700/50 pb-4">
-                <button 
-                    onClick={() => setShowNewMap(true)}
-                    className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                >
-                    <span className="text-yellow-400 font-bold text-lg leading-none">+</span> <span className="text-sm font-medium">New</span>
-                </button>
-                <label className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg cursor-pointer flex justify-center items-center gap-2 transition-all">
-                    <Upload size={14} className="text-blue-400" /> <span className="text-sm font-medium">Load</span>
-                    <input type="file" className="hidden" onChange={handleUpload} />
-                </label>
-                <button 
-                    onClick={handleDownload}
-                    className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                >
-                    <Download size={14} className="text-green-400" /> <span className="text-sm font-medium">Save</span>
-                </button>
-            </div>
+            <section className={`${panelClass} absolute bottom-4 left-[408px] right-[392px] flex min-h-[136px] flex-col overflow-hidden px-3 py-3`}>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                    <div>
+                        <div className={sectionTitleClass}>Brush Inspector</div>
+                        <div className="mt-1 text-xs text-slate-300">
+                            {navPanelTab === 'simulation' ? 'Simulation pick mode' : `${activeCategory} / ${activeMode}`}
+                        </div>
+                    </div>
+                    <div className={`rounded border px-2 py-1 text-[10px] ${
+                        navPanelTab === 'simulation'
+                            ? 'border-sky-700/60 bg-sky-950/30 text-sky-100'
+                            : canvasCanEdit
+                            ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-100'
+                            : 'border-amber-800/70 bg-amber-950/25 text-amber-100'
+                    }`}>
+                        {navPanelTab === 'simulation'
+                            ? 'Left start / right goal'
+                            : canvasCanEdit ? 'Canvas editable' : 'Open selected board before editing'}
+                    </div>
+                </div>
+                <div className="grid grid-cols-[minmax(260px,1.1fr)_minmax(260px,1fr)_auto] gap-3">
+                    <div className="space-y-2">
+                        <div className="grid grid-cols-5 gap-1">
+                            {categories.map((category) => (
+                                <button
+                                    key={category.id}
+                                    onClick={() => !brushInspectorLocked && setCategory(category.id)}
+                                    disabled={brushInspectorLocked}
+                                    className={`flex h-11 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
+                                        activeCategory === category.id
+                                            ? 'border-sky-500/70 bg-sky-600/25 text-sky-200'
+                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                    }`}
+                                    title={category.id}
+                                >
+                                    {category.icon}
+                                    <span className="text-[9px] font-medium">{category.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-4 gap-1">
+                            {modes.map((mode) => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => !brushInspectorLocked && setMode(mode.id)}
+                                    disabled={brushInspectorLocked}
+                                    className={`flex h-10 flex-col items-center justify-center gap-0.5 rounded border px-1 transition ${
+                                        activeMode === mode.id
+                                            ? 'border-violet-500/70 bg-violet-600/25 text-violet-200'
+                                            : 'border-slate-800 bg-slate-900 text-slate-400 hover:border-slate-600 hover:bg-slate-800'
+                                    }`}
+                                    title={mode.id}
+                                >
+                                    {mode.icon}
+                                    <span className="text-[9px] font-medium">{mode.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-            <div className="flex gap-2 border-b border-gray-700/50 pb-4">
-                <button
-                    onClick={handleBakeNavTiles}
-                    className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                    title="Export map_data.bin + dirty list, then bake via CLI"
-                >
-                    <Footprints size={14} className="text-orange-400" /> <span className="text-sm font-medium">NavTiles</span>
-                </button>
-            </div>
+                    <div className="min-w-0 space-y-2">
+                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                            <div className="mb-2 flex items-center justify-between text-xs text-slate-300">
+                                <span>Size {brushSize}</span>
+                                <span>Value {brushValue}</span>
+                            </div>
+                            <label className={fieldLabelClass}>
+                                Brush Size
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    value={brushSize}
+                                    onChange={(e) => setBrushSize(parseInt(e.target.value))}
+                                    disabled={brushInspectorLocked}
+                                    className="mt-2 w-full accent-sky-500"
+                                />
+                            </label>
+                        </div>
+                        <fieldset disabled={brushInspectorLocked} className={brushInspectorLocked ? 'pointer-events-none opacity-60' : ''}>
+                            {renderBrushValueControls()}
+                        </fieldset>
+                    </div>
 
-            <div className="flex gap-2 border-b border-gray-700/50 pb-4">
-                <label className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg cursor-pointer flex justify-center items-center gap-2 transition-all">
-                    <Upload size={14} className="text-orange-400" /> <span className="text-sm font-medium">Load .ntil</span>
-                    <input type="file" className="hidden" multiple accept=".ntil" onChange={handleLoadNavTiles} />
-                </label>
-                <button
-                    onClick={clearBakedNavTiles}
-                    className="flex-1 btn btn-sm bg-gray-800 hover:bg-gray-700 border border-gray-600 p-2 rounded-lg flex justify-center items-center gap-2 transition-all"
-                    title="Clear baked NavTiles"
-                    disabled={bakedNavTiles.size === 0}
-                >
-                    <span className="text-sm font-medium">Clear</span>
-                </button>
-            </div>
+                    <div className="flex w-36 flex-col justify-between gap-2">
+                        <div>
+                            <div className={sectionTitleClass}>View</div>
+                            <div className="mt-2 flex gap-2">
+                                <button
+                                    onClick={toggleGrid}
+                                    className={`${iconToggleClass} ${showGrid ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
+                                    title="Toggle Grid"
+                                >
+                                    <Grid size={16} />
+                                </button>
+                                <button
+                                    onClick={toggleChunkBorders}
+                                    className={`${iconToggleClass} ${showChunkBorders ? 'border-violet-500/70 bg-violet-600/25 text-violet-100' : ''}`}
+                                    title="Toggle Chunk Borders"
+                                >
+                                    <BoxSelect size={16} />
+                                </button>
+                                <button
+                                    onClick={toggleNavMesh}
+                                    className={`${iconToggleClass} ${showNavMesh ? 'border-emerald-500/70 bg-emerald-600/25 text-emerald-100' : ''}`}
+                                    title="Toggle NavMesh Visualization"
+                                >
+                                    <Eye size={16} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] leading-snug text-slate-500">
+                            {navPanelTab === 'simulation'
+                                ? 'Simulation mode: left-click picks start, right-click picks goal. Brush input is suspended.'
+                                : canvasCanEdit
+                                ? `Middle pans. Right rotates. Left ${activeCategory === 'Entities' ? 'places/selects' : activeCategory === 'Obstacle' ? 'places obstacles' : 'paints'}.`
+                                : 'Editing is locked until the selected board is opened.'}
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-            {/* New Map Modal (Simple overlay) */}
-            {showNewMap && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center backdrop-blur-sm" onClick={() => setShowNewMap(false)}>
-                    <div className="bg-gray-900 p-6 rounded-xl border border-gray-600 shadow-2xl w-80" onClick={e => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold mb-4 text-white">Create New Map</h3>
-                        
+            {showNewMap ? (
+                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowNewMap(false)}>
+                    <div className="w-80 rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="mb-4 text-lg font-semibold text-white">Create New Map</h3>
                         <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Width (Chunks)</label>
-                                <input 
-                                    type="number" min="1" max="32" 
-                                    value={newWidth} 
-                                    onChange={e => setNewWidth(parseInt(e.target.value) || 1)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white"
+                            <label className="block text-sm text-slate-400">
+                                Width (Chunks)
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="32"
+                                    value={newWidth}
+                                    onChange={(e) => setNewWidth(parseInt(e.target.value) || 1)}
+                                    className={inputClass}
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Height (Chunks)</label>
-                                <input 
-                                    type="number" min="1" max="32" 
-                                    value={newHeight} 
-                                    onChange={e => setNewHeight(parseInt(e.target.value) || 1)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white"
+                            </label>
+                            <label className="block text-sm text-slate-400">
+                                Height (Chunks)
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="32"
+                                    value={newHeight}
+                                    onChange={(e) => setNewHeight(parseInt(e.target.value) || 1)}
+                                    className={inputClass}
                                 />
-                            </div>
-                            <div>
-                                <label className="block text-sm text-gray-400 mb-1">Topology</label>
+                            </label>
+                            <label className="block text-sm text-slate-400">
+                                Topology
                                 <select
                                     value={newTopology}
                                     onChange={(e) => setNewTopology(e.target.value as BoardTopology)}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded p-2 text-white"
+                                    className={inputClass}
                                 >
                                     <option value="Grid">Grid</option>
                                     <option value="HexGrid">HexGrid</option>
                                 </select>
-                            </div>
-                            
+                            </label>
                             <div className="flex gap-2 pt-2">
-                                <button 
+                                <button
                                     onClick={() => setShowNewMap(false)}
-                                    className="flex-1 py-2 bg-gray-700 hover:bg-gray-600 rounded text-gray-300 font-medium"
+                                    className="flex-1 rounded bg-slate-800 py-2 font-medium text-slate-300 hover:bg-slate-700"
                                 >
                                     Cancel
                                 </button>
-                                <button 
+                                <button
                                     onClick={handleNewMap}
-                                    className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white font-medium"
+                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600"
                                 >
                                     Create
                                 </button>
@@ -1100,375 +2477,95 @@ export const Toolbar: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            ) : null}
 
-            {/* Categories */}
-            <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Tools</label>
-                <div className="grid grid-cols-3 gap-2">
-                    {categories.map(c => (
-                        <button
-                            key={c.id}
-                            onClick={() => setCategory(c.id)}
-                            className={`p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all border ${
-                                activeCategory === c.id 
-                                    ? 'bg-blue-600/20 border-blue-500/50 text-blue-400' 
-                                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-600'
-                            }`}
-                            title={c.id}
-                        >
-                            {c.icon}
-                            <span className="text-[10px] font-medium">{c.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Modes */}
-            <div className="space-y-2">
-                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-1">Mode</label>
-                <div className="grid grid-cols-3 gap-2">
-                    {modes.map(m => (
-                        <button
-                            key={m.id}
-                            onClick={() => setMode(m.id)}
-                            className={`p-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all border ${
-                                activeMode === m.id 
-                                    ? 'bg-purple-600/20 border-purple-500/50 text-purple-400' 
-                                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750 hover:border-gray-600'
-                            }`}
-                            title={m.id}
-                        >
-                            {m.icon}
-                            <span className="text-[10px] font-medium">{m.label}</span>
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-
-            {/* Brush Settings */}
-            <div className="space-y-3">
-                <div className="flex justify-between text-sm text-gray-400">
-                    <span>Size: {brushSize}</span>
-                </div>
-                <input 
-                    type="range" min="1" max="10" 
-                    value={brushSize} 
-                    onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                    className="w-full accent-blue-500"
-                />
-
-                <div className="flex justify-between text-sm text-gray-400">
-                    <span>
-                        {activeCategory === 'Biome' ? 'Biome Type' : 
-                         activeCategory === 'Area' ? 'Area ID' :
-                         activeCategory === 'Blocked' ? 'Blocked' :
-                         activeCategory === 'Vegetation' ? 'Veg Type' : 
-                         activeCategory === 'Layers' ? 'Layer Type' :
-                         activeCategory === 'Territory' ? 'Faction ID' :
-                         activeCategory === 'Entities' ? 'Template' :
-                         activeCategory === 'Obstacle' ? 'Obstacle' :
-                         'Value'}
-                    </span>
-                    <span className="text-xs text-gray-500">{brushValue}</span>
-                </div>
-
-                {activeCategory === 'Area' ? (
-                     <div className="grid grid-cols-2 gap-2">
-                         {[
-                             { id: 0, label: '0 Default', color: 'bg-[#8B4513]' },
-                             { id: 1, label: '1 Road', color: 'bg-[#9ca3af]' },
-                             { id: 2, label: '2 Forest', color: 'bg-[#256d3b]' },
-                             { id: 3, label: '3 Swamp', color: 'bg-[#4d5f2f]' },
-                             { id: 4, label: '4 Waterbank', color: 'bg-[#2563eb]' },
-                             { id: 5, label: '5 Hazard', color: 'bg-[#b45309]' },
-                         ].map(a => (
-                             <button
-                                 key={a.id}
-                                 onClick={() => {
-                                     setBrushValue(a.id);
-                                     setMode('Set');
-                                 }}
-                                 className={`p-2 rounded text-xs font-bold border transition-all ${
-                                     brushValue === a.id
-                                     ? 'border-white scale-105 shadow-md'
-                                     : 'border-transparent opacity-70 hover:opacity-100'
-                                 } ${a.color}`}
-                             >
-                                 {a.label}
-                             </button>
-                         ))}
-                         <input
-                             type="range"
-                             min="0"
-                             max="15"
-                             value={brushValue}
-                             onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                             className="col-span-2 w-full accent-purple-500"
-                         />
-                         <div className="col-span-2 text-[10px] text-gray-400">
-                            Area ID is stored in logic terrain and propagated to baked NavTile triangle areas.
-                         </div>
-                     </div>
-                ) : activeCategory === 'Blocked' ? (
-                    <div className="grid grid-cols-2 gap-2">
-                        <button
-                            onClick={() => {
-                                setBrushValue(1);
-                                setMode('Set');
-                            }}
-                            className={`p-2 rounded text-xs font-bold border transition-all ${
-                                brushValue > 0 ? 'bg-red-700/70 border-red-300 text-red-50' : 'bg-gray-800 border-gray-700 text-gray-400'
-                            }`}
-                        >
-                            Block
-                        </button>
-                        <button
-                            onClick={() => {
-                                setBrushValue(0);
-                                setMode('Set');
-                            }}
-                            className={`p-2 rounded text-xs font-bold border transition-all ${
-                                brushValue === 0 ? 'bg-emerald-700/70 border-emerald-300 text-emerald-50' : 'bg-gray-800 border-gray-700 text-gray-400'
-                            }`}
-                        >
-                            Clear
-                        </button>
-                        <div className="col-span-2 text-[10px] text-gray-400">
-                            Raise paints blocked; Lower clears. Baked navmesh excludes blocked cells.
-                        </div>
-                    </div>
-                ) : activeCategory === 'Biome' ? (
-                     <div className="grid grid-cols-2 gap-2">
-                         {[
-                             { id: 0, label: 'Dirt', color: 'bg-[#8B4513]' },
-                             { id: 1, label: 'Sand', color: 'bg-[#F4A460]' },
-                             { id: 2, label: 'Rock', color: 'bg-[#808080]' },
-                             { id: 3, label: 'Grass', color: 'bg-[#3d6c2e]' },
-                             { id: 4, label: 'Wasteland', color: 'bg-[#696969]' },
-                             { id: 5, label: 'Swamp', color: 'bg-[#556B2F]' },
-                         ].map(b => (
-                             <button
-                                 key={b.id}
-                                 onClick={() => {
-                                     setBrushValue(b.id);
-                                     setMode('Set'); // Force Set Mode
-                                 }}
-                                 className={`p-2 rounded text-xs font-bold border transition-all ${
-                                     brushValue === b.id 
-                                     ? 'border-white scale-105 shadow-md' 
-                                     : 'border-transparent opacity-70 hover:opacity-100'
-                                 } ${b.color}`}
-                             >
-                                 {b.label}
-                             </button>
-                         ))}
-                     </div>
-                ) : activeCategory === 'Vegetation' ? (
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                             { id: 0, label: 'None', icon: '❌' },
-                             { id: 1, label: 'Small Tree', icon: '🌲' },
-                             { id: 2, label: 'Big Tree', icon: '🌳' },
-                             { id: 3, label: 'Dense', icon: '🌲🌲' },
-                             { id: 4, label: 'Crop', icon: '🌾' }
-                        ].map(v => (
-                             <button
-                                 key={v.id}
-                                 onClick={() => {
-                                     setBrushValue(v.id);
-                                     setMode('Set'); // Force Set Mode
-                                 }}
-                                 className={`p-2 rounded border transition-all flex flex-col items-center gap-1 ${
-                                     brushValue === v.id 
-                                     ? 'bg-green-600/30 border-green-500 text-green-300' 
-                                     : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-750'
-                                 }`}
-                             >
-                                 <span className="text-lg">{v.icon}</span>
-                                 <span className="text-[10px]">{v.label}</span>
-                             </button>
-                        ))}
-                    </div>
-                ) : activeCategory === 'Layers' ? (
-                    <div className="grid grid-cols-1 gap-2">
-                         {[
-                             { id: 'Snow', label: 'Snow', color: 'bg-white text-black' },
-                             { id: 'Mud', label: 'Mud', color: 'bg-[#5c4033] text-white' },
-                             { id: 'Ice', label: 'Ice', color: 'bg-cyan-200 text-black' }
-                         ].map(l => (
-                             <button
-                                 key={l.id}
-                                 onClick={() => {
-                                     setActiveLayer(l.id as any);
-                                     setBrushValue(1); // Auto-set to 'On' for layer logic
-                                 }}
-                                 className={`p-2 rounded text-xs font-bold border transition-all flex justify-between items-center ${
-                                     activeLayer === l.id 
-                                     ? 'border-blue-400 scale-105' 
-                                     : 'border-transparent opacity-70 hover:opacity-100'
-                                 } ${l.color}`}
-                             >
-                                 <span>{l.label}</span>
-                                 {activeLayer === l.id && <span className="text-xs bg-black/20 px-1 rounded">Active</span>}
-                             </button>
-                         ))}
-                         <div className="text-[10px] text-gray-400 mt-1">
-                            Mode: Raise = Add, Lower = Remove
-                         </div>
-                    </div>
-                ) : activeCategory === 'Territory' ? (
-                    <div className="flex flex-col gap-2">
-                        <input 
-                            type="range" min="0" max="255" 
-                            value={brushValue} 
-                            onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                            className="w-full accent-purple-500"
-                        />
-                        <div className="flex justify-between text-xs text-gray-400">
-                            <button onClick={() => setBrushValue(0)} className="hover:text-white">Neutral (0)</button>
-                            <button onClick={() => setBrushValue(1)} className="hover:text-white">F1</button>
-                            <button onClick={() => setBrushValue(128)} className="hover:text-white">F128</button>
-                            <button onClick={() => setBrushValue(255)} className="hover:text-white">F255</button>
-                        </div>
-                    </div>
-                ) : activeCategory === 'Obstacle' ? (
-                    <div className="flex flex-col gap-2">
-                        <select
-                            value={obstacleTemplateId ?? ''}
-                            onChange={(e) => setObstacleTemplate(e.target.value.length > 0 ? e.target.value : null)}
-                            className="w-full px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                            title="Obstacle template"
-                        >
-                            {templates.map((t: any, i: number) => {
-                                const id = String(t?.Id ?? t?.id ?? `template_${i}`);
-                                return <option key={id} value={id}>{id}</option>;
-                            })}
-                        </select>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                onClick={() => setObstacleShape('Circle')}
-                                className={`p-2 rounded text-xs font-bold border flex items-center justify-center gap-1 ${obstacleShape === 'Circle' ? 'bg-orange-700/70 border-orange-300 text-orange-50' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
-                            >
-                                <Circle size={14} /> Circle
-                            </button>
-                            <button
-                                onClick={() => setObstacleShape('Box')}
-                                className={`p-2 rounded text-xs font-bold border flex items-center justify-center gap-1 ${obstacleShape === 'Box' ? 'bg-orange-700/70 border-orange-300 text-orange-50' : 'bg-gray-800 border-gray-700 text-gray-400'}`}
-                            >
-                                <Square size={14} /> Box
-                            </button>
-                        </div>
-                        {obstacleShape === 'Circle' ? (
-                            <label className="text-[10px] text-gray-400">
-                                Radius cm
+            {showAddBoard ? (
+                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowAddBoard(false)}>
+                    <div className="w-[360px] rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <h3 className="mb-4 text-lg font-semibold text-white">Add Board</h3>
+                        <div className="space-y-4">
+                            <label className="block text-sm text-slate-400">
+                                Name
+                                <input
+                                    value={newBoardName}
+                                    onChange={(e) => setNewBoardName(e.target.value)}
+                                    className={inputClass}
+                                />
+                            </label>
+                            <label className="block text-sm text-slate-400">
+                                Topology
+                                <select
+                                    value={newBoardTopology}
+                                    onChange={(e) => setNewBoardTopology(e.target.value as BoardTopology)}
+                                    className={inputClass}
+                                >
+                                    <option value="Grid">Grid</option>
+                                    <option value="HexGrid">HexGrid</option>
+                                </select>
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-sm text-slate-400">
+                                    Width Macro
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="16"
+                                        value={newBoardWidthMacroTiles}
+                                        onChange={(e) => setNewBoardWidthMacroTiles(parseInt(e.target.value) || 1)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <label className="block text-sm text-slate-400">
+                                    Height Macro
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="16"
+                                        value={newBoardHeightMacroTiles}
+                                        onChange={(e) => setNewBoardHeightMacroTiles(parseInt(e.target.value) || 1)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                            </div>
+                            <label className="block text-sm text-slate-400">
+                                Cell cm
                                 <input
                                     type="number"
                                     min="1"
-                                    value={obstacleRadiusCm}
-                                    onChange={(e) => setObstacleRadiusCm(Number(e.target.value))}
-                                    className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
+                                    value={newBoardCellSizeCm}
+                                    onChange={(e) => setNewBoardCellSizeCm(parseInt(e.target.value) || 100)}
+                                    className={inputClass}
                                 />
                             </label>
-                        ) : (
-                            <div className="grid grid-cols-2 gap-2">
-                                <label className="text-[10px] text-gray-400">
-                                    Half W
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={obstacleHalfWidthCm}
-                                        onChange={(e) => setObstacleHalfSizeCm(Number(e.target.value), obstacleHalfHeightCm)}
-                                        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                                    />
-                                </label>
-                                <label className="text-[10px] text-gray-400">
-                                    Half H
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        value={obstacleHalfHeightCm}
-                                        onChange={(e) => setObstacleHalfSizeCm(obstacleHalfWidthCm, Number(e.target.value))}
-                                        className="mt-1 w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-200"
-                                    />
-                                </label>
+                            <label className="flex items-center gap-2 text-sm text-slate-300">
+                                <input
+                                    type="checkbox"
+                                    checked={newBoardNavigationEnabled}
+                                    onChange={(e) => setNewBoardNavigationEnabled(e.target.checked)}
+                                />
+                                <span>Navigation enabled</span>
+                            </label>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] text-slate-500">
+                                One macro tile is 256 cells. The editor creates 64-cell terrain chunks, so 1x1 macro creates a 4x4 chunk board.
                             </div>
-                        )}
-                        <div className="text-[10px] text-gray-400">
-                            Set: Place / Replace<br/>
-                            Lower: Erase
+                            <div className="flex gap-2 pt-2">
+                                <button
+                                    onClick={() => setShowAddBoard(false)}
+                                    className="flex-1 rounded bg-slate-800 py-2 font-medium text-slate-300 hover:bg-slate-700"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreateBoard}
+                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600"
+                                >
+                                    Create Board
+                                </button>
+                            </div>
                         </div>
                     </div>
-                ) : activeCategory === 'Entities' ? (
-                    <div className="flex flex-col gap-2">
-                        <select
-                            value={selectedTemplateId ?? ''}
-                            onChange={(e) => selectTemplate(e.target.value.length > 0 ? e.target.value : null)}
-                            className="w-full px-2 py-1 rounded bg-gray-800 border border-gray-700 text-gray-200 text-xs"
-                            title="Template"
-                        >
-                            {templates.map((t: any, i: number) => {
-                                const id = String(t?.Id ?? t?.id ?? `template_${i}`);
-                                return <option key={id} value={id}>{id}</option>;
-                            })}
-                        </select>
-
-                        <div className="text-[10px] text-gray-400">
-                            Set: Place / Replace<br/>
-                            Lower: Erase<br/>
-                            Raise: Select
-                        </div>
-
-                        {selectedEntityIndex != null && selectedEntityIndex >= 0 && selectedEntityIndex < spawnEntities.length ? (
-                            <div className="bg-gray-800/60 border border-gray-700 rounded p-2 flex flex-col gap-2">
-                                <div className="text-xs text-gray-300">
-                                    Selected: {spawnEntities[selectedEntityIndex].template} @ ({spawnEntities[selectedEntityIndex].position.x},{spawnEntities[selectedEntityIndex].position.y})
-                                </div>
-
-                                <div className="text-[10px] text-gray-400">Overrides (componentName: JSON)</div>
-                                {Object.keys(spawnEntities[selectedEntityIndex].overrides ?? {}).length === 0 ? (
-                                    <div className="text-[10px] text-gray-500">No overrides.</div>
-                                ) : (
-                                    Object.entries(spawnEntities[selectedEntityIndex].overrides ?? {}).map(([k, v]) => (
-                                        <div key={k} className="flex flex-col gap-1">
-                                            <div className="flex justify-between items-center">
-                                                <div className="text-[11px] text-gray-200">{k}</div>
-                                                <button
-                                                    onClick={() => deleteSelectedEntityOverride(k)}
-                                                    className="text-[10px] text-red-300 hover:text-red-200"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-                                            <textarea
-                                                className="w-full h-20 bg-gray-900 border border-gray-700 rounded p-1 text-[10px] font-mono text-gray-200"
-                                                defaultValue={JSON.stringify(v, null, 2)}
-                                                onBlur={(e) => updateSelectedEntityOverridesJson(k, e.target.value)}
-                                            />
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-[10px] text-gray-500">No entity selected.</div>
-                        )}
-                    </div>
-                ) : (
-                    <input 
-                        type="range" min="0" max="15" 
-                        value={brushValue} 
-                        onChange={(e) => setBrushValue(parseInt(e.target.value))}
-                        className="w-full accent-purple-500"
-                    />
-                )}
-            </div>
-            
-            <div className="text-xs text-gray-500 mt-2">
-                Middle Click: Pan<br/>
-                Right Click: Rotate<br/>
-                Left Click: {activeCategory === 'Entities' ? 'Place/Erase/Select' : activeCategory === 'Obstacle' ? 'Place/Erase' : 'Paint'}
-            </div>
+                </div>
+            ) : null}
         </div>
     );
 };

@@ -11,5 +11,6 @@
     <ProjectReference Include="..\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\Ludots.Tool\Ludots.Tool.csproj" />
     <ProjectReference Include="..\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />
+    <ProjectReference Include="..\..\Libraries\DotRecast\src\DotRecast.Detour\DotRecast.Detour.csproj" />
   </ItemGroup>
 </Project>

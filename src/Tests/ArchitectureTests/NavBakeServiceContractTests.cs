@@ -9,6 +9,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
 using NUnit.Framework;
 
@@ -76,6 +77,201 @@ namespace Ludots.Tests.Architecture
             Assert.That(result.SuccessCount, Is.EqualTo(1));
             Assert.That(result.Entries[0].Tile.VertexCount, Is.GreaterThan(0));
             Assert.That(result.Entries[0].Tile.TriangleCount, Is.GreaterThan(0));
+            Assert.That(result.Entries[0].DetourTileBytes.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void RecastBake_OpenGridCrossTileQuery_ReturnsStraightCorePath()
+        {
+            const int chunkSizeCells = 4;
+            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            var context = new NavBakeContext
+            {
+                MapId = "nav_recast_open_grid_query_contract",
+                SourceUri = "Core:Maps/nav_recast_open_grid_query_contract.bin",
+                Terrain = new FlatGridLogicTerrainField(12, 4, chunkSizeCells: chunkSizeCells),
+                Obstacles = new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[]
+                {
+                    new NavBakeTileCoord(0, 0),
+                    new NavBakeTileCoord(1, 0),
+                    new NavBakeTileCoord(2, 0)
+                },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeResult bake = new NavBakeService(new RecastNavBakeAlgorithm()).Bake(context);
+            Assert.That(bake.FailureCount, Is.EqualTo(0));
+
+            NavPathResult path = DetourNavQueryEngine.FindPathFromDetourTileBytes(
+                CollectDetourTileBytes(bake),
+                layer: 0,
+                areaCosts: NavAreaCostTable.CreateDefault(),
+                startXcm: 50,
+                startZcm: 150,
+                goalXcm: 1050,
+                goalZcm: 150,
+                maxPortals: 256);
+
+            Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+            TestContext.WriteLine("Default baseline path: " + string.Join(" -> ", FormatPathPoints(path)));
+            Assert.That(path.PathXcm, Is.EqualTo(new[] { 50, 1050 }));
+            Assert.That(path.PathZcm, Is.EqualTo(new[] { 150, 150 }));
+        }
+
+        [Test]
+        public void DefaultGridFlatBaseline_CrossTileQuery_ReturnsStraightCorePath()
+        {
+            const int chunkSizeCells = 4;
+            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            var detourTiles = new List<byte[]>(3);
+
+            for (int cx = 0; cx < 3; cx++)
+            {
+                NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
+                    cx,
+                    chunkY: 0,
+                    layer: 0,
+                    tileVersion: 1,
+                    chunkSizeCells,
+                    SpatialScaleDefaults.CellCm);
+
+                Assert.That(tile.VertexCount, Is.EqualTo(4));
+                Assert.That(tile.TriangleCount, Is.EqualTo(2));
+                Assert.That(tile.Portals.Length, Is.EqualTo(4));
+
+                byte[] detourBytes = DetourNavQueryEngine.BuildFlatGridBaselineDetourTileBytes(tile, tileSizeCm, tileSizeCm);
+                Assert.That(detourBytes.Length, Is.GreaterThan(0));
+                detourTiles.Add(detourBytes);
+            }
+
+            NavPathResult path = DetourNavQueryEngine.FindPathFromDetourTileBytes(
+                detourTiles,
+                layer: 0,
+                areaCosts: NavAreaCostTable.CreateDefault(),
+                startXcm: 50,
+                startZcm: 150,
+                goalXcm: 1050,
+                goalZcm: 150,
+                maxPortals: 256);
+
+            Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+            string pathPoints = string.Join(" -> ", FormatPathPoints(path));
+            Assert.That(path.PathXcm, Is.EqualTo(new[] { 50, 1050 }), pathPoints);
+            Assert.That(path.PathZcm, Is.EqualTo(new[] { 150, 150 }), pathPoints);
+        }
+
+        [Test]
+        public void DefaultGridFlatBaseline_LongOpenDiagonalQuery_ReturnsDirectCorePath()
+        {
+            const int chunkSizeCells = 64;
+            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            var detourTiles = new List<byte[]>(168);
+
+            for (int cy = 16; cy <= 29; cy++)
+            {
+                for (int cx = 16; cx <= 27; cx++)
+                {
+                    NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
+                        cx,
+                        cy,
+                        layer: 0,
+                        tileVersion: 1,
+                        chunkSizeCells,
+                        SpatialScaleDefaults.CellCm);
+
+                    detourTiles.Add(DetourNavQueryEngine.BuildFlatGridBaselineDetourTileBytes(tile, tileSizeCm, tileSizeCm));
+                }
+            }
+
+            NavPathResult path = DetourNavQueryEngine.FindPathFromDetourTileBytes(
+                detourTiles,
+                layer: 0,
+                areaCosts: NavAreaCostTable.CreateDefault(),
+                startXcm: 175700,
+                startZcm: 185800,
+                goalXcm: 108100,
+                goalZcm: 103000,
+                maxPortals: 256);
+
+            Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+            string pathPoints = string.Join(" -> ", FormatPathPoints(path));
+            Assert.That(path.PathXcm, Is.EqualTo(new[] { 175700, 108100 }), pathPoints);
+            Assert.That(path.PathZcm, Is.EqualTo(new[] { 185800, 103000 }), pathPoints);
+        }
+
+        [Test]
+        public void RecastBake_QueryPathDoesNotCutThroughBlockedGridHole()
+        {
+            const int chunkSizeCells = 9;
+            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            const int obstacleMinXcm = 300;
+            const int obstacleMinZcm = 300;
+            const int obstacleMaxXcm = 600;
+            const int obstacleMaxZcm = 600;
+
+            var context = new NavBakeContext
+            {
+                MapId = "nav_recast_blocked_hole_query_contract",
+                SourceUri = "Core:Maps/nav_recast_blocked_hole_query_contract.bin",
+                Terrain = new FlatGridLogicTerrainField(9, 9, chunkSizeCells: chunkSizeCells),
+                Obstacles = new NavObstacleSet
+                {
+                    Obstacles =
+                    {
+                        new NavObstacle
+                        {
+                            Id = "center-hole",
+                            Enabled = true,
+                            Kind = NavObstacleKind.Polygon,
+                            LayerId = GroundLayerId,
+                            Points =
+                            {
+                                new NavPointCm(obstacleMinXcm, obstacleMinZcm),
+                                new NavPointCm(obstacleMaxXcm, obstacleMinZcm),
+                                new NavPointCm(obstacleMaxXcm, obstacleMaxZcm),
+                                new NavPointCm(obstacleMinXcm, obstacleMaxZcm)
+                            }
+                        }
+                    }
+                },
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeResult bake = new NavBakeService(new RecastNavBakeAlgorithm()).Bake(context);
+            Assert.That(bake.FailureCount, Is.EqualTo(0), bake.Entries[0].Artifact.Message);
+
+            NavPathResult path = DetourNavQueryEngine.FindPathFromDetourTileBytes(
+                CollectDetourTileBytes(bake),
+                layer: 0,
+                areaCosts: NavAreaCostTable.CreateDefault(),
+                startXcm: 50,
+                startZcm: 50,
+                goalXcm: 750,
+                goalZcm: 750,
+                maxPortals: 256);
+
+            Assert.That(path.Status, Is.EqualTo(NavPathStatus.Ok));
+            AssertPathSegmentsDoNotEnterAabb(path, obstacleMinXcm, obstacleMinZcm, obstacleMaxXcm, obstacleMaxZcm);
+            var store = new NavTileStore(_ => throw new InvalidOperationException("Blocked-hole query test publishes tiles before disk load."));
+            foreach (NavBakeResultEntry entry in bake.Entries)
+            {
+                store.Replace(entry.Tile);
+            }
+            AssertPathSegmentsStayInsideNavMesh(path, store, tileSizeCm, tileSizeCm);
         }
 
         [Test]
@@ -733,6 +929,139 @@ namespace Ludots.Tests.Architecture
             Assert.That(missingLayer.Message, Does.Contain("layer id"));
         }
 
+        private static void AssertPathSegmentsDoNotEnterAabb(
+            NavPathResult path,
+            int minXcm,
+            int minZcm,
+            int maxXcm,
+            int maxZcm)
+        {
+            Assert.That(path.PathXcm.Length, Is.EqualTo(path.PathZcm.Length));
+            for (int i = 0; i + 1 < path.PathXcm.Length; i++)
+            {
+                int ax = path.PathXcm[i];
+                int az = path.PathZcm[i];
+                int bx = path.PathXcm[i + 1];
+                int bz = path.PathZcm[i + 1];
+                int dx = bx - ax;
+                int dz = bz - az;
+                int steps = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)dx * dx + (double)dz * dz) / 25d));
+
+                for (int s = 0; s <= steps; s++)
+                {
+                    double t = s / (double)steps;
+                    double x = ax + dx * t;
+                    double z = az + dz * t;
+                    bool inside = x > minXcm && x < maxXcm && z > minZcm && z < maxZcm;
+                    Assert.That(
+                        inside,
+                        Is.False,
+                        $"Path segment {i} enters the blocked obstacle interior near ({x:0.##},{z:0.##}).");
+                }
+            }
+        }
+
+        private static void AssertPathSegmentsStayInsideNavMesh(
+            NavPathResult path,
+            NavTileStore store,
+            int tileWidthCm,
+            int tileHeightCm)
+        {
+            Assert.That(path.PathXcm.Length, Is.EqualTo(path.PathZcm.Length));
+            for (int i = 0; i + 1 < path.PathXcm.Length; i++)
+            {
+                int ax = path.PathXcm[i];
+                int az = path.PathZcm[i];
+                int bx = path.PathXcm[i + 1];
+                int bz = path.PathZcm[i + 1];
+                int dx = bx - ax;
+                int dz = bz - az;
+                int steps = Math.Max(1, (int)Math.Ceiling(Math.Sqrt((double)dx * dx + (double)dz * dz) / 25d));
+
+                for (int s = 0; s <= steps; s++)
+                {
+                    double t = s / (double)steps;
+                    double x = ax + dx * t;
+                    double z = az + dz * t;
+                    Assert.That(
+                        IsPointInsideAnyNavTriangle(store, tileWidthCm, tileHeightCm, x, z),
+                        Is.True,
+                        $"Path segment {i} leaves the baked navmesh near ({x:0.##},{z:0.##}).");
+                }
+            }
+        }
+
+        private static bool IsPointInsideAnyNavTriangle(
+            NavTileStore store,
+            int tileWidthCm,
+            int tileHeightCm,
+            double worldXcm,
+            double worldZcm)
+        {
+            int tileX = (int)Math.Floor(worldXcm / tileWidthCm);
+            int tileZ = (int)Math.Floor(worldZcm / tileHeightCm);
+            if (!store.TryGet(new NavTileId(tileX, tileZ, 0), out NavTile tile))
+            {
+                return false;
+            }
+
+            double localX = worldXcm - tile.OriginXcm;
+            double localZ = worldZcm - tile.OriginZcm;
+            for (int i = 0; i < tile.TriangleCount; i++)
+            {
+                int a = tile.TriA[i];
+                int b = tile.TriB[i];
+                int c = tile.TriC[i];
+                if (PointInTriangle2D(
+                    localX,
+                    localZ,
+                    tile.VertexXcm[a],
+                    tile.VertexZcm[a],
+                    tile.VertexXcm[b],
+                    tile.VertexZcm[b],
+                    tile.VertexXcm[c],
+                    tile.VertexZcm[c]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool PointInTriangle2D(
+            double px,
+            double pz,
+            double ax,
+            double az,
+            double bx,
+            double bz,
+            double cx,
+            double cz)
+        {
+            double v0x = cx - ax;
+            double v0z = cz - az;
+            double v1x = bx - ax;
+            double v1z = bz - az;
+            double v2x = px - ax;
+            double v2z = pz - az;
+
+            double dot00 = v0x * v0x + v0z * v0z;
+            double dot01 = v0x * v1x + v0z * v1z;
+            double dot02 = v0x * v2x + v0z * v2z;
+            double dot11 = v1x * v1x + v1z * v1z;
+            double dot12 = v1x * v2x + v1z * v2z;
+
+            double denom = dot00 * dot11 - dot01 * dot01;
+            if (Math.Abs(denom) <= 0.000001d) return false;
+
+            double invDenom = 1d / denom;
+            double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+            const double epsilon = 0.001d;
+            return u >= -epsilon && v >= -epsilon && u + v <= 1d + epsilon;
+        }
+
         private static NavMeshBakeConfig CreateBakeConfig(string mode, string algorithm)
         {
             return new NavMeshBakeConfig
@@ -867,6 +1196,30 @@ namespace Ludots.Tests.Architecture
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             return new NavMeshBakeConfigLoader(pipeline, profiles).Load(catalog);
+        }
+
+        private static IReadOnlyList<byte[]> CollectDetourTileBytes(NavBakeResult bake)
+        {
+            var tiles = new List<byte[]>(bake.Entries.Count);
+            for (int i = 0; i < bake.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = bake.Entries[i];
+                if (entry.Success && entry.DetourTileBytes.Length > 0)
+                {
+                    tiles.Add(entry.DetourTileBytes);
+                }
+            }
+
+            return tiles;
+        }
+
+        private static IEnumerable<string> FormatPathPoints(NavPathResult path)
+        {
+            int count = Math.Min(path.PathXcm.Length, path.PathZcm.Length);
+            for (int i = 0; i < count; i++)
+            {
+                yield return $"({path.PathXcm[i]},{path.PathZcm[i]})";
+            }
         }
 
         private static string CreateTempNavConfig(string navmeshJson)

@@ -87,7 +87,22 @@ export class TerrainStore {
         
         if (oldByte !== newByte) {
             loc.chunk[loc.index] = newByte;
-            this.dirtyChunks.add(`${loc.cx},${loc.cy}`);
+            this.markNeighborChunksDirty(col, row);
+        }
+    }
+
+    private markNeighborChunksDirty(col: number, row: number) {
+        const minCx = Math.floor((col - 1) / CHUNK_SIZE);
+        const maxCx = Math.floor((col + 1) / CHUNK_SIZE);
+        const minCy = Math.floor((row - 1) / CHUNK_SIZE);
+        const maxCy = Math.floor((row + 1) / CHUNK_SIZE);
+
+        for (let cy = minCy; cy <= maxCy; cy++) {
+            for (let cx = minCx; cx <= maxCx; cx++) {
+                if (this.isValidChunk(cx, cy)) {
+                    this.dirtyChunks.add(`${cx},${cy}`);
+                }
+            }
         }
     }
 
@@ -327,7 +342,6 @@ export class TerrainStore {
             for (let cx = 0; cx < widthChunks; cx++) {
                 const chunkData = bytes.slice(offset, offset + CHUNK_BYTE_SIZE);
                 this.chunks.set(`${cx},${cy}`, chunkData);
-                this.dirtyChunks.add(`${cx},${cy}`); // Mark all dirty for initial render
                 offset += CHUNK_BYTE_SIZE;
             }
         }

@@ -35,6 +35,16 @@ namespace Ludots.Core.Navigation.NavMesh
             }
         }
 
+        public NavTile[] SnapshotLoadedTiles()
+        {
+            lock (_gate)
+            {
+                var tiles = new NavTile[_loaded.Count];
+                _loaded.Values.CopyTo(tiles, 0);
+                return tiles;
+            }
+        }
+
         public bool TryRunStableRead<T>(Func<T> read, out T result, int maxAttempts = 2)
         {
             if (read == null) throw new ArgumentNullException(nameof(read));

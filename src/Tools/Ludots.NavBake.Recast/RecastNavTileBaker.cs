@@ -1,5 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using DotRecast.Core;
+using DotRecast.Core.Numerics;
+using DotRecast.Detour;
+using DotRecast.Detour.Io;
 using DotRecast.Recast;
 using DotRecast.Recast.Geom;
 using Ludots.Core.Map.Hex;
@@ -22,6 +27,7 @@ namespace Ludots.NavBake.Recast
             NavMeshAgentProfileConfig navProfile,
             AgentProfileConfig agentProfile,
             out NavTile tile,
+            out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
             return RecastNavTileBaker.TryBake(
@@ -36,6 +42,7 @@ namespace Ludots.NavBake.Recast
                 layer.Id,
                 context.Obstacles,
                 out tile,
+                out detourTileBytes,
                 out artifact);
         }
     }
@@ -54,8 +61,10 @@ namespace Ludots.NavBake.Recast
             string layerId,
             NavObstacleSet obstacles,
             out NavTile tile,
+            out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
+            detourTileBytes = Array.Empty<byte>();
             if (map == null)
             {
                 tile = null!;
@@ -63,7 +72,7 @@ namespace Ludots.NavBake.Recast
                 return false;
             }
 
-            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, layerId, obstacles, out tile, out artifact);
+            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, layerId, obstacles, out tile, out detourTileBytes, out artifact);
         }
 
         public static bool TryBake(
@@ -78,9 +87,11 @@ namespace Ludots.NavBake.Recast
             string layerId,
             NavObstacleSet obstacles,
             out NavTile tile,
+            out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
             tile = null!;
+            detourTileBytes = Array.Empty<byte>();
             artifact = default;
 
             if (!NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact))
@@ -91,7 +102,9 @@ namespace Ludots.NavBake.Recast
 
             try
             {
-                BuildRecastTriangleMesh(baseTile, obstacles, layerId, out var verts, out var tris);
+                ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
+                var rcCfg = BuildRcConfig(agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
+                BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, legacyConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
                 if (tris.Count == 0)
                 {
                     artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No triangles after obstacle filtering.", 0, 0, 0, 0);
@@ -99,16 +112,24 @@ namespace Ludots.NavBake.Recast
                 }
 
                 var geom = new RcSampleInputGeomProvider(verts.ToArray(), tris.ToArray());
-                var rcCfg = BuildRcConfig(agentProfile, navProfile);
-                var bcfg = new RcBuilderConfig(rcCfg, geom.GetMeshBoundsMin(), geom.GetMeshBoundsMax());
+                RcVec3f geomMin = geom.GetMeshBoundsMin();
+                RcVec3f geomMax = geom.GetMeshBoundsMax();
+                var tileBmin = new RcVec3f(tileMinX, geomMin.Y, tileMinZ);
+                var tileBmax = new RcVec3f(
+                    tileMinX + rcCfg.TileSizeX * rcCfg.Cs,
+                    geomMax.Y,
+                    tileMinZ + rcCfg.TileSizeZ * rcCfg.Cs);
+                var bcfg = new RcBuilderConfig(rcCfg, tileBmin, tileBmax, tileX: 0, tileZ: 0);
                 var rcBuilder = new RcBuilder();
                 var rcResult = rcBuilder.Build(geom, bcfg, keepInterResults: false);
 
-                if (rcResult?.MeshDetail == null || rcResult.MeshDetail.ntris <= 0)
+                if (rcResult?.Mesh == null || rcResult.MeshDetail == null || rcResult.MeshDetail.ntris <= 0)
                 {
                     artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.TriangulationFailed, "Recast produced empty detail mesh.", 0, 0, 0, 0);
                     return false;
                 }
+
+                PrepareDetourPolygons(baseTile, rcResult.Mesh);
 
                 BuildNavTileFromDetailMesh(
                     baseTile,
@@ -118,6 +139,16 @@ namespace Ludots.NavBake.Recast
                     rcResult.MeshDetail,
                     out tile);
 
+                detourTileBytes = BuildDetourTileBytes(
+                    rcResult,
+                    agentProfile,
+                    navProfile,
+                    chunkX,
+                    chunkY,
+                    layer,
+                    tileBmin,
+                    tileBmax);
+
                 artifact = new NavBakeArtifact(tile.TileId, tile.TileVersion, NavBakeStage.Serialize, NavBakeErrorCode.None, "", baseArtifact.WalkableTriangleCount, tile.VertexCount, tile.TriangleCount, tile.Portals.Length);
                 return true;
             }
@@ -125,11 +156,218 @@ namespace Ludots.NavBake.Recast
             {
                 artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Serialize, NavBakeErrorCode.SerializationFailed, ex.Message, 0, 0, 0, 0);
                 tile = null!;
+                detourTileBytes = Array.Empty<byte>();
                 return false;
             }
         }
 
-        private static RcConfig BuildRcConfig(AgentProfileConfig agentProfile, NavMeshAgentProfileConfig navProfile)
+        private static void PrepareDetourPolygons(NavTile baseTile, RcPolyMesh mesh)
+        {
+            if (mesh.flags == null || mesh.flags.Length < mesh.npolys)
+            {
+                mesh.flags = new int[mesh.npolys];
+            }
+
+            for (int i = 0; i < mesh.npolys; i++)
+            {
+                mesh.flags[i] = 1;
+                byte areaId = ResolveAreaIdFromPolyMesh(baseTile, mesh, i);
+                if (areaId >= DtDetour.DT_MAX_AREAS)
+                {
+                    throw new InvalidOperationException(
+                        $"NavTile {baseTile.TileId} polygon {i} area id {areaId} exceeds Detour max area id {DtDetour.DT_MAX_AREAS - 1}.");
+                }
+
+                mesh.areas[i] = areaId;
+            }
+
+            MarkDetourTilePortals(mesh);
+        }
+
+        private static byte ResolveAreaIdFromPolyMesh(NavTile baseTile, RcPolyMesh mesh, int polyIndex)
+        {
+            int p = polyIndex * mesh.nvp * 2;
+            float sx = 0f;
+            float sz = 0f;
+            int count = 0;
+            for (int j = 0; j < mesh.nvp; j++)
+            {
+                int vi = mesh.polys[p + j];
+                if (vi == RcRecast.RC_MESH_NULL_IDX) break;
+                int v = vi * 3;
+                sx += mesh.bmin.X + mesh.verts[v + 0] * mesh.cs;
+                sz += mesh.bmin.Z + mesh.verts[v + 2] * mesh.cs;
+                count++;
+            }
+
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            int localXcm = (int)MathF.Round((sx / count) * 100f) - baseTile.OriginXcm;
+            int localZcm = (int)MathF.Round((sz / count) * 100f) - baseTile.OriginZcm;
+
+            for (int i = 0; i < baseTile.TriangleCount; i++)
+            {
+                int ia = baseTile.TriA[i];
+                int ib = baseTile.TriB[i];
+                int ic = baseTile.TriC[i];
+                if (PointInTriangle2D(
+                    localXcm,
+                    localZcm,
+                    baseTile.VertexXcm[ia],
+                    baseTile.VertexZcm[ia],
+                    baseTile.VertexXcm[ib],
+                    baseTile.VertexZcm[ib],
+                    baseTile.VertexXcm[ic],
+                    baseTile.VertexZcm[ic]))
+                {
+                    return baseTile.TriAreaIds[i];
+                }
+            }
+
+            return 0;
+        }
+
+        private static void MarkDetourTilePortals(RcPolyMesh mesh)
+        {
+            int maxX = Math.Max(0, (int)MathF.Round((mesh.bmax.X - mesh.bmin.X) / mesh.cs));
+            int maxZ = Math.Max(0, (int)MathF.Round((mesh.bmax.Z - mesh.bmin.Z) / mesh.cs));
+            for (int i = 0; i < mesh.npolys; i++)
+            {
+                int p = i * mesh.nvp * 2;
+                for (int j = 0; j < mesh.nvp; j++)
+                {
+                    int va = mesh.polys[p + j];
+                    if (va == RcRecast.RC_MESH_NULL_IDX) break;
+                    if (mesh.polys[p + mesh.nvp + j] != RcRecast.RC_MESH_NULL_IDX) continue;
+                    int next = j + 1;
+                    if (next >= mesh.nvp || mesh.polys[p + next] == RcRecast.RC_MESH_NULL_IDX) next = 0;
+                    int vb = mesh.polys[p + next];
+                    if (vb == RcRecast.RC_MESH_NULL_IDX) continue;
+
+                    int a = va * 3;
+                    int b = vb * 3;
+                    int ax = mesh.verts[a + 0];
+                    int az = mesh.verts[a + 2];
+                    int bx = mesh.verts[b + 0];
+                    int bz = mesh.verts[b + 2];
+
+                    if (Near(ax, 0) && Near(bx, 0)) mesh.polys[p + mesh.nvp + j] = 0x8000 | 0;
+                    else if (Near(az, maxZ) && Near(bz, maxZ)) mesh.polys[p + mesh.nvp + j] = 0x8000 | 1;
+                    else if (Near(ax, maxX) && Near(bx, maxX)) mesh.polys[p + mesh.nvp + j] = 0x8000 | 2;
+                    else if (Near(az, 0) && Near(bz, 0)) mesh.polys[p + mesh.nvp + j] = 0x8000 | 3;
+                }
+            }
+        }
+
+        private static bool Near(int value, int expected)
+            => Math.Abs(value - expected) <= 1;
+
+        private static byte[] BuildDetourTileBytes(
+            RcBuilderResult rcResult,
+            AgentProfileConfig agentProfile,
+            NavMeshAgentProfileConfig navProfile,
+            int chunkX,
+            int chunkY,
+            int layer,
+            RcVec3f tileBmin,
+            RcVec3f tileBmax)
+        {
+            RcPolyMesh pmesh = rcResult.Mesh;
+            RcPolyMeshDetail dmesh = rcResult.MeshDetail;
+
+            var option = new DtNavMeshCreateParams
+            {
+                verts = pmesh.verts,
+                vertCount = pmesh.nverts,
+                polys = pmesh.polys,
+                polyAreas = pmesh.areas,
+                polyFlags = pmesh.flags,
+                polyCount = pmesh.npolys,
+                nvp = pmesh.nvp,
+                detailMeshes = dmesh.meshes,
+                detailVerts = dmesh.verts,
+                detailVertsCount = dmesh.nverts,
+                detailTris = dmesh.tris,
+                detailTriCount = dmesh.ntris,
+                walkableHeight = agentProfile.HeightCm / 100f,
+                walkableRadius = agentProfile.RadiusCm / 100f,
+                walkableClimb = navProfile.MaxClimbCm / 100f,
+                bmin = new RcVec3f(tileBmin.X, pmesh.bmin.Y, tileBmin.Z),
+                bmax = new RcVec3f(tileBmax.X, pmesh.bmax.Y, tileBmax.Z),
+                cs = pmesh.cs,
+                ch = pmesh.ch,
+                tileX = chunkX,
+                tileZ = chunkY,
+                tileLayer = layer,
+                buildBvTree = true
+            };
+
+            DtMeshData data = DtNavMeshBuilder.CreateNavMeshData(option)
+                ?? throw new InvalidOperationException($"DotRecast failed to create Detour tile data for chunk ({chunkX},{chunkY}) layer {layer}.");
+
+            using var ms = new MemoryStream();
+            using var writer = new BinaryWriter(ms);
+            new DtMeshDataWriter().Write(writer, data, RcByteOrder.LITTLE_ENDIAN, cCompatibility: false);
+            writer.Flush();
+            return ms.ToArray();
+        }
+
+        private static void ComputeTileFootprintBounds(
+            LogicTerrainField terrain,
+            int chunkX,
+            int chunkY,
+            out float minX,
+            out float minZ,
+            out float maxX,
+            out float maxZ)
+        {
+            int startC = chunkX * terrain.ChunkSizeCells;
+            int startR = chunkY * terrain.ChunkSizeCells;
+            int endC = startC + terrain.TileWidthCells(chunkX);
+            int endR = startR + terrain.TileHeightCells(chunkY);
+
+            float localMinX = float.PositiveInfinity;
+            float localMinZ = float.PositiveInfinity;
+            float localMaxX = float.NegativeInfinity;
+            float localMaxZ = float.NegativeInfinity;
+
+            for (int r = startR; r <= endR; r++)
+            {
+                Include(startC, r);
+                Include(endC, r);
+            }
+
+            for (int c = startC; c <= endC; c++)
+            {
+                Include(c, startR);
+                Include(c, endR);
+            }
+
+            void Include(int c, int r)
+            {
+                terrain.GetWorldPositionMeters(c, r, out float x, out float z);
+                localMinX = MathF.Min(localMinX, x);
+                localMinZ = MathF.Min(localMinZ, z);
+                localMaxX = MathF.Max(localMaxX, x);
+                localMaxZ = MathF.Max(localMaxZ, z);
+            }
+
+            minX = localMinX;
+            minZ = localMinZ;
+            maxX = localMaxX;
+            maxZ = localMaxZ;
+        }
+
+        private static RcConfig BuildRcConfig(
+            AgentProfileConfig agentProfile,
+            NavMeshAgentProfileConfig navProfile,
+            float tileMinX,
+            float tileMinZ,
+            float tileMaxX,
+            float tileMaxZ)
         {
             float radius = agentProfile.RadiusCm / 100f;
             float height = agentProfile.HeightCm / 100f;
@@ -138,12 +376,20 @@ namespace Ludots.NavBake.Recast
 
             float cellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
             float cellHeight = cellSize * 0.5f;
+            int tileSizeX = Math.Max(1, (int)MathF.Ceiling((tileMaxX - tileMinX) / cellSize));
+            int tileSizeZ = Math.Max(1, (int)MathF.Ceiling((tileMaxZ - tileMinZ) / cellSize));
+            int borderSize = RcConfig.CalcBorder(radius, cellSize);
 
             return new RcConfig(
+                true,
+                tileSizeX,
+                tileSizeZ,
+                borderSize,
                 DotRecast.Recast.RcPartition.WATERSHED,
                 cellSize, cellHeight,
                 maxSlope, height, radius, maxClimb,
-                8, 20,
+                8 * 8 * cellSize * cellSize,
+                20 * 20 * cellSize * cellSize,
                 12f, 1.3f,
                 6,
                 6f, 1f,
@@ -151,10 +397,57 @@ namespace Ludots.NavBake.Recast
                 new RcAreaModification(RcRecast.RC_WALKABLE_AREA), true);
         }
 
-        private static void BuildRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, string layerId, out List<float> verts, out List<int> tris)
+        private static void BuildExpandedRecastTriangleMesh(
+            LogicTerrainField terrain,
+            int chunkX,
+            int chunkY,
+            uint tileVersion,
+            in NavBuildConfig legacyConfig,
+            RcConfig rcCfg,
+            NavObstacleSet obstacles,
+            string layerId,
+            out List<float> verts,
+            out List<int> tris)
         {
+            int expandedCells = Math.Max(1, (int)MathF.Ceiling(rcCfg.BorderSize * rcCfg.Cs / Math.Max(0.01f, GetTerrainCellStepMeters(terrain))));
+            int expandedChunkRadius = Math.Max(1, (expandedCells + terrain.ChunkSizeCells - 1) / terrain.ChunkSizeCells);
+            int minChunkX = Math.Max(0, chunkX - expandedChunkRadius);
+            int minChunkY = Math.Max(0, chunkY - expandedChunkRadius);
+            int maxChunkX = Math.Min(terrain.WidthChunks - 1, chunkX + expandedChunkRadius);
+            int maxChunkY = Math.Min(terrain.HeightChunks - 1, chunkY + expandedChunkRadius);
+
+            verts = new List<float>();
+            tris = new List<int>();
+
+            for (int y = minChunkY; y <= maxChunkY; y++)
+            {
+                for (int x = minChunkX; x <= maxChunkX; x++)
+                {
+                    if (!NavTileBuilder.TryBuildTile(terrain, x, y, tileVersion, legacyConfig, out var tile, out var artifact))
+                    {
+                        if (x == chunkX && y == chunkY)
+                        {
+                            throw new InvalidOperationException($"Target tile failed during expanded Recast input build: {artifact.Message}");
+                        }
+
+                        continue;
+                    }
+
+                    AppendRecastTriangleMesh(tile, obstacles, layerId, verts, tris);
+                }
+            }
+        }
+
+        private static float GetTerrainCellStepMeters(LogicTerrainField terrain)
+        {
+            int stepCm = Math.Max(1, Math.Min(terrain.HorizontalStepCm, terrain.VerticalStepCm));
+            return stepCm / 100f;
+        }
+
+        private static void AppendRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, string layerId, List<float> verts, List<int> tris)
+        {
+            int vertexBase = verts.Count / 3;
             int vCount = baseTile.VertexCount;
-            verts = new List<float>(vCount * 3);
             for (int i = 0; i < vCount; i++)
             {
                 verts.Add((baseTile.OriginXcm + baseTile.VertexXcm[i]) / 100f);
@@ -162,7 +455,6 @@ namespace Ludots.NavBake.Recast
                 verts.Add((baseTile.OriginZcm + baseTile.VertexZcm[i]) / 100f);
             }
 
-            tris = new List<int>(baseTile.TriangleCount * 3);
             for (int i = 0; i < baseTile.TriangleCount; i++)
             {
                 int a = baseTile.TriA[i];
@@ -174,9 +466,9 @@ namespace Ludots.NavBake.Recast
                     continue;
                 }
 
-                tris.Add(a);
-                tris.Add(b);
-                tris.Add(c);
+                tris.Add(vertexBase + a);
+                tris.Add(vertexBase + b);
+                tris.Add(vertexBase + c);
             }
         }
 

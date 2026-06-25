@@ -3,13 +3,20 @@ import { useEditorStore } from './EditorStore';
 import * as THREE from 'three';
 import { getMapWorldSizeM } from '../../Core/Map/TopologyMetrics';
 
-export const Minimap: React.FC = () => {
+type MinimapProps = {
+    embedded?: boolean;
+    className?: string;
+};
+
+export const Minimap: React.FC<MinimapProps> = ({ embedded = false, className = '' }) => {
     const terrainCanvasRef = useRef<HTMLCanvasElement>(null);
     const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     
-    const { terrain, boardMetrics, activeCategory, cameraRef, controlsRef } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, cameraRef, controlsRef, navDirtyChunks, canvasSessionKind } = useEditorStore();
+    const hasCanvasSession = canvasSessionKind === 'local' || canvasSessionKind === 'repo';
     const [isDragging, setIsDragging] = useState(false);
+    const [cameraInfo, setCameraInfo] = useState('camera --');
 
     // 1. Terrain Render (Cached)
     useEffect(() => {
@@ -21,6 +28,10 @@ export const Minimap: React.FC = () => {
 
         const w = canvas.width;
         const h = canvas.height;
+        if (!hasCanvasSession) {
+            ctx.clearRect(0, 0, w, h);
+            return;
+        }
         
         // Full Redraw if terrain size changes or first load
         // But for MVP let's just redraw fully on change for simplicity
@@ -86,7 +97,7 @@ export const Minimap: React.FC = () => {
         }
         ctx.stroke();
 
-    }, [terrain, terrain.widthChunks, terrain.heightChunks, boardMetrics]); // Redraw on load/resize
+    }, [terrain, terrain.widthChunks, terrain.heightChunks, boardMetrics, hasCanvasSession]); // Redraw on load/resize
 
     // 2. Animation Loop (Overlay: Camera + Dirty + Interaction)
     useEffect(() => {
@@ -113,10 +124,16 @@ export const Minimap: React.FC = () => {
         const cellScaleX = w / mapCellsW;
         const cellScaleY = h / mapCellsH;
 
+        let lastCameraLabelAt = 0;
+
         const renderLoop = () => {
             const { minimapDirtyChunks, clearMinimapDirty, cameraRef, controlsRef } = useEditorStore.getState();
 
             ctxOverlay.clearRect(0, 0, w, h);
+            if (!hasCanvasSession) {
+                frameId = requestAnimationFrame(renderLoop);
+                return;
+            }
 
             // A. Process Dirty Chunks (Update Terrain Canvas + Draw Highlight)
             if (minimapDirtyChunks.size > 0) {
@@ -186,6 +203,12 @@ export const Minimap: React.FC = () => {
             // B. Draw Camera Frustum
             const cam = cameraRef.current;
             if (cam) {
+                const now = performance.now();
+                if (now - lastCameraLabelAt > 250) {
+                    lastCameraLabelAt = now;
+                    setCameraInfo(`camera ${cam.position.x.toFixed(1)}, ${cam.position.z.toFixed(1)}`);
+                }
+
                 // Project camera frustum to ground plane (y=0)
                 // Simplified: Just project 4 corners of screen if possible, 
                 // or just camera position + target for now.
@@ -223,7 +246,7 @@ export const Minimap: React.FC = () => {
                     ctxOverlay.lineTo(groundPoints[2].x, groundPoints[2].y);
                     ctxOverlay.lineTo(groundPoints[3].x, groundPoints[3].y);
                     ctxOverlay.closePath();
-                    ctxOverlay.strokeStyle = 'white';
+                    ctxOverlay.strokeStyle = 'rgba(255, 255, 255, 0.95)';
                     ctxOverlay.lineWidth = 2;
                     ctxOverlay.stroke();
                     ctxOverlay.fillStyle = 'rgba(255, 255, 255, 0.1)';
@@ -236,10 +259,11 @@ export const Minimap: React.FC = () => {
         
         frameId = requestAnimationFrame(renderLoop);
         return () => cancelAnimationFrame(frameId);
-    }, [terrain, boardMetrics]);
+    }, [terrain, boardMetrics, hasCanvasSession]);
 
     // 3. Interaction
     const handlePointer = (e: React.PointerEvent) => {
+        if (!hasCanvasSession) return;
         if (!isDragging && e.type !== 'pointerdown') return;
         if (e.type === 'pointerdown') setIsDragging(true);
         if (e.type === 'pointerup' || e.type === 'pointerleave') {
@@ -274,29 +298,48 @@ export const Minimap: React.FC = () => {
     };
 
     return (
-        <div 
+        <div
             ref={containerRef}
-            className="absolute top-4 right-4 bg-gray-900 border border-gray-700 shadow-lg rounded p-1 select-none"
-            style={{ width: 200, height: 200 }}
+            className={`${embedded ? 'mx-auto w-[220px]' : 'absolute right-4 top-4 z-40 w-[228px]'} select-none rounded-lg border border-slate-700/80 bg-slate-950/90 p-3 text-slate-100 shadow-2xl backdrop-blur-md ${className}`}
         >
-            <canvas 
-                ref={terrainCanvasRef} 
-                width={200} 
-                height={200} 
-                className="absolute top-1 left-1"
-            />
-            <canvas 
-                ref={overlayCanvasRef}
-                width={200} 
-                height={200} 
-                className="absolute top-1 left-1 cursor-crosshair z-10"
-                onPointerDown={handlePointer}
-                onPointerMove={handlePointer}
-                onPointerUp={handlePointer}
-                onPointerLeave={handlePointer}
-            />
-            <div className="absolute bottom-1 right-1 text-[10px] text-gray-400 bg-black/50 px-1 rounded pointer-events-none">
-                {terrain.widthChunks}x{terrain.heightChunks}
+            <div className="mb-2 flex items-start justify-between gap-2">
+                <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Minimap</div>
+                    <div className="text-xs text-slate-300">{hasCanvasSession ? `${terrain.widthChunks}x${terrain.heightChunks} chunks` : 'no board open'}</div>
+                </div>
+                <div className="rounded border border-amber-700/60 bg-amber-950/40 px-2 py-1 text-[10px] text-amber-100">
+                    dirty {navDirtyChunks.size}
+                </div>
+            </div>
+            <div className="relative aspect-square w-full overflow-hidden rounded border border-slate-700 bg-black">
+                <canvas
+                    ref={terrainCanvasRef}
+                    width={200}
+                    height={200}
+                    className="absolute left-0 top-0 h-full w-full"
+                />
+                <canvas
+                    ref={overlayCanvasRef}
+                    width={200}
+                    height={200}
+                    className={`absolute left-0 top-0 z-10 h-full w-full ${hasCanvasSession ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
+                    onPointerDown={handlePointer}
+                    onPointerMove={handlePointer}
+                    onPointerUp={handlePointer}
+                    onPointerLeave={handlePointer}
+                />
+                {!hasCanvasSession ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/70 px-4 text-center text-[11px] text-slate-400">
+                        Open a board to enable minimap.
+                    </div>
+                ) : null}
+                <div className="pointer-events-none absolute bottom-1 right-1 rounded bg-black/60 px-1 text-[10px] text-slate-300">
+                    {hasCanvasSession ? boardMetrics.topology : 'empty'}
+                </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-[10px] text-slate-400">
+                <span>{hasCanvasSession ? cameraInfo : 'canvas empty'}</span>
+                <span>{activeCategory}</span>
             </div>
         </div>
     );
