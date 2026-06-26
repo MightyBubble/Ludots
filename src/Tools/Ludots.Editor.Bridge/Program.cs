@@ -598,6 +598,14 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
 
         if (!EditorRepo.TryResolveDataFile(ctx, dataFile, out var fullPath, out var checkedPaths))
         {
+            if (EditorRepo.CanServeVirtualEmptyTerrain(mapId, board))
+            {
+                return Results.File(
+                    EditorRepo.CreateEmptyReactTerrainHeader(board),
+                    "application/octet-stream",
+                    fileDownloadName: $"{mapId}_{board.Name}_map_data.bin");
+            }
+
             return Results.NotFound(new { ok = false, error = $"DataFile not found for board '{board.Name}': {dataFile}", checkedPaths });
         }
 
@@ -1020,7 +1028,7 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
         var mapR = EditorRepo.LoadMergedMapConfig(ctx, payload.MapId);
         if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {payload.MapId}" });
         boardConfig = EditorRepo.ResolveRequiredBoardByName(mapR.Map, payload.BoardName);
-        boardInfo = EditorRepo.DescribeBoard(ctx, boardConfig);
+        boardInfo = EditorRepo.DescribeBoard(ctx, payload.MapId, boardConfig);
         if (!boardConfig.NavigationEnabled)
         {
             return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
@@ -2044,6 +2052,8 @@ static string ToEditorUploadSourceUri(string fileName)
 
 static class EditorRepo
 {
+    private const int EagerEmptyTerrainFileMacroTileLimit = 16;
+
     public sealed record ModInfo(
         string Id, string Name, string Version, int Priority,
         Dictionary<string, string> Dependencies, string RootPath, string RelativePath, string LayerPath,
@@ -2230,9 +2240,9 @@ static class EditorRepo
                 Boards: Array.Empty<BoardInfo>());
         }
 
-        var boards = DescribeBoards(ctx, mapR.Map);
+        var boards = DescribeBoards(ctx, mapR.Map, mapId);
         var primary = boards.FirstOrDefault(b => string.Equals(b.Name, board.Name, StringComparison.Ordinal))
-            ?? DescribeBoard(ctx, board);
+            ?? DescribeBoard(ctx, mapId, board);
 
         return new MapInfo(
             mapId,
@@ -2255,7 +2265,7 @@ static class EditorRepo
             Boards: boards);
     }
 
-    public static IReadOnlyList<BoardInfo> DescribeBoards(ModContext ctx, Ludots.Core.Config.MapConfig map)
+    public static IReadOnlyList<BoardInfo> DescribeBoards(ModContext ctx, Ludots.Core.Config.MapConfig map, string mapId)
     {
         if (map?.Boards == null || map.Boards.Count == 0)
             return Array.Empty<BoardInfo>();
@@ -2265,13 +2275,13 @@ static class EditorRepo
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            result.Add(DescribeBoard(ctx, board));
+            result.Add(DescribeBoard(ctx, mapId, board));
         }
 
         return result;
     }
 
-    public static BoardInfo DescribeBoard(ModContext ctx, Ludots.Core.Map.Board.BoardConfig board)
+    public static BoardInfo DescribeBoard(ModContext ctx, string mapId, Ludots.Core.Map.Board.BoardConfig board)
     {
         int chunkSizeCells = board.ChunkSizeCells > 0
             ? board.ChunkSizeCells
@@ -2300,11 +2310,13 @@ static class EditorRepo
         bool hasDataFile = !string.IsNullOrWhiteSpace(board.DataFile);
         bool dataFileExists = hasDataFile && TryResolveDataFile(ctx, board.DataFile, out _, out _);
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && dataFileExists;
+        bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
+        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
         bool canBake = canEditTerrain && board.NavigationEnabled;
         string reason =
             topologyError != null ? topologyError :
             canBake ? "Ready for nav bake." :
+            canUseVirtualEmptyTerrain ? "Sparse empty terrain is virtual; missing chunks are treated as flat until saved." :
             !board.NavigationEnabled ? "Board NavigationEnabled is false." :
             !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
             !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
@@ -2437,13 +2449,20 @@ static class EditorRepo
                 throw new InvalidOperationException($"Board DataFile already exists: {board.DataFile}");
             }
 
-            CreateEmptyTerrainDataFile(board, dataPath);
+            if (ShouldCreateFullEmptyTerrainDataFile(board))
+            {
+                CreateEmptyTerrainDataFile(board, dataPath);
+            }
+            else
+            {
+                dataPath = null;
+            }
         }
 
         map.Boards.Add(board);
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
-        var boardInfo = DescribeBoard(ctx, board);
+        var boardInfo = DescribeBoard(ctx, mapId, board);
         return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, dataPath);
     }
 
@@ -2500,7 +2519,7 @@ static class EditorRepo
 
         string mapPath = WriteWritableMapConfig(ctx, mapId, map);
         var mapInfo = DescribeMap(ctx, mapId);
-        var boardInfo = DescribeBoard(ctx, board);
+        var boardInfo = DescribeBoard(ctx, mapId, board);
         return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, null);
     }
 
@@ -2535,7 +2554,7 @@ static class EditorRepo
         }
 
         var removed = map.Boards[index];
-        var removedInfo = DescribeBoard(ctx, removed);
+        var removedInfo = DescribeBoard(ctx, mapId, removed);
         string? dataPath = null;
         if (!string.IsNullOrWhiteSpace(removed.DataFile))
         {
@@ -2803,6 +2822,42 @@ static class EditorRepo
     {
         string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".vtxm" : ".bin";
         return $"{SanitizeId(mapId)}_{SanitizeId(boardName)}{extension}";
+    }
+
+    public static bool CanServeVirtualEmptyTerrain(string mapId, Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (string.IsNullOrWhiteSpace(mapId)) return false;
+        if (string.IsNullOrWhiteSpace(board.DataFile)) return false;
+        if (board.WidthInMacroTiles <= 0 || board.HeightInMacroTiles <= 0) return false;
+        string spatialType = NormalizeSpatialType(board);
+        if (!string.Equals(spatialType, "Grid", StringComparison.Ordinal) &&
+            !string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string defaultDataFile = BuildDefaultBoardDataFile(mapId, board.Name, spatialType);
+        return string.Equals(board.DataFile.Trim(), defaultDataFile, StringComparison.Ordinal);
+    }
+
+    public static byte[] CreateEmptyReactTerrainHeader(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
+        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+        using var ms = new MemoryStream(9);
+        using var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
+        bw.Write(widthChunks);
+        bw.Write(heightChunks);
+        bw.Write((byte)4);
+        bw.Flush();
+        return ms.ToArray();
+    }
+
+    private static bool ShouldCreateFullEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        return board.WidthInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit &&
+            board.HeightInMacroTiles <= EagerEmptyTerrainFileMacroTileLimit;
     }
 
     private static void CreateEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board, string outFile)

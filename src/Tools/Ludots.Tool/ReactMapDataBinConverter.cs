@@ -34,6 +34,7 @@ namespace Ludots.Tool
         private const int ChunkSize = SpatialScaleDefaults.TerrainChunkCells;
         private const int CellsPerChunk = ChunkSize * ChunkSize;
         private const int ReactCellStride = 4;
+        public const byte ReactSparseFormatVersion = 0x84;
         private const int ReactChunkBytes = CellsPerChunk * ReactCellStride;
 
         private const int PackedBytesPerChunk = CellsPerChunk;
@@ -58,7 +59,7 @@ namespace Ludots.Tool
             return ConvertToVertexMapBinary(inputPath, outputPath: string.Empty, input, output);
         }
 
-        public static MutableGridLogicTerrainField ReadGridLogicTerrainField(
+        public static LogicTerrainField ReadGridLogicTerrainField(
             string inputPath,
             int cellSizeCm = SpatialScaleDefaults.CellCm)
         {
@@ -66,7 +67,7 @@ namespace Ludots.Tool
             return ReadGridLogicTerrainField(inputPath, input, cellSizeCm);
         }
 
-        public static MutableGridLogicTerrainField ReadGridLogicTerrainField(
+        public static LogicTerrainField ReadGridLogicTerrainField(
             string inputName,
             Stream input,
             int cellSizeCm = SpatialScaleDefaults.CellCm)
@@ -83,8 +84,42 @@ namespace Ludots.Tool
 
             int widthCells = checked(widthChunks * ChunkSize);
             int heightCells = checked(heightChunks * ChunkSize);
-            var terrain = new MutableGridLogicTerrainField(widthCells, heightCells, cellSizeCm, ChunkSize);
+            var terrain = new SparseGridLogicTerrainField(widthCells, heightCells, cellSizeCm, ChunkSize);
             byte[] reactChunk = new byte[ReactChunkBytes];
+
+            if (strideOrVersion == ReactSparseFormatVersion)
+            {
+                int chunkCount = br.ReadInt32();
+                if (chunkCount < 0)
+                {
+                    throw new InvalidDataException($"Sparse React terrain '{inputName}' has negative chunk count {chunkCount}.");
+                }
+
+                for (int i = 0; i < chunkCount; i++)
+                {
+                    int cx = br.ReadInt32();
+                    int cy = br.ReadInt32();
+                    if ((uint)cx >= (uint)widthChunks || (uint)cy >= (uint)heightChunks)
+                    {
+                        throw new InvalidDataException($"Sparse React terrain '{inputName}' has chunk ({cx},{cy}) outside {widthChunks}x{heightChunks}.");
+                    }
+
+                    int read = input.Read(reactChunk, 0, reactChunk.Length);
+                    if (read != reactChunk.Length)
+                    {
+                        throw new EndOfStreamException($"Unexpected EOF when reading sparse chunk ({cx},{cy}) from '{inputName}'.");
+                    }
+
+                    LoadReactChunkIntoSparseGrid(terrain, cx, cy, reactChunk);
+                }
+
+                return terrain;
+            }
+
+            if (input.Length - input.Position == 0)
+            {
+                return terrain;
+            }
 
             for (int cy = 0; cy < heightChunks; cy++)
             {
@@ -96,34 +131,53 @@ namespace Ludots.Tool
                         throw new EndOfStreamException($"Unexpected EOF when reading chunk ({cx},{cy}) from '{inputName}'.");
                     }
 
-                    for (int ly = 0; ly < ChunkSize; ly++)
-                    {
-                        for (int lx = 0; lx < ChunkSize; lx++)
-                        {
-                            int cell = (ly * ChunkSize) + lx;
-                            int i = cell * ReactCellStride;
-
-                            byte b0 = reactChunk[i];
-                            byte b2 = reactChunk[i + 2];
-                            byte areaId = reactChunk[i + 3];
-                            byte height = (byte)((b0 >> 4) & 0x0F);
-                            byte water = (byte)(b0 & 0x0F);
-
-                            var flags = LogicTerrainSurfaceFlags.None;
-                            if ((b2 & 0b1000_0000) != 0) flags |= LogicTerrainSurfaceFlags.Ramp;
-                            if ((b2 & 0b0000_1000) != 0) flags |= LogicTerrainSurfaceFlags.Blocked;
-                            if (water > height) flags |= LogicTerrainSurfaceFlags.Water;
-
-                            terrain.SetCell(
-                                cx * ChunkSize + lx,
-                                cy * ChunkSize + ly,
-                                new LogicTerrainCell(height, water, flags, areaId));
-                        }
-                    }
+                    LoadReactChunkIntoSparseGrid(terrain, cx, cy, reactChunk);
                 }
             }
 
             return terrain;
+        }
+
+        private static void LoadReactChunkIntoSparseGrid(
+            SparseGridLogicTerrainField terrain,
+            int chunkX,
+            int chunkY,
+            byte[] reactChunk)
+        {
+            var cells = new LogicTerrainCell[CellsPerChunk];
+            bool hasAuthoredCell = false;
+
+            for (int ly = 0; ly < ChunkSize; ly++)
+            {
+                for (int lx = 0; lx < ChunkSize; lx++)
+                {
+                    int cell = (ly * ChunkSize) + lx;
+                    int i = cell * ReactCellStride;
+
+                    byte b0 = reactChunk[i];
+                    byte b2 = reactChunk[i + 2];
+                    byte areaId = reactChunk[i + 3];
+                    byte height = (byte)((b0 >> 4) & 0x0F);
+                    byte water = (byte)(b0 & 0x0F);
+
+                    var flags = LogicTerrainSurfaceFlags.None;
+                    if ((b2 & 0b1000_0000) != 0) flags |= LogicTerrainSurfaceFlags.Ramp;
+                    if ((b2 & 0b0000_1000) != 0) flags |= LogicTerrainSurfaceFlags.Blocked;
+                    if (water > height) flags |= LogicTerrainSurfaceFlags.Water;
+
+                    var logicCell = new LogicTerrainCell(height, water, flags, areaId);
+                    cells[cell] = logicCell;
+                    hasAuthoredCell |= height != 0 ||
+                        water != 0 ||
+                        flags != LogicTerrainSurfaceFlags.None ||
+                        areaId != 0;
+                }
+            }
+
+            if (hasAuthoredCell)
+            {
+                terrain.SetChunk(chunkX, chunkY, cells);
+            }
         }
 
         private static ReactMapConversionSummary ConvertToVertexMapBinary(string inputPath, string outputPath, Stream input, Stream output)
@@ -168,71 +222,108 @@ namespace Ludots.Tool
             var ice = new bool[mapCells];
             var areaIds = new byte[mapCells];
 
-            for (int cy = 0; cy < heightChunks; cy++)
+            void LoadReactChunkIntoArrays(int cx, int cy)
             {
-                for (int cx = 0; cx < widthChunks; cx++)
+                for (int ly = 0; ly < ChunkSize; ly++)
                 {
-                    int read = input.Read(reactChunk, 0, reactChunk.Length);
-                    if (read != reactChunk.Length)
+                    for (int lx = 0; lx < ChunkSize; lx++)
                     {
-                        throw new EndOfStreamException($"Unexpected EOF when reading chunk ({cx},{cy}).");
-                    }
+                        int cell = (ly * ChunkSize) + lx;
+                        int i = cell * ReactCellStride;
 
-                    for (int ly = 0; ly < ChunkSize; ly++)
-                    {
-                        for (int lx = 0; lx < ChunkSize; lx++)
-                        {
-                            int cell = (ly * ChunkSize) + lx;
-                            int i = cell * ReactCellStride;
+                        byte b0 = reactChunk[i];
+                        byte b1 = reactChunk[i + 1];
+                        byte b2 = reactChunk[i + 2];
+                        byte areaId = reactChunk[i + 3];
 
-                            byte b0 = reactChunk[i];
-                            byte b1 = reactChunk[i + 1];
-                            byte b2 = reactChunk[i + 2];
-                            byte areaId = reactChunk[i + 3];
+                        byte height = (byte)((b0 >> 4) & 0x0F);
+                        byte water = (byte)(b0 & 0x0F);
+                        byte biome = (byte)((b1 >> 4) & 0x0F);
+                        byte veg = (byte)(b1 & 0x0F);
 
-                            byte height = (byte)((b0 >> 4) & 0x0F);
-                            byte water = (byte)(b0 & 0x0F);
-                            byte biome = (byte)((b1 >> 4) & 0x0F);
-                            byte veg = (byte)(b1 & 0x0F);
+                        bool isRamp = (b2 & 0b1000_0000) != 0;
+                        bool isSnow = (b2 & 0b0100_0000) != 0;
+                        bool isMud = (b2 & 0b0010_0000) != 0;
+                        bool isIce = (b2 & 0b0001_0000) != 0;
+                        bool isBlocked = (b2 & 0b0000_1000) != 0;
 
-                            bool isRamp = (b2 & 0b1000_0000) != 0;
-                            bool isSnow = (b2 & 0b0100_0000) != 0;
-                            bool isMud = (b2 & 0b0010_0000) != 0;
-                            bool isIce = (b2 & 0b0001_0000) != 0;
-                            bool isBlocked = (b2 & 0b0000_1000) != 0;
+                        int globalC = cx * ChunkSize + lx;
+                        int globalR = cy * ChunkSize + ly;
+                        int globalIndex = globalR * mapWidth + globalC;
 
-                            int globalC = cx * ChunkSize + lx;
-                            int globalR = cy * ChunkSize + ly;
-                            int globalIndex = globalR * mapWidth + globalC;
+                        heights[globalIndex] = height;
+                        waters[globalIndex] = water;
+                        biomes[globalIndex] = biome;
+                        vegs[globalIndex] = veg;
+                        ramp[globalIndex] = isRamp;
+                        blocked[globalIndex] = isBlocked;
+                        snow[globalIndex] = isSnow;
+                        mud[globalIndex] = isMud;
+                        ice[globalIndex] = isIce;
+                        areaIds[globalIndex] = areaId;
 
-                            heights[globalIndex] = height;
-                            waters[globalIndex] = water;
-                            biomes[globalIndex] = biome;
-                            vegs[globalIndex] = veg;
-                            ramp[globalIndex] = isRamp;
-                            blocked[globalIndex] = isBlocked;
-                            snow[globalIndex] = isSnow;
-                            mud[globalIndex] = isMud;
-                            ice[globalIndex] = isIce;
-                            areaIds[globalIndex] = areaId;
+                        if (height < summary.MinHeight) summary.MinHeight = height;
+                        if (height > summary.MaxHeight) summary.MaxHeight = height;
+                        if (water < summary.MinWater) summary.MinWater = water;
+                        if (water > summary.MaxWater) summary.MaxWater = water;
 
-                            if (height < summary.MinHeight) summary.MinHeight = height;
-                            if (height > summary.MaxHeight) summary.MaxHeight = height;
-                            if (water < summary.MinWater) summary.MinWater = water;
-                            if (water > summary.MaxWater) summary.MaxWater = water;
+                        if (!summary.BiomeCounts.TryGetValue(biome, out int bc)) bc = 0;
+                        summary.BiomeCounts[biome] = bc + 1;
 
-                            if (!summary.BiomeCounts.TryGetValue(biome, out int bc)) bc = 0;
-                            summary.BiomeCounts[biome] = bc + 1;
+                        if (!summary.AreaCounts.TryGetValue(areaId, out int ac)) ac = 0;
+                        summary.AreaCounts[areaId] = ac + 1;
 
-                            if (!summary.AreaCounts.TryGetValue(areaId, out int ac)) ac = 0;
-                            summary.AreaCounts[areaId] = ac + 1;
-
-                            if (!summary.VegetationCounts.TryGetValue(veg, out int vc)) vc = 0;
-                            summary.VegetationCounts[veg] = vc + 1;
-                        }
+                        if (!summary.VegetationCounts.TryGetValue(veg, out int vc)) vc = 0;
+                        summary.VegetationCounts[veg] = vc + 1;
                     }
                 }
             }
+
+            if (strideOrVersion == ReactSparseFormatVersion)
+            {
+                int chunkCount = br.ReadInt32();
+                if (chunkCount < 0)
+                {
+                    throw new InvalidDataException($"Sparse React terrain '{inputPath}' has negative chunk count {chunkCount}.");
+                }
+
+                for (int i = 0; i < chunkCount; i++)
+                {
+                    int cx = br.ReadInt32();
+                    int cy = br.ReadInt32();
+                    if ((uint)cx >= (uint)widthChunks || (uint)cy >= (uint)heightChunks)
+                    {
+                        throw new InvalidDataException($"Sparse React terrain '{inputPath}' has chunk ({cx},{cy}) outside {widthChunks}x{heightChunks}.");
+                    }
+
+                    int read = input.Read(reactChunk, 0, reactChunk.Length);
+                    if (read != reactChunk.Length)
+                    {
+                        throw new EndOfStreamException($"Unexpected EOF when reading sparse chunk ({cx},{cy}).");
+                    }
+
+                    LoadReactChunkIntoArrays(cx, cy);
+                }
+            }
+            else if (input.Length - input.Position > 0)
+            {
+                for (int cy = 0; cy < heightChunks; cy++)
+                {
+                    for (int cx = 0; cx < widthChunks; cx++)
+                    {
+                        int read = input.Read(reactChunk, 0, reactChunk.Length);
+                        if (read != reactChunk.Length)
+                        {
+                            throw new EndOfStreamException($"Unexpected EOF when reading chunk ({cx},{cy}).");
+                        }
+
+                        LoadReactChunkIntoArrays(cx, cy);
+                    }
+                }
+            }
+
+            if (summary.MinHeight == 255) summary.MinHeight = 0;
+            if (summary.MinWater == 255) summary.MinWater = 0;
 
             static byte HeightAt(byte[] data, int w, int h, int c, int r)
             {
@@ -449,15 +540,30 @@ namespace Ludots.Tool
                 throw new InvalidDataException($"Invalid chunk dimensions in '{inputName}': {widthChunks}x{heightChunks}");
             }
 
-            if (strideOrVersion != ReactCellStride)
+            if (strideOrVersion != ReactCellStride && strideOrVersion != ReactSparseFormatVersion)
             {
-                throw new InvalidDataException($"React terrain cell stride mismatch in '{inputName}'. Expected={ReactCellStride}, actual={strideOrVersion}.");
+                throw new InvalidDataException($"React terrain format mismatch in '{inputName}'. Expected stride={ReactCellStride} or sparse version={ReactSparseFormatVersion}, actual={strideOrVersion}.");
+            }
+
+            long remaining = input.Length - input.Position;
+            if (strideOrVersion == ReactSparseFormatVersion)
+            {
+                if (remaining < sizeof(int))
+                {
+                    throw new InvalidDataException($"Sparse React terrain '{inputName}' too small. Missing resident chunk count.");
+                }
+
+                return;
             }
 
             long expectedBody = (long)widthChunks * heightChunks * ReactChunkBytes;
-            long remaining = input.Length - input.Position;
             if (remaining < expectedBody)
             {
+                if (remaining == 0)
+                {
+                    return;
+                }
+
                 throw new InvalidDataException($"Input '{inputName}' too small. Expected body bytes={expectedBody}, actual remaining={remaining}.");
             }
         }

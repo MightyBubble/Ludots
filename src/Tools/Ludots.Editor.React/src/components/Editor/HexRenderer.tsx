@@ -14,6 +14,7 @@ import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
 const FULL_RENDER_CHUNK_LIMIT = 64;
 const MEDIUM_RENDER_CHUNK_LIMIT = 1024;
+const MAX_TERRAIN_LOD_PATCHES_PER_AXIS = 192;
 const INITIAL_RENDER_FRAME_BUDGET_MS = 12;
 type MouseAction = (typeof THREE.MOUSE)[keyof typeof THREE.MOUSE];
 const DISABLED_MOUSE_BUTTON = -1 as MouseAction;
@@ -292,23 +293,28 @@ export const HexRenderer: React.FC = () => {
             return height;
         };
 
-        for (let cy = 0; cy < currentTerrain.heightChunks; cy++) {
-            for (let cx = 0; cx < currentTerrain.widthChunks; cx++) {
-                const sampleC = Math.min(currentTerrain.widthChunks * chunkSize - 1, cx * chunkSize + Math.floor(chunkSize / 2));
-                const sampleR = Math.min(currentTerrain.heightChunks * chunkSize - 1, cy * chunkSize + Math.floor(chunkSize / 2));
+        const lodStepX = Math.max(1, Math.ceil(currentTerrain.widthChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+        const lodStepY = Math.max(1, Math.ceil(currentTerrain.heightChunks / MAX_TERRAIN_LOD_PATCHES_PER_AXIS));
+
+        for (let cy = 0; cy < currentTerrain.heightChunks; cy += lodStepY) {
+            for (let cx = 0; cx < currentTerrain.widthChunks; cx += lodStepX) {
+                const nextCx = Math.min(currentTerrain.widthChunks, cx + lodStepX);
+                const nextCy = Math.min(currentTerrain.heightChunks, cy + lodStepY);
+                const sampleC = Math.min(currentTerrain.widthChunks * chunkSize - 1, (cx * chunkSize) + Math.floor(((nextCx - cx) * chunkSize) / 2));
+                const sampleR = Math.min(currentTerrain.heightChunks * chunkSize - 1, (cy * chunkSize) + Math.floor(((nextCy - cy) * chunkSize) / 2));
                 const height = currentTerrain.getHeight(sampleC, sampleR);
                 const water = currentTerrain.getWater(sampleC, sampleR);
                 const biome = currentTerrain.getBiome(sampleC, sampleR);
                 const color = getLodColor(height, water, biome);
                 const x0 = cx * chunkWorldW;
-                const x1 = (cx + 1) * chunkWorldW;
+                const x1 = nextCx * chunkWorldW;
                 const z0 = cy * chunkWorldH;
-                const z1 = (cy + 1) * chunkWorldH;
+                const z1 = nextCy * chunkWorldH;
                 const flatY = Math.max(height, water) * 2.0 - 0.18;
                 const c0 = cx * chunkSize;
-                const c1 = Math.min((cx + 1) * chunkSize, currentTerrain.widthChunks * chunkSize);
+                const c1 = Math.min(nextCx * chunkSize, currentTerrain.widthChunks * chunkSize);
                 const r0 = cy * chunkSize;
-                const r1 = Math.min((cy + 1) * chunkSize, currentTerrain.heightChunks * chunkSize);
+                const r1 = Math.min(nextCy * chunkSize, currentTerrain.heightChunks * chunkSize);
                 const y00 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r0) * 2.0 - 0.18 : flatY;
                 const y10 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r0) * 2.0 - 0.18 : flatY;
                 const y11 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r1) * 2.0 - 0.18 : flatY;

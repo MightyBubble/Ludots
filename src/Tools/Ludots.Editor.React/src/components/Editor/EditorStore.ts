@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { TerrainStore } from '../../Core/Map/TerrainStore';
+import { REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE, TerrainStore } from '../../Core/Map/TerrainStore';
 import {
     DEFAULT_BOARD_METRICS,
     type BoardMetrics,
@@ -171,7 +171,7 @@ export interface EditorState {
     
     // Map Actions
     initMap: (w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
-    loadMap: (data: Uint8Array, w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
+    loadMap: (data: Uint8Array, w: number, h: number, metrics?: Partial<BoardMetrics>, format?: number) => void;
     refreshMods: () => Promise<void>;
     selectMod: (modId: string) => Promise<void>;
     selectMap: (mapId: string) => void;
@@ -387,7 +387,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     })),
 
     initMap: (w, h, metrics) => set({
-        terrain: new TerrainStore(w, h), 
+        terrain: new TerrainStore(w, h, { initializeChunks: false }),
         boardMetrics: normalizeBoardMetrics(metrics ?? get().boardMetrics),
         canvasSessionKind: 'local',
         canvasSessionLabel: `New ${w}x${h} terrain`,
@@ -405,13 +405,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         navSimulationVersion: Date.now(),
         loadingState: { isLoading: true, message: 'Initializing Map...', progress: 0 }
     }),
-    loadMap: (data, w, h, metrics) => {
-        const newTerrain = new TerrainStore(w, h);
-        newTerrain.loadFromBytes(w, h, data);
+    loadMap: (data, w, h, metrics, format = REACT_TERRAIN_STRIDE) => {
+        const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
+        newTerrain.loadFromBytes(w, h, data, format);
         const boardMetrics = normalizeBoardMetrics(metrics ?? get().boardMetrics);
-        // Mark all as dirty for minimap
-        const allChunks = new Set<string>();
-        for(let y=0; y<h; y++) for(let x=0; x<w; x++) allChunks.add(`${x},${y}`);
+        const allChunks = new Set<string>(newTerrain.chunks.keys());
         
         set({ 
             terrain: newTerrain, 
@@ -768,14 +766,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const w = view.getInt32(0, true);
         const h = view.getInt32(4, true);
         const stride = view.getUint8(8);
-        if (stride !== 4) throw new Error(`Invalid terrain stride ${stride}`);
+        if (stride !== REACT_TERRAIN_STRIDE && stride !== REACT_TERRAIN_SPARSE_VERSION) throw new Error(`Invalid terrain format ${stride}`);
         const data = new Uint8Array(buf.slice(9));
-        const newTerrain = new TerrainStore(w, h);
-        newTerrain.loadFromBytes(w, h, data);
-        const allChunks = new Set<string>();
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) allChunks.add(`${x},${y}`);
-        }
+        const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
+        newTerrain.loadFromBytes(w, h, data, stride);
+        const allChunks = new Set<string>(newTerrain.chunks.keys());
         set({
             terrain: newTerrain,
             boardMetrics,
@@ -854,12 +849,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
 
         setLoading(true, 'Saving Terrain...', 60);
-        const header = new Uint8Array(9);
-        const view = new DataView(header.buffer);
-        view.setInt32(0, terrain.widthChunks, true);
-        view.setInt32(4, terrain.heightChunks, true);
-        view.setUint8(8, 4);
-        const blob = new Blob([header, terrain.serialize()], { type: 'application/octet-stream' });
+        const terrainBinary = terrain.toReactTerrainBinary();
+        const blob = new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
 
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`, {
             method: 'PUT',

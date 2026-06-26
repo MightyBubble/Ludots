@@ -125,7 +125,7 @@ namespace Ludots.Tests.Architecture
                     blocked: false,
                     areaId: 7);
 
-                MutableGridLogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                LogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
                     reactPath,
                     cellSizeCm: 125);
                 LogicTerrainCell cell = terrain.GetCell(0, 0);
@@ -136,6 +136,56 @@ namespace Ludots.Tests.Architecture
                 Assert.That(cell.HeightLevel, Is.EqualTo(2));
                 Assert.That(cell.AreaId, Is.EqualTo(7));
                 Assert.That(cell.IsBlocked, Is.False);
+
+                var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
+                bool ok = NavTileBuilder.TryBuildTile(terrain, 0, 0, 1, config, out NavTile tile, out NavBakeArtifact artifact);
+
+                Assert.That(ok, Is.True, artifact.Message);
+                Assert.That(tile.TriangleCount, Is.GreaterThan(0));
+            }
+            finally
+            {
+                if (File.Exists(reactPath))
+                {
+                    File.Delete(reactPath);
+                }
+            }
+        }
+
+        [Test]
+        public void ReactSparseGridLoader_DefaultsMissingChunksToFlatTerrain()
+        {
+            string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-sparse-grid-terrain-" + Guid.NewGuid().ToString("N") + ".bin");
+            try
+            {
+                WriteReactSparseStride4Map(
+                    reactPath,
+                    widthChunks: 64,
+                    heightChunks: 64,
+                    residentChunkX: 7,
+                    residentChunkY: 5,
+                    height: 4,
+                    water: 0,
+                    biome: 2,
+                    vegetation: 0,
+                    blocked: true,
+                    areaId: 11);
+
+                LogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                    reactPath,
+                    cellSizeCm: 400);
+                LogicTerrainCell authored = terrain.GetCell(7 * SpatialScaleDefaults.TerrainChunkCells, 5 * SpatialScaleDefaults.TerrainChunkCells);
+                LogicTerrainCell missing = terrain.GetCell(0, 0);
+
+                Assert.That(terrain.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+                Assert.That(terrain.WidthChunks, Is.EqualTo(64));
+                Assert.That(terrain.HeightChunks, Is.EqualTo(64));
+                Assert.That(authored.HeightLevel, Is.EqualTo(4));
+                Assert.That(authored.AreaId, Is.EqualTo(11));
+                Assert.That(authored.IsBlocked, Is.True);
+                Assert.That(missing.HeightLevel, Is.EqualTo(0));
+                Assert.That(missing.AreaId, Is.EqualTo(0));
+                Assert.That(missing.IsBlocked, Is.False);
 
                 var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
                 bool ok = NavTileBuilder.TryBuildTile(terrain, 0, 0, 1, config, out NavTile tile, out NavBakeArtifact artifact);
@@ -203,6 +253,36 @@ namespace Ludots.Tests.Architecture
             writer.Write(1);
             writer.Write(1);
             writer.Write((byte)4);
+
+            var chunk = new byte[VertexChunk.TotalCells * 4];
+            chunk[0] = (byte)(((height & 0x0F) << 4) | (water & 0x0F));
+            chunk[1] = (byte)(((biome & 0x0F) << 4) | (vegetation & 0x0F));
+            chunk[2] = blocked ? (byte)0b0000_1000 : (byte)0;
+            chunk[3] = areaId;
+            writer.Write(chunk);
+        }
+
+        private static void WriteReactSparseStride4Map(
+            string path,
+            int widthChunks,
+            int heightChunks,
+            int residentChunkX,
+            int residentChunkY,
+            byte height,
+            byte water,
+            byte biome,
+            byte vegetation,
+            bool blocked,
+            byte areaId)
+        {
+            using var stream = File.Create(path);
+            using var writer = new BinaryWriter(stream);
+            writer.Write(widthChunks);
+            writer.Write(heightChunks);
+            writer.Write(ReactMapDataBinConverter.ReactSparseFormatVersion);
+            writer.Write(1);
+            writer.Write(residentChunkX);
+            writer.Write(residentChunkY);
 
             var chunk = new byte[VertexChunk.TotalCells * 4];
             chunk[0] = (byte)(((height & 0x0F) << 4) | (water & 0x0F));

@@ -36,7 +36,8 @@ import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type B
 import { Minimap } from './Minimap';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
 import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
-import { CellCm, DefaultBoardMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
+import { CHUNK_BYTE_SIZE, REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE } from '../../Core/Map/TerrainStore';
+import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
 
 const FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline-v2';
 const LEGACY_FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline';
@@ -172,6 +173,7 @@ function numericValue(value: unknown, fallback: number): number {
 type BoardAllocationPreview = {
     isValid: boolean;
     withinEditorBudget: boolean;
+    exceedsDefaultWorldFootprint: boolean;
     snappedToMacroTile: boolean;
     requestedWidthMeters: number;
     requestedHeightMeters: number;
@@ -186,6 +188,8 @@ type BoardAllocationPreview = {
     allocatedHeightCells: number;
     widthTerrainChunks: number;
     heightTerrainChunks: number;
+    totalTerrainChunks: number;
+    fullTerrainBytes: number;
     allocatedWidthMeters: number;
     allocatedHeightMeters: number;
 };
@@ -207,6 +211,8 @@ function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSi
     const chunksPerMacroTile = MacroTileCells / TerrainChunkCells;
     const widthTerrainChunks = widthMacroTiles * chunksPerMacroTile;
     const heightTerrainChunks = heightMacroTiles * chunksPerMacroTile;
+    const totalTerrainChunks = widthTerrainChunks * heightTerrainChunks;
+    const fullTerrainBytes = totalTerrainChunks * CHUNK_BYTE_SIZE;
     const allocatedWidthMeters = allocatedWidthCells * safeCellSizeCm / 100;
     const allocatedHeightMeters = allocatedHeightCells * safeCellSizeCm / 100;
     const macroTileMeters = MacroTileCells * safeCellSizeCm / 100;
@@ -217,11 +223,10 @@ function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSi
 
     return {
         isValid: requestedWidthMeters > 0 && requestedHeightMeters > 0,
-        withinEditorBudget:
-            widthMacroTiles > 0 &&
-            heightMacroTiles > 0 &&
-            widthMacroTiles <= DefaultBoardMacroTilesPerAxis &&
-            heightMacroTiles <= DefaultBoardMacroTilesPerAxis,
+        withinEditorBudget: widthMacroTiles > 0 && heightMacroTiles > 0,
+        exceedsDefaultWorldFootprint:
+            widthMacroTiles > DefaultWorldWidthMacroTiles ||
+            heightMacroTiles > DefaultWorldHeightMacroTiles,
         snappedToMacroTile,
         requestedWidthMeters,
         requestedHeightMeters,
@@ -236,6 +241,8 @@ function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSi
         allocatedHeightCells,
         widthTerrainChunks,
         heightTerrainChunks,
+        totalTerrainChunks,
+        fullTerrainBytes,
         allocatedWidthMeters,
         allocatedHeightMeters,
     };
@@ -243,6 +250,18 @@ function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSi
 
 function formatMeters(value: number): string {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function formatBytes(value: number): string {
+    if (!Number.isFinite(value) || value <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let size = value;
+    let unit = 0;
+    while (size >= 1024 && unit < units.length - 1) {
+        size /= 1024;
+        unit++;
+    }
+    return `${size.toLocaleString(undefined, { maximumFractionDigits: unit === 0 ? 0 : 1 })} ${units[unit]}`;
 }
 
 function parseDraftNumber(value: string): number {
@@ -444,16 +463,25 @@ export const Toolbar: React.FC = () => {
         () => deriveBoardAllocation(newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue),
         [newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue],
     );
+    const newBoardWithinFullFileBudget =
+        newBoardAllocation.widthMacroTiles > 0 &&
+        newBoardAllocation.heightMacroTiles > 0 &&
+        newBoardAllocation.widthMacroTiles <= DefaultEditorEagerFullTerrainFileMacroTilesPerAxis &&
+        newBoardAllocation.heightMacroTiles <= DefaultEditorEagerFullTerrainFileMacroTilesPerAxis;
+    const newMapCreateWarning = newMapAllocation.exceedsDefaultWorldFootprint
+        ? `This draft is larger than the default ${DefaultWorldWidthMacroTiles}x${DefaultWorldHeightMacroTiles} MacroTile world footprint. It will still open as sparse terrain; empty chunks are allocated only when painted.`
+        : '';
     const newMapCreateDisabledReason = !isPositiveFinite(newMapWidthMetersValue) || !isPositiveFinite(newMapHeightMetersValue)
         ? 'Enter positive map width and height in meters.'
         : !isPositiveFinite(newMapCellSizeCmValue)
             ? 'Enter a positive grid cell size in centimeters.'
             : newTopology === 'HexGrid' && !isPositiveFinite(newMapHexEdgeLengthCmValue)
                 ? 'Enter a positive hex edge length in centimeters.'
-                : !newMapAllocation.withinEditorBudget
-                    ? `Requested size allocates ${newMapAllocation.widthMacroTiles}x${newMapAllocation.heightMacroTiles} MacroTiles; editor draft cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
-                    : '';
+                : '';
     const newMapCanCreate = newMapCreateDisabledReason.length === 0;
+    const newBoardCreateWarning = newBoardWithinFullFileBudget
+        ? ''
+        : `This board is ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles. Bridge will create MapConfig first; Save writes sparse terrain instead of the ${formatBytes(newBoardAllocation.fullTerrainBytes)} full-file equivalent.`;
     const newBoardCreateDisabledReason = !newBoardName.trim()
         ? 'Board name is required.'
         : !isPositiveFinite(newBoardWidthMetersValue) || !isPositiveFinite(newBoardHeightMetersValue)
@@ -462,9 +490,7 @@ export const Toolbar: React.FC = () => {
                 ? 'Enter a positive grid cell size in centimeters.'
                 : newBoardTopology === 'HexGrid' && !isPositiveFinite(newBoardHexEdgeLengthCmValue)
                     ? 'Enter a positive hex edge length in centimeters.'
-                    : !newBoardAllocation.withinEditorBudget
-                        ? `Requested size allocates ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles; editor create cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
-                        : '';
+                    : '';
     const newBoardCanCreate = newBoardCreateDisabledReason.length === 0;
     const bakeButtonDisabled = !selectedNavReady || navBakeState.phase === 'estimating' || navBakeState.phase === 'baking';
 
@@ -646,13 +672,8 @@ export const Toolbar: React.FC = () => {
     ];
 
     const buildMapBlob = () => {
-        const data = terrain.serialize();
-        const header = new Uint8Array(9);
-        const view = new DataView(header.buffer);
-        view.setInt32(0, terrain.widthChunks, true);
-        view.setInt32(4, terrain.heightChunks, true);
-        view.setUint8(8, 4);
-        return new Blob([header, data], { type: 'application/octet-stream' });
+        const terrainBinary = terrain.toReactTerrainBinary();
+        return new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
     };
 
     const handleDownload = () => {
@@ -1302,13 +1323,13 @@ export const Toolbar: React.FC = () => {
             const h = view.getInt32(4, true);
             const stride = view.getUint8(8);
 
-            if (stride !== 4) {
-                alert(`Invalid map stride. Expected 4, got ${stride}. Please recreate map.`);
+            if (stride !== REACT_TERRAIN_STRIDE && stride !== REACT_TERRAIN_SPARSE_VERSION) {
+                alert(`Invalid map terrain format. Expected ${REACT_TERRAIN_STRIDE} or ${REACT_TERRAIN_SPARSE_VERSION}, got ${stride}. Please recreate map.`);
                 return;
             }
 
             const data = new Uint8Array(buffer.slice(9));
-            loadMap(data, w, h, boardMetrics);
+            loadMap(data, w, h, boardMetrics, stride);
         };
         reader.readAsArrayBuffer(file);
     };
@@ -2815,7 +2836,7 @@ export const Toolbar: React.FC = () => {
                                     <option value="HexGrid">HexGrid</option>
                                 </select>
                             </label>
-                            <div className={`rounded border p-2 text-[10px] leading-snug ${newMapAllocation.withinEditorBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-amber-800/80 bg-amber-950/30 text-amber-100'}`}>
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newMapAllocation.exceedsDefaultWorldFootprint ? 'border-sky-800/80 bg-sky-950/30 text-sky-100' : 'border-slate-800 bg-slate-900/60 text-slate-500'}`}>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
                                         <div className="uppercase tracking-wide text-slate-600">Allocated extent</div>
@@ -2833,15 +2854,23 @@ export const Toolbar: React.FC = () => {
                                         <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
                                         <div className="font-mono text-slate-200">{newMapAllocation.widthMacroTiles} x {newMapAllocation.heightMacroTiles}</div>
                                     </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Sparse resident</div>
+                                        <div className="font-mono text-slate-200">0 / {newMapAllocation.totalTerrainChunks.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Full file equivalent</div>
+                                        <div className="font-mono text-slate-200">{formatBytes(newMapAllocation.fullTerrainBytes)}</div>
+                                    </div>
                                 </div>
                                 <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
                                     {newMapAllocation.snappedToMacroTile
-                                        ? 'Local draft allocation snaps upward to whole MacroTiles; chunk count is derived.'
-                                        : 'Meters align exactly with MacroTile allocation; no chunk count is authored.'}
+                                        ? 'Local draft allocation snaps upward to whole MacroTiles. Empty terrain chunks are sparse and created only when painted.'
+                                        : 'Meters align exactly with MacroTile allocation. Empty terrain chunks are sparse and created only when painted.'}
                                 </div>
-                                {!newMapAllocation.withinEditorBudget ? (
-                                    <div className="mt-2 rounded border border-amber-700/70 bg-amber-950/50 px-2 py-1 text-amber-100">
-                                        {newMapCreateDisabledReason}
+                                {newMapCreateWarning ? (
+                                    <div className="mt-2 rounded border border-sky-700/70 bg-sky-950/50 px-2 py-1 text-sky-100">
+                                        {newMapCreateWarning}
                                     </div>
                                 ) : null}
                             </div>
@@ -2856,7 +2885,7 @@ export const Toolbar: React.FC = () => {
                                     onClick={handleNewMap}
                                     className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
                                     disabled={!newMapCanCreate}
-                                    title={newMapCanCreate ? 'Create local terrain draft from desired meters and SSOT constants' : newMapCreateDisabledReason}
+                                    title={newMapCanCreate ? (newMapCreateWarning || 'Create local terrain draft from desired meters and SSOT constants') : newMapCreateDisabledReason}
                                 >
                                     Create
                                 </button>
@@ -2948,7 +2977,7 @@ export const Toolbar: React.FC = () => {
                                 />
                                 <span>Navigation enabled</span>
                             </label>
-                            <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardAllocation.withinEditorBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-amber-800/80 bg-amber-950/30 text-amber-100'}`}>
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardWithinFullFileBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-sky-800/80 bg-sky-950/30 text-sky-100'}`}>
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
                                         <div className="uppercase tracking-wide text-slate-600">Requested</div>
@@ -2974,15 +3003,23 @@ export const Toolbar: React.FC = () => {
                                         <div className="uppercase tracking-wide text-slate-600">Unit constants</div>
                                         <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.macroTileMeters)}m / {formatMeters(newBoardAllocation.terrainChunkMeters)}m</div>
                                     </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Full terrain file</div>
+                                        <div className="font-mono text-slate-200">{formatBytes(newBoardAllocation.fullTerrainBytes)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Eager file threshold</div>
+                                        <div className="font-mono text-slate-200">{DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} x {DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} MacroTiles</div>
+                                    </div>
                                 </div>
                                 <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
                                     {newBoardAllocation.snappedToMacroTile
-                                        ? 'The editor snaps allocation upward to whole MacroTiles, then derives Terrain/NavTile count from TerrainChunkCells.'
-                                        : 'Meters align exactly with MacroTile allocation. No chunk count is authored by the user.'}
+                                        ? 'The editor snaps allocation upward to whole MacroTiles. Large boards are created sparse; first save writes only resident terrain chunks.'
+                                        : 'Meters align exactly with MacroTile allocation. Large boards are created sparse; first save writes only resident terrain chunks.'}
                                 </div>
-                                {!newBoardAllocation.withinEditorBudget ? (
-                                    <div className="mt-2 rounded border border-amber-700/70 bg-amber-950/50 px-2 py-1 text-amber-100">
-                                        {newBoardCreateDisabledReason}
+                                {!newBoardWithinFullFileBudget ? (
+                                    <div className="mt-2 rounded border border-sky-700/70 bg-sky-950/50 px-2 py-1 text-sky-100">
+                                        {newBoardCreateWarning}
                                     </div>
                                 ) : null}
                             </div>
@@ -2997,7 +3034,7 @@ export const Toolbar: React.FC = () => {
                                     onClick={handleCreateBoard}
                                     className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
                                     disabled={!newBoardCanCreate}
-                                    title={newBoardCanCreate ? 'Create board from desired meters and SSOT constants' : newBoardCreateDisabledReason}
+                                    title={newBoardCanCreate ? (newBoardCreateWarning || 'Create board from desired meters and SSOT constants') : newBoardCreateDisabledReason}
                                 >
                                     Create Board
                                 </button>

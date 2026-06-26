@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
@@ -254,6 +255,101 @@ namespace Ludots.Core.Navigation.Terrain
             xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
             zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
         }
+    }
+
+    public sealed class SparseGridLogicTerrainField : LogicTerrainField
+    {
+        private readonly Dictionary<long, LogicTerrainCell[]> _chunks = new Dictionary<long, LogicTerrainCell[]>();
+        private readonly LogicTerrainCell _defaultCell;
+
+        public SparseGridLogicTerrainField(
+            int widthCells,
+            int heightCells,
+            int cellSizeCm = SpatialScaleDefaults.CellCm,
+            int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
+            LogicTerrainCell defaultCell = default)
+            : base(widthCells, heightCells, chunkSizeCells)
+        {
+            if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+            CellSizeCm = cellSizeCm;
+            _defaultCell = defaultCell.Cost > 0f ? defaultCell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+        }
+
+        public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
+
+        public int CellSizeCm { get; }
+
+        public int ResidentChunkCount => _chunks.Count;
+
+        public override int HorizontalStepCm => CellSizeCm;
+
+        public override int VerticalStepCm => CellSizeCm;
+
+        public void SetCell(int col, int row, LogicTerrainCell cell)
+        {
+            if (!IsInBounds(col, row)) throw new ArgumentOutOfRangeException();
+
+            int chunkX = col / ChunkSizeCells;
+            int chunkY = row / ChunkSizeCells;
+            int localX = col - chunkX * ChunkSizeCells;
+            int localY = row - chunkY * ChunkSizeCells;
+            LogicTerrainCell[] chunk = GetOrCreateChunk(chunkX, chunkY);
+            chunk[localY * ChunkSizeCells + localX] = cell;
+        }
+
+        public void SetChunk(int chunkX, int chunkY, LogicTerrainCell[] cells)
+        {
+            if ((uint)chunkX >= (uint)WidthChunks) throw new ArgumentOutOfRangeException(nameof(chunkX));
+            if ((uint)chunkY >= (uint)HeightChunks) throw new ArgumentOutOfRangeException(nameof(chunkY));
+            if (cells == null) throw new ArgumentNullException(nameof(cells));
+            int expected = checked(ChunkSizeCells * ChunkSizeCells);
+            if (cells.Length != expected)
+            {
+                throw new ArgumentException($"SparseGridLogicTerrainField chunk requires {expected} cells, got {cells.Length}.", nameof(cells));
+            }
+
+            _chunks[ChunkKey(chunkX, chunkY)] = cells;
+        }
+
+        public override LogicTerrainCell GetCell(int col, int row)
+        {
+            if (!IsInBounds(col, row)) return default;
+
+            int chunkX = col / ChunkSizeCells;
+            int chunkY = row / ChunkSizeCells;
+            if (!_chunks.TryGetValue(ChunkKey(chunkX, chunkY), out LogicTerrainCell[]? chunk))
+            {
+                return _defaultCell;
+            }
+
+            int localX = col - chunkX * ChunkSizeCells;
+            int localY = row - chunkY * ChunkSizeCells;
+            return chunk[localY * ChunkSizeCells + localX];
+        }
+
+        public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
+        {
+            xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+            zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+        }
+
+        private LogicTerrainCell[] GetOrCreateChunk(int chunkX, int chunkY)
+        {
+            long key = ChunkKey(chunkX, chunkY);
+            if (_chunks.TryGetValue(key, out LogicTerrainCell[]? chunk))
+            {
+                return chunk;
+            }
+
+            int cellCount = checked(ChunkSizeCells * ChunkSizeCells);
+            chunk = new LogicTerrainCell[cellCount];
+            Array.Fill(chunk, _defaultCell);
+            _chunks.Add(key, chunk);
+            return chunk;
+        }
+
+        private static long ChunkKey(int chunkX, int chunkY)
+            => ((long)chunkY << 32) | (uint)chunkX;
     }
 
     public readonly struct LogicTerrainProjectionOptions
