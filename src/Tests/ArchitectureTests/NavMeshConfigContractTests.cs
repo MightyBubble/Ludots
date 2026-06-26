@@ -12,7 +12,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using NUnit.Framework;

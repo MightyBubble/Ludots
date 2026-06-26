@@ -2,7 +2,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.Tool;

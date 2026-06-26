@@ -45,7 +45,7 @@ using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Persistence;
 using Ludots.Core.Presentation;

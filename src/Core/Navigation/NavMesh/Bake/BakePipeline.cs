@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake

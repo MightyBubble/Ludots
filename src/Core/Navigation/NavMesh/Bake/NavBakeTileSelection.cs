@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {

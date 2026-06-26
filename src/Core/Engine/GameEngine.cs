@@ -72,7 +72,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;

@@ -1,10 +1,9 @@
 using System;
-using System.Collections.Generic;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 
-namespace Ludots.Core.Navigation.Terrain
+namespace Ludots.Core.Map.Fields
 {
     public enum LogicTerrainTopology : byte
     {
@@ -21,8 +20,10 @@ namespace Ludots.Core.Navigation.Terrain
         Blocked = 1 << 2
     }
 
-    public readonly struct LogicTerrainCell
+    public readonly struct LogicTerrainCell : IEquatable<LogicTerrainCell>
     {
+        public static readonly LogicTerrainCell Default = new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+
         public LogicTerrainCell(
             byte heightLevel,
             byte waterHeightLevel,
@@ -52,6 +53,19 @@ namespace Ludots.Core.Navigation.Terrain
         public bool IsBlocked => (SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0;
 
         public bool HasWater => (SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0 || WaterHeightLevel > 0;
+
+        public bool Equals(LogicTerrainCell other)
+            => HeightLevel == other.HeightLevel &&
+               WaterHeightLevel == other.WaterHeightLevel &&
+               SurfaceFlags == other.SurfaceFlags &&
+               AreaId == other.AreaId &&
+               Cost.Equals(other.Cost);
+
+        public override bool Equals(object? obj)
+            => obj is LogicTerrainCell other && Equals(other);
+
+        public override int GetHashCode()
+            => HashCode.Combine(HeightLevel, WaterHeightLevel, SurfaceFlags, AreaId, Cost);
 
         private static byte ClampHeight(byte value)
             => value > SpatialScaleDefaults.LogicTerrainMaxHeightLevel
@@ -213,7 +227,7 @@ namespace Ludots.Core.Navigation.Terrain
 
     public sealed class MutableGridLogicTerrainField : LogicTerrainField
     {
-        private readonly LogicTerrainCell[] _cells;
+        private BoardFieldStore<LogicTerrainCell> _store;
 
         public MutableGridLogicTerrainField(
             int widthCells,
@@ -224,13 +238,14 @@ namespace Ludots.Core.Navigation.Terrain
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            _cells = new LogicTerrainCell[checked(widthCells * heightCells)];
-            Fill(new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None));
+            _store = CreateStore(LogicTerrainCell.Default);
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
 
         public int CellSizeCm { get; }
+
+        public int ResidentChunkCount => _store.ResidentChunkCount;
 
         public override int HorizontalStepCm => CellSizeCm;
 
@@ -239,28 +254,36 @@ namespace Ludots.Core.Navigation.Terrain
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {
             if (!IsInBounds(col, row)) throw new ArgumentOutOfRangeException();
-            _cells[row * WidthCells + col] = cell;
+            _store.SetCell(col, row, cell);
         }
 
         public void Fill(LogicTerrainCell cell)
         {
-            Array.Fill(_cells, cell);
+            _store = CreateStore(cell);
         }
 
         public override LogicTerrainCell GetCell(int col, int row)
-            => IsInBounds(col, row) ? _cells[row * WidthCells + col] : default;
+            => IsInBounds(col, row) ? _store.GetCell(col, row) : default;
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
             xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
             zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
         }
+
+        private BoardFieldStore<LogicTerrainCell> CreateStore(LogicTerrainCell defaultCell)
+            => new BoardFieldStore<LogicTerrainCell>(
+                WidthCells,
+                HeightCells,
+                CellSizeCm,
+                defaultCell,
+                LogicTerrainChunkCodec.Instance,
+                ChunkSizeCells);
     }
 
     public sealed class SparseGridLogicTerrainField : LogicTerrainField
     {
-        private readonly Dictionary<long, LogicTerrainCell[]> _chunks = new Dictionary<long, LogicTerrainCell[]>();
-        private readonly LogicTerrainCell _defaultCell;
+        private readonly BoardFieldStore<LogicTerrainCell> _store;
 
         public SparseGridLogicTerrainField(
             int widthCells,
@@ -272,59 +295,48 @@ namespace Ludots.Core.Navigation.Terrain
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            _defaultCell = defaultCell.Cost > 0f ? defaultCell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+            LogicTerrainCell normalizedDefault = defaultCell.Cost > 0f ? defaultCell : LogicTerrainCell.Default;
+            _store = new BoardFieldStore<LogicTerrainCell>(
+                widthCells,
+                heightCells,
+                cellSizeCm,
+                normalizedDefault,
+                LogicTerrainChunkCodec.Instance,
+                chunkSizeCells);
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
 
         public int CellSizeCm { get; }
 
-        public int ResidentChunkCount => _chunks.Count;
+        public int ResidentChunkCount => _store.ResidentChunkCount;
 
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
 
+        public bool IsChunkResident(int chunkX, int chunkY)
+            => _store.IsChunkResident(chunkX, chunkY);
+
+        public bool IsChunkDirty(int chunkX, int chunkY)
+            => _store.IsChunkDirty(chunkX, chunkY);
+
+        public void ClearChunkDirty(int chunkX, int chunkY)
+            => _store.ClearChunkDirty(chunkX, chunkY);
+
+        public void ClearDirty()
+            => _store.ClearDirty();
+
         public void SetCell(int col, int row, LogicTerrainCell cell)
         {
             if (!IsInBounds(col, row)) throw new ArgumentOutOfRangeException();
-
-            int chunkX = col / ChunkSizeCells;
-            int chunkY = row / ChunkSizeCells;
-            int localX = col - chunkX * ChunkSizeCells;
-            int localY = row - chunkY * ChunkSizeCells;
-            LogicTerrainCell[] chunk = GetOrCreateChunk(chunkX, chunkY);
-            chunk[localY * ChunkSizeCells + localX] = cell;
-        }
-
-        public void SetChunk(int chunkX, int chunkY, LogicTerrainCell[] cells)
-        {
-            if ((uint)chunkX >= (uint)WidthChunks) throw new ArgumentOutOfRangeException(nameof(chunkX));
-            if ((uint)chunkY >= (uint)HeightChunks) throw new ArgumentOutOfRangeException(nameof(chunkY));
-            if (cells == null) throw new ArgumentNullException(nameof(cells));
-            int expected = checked(ChunkSizeCells * ChunkSizeCells);
-            if (cells.Length != expected)
-            {
-                throw new ArgumentException($"SparseGridLogicTerrainField chunk requires {expected} cells, got {cells.Length}.", nameof(cells));
-            }
-
-            _chunks[ChunkKey(chunkX, chunkY)] = cells;
+            _store.SetCell(col, row, cell);
         }
 
         public override LogicTerrainCell GetCell(int col, int row)
         {
             if (!IsInBounds(col, row)) return default;
-
-            int chunkX = col / ChunkSizeCells;
-            int chunkY = row / ChunkSizeCells;
-            if (!_chunks.TryGetValue(ChunkKey(chunkX, chunkY), out LogicTerrainCell[]? chunk))
-            {
-                return _defaultCell;
-            }
-
-            int localX = col - chunkX * ChunkSizeCells;
-            int localY = row - chunkY * ChunkSizeCells;
-            return chunk[localY * ChunkSizeCells + localX];
+            return _store.GetCell(col, row);
         }
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
@@ -332,24 +344,113 @@ namespace Ludots.Core.Navigation.Terrain
             xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
             zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
         }
+    }
 
-        private LogicTerrainCell[] GetOrCreateChunk(int chunkX, int chunkY)
+    internal sealed class LogicTerrainChunkCodec : IBoardFieldChunkCodec<LogicTerrainCell>
+    {
+        public static readonly LogicTerrainChunkCodec Instance = new LogicTerrainChunkCodec();
+
+        private LogicTerrainChunkCodec()
         {
-            long key = ChunkKey(chunkX, chunkY);
-            if (_chunks.TryGetValue(key, out LogicTerrainCell[]? chunk))
-            {
-                return chunk;
-            }
-
-            int cellCount = checked(ChunkSizeCells * ChunkSizeCells);
-            chunk = new LogicTerrainCell[cellCount];
-            Array.Fill(chunk, _defaultCell);
-            _chunks.Add(key, chunk);
-            return chunk;
         }
 
-        private static long ChunkKey(int chunkX, int chunkY)
-            => ((long)chunkY << 32) | (uint)chunkX;
+        public BoardFieldChunk<LogicTerrainCell> CreateChunk(int cellCount, LogicTerrainCell defaultValue)
+        {
+            var chunk = new LogicTerrainChunk(cellCount);
+            chunk.Fill(defaultValue);
+            return chunk;
+        }
+    }
+
+    internal sealed class LogicTerrainChunk : BoardFieldChunk<LogicTerrainCell>
+    {
+        private const int SurfaceFlagPlaneCount = 3;
+        private const int WaterFlagPlane = 0;
+        private const int RampFlagPlane = 1;
+        private const int BlockedFlagPlane = 2;
+
+        private readonly byte[] _heightWaterLevels;
+        private readonly byte[] _areaIds;
+        private readonly float[] _costs;
+        private readonly ulong[] _surfaceFlagPlanes;
+        private readonly int _wordsPerPlane;
+
+        public LogicTerrainChunk(int cellCount)
+            : base(cellCount)
+        {
+            _heightWaterLevels = new byte[cellCount];
+            _areaIds = new byte[cellCount];
+            _costs = new float[cellCount];
+            _wordsPerPlane = (cellCount + 63) >> 6;
+            _surfaceFlagPlanes = new ulong[checked(_wordsPerPlane * SurfaceFlagPlaneCount)];
+        }
+
+        public override LogicTerrainCell GetCell(int index)
+        {
+            float cost = _costs[index];
+            if (cost <= 0f || float.IsNaN(cost))
+            {
+                return default;
+            }
+
+            byte packed = _heightWaterLevels[index];
+            var flags = LogicTerrainSurfaceFlags.None;
+            if (GetFlag(index, WaterFlagPlane)) flags |= LogicTerrainSurfaceFlags.Water;
+            if (GetFlag(index, RampFlagPlane)) flags |= LogicTerrainSurfaceFlags.Ramp;
+            if (GetFlag(index, BlockedFlagPlane)) flags |= LogicTerrainSurfaceFlags.Blocked;
+
+            return new LogicTerrainCell(
+                (byte)(packed & 0x0F),
+                (byte)((packed >> 4) & 0x0F),
+                flags,
+                _areaIds[index],
+                cost);
+        }
+
+        public override void SetCell(int index, LogicTerrainCell value)
+        {
+            _heightWaterLevels[index] = PackHeightWater(value.HeightLevel, value.WaterHeightLevel);
+            _areaIds[index] = value.AreaId;
+            _costs[index] = value.Cost;
+            SetFlag(index, WaterFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0);
+            SetFlag(index, RampFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0);
+            SetFlag(index, BlockedFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0);
+        }
+
+        public override void Fill(LogicTerrainCell value)
+        {
+            Array.Fill(_heightWaterLevels, PackHeightWater(value.HeightLevel, value.WaterHeightLevel));
+            Array.Fill(_areaIds, value.AreaId);
+            Array.Fill(_costs, value.Cost);
+            FillFlagPlane(WaterFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0);
+            FillFlagPlane(RampFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0);
+            FillFlagPlane(BlockedFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0);
+        }
+
+        private static byte PackHeightWater(byte heightLevel, byte waterHeightLevel)
+            => (byte)((heightLevel & 0x0F) | ((waterHeightLevel & 0x0F) << 4));
+
+        private bool GetFlag(int index, int plane)
+        {
+            int wordIndex = plane * _wordsPerPlane + (index >> 6);
+            int bitIndex = index & 0x3F;
+            return (_surfaceFlagPlanes[wordIndex] & (1UL << bitIndex)) != 0;
+        }
+
+        private void SetFlag(int index, int plane, bool value)
+        {
+            int wordIndex = plane * _wordsPerPlane + (index >> 6);
+            int bitIndex = index & 0x3F;
+            ulong mask = 1UL << bitIndex;
+            if (value) _surfaceFlagPlanes[wordIndex] |= mask;
+            else _surfaceFlagPlanes[wordIndex] &= ~mask;
+        }
+
+        private void FillFlagPlane(int plane, bool value)
+        {
+            int offset = plane * _wordsPerPlane;
+            Array.Fill(_surfaceFlagPlanes, value ? ulong.MaxValue : 0UL, offset, _wordsPerPlane);
+        }
     }
 
     public readonly struct LogicTerrainProjectionOptions

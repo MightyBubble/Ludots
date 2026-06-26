@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
@@ -144,9 +144,6 @@ namespace Ludots.Tool
             int chunkY,
             byte[] reactChunk)
         {
-            var cells = new LogicTerrainCell[CellsPerChunk];
-            bool hasAuthoredCell = false;
-
             for (int ly = 0; ly < ChunkSize; ly++)
             {
                 for (int lx = 0; lx < ChunkSize; lx++)
@@ -166,17 +163,8 @@ namespace Ludots.Tool
                     if (water > height) flags |= LogicTerrainSurfaceFlags.Water;
 
                     var logicCell = new LogicTerrainCell(height, water, flags, areaId);
-                    cells[cell] = logicCell;
-                    hasAuthoredCell |= height != 0 ||
-                        water != 0 ||
-                        flags != LogicTerrainSurfaceFlags.None ||
-                        areaId != 0;
+                    terrain.SetCell((chunkX * ChunkSize) + lx, (chunkY * ChunkSize) + ly, logicCell);
                 }
-            }
-
-            if (hasAuthoredCell)
-            {
-                terrain.SetChunk(chunkX, chunkY, cells);
             }
         }
 

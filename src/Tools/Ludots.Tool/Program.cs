@@ -16,7 +16,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;

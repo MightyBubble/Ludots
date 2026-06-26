@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Map.Fields;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
