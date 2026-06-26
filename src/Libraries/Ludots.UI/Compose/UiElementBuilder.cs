@@ -20,6 +20,8 @@ public sealed class UiElementBuilder
 
 	private UiStyle _style;
 
+	private UiStyleDeclaration? _inlineStyle;
+
 	private string? _elementId;
 
 	private string? _textContent;
@@ -600,6 +602,15 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder PointerEvents(UiPointerEvents value)
+	{
+		_style = _style with
+		{
+			PointerEvents = value
+		};
+		return this;
+	}
+
 	public UiElementBuilder Direction(UiTextDirection value)
 	{
 		_style = _style with
@@ -720,6 +731,14 @@ public sealed class UiElementBuilder
 		return this;
 	}
 
+	public UiElementBuilder InlineStyle(UiStyleDeclaration style)
+	{
+		ArgumentNullException.ThrowIfNull(style, "style");
+		_inlineStyle = new UiStyleDeclaration();
+		_inlineStyle.CopyFrom(style);
+		return this;
+	}
+
 	public UiNode Build(UiDispatcher dispatcher, ref int nextId)
 	{
 		UiActionHandle[] actionHandles = ((_onClick == null) ? Array.Empty<UiActionHandle>() : new UiActionHandle[1] { dispatcher.Register(_onClick) });
@@ -745,7 +764,41 @@ public sealed class UiElementBuilder
 		{
 			Id = _elementId,
 			ClassName = string.Join(' ', _classNames)
-		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, null, _canvasContent);
+		}, _textContent, array, actionHandles, TagName, _elementId, _classNames, uiAttributeBag, _inlineStyle, _canvasContent);
+	}
+
+	public static UiElementBuilder FromElement(UiElement element)
+	{
+		ArgumentNullException.ThrowIfNull(element, "element");
+		UiElementBuilder builder = new UiElementBuilder(element.Kind, element.TagName);
+		foreach (KeyValuePair<string, string> attribute in element.Attributes)
+		{
+			if (attribute.Key.Equals("id", StringComparison.OrdinalIgnoreCase))
+			{
+				builder.Id(attribute.Value);
+			}
+			else if (attribute.Key.Equals("class", StringComparison.OrdinalIgnoreCase))
+			{
+				builder.Classes(attribute.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+			}
+			else
+			{
+				builder.Attribute(attribute.Key, attribute.Value);
+			}
+		}
+		if (!string.IsNullOrWhiteSpace(element.TextContent))
+		{
+			builder.Text(element.TextContent);
+		}
+		if (element.InlineStyle.Count > 0)
+		{
+			builder.InlineStyle(element.InlineStyle);
+		}
+		foreach (UiElement child in element.Children)
+		{
+			builder.Child(FromElement(child));
+		}
+		return builder;
 	}
 
 	private static UiStyle CreateDefaultStyle(UiNodeKind kind)

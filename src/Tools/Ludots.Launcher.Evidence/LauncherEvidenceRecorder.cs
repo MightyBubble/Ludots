@@ -40,6 +40,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using Raylib_cs;
 using SkiaSharp;
 
@@ -181,11 +182,13 @@ public static class LauncherEvidenceRecorder
         var textMeasurer = new SkiaTextMeasurer();
         var imageSizeProvider = new SkiaImageSizeProvider();
         var uiRoot = new UIRoot(skiaRenderer);
+        var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
@@ -262,11 +265,13 @@ public static class LauncherEvidenceRecorder
         var textMeasurer = new SkiaTextMeasurer();
         var imageSizeProvider = new SkiaImageSizeProvider();
         var uiRoot = new UIRoot(skiaRenderer);
+        var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());

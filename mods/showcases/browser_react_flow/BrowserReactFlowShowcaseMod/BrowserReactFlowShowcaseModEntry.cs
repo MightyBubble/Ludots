@@ -7,6 +7,7 @@ using Ludots.UI;
 using Ludots.UI.Browser;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using Ludots.WebUI.Browser;
 using Ludots.WebUI.DataPlane;
 
@@ -28,6 +29,8 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     private CancellationTokenSource? _publisherCts;
     private Task? _publisherTask;
     private IModContext? _modContext;
+    private IUiSurfaceHost? _surfaceHost;
+    private UiSurfaceLeaseHandle _lease;
     private bool _perfBaselineMode;
     private int _alphaPassThroughClicks;
 
@@ -50,21 +53,34 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
 
         _browserContent?.Dispose();
         _browserContent = null;
+        if (_lease.IsValid && _surfaceHost != null)
+        {
+            _surfaceHost.ReleaseLease(ref _lease);
+        }
+
+        _surfaceHost = null;
         _surface?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _surface = null;
     }
 
     private async Task OnGameStartAsync(ScriptContext context)
     {
-        IUiTextMeasurer textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
-        IUiImageSizeProvider imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
+        IUiSurfaceHost surfaceHost = context.Get(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
+        _surfaceHost = surfaceHost;
+        _lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+            "BrowserReactFlow.Showcase",
+            UiSurfaceSegment.Main,
+            priority: 10,
+            exclusive: true));
         UIRoot root = context.Get(CoreServiceKeys.UIRoot) as UIRoot
             ?? throw new InvalidOperationException("UIRoot service is missing from ScriptContext.");
 
         if (!TryGetBrowserRuntime(context, out IBrowserRuntime runtime))
         {
-            root.MountScene(BuildMissingRuntimeScene(textMeasurer, imageSizeProvider));
-            root.IsDirty = true;
+            surfaceHost.Publish(
+                _lease,
+                UiSurfaceContribution.FromBuilder(BuildMissingRuntimeRoot));
             return;
         }
 
@@ -84,12 +100,11 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         _browserContent = new BrowserSurfaceCanvasContent(
             _surface,
             hitTestOptions: ResolveHitTestOptions());
-        root.MountScene(BuildBrowserScene(
-            textMeasurer,
-            imageSizeProvider,
-            _browserContent,
-            BuildAlphaPassThroughPanel(root, textMeasurer, imageSizeProvider)));
-        root.IsDirty = true;
+        surfaceHost.Publish(
+            _lease,
+            UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(
+                _browserContent,
+                BuildAlphaPassThroughPanel(surfaceHost))));
 
         Uri navigationUri = _perfBaselineMode
             ? BrowserLocalAppUri.Create("/", "perf=baseline")
@@ -178,13 +193,11 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         }
     }
 
-    private static UiScene BuildBrowserScene(
-        IUiTextMeasurer textMeasurer,
-        IUiImageSizeProvider imageSizeProvider,
+    private static UiElementBuilder BuildBrowserRoot(
         BrowserSurfaceCanvasContent browserContent,
         UiElementBuilder passThroughPanel)
     {
-        UiElementBuilder root = Ui.Panel(
+        return Ui.Panel(
                 passThroughPanel,
                 Ui.Canvas(browserContent)
                     .Id("react-flow-browser-surface")
@@ -195,14 +208,9 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
             .Id("react-flow-browser-stack")
             .WidthPercent(100f)
             .HeightPercent(100f);
-
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root);
     }
 
-    private UiElementBuilder BuildAlphaPassThroughPanel(
-        UIRoot root,
-        IUiTextMeasurer textMeasurer,
-        IUiImageSizeProvider imageSizeProvider)
+    private UiElementBuilder BuildAlphaPassThroughPanel(IUiSurfaceHost surfaceHost)
     {
         return Ui.Column(
                 Ui.Text("Native Ludots hit-test layer").FontSize(16f).Bold(),
@@ -212,12 +220,14 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
                     _alphaPassThroughClicks++;
                     BrowserSurfaceCanvasContent browserContent = _browserContent
                         ?? throw new InvalidOperationException("Browser content is not mounted.");
-                    root.MountScene(BuildBrowserScene(
-                        textMeasurer,
-                        imageSizeProvider,
-                        browserContent,
-                        BuildAlphaPassThroughPanel(root, textMeasurer, imageSizeProvider)));
-                    root.IsDirty = true;
+                    if (_lease.IsValid && surfaceHost.Revalidate(_lease))
+                    {
+                        surfaceHost.Publish(
+                            _lease,
+                            UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(
+                                browserContent,
+                                BuildAlphaPassThroughPanel(surfaceHost))));
+                    }
                 }))
             .Id("react-flow-alpha-pass-through-target")
             .Width(320f)
@@ -240,17 +250,15 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         return parsed;
     }
 
-    private static UiScene BuildMissingRuntimeScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    private static UiElementBuilder BuildMissingRuntimeRoot()
     {
-        UiElementBuilder root = Ui.Column(
+        return Ui.Column(
                 Ui.Text("Browser runtime missing").FontSize(32f).Bold(),
                 Ui.Text("Run this showcase with the CEF runtime preset to load the packaged React Flow web app."))
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Padding(32f)
             .Gap(12f);
-
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root);
     }
 
     private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)

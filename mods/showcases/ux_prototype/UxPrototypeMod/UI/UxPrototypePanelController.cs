@@ -8,6 +8,7 @@ using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 using UxPrototypeMod.Runtime;
 
 namespace UxPrototypeMod.UI;
@@ -18,6 +19,7 @@ internal sealed class UxPrototypePanelController
     private ReactivePage<UxPrototypePanelState>? _page;
     private GameEngine? _engine;
     private ViewModeManager? _viewModeManager;
+    private UiSurfaceLeaseHandle _lease;
 
     public UxPrototypePanelController(UxPrototypeScenarioState state)
     {
@@ -26,6 +28,11 @@ internal sealed class UxPrototypePanelController
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, ViewModeManager? viewModeManager)
     {
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+
         _engine = engine;
         _viewModeManager = viewModeManager;
         UxPrototypePanelState nextState = _state.BuildSnapshot(engine, viewModeManager);
@@ -40,20 +47,22 @@ internal sealed class UxPrototypePanelController
             _page.SetState(_ => nextState);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
-
-        root.IsDirty = true;
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.UxPrototype.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            _page);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
         }
+
+        _engine = null;
+        _viewModeManager = null;
     }
 
     private UiElementBuilder BuildRoot(ReactiveContext<UxPrototypePanelState> context)
@@ -1048,5 +1057,4 @@ internal sealed class UxPrototypePanelController
             : label[..7];
     }
 }
-
 

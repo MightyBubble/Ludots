@@ -5,6 +5,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace CapabilityStandardPhysics2DShowcaseMod.Runtime;
 
@@ -17,6 +18,7 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
     private ReactivePage<CapabilityStandardPhysics2DShowcasePanelState>? _page;
     private CapabilityStandardPhysics2DShowcasePanelState _lastState = CapabilityStandardPhysics2DShowcasePanelState.Empty;
     private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public CapabilityStandardPhysics2DShowcasePanelController(CapabilityStandardPhysics2DShowcaseRuntime runtime)
     {
@@ -27,6 +29,10 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(engine);
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return false;
+        }
 
         _engine = engine;
         ReactivePage<CapabilityStandardPhysics2DShowcasePanelState>? page = EnsurePage();
@@ -35,13 +41,7 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
             return false;
         }
 
-        bool changed = false;
-        if (!ReferenceEquals(root.Scene, page.Scene))
-        {
-            root.MountScene(page.Scene);
-            changed = true;
-        }
-
+        bool changed = !_lease.IsValid || !surfaceHost.Revalidate(_lease);
         if (!StateEquals(in _lastState, in state))
         {
             CapabilityStandardPhysics2DShowcasePanelState snapshot = state;
@@ -50,11 +50,10 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
             changed = true;
         }
 
-        if (changed)
-        {
-            root.IsDirty = true;
-        }
-
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.CapabilityStandardPhysics2D.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            page);
         return changed;
     }
 
@@ -62,9 +61,10 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
     {
         ArgumentNullException.ThrowIfNull(root);
 
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
         }
 
         _engine = null;
@@ -306,9 +306,10 @@ internal sealed class CapabilityStandardPhysics2DShowcasePanelController
     {
         GameEngine engine = RequireEngine();
         action(_runtime);
-        if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+        if (_lease.IsValid &&
+            engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.IsDirty = true;
+            surfaceHost.InvalidateLease(_lease);
         }
     }
 

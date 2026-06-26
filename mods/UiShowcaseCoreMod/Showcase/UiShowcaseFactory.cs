@@ -1,6 +1,7 @@
 ﻿using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -8,7 +9,19 @@ public static class UiShowcaseFactory
 {
     public static UiScene CreateHubScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
-        UiElementBuilder root = Ui.Column(
+        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildHubRoot(), null, UiShowcaseScaffolding.AuthoringStyleSheet);
+    }
+
+    public static UiSurfaceContribution CreateHubContribution()
+    {
+        return UiSurfaceContribution.FromBuilder(
+            BuildHubRoot,
+            styleSheets: new[] { UiShowcaseScaffolding.AuthoringStyleSheet });
+    }
+
+    public static UiElementBuilder BuildHubRoot()
+    {
+        return Ui.Column(
                 Ui.Text("Ludots Unified UI Showcase").Class("skin-header").FontSize(34).Bold(),
                 Ui.Text("FeatureHub 负责顶层入口；Hub 只做薄导航，三种官方写法和换肤演示分别独立成 Mod。")
                     .Class("page-copy"),
@@ -41,8 +54,6 @@ public static class UiShowcaseFactory
             .Width(1280)
             .Height(720)
             .Gap(12);
-
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root, null, UiShowcaseScaffolding.AuthoringStyleSheet);
     }
 
     public static UiScene CreateComposeScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
@@ -63,6 +74,11 @@ public static class UiShowcaseFactory
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return UiSkinShowcaseSceneFactory.CreateScene(textMeasurer, imageSizeProvider);
+    }
+
+    public static UiSurfaceContribution CreateSkinShowcaseContribution(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        return UiSkinShowcaseSceneFactory.CreateContribution(textMeasurer, imageSizeProvider);
     }
 
     public static UiScene CreateSkinFixtureScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiThemePack theme)

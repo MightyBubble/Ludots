@@ -11,6 +11,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using Ludots.Core.MassCrowd;
 using Ludots.Core.MassCrowd.Runtime;
 
@@ -25,10 +26,11 @@ internal sealed class MassNavigationPanelController
     private long _lastPerfCaptureTicks;
     private long _perfRefreshStopwatchTicks;
     private string _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics buttons only touch engine policy. Agent count and Reset rebuild the scene.";
+    private UiSurfaceLeaseHandle _lease;
 
     public bool MountOrSync(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
-        if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
         {
             return false;
         }
@@ -37,17 +39,16 @@ internal sealed class MassNavigationPanelController
         _simulation = simulation;
         _perfRefreshStopwatchTicks = ResolvePerfRefreshStopwatchTicks(simulation);
         var page = EnsurePage(engine);
-        bool changed = false;
-        if (!ReferenceEquals(root.Scene, page.Scene))
-        {
-            root.MountScene(page.Scene);
-            root.IsDirty = true;
-            changed = true;
-        }
+        bool changed = !_lease.IsValid || !surfaceHost.Revalidate(_lease);
 
         long nowTicks = Stopwatch.GetTimestamp();
         if (_lastPerfCaptureTicks != 0 && nowTicks - _lastPerfCaptureTicks < _perfRefreshStopwatchTicks)
         {
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("MassNavigation.Panel", UiSurfaceSegment.Overlay, priority: 35)),
+                UiSurfaceContribution.FromReactivePage(page));
             return changed;
         }
 
@@ -58,10 +59,14 @@ internal sealed class MassNavigationPanelController
         {
             _lastState = next;
             page.SetState(_ => next);
-            root.IsDirty = true;
             changed = true;
         }
 
+        surfaceHost.Publish(
+            surfaceHost.EnsureLease(
+                ref _lease,
+                new UiSurfaceLeaseRequest("MassNavigation.Panel", UiSurfaceSegment.Overlay, priority: 35)),
+            UiSurfaceContribution.FromReactivePage(page));
         return changed;
     }
 
@@ -82,9 +87,11 @@ internal sealed class MassNavigationPanelController
     {
         ArgumentNullException.ThrowIfNull(root);
 
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.Release(_lease);
+            _lease = default;
         }
 
         _engine = null;
@@ -715,9 +722,11 @@ internal sealed class MassNavigationPanelController
         _lastState = next;
         _lastPerfCaptureTicks = Stopwatch.GetTimestamp();
         _page.SetState(_ => next);
-        if (_engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+        if (_lease.IsValid &&
+            _engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost &&
+            surfaceHost.Revalidate(_lease))
         {
-            root.IsDirty = true;
+            surfaceHost.Invalidate(_lease);
         }
     }
 
@@ -1053,5 +1062,4 @@ internal sealed class MassNavigationPanelController
 
     private static string FormatAgentCount(int totalAgents) => totalAgents.ToString();
 }
-
 

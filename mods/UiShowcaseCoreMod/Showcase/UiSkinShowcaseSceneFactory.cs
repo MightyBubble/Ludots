@@ -1,6 +1,7 @@
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 
 namespace UiShowcaseCoreMod.Showcase;
 
@@ -11,6 +12,17 @@ internal static class UiSkinShowcaseSceneFactory
         return BuildSkinScene(textMeasurer, imageSizeProvider, UiSkinThemes.Classic, includeSwitcher: true);
     }
 
+    internal static UiSurfaceContribution CreateContribution(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        UiStyleSheet baseSheet = CreateBaseSheet();
+        UiScene initial = UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(string.Empty, includeSwitcher: true), UiSkinThemes.Classic, baseSheet);
+        string domHash = UiDomHasher.Hash(initial);
+        return UiSurfaceContribution.FromBuilder(
+            () => BuildFixture(domHash, includeSwitcher: true),
+            UiSkinThemes.Classic,
+            new[] { baseSheet });
+    }
+
     internal static UiScene CreateFixtureScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiThemePack theme)
     {
         return BuildSkinScene(textMeasurer, imageSizeProvider, theme, includeSwitcher: false);
@@ -18,7 +30,16 @@ internal static class UiSkinShowcaseSceneFactory
 
     private static UiScene BuildSkinScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiThemePack theme, bool includeSwitcher)
     {
-        UiStyleSheet baseSheet = new UiStyleSheet()
+        UiStyleSheet baseSheet = CreateBaseSheet();
+
+        UiScene initial = UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(string.Empty, includeSwitcher), theme, baseSheet);
+        string domHash = UiDomHasher.Hash(initial);
+        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(domHash, includeSwitcher), theme, baseSheet);
+    }
+
+    private static UiStyleSheet CreateBaseSheet()
+    {
+        return new UiStyleSheet()
             .AddRule(".skin-toolbar", style =>
             {
                 style.Set("display", "flex");
@@ -36,10 +57,6 @@ internal static class UiSkinShowcaseSceneFactory
                 style.Set("padding", "8px 10px");
                 style.Set("border-radius", "8px");
             });
-
-        UiScene initial = UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(string.Empty, includeSwitcher), theme, baseSheet);
-        string domHash = UiDomHasher.Hash(initial);
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, BuildFixture(domHash, includeSwitcher), theme, baseSheet);
     }
 
     private static UiElementBuilder BuildFixture(string domHash, bool includeSwitcher)
@@ -85,4 +102,3 @@ internal static class UiSkinShowcaseSceneFactory
             .Class("skin-card");
     }
 }
-

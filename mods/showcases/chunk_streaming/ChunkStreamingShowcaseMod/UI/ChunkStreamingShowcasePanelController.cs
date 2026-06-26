@@ -6,6 +6,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using RoadNetworkShowcaseMod.Runtime;
 
 namespace ChunkStreamingShowcaseMod.UI
@@ -15,6 +16,7 @@ namespace ChunkStreamingShowcaseMod.UI
         private ReactivePage<ChunkStreamingShowcasePanelState>? _page;
         private GameEngine? _engine;
         private readonly ChunkStreamingShowcaseRuntime _runtime;
+        private UiSurfaceLeaseHandle _lease;
 
         public ChunkStreamingShowcasePanelController(ChunkStreamingShowcaseRuntime runtime)
         {
@@ -25,6 +27,10 @@ namespace ChunkStreamingShowcaseMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return false;
+            }
 
             _engine = engine;
             ReactivePage<ChunkStreamingShowcasePanelState>? page = EnsurePage();
@@ -35,13 +41,11 @@ namespace ChunkStreamingShowcaseMod.UI
 
             ChunkStreamingShowcasePanelState snapshot = state;
             page.SetState(_ => snapshot);
-            root.IsDirty = true;
-            if (ReferenceEquals(root.Scene, page.Scene))
-            {
-                return true;
-            }
-
-            root.MountScene(page.Scene);
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("ChunkStreamingShowcase.Panel", UiSurfaceSegment.Overlay, priority: 30)),
+                UiSurfaceContribution.FromReactivePage(page));
             return true;
         }
 
@@ -49,9 +53,11 @@ namespace ChunkStreamingShowcaseMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.Release(_lease);
+                _lease = default;
             }
 
             _engine = null;
@@ -150,9 +156,11 @@ namespace ChunkStreamingShowcaseMod.UI
             }
 
             action(engine);
-            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (_lease.IsValid &&
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost &&
+                surfaceHost.Revalidate(_lease))
             {
-                root.IsDirty = true;
+                surfaceHost.Invalidate(_lease);
             }
         }
 

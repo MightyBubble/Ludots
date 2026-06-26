@@ -30,7 +30,7 @@ public class UIRoot
 		_renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
 	}
 
-	public void MountScene(UiScene scene)
+	internal void MountSceneFromHost(UiScene scene)
 	{
 		SetFocusedCanvas(null);
 		_pressedNodeId = null;
@@ -39,7 +39,7 @@ public class UIRoot
 		IsDirty = true;
 	}
 
-	public void ClearScene()
+	internal void ClearSceneFromHost()
 	{
 		SetFocusedCanvas(null);
 		_pressedNodeId = null;

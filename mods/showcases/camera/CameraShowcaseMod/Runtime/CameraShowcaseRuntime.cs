@@ -8,7 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.Core.Modding;
-using Ludots.UI;
+using Ludots.UI.Surface;
 
 namespace CameraShowcaseMod.Runtime
 {
@@ -97,23 +97,22 @@ namespace CameraShowcaseMod.Runtime
 
         private void MountPanel(ScriptContext context, GameEngine engine, string activeMapId, ViewModeManager? viewModeManager)
         {
-            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot root)
+            if (context.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
                 return;
             }
 
-            root.MountScene(_panelController.BuildScene(engine, activeMapId, viewModeManager));
-            root.IsDirty = true;
+            _panelController.PublishOrRefresh(engine, activeMapId, viewModeManager, surfaceHost);
         }
 
         private void ClearPanelIfOwned(ScriptContext context)
         {
-            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot root)
+            if (context.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
                 return;
             }
 
-            _panelController.ClearIfOwned(root);
+            _panelController.ClearIfOwned(surfaceHost);
         }
 
         private static ViewModeManager? ResolveViewModeManager(GameEngine engine)

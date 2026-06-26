@@ -107,6 +107,7 @@ namespace Ludots.Core.Scripting
         // --- UI ---
         public static readonly ServiceKey<IUiSystem> UISystem = new("UISystem");
         public static readonly ServiceKey<object> UIRoot = new("UIRoot");
+        public static readonly ServiceKey<object> UiSurfaceHost = new("UiSurfaceHost");
         public static readonly ServiceKey<bool> UiCaptured = new("UiCaptured");
         public static readonly ServiceKey<bool> UiWheelCaptured = new("UiWheelCaptured");
         public static readonly ServiceKey<IEntityCommandPanelService> EntityCommandPanelService = new("EntityCommandPanelService");

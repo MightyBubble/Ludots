@@ -15,6 +15,7 @@ using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 
 namespace Ludots.Adapter.Raylib
 {
@@ -62,10 +63,12 @@ namespace Ludots.Adapter.Raylib
             IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();
             IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
             var uiRoot = new UIRoot(renderer);
+            var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
+            engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
@@ -91,6 +94,7 @@ namespace Ludots.Adapter.Raylib
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
             ValidateKey(engine, CoreServiceKeys.UIRoot);
+            ValidateKey(engine, CoreServiceKeys.UiSurfaceHost);
             ValidateKey(engine, CoreServiceKeys.UISystem);
             ValidateKey(engine, CoreServiceKeys.InputHandler);
             ValidateKey(engine, CoreServiceKeys.InputBackend);

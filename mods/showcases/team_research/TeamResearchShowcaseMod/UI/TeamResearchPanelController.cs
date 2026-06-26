@@ -5,6 +5,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using TeamResearchShowcaseMod.Runtime;
 
 namespace TeamResearchShowcaseMod.UI;
@@ -13,6 +14,8 @@ internal sealed class TeamResearchPanelController
 {
     private readonly TeamResearchRuntime _runtime;
     private ReactivePage<TeamResearchPanelState>? _page;
+    private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public TeamResearchPanelController(TeamResearchRuntime runtime)
     {
@@ -21,6 +24,12 @@ internal sealed class TeamResearchPanelController
 
     public void MountOrRefresh(UIRoot root, GameEngine engine)
     {
+        if (engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+
+        _engine = engine;
         TeamResearchPanelState state = _runtime.BuildPanelState();
         if (_page == null)
         {
@@ -33,20 +42,21 @@ internal sealed class TeamResearchPanelController
             _page.SetState(_ => state);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
-
-        root.IsDirty = true;
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.TeamResearch.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            _page);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(Ludots.Core.Scripting.CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
         }
+
+        _engine = null;
     }
 
     private static UiElementBuilder BuildRoot(ReactiveContext<TeamResearchPanelState> context)
