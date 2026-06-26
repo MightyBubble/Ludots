@@ -8,9 +8,6 @@
   "physics2D": {
     "enabled": true
   },
-  "navigation2D": {
-    "enabled": false
-  },
   "presentation": {
     "runtimeEntitySpawnQueueCapacity": 256,
     "runtimeEntitySpawnReceiptQueueCapacity": 256,

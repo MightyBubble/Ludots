@@ -13,6 +13,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace EntityCommandPanelMod.UI
 {
@@ -28,6 +29,7 @@ namespace EntityCommandPanelMod.UI
         private uint _lastRevision;
         private uint _lastToolbarRevision;
         private bool _lastToolbarVisible;
+        private UiSurfaceLeaseHandle _lease;
 
         public EntityCommandPanelController(GameEngine engine, EntityCommandPanelRuntime runtime)
         {
@@ -47,6 +49,11 @@ namespace EntityCommandPanelMod.UI
 
         public void Sync(UIRoot root)
         {
+            if (_engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return;
+            }
+
             IEntityCommandPanelToolbarProvider? toolbar = ResolveToolbarProvider();
             bool toolbarVisible = toolbar?.IsVisible == true;
             uint toolbarRevision = toolbarVisible ? toolbar!.Revision : 0u;
@@ -65,21 +72,22 @@ namespace EntityCommandPanelMod.UI
                 _lastToolbarRevision = toolbarRevision;
                 _lastToolbarVisible = toolbarVisible;
                 _page.SetState(_ => new HostState(_lastRevision));
-                root.IsDirty = true;
             }
 
-            if (!ReferenceEquals(root.Scene, _page.Scene))
-            {
-                root.MountScene(_page.Scene);
-                root.IsDirty = true;
-            }
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("EntityCommandPanel.Host", UiSurfaceSegment.Overlay, priority: 80)),
+                UiSurfaceContribution.FromReactivePage(_page));
         }
 
         public void ClearIfOwned(UIRoot root)
         {
-            if (ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.Release(_lease);
+                _lease = default;
             }
         }
 
@@ -1965,4 +1973,3 @@ namespace EntityCommandPanelMod.UI
         }
     }
 }
-

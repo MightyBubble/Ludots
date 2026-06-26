@@ -1,0 +1,38 @@
+{
+  "Id": "nav_editor_grid",
+  "Tags": ["nav_editor", "grid", "navigation"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "nav_editor_grid.bin",
+      "NavigationEnabled": true
+    },
+    {
+      "Name": "board_2",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 16,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "nav_editor_grid_board_2.bin",
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": [],
+  "TriggerTypes": [],
+  "DefaultCamera": {
+    "VirtualCameraId": "Rts",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 24000,
+    "FovYDeg": 60
+  }
+}

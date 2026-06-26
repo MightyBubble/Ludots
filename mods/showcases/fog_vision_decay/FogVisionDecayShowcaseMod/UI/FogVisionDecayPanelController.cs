@@ -6,6 +6,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace FogVisionDecayShowcaseMod.UI;
 
@@ -13,6 +14,8 @@ internal sealed class FogVisionDecayPanelController
 {
     private readonly FogVisionDecayShowcaseRuntime _runtime;
     private ReactivePage<FogVisionDecayPanelState>? _page;
+    private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public FogVisionDecayPanelController(FogVisionDecayShowcaseRuntime runtime)
     {
@@ -21,6 +24,12 @@ internal sealed class FogVisionDecayPanelController
 
     public void MountOrRefresh(UIRoot root, GameEngine engine)
     {
+        if (engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+
+        _engine = engine;
         FogVisionDecayPanelState state = _runtime.BuildPanelState();
         if (_page == null)
         {
@@ -33,20 +42,21 @@ internal sealed class FogVisionDecayPanelController
             _page.SetState(_ => state);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
-
-        root.IsDirty = true;
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.FogVisionDecay.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            _page);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(Ludots.Core.Scripting.CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
         }
+
+        _engine = null;
     }
 
     private static UiElementBuilder BuildRoot(ReactiveContext<FogVisionDecayPanelState> context)

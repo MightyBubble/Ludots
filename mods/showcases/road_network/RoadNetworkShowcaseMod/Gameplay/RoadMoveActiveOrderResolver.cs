@@ -1,7 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Core.MovePlanning;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -28,7 +28,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
-        public static bool OwnsRuntime(in Order activeOrder, in RoadMoveOrderRuntime runtime)
+        public static bool OwnsRuntime(in Order activeOrder, in MovePlanOrderRuntime runtime)
         {
             return runtime.ActiveOrderId == activeOrder.OrderId;
         }

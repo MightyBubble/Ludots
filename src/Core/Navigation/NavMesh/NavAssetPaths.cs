@@ -14,12 +14,6 @@ namespace Ludots.Core.Navigation.NavMesh
             return $"assets/Data/Nav/{mapId}/layer{layer}/profile_{safe}/{xDir}/navtile_{chunkX}_{chunkY}.ntil";
         }
 
-        public static string GetObstacleRelativePath(string mapId)
-        {
-            if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
-            return $"assets/Data/Maps/{mapId}.obstacles.json";
-        }
-
         private static string SanitizePathSegment(string raw)
         {
             if (raw == null) return "null";

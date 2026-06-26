@@ -77,7 +77,31 @@ Drop diagnostics are contract data. A WebUI panel that receives a sampled or dro
 
 ## 5 Transport Paths
 
-The DataPlane is transport-neutral. It can flow through two supported browser paths:
+The DataPlane is transport-neutral. `IWebUiDataTransport` is the semantic transport boundary. It carries DataPlane topics, delivery semantics, command acknowledgements, transport capabilities, diagnostics, and shared-buffer descriptors. It does not expose CEF, V8, BLUI, UE, Raylib, platform texture, or browser engine handles.
+
+Every Web app uses the same browser-facing facade:
+
+```text
+React / Web app
+    -> window.ludotsDataplane
+        -> Browser Native Bridge
+            -> IWebUiDataTransport
+                -> WebUiDataPlaneRuntime
+```
+
+`window.ludotsDataplane` is the only production JS entrypoint. A CEF provider may install that facade from renderer/V8-side script injection, and a UE5 BLUI adapter may install the same facade over its private BLUI message API. The Web app must not call `window.CefSharp`, BLUI-private globals, or provider-specific objects directly.
+
+Control and data are separate lanes:
+
+- The control lane carries handshake, subscribe, unsubscribe, command, ack/error, diagnostics, and shared-buffer descriptor messages.
+- The data lane carries high-volume binary payloads. A message transport may carry base64 chunks as a low-capability mode; a shared-memory transport carries a shared-buffer descriptor plus sequence/tick/drop/coalesce counters.
+- A shared-buffer descriptor identifies buffer id, topic, schema id, layout, capacity, header bytes, byte range, sequence, tick, dropped packets, and coalesced packets. The descriptor is DataPlane contract data; native handles and OS mapping details stay inside the concrete provider.
+- The Windows CEF/Raylib slice uses `BrowserSharedMemoryBufferStore` to allocate host-owned named memory-mapped files and registers only buffer-id readers with `BrowserSharedBufferBridge`. Descriptors sent to Web apps never include the OS memory-map name.
+- The CEF provider exposes `window.ludotsDataplane.readSharedBuffer(descriptor)` through a provider-local native bridge. Web apps still call the standard facade and never call CEF/CefSharp objects directly.
+
+No implicit fallback is allowed. Browser hosts must explicitly negotiate capabilities during handshake. If a Web app requires `shared-memory` or `shared-buffer-descriptor` and the host only has message/base64 transport, the session returns a transport capability mismatch error instead of silently downgrading to a slower path.
+
+The DataPlane can flow through two supported browser paths:
 
 | Path | Owner | Role |
 |------|-------|------|
@@ -89,11 +113,43 @@ Both paths consume the same high-level WebUI topics and event names. The differe
 UE5 BLUI is therefore a reference transport shape, not a Core dependency:
 
 - it may translate DataPlane messages into BLUI/CEF browser process messages;
+- it may expose a shared-buffer descriptor through its own Browser Native Bridge;
 - it may translate Web events back into `IWebUIBridge`;
 - it may own UE textures, widgets, and native lifecycle;
 - it must not define new Core contracts, collection semantics, or marker buffer semantics.
 
-## 6 Boundary Rules
+## 6 Benchmark Baseline
+
+WebUI DataPlane performance is measured under `artifacts/benchmarks/webui-dataplane`.
+
+The benchmark baseline must stay separate from React Flow, browser animation, browser surface upload, and showcase-specific business logic. It records transport mode, publish CPU, managed allocations, packet count, payload bytes, expected managed copy count, dropped packets, and coalesced packets. Browser frame time, command RTT, and input latency are nullable fields until a host/browser runner supplies those measurements.
+
+Required benchmark scenarios are:
+
+- `surface-idle`: browser surface composition/upload cost only.
+- `input-latency`: Ludots input timestamp to Web handler timestamp.
+- `command-rtt`: Web command to C# ack/error round trip.
+- `entity-10k-delta`: high-frequency RTS entity delta.
+- `entity-100k-snapshot`: low-frequency full entity snapshot.
+- `minimap-250k-static`: 4X map marker snapshot.
+- `mixed-rts`: input, command, entity delta, and minimap delta together.
+
+The first checked-in harness establishes machine-readable baseline rows; regression gates compare the same preset on the same machine and must document material threshold changes.
+
+## 7 Browser-Host Conformance Checklist
+
+An adapter that hosts a browser outside Ludots, including UE5 BLUI, must pass this checklist before claiming WebUI DataPlane support:
+
+- Install `window.ludotsDataplane` before the app sends handshake.
+- Implement `postMessage`, `addEventListener`, and `removeEventListener` with the same facade shape as Ludots-started CEF.
+- Return capability negotiation fields for message, binary, shared-memory, chunking, expected copy count, and delivery semantics.
+- Fail fast on missing required capabilities; do not downgrade to message/base64 without an explicit mock or preview mode.
+- Forward handshake, subscribe, snapshot, delta, command ack/error, diagnostics, and session detach.
+- Route pointer, wheel, middle-button, keyboard focus, alpha hit-test, and passthrough decisions through Ludots input ownership, not through adapter-local gameplay rules.
+- Keep BLUI/CEF/V8/UE object lifetimes and native handles inside the adapter.
+- Never interpret Ludots topics, entity collections, minimap schemas, commands, or selection truth inside the browser host.
+
+## 8 Boundary Rules
 
 - `Ludots.WebUI` may depend on lower-level browser contracts to implement browser-backed transport.
 - `Ludots.UI.Browser` must not depend on `Ludots.WebUI`.
@@ -101,23 +157,25 @@ UE5 BLUI is therefore a reference transport shape, not a Core dependency:
 - `Ludots.WebUI` must not duplicate high-frequency marker buffers when existing SoA/bucket/drop-diagnostic infrastructure applies.
 - Browser providers must not introduce new gameplay truth. They only carry messages, frames, input, resources, and lifecycle.
 - UE5, BLUI, CEF native handles, platform windows, and texture objects stay inside adapter/provider assemblies.
+- CEF renderer/V8 injection is provider implementation detail and must not enter Core, WebUI contracts, or DataPlane contracts.
 - Browser-side caches are derived views. Their invalidation is driven by DataPlane revision, sequence, and diagnostics fields from Ludots.
 
-## 7 Issue SSOT Anchors
+## 9 Issue SSOT Anchors
 
 Implementation issues should reference this page and ADR-0003 instead of redefining the boundary locally.
 
 Use these issue slices when work is split:
 
 - DataPlane vocabulary and Mod-facing API live in `Ludots.WebUI`.
+- `IWebUiDataTransport`, capability negotiation, and shared-buffer descriptors are the transport SSOT.
 - Collection topics are adapters over `EntityCollectionStore`.
 - High-frequency marker/entity topics follow the minimap SoA/bucket/drop-diagnostic pattern.
 - Ludots-started CEF and UE5 BLUI are separate transport adapters over the same DataPlane vocabulary.
 - UE5 BLUI work must stay outside Core and must not introduce Core-facing UE or BLUI types.
 
-## 8 Acceptance Evidence
+## 10 Acceptance Evidence
 
-Current evidence is architectural and source-aligned:
+Current evidence is architectural, source-aligned, and executable:
 
 - Browser surface boundary: `docs/architecture/browser_ui_runtime.md`
 - Browser ADR: `docs/adr/ADR-0003-browser-ui-runtime-contract.md`
@@ -125,5 +183,14 @@ Current evidence is architectural and source-aligned:
 - Marker buffer model: `src/Core/Presentation/Minimap/MinimapMarkerBuffer.cs`
 - Screen marker bucket model: `src/Core/Presentation/Minimap/MinimapScreenMarkerBuffer.cs`
 - WebUI facade: `src/Libraries/Ludots.WebUI/`
+- DataPlane transport contracts: `src/Libraries/Ludots.WebUI.DataPlane/`
+- Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
+- Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
+- Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`
+- CEF native shared-buffer facade: `src/Libraries/Ludots.UI.Browser.Cef/CefDataPlaneNativeBridge.cs`
+- React Flow showcase shared-memory wiring: `mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod/BrowserReactFlowShowcaseModEntry.cs`
+- Benchmark harness: `src/Tests/WebUiDataPlaneTests/WebUiDataPlaneBenchmarkTests.cs`
 
-Future implementation evidence should add focused tests around DataPlane topic revisioning, collection window payloads, high-frequency topic capacity/drop diagnostics, and transport parity between Ludots-started CEF and UE5 BLUI adapters.
+Executable evidence includes `BrowserSharedMemoryDataTransportTests`, which reopens the named memory-mapped file and verifies payload bytes, rejects stale descriptors after ring overwrite, and proves binary packets for unconfigured topics fail instead of falling back to base64. The benchmark harness records real `BrowserMessageBridgeDataTransport` base64 chunks next to real `BrowserSharedMemoryDataTransport` descriptor messages, with `observedBase64Chunks = 0` for shared memory.
+
+Future implementation evidence should add focused tests around browser-host input latency, alpha passthrough diagnostics, and transport parity between Ludots-started CEF and UE5 BLUI adapters.

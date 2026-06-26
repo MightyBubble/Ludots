@@ -1,24 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Components;
+using CapabilityStandardPhysics2DShowcaseMod.Runtime;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Map;
-using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Physics;
-using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -30,24 +28,10 @@ namespace Ludots.Tests.GAS.Production
     [NonParallelizable]
     public sealed class CapabilityStandardPhysics2DShowcaseAcceptanceTests
     {
-        private const float DeltaTime = 1f / 60f;
-        private const string ShowcaseModId = "CapabilityStandardPhysics2DMod";
-        private const string ShowcaseConfigRelativePath = "CapabilityStandardPhysics2DConfig.json";
-        private const string MapId = "capability_standard_physics2d";
-        private const string StoneTemplateId = "capability_standard_physics2d_bouncing_stone";
-        private const string WallTemplateId = "capability_standard_physics2d_polygon_wall";
-        private const string KnockbackTemplateId = "capability_standard_physics2d_knockback_target";
-        private const string DampingFieldTemplateId = "capability_standard_physics2d_damping_field";
-        private const string DampingProbeTemplateId = "capability_standard_physics2d_damping_probe";
-        private const string DoorTemplateId = "capability_standard_physics2d_kinematic_rotating_door";
-        private const string FrictionWallLowTemplateId = "capability_standard_physics2d_friction_wall_low";
-        private const string FrictionProbeLowTemplateId = "capability_standard_physics2d_friction_probe_low";
-        private const string FrictionWallHighTemplateId = "capability_standard_physics2d_friction_wall_high";
-        private const string FrictionProbeHighTemplateId = "capability_standard_physics2d_friction_probe_high";
-        private const string RadialProbeEastTemplateId = "capability_standard_physics2d_radial_impulse_probe_east";
-        private const string RadialProbeWestTemplateId = "capability_standard_physics2d_radial_impulse_probe_west";
-        private const string RadialProbeNorthTemplateId = "capability_standard_physics2d_radial_impulse_probe_north";
-        private const string RadialProbeSouthTemplateId = "capability_standard_physics2d_radial_impulse_probe_south";
+        private const string BindingName = "capability_standard_physics2d_showcase";
+        private const string PresetId = "capability_standard_physics2d_showcase_raylib";
+        private const string ShowcaseModId = "CapabilityStandardPhysics2DShowcaseMod";
+        private const string ShowcaseConfigPath = "CapabilityStandardPhysics2DShowcaseConfig.json";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -58,112 +42,80 @@ namespace Ludots.Tests.GAS.Production
         };
 
         [Test]
-        public void CapabilityStandardPhysics2D_ProductionChain_WritesKeyframeAcceptance()
+        public void RootMod_UsesCapabilityLauncherAndFormalPhysics2DStartupPath()
         {
             string repoRoot = FindRepoRoot();
+            AssertLauncherBinding(repoRoot);
+            AssertLauncherPreset(repoRoot);
             ShowcaseConfigSnapshot config = ReadShowcaseConfig(repoRoot);
-            Assert.That(config.MapId, Is.EqualTo(MapId));
             AssertShowcaseCatalog(repoRoot);
-            AssertShowcaseTemplates(repoRoot);
+            AssertTemplateAuthoring(repoRoot, config.StaticObstacleTemplateId);
+            AssertGameJson(repoRoot, config.MapId);
+            AssertMapExists(repoRoot, config.MapId);
 
             using var engine = CreateEngine(repoRoot);
-            Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(MapId));
-            Assert.That(engine.MergedConfig.Physics2D.Enabled, Is.True);
-            Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.False);
-            Assert.That(engine.GetService(CoreServiceKeys.Navigation2DRuntime), Is.Null);
+            Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(config.MapId));
 
             Physics2DSimulationSystem physics = FindSystem<Physics2DSimulationSystem>(engine, SystemGroup.InputCollection);
-            RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-                ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+            Physics2DBroadphasePolicy broadphasePolicy = engine.GetService(CoreServiceKeys.Physics2DBroadphasePolicy)
+                ?? throw new InvalidOperationException("Physics2DBroadphasePolicy missing.");
+            Physics2DTickPolicy tickPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy)
+                ?? throw new InvalidOperationException("Physics2DTickPolicy missing.");
 
-            engine.LoadMap(config.MapId);
-            Assert.That(engine.CurrentMapSession, Is.Not.Null);
-            Assert.That(spawnQueue.Count, Is.EqualTo(config.SpawnCount),
-                "Map focus should enqueue all configured Physics2D showcase entities through RuntimeEntitySpawnQueue.EnqueueMany.");
-
-            var frameTimesMs = new List<double>(96);
-            TickUntil(engine, frameTimesMs, () => spawnQueue.Count == 0, maxFrames: 8);
-            Assert.That(spawnQueue.Count, Is.EqualTo(0), "RuntimeEntitySpawnSystem should drain the Physics2D showcase spawn batch.");
-
-            Entity wall = FindSingleByTemplate(engine, WallTemplateId);
-            Entity stone = FindSingleByTemplate(engine, StoneTemplateId);
-            Entity knockback = FindSingleByTemplate(engine, KnockbackTemplateId);
-            Entity dampingField = FindSingleByTemplate(engine, DampingFieldTemplateId);
-            Entity dampingProbe = FindSingleByTemplate(engine, DampingProbeTemplateId);
-            Entity door = FindSingleByTemplate(engine, DoorTemplateId);
-            Entity frictionWallLow = FindSingleByTemplate(engine, FrictionWallLowTemplateId);
-            Entity frictionProbeLow = FindSingleByTemplate(engine, FrictionProbeLowTemplateId);
-            Entity frictionWallHigh = FindSingleByTemplate(engine, FrictionWallHighTemplateId);
-            Entity frictionProbeHigh = FindSingleByTemplate(engine, FrictionProbeHighTemplateId);
-            Entity radialProbeEast = FindSingleByTemplate(engine, RadialProbeEastTemplateId);
-            Entity radialProbeWest = FindSingleByTemplate(engine, RadialProbeWestTemplateId);
-            Entity radialProbeNorth = FindSingleByTemplate(engine, RadialProbeNorthTemplateId);
-            Entity radialProbeSouth = FindSingleByTemplate(engine, RadialProbeSouthTemplateId);
-
-            Assert.That(engine.World.Has<Position2D>(dampingField), Is.True);
-            Assert.That(engine.World.Has<DampingField>(dampingField), Is.True);
-            Assert.That(engine.World.Has<Collider2D>(stone), Is.True);
-            Assert.That(engine.World.Has<Collider2D>(door), Is.True);
-            Assert.That(engine.World.Has<ForceInput2D>(knockback), Is.True);
-            Assert.That(engine.World.Has<Collider2D>(frictionWallLow), Is.True);
-            Assert.That(engine.World.Has<Collider2D>(frictionWallHigh), Is.True);
-            Assert.That(engine.World.Has<ForceInput2D>(radialProbeEast), Is.True);
-            Assert.That(engine.World.Has<ForceInput2D>(radialProbeWest), Is.True);
-
-            TickUntil(engine, frameTimesMs, () => physics.Build.StaticBodyVersion > 0, maxFrames: 8);
-            Assert.That(engine.World.Has<Physics2DStaticBodyState>(wall), Is.True);
-            Assert.That(physics.Build.StaticRigidBodyDescriptors.Count, Is.GreaterThanOrEqualTo(1),
-                "The polygon wall should materialize into the retained static body cache.");
-
-            var keyframes = new List<KeyframeSnapshot>(8)
-            {
-                Capture(engine, frame: 0, stone, knockback, dampingProbe, door)
-            };
-            var frictionInitial = CaptureFriction(engine, frictionProbeLow, frictionProbeHigh);
-            TickMeasured(engine, 1, frameTimesMs);
-            var afterFirstFrame = Capture(engine, frame: 1, stone, knockback, dampingProbe, door);
-            var radialAfterFirstFrame = CaptureRadial(engine, radialProbeEast, radialProbeWest, radialProbeNorth, radialProbeSouth);
-            keyframes.Add(afterFirstFrame);
-            Assert.That(afterFirstFrame.KnockbackForceX, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(afterFirstFrame.KnockbackForceY, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(afterFirstFrame.KnockbackVelocityX, Is.GreaterThan(0f));
-            Assert.That(afterFirstFrame.KnockbackPositionX, Is.GreaterThan(-900f));
-            AssertRadialImpulseSymmetry(radialAfterFirstFrame);
-            Assert.That(radialAfterFirstFrame.EastVelocityX, Is.GreaterThan(0f));
-            Assert.That(radialAfterFirstFrame.WestVelocityX, Is.LessThan(0f));
-            Assert.That(radialAfterFirstFrame.NorthVelocityY, Is.GreaterThan(0f));
-            Assert.That(radialAfterFirstFrame.SouthVelocityY, Is.LessThan(0f));
+            Assert.That(tickPolicy.TargetHz, Is.EqualTo(15));
+            Assert.That(broadphasePolicy.Strategy, Is.EqualTo(Physics2DBroadphaseStrategyKind.UniformGrid));
+            Assert.That(broadphasePolicy.CellSizeCm, Is.EqualTo(256));
+            Assert.That(physics.Spatial.CurrentStrategyKind, Is.EqualTo(Physics2DBroadphaseStrategyKind.SortAndSweep),
+                "Policy application happens on the first physics simulation update, after BuildPhysicsWorld runs.");
 
             TickUntil(
                 engine,
-                frameTimesMs,
-                () => engine.World.Get<Velocity2D>(stone).Linear.X < Fix64.Zero,
-                maxFrames: 90);
-            keyframes.Add(Capture(engine, frame: frameTimesMs.Count, stone, knockback, dampingProbe, door));
+                () => physics.Spatial.CurrentStrategyKind == Physics2DBroadphaseStrategyKind.UniformGrid,
+                maxFrames: 12);
 
-            TickMeasured(engine, 16, frameTimesMs);
-            var final = Capture(engine, frame: frameTimesMs.Count, stone, knockback, dampingProbe, door);
-            var finalFriction = CaptureFriction(engine, frictionProbeLow, frictionProbeHigh);
-            var finalRadial = CaptureRadial(engine, radialProbeEast, radialProbeWest, radialProbeNorth, radialProbeSouth);
-            keyframes.Add(final);
+            Assert.That(physics.Spatial.CurrentStrategyKind, Is.EqualTo(Physics2DBroadphaseStrategyKind.UniformGrid));
+            Assert.That(physics.Spatial.CurrentCellSizeCm, Is.EqualTo(256));
 
-            Assert.That(final.StoneVelocityX, Is.LessThan(0f), "Restitution should reverse the stone after hitting the static polygon wall.");
-            Assert.That(final.StonePositionX, Is.GreaterThan(-360f), "The stone should move from its configured spawn position before bouncing.");
-            Assert.That(final.DampingProbeVelocityX, Is.LessThan(keyframes[0].DampingProbeVelocityX * 0.7f),
-                "The damping field should reduce probe velocity through AppliedDamping.");
-            Assert.That(engine.World.Has<AppliedDamping>(dampingProbe), Is.True);
-            Assert.That(final.DoorRotationRad, Is.GreaterThan(keyframes[0].DoorRotationRad + 0.05f),
-                "The rotating door should advance through Velocity2D.Angular without Navigation2D.");
-            Assert.That(MathF.Abs(finalFriction.LowProbeX - frictionInitial.LowProbeX), Is.GreaterThan(MathF.Abs(finalFriction.HighProbeX - frictionInitial.HighProbeX) + 2f),
-                "Higher PhysicsMaterial2D.Friction should apply stronger tangent impulse and produce a shorter tangent slide distance.");
-            Assert.That(MathF.Abs(finalFriction.HighProbeVx), Is.LessThan(MathF.Abs(finalFriction.LowProbeVx) * 0.5f),
-                "High friction probe should lose more tangential speed than the low friction probe.");
-            AssertRadialImpulseSymmetry(finalRadial);
+            WriteAcceptanceEvidence(repoRoot, config, tickPolicy, broadphasePolicy);
+        }
 
-            Physics2DPerfStats stats = ReadPhysicsPerfStats(engine.World);
-            Assert.That(stats.PhysicsHz, Is.GreaterThan(0));
+        [Test]
+        public void RootMod_CommandPointerDrawing_CreatesStaticPolygonObstacleThroughBridge()
+        {
+            string repoRoot = FindRepoRoot();
+            using var engine = CreateEngine(repoRoot);
+            var runtime = engine.GetService(CoreServiceKeys.BenchmarkSceneController) as CapabilityStandardPhysics2DShowcaseRuntime
+                ?? throw new InvalidOperationException("Capability-standard Physics2D showcase runtime missing.");
+            var control = FindSystem<CapabilityStandardPhysics2DShowcaseControlSystem>(engine, SystemGroup.InputCollection);
 
-            WriteAcceptanceArtifacts(repoRoot, keyframes, frameTimesMs, stats, physics, finalFriction, finalRadial);
+            engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+            Assert.That(runtime.IsActive, Is.True);
+            engine.SetService(CoreServiceKeys.AuthoritativeInput, new FrozenInputActionReader());
+            runtime.TogglePolygonDrawMode();
+            AddPolygonVertex(control, engine, new WorldCmInt2(-300, -200));
+            AddPolygonVertex(control, engine, new WorldCmInt2(300, -200));
+            AddPolygonVertex(control, engine, new WorldCmInt2(0, 300));
+
+            CapabilityStandardPhysics2DShowcasePanelState draftState = runtime.CapturePanelState(engine);
+            Assert.That(draftState.PolygonDrawMode, Is.True);
+            Assert.That(draftState.DrawnPolygonVertices, Is.EqualTo(3));
+
+            runtime.CompletePolygonObstacle();
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D showcase test requires Physics2D shape storage.");
+            new ManifestationObstacleBridge2DSystem(engine.World, shapeStorage).Update(0f);
+
+            Entity polygonEntity = FindShowcasePolygonObstacle(engine.World);
+            Assert.That(engine.World.Has<CapabilityStandardPhysics2DShowcaseStaticObstacleTag>(polygonEntity), Is.True);
+            Assert.That(engine.World.Has<Collider2D>(polygonEntity), Is.True);
+            Assert.That(engine.World.Get<Collider2D>(polygonEntity).Type, Is.EqualTo(ColliderType2D.Polygon));
+            Assert.That(engine.World.Has<Mass2D>(polygonEntity), Is.True);
+            Assert.That(engine.World.Get<Mass2D>(polygonEntity).IsStatic, Is.True);
+            Assert.That(engine.World.Has<Velocity2D>(polygonEntity), Is.True);
+
+            CapabilityStandardPhysics2DShowcasePanelState completedState = runtime.CapturePanelState(engine);
+            Assert.That(completedState.PolygonDrawMode, Is.False);
+            Assert.That(completedState.DrawnPolygonVertices, Is.EqualTo(0));
         }
 
         private static GameEngine CreateEngine(string repoRoot)
@@ -192,169 +144,281 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.UiCaptured, false);
         }
 
-        private static void TickMeasured(GameEngine engine, int frames, List<double> frameTimesMs)
+        private static void AddPolygonVertex(
+            CapabilityStandardPhysics2DShowcaseControlSystem control,
+            GameEngine engine,
+            in WorldCmInt2 worldCm)
         {
-            for (int i = 0; i < frames; i++)
+            var input = engine.GetService(CoreServiceKeys.AuthoritativeInput)
+                ?? throw new InvalidOperationException("AuthoritativeInput missing.");
+            var pointerButtons = engine.GetService(CoreServiceKeys.AuthoritativePointerButtons)
+                ?? throw new InvalidOperationException("AuthoritativePointerButtons missing.");
+            InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
+                engine.GlobalContext,
+                nameof(CapabilityStandardPhysics2DShowcaseAcceptanceTests));
+            SetPointerButtonState(pointerButtons, bindings.ConfirmActionId, worldCm, isDown: false, pressed: false);
+            SetPointerButtonState(pointerButtons, bindings.CancelActionId, worldCm, isDown: false, pressed: false);
+            SetPointerButtonState(pointerButtons, bindings.CommandActionId, worldCm, isDown: true, pressed: true);
+            if (input is FrozenInputActionReader frozen)
             {
-                long start = Stopwatch.GetTimestamp();
-                engine.SetService(CoreServiceKeys.UiCaptured, false);
-                engine.Tick(DeltaTime);
-                frameTimesMs.Add((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
+                frozen.SetActionState(
+                    AuthoritativeGroundPointerHelper.ActionId,
+                    new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y),
+                    isDown: true,
+                    pressedThisFrame: false,
+                    releasedThisFrame: false);
+                frozen.SetActionValue(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
             }
+            else if (input is PlayerInputHandler playerInput)
+            {
+                playerInput.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y));
+                playerInput.InjectAction(bindings.PointerPositionActionId, new System.Numerics.Vector3(worldCm.X, worldCm.Y, 0f));
+                playerInput.Update();
+            }
+            else
+            {
+                throw new InvalidOperationException($"Unsupported test input reader '{input.GetType().Name}'.");
+            }
+
+            control.Update(0f);
+            pointerButtons.SuppressAction(bindings.CommandActionId);
         }
 
-        private static void TickUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
+        private static void SetPointerButtonState(
+            AuthoritativePointerButtonSnapshot pointerButtons,
+            string actionId,
+            in WorldCmInt2 worldCm,
+            bool isDown,
+            bool pressed)
         {
-            for (int i = 0; i < maxFrames; i++)
-            {
-                if (predicate())
-                {
-                    return;
-                }
-
-                TickMeasured(engine, 1, frameTimesMs);
-            }
-
-            Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
+            pointerButtons.SetState(
+                actionId,
+                new PointerButtonState(
+                    new System.Numerics.Vector2(worldCm.X, worldCm.Y),
+                    new System.Numerics.Vector2(worldCm.X, worldCm.Y),
+                    default,
+                    new System.Numerics.Vector2(worldCm.X, worldCm.Y),
+                    isDown: isDown,
+                    pressedThisFrame: pressed,
+                    releasedThisFrame: false,
+                    hasPressPointer: pressed,
+                    hasReleasePointer: false,
+                    hasLastDownPointer: isDown));
         }
 
-        private static Entity FindSingleByTemplate(GameEngine engine, string templateId)
+        private static Entity FindShowcasePolygonObstacle(World world)
         {
-            EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
-                ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
-            int templateKeyId = templateKeys.GetId(templateId);
-            Assert.That(templateKeyId, Is.GreaterThan(0), $"Template '{templateId}' should be registered.");
-
+            var query = new QueryDescription().WithAll<
+                CapabilityStandardPhysics2DShowcaseEntityTag,
+                CapabilityStandardPhysics2DShowcaseStaticObstacleTag,
+                ManifestationObstaclePolygon2D,
+                Collider2D>();
             Entity found = Entity.Null;
             int count = 0;
-            var expectedMap = new MapId(MapId);
-            var query = new QueryDescription().WithAll<EntityTemplateKeyRef, MapEntity>();
-            engine.World.Query(in query, (Entity entity, ref EntityTemplateKeyRef keyRef, ref MapEntity mapEntity) =>
+            world.Query(in query, (Entity entity) =>
             {
-                if (keyRef.TemplateKeyId == templateKeyId && mapEntity.MapId == expectedMap)
-                {
-                    found = entity;
-                    count++;
-                }
+                found = entity;
+                count++;
             });
 
-            Assert.That(count, Is.EqualTo(1), $"Expected exactly one entity for template '{templateId}'.");
+            Assert.That(count, Is.EqualTo(1));
             return found;
         }
 
-        private static KeyframeSnapshot Capture(
-            GameEngine engine,
-            int frame,
-            Entity stone,
-            Entity knockback,
-            Entity dampingProbe,
-            Entity door)
+        private static void AssertLauncherBinding(string repoRoot)
         {
-            Position2D stonePosition = engine.World.Get<Position2D>(stone);
-            Velocity2D stoneVelocity = engine.World.Get<Velocity2D>(stone);
-            Position2D knockbackPosition = engine.World.Get<Position2D>(knockback);
-            Velocity2D knockbackVelocity = engine.World.Get<Velocity2D>(knockback);
-            ForceInput2D knockbackForce = engine.World.Has<ForceInput2D>(knockback)
-                ? engine.World.Get<ForceInput2D>(knockback)
-                : default;
-            Velocity2D dampingVelocity = engine.World.Get<Velocity2D>(dampingProbe);
-            AppliedDamping appliedDamping = engine.World.Has<AppliedDamping>(dampingProbe)
-                ? engine.World.Get<AppliedDamping>(dampingProbe)
-                : new AppliedDamping { TotalFieldDamping = Fix64.OneValue };
-            Rotation2D doorRotation = engine.World.Get<Rotation2D>(door);
-
-            return new KeyframeSnapshot(
-                frame,
-                ToFloat(stonePosition.Value.X),
-                ToFloat(stonePosition.Value.Y),
-                ToFloat(stoneVelocity.Linear.X),
-                ToFloat(stoneVelocity.Linear.Y),
-                ToFloat(knockbackPosition.Value.X),
-                ToFloat(knockbackPosition.Value.Y),
-                ToFloat(knockbackVelocity.Linear.X),
-                ToFloat(knockbackVelocity.Linear.Y),
-                ToFloat(knockbackForce.Force.X),
-                ToFloat(knockbackForce.Force.Y),
-                ToFloat(dampingVelocity.Linear.X),
-                ToFloat(appliedDamping.TotalFieldDamping),
-                ToFloat(doorRotation.Value));
-        }
-
-        private static FrictionSnapshot CaptureFriction(GameEngine engine, Entity lowProbe, Entity highProbe)
-        {
-            Position2D lowPosition = engine.World.Get<Position2D>(lowProbe);
-            Velocity2D lowVelocity = engine.World.Get<Velocity2D>(lowProbe);
-            Position2D highPosition = engine.World.Get<Position2D>(highProbe);
-            Velocity2D highVelocity = engine.World.Get<Velocity2D>(highProbe);
-
-            return new FrictionSnapshot(
-                ToFloat(lowPosition.Value.X),
-                ToFloat(lowVelocity.Linear.X),
-                ToFloat(highPosition.Value.X),
-                ToFloat(highVelocity.Linear.X));
-        }
-
-        private static RadialSnapshot CaptureRadial(
-            GameEngine engine,
-            Entity eastProbe,
-            Entity westProbe,
-            Entity northProbe,
-            Entity southProbe)
-        {
-            Position2D eastPosition = engine.World.Get<Position2D>(eastProbe);
-            Velocity2D eastVelocity = engine.World.Get<Velocity2D>(eastProbe);
-            Position2D westPosition = engine.World.Get<Position2D>(westProbe);
-            Velocity2D westVelocity = engine.World.Get<Velocity2D>(westProbe);
-            Position2D northPosition = engine.World.Get<Position2D>(northProbe);
-            Velocity2D northVelocity = engine.World.Get<Velocity2D>(northProbe);
-            Position2D southPosition = engine.World.Get<Position2D>(southProbe);
-            Velocity2D southVelocity = engine.World.Get<Velocity2D>(southProbe);
-
-            return new RadialSnapshot(
-                ToFloat(eastPosition.Value.X),
-                ToFloat(eastVelocity.Linear.X),
-                ToFloat(eastVelocity.Linear.Y),
-                ToFloat(westPosition.Value.X),
-                ToFloat(westVelocity.Linear.X),
-                ToFloat(westVelocity.Linear.Y),
-                ToFloat(northPosition.Value.Y),
-                ToFloat(northVelocity.Linear.X),
-                ToFloat(northVelocity.Linear.Y),
-                ToFloat(southPosition.Value.Y),
-                ToFloat(southVelocity.Linear.X),
-                ToFloat(southVelocity.Linear.Y));
-        }
-
-        private static void AssertRadialImpulseSymmetry(in RadialSnapshot snapshot)
-        {
-            Assert.That(snapshot.EastVelocityX, Is.EqualTo(-snapshot.WestVelocityX).Within(0.001f),
-                "East/west radial impulse probes should receive mirrored X velocity.");
-            Assert.That(snapshot.NorthVelocityY, Is.EqualTo(-snapshot.SouthVelocityY).Within(0.001f),
-                "North/south radial impulse probes should receive mirrored Y velocity.");
-            Assert.That(snapshot.EastVelocityY, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(snapshot.WestVelocityY, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(snapshot.NorthVelocityX, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(snapshot.SouthVelocityX, Is.EqualTo(0f).Within(0.001f));
-        }
-
-        private static Physics2DPerfStats ReadPhysicsPerfStats(World world)
-        {
-            var query = new QueryDescription().WithAll<Physics2DPerfStats>();
-            Physics2DPerfStats stats = default;
-            bool found = false;
-            world.Query(in query, (Entity _, ref Physics2DPerfStats value) =>
+            string launcherConfig = Path.Combine(repoRoot, "launcher.config.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(launcherConfig));
+            foreach (JsonElement binding in document.RootElement.GetProperty("bindings").EnumerateArray())
             {
-                if (found)
+                if (!string.Equals(binding.GetProperty("name").GetString(), BindingName, StringComparison.Ordinal))
                 {
-                    return;
+                    continue;
                 }
 
-                stats = value;
-                found = true;
-            });
+                JsonElement target = binding.GetProperty("target");
+                Assert.That(target.GetProperty("type").GetString(), Is.EqualTo("path"));
+                Assert.That(
+                    target.GetProperty("value").GetString(),
+                    Is.EqualTo("mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod"));
+                Assert.That(target.GetProperty("projectPath").GetString(), Is.EqualTo("CapabilityStandardPhysics2DShowcaseMod.csproj"));
+                return;
+            }
 
-            Assert.That(found, Is.True, "Physics2DPerfStats should be published by the production physics system.");
-            return stats;
+            Assert.Fail($"Launcher binding '{BindingName}' is missing.");
+        }
+
+        private static void AssertLauncherPreset(string repoRoot)
+        {
+            string launcherPresets = Path.Combine(repoRoot, "launcher.presets.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(launcherPresets));
+            foreach (JsonElement preset in document.RootElement.GetProperty("presets").EnumerateArray())
+            {
+                if (!string.Equals(preset.GetProperty("id").GetString(), PresetId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Assert.That(preset.GetProperty("adapterId").GetString(), Is.EqualTo("raylib"));
+                JsonElement selectors = preset.GetProperty("selectors");
+                Assert.That(selectors.GetArrayLength(), Is.EqualTo(1));
+                Assert.That(selectors[0].GetString(), Is.EqualTo($"${BindingName}"));
+                return;
+            }
+
+            Assert.Fail($"Launcher preset '{PresetId}' is missing.");
+        }
+
+        private static void AssertShowcaseCatalog(string repoRoot)
+        {
+            string catalogPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardPhysics2DShowcaseMod",
+                "assets",
+                "Configs",
+                "config_catalog.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
+            AssertCatalogEntry(document.RootElement, ShowcaseConfigPath, "Replace", null);
+            AssertCatalogEntry(document.RootElement, "Physics2D/clock.json", "DeepObject", null);
+            AssertCatalogEntry(document.RootElement, "Entities/templates.json", "ArrayById", "id");
+        }
+
+        private static void AssertCatalogEntry(JsonElement catalog, string path, string policy, string? idField)
+        {
+            foreach (JsonElement entry in catalog.EnumerateArray())
+            {
+                if (!string.Equals(entry.GetProperty("Path").GetString(), path, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Assert.That(entry.GetProperty("Policy").GetString(), Is.EqualTo(policy));
+                if (idField != null)
+                {
+                    Assert.That(entry.GetProperty("IdField").GetString(), Is.EqualTo(idField));
+                }
+
+                return;
+            }
+
+            Assert.Fail($"Catalog entry '{path}' is missing.");
+        }
+
+        private static void AssertGameJson(string repoRoot, string mapId)
+        {
+            string gamePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardPhysics2DShowcaseMod",
+                "assets",
+                "game.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(gamePath));
+            JsonElement root = document.RootElement;
+            Assert.That(root.GetProperty("startupMapId").GetString(), Is.EqualTo(mapId));
+            Assert.That(root.TryGetProperty("navigation" + "2D", out _), Is.False);
+            Assert.That(
+                root.GetProperty("presentation").GetProperty("runtimeEntitySpawnQueueCapacity").GetInt32(),
+                Is.GreaterThanOrEqualTo(100000));
+            Assert.That(
+                root.GetProperty("presentation").GetProperty("runtimeEntitySpawnReceiptQueueCapacity").GetInt32(),
+                Is.GreaterThanOrEqualTo(100000));
+        }
+
+        private static ShowcaseConfigSnapshot ReadShowcaseConfig(string repoRoot)
+        {
+            string configPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardPhysics2DShowcaseMod",
+                "assets",
+                ShowcaseConfigPath);
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(configPath));
+            JsonElement root = document.RootElement;
+            Assert.That(root.GetProperty("maxDynamicEntities").GetInt32(), Is.EqualTo(30000));
+            Assert.That(root.GetProperty("maxStaticObstacles").GetInt32(), Is.EqualTo(100000));
+            return new ShowcaseConfigSnapshot(
+                RequireString(root, "mapId"),
+                RequireString(root, "staticObstacleTemplateId"));
+        }
+
+        private static void AssertTemplateAuthoring(string repoRoot, string templateId)
+        {
+            string templatePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardPhysics2DShowcaseMod",
+                "assets",
+                "Entities",
+                "templates.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(templatePath));
+            foreach (JsonElement template in document.RootElement.EnumerateArray())
+            {
+                if (!string.Equals(template.GetProperty("id").GetString(), templateId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                JsonElement components = template.GetProperty("components");
+                Assert.That(components.TryGetProperty("CompoundObstacle2D", out JsonElement compound), Is.True);
+                Assert.That(components.TryGetProperty("Collider2D", out _), Is.False);
+                Assert.That(components.TryGetProperty("Mass2D", out _), Is.False);
+                Assert.That(compound.GetProperty("sinkPhysicsCollider").GetBoolean(), Is.True);
+                Assert.That(compound.GetProperty("sinkNavigationObstacle").GetBoolean(), Is.False);
+                Assert.That(compound.GetProperty("pieces").GetArrayLength(), Is.GreaterThan(0));
+                return;
+            }
+
+            Assert.Fail($"Static obstacle template '{templateId}' is missing.");
+        }
+
+        private static void AssertMapExists(string repoRoot, string mapId)
+        {
+            string mapPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardPhysics2DShowcaseMod",
+                "assets",
+                "Maps",
+                $"{mapId}.json");
+            Assert.That(File.Exists(mapPath), Is.True);
+        }
+
+        private static void WriteAcceptanceEvidence(
+            string repoRoot,
+            ShowcaseConfigSnapshot config,
+            Physics2DTickPolicy tickPolicy,
+            Physics2DBroadphasePolicy broadphasePolicy)
+        {
+            string artifactDir = Path.Combine(
+                repoRoot,
+                "artifacts",
+                "showcases",
+                "capability-standard-physics2d-showcase");
+            Directory.CreateDirectory(artifactDir);
+            File.WriteAllText(
+                Path.Combine(artifactDir, "acceptance.md"),
+                string.Join(
+                    Environment.NewLine,
+                    "# Capability Standard Physics2D Showcase Acceptance",
+                    "",
+                    $"binding={BindingName}",
+                    $"preset={PresetId}",
+                    $"map={config.MapId}",
+                    $"physics2D.tickHz={tickPolicy.TargetHz}",
+                    $"physics2D.broadphase={broadphasePolicy.Strategy}",
+                    $"physics2D.broadphaseCellSizeCm={broadphasePolicy.CellSizeCm}",
+                    ""));
         }
 
         private static T FindSystem<T>(GameEngine engine, SystemGroup group)
@@ -378,99 +442,20 @@ namespace Ludots.Tests.GAS.Production
             throw new InvalidOperationException($"System '{typeof(T).Name}' was not registered in group '{group}'.");
         }
 
-        private static void AssertShowcaseCatalog(string repoRoot)
+        private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames)
         {
-            string catalogPath = Path.Combine(
-                repoRoot,
-                "mods",
-                "showcases",
-                "capability_standard",
-                "CapabilityStandardPhysics2DMod",
-                "assets",
-                "Configs",
-                "config_catalog.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(catalogPath));
-            AssertCatalogEntry(document.RootElement, ShowcaseConfigRelativePath, "Replace", null);
-            AssertCatalogEntry(document.RootElement, "Entities/templates.json", "ArrayById", "id");
-        }
-
-        private static void AssertCatalogEntry(JsonElement catalog, string path, string policy, string? idField)
-        {
-            foreach (JsonElement entry in catalog.EnumerateArray())
+            for (int i = 0; i < maxFrames; i++)
             {
-                string? entryPath = entry.GetProperty("Path").GetString();
-                if (!string.Equals(entryPath, path, StringComparison.Ordinal))
+                if (condition())
                 {
-                    continue;
+                    return;
                 }
 
-                Assert.That(entry.GetProperty("Policy").GetString(), Is.EqualTo(policy));
-                if (idField != null)
-                {
-                    Assert.That(entry.GetProperty("IdField").GetString(), Is.EqualTo(idField));
-                }
-
-                return;
+                engine.SetService(CoreServiceKeys.UiCaptured, false);
+                engine.Tick(1f / 60f);
             }
 
-            Assert.Fail($"Catalog entry '{path}' is missing.");
-        }
-
-        private static ShowcaseConfigSnapshot ReadShowcaseConfig(string repoRoot)
-        {
-            string configPath = Path.Combine(
-                repoRoot,
-                "mods",
-                "showcases",
-                "capability_standard",
-                "CapabilityStandardPhysics2DMod",
-                "assets",
-                ShowcaseConfigRelativePath);
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(configPath));
-            JsonElement root = document.RootElement;
-            return new ShowcaseConfigSnapshot(RequireString(root, "mapId"), root.GetProperty("spawns").GetArrayLength());
-        }
-
-        private static void AssertShowcaseTemplates(string repoRoot)
-        {
-            string templatePath = Path.Combine(
-                repoRoot,
-                "mods",
-                "showcases",
-                "capability_standard",
-                "CapabilityStandardPhysics2DMod",
-                "assets",
-                "Entities",
-                "templates.json");
-            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(templatePath));
-            var templateIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (JsonElement template in document.RootElement.EnumerateArray())
-            {
-                string id = RequireString(template, "id");
-                templateIds.Add(id);
-                JsonElement components = template.GetProperty("components");
-                Assert.That(components.TryGetProperty("NavKinematics2D", out _), Is.False);
-                Assert.That(components.TryGetProperty("NavDesiredVelocity2D", out _), Is.False);
-                Assert.That(components.TryGetProperty("NavObstacle2D", out _), Is.False);
-            }
-
-            Assert.That(templateIds.SetEquals(new[]
-            {
-                WallTemplateId,
-                StoneTemplateId,
-                KnockbackTemplateId,
-                DampingFieldTemplateId,
-                DampingProbeTemplateId,
-                DoorTemplateId,
-                FrictionWallLowTemplateId,
-                FrictionProbeLowTemplateId,
-                FrictionWallHighTemplateId,
-                FrictionProbeHighTemplateId,
-                RadialProbeEastTemplateId,
-                RadialProbeWestTemplateId,
-                RadialProbeNorthTemplateId,
-                RadialProbeSouthTemplateId
-            }), Is.True);
+            Assert.That(condition(), Is.True);
         }
 
         private static string RequireString(JsonElement root, string propertyName)
@@ -482,80 +467,6 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return value;
-        }
-
-        private static void WriteAcceptanceArtifacts(
-            string repoRoot,
-            IReadOnlyList<KeyframeSnapshot> keyframes,
-            IReadOnlyList<double> frameTimesMs,
-            in Physics2DPerfStats stats,
-            Physics2DSimulationSystem physics,
-            in FrictionSnapshot friction,
-            in RadialSnapshot radial)
-        {
-            string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d");
-            Directory.CreateDirectory(artifactDir);
-            string jsonlPath = Path.Combine(artifactDir, "keyframes.jsonl");
-            string mdPath = Path.Combine(artifactDir, "acceptance.md");
-
-            var jsonOptions = new JsonSerializerOptions { WriteIndented = false };
-            using (var writer = new StreamWriter(jsonlPath, append: false, Encoding.UTF8))
-            {
-                for (int i = 0; i < keyframes.Count; i++)
-                {
-                    writer.WriteLine(JsonSerializer.Serialize(keyframes[i], jsonOptions));
-                }
-            }
-
-            double maxMs = 0d;
-            double sumMs = 0d;
-            for (int i = 0; i < frameTimesMs.Count; i++)
-            {
-                double value = frameTimesMs[i];
-                maxMs = Math.Max(maxMs, value);
-                sumMs += value;
-            }
-
-            double avgMs = frameTimesMs.Count > 0 ? sumMs / frameTimesMs.Count : 0d;
-            var builder = new StringBuilder();
-            builder.AppendLine("# Capability Standard Physics2D Acceptance");
-            builder.AppendLine();
-            builder.AppendLine("| Check | Evidence |");
-            builder.AppendLine("| --- | --- |");
-            builder.AppendLine("| Pure Physics2D startup | `physics2D.enabled=true`, `navigation2D.enabled=false`, no `Navigation2DRuntime` service |");
-            builder.AppendLine("| Spawn path | `ConfigPipeline` catalog -> map focus event -> `RuntimeEntitySpawnQueue.EnqueueMany` -> `RuntimeEntitySpawnSystem` |");
-            builder.AppendLine($"| Static polygon wall | Static body version `{physics.Build.StaticBodyVersion}`, descriptors `{physics.Build.StaticRigidBodyDescriptors.Count}` |");
-            builder.AppendLine($"| Restitution bounce | final stone velocity X `{Format(keyframes[^1].StoneVelocityX)}` cm/s |");
-            builder.AppendLine($"| ForceInput knockback | frame 1 force X/Y `{Format(keyframes[1].KnockbackForceX)}` / `{Format(keyframes[1].KnockbackForceY)}`, velocity X `{Format(keyframes[1].KnockbackVelocityX)}` cm/s |");
-            builder.AppendLine($"| Damping field | final damping probe velocity X `{Format(keyframes[^1].DampingProbeVelocityX)}` cm/s, applied damping `{Format(keyframes[^1].DampingProbeAppliedDamping)}` |");
-            builder.AppendLine($"| Kinematic rotating door | final rotation `{Format(keyframes[^1].DoorRotationRad)}` rad |");
-            builder.AppendLine($"| Friction tangent impulse | low friction X `{Format(friction.LowProbeX)}` / Vx `{Format(friction.LowProbeVx)}`, high friction X `{Format(friction.HighProbeX)}` / Vx `{Format(friction.HighProbeVx)}` |");
-            builder.AppendLine($"| Radial impulse symmetry | east/west Vx `{Format(radial.EastVelocityX)}` / `{Format(radial.WestVelocityX)}`, north/south Vy `{Format(radial.NorthVelocityY)}` / `{Format(radial.SouthVelocityY)}` |");
-            builder.AppendLine($"| Physics stats | Hz `{stats.PhysicsHz}`, potential pairs `{stats.PotentialPairs}`, contact pairs `{stats.ContactPairs}`, last update `{stats.PhysicsUpdateMs:F4}` ms |");
-            builder.AppendLine($"| Test tick timings | frames `{frameTimesMs.Count}`, avg `{avgMs:F4}` ms, max `{maxMs:F4}` ms |");
-            builder.AppendLine();
-            builder.AppendLine("## Keyframes");
-            builder.AppendLine();
-            builder.AppendLine("| Frame | Stone X | Stone Vx | Knockback X | Knockback Vx | Damping Vx | Door Rot |");
-            builder.AppendLine("| ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
-            for (int i = 0; i < keyframes.Count; i++)
-            {
-                KeyframeSnapshot keyframe = keyframes[i];
-                builder.AppendLine(
-                    $"| {keyframe.Frame} | {Format(keyframe.StonePositionX)} | {Format(keyframe.StoneVelocityX)} | {Format(keyframe.KnockbackPositionX)} | {Format(keyframe.KnockbackVelocityX)} | {Format(keyframe.DampingProbeVelocityX)} | {Format(keyframe.DoorRotationRad)} |");
-            }
-
-            File.WriteAllText(mdPath, builder.ToString(), Encoding.UTF8);
-        }
-
-        private static float ToFloat(Fix64 value)
-        {
-            return value.ToFloat();
-        }
-
-        private static string Format(float value)
-        {
-            return value.ToString("0.###", CultureInfo.InvariantCulture);
         }
 
         private static string FindRepoRoot()
@@ -575,43 +486,19 @@ namespace Ludots.Tests.GAS.Production
             throw new InvalidOperationException("Could not locate repo root.");
         }
 
-        private readonly record struct ShowcaseConfigSnapshot(string MapId, int SpawnCount);
+        private readonly struct ShowcaseConfigSnapshot
+        {
+            public ShowcaseConfigSnapshot(
+                string mapId,
+                string staticObstacleTemplateId)
+            {
+                MapId = mapId;
+                StaticObstacleTemplateId = staticObstacleTemplateId;
+            }
 
-        private readonly record struct KeyframeSnapshot(
-            int Frame,
-            float StonePositionX,
-            float StonePositionY,
-            float StoneVelocityX,
-            float StoneVelocityY,
-            float KnockbackPositionX,
-            float KnockbackPositionY,
-            float KnockbackVelocityX,
-            float KnockbackVelocityY,
-            float KnockbackForceX,
-            float KnockbackForceY,
-            float DampingProbeVelocityX,
-            float DampingProbeAppliedDamping,
-            float DoorRotationRad);
-
-        private readonly record struct FrictionSnapshot(
-            float LowProbeX,
-            float LowProbeVx,
-            float HighProbeX,
-            float HighProbeVx);
-
-        private readonly record struct RadialSnapshot(
-            float EastPositionX,
-            float EastVelocityX,
-            float EastVelocityY,
-            float WestPositionX,
-            float WestVelocityX,
-            float WestVelocityY,
-            float NorthPositionY,
-            float NorthVelocityX,
-            float NorthVelocityY,
-            float SouthPositionY,
-            float SouthVelocityX,
-            float SouthVelocityY);
+            public string MapId { get; }
+            public string StaticObstacleTemplateId { get; }
+        }
 
         private sealed class NullInputBackend : IInputBackend
         {

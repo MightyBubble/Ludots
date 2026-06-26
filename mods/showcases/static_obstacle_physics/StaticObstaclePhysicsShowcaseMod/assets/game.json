@@ -1,6 +1,3 @@
 {
-  "startupMapId": "static_obstacle_physics_showcase",
-  "navigation2D": {
-    "enabled": true
-  }
+  "startupMapId": "static_obstacle_physics_showcase"
 }

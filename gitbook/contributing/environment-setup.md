@@ -37,7 +37,6 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 dotnet test src/Tests/GasTests/GasTests.csproj
 dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
 dotnet test src/Tests/PresentationTests/PresentationTests.csproj
-dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 

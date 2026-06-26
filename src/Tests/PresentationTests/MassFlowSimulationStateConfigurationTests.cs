@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
-using MassNavigationMod.Runtime;
+using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.Navigation.AgentProfiles;
 using NUnit.Framework;
 using Schedulers;
 using Ludots.Core.Gameplay.Teams;
@@ -48,6 +50,48 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationConfig_RejectsLegacyWorldObstacles()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
+            world["obstacles"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["id"] = "legacy_obstacle",
+                    ["localXCm"] = 1000f,
+                    ["localYCm"] = 1000f,
+                    ["radiusCm"] = 100f,
+                },
+            };
+
+            JsonException ex = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+            Assert.That(ex.Message, Does.Contain("obstacles"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode()
+        {
+            JsonObject missingModeConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject missingAvoidance = missingModeConfig["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            missingAvoidance.Remove("mode");
+
+            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingModeConfig))!;
+            Assert.That(missing.Message, Does.Contain("mode"));
+
+            JsonObject wrongCaseConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject wrongCaseAvoidance = wrongCaseConfig["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            wrongCaseAvoidance["mode"] = "orca";
+
+            InvalidOperationException wrongCase = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCaseConfig))!;
+            Assert.That(wrongCase.Message, Does.Contain("avoidance.mode"));
+            Assert.That(wrongCase.Message, Does.Contain("orca"));
+        }
+
+        [Test]
         public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
         {
             JobScheduler? previousScheduler = World.SharedJobScheduler;
@@ -61,7 +105,6 @@ namespace Ludots.Tests.Presentation
                 flow.Reset(
                     new[] { 1 },
                     unitsPerTeam: 2,
-                    CreateObstacles(),
                     CreateProfileSet(),
                     layer,
                     CreateSpawnLayout(randomSeed: 1234));
@@ -122,7 +165,7 @@ namespace Ludots.Tests.Presentation
             group.FormationRotationSpeedRadiansPerSecond = 6.75f;
 
             var runtime = new MassNavigationSimulationRuntime(config);
-            MassNavigationGroupSemantics massFlowGroup = runtime.MassFlow.Semantics.Group;
+            MassNavigationGroupSemantics massFlowGroup = runtime.GetRuntimeGroupSemantics();
 
             Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
             Assert.That(massFlowGroup.FormationSquareSpacingCm, Is.EqualTo(group.FormationSquareSpacingCm));
@@ -140,7 +183,6 @@ namespace Ludots.Tests.Presentation
             flow.Reset(
                 new[] { 1 },
                 unitsPerTeam: 4,
-                CreateObstacles(),
                 CreateProfileSet(),
                 layer,
                 CreateSpawnLayout(randomSeed));
@@ -207,9 +249,7 @@ namespace Ludots.Tests.Presentation
                     {
                         Id = "light",
                         Heavy = false,
-                        NavMass = 1f,
                         VisualScale = 1f,
-                        BodyRadiusCm = 20f,
                         SpeedCmPerSecond = 800f,
                         EveryNth = 0,
                         NthOffset = 0,
@@ -217,21 +257,24 @@ namespace Ludots.Tests.Presentation
                 },
             };
             profileSet.Validate();
+            profileSet.BindAgentProfiles(CreateAgentProfiles());
             return profileSet;
         }
 
-        private static MassNavigationObstacleConfig[] CreateObstacles()
+        private static AgentProfileRegistry CreateAgentProfiles()
         {
-            return new[]
+            return new AgentProfileRegistry(new[]
             {
-                new MassNavigationObstacleConfig
+                new AgentProfileConfig
                 {
-                    Id = "contract_obstacle",
-                    LocalXCm = 9_000f,
-                    LocalYCm = 9_000f,
-                    RadiusCm = 100f,
-                },
-            };
+                    Id = "light",
+                    RadiusCm = 20,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
         }
 
         private static JsonObject ReadObject(string path)

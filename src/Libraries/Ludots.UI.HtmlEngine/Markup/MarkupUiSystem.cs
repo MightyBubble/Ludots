@@ -1,26 +1,31 @@
 using Ludots.Core.UI;
-using Ludots.UI;
+using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace Ludots.UI.HtmlEngine.Markup;
 
 public sealed class MarkupUiSystem : IUiSystem
 {
-    private readonly UIRoot _root;
-    private readonly IUiTextMeasurer _textMeasurer;
-    private readonly IUiImageSizeProvider _imageSizeProvider;
-    private readonly UiMarkupLoader _markupLoader = new();
+    private const string OwnerId = "Core.UISystem.Markup";
 
-    public MarkupUiSystem(UIRoot root, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    private readonly IUiSurfaceHost _surfaceHost;
+    private readonly UiMarkupLoader _markupLoader = new();
+    private readonly UiSurfaceLeaseHandle _lease;
+
+    public MarkupUiSystem(IUiSurfaceHost surfaceHost)
     {
-        _root = root;
-        _textMeasurer = textMeasurer;
-        _imageSizeProvider = imageSizeProvider;
+        _surfaceHost = surfaceHost;
+        _lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(OwnerId, UiSurfaceSegment.Main, exclusive: true));
     }
 
     public void SetHtml(string html, string css)
     {
-        var scene = _markupLoader.LoadScene(_textMeasurer, _imageSizeProvider, html, css);
-        _root.MountScene(scene);
+        UiDocument document = _markupLoader.LoadDocument(html, css);
+        _surfaceHost.Publish(
+            _lease,
+            UiSurfaceContribution.FromBuilder(
+                () => UiElementBuilder.FromElement(document.Root),
+                styleSheets: document.StyleSheets));
     }
 }

@@ -4,6 +4,7 @@ using Ludots.UI.Compose;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 using SkiaSharp;
 using Ludots.UI.Browser.Skia;
@@ -93,13 +94,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface);
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		bool downHandled = root.HandleInput(new PointerEvent
 		{
@@ -131,13 +126,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface);
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		bool downHandled = root.HandleInput(new PointerEvent
 		{
@@ -179,13 +168,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface);
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		bool downHandled = root.HandleInput(new PointerEvent
 		{
@@ -249,13 +232,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		bool handled = root.HandleInput(new PointerEvent
 		{
@@ -276,13 +253,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		bool handled = root.HandleInput(new PointerEvent
 		{
@@ -305,13 +276,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface);
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		root.HandleInput(new PointerEvent
 		{
@@ -340,13 +305,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateTwoPixelAlphaFrame(leftAlpha: 0, rightAlpha: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface, hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 
 		root.HandleInput(new PointerEvent
 		{
@@ -405,13 +364,7 @@ public sealed class BrowserCanvasContentTests
 		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
 		var surface = new TestBrowserSurface(frame);
 		var content = new BrowserSurfaceCanvasContent(surface);
-		UiScene scene = UiSceneComposer.Compose(
-			new SkiaTextMeasurer(),
-			new SkiaImageSizeProvider(),
-			Ui.Canvas(content).Width(200).Height(100));
-		var root = new UIRoot(new NullUiRenderer());
-		root.MountScene(scene);
-		root.Resize(200, 100);
+		var root = CreateInputRoot(() => Ui.Canvas(content).Width(200).Height(100), 200, 100);
 		root.HandleInput(new PointerEvent
 		{
 			PointerId = 0,
@@ -424,6 +377,16 @@ public sealed class BrowserCanvasContentTests
 		surface.DisposeAsync().AsTask().GetAwaiter().GetResult();
 
 		Assert.DoesNotThrow(() => content.Dispose());
+	}
+
+	private static UIRoot CreateInputRoot(Func<UiElementBuilder> buildRoot, float width, float height)
+	{
+		var root = new UIRoot(new NullUiRenderer());
+		var host = new UiSurfaceHost(root, new SkiaTextMeasurer(), new SkiaImageSizeProvider());
+		UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.browser-canvas", UiSurfaceSegment.Main, exclusive: true));
+		host.Publish(lease, UiSurfaceContribution.FromBuilder(buildRoot));
+		root.Resize(width, height);
+		return root;
 	}
 
 	private static BrowserFrame CreateSolidFrame(int width, int height, byte b, byte g, byte r, byte a)

@@ -1,19 +1,25 @@
 using System.Collections.Generic;
+using Ludots.Core.Navigation.NavMesh.Bake;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
 {
     public sealed class NavMeshBakeConfig
     {
-        public List<NavAgentProfileConfig> Profiles { get; set; } = new List<NavAgentProfileConfig>();
+        public string Mode { get; set; } = string.Empty;
+        public string Algorithm { get; set; } = string.Empty;
+        public List<NavMeshAgentProfileConfig> Profiles { get; set; } = new List<NavMeshAgentProfileConfig>();
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
         public List<NavAreaCostConfig> Areas { get; set; } = new List<NavAreaCostConfig>();
+        public NavRuntimeIncrementalConfig RuntimeIncremental { get; set; } = new NavRuntimeIncrementalConfig();
+
+        public NavBakeMode ParsedMode => NavBakeNames.ParseMode(Mode, "NavMeshBakeConfig.mode");
+
+        public NavBakeAlgorithmKind ParsedAlgorithm => NavBakeNames.ParseAlgorithm(Algorithm, "NavMeshBakeConfig.algorithm");
     }
 
-    public sealed class NavAgentProfileConfig
+    public sealed class NavMeshAgentProfileConfig
     {
         public string Id { get; set; } = string.Empty;
-        public int RadiusCm { get; set; }
-        public int HeightCm { get; set; }
         public int MaxClimbCm { get; set; }
         public float MaxSlopeDeg { get; set; }
     }
@@ -29,5 +35,14 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         public string Id { get; set; } = string.Empty;
         public int AreaId { get; set; }
         public float Cost { get; set; } = 1f;
+    }
+
+    public sealed class NavRuntimeIncrementalConfig
+    {
+        public int TileBudgetPerFixedTick { get; set; }
+        public bool IncludeNeighborTiles { get; set; }
+        public float HeightScaleMeters { get; set; }
+        public float MinWalkableUpDot { get; set; }
+        public int CliffHeightThreshold { get; set; }
     }
 }

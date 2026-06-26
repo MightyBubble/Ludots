@@ -39,6 +39,11 @@ namespace CoreInputMod.ViewMode
 
         public bool SwitchTo(string modeId)
         {
+            return SwitchTo(modeId, applyCamera: true);
+        }
+
+        public bool SwitchTo(string modeId, bool applyCamera)
+        {
             if (!_modeMap.TryGetValue(modeId, out var target))
             {
                 return false;
@@ -52,7 +57,7 @@ namespace CoreInputMod.ViewMode
 
             var previous = ActiveMode;
             _activeIndex = nextIndex;
-            ApplyViewMode(previous, target);
+            ApplyViewMode(previous, target, applyCamera);
             return true;
         }
 
@@ -95,7 +100,7 @@ namespace CoreInputMod.ViewMode
             _globals[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
         }
 
-        private void ApplyViewMode(ViewModeConfig? previous, ViewModeConfig next)
+        private void ApplyViewMode(ViewModeConfig? previous, ViewModeConfig next, bool applyCamera)
         {
             if (_globals.TryGetValue(CoreServiceKeys.InputHandler.Name, out var inputObj) && inputObj is PlayerInputHandler input)
             {
@@ -110,7 +115,11 @@ namespace CoreInputMod.ViewMode
                 }
             }
 
-            ApplyCamera(next);
+            if (applyCamera)
+            {
+                ApplyCamera(next);
+            }
+
             ApplyInteractionMode(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;

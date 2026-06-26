@@ -113,8 +113,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/performer_blacksmith_dynamic_worker_large_world.vhtm"));
             Assert.That(engine.CurrentMapSession!.MapConfig.Boards, Has.Count.EqualTo(1));
             Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].SpatialType, Is.EqualTo("Grid"));
-            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].WidthInTiles, Is.EqualTo(256));
-            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].HeightInTiles, Is.EqualTo(256));
+            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].HeightInMacroTiles, Is.EqualTo(256));
             Assert.That(
                 engine.CurrentMapSession.MapConfig.Metadata["performerBlacksmith"]!["dynamicWorkerBenchmarkTotal"]!.GetValue<int>(),
                 Is.EqualTo(30_000));
@@ -219,8 +219,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(engine.CurrentMapSession?.MapConfig.Boards, Has.Count.EqualTo(1));
             Assert.That(engine.CurrentMapSession!.MapConfig.Boards[0].SpatialType, Is.EqualTo("Grid"));
-            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].WidthInTiles, Is.EqualTo(256));
-            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].HeightInTiles, Is.EqualTo(256));
+            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].WidthInMacroTiles, Is.EqualTo(256));
+            Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].HeightInMacroTiles, Is.EqualTo(256));
             Assert.That(markerBuffer.Count, Is.EqualTo(expectedMarkers));
             Assert.That(markerBuffer.DroppedSinceClear, Is.EqualTo(0));
             Assert.That(CountOrientedMarkers(markerBuffer), Is.EqualTo(expectedMarkers));

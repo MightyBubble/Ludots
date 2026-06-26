@@ -1,11 +1,13 @@
 using System;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Physics2D.Components;
+using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -14,21 +16,23 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMovePlanSelectionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, OrderBuffer, Position2D, RoadMoveOrderRuntime, RoadNavPlanRuntime>();
+            .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm, MovePlanOrderRuntime, MovePlanRuntime>();
 
         private readonly float _defaultSpeedCmPerSec;
         private readonly int _moveSpeedAttributeId;
         private readonly int _roadMoveFollowOrderTypeId;
-        private readonly RoadNavPlanStore _plans;
-        private readonly RoadMoveRuntimeService _runtime;
+        private readonly MovePlanStore _plans;
+        private readonly MovePlanRuntimeService _runtime;
+        private readonly MassNavigationSimulationRuntime _simulation;
         private readonly RoadRouteProfileCatalog _profiles;
         private readonly RoadRouteSelectionStrategy _selection = new();
 
-        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, RoadNavPlanStore plans, RoadMoveRuntimeService runtime, float defaultSpeedCmPerSec = 600f) : base(world)
+        public RoadMovePlanSelectionSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation, float defaultSpeedCmPerSec = 600f) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
             _defaultSpeedCmPerSec = Math.Max(0f, defaultSpeedCmPerSec);
             _moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
             _profiles = new RoadRouteProfileCatalog(world);
@@ -39,9 +43,8 @@ namespace RoadNetworkShowcaseMod.Systems
             foreach (ref var chunk in World.Query(in Query))
             {
                 Span<OrderBuffer> buffers = chunk.GetSpan<OrderBuffer>();
-                Span<Position2D> positions = chunk.GetSpan<Position2D>();
-                Span<RoadMoveOrderRuntime> orderStates = chunk.GetSpan<RoadMoveOrderRuntime>();
-                Span<RoadNavPlanRuntime> planStates = chunk.GetSpan<RoadNavPlanRuntime>();
+                Span<MovePlanOrderRuntime> orderStates = chunk.GetSpan<MovePlanOrderRuntime>();
+                Span<MovePlanRuntime> planStates = chunk.GetSpan<MovePlanRuntime>();
                 ref Entity entityFirst = ref chunk.Entity(0);
 
                 foreach (int index in chunk)
@@ -58,19 +61,25 @@ namespace RoadNetworkShowcaseMod.Systems
                         continue;
                     }
 
-                    if (orderRuntime.LifecycleState != RoadMoveLifecycleState.Active)
+                    if (orderRuntime.LifecycleState != MovePlanLifecycleState.Active)
                     {
                         continue;
                     }
 
-                    if (!_plans.TryGetPlan(entity, activeOrder.OrderId, out RoadNavPlanView plan))
+                    if (!_plans.TryGetPlan(entity, activeOrder.OrderId, out MovePlanView plan))
                     {
-                        orderRuntime.LifecycleState = RoadMoveLifecycleState.Failed;
-                        orderRuntime.FailureReason = RoadMoveFailureReason.MissingPlan;
+                        orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
+                        orderRuntime.FailureReason = MovePlanFailureReason.MissingPlan;
                         continue;
                     }
 
-                    Fix64Vec2 position = positions[index].Value;
+                    if (!_simulation.TryGetAgentWorldPositionCm(World, entity, out Vector2 position))
+                    {
+                        orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
+                        orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;
+                        continue;
+                    }
+
                     RoadRouteExecutionProfile execution = _profiles.ResolveExecution(entity);
                     if (!_selection.TrySelect(
                             in plan,
@@ -79,15 +88,25 @@ namespace RoadNetworkShowcaseMod.Systems
                             execution.WaypointRadiusCm,
                             out RoadRouteSelection selection))
                     {
-                        orderRuntime.LifecycleState = RoadMoveLifecycleState.NeedsReplan;
-                        orderRuntime.FailureReason = RoadMoveFailureReason.RouteEndedEarly;
+                        orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
+                        orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
                         continue;
                     }
 
                     if (selection.Completed)
                     {
-                        orderRuntime.LifecycleState = RoadMoveLifecycleState.NeedsReplan;
-                        orderRuntime.FailureReason = RoadMoveFailureReason.RouteEndedEarly;
+                        var arrival = new RoadRouteArrivalPolicy();
+                        if (arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
+                        {
+                            orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
+                            orderRuntime.FailureReason = MovePlanFailureReason.None;
+                        }
+                        else
+                        {
+                            orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
+                            orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
+                        }
+
                         continue;
                     }
 
@@ -95,9 +114,9 @@ namespace RoadNetworkShowcaseMod.Systems
                     planRuntime.PlanGeneration = plan.PlanGeneration;
                     planRuntime.CurrentWaypointIndex = selection.WaypointIndex;
                     planRuntime.FinalGoalXcm = (int)MathF.Round(plan.FinalGoalWorldCm.X, MidpointRounding.AwayFromZero);
-                    planRuntime.FinalGoalYcm = (int)MathF.Round(plan.FinalGoalWorldCm.Z, MidpointRounding.AwayFromZero);
+                    planRuntime.FinalGoalYcm = (int)MathF.Round(plan.FinalGoalWorldCm.Y, MidpointRounding.AwayFromZero);
 
-                    intent.Target = selection.Target;
+                    intent.TargetWorldCm = selection.Target;
                     intent.SpeedCmPerSec = ResolveMoveSpeed(entity) * Math.Max(0.1f, execution.SpeedMultiplier);
                     intent.StopRadiusCm = execution.WaypointRadiusCm;
                     intent.HasTarget = 1;

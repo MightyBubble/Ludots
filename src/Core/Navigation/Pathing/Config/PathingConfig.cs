@@ -12,7 +12,6 @@ namespace Ludots.Core.Navigation.Pathing.Config
     {
         public string Id { get; set; }
         public string ProfileId { get; set; }
-        public int Layer { get; set; } = 0;
         public PathingSelectionConfig Selection { get; set; } = new();
         public PathingNavMeshConfig NavMesh { get; set; } = new();
         public PathingNodeGraphConfig NodeGraph { get; set; } = new();
@@ -22,7 +21,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
     {
         AutoCheapest = 0,
         PreferGraph = 1,
-        PreferMesh = 2
+        PreferMesh = 2,
+        Direct = 3
     }
 
     public sealed class PathingSelectionConfig

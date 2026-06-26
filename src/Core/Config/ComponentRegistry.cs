@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -20,6 +21,8 @@ using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.Selection;
@@ -41,6 +44,8 @@ namespace Ludots.Core.Config
 
         static ComponentRegistry()
         {
+            LayerRegistry.Register(MassNavigationLayerNames.Agent);
+
             Register<Position>("Position");
             Register<Velocity>("Velocity");
             Register<Health>("Health");
@@ -83,6 +88,7 @@ namespace Ludots.Core.Config
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
+            Register<RuntimeNavMeshStructuralObstacle>("RuntimeNavMeshStructuralObstacle");
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
@@ -92,6 +98,16 @@ namespace Ludots.Core.Config
             Register<UtilityAiCombatMemory>("UtilityAiCombatMemory", SetUtilityAiCombatMemory);
             Register<ActuatorReadiness>("ActuatorReadiness", SetActuatorReadiness);
             Register<AimGate>("AimGate", SetAimGate);
+            Register("MassCrowdAgent", SetMassCrowdAgent, null, Component<MassCrowdAgent>.ComponentType);
+            Register("MassCrowdBlocker", SetMassCrowdBlocker, null, Component<MassCrowdBlocker>.ComponentType);
+            Register<MassCrowdHotspotMarker>("MassCrowdHotspotMarker");
+            Register<SimulationAuthority>("SimulationAuthority");
+            Register("SimulationResidencyPolicy", SetSimulationResidencyPolicy, null, Component<SimulationResidencyPolicy>.ComponentType);
+            Register("CollisionParticipation", SetCollisionParticipation, null, Component<CollisionParticipation>.ComponentType);
+            Register("AvoidanceLane", SetAvoidanceLane, null, Component<AvoidanceLane>.ComponentType);
+            Register("MassCrowdFormationAnchor", SetMassCrowdFormationAnchor, null, Component<MassCrowdFormationAnchor>.ComponentType);
+            Register("MassCrowdFormationFollower", SetMassCrowdFormationFollower, null, Component<MassCrowdFormationFollower>.ComponentType);
+            Register("MassCrowdFollowerLocomotion", SetMassCrowdFollowerLocomotion, null, Component<MassCrowdFollowerLocomotion>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -169,7 +185,7 @@ namespace Ludots.Core.Config
             {
                 string existingMod = _registrationSource.TryGetValue(name, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                if (IsSameRegistration(name, existingSetter, setter, componentType, existingMod, newMod))
+                if (IsSameRegistration(name, existingSetter, setter, componentType))
                 {
                     return;
                 }
@@ -196,15 +212,8 @@ namespace Ludots.Core.Config
             string name,
             ComponentSetterWithContext existingSetter,
             ComponentSetterWithContext newSetter,
-            ComponentType? newComponentType,
-            string existingMod,
-            string newMod)
+            ComponentType? newComponentType)
         {
-            if (!string.Equals(existingMod, newMod, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
             bool hasExistingType = _componentTypes.TryGetValue(name, out var existingType);
             if (hasExistingType || newComponentType.HasValue)
             {
@@ -213,7 +222,98 @@ namespace Ludots.Core.Config
                     existingType.Equals(newComponentType.Value);
             }
 
-            return existingSetter.Equals(newSetter);
+            return existingSetter.Equals(newSetter) ||
+                IsSameSetterDefinition(existingSetter, newSetter);
+        }
+
+        private static bool IsSameSetterDefinition(ComponentSetterWithContext existingSetter, ComponentSetterWithContext newSetter)
+        {
+            MethodInfo existingMethod = existingSetter.Method;
+            MethodInfo newMethod = newSetter.Method;
+            Type? existingDeclaringType = existingMethod.DeclaringType;
+            Type? newDeclaringType = newMethod.DeclaringType;
+            if (existingDeclaringType == null || newDeclaringType == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(existingDeclaringType.Assembly.GetName().Name, newDeclaringType.Assembly.GetName().Name, StringComparison.Ordinal) ||
+                !Equals(existingMethod.Module.ModuleVersionId, newMethod.Module.ModuleVersionId) ||
+                !string.Equals(existingDeclaringType.FullName, newDeclaringType.FullName, StringComparison.Ordinal) ||
+                !string.Equals(existingMethod.Name, newMethod.Name, StringComparison.Ordinal) ||
+                !Equals(existingMethod.ReturnType, newMethod.ReturnType))
+            {
+                return false;
+            }
+
+            ParameterInfo[] existingParameters = existingMethod.GetParameters();
+            ParameterInfo[] newParameters = newMethod.GetParameters();
+            if (existingParameters.Length != newParameters.Length)
+            {
+                return false;
+            }
+
+            if (!AreDelegateTargetsEquivalent(existingSetter.Target, newSetter.Target))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < existingParameters.Length; i++)
+            {
+                if (!Equals(existingParameters[i].ParameterType, newParameters[i].ParameterType))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool AreDelegateTargetsEquivalent(object? existingTarget, object? newTarget)
+        {
+            if (ReferenceEquals(existingTarget, newTarget))
+            {
+                return true;
+            }
+
+            if (existingTarget == null || newTarget == null)
+            {
+                return false;
+            }
+
+            Type existingType = existingTarget.GetType();
+            if (existingType != newTarget.GetType())
+            {
+                return false;
+            }
+
+            FieldInfo[] fields = existingType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (fields.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < fields.Length; i++)
+            {
+                object? existingValue = fields[i].GetValue(existingTarget);
+                object? newValue = fields[i].GetValue(newTarget);
+                if (existingValue is Delegate existingDelegate && newValue is Delegate newDelegate)
+                {
+                    if (!existingDelegate.Equals(newDelegate))
+                    {
+                        return false;
+                    }
+
+                    continue;
+                }
+
+                if (!Equals(existingValue, newValue))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static int UnregisterSource(string modId)
@@ -1155,6 +1255,157 @@ namespace Ludots.Core.Config
             entity.Add(new DestroyWhenParentExecutionEnds());
         }
 
+        private static void SetMassCrowdAgent(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MassCrowdAgent requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MassCrowdAgent", "profileId");
+            string profileId = RequireStringProperty(obj, "profileId", "MassCrowdAgent");
+            int profileKey = MassCrowdProfileRegistry.Register(profileId);
+            entity.Add(new MassCrowdAgent { ProfileId = profileKey });
+        }
+
+        private static void SetMassCrowdBlocker(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MassCrowdBlocker requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MassCrowdBlocker", "radiusCm");
+            JsonNode radiusNode = RequireProperty(obj, "radiusCm", "MassCrowdBlocker");
+            if (radiusNode is not JsonValue radiusValue || !radiusValue.TryGetValue(out float radiusCm))
+            {
+                throw new InvalidOperationException("MassCrowdBlocker.radiusCm requires a numeric value.");
+            }
+
+            if (!(radiusCm > 0f))
+            {
+                throw new InvalidOperationException("MassCrowdBlocker.radiusCm must be > 0.");
+            }
+
+            entity.Add(new MassCrowdBlocker { RadiusCm = radiusCm });
+        }
+
+        private static void SetSimulationResidencyPolicy(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("SimulationResidencyPolicy requires an object payload.");
+            }
+
+            ValidateProperties(obj, "SimulationResidencyPolicy", "kind");
+            entity.Add(new SimulationResidencyPolicy
+            {
+                Kind = ParseSimulationResidencyKind(RequireStringProperty(obj, "kind", "SimulationResidencyPolicy")),
+            });
+        }
+
+        private static void SetCollisionParticipation(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CollisionParticipation requires an object payload.");
+            }
+
+            ValidateProperties(obj, "CollisionParticipation", "kind");
+            entity.Add(new CollisionParticipation
+            {
+                Kind = ParseCollisionParticipationKind(RequireStringProperty(obj, "kind", "CollisionParticipation")),
+            });
+        }
+
+        private static void SetAvoidanceLane(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AvoidanceLane requires an object payload.");
+            }
+
+            ValidateProperties(obj, "AvoidanceLane", "kind");
+            entity.Add(new AvoidanceLane
+            {
+                Kind = ParseAvoidanceLaneKind(RequireStringProperty(obj, "kind", "AvoidanceLane")),
+            });
+        }
+
+        private static void SetMassCrowdFormationAnchor(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MassCrowdFormationAnchor requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MassCrowdFormationAnchor", "formationId", "slotCount");
+            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationAnchor");
+            int slotCount = ReadIntProperty(obj, "slotCount", "MassCrowdFormationAnchor");
+            if (slotCount <= 0)
+            {
+                throw new InvalidOperationException("MassCrowdFormationAnchor.slotCount must be > 0.");
+            }
+
+            entity.Add(new MassCrowdFormationAnchor
+            {
+                FormationId = MassCrowdFormationRegistry.Register(formationId),
+                SlotCount = slotCount,
+            });
+        }
+
+        private static void SetMassCrowdFormationFollower(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MassCrowdFormationFollower requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MassCrowdFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
+            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationFollower");
+            int slotIndex = ReadIntProperty(obj, "slotIndex", "MassCrowdFormationFollower");
+            if (slotIndex < 0)
+            {
+                throw new InvalidOperationException("MassCrowdFormationFollower.slotIndex must be >= 0.");
+            }
+
+            entity.Add(new MassCrowdFormationFollower
+            {
+                FormationId = MassCrowdFormationRegistry.Register(formationId),
+                Anchor = Entity.Null,
+                SlotIndex = slotIndex,
+                LocalOffsetXCm = ReadFloatProperty(obj, "localOffsetXCm", "MassCrowdFormationFollower"),
+                LocalOffsetYCm = ReadFloatProperty(obj, "localOffsetYCm", "MassCrowdFormationFollower"),
+            });
+        }
+
+        private static void SetMassCrowdFollowerLocomotion(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MassCrowdFollowerLocomotion requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MassCrowdFollowerLocomotion", "targetChangeEpsilonCm", "facingChangeEpsilonRadians");
+            float targetChangeEpsilonCm = ReadFloatProperty(obj, "targetChangeEpsilonCm", "MassCrowdFollowerLocomotion");
+            float facingChangeEpsilonRadians = ReadFloatProperty(obj, "facingChangeEpsilonRadians", "MassCrowdFollowerLocomotion");
+            if (!(targetChangeEpsilonCm > 0f))
+            {
+                throw new InvalidOperationException("MassCrowdFollowerLocomotion.targetChangeEpsilonCm must be > 0.");
+            }
+
+            if (!(facingChangeEpsilonRadians > 0f))
+            {
+                throw new InvalidOperationException("MassCrowdFollowerLocomotion.facingChangeEpsilonRadians must be > 0.");
+            }
+
+            entity.Add(new MassCrowdFollowerLocomotion
+            {
+                TargetChangeEpsilonCm = targetChangeEpsilonCm,
+                FacingChangeEpsilonRadians = facingChangeEpsilonRadians,
+            });
+        }
+
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)
         {
             return ParseManifestationObstacleShape(raw, "ManifestationObstacleIntent2D");
@@ -1189,6 +1440,53 @@ namespace Ludots.Core.Config
                 "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
+            };
+        }
+
+        private static SimulationResidencyKind ParseSimulationResidencyKind(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException("SimulationResidencyPolicy requires a non-empty kind.");
+            }
+
+            return raw switch
+            {
+                "AlwaysResident" => SimulationResidencyKind.AlwaysResident,
+                "BudgetedResident" => SimulationResidencyKind.BudgetedResident,
+                "Streamable" => SimulationResidencyKind.Streamable,
+                _ => throw new InvalidOperationException($"Unsupported SimulationResidencyPolicy kind '{raw}'.")
+            };
+        }
+
+        private static CollisionParticipationKind ParseCollisionParticipationKind(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException("CollisionParticipation requires a non-empty kind.");
+            }
+
+            return raw switch
+            {
+                "CrowdOnly" => CollisionParticipationKind.CrowdOnly,
+                "Physics2D" => CollisionParticipationKind.Physics2D,
+                "Physics2DAndCrowd" => CollisionParticipationKind.Physics2DAndCrowd,
+                _ => throw new InvalidOperationException($"Unsupported CollisionParticipation kind '{raw}'.")
+            };
+        }
+
+        private static AvoidanceLaneKind ParseAvoidanceLaneKind(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException("AvoidanceLane requires a non-empty kind.");
+            }
+
+            return raw switch
+            {
+                "FormationPhysics" => AvoidanceLaneKind.FormationPhysics,
+                "MassCrowd" => AvoidanceLaneKind.MassCrowd,
+                _ => throw new InvalidOperationException($"Unsupported AvoidanceLane kind '{raw}'.")
             };
         }
 

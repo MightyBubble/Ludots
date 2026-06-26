@@ -8,25 +8,120 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 250,
-      "HeightInTiles": 250,
+      "WidthInMacroTiles": 250,
+      "HeightInMacroTiles": 250,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64
     }
   ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.MassNavigationTactical",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "Yaw": 225,
-    "Pitch": 52,
-    "DistanceCm": 7000,
-    "FovYDeg": 46
-  },
   "Entities": [
     {
       "Template": "mass_navigation_local_player"
+    },
+    {
+      "InstanceId": "west_gate",
+      "Template": "mass_navigation_blocker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 3000,
+            "Y": 5000
+          }
+        },
+        "ManifestationObstacleIntent2D": {
+          "shape": "Circle",
+          "sinkPhysicsCollider": false,
+          "sinkNavigationObstacle": true,
+          "navRadiusCm": 500,
+          "radiusCm": 500,
+          "localOffsetXCm": 0,
+          "localOffsetYCm": 0
+        }
+      }
+    },
+    {
+      "InstanceId": "south_gate",
+      "Template": "mass_navigation_blocker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5000,
+            "Y": 3000
+          }
+        },
+        "ManifestationObstacleIntent2D": {
+          "shape": "Circle",
+          "sinkPhysicsCollider": false,
+          "sinkNavigationObstacle": true,
+          "navRadiusCm": 400,
+          "radiusCm": 400,
+          "localOffsetXCm": 0,
+          "localOffsetYCm": 0
+        }
+      }
+    },
+    {
+      "InstanceId": "north_gate",
+      "Template": "mass_navigation_blocker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5000,
+            "Y": 7000
+          }
+        },
+        "ManifestationObstacleIntent2D": {
+          "shape": "Circle",
+          "sinkPhysicsCollider": false,
+          "sinkNavigationObstacle": true,
+          "navRadiusCm": 400,
+          "radiusCm": 400,
+          "localOffsetXCm": 0,
+          "localOffsetYCm": 0
+        }
+      }
+    },
+    {
+      "InstanceId": "east_gate",
+      "Template": "mass_navigation_blocker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7000,
+            "Y": 5000
+          }
+        },
+        "ManifestationObstacleIntent2D": {
+          "shape": "Circle",
+          "sinkPhysicsCollider": false,
+          "sinkNavigationObstacle": true,
+          "navRadiusCm": 500,
+          "radiusCm": 500,
+          "localOffsetXCm": 0,
+          "localOffsetYCm": 0
+        }
+      }
+    },
+    {
+      "InstanceId": "central_blocker",
+      "Template": "mass_navigation_blocker",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 5000,
+            "Y": 5000
+          }
+        },
+        "ManifestationObstacleIntent2D": {
+          "shape": "Circle",
+          "sinkPhysicsCollider": false,
+          "sinkNavigationObstacle": true,
+          "navRadiusCm": 300,
+          "radiusCm": 300,
+          "localOffsetXCm": 0,
+          "localOffsetYCm": 0
+        }
+      }
     }
   ]
 }
-

@@ -1,12 +1,10 @@
 {
   "name": "MassNavigationTotalWarEntryMod",
   "version": "1.0.0",
-  "description": "Direct launcher entry for the MassNavigation Total War movement and culling residency showcase.",
+  "description": "Direct launcher entry for the MassNavigation Total War movement showcase.",
   "main": "bin/net8.0/MassNavigationTotalWarEntryMod.dll",
-  "priority": 0,
-  "dependencies": {
-    "MassNavigationMod": "^1.0.0"
-  },
+  "priority": -2000,
+  "dependencies": {},
   "author": "OpenAI Codex",
   "tags": ["navigation", "mass-navigation", "total-war", "showcase"]
 }

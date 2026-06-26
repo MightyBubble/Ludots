@@ -3,7 +3,6 @@
     {
       "id": "RoadColumn",
       "profileId": "Small",
-      "layer": 0,
       "selection": {
         "mode": "PreferGraph",
         "graphBias": -0.25,
@@ -26,7 +25,6 @@
     {
       "id": "Humanoid",
       "profileId": "Small",
-      "layer": 0,
       "selection": {
         "mode": "PreferGraph",
         "graphBias": 0.0,

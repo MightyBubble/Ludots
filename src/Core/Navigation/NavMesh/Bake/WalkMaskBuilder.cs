@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.Terrain;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -83,15 +84,23 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (map == null)
                 throw new ArgumentNullException(nameof(map));
 
-            int tileWidth = VertexChunk.ChunkSize;
-            int tileHeight = VertexChunk.ChunkSize;
+            return Build(new VertexMapLogicTerrainField(map), chunkX, chunkY, config);
+        }
+
+        public static TriWalkMask Build(LogicTerrainField terrain, int chunkX, int chunkY, in NavBuildConfig config)
+        {
+            if (terrain == null)
+                throw new ArgumentNullException(nameof(terrain));
+
+            int tileWidth = terrain.TileWidthCells(chunkX);
+            int tileHeight = terrain.TileHeightCells(chunkY);
             int triCount = tileWidth * tileHeight * 2;
             var walkable = new bool[triCount];
 
-            int startC = chunkX * VertexChunk.ChunkSize;
-            int startR = chunkY * VertexChunk.ChunkSize;
-            int mapWidth = map.WidthInChunks * VertexChunk.ChunkSize;
-            int mapHeight = map.HeightInChunks * VertexChunk.ChunkSize;
+            int startC = chunkX * terrain.ChunkSizeCells;
+            int startR = chunkY * terrain.ChunkSizeCells;
+            int mapWidth = terrain.WidthCells;
+            int mapHeight = terrain.HeightCells;
 
             // Pass 1: Basic walkability from vertex properties
             for (int localR = 0; localR < tileHeight; localR++)
@@ -106,13 +115,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         continue;
 
                     int cellIndex = localR * tileWidth + localC;
-                    bool isOdd = (globalR & 1) == 1;
+                    bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (globalR & 1) == 1;
 
                     // Get vertices for this cell's triangles
-                    var v00 = GetVertex(map, mapWidth, mapHeight, globalC, globalR);
-                    var v10 = GetVertex(map, mapWidth, mapHeight, globalC + 1, globalR);
-                    var v01 = GetVertex(map, mapWidth, mapHeight, globalC, globalR + 1);
-                    var v11 = GetVertex(map, mapWidth, mapHeight, globalC + 1, globalR + 1);
+                    var v00 = GetVertex(terrain, mapWidth, mapHeight, globalC, globalR);
+                    var v10 = GetVertex(terrain, mapWidth, mapHeight, globalC + 1, globalR);
+                    var v01 = GetVertex(terrain, mapWidth, mapHeight, globalC, globalR + 1);
+                    var v11 = GetVertex(terrain, mapWidth, mapHeight, globalC + 1, globalR + 1);
 
                     // Triangle layout depends on row parity (hex grid staggering)
                     // Even rows: Tri0 = (v00, v10, v01), Tri1 = (v10, v11, v01)
@@ -140,7 +149,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             // When a cliff edge has a straighten mark, the diagonal triangle that
             // protrudes into the cliff face is forced unwalkable, producing a clean
             // axis-aligned boundary instead of a jagged staircase.
-            ApplyCliffStraightening(map, walkable, tileWidth, tileHeight, startC, startR, mapWidth, mapHeight);
+            if (terrain.Topology == LogicTerrainTopology.Hex)
+            {
+                ApplyCliffStraightening(terrain, walkable, tileWidth, tileHeight, startC, startR, mapWidth, mapHeight);
+            }
 
             return new TriWalkMask(tileWidth, tileHeight, walkable);
         }
@@ -158,7 +170,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// diagonal triangle that crosses the cliff line is forced unwalkable.
         /// </summary>
         private static void ApplyCliffStraightening(
-            VertexMap map,
+            LogicTerrainField terrain,
             bool[] walkable,
             int tileWidth,
             int tileHeight,
@@ -177,11 +189,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     if (globalR >= mapHeight - 1 || globalC >= mapWidth - 1)
                         continue;
 
-                    var chunk = map.GetChunk(globalC, globalR, false);
-                    if (chunk == null) continue;
-
-                    int lx = globalC & VertexChunk.ChunkSizeMask;
-                    int ly = globalR & VertexChunk.ChunkSizeMask;
                     bool isOdd = (globalR & 1) == 1;
                     int cellIndex = localR * tileWidth + localC;
 
@@ -189,11 +196,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     // A cliff along this edge runs north-south.
                     // The cell's diagonal crosses this cliff, so the triangle
                     // containing the diagonal on the cliff side should be unwalkable.
-                    if (chunk.GetCliffStraightenEdge(lx, ly, 0))
+                    if (terrain.TryGetCliffStraightenEdge(globalC, globalR, 0, out bool edge0) && edge0)
                     {
                         // Determine which side is high and which is low
-                        byte hHere = GetHeightSafe(map, mapWidth, mapHeight, globalC, globalR);
-                        byte hRight = GetHeightSafe(map, mapWidth, mapHeight, globalC + 1, globalR);
+                        byte hHere = GetHeightSafe(terrain, mapWidth, mapHeight, globalC, globalR);
+                        byte hRight = GetHeightSafe(terrain, mapWidth, mapHeight, globalC + 1, globalR);
 
                         if (hHere != hRight)
                         {
@@ -218,11 +225,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     }
 
                     // Edge 1: diagonal bottom edge (c,r)↔(n1c, r+1)
-                    if (chunk.GetCliffStraightenEdge(lx, ly, 1))
+                    if (terrain.TryGetCliffStraightenEdge(globalC, globalR, 1, out bool edge1) && edge1)
                     {
                         int n1c = isOdd ? globalC + 1 : globalC;
-                        byte hHere = GetHeightSafe(map, mapWidth, mapHeight, globalC, globalR);
-                        byte hNeighbor = GetHeightSafe(map, mapWidth, mapHeight, n1c, globalR + 1);
+                        byte hHere = GetHeightSafe(terrain, mapWidth, mapHeight, globalC, globalR);
+                        byte hNeighbor = GetHeightSafe(terrain, mapWidth, mapHeight, n1c, globalR + 1);
 
                         if (hHere != hNeighbor)
                         {
@@ -231,11 +238,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     }
 
                     // Edge 2: diagonal bottom edge (c,r)↔(n2c, r+1)
-                    if (chunk.GetCliffStraightenEdge(lx, ly, 2))
+                    if (terrain.TryGetCliffStraightenEdge(globalC, globalR, 2, out bool edge2) && edge2)
                     {
                         int n2c = isOdd ? globalC : globalC - 1;
-                        byte hHere = GetHeightSafe(map, mapWidth, mapHeight, globalC, globalR);
-                        byte hNeighbor = GetHeightSafe(map, mapWidth, mapHeight, n2c, globalR + 1);
+                        byte hHere = GetHeightSafe(terrain, mapWidth, mapHeight, globalC, globalR);
+                        byte hNeighbor = GetHeightSafe(terrain, mapWidth, mapHeight, n2c, globalR + 1);
 
                         if (hHere != hNeighbor)
                         {
@@ -290,17 +297,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             // creates a clean gap at the cliff base
         }
 
-        private static byte GetHeightSafe(VertexMap map, int mapWidth, int mapHeight, int c, int r)
+        private static byte GetHeightSafe(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r)
         {
             if ((uint)c >= (uint)mapWidth || (uint)r >= (uint)mapHeight) return 0;
-            var chunk = map.GetChunk(c, r, false);
-            if (chunk == null) return 0;
-            int lx = c & VertexChunk.ChunkSizeMask;
-            int lr = r & VertexChunk.ChunkSizeMask;
-            return chunk.GetHeight(lx, lr);
+            return terrain.GetCell(c, r).HeightLevel;
         }
 
-        private static WalkVertex GetVertex(VertexMap map, int mapWidth, int mapHeight, int c, int r)
+        private static WalkVertex GetVertex(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r)
         {
             byte h = 0;
             byte w = 0;
@@ -309,16 +312,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             if ((uint)c < (uint)mapWidth && (uint)r < (uint)mapHeight)
             {
-                var chunk = map.GetChunk(c, r, false);
-                if (chunk != null)
-                {
-                    int lx = c & VertexChunk.ChunkSizeMask;
-                    int lr = r & VertexChunk.ChunkSizeMask;
-                    h = chunk.GetHeight(lx, lr);
-                    w = chunk.GetWaterHeight(lx, lr);
-                    ramp = chunk.GetRamp(lx, lr);
-                    blocked = chunk.GetFlag(lx, lr);
-                }
+                LogicTerrainCell cell = terrain.GetCell(c, r);
+                h = cell.HeightLevel;
+                w = cell.WaterHeightLevel;
+                ramp = cell.IsRamp;
+                blocked = cell.IsBlocked;
             }
 
             return new WalkVertex(c, r, h, w, ramp, blocked);

@@ -36,11 +36,12 @@ export type NavTile = {
     n0: Int32Array;
     n1: Int32Array;
     n2: Int32Array;
+    triAreaIds: Uint8Array;
     portals: NavBorderPortal[];
 };
 
 const MAGIC = 0x4c49544e;
-const FORMAT_VERSION = 1;
+const FORMAT_VERSION = 2;
 
 export function readNavTile(buffer: ArrayBuffer): NavTile {
     const view = new DataView(buffer);
@@ -96,6 +97,11 @@ export function readNavTile(buffer: ArrayBuffer): NavTile {
         n2[i] = view.getInt32(o, true); o += 4;
     }
 
+    const aCount = view.getInt32(o, true); o += 4;
+    if (aCount !== tCount) throw new Error('NavTileBin triArea count mismatch.');
+    const triAreaIds = new Uint8Array(buffer.slice(o, o + aCount)); o += aCount;
+    if (triAreaIds.length !== tCount) throw new Error('NavTileBin triArea truncated.');
+
     const pCount = view.getInt32(o, true); o += 4;
     const portals: NavBorderPortal[] = [];
     for (let i = 0; i < pCount; i++) {
@@ -128,6 +134,7 @@ export function readNavTile(buffer: ArrayBuffer): NavTile {
         n0,
         n1,
         n2,
+        triAreaIds,
         portals,
     };
 }

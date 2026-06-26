@@ -92,6 +92,14 @@ namespace Ludots.Core.Gameplay.Spawning
     }
 
     /// <summary>
+    /// Marker for persistent topology obstacles that are allowed to dirty runtime navmesh tiles.
+    /// The obstacle geometry remains owned by ManifestationObstacleIntent2D or CompoundObstacle2D.
+    /// </summary>
+    public struct RuntimeNavMeshStructuralObstacle
+    {
+    }
+
+    /// <summary>
     /// One logical entity can own several local-space obstacle pieces.
     /// Physics and navigation components are derived state; this component is the authored SSOT.
     /// </summary>

@@ -120,6 +120,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void DirectPathService_EmitsExplicitDirectWorldLeg()
+        {
+            using var world = World.Create();
+            var overlays = new GroundOverlayBuffer();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var bridge = new SelectedMovePathOverlayBridge(
+                world,
+                new DirectPathService(pathStore),
+                pathStore,
+                overlays,
+                MoveToOrderTypeId);
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(CreateMoveOrder(actor, 300, 0, orderId: 1), priority: 60);
+
+            bridge.UpdateViewedSelection(new[] { actor });
+
+            ReadOnlySpan<GroundOverlayItem> span = overlays.GetSpan();
+            Assert.That(Count(span, GroundOverlayShape.Line), Is.EqualTo(1));
+            Assert.That(Count(span, GroundOverlayShape.Circle), Is.EqualTo(1));
+        }
+
+        [Test]
         public void UpdateViewedSelection_AuthoredRoutePastScratchCapacityDoesNotOverflow()
         {
             using var world = World.Create();

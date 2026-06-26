@@ -26,7 +26,7 @@
   { "Path": "Engine/clock.json", "Policy": "DeepObject" },
   { "Path": "Physics2D/clock.json", "Policy": "DeepObject" },
   { "Path": "Physics2D/solver.json", "Policy": "DeepObject" },
-  { "Path": "Navigation2D/clock.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Navigation/pathing.json", "Policy": "DeepObject" },
   { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" },
 

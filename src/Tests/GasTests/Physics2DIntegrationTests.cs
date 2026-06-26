@@ -2,19 +2,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Engine.Physics2D;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Config;
-using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Navigation2D.Spatial;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics;
 using Ludots.Physics.Broadphase;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Physics2D.Ticking;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace GasTests
@@ -24,6 +28,7 @@ namespace GasTests
     {
         private ShapeDataStorage2D _shapeStorage = null!;
         private Physics2DSolverConfig _solverConfig = null!;
+        private const string GroundNavLayerId = "Ground";
 
         [SetUp]
         public void SetUp()
@@ -36,119 +41,6 @@ namespace GasTests
         public void ShapeStorage_FailFast_WhenMissingIndex()
         {
             Assert.Throws<KeyNotFoundException>(() => _shapeStorage.GetShapeType(123));
-        }
-
-        [Test]
-        public void NavToPhysicsVelocitySync_RespectsMovementSuppression()
-        {
-            using var world = World.Create();
-            var system = new NavToPhysicsVelocitySyncSystem(world);
-
-            var freeActor = world.Create(
-                Velocity2D.Zero,
-                Mass2D.FromFloat(1f, 1f),
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(120, 0) });
-            var suppressedActor = world.Create(
-                Velocity2D.Zero,
-                Mass2D.FromFloat(1f, 1f),
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
-                new MovementSuppressed2D());
-
-            system.Update(0f);
-
-            Assert.That(world.Get<Velocity2D>(freeActor).Linear.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
-            Assert.That(world.Get<Velocity2D>(suppressedActor).Linear, Is.EqualTo(Fix64Vec2.Zero));
-            Assert.That(world.Get<NavDesiredVelocity2D>(suppressedActor).ValueCmPerSec.X.ToFloat(), Is.EqualTo(240f).Within(0.01f));
-        }
-
-        [Test]
-        public void NavToPhysicsVelocitySync_ClearsResidualLocomotionVelocityBeforeIntegration_WhenMovementSuppressed()
-        {
-            using var world = World.Create();
-            var sync = new NavToPhysicsVelocitySyncSystem(world);
-            var integration = new IntegrationSystem2D(world, _solverConfig);
-            var actor = world.Create(
-                Position2D.Zero,
-                new PreviousPosition2D { Value = Fix64Vec2.Zero },
-                new Velocity2D { Linear = Fix64Vec2.FromInt(120, 0), Angular = Fix64.Zero },
-                Mass2D.FromFloat(1f, 1f),
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
-                new MovementSuppressed2D());
-
-            sync.Update(0f);
-            integration.Update(1f);
-
-            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero));
-            Assert.That(world.Get<Position2D>(actor).Value, Is.EqualTo(Fix64Vec2.Zero));
-            Assert.That(world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec.X.ToFloat(), Is.EqualTo(240f).Within(0.01f));
-        }
-
-        [Test]
-        public void MovementSuppressedBody_StillReceivesCollisionCorrectionWithoutLocomotionDrift()
-        {
-            using var world = World.Create();
-            int shape = _shapeStorage.RegisterBox(50f, 50f);
-            var sync = new NavToPhysicsVelocitySyncSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(16));
-            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
-            var solver = new SolverSystem2D(world, _solverConfig);
-            var impulses = new ApplyImpulsesSystem2D(world);
-            var correction = new PositionCorrectionSystem2D(world, _solverConfig);
-            var integration = new IntegrationSystem2D(world, _solverConfig);
-
-            var actor = world.Create(
-                Position2D.FromCm(40, 0),
-                new PreviousPosition2D { Value = Fix64Vec2.FromInt(40, 0) },
-                new Velocity2D { Linear = Fix64Vec2.FromInt(120, 0), Angular = Fix64.Zero },
-                Mass2D.FromFloat(1f, 1f),
-                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape },
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
-                new MovementSuppressed2D());
-            world.Create(
-                Position2D.FromCm(100, 0),
-                new PreviousPosition2D { Value = Fix64Vec2.FromInt(100, 0) },
-                Velocity2D.Zero,
-                Mass2D.Static,
-                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
-
-            sync.Update(0f);
-            build.Update(0f);
-            spatial.Update(0f);
-            narrow.Update(0f);
-            solver.Update(0f);
-            impulses.Update(0f);
-            correction.Update(0f);
-            Fix64 correctedX = world.Get<Position2D>(actor).Value.X;
-            integration.Update(1f);
-
-            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero),
-                "Movement suppression clears locomotion velocity but does not disable Physics2D collision correction.");
-            Assert.That(world.Get<Position2D>(actor).Value.X, Is.EqualTo(correctedX),
-                "The integration step must not add residual locomotion drift after collision correction.");
-            Assert.That(correctedX, Is.LessThan(Fix64.FromInt(40)),
-                "The suppressed dynamic body should still be pushed out of the static wall by the solver/correction path.");
-        }
-
-        [Test]
-        public void NavToPhysicsVelocitySync_RestoresDesiredVelocityAfterMovementSuppressionClears()
-        {
-            using var world = World.Create();
-            var sync = new NavToPhysicsVelocitySyncSystem(world);
-            var actor = world.Create(
-                Velocity2D.Zero,
-                Mass2D.FromFloat(1f, 1f),
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
-                new MovementSuppressed2D());
-
-            sync.Update(0f);
-            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero));
-
-            world.Remove<MovementSuppressed2D>(actor);
-            sync.Update(0f);
-
-            Assert.That(world.Get<Velocity2D>(actor).Linear.X.ToFloat(), Is.EqualTo(240f).Within(0.01f),
-                "Velocity should be committed from NavDesiredVelocity2D on the first sync after CC clears.");
         }
 
         [Test]
@@ -240,6 +132,98 @@ namespace GasTests
             });
 
             Assert.That(activeAfterCleanup, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public void DynamicCircles_ResolveOverlapAcrossPhysicsSteps()
+        {
+            using var world = World.Create();
+
+            int shape = _shapeStorage.RegisterCircle(50f);
+            var a = world.Create(
+                Position2D.FromCm(0, 0),
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }
+            );
+            var b = world.Create(
+                Position2D.FromCm(70, 0),
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }
+            );
+
+            var simulation = CreateProductionPhysicsSimulation(world, physicsHz: 60);
+            for (int i = 0; i < 12; i++)
+            {
+                simulation.Update(1f / 60f);
+            }
+
+            var posA = world.Get<Position2D>(a).Value;
+            var posB = world.Get<Position2D>(b).Value;
+            float distanceCm = (posB - posA).Length().ToFloat();
+            float clearanceCm = distanceCm - 100f;
+
+            Assert.That(clearanceCm, Is.GreaterThanOrEqualTo(-1f));
+        }
+
+        [Test]
+        public void DrivenCircleCrowd_MaintainsEffectiveSeparation()
+        {
+            using var world = World.Create();
+
+            int shape = _shapeStorage.RegisterCircle(46f);
+            var entities = new[]
+            {
+                world.Create(Position2D.FromCm(-70, -70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(-70, 70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(70, -70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(70, 70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+            };
+
+            var simulation = CreateProductionPhysicsSimulation(world, physicsHz: 60);
+
+            for (int i = 0; i < 120; i++)
+            {
+                for (int entityIndex = 0; entityIndex < entities.Length; entityIndex++)
+                {
+                    var entity = entities[entityIndex];
+                    var position = world.Get<Position2D>(entity).Value;
+                    world.Set(entity, new Velocity2D
+                    {
+                        Linear = (Fix64Vec2.Zero - position).Normalized() * Fix64.FromInt(330),
+                        Angular = Fix64.Zero
+                    });
+                }
+
+                simulation.Update(1f / 60f);
+            }
+
+            float minimumClearanceCm = float.MaxValue;
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var a = world.Get<Position2D>(entities[i]).Value;
+                for (int j = i + 1; j < entities.Length; j++)
+                {
+                    var b = world.Get<Position2D>(entities[j]).Value;
+                    float clearanceCm = (b - a).Length().ToFloat() - 92f;
+                    minimumClearanceCm = MathF.Min(minimumClearanceCm, clearanceCm);
+                }
+            }
+
+            Assert.That(minimumClearanceCm, Is.GreaterThanOrEqualTo(-6f));
+        }
+
+        private Physics2DSimulationSystem CreateProductionPhysicsSimulation(World world, int physicsHz)
+        {
+            var simulation = new Physics2DSimulationSystem(
+                world,
+                new DiscreteClock(),
+                new Physics2DTickPolicy(physicsHz, maxStepsPerFixedTick: 1),
+                _solverConfig,
+                _shapeStorage);
+            simulation.Initialize();
+            return simulation;
         }
 
         [Test]
@@ -367,142 +351,6 @@ namespace GasTests
             });
 
             Assert.That(activeWithContact, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void CompoundObstacleFlowDiscomfortHalo_UsesRotatedPieceCenter()
-        {
-            using var world = World.Create();
-
-            var obstacle = new CompoundObstacle2D
-            {
-                SinkPhysicsCollider = 0,
-                SinkNavigationObstacle = 1
-            };
-            obstacle.SetPiece(
-                0,
-                ManifestationObstacleShape2D.Circle,
-                radiusCm: 20,
-                halfWidthCm: 0,
-                halfHeightCm: 0,
-                localOffsetXCm: 200,
-                localOffsetYCm: 0,
-                navRadiusCm: 20);
-
-            world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new FacingDirection { AngleRad = MathF.PI / 2f },
-                obstacle);
-            world.Create(
-                new NavAgent2D(),
-                new Position2D { Value = Fix64Vec2.FromInt(1000, 1000) },
-                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(100),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(100),
-                    RadiusCm = Fix64.FromInt(20),
-                    NeighborDistCm = Fix64.FromInt(100),
-                    TimeHorizonSec = Fix64.OneValue,
-                    MaxNeighbors = 0
-                });
-
-            var config = new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 8,
-                FlowIterationsPerTick = 0,
-                FlowCrowd = new Navigation2DFlowCrowdConfig
-                {
-                    Enabled = true,
-                    Discomfort = new Navigation2DFlowCrowdDiscomfortConfig
-                    {
-                        Enabled = true,
-                        ObstacleHaloRadiusCm = 120,
-                        ObstacleHaloValue = 10f,
-                        ObstacleHaloEdgeValue = 0f,
-                    },
-                },
-            };
-            using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null)
-            {
-                FlowEnabled = true,
-            };
-            runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
-
-            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime, _shapeStorage);
-
-            bridge.Update(0f);
-            steering.Update(0.016f);
-
-            Assert.That(runtime.Surface.TryGetDiscomfortCell(1, 2, out float rotatedPieceHalo), Is.True);
-            Assert.That(rotatedPieceHalo, Is.GreaterThan(0f));
-        }
-
-        [Test]
-        public void SingleObstacleFlowDiscomfortHalo_UsesRotatedShapeCenter()
-        {
-            using var world = World.Create();
-
-            world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new FacingDirection { AngleRad = MathF.PI / 2f },
-                new ManifestationObstacleIntent2D
-                {
-                    Shape = ManifestationObstacleShape2D.Circle,
-                    SinkPhysicsCollider = 0,
-                    SinkNavigationObstacle = 1,
-                    RadiusCm = 20,
-                    NavRadiusCm = 20,
-                    LocalOffsetXCm = 200,
-                    LocalOffsetYCm = 0,
-                });
-            world.Create(
-                new NavAgent2D(),
-                new Position2D { Value = Fix64Vec2.FromInt(1000, 1000) },
-                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(100),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(100),
-                    RadiusCm = Fix64.FromInt(20),
-                    NeighborDistCm = Fix64.FromInt(100),
-                    TimeHorizonSec = Fix64.OneValue,
-                    MaxNeighbors = 0
-                });
-
-            var config = new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 8,
-                FlowIterationsPerTick = 0,
-                FlowCrowd = new Navigation2DFlowCrowdConfig
-                {
-                    Enabled = true,
-                    Discomfort = new Navigation2DFlowCrowdDiscomfortConfig
-                    {
-                        Enabled = true,
-                        ObstacleHaloRadiusCm = 120,
-                        ObstacleHaloValue = 10f,
-                        ObstacleHaloEdgeValue = 0f,
-                    },
-                },
-            };
-            using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null)
-            {
-                FlowEnabled = true,
-            };
-            runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
-
-            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime, _shapeStorage);
-
-            bridge.Update(0f);
-            steering.Update(0.016f);
-
-            Assert.That(runtime.Surface.TryGetDiscomfortCell(1, 2, out float rotatedShapeHalo), Is.True);
-            Assert.That(rotatedShapeHalo, Is.GreaterThan(0f));
         }
 
         [Test]
@@ -759,6 +607,189 @@ namespace GasTests
                 CollisionPairInitialCapacity = 0,
                 CollisionPairGrowthStep = 1
             };
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(
+                world,
+                out NavObstacleSet obstacles,
+                out RuntimeIncrementalNavMeshRebuildQueue queue,
+                out NavTileStore store);
+
+            var obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 45,
+                    NavRadiusCm = 45
+                });
+            var nonStructuralEntity = world.Create(
+                WorldPositionCm.FromCm(120, 250),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 35,
+                    NavRadiusCm = 35
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
+
+            world.Set(nonStructuralEntity, WorldPositionCm.FromCm(170, 250));
+            world.Add(nonStructuralEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+
+            world.Set(obstacleEntity, WorldPositionCm.FromCm(250, 150));
+            world.Add(obstacleEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(2u));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile secondTile), Is.True);
+            Assert.That(secondTile.Checksum, Is.Not.EqualTo(firstTile.Checksum));
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_ClearsTrackedStateWhenRuntimeModeStops()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(world, out _, out RuntimeIncrementalNavMeshRebuildQueue queue, out NavTileStore store);
+            var obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 45,
+                    NavRadiusCm = 45
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+
+            engine.RemoveService(CoreServiceKeys.NavMeshBakeConfig);
+            dirtySystem.Update(0f);
+
+            world.Destroy(obstacleEntity);
+            engine.SetService(CoreServiceKeys.NavMeshBakeConfig, CreateRuntimeNavBakeConfig());
+            dirtySystem.Update(0f);
+
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+        }
+
+        private static NavMeshBakeConfig CreateRuntimeNavBakeConfig()
+        {
+            return new NavMeshBakeConfig
+            {
+                Mode = NavBakeNames.ModeRuntimeIncremental,
+                Algorithm = NavBakeNames.AlgorithmCdt,
+                Profiles = new List<NavMeshAgentProfileConfig>
+                {
+                    new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
+                },
+                Layers = new List<NavLayerConfig>
+                {
+                    new NavLayerConfig { Id = GroundNavLayerId, Layer = 0 }
+                },
+                Areas = new List<NavAreaCostConfig>(),
+                RuntimeIncremental = new NavRuntimeIncrementalConfig
+                {
+                    TileBudgetPerFixedTick = 1,
+                    IncludeNeighborTiles = false,
+                    HeightScaleMeters = 1f,
+                    MinWalkableUpDot = 0.6f,
+                    CliffHeightThreshold = 1
+                }
+            };
+        }
+
+        private static AgentProfileRegistry CreateNavAgentProfiles()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "Small",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+        }
+
+        private GameEngine CreateRuntimeNavMeshDirtyEngine(
+            World world,
+            out NavObstacleSet obstacles,
+            out RuntimeIncrementalNavMeshRebuildQueue queue,
+            out NavTileStore store)
+        {
+            var engine = new GameEngine();
+            engine.SetService(CoreServiceKeys.World, world);
+            engine.SetService(CoreServiceKeys.Physics2DShapeStorage, _shapeStorage);
+            typeof(GameEngine).GetProperty(nameof(GameEngine.World))!
+                .SetValue(engine, world);
+
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            NavMeshBakeConfig bakeConfig = CreateRuntimeNavBakeConfig();
+            AgentProfileRegistry agentProfiles = CreateNavAgentProfiles();
+            var navProfiles = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
+            obstacles = new NavObstacleSet();
+            store = new NavTileStore(_ => throw new InvalidOperationException("Runtime navmesh dirty test publishes before disk load."));
+            var registry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+            {
+                [new NavQueryServiceKey(0, 0)] = store
+            });
+            queue = new RuntimeIncrementalNavMeshRebuildQueue(
+                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeContext
+                {
+                    MapId = "physics_runtime_navmesh_dirty_contract",
+                    SourceUri = "Core:Maps/physics_runtime_navmesh_dirty_contract.runtime-navmesh",
+                    Terrain = terrain,
+                    Obstacles = obstacles,
+                    Config = bakeConfig,
+                    AgentProfiles = agentProfiles,
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                    TileVersion = 3,
+                    Mode = NavBakeMode.RuntimeIncremental,
+                    Algorithm = NavBakeAlgorithmKind.Cdt,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                },
+                registry,
+                navProfiles);
+            engine.SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
+            engine.SetService(CoreServiceKeys.RuntimeNavMeshObstacles, obstacles);
+            engine.SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, queue);
+            return engine;
         }
     }
 }

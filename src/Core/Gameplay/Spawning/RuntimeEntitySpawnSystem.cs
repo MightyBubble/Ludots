@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
+using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -97,6 +98,7 @@ namespace Ludots.Core.Gameplay.Spawning
             while (_requests.TryPeek(out var peek))
             {
                 if (peek.Kind == RuntimeEntitySpawnKind.Template &&
+                    !HasComponentPatches(in peek) &&
                     !string.IsNullOrWhiteSpace(peek.TemplateId) &&
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
@@ -166,8 +168,9 @@ namespace Ludots.Core.Gameplay.Spawning
 
             World.Add(entity, new Name { Value = "Unit:" + typeName });
             TryApplyFacing(in request, entity);
-            TryApplySourceTeam(in request, entity);
-            TryApplySourcePlayerOwner(in request, entity);
+            TryApplyTeam(in request, entity);
+            TryApplyPlayerOwner(in request, entity);
+            ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             return entity;
@@ -181,10 +184,11 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
-            var entity = _builder
+            var builder = _builder
                 .UseTemplate(request.TemplateId)
-                .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'")
-                .Build();
+                .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
+            ApplyTemplateComponentPatches(builder, in request);
+            var entity = builder.Build();
             ApplyTemplateKey(entity, request.TemplateId);
 
             if (request.HasWorldPosition != 0)
@@ -197,8 +201,8 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             TryApplyFacing(in request, entity);
-            TryApplySourceTeam(in request, entity);
-            TryApplySourcePlayerOwner(in request, entity);
+            TryApplyTeam(in request, entity);
+            TryApplyPlayerOwner(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryBootstrapPerformer(entity, request.TemplateId);
@@ -216,6 +220,7 @@ namespace Ludots.Core.Gameplay.Spawning
             while (count < _batchRequests.Length &&
                    _requests.TryPeek(out var next) &&
                    next.Kind == RuntimeEntitySpawnKind.Template &&
+                   !HasComponentPatches(in next) &&
                    string.Equals(next.TemplateId, templateId, StringComparison.Ordinal))
             {
                 if (!_requests.TryDequeue(out _batchRequests[count]))
@@ -250,16 +255,16 @@ namespace Ludots.Core.Gameplay.Spawning
             int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
             bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
             bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
-            bool hasSourceTeamWork = false;
-            bool hasSourcePlayerOwnerWork = false;
+            bool hasTeamWork = false;
+            bool hasPlayerOwnerWork = false;
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
-                hasSourceTeamWork |= request.CopySourceTeam != 0;
-                hasSourcePlayerOwnerWork |= request.CopySourcePlayerOwner != 0;
+                hasTeamWork |= request.TeamIdOverride > 0 || request.CopySourceTeam != 0;
+                hasPlayerOwnerWork |= request.PlayerOwnerIdOverride > 0 || request.CopySourcePlayerOwner != 0;
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
@@ -300,8 +305,8 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             bool requiresPostSpawnLoop =
-                hasSourceTeamWork ||
-                hasSourcePlayerOwnerWork ||
+                hasTeamWork ||
+                hasPlayerOwnerWork ||
                 hasParentWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
@@ -315,14 +320,14 @@ namespace Ludots.Core.Gameplay.Spawning
                 {
                     Entity entity = created[i];
                     ref readonly var request = ref _batchRequests[i];
-                    if (hasSourceTeamWork)
+                    if (hasTeamWork)
                     {
-                        TryApplySourceTeam(in request, entity);
+                        TryApplyTeam(in request, entity);
                     }
 
-                    if (hasSourcePlayerOwnerWork)
+                    if (hasPlayerOwnerWork)
                     {
-                        TryApplySourcePlayerOwner(in request, entity);
+                        TryApplyPlayerOwner(in request, entity);
                     }
 
                     if (!allHaveMapEntity)
@@ -465,8 +470,9 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             TryApplyFacing(in request, entity);
-            TryApplySourceTeam(in request, entity);
-            TryApplySourcePlayerOwner(in request, entity);
+            TryApplyTeam(in request, entity);
+            TryApplyPlayerOwner(in request, entity);
+            ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             return entity;
@@ -582,19 +588,25 @@ namespace Ludots.Core.Gameplay.Spawning
             World.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
         }
 
-        private void TryApplySourceTeam(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void TryApplyTeam(in RuntimeEntitySpawnRequest request, Entity entity)
         {
-            if (request.CopySourceTeam == 0)
+            Team team;
+            if (request.TeamIdOverride > 0)
             {
-                return;
+                team = new Team { Id = request.TeamIdOverride };
+            }
+            else
+            {
+                if (request.CopySourceTeam == 0 ||
+                    !World.IsAlive(request.Source) ||
+                    !World.Has<Team>(request.Source))
+                {
+                    return;
+                }
+
+                team = World.Get<Team>(request.Source);
             }
 
-            if (!World.IsAlive(request.Source) || !World.Has<Team>(request.Source))
-            {
-                return;
-            }
-
-            var team = World.Get<Team>(request.Source);
             if (World.Has<Team>(entity))
             {
                 World.Set(entity, team);
@@ -605,19 +617,25 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void TryApplySourcePlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void TryApplyPlayerOwner(in RuntimeEntitySpawnRequest request, Entity entity)
         {
-            if (request.CopySourcePlayerOwner == 0)
+            PlayerOwner owner;
+            if (request.PlayerOwnerIdOverride > 0)
             {
-                return;
+                owner = new PlayerOwner { PlayerId = request.PlayerOwnerIdOverride };
+            }
+            else
+            {
+                if (request.CopySourcePlayerOwner == 0 ||
+                    !World.IsAlive(request.Source) ||
+                    !World.Has<PlayerOwner>(request.Source))
+                {
+                    return;
+                }
+
+                owner = World.Get<PlayerOwner>(request.Source);
             }
 
-            if (!World.IsAlive(request.Source) || !World.Has<PlayerOwner>(request.Source))
-            {
-                return;
-            }
-
-            var owner = World.Get<PlayerOwner>(request.Source);
             if (World.Has<PlayerOwner>(entity))
             {
                 World.Set(entity, owner);
@@ -625,6 +643,67 @@ namespace Ludots.Core.Gameplay.Spawning
             else
             {
                 World.Add(entity, owner);
+            }
+        }
+
+        private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)
+        {
+            if (!HasComponentPatches(in request))
+            {
+                return;
+            }
+
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            for (int i = 0; i < patches.Length; i++)
+            {
+                RuntimeEntitySpawnComponentPatch patch = patches[i];
+                ValidateComponentPatch(in patch, i);
+                builder.WithOverride(patch.ComponentName, patch.Data);
+            }
+        }
+
+        private void ApplyComponentPatches(in RuntimeEntitySpawnRequest request, Entity entity)
+        {
+            if (!HasComponentPatches(in request))
+            {
+                return;
+            }
+
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            for (int i = 0; i < patches.Length; i++)
+            {
+                RuntimeEntitySpawnComponentPatch patch = patches[i];
+                ValidateComponentPatch(in patch, i);
+                if (!CoreComponentRegistry.TryGetComponentType(patch.ComponentName, out var componentType))
+                {
+                    throw new InvalidOperationException($"Runtime entity spawn component patch '{patch.ComponentName}' is not registered.");
+                }
+
+                if (World.Has(entity, componentType))
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime entity spawn component patch '{patch.ComponentName}' cannot overwrite an existing component outside the template override path.");
+                }
+
+                CoreComponentRegistry.Apply(entity, patch.ComponentName, patch.Data);
+            }
+        }
+
+        private static bool HasComponentPatches(in RuntimeEntitySpawnRequest request)
+        {
+            return request.ComponentPatches is { Length: > 0 };
+        }
+
+        private static void ValidateComponentPatch(in RuntimeEntitySpawnComponentPatch patch, int index)
+        {
+            if (string.IsNullOrWhiteSpace(patch.ComponentName))
+            {
+                throw new InvalidOperationException($"Runtime entity spawn component patch at index {index} requires a non-empty component name.");
+            }
+
+            if (patch.Data == null)
+            {
+                throw new InvalidOperationException($"Runtime entity spawn component patch '{patch.ComponentName}' requires non-null data.");
             }
         }
 

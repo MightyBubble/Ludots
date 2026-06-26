@@ -1,0 +1,14 @@
+{
+  "name": "CapabilityStandardPhysics2DShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard Physics2D showcase with runtime tuning, reset, dynamic spawn, static obstacle spawn, and drawn polygon obstacles.",
+  "main": "bin/net8.0/CapabilityStandardPhysics2DShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "physics2d", "capability_standard"]
+}

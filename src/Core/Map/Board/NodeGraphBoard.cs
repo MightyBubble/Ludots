@@ -27,25 +27,25 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            int gridCellSizeCm = config.GridCellSizeCm;
-            int worldWidthCm = config.WidthInTiles * 256 * gridCellSizeCm;
-            int worldHeightCm = config.HeightInTiles * 256 * gridCellSizeCm;
-            WorldSize = new WorldSizeSpec(
-                new Mathematics.WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm);
+            var worldExtent = new WorldExtentSpec(
+                config.WidthInMacroTiles,
+                config.HeightInMacroTiles,
+                config.GridCellSizeCm);
+            WorldSize = worldExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
             SpatialPartition = partition;
             QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
 
-            LoadedChunksSource = new WorldGridLoadedChunks(config.ChunkSizeCells * gridCellSizeCm);
+            int streamingChunkSizeCm = config.ChunkSizeCells * config.GridCellSizeCm;
+            LoadedChunksSource = new WorldGridLoadedChunks(streamingChunkSizeCm);
             GraphStore = new ChunkedNodeGraphStore();
             GraphStore.SubscribeToLoadedChunks(LoadedChunksSource);
             GraphRuntime = new LoadedGraphRuntime(
                 GraphStore,
                 LoadedChunksSource,
-                preferredProjectionCellSizeCm: config.ChunkSizeCells * gridCellSizeCm);
+                preferredProjectionCellSizeCm: streamingChunkSizeCm);
         }
 
         public void Dispose()

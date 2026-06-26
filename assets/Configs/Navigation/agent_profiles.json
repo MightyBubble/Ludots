@@ -1,0 +1,50 @@
+[
+  {
+    "id": "Small",
+    "radiusCm": 30.0,
+    "heightCm": 180.0,
+    "clearanceCm": 40.0,
+    "mass": 1.0,
+    "layer": 0
+  },
+  {
+    "id": "Medium",
+    "radiusCm": 50.0,
+    "heightCm": 200.0,
+    "clearanceCm": 45.0,
+    "mass": 2.0,
+    "layer": 0
+  },
+  {
+    "id": "Large",
+    "radiusCm": 80.0,
+    "heightCm": 240.0,
+    "clearanceCm": 50.0,
+    "mass": 4.0,
+    "layer": 0
+  },
+  {
+    "id": "light",
+    "radiusCm": 20.0,
+    "heightCm": 180.0,
+    "clearanceCm": 40.0,
+    "mass": 1.0,
+    "layer": 0
+  },
+  {
+    "id": "heavy",
+    "radiusCm": 28.0,
+    "heightCm": 220.0,
+    "clearanceCm": 50.0,
+    "mass": 4.0,
+    "layer": 0
+  },
+  {
+    "id": "formation",
+    "radiusCm": 36.0,
+    "heightCm": 220.0,
+    "clearanceCm": 50.0,
+    "mass": 8.0,
+    "layer": 0
+  }
+]

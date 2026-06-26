@@ -39,6 +39,33 @@ public sealed class WebUiDataPlaneDocumentationTests
 		Assert.That(docs, Does.Contain("UE5 BLUI is therefore a reference transport shape, not a Core dependency"));
 	}
 
+	[Test]
+	public void DataPlaneArchitectureDocs_RecordNativeBridgeSharedMemoryBenchmarkAndFacadeContracts()
+	{
+		string docs = ReadRepoFile("docs", "architecture", "webui_dataplane_architecture.md");
+
+		Assert.That(docs, Does.Contain("`IWebUiDataTransport` is the semantic transport boundary"));
+		Assert.That(docs, Does.Contain("`window.ludotsDataplane`"));
+		Assert.That(docs, Does.Contain("control lane"));
+		Assert.That(docs, Does.Contain("data lane"));
+		Assert.That(docs, Does.Contain("shared-buffer descriptor"));
+		Assert.That(docs, Does.Contain("No implicit fallback"));
+		Assert.That(docs, Does.Contain("artifacts/benchmarks/webui-dataplane"));
+		Assert.That(docs, Does.Contain("Browser-Host Conformance Checklist"));
+	}
+
+	[Test]
+	public void AdrRecordsBrowserNativeBridgeAsProviderDetail_NotDataPlaneDependency()
+	{
+		string adr = ReadRepoFile("docs", "adr", "ADR-0003-browser-ui-runtime-contract.md");
+
+		Assert.That(adr, Does.Contain("Browser Native Bridge"));
+		Assert.That(adr, Does.Contain("`window.ludotsDataplane`"));
+		Assert.That(adr, Does.Contain("control lane"));
+		Assert.That(adr, Does.Contain("shared-memory data lane"));
+		Assert.That(adr, Does.Contain("CEF renderer/V8 injection is provider implementation detail"));
+	}
+
 	private static string ReadRepoFile(params string[] segments)
 	{
 		string current = TestContext.CurrentContext.TestDirectory;

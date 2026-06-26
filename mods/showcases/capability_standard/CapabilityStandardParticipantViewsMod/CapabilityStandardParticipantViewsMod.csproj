@@ -7,6 +7,5 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
-    <ProjectReference Include="..\..\..\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
   </ItemGroup>
 </Project>

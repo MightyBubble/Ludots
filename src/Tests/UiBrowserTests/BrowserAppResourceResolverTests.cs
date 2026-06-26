@@ -17,7 +17,7 @@ public sealed class BrowserAppResourceResolverTests
 			await File.WriteAllTextAsync(Path.Combine(root, "index.html"), html, Encoding.UTF8);
 			var resolver = new BrowserAppResourceResolver(root);
 
-			BrowserResource? resource = await resolver.ResolveAsync(new Uri("ludots-app://ui/"));
+			BrowserResource? resource = await resolver.ResolveAsync(BrowserLocalAppUri.Root);
 
 			Assert.That(resource, Is.Not.Null);
 			Assert.That(resource!.ContentType, Is.EqualTo("text/html; charset=utf-8"));
@@ -40,7 +40,7 @@ public sealed class BrowserAppResourceResolverTests
 			await File.WriteAllBytesAsync(Path.Combine(assets, "app.wasm"), [0, 97, 115, 109]);
 			var resolver = new BrowserAppResourceResolver(root);
 
-			BrowserResource? resource = await resolver.ResolveAsync(new Uri("ludots-app://ui/assets/app.wasm"));
+			BrowserResource? resource = await resolver.ResolveAsync(BrowserLocalAppUri.Create("/assets/app.wasm"));
 
 			Assert.That(resource, Is.Not.Null);
 			Assert.That(resource!.ContentType, Is.EqualTo("application/wasm"));
@@ -50,6 +50,15 @@ public sealed class BrowserAppResourceResolverTests
 		{
 			Directory.Delete(root, recursive: true);
 		}
+	}
+
+	[Test]
+	public void BrowserLocalAppUri_UsesStandardHostForCefCustomSchemeNavigation()
+	{
+		Assert.That(BrowserLocalAppUri.Scheme, Is.EqualTo("ludots-app"));
+		Assert.That(BrowserLocalAppUri.Host, Is.EqualTo("app.ludots.local"));
+		Assert.That(BrowserLocalAppUri.Root.AbsoluteUri, Is.EqualTo("ludots-app://app.ludots.local/"));
+		Assert.That(BrowserLocalAppUri.Create("/", "perf=baseline").AbsoluteUri, Is.EqualTo("ludots-app://app.ludots.local/?perf=baseline"));
 	}
 
 	[Test]

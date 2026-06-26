@@ -51,6 +51,15 @@ Add a WebUI DataPlane boundary above Browser UI:
 - Ludots-started CEF and external UE5 BLUI are two transport paths for the same DataPlane vocabulary.
 - UE5 BLUI remains an adapter concern. It may host BLUI/CEF and forward messages, but it does not enter Core and must not define browser, collection, marker, or topic contracts.
 
+The WebUI DataPlane also defines a Browser Native Bridge shape:
+
+- Web applications depend only on `window.ludotsDataplane`.
+- `IWebUiDataTransport` is the C# semantic boundary for control messages, delivery semantics, capability negotiation, shared-buffer descriptors, and diagnostics.
+- The control lane carries handshake, subscribe, command, ack/error, diagnostics, and buffer descriptor messages.
+- The shared-memory data lane is optional and must be explicitly negotiated; missing capability fails fast instead of falling back silently to message/base64.
+- CEF renderer/V8 injection is provider implementation detail. It may install `window.ludotsDataplane` over `CefSharp.PostMessage`, but Core, Browser contracts, WebUI contracts, and Web apps do not depend on V8 or CEF-specific globals.
+- UE5 BLUI may install the same facade over BLUI-native messages and shared-buffer descriptors. It remains a host adapter and must not own Ludots topic or command semantics.
+
 ## Consequences
 
 Positive:
@@ -73,6 +82,8 @@ Constraints:
 - WebUI collection topics must reuse `EntityCollectionStore`; unknown owner/key/query ids fail explicitly.
 - High-frequency WebUI topics must follow the minimap buffer pattern for capacity, buckets, stable ids, and drop diagnostics instead of allocating per row on the hot path.
 - UE5 BLUI support is transport adapter work only. Core accepts the transport-neutral C# contracts and DataPlane vocabulary, not UE widgets, UE textures, or BLUI native lifecycle.
+- Browser Native Bridge support does not make V8 a Ludots dependency. V8 is a browser-engine implementation detail behind CEF/BLUI.
+- Shared-memory support requires benchmark evidence under `artifacts/benchmarks/webui-dataplane` and host conformance evidence for input, focus, alpha hit-test, and passthrough semantics.
 
 ## Evidence
 
@@ -80,4 +91,5 @@ Constraints:
 - Skia adapter: `src/Libraries/Ludots.UI.Browser.Skia/`
 - Canvas extension point: `src/Libraries/Ludots.UI.Skia/ISkiaUiCanvasContent.cs`
 - WebUI DataPlane boundary: `docs/architecture/webui_dataplane_architecture.md`
+- DataPlane contracts and tests: `src/Libraries/Ludots.WebUI.DataPlane/`, `src/Tests/WebUiDataPlaneTests/`
 - Tests: `src/Tests/UiBrowserTests/`

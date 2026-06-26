@@ -1,5 +1,0 @@
-[
-  { "Path": "CapabilityStandardPhysics2DPlaygroundV2Config.json", "Policy": "Replace" },
-  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
-]

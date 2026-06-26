@@ -5,6 +5,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using SplineSurfaceUatMod.Runtime;
 
 namespace SplineSurfaceUatMod.UI
@@ -14,6 +15,7 @@ namespace SplineSurfaceUatMod.UI
         private ReactivePage<SplineSurfaceUatPanelState>? _page;
         private GameEngine? _engine;
         private readonly SplineSurfaceUatRuntime _runtime;
+        private UiSurfaceLeaseHandle _lease;
 
         public SplineSurfaceUatPanelController(SplineSurfaceUatRuntime runtime)
         {
@@ -24,6 +26,10 @@ namespace SplineSurfaceUatMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return false;
+            }
 
             _engine = engine;
             ReactivePage<SplineSurfaceUatPanelState>? page = EnsurePage();
@@ -34,13 +40,10 @@ namespace SplineSurfaceUatMod.UI
 
             SplineSurfaceUatPanelState snapshot = state;
             page.SetState(_ => snapshot);
-            root.IsDirty = true;
-            if (ReferenceEquals(root.Scene, page.Scene))
-            {
-                return true;
-            }
-
-            root.MountScene(page.Scene);
+            surfaceHost.PublishReactivePage(
+                ref _lease,
+                new UiSurfaceLeaseRequest("Showcase.SplineSurfaceUat.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                page);
             return true;
         }
 
@@ -48,9 +51,10 @@ namespace SplineSurfaceUatMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.ReleaseLease(ref _lease);
             }
 
             _engine = null;
@@ -141,9 +145,10 @@ namespace SplineSurfaceUatMod.UI
             }
 
             action(engine);
-            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (_lease.IsValid &&
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.IsDirty = true;
+                surfaceHost.InvalidateLease(_lease);
             }
         }
 
