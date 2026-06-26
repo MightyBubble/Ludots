@@ -109,6 +109,51 @@ public sealed class UiShowcaseAcceptanceTests
     }
 
     [Test]
+    public void UIRoot_ClickThatClearsScene_CompletesInputFrame()
+    {
+        var root = new UIRoot(new SkiaUiRenderer());
+        root.Resize(1280f, 720f);
+        UiScene scene = UiSceneComposer.Compose(
+            TextMeasurer,
+            ImageSizeProvider,
+            Ui.Column(
+                Ui.Button("Clear Scene", _ => root.ClearScene())
+                    .Id("clear-scene")
+                    .Width(160f)
+                    .Height(48f)));
+        root.MountScene(scene);
+        scene.Layout(1280f, 720f);
+
+        UiNode button = scene.FindByElementId("clear-scene")!;
+        float x = button.LayoutRect.X + 4f;
+        float y = button.LayoutRect.Y + 4f;
+
+        bool downHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Down,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+        bool upHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Up,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+
+        Assert.That(downHandled, Is.True);
+        Assert.That(upHandled, Is.True);
+        Assert.That(root.Scene, Is.Null);
+        Assert.That(root.IsDirty, Is.True);
+    }
+
+    [Test]
     public void ReactiveScene_ThemeSwitch_ChangesRootComputedStyle()
     {
         var page = UiShowcaseFactory.CreateReactivePage(TextMeasurer, ImageSizeProvider);
@@ -271,4 +316,3 @@ public sealed class UiShowcaseAcceptanceTests
              + (0.0722d * Linearize(color.Blue));
     }
 }
-

@@ -83,11 +83,12 @@ public class UIRoot
 
 	public bool HandleInput(InputEvent e)
 	{
-		if (Scene == null)
+		UiScene? scene = Scene;
+		if (scene == null)
 		{
 			return false;
 		}
-		Scene.Layout(Width, Height);
+		scene.Layout(Width, Height);
 		if (e is KeyboardEvent keyboardEvent)
 		{
 			return HandleKeyboardInput(keyboardEvent);
@@ -99,7 +100,7 @@ public class UIRoot
 		}
 		bool flag = false;
 		if (_capturedCanvasNodeId.HasValue &&
-			Scene.FindNode(_capturedCanvasNodeId.Value) is UiNode capturedCanvasNode &&
+			scene.FindNode(_capturedCanvasNodeId.Value) is UiNode capturedCanvasNode &&
 			capturedCanvasNode.CanvasContent is IUiCanvasInputSink capturedInputSink)
 		{
 			bool capturedHandled = capturedInputSink.HandleInput(capturedCanvasNode, pointerEvent);
@@ -119,12 +120,12 @@ public class UIRoot
 			_capturedCanvasNodeId = null;
 		}
 
-		UiNodeId? uiNodeId = Scene.HitTest(pointerEvent.X, pointerEvent.Y)?.Id;
+		UiNodeId? uiNodeId = scene.HitTest(pointerEvent.X, pointerEvent.Y)?.Id;
 		if (uiNodeId.HasValue)
 		{
 			UiNodeId valueOrDefault = uiNodeId.GetValueOrDefault();
 			if (valueOrDefault.IsValid &&
-				Scene.FindNode(valueOrDefault) is UiNode hitNode &&
+				scene.FindNode(valueOrDefault) is UiNode hitNode &&
 				TryHandleCanvasInput(hitNode, pointerEvent, out UiNodeId canvasNodeId))
 			{
 				if (pointerEvent.Action == PointerAction.Down)
@@ -151,18 +152,18 @@ public class UIRoot
 		switch (pointerEvent.Action)
 		{
 		case PointerAction.Move:
-			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			flag = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			break;
 		case PointerAction.Down:
 		{
 			PointerButton button = RequirePointerButton(pointerEvent);
 			_pressedNodeId = button == PointerButton.Left ? uiNodeId : null;
-			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Down, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			flag = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Down, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			break;
 		}
 		case PointerAction.Up:
 		{
-			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Up, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
+			flag = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Up, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			UiNodeId? pressedNodeId = _pressedNodeId;
 			PointerButton button = RequirePointerButton(pointerEvent);
 			if (pressedNodeId.HasValue && button == PointerButton.Left)
@@ -170,7 +171,7 @@ public class UIRoot
 				UiNodeId valueOrDefault = pressedNodeId.GetValueOrDefault();
 				if (valueOrDefault.IsValid && uiNodeId == valueOrDefault)
 				{
-					flag |= Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, valueOrDefault)).Handled;
+					flag |= scene.Dispatch(new UiPointerEvent(UiPointerEventType.Click, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, valueOrDefault)).Handled;
 				}
 			}
 			_pressedNodeId = null;
@@ -182,15 +183,25 @@ public class UIRoot
 			_capturedCanvasNodeId = null;
 			break;
 		case PointerAction.Scroll:
-			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
+			flag = scene.Dispatch(new UiPointerEvent(UiPointerEventType.Scroll, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId, pointerEvent.DeltaX, pointerEvent.DeltaY)).Handled;
 			break;
 		}
-		bool sceneChanged = Scene.IsDirty;
+		if (!ReferenceEquals(Scene, scene))
+		{
+			IsDirty = true;
+			return flag;
+		}
+		bool sceneChanged = scene.IsDirty;
 		bool runtimeChanged = false;
 		if (flag || sceneChanged)
 		{
 			runtimeChanged = RefreshReactiveSceneRuntime();
-			sceneChanged = Scene.IsDirty;
+			if (!ReferenceEquals(Scene, scene))
+			{
+				IsDirty = true;
+				return flag || runtimeChanged;
+			}
+			sceneChanged = scene.IsDirty;
 		}
 		if (sceneChanged || runtimeChanged)
 		{
