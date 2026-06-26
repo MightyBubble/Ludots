@@ -20,9 +20,14 @@ import '@xyflow/react/dist/style.css';
 import './styles.css';
 import {
   DATA_PLANE_DEFAULT_TOPIC,
+  applyEntityColumnarPacket,
+  createEntityAttributeView,
   createLudotsDataPlaneClient,
+  decodeEntityColumnarPacket,
   ensureLudotsDataPlaneTransport
 } from './dataplane/client.js';
+
+const DATA_PLANE_VIEW_SAMPLE_MS = 100;
 
 const lanes = [
   { id: 'runtime', label: 'Runtime', color: '#64d2ff' },
@@ -65,6 +70,18 @@ const initialRawInputState = {
   y: 0
 };
 
+const initialProfileState = {
+  packetCount: 0,
+  packetsPerSecond: 0,
+  mbPerSecond: 0,
+  descriptorKbPerSecond: 0,
+  lastPacketBytes: 0,
+  decodeMs: 0,
+  applyMs: 0,
+  viewMs: 0,
+  lastDeltaRows: 0
+};
+
 const initialDataPlaneState = {
   phase: 'boot',
   transport: 'none',
@@ -80,7 +97,10 @@ const initialDataPlaneState = {
   droppedPackets: 0,
   binaryBytes: 0,
   error: '',
-  rows: []
+  rows: [],
+  entityView: null,
+  visibleStart: 0,
+  profile: initialProfileState
 };
 
 function resolveShowcaseMode() {
@@ -88,6 +108,14 @@ function resolveShowcaseMode() {
   return params.get('perf') === 'baseline' || params.get('mode') === 'baseline'
     ? 'baseline'
     : 'react-flow';
+}
+
+function resolveDataPlaneTransportMode() {
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('dataplane') ?? params.get('mode');
+  return mode === 'mock' || mode === 'preview'
+    ? 'mock'
+    : 'standard';
 }
 
 function buildInitialGraph() {
@@ -200,11 +228,58 @@ function LaneBackgrounds() {
 
 function useLudotsDataPlane() {
   const clientRef = useRef(null);
+  const stateRef = useRef(initialDataPlaneState);
+  const entityStoreRef = useRef(null);
+  const commitFrameRef = useRef(0);
+  const lastViewRefreshRef = useRef(0);
   const [state, setState] = useState(initialDataPlaneState);
+
+  const commitState = useCallback((updater, immediate = false) => {
+    const current = stateRef.current;
+    stateRef.current = typeof updater === 'function'
+      ? updater(current)
+      : { ...current, ...updater };
+
+    if (immediate) {
+      if (commitFrameRef.current !== 0) {
+        window.cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = 0;
+      }
+
+      React.startTransition(() => setState(stateRef.current));
+      return;
+    }
+
+    if (commitFrameRef.current !== 0) {
+      return;
+    }
+
+    commitFrameRef.current = window.requestAnimationFrame(() => {
+      commitFrameRef.current = 0;
+      React.startTransition(() => setState(stateRef.current));
+    });
+  }, []);
 
   React.useEffect(() => {
     let active = true;
-    const { transport, installedFake } = ensureLudotsDataPlaneTransport();
+    let resolvedTransport;
+
+    try {
+      resolvedTransport = ensureLudotsDataPlaneTransport({
+        mode: resolveDataPlaneTransportMode()
+      });
+    } catch (error) {
+      commitState((current) => ({
+        ...current,
+        phase: 'unavailable',
+        error: error instanceof Error ? error.message : String(error)
+      }), true);
+      return () => {
+        active = false;
+      };
+    }
+
+    const { transport, installedFake, mode } = resolvedTransport;
     const client = createLudotsDataPlaneClient({
       transport,
       installedFake,
@@ -213,25 +288,21 @@ function useLudotsDataPlane() {
           return;
         }
 
-        React.startTransition(() => {
-          setState((current) => ({
-            ...current,
-            error: diagnostic.message,
-            lastPacket: diagnostic.type
-          }));
-        });
+        commitState((current) => ({
+          ...current,
+          error: diagnostic.message,
+          lastPacket: diagnostic.type
+        }), true);
       }
     });
     clientRef.current = client;
 
-    React.startTransition(() => {
-      setState((current) => ({
-        ...current,
-        phase: 'connecting',
-        transport: transport?.name ?? 'unknown',
-        error: ''
-      }));
-    });
+    commitState((current) => ({
+      ...current,
+      phase: 'connecting',
+      transport: transport?.name ?? mode ?? 'unknown',
+      error: ''
+    }), true);
 
     client
       .handshake({ app: 'browser-react-flow-showcase' })
@@ -240,22 +311,21 @@ function useLudotsDataPlane() {
           return null;
         }
 
-        React.startTransition(() => {
-          setState((current) => ({
-            ...current,
-            phase: 'connected',
-            sessionId: handshake.sessionId ?? handshake.payload?.sessionId ?? current.sessionId,
-            transport: handshake.payload?.transportName ?? transport?.name ?? current.transport
-          }));
-        });
+        commitState((current) => ({
+          ...current,
+          phase: 'connected',
+          sessionId: handshake.sessionId ?? handshake.payload?.sessionId ?? current.sessionId,
+          transport: handshake.payload?.transportName ??
+            handshake.payload?.transportMode ??
+            transport?.name ??
+            current.transport
+        }), true);
         return client.subscribe(DATA_PLANE_DEFAULT_TOPIC, (event) => {
           if (!active) {
             return;
           }
 
-          React.startTransition(() => {
-            setState((current) => reduceDataPlaneEvent(current, event));
-          });
+          commitState((current) => reduceDataPlaneEvent(current, event, entityStoreRef, lastViewRefreshRef));
         });
       })
       .catch((error) => {
@@ -263,64 +333,147 @@ function useLudotsDataPlane() {
           return;
         }
 
-        React.startTransition(() => {
-          setState((current) => ({
-            ...current,
-            phase: 'error',
-            error: error instanceof Error ? error.message : String(error)
-          }));
-        });
+        commitState((current) => ({
+          ...current,
+          phase: 'error',
+          error: error instanceof Error ? error.message : String(error)
+        }), true);
       });
 
     return () => {
       active = false;
+      if (commitFrameRef.current !== 0) {
+        window.cancelAnimationFrame(commitFrameRef.current);
+        commitFrameRef.current = 0;
+      }
       client.close();
       if (transport?.dispose) {
         transport.dispose();
       }
     };
-  }, []);
+  }, [commitState]);
 
-  const command = useCallback(async (name, payload) => {
+  const command = useCallback(async (name, payload = {}) => {
     const client = clientRef.current;
     if (!client) {
       return;
     }
 
-    React.startTransition(() => {
-      setState((current) => ({
-        ...current,
-        lastCommand: `${name}:pending`,
-        error: ''
-      }));
-    });
+    commitState((current) => ({
+      ...current,
+      lastCommand: `${name}:pending`,
+      error: ''
+    }), true);
 
     try {
       const response = await client.command(name, payload);
-      React.startTransition(() => {
-        setState((current) => ({
-          ...current,
-          lastCommand: `${name}:ack`,
-          commandAcks: current.commandAcks + 1,
-          selectedEntityId: payload.nodeId ?? current.selectedEntityId,
-          error: response.payload?.message ?? current.error
-        }));
-      });
+      commitState((current) => ({
+        ...current,
+        lastCommand: `${name}:ack`,
+        commandAcks: current.commandAcks + 1,
+        selectedEntityId: payload.stableId ? `entity.${payload.stableId}` : payload.nodeId ?? current.selectedEntityId,
+        error: response.payload?.message ?? current.error
+      }), true);
     } catch (error) {
-      React.startTransition(() => {
-        setState((current) => ({
-          ...current,
-          lastCommand: `${name}:error`,
-          error: error instanceof Error ? error.message : String(error)
-        }));
-      });
+      commitState((current) => ({
+        ...current,
+        lastCommand: `${name}:error`,
+        error: error instanceof Error ? error.message : String(error)
+      }), true);
     }
-  }, []);
+  }, [commitState]);
 
-  return { state, command };
+  const setVisibleStart = useCallback((visibleStart) => {
+    commitState((current) => {
+      const store = entityStoreRef.current;
+      const entityView = store
+        ? createEntityAttributeView(store, { visibleStart, visibleCount: 32, bucketCount: 64, reuse: current.entityView })
+        : current.entityView;
+      lastViewRefreshRef.current = performance.now();
+      return {
+        ...current,
+        visibleStart: entityView?.visibleStart ?? visibleStart,
+        entityView,
+        rows: entityView?.visibleRows ?? current.rows
+      };
+    }, true);
+  }, [commitState]);
+
+  return { state, command, setVisibleStart };
 }
 
-function reduceDataPlaneEvent(current, event) {
+function reduceDataPlaneEvent(current, event, entityStoreRef, lastViewRefreshRef) {
+  if (event.bytes) {
+    const decoded = tryDecodeEntityColumnarPacket(event.bytes);
+    const descriptor = event.sharedBuffer ?? {};
+    if (decoded) {
+      const decodeMs = decoded.decodeMs;
+      let store;
+      let applyMs = 0;
+      try {
+        const applyStarted = performance.now();
+        store = applyEntityColumnarPacket(entityStoreRef.current, decoded.packet);
+        applyMs = performance.now() - applyStarted;
+        entityStoreRef.current = store;
+      } catch (error) {
+        return {
+          ...current,
+          phase: 'error',
+          error: error instanceof Error ? error.message : String(error),
+          lastPacket: `${event.kind}:decode-error`
+        };
+      }
+
+      const now = performance.now();
+      const shouldRefreshView =
+        current.entityView == null ||
+        now - lastViewRefreshRef.current >= DATA_PLANE_VIEW_SAMPLE_MS;
+      let entityView = current.entityView;
+      let viewMs = 0;
+      if (shouldRefreshView) {
+        const viewStarted = performance.now();
+        entityView = createEntityAttributeView(store, {
+          visibleStart: current.visibleStart,
+          visibleCount: 32,
+          bucketCount: 64,
+          reuse: current.entityView
+        });
+        viewMs = performance.now() - viewStarted;
+        lastViewRefreshRef.current = now;
+      }
+
+      const binaryBytes = event.binaryBytes ?? event.bytes.byteLength ?? 0;
+      const profile = updateStreamProfile(
+        current.profile,
+        binaryBytes,
+        event.rawDescriptorBytes ?? 0,
+        decodeMs,
+        applyMs,
+        viewMs,
+        store.lastDeltaRows);
+      const visibleRows = entityView?.visibleRows ?? current.rows;
+      return {
+        ...current,
+        phase: 'streaming',
+        topic: event.topic ?? current.topic,
+        sessionId: event.sessionId ?? current.sessionId,
+        tick: descriptor.tick ?? store.tick ?? current.tick,
+        entityCount: store.stableIds.length,
+        selectedEntityId: current.selectedEntityId === 'none'
+          ? visibleRows[0]?.id ?? current.selectedEntityId
+          : current.selectedEntityId,
+        lastPacket: `${event.kind}:shared-memory`,
+        coalescedPackets: descriptor.coalescedPackets ?? current.coalescedPackets,
+        droppedPackets: descriptor.droppedPackets ?? current.droppedPackets,
+        binaryBytes: current.binaryBytes + binaryBytes,
+        rows: visibleRows,
+        entityView: entityView ?? current.entityView,
+        visibleStart: entityView?.visibleStart ?? current.visibleStart,
+        profile
+      };
+    }
+  }
+
   if (event.kind === 'binaryChunk') {
     return {
       ...current,
@@ -352,6 +505,257 @@ function reduceDataPlaneEvent(current, event) {
   };
 }
 
+function tryDecodeEntityColumnarPacket(bytes) {
+  try {
+    const started = performance.now();
+    const decoded = decodeEntityColumnarPacket(bytes);
+    return { packet: decoded, decodeMs: performance.now() - started };
+  } catch {
+    return null;
+  }
+}
+
+function updateStreamProfile(previous, byteLength, descriptorBytes, decodeMs, applyMs, viewMs, lastDeltaRows) {
+  const now = performance.now();
+  const sample = previous.sample ?? {
+    startedAt: now,
+    packets: 0,
+    bytes: 0,
+    descriptorBytes: 0
+  };
+  const nextSample = {
+    startedAt: sample.startedAt,
+    packets: sample.packets + 1,
+    bytes: sample.bytes + byteLength,
+    descriptorBytes: sample.descriptorBytes + descriptorBytes
+  };
+  const elapsed = now - sample.startedAt;
+
+  if (elapsed < 500) {
+    return {
+      ...previous,
+      packetCount: previous.packetCount + 1,
+      lastPacketBytes: byteLength,
+      decodeMs,
+      applyMs,
+      viewMs,
+      lastDeltaRows,
+      sample: nextSample
+    };
+  }
+
+  return {
+    packetCount: previous.packetCount + 1,
+    packetsPerSecond: (nextSample.packets * 1000) / elapsed,
+    mbPerSecond: (nextSample.bytes * 1000) / elapsed / (1024 * 1024),
+    descriptorKbPerSecond: (nextSample.descriptorBytes * 1000) / elapsed / 1024,
+    lastPacketBytes: byteLength,
+    decodeMs,
+    applyMs,
+    viewMs,
+    lastDeltaRows,
+    sample: {
+      startedAt: now,
+      packets: 0,
+      bytes: 0,
+      descriptorBytes: 0
+    }
+  };
+}
+
+function useBrowserFps() {
+  const [fps, setFps] = useState(0);
+
+  React.useEffect(() => {
+    let raf = 0;
+    let frames = 0;
+    let lastSample = performance.now();
+
+    const sample = (time) => {
+      frames += 1;
+      const elapsed = time - lastSample;
+      if (elapsed >= 500) {
+        setFps(Math.round((frames * 1000) / elapsed));
+        frames = 0;
+        lastSample = time;
+      }
+
+      raf = window.requestAnimationFrame(sample);
+    };
+
+    raf = window.requestAnimationFrame(sample);
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
+
+  return fps;
+}
+
+function formatCount(value) {
+  return new Intl.NumberFormat('en-US').format(value ?? 0);
+}
+
+function formatNumber(value, digits = 1) {
+  return Number.isFinite(value) ? value.toFixed(digits) : '0.0';
+}
+
+function formatBytes(value) {
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0 B';
+  }
+
+  if (value >= 1024 * 1024) {
+    return `${formatNumber(value / (1024 * 1024), 2)} MB`;
+  }
+
+  if (value >= 1024) {
+    return `${formatNumber(value / 1024, 1)} KB`;
+  }
+
+  return `${Math.round(value)} B`;
+}
+
+function DataPlaneStressPanel({ dataPlane, keyboardProbe, setKeyboardProbe, keyboardStatus, setKeyboardStatus }) {
+  const browserFps = useBrowserFps();
+  const state = dataPlane.state;
+  const entityView = state.entityView;
+  const profile = state.profile ?? initialProfileState;
+  const maxVisibleStart = Math.max(0, state.entityCount - 32);
+  const visibleRows = entityView?.visibleRows ?? state.rows ?? [];
+  const summary = entityView?.summary;
+
+  return (
+    <div className="dataplane-stress">
+      <div className="stress-head">
+        <div>
+          <span className="eyebrow">Shared memory DataPlane</span>
+          <h2>{formatCount(state.entityCount)} entity attributes</h2>
+        </div>
+        <strong>{state.phase}</strong>
+      </div>
+
+      <div className="stress-profile-grid">
+        <MetricCell value={browserFps} label="browser fps" />
+        <MetricCell value={formatNumber(profile.packetsPerSecond, 1)} label="packets/s" />
+        <MetricCell value={formatNumber(profile.mbPerSecond, 1)} label="MB/s payload" />
+        <MetricCell value={`${formatNumber(profile.decodeMs, 2)} ms`} label="decode" />
+        <MetricCell value={`${formatNumber(profile.applyMs, 2)} ms`} label="apply" />
+        <MetricCell value={`${formatNumber(profile.viewMs, 2)} ms`} label="view map" />
+        <MetricCell value={formatBytes(profile.lastPacketBytes)} label="last packet" />
+        <MetricCell value={formatCount(profile.lastDeltaRows)} label="rows/frame" />
+      </div>
+
+      <div className="stress-meta">
+        <span>{state.lastPacket}</span>
+        <span>{state.transport}</span>
+        <span>{formatNumber(profile.descriptorKbPerSecond, 1)} KB/s descriptors</span>
+        <span>{state.error || state.topic}</span>
+      </div>
+
+      <BucketStrip buckets={entityView?.buckets ?? []} />
+
+      <div className="stress-summary">
+        <MetricCell value={summary ? formatNumber(summary.avgHp, 1) : '-'} label="avg hp" />
+        <MetricCell value={summary ? summary.activeRows : '-'} label="active" />
+        <MetricCell value={summary ? summary.damagedRows : '-'} label="damaged" />
+        <MetricCell value={state.coalescedPackets} label="coalesced" />
+      </div>
+
+      <div className="entity-window-control">
+        <label htmlFor="entity-window-range">
+          <span>entity window</span>
+          <strong>{formatCount(entityView?.visibleStart ?? state.visibleStart)} - {formatCount((entityView?.visibleStart ?? state.visibleStart) + visibleRows.length)}</strong>
+        </label>
+        <input
+          id="entity-window-range"
+          type="range"
+          min="0"
+          max={maxVisibleStart}
+          step="32"
+          value={Math.min(state.visibleStart, maxVisibleStart)}
+          onChange={(event) => dataPlane.setVisibleStart(Number(event.target.value))}
+        />
+      </div>
+
+      <div className="entity-attribute-list">
+        {visibleRows.map((row) => (
+          <button
+            key={row.id ?? row.stableId}
+            type="button"
+            onClick={() => dataPlane.command('inspectEntity', { stableId: row.stableId, nodeId: row.id })}
+          >
+            <span className="entity-id">{row.stableId}</span>
+            <span className="entity-hp">
+              <i style={{ width: `${Math.max(1, Math.min(100, row.hp))}%` }} />
+              <strong>{row.hp}</strong>
+            </span>
+            <span>T{row.team}</span>
+            <span>S{row.state}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="keyboard-probe">
+        <label htmlFor="keyboard-probe-input">Keyboard probe</label>
+        <input
+          id="keyboard-probe-input"
+          value={keyboardProbe}
+          onChange={(event) => {
+            const value = event.target.value;
+            setKeyboardProbe(value);
+            setKeyboardStatus(`input: ${value || 'empty'}`);
+            window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
+              ...(window.__LUDOTS_REACT_FLOW_KEYBOARD__ ?? {}),
+              value,
+              event: 'input'
+            };
+          }}
+          onKeyDown={(event) => {
+            window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
+              value: event.currentTarget.value,
+              key: event.key,
+              code: event.code,
+              event: 'keydown'
+            };
+            setKeyboardStatus(`key: ${event.key}`);
+          }}
+          placeholder="click and type"
+        />
+        <span>{keyboardStatus}</span>
+      </div>
+    </div>
+  );
+}
+
+function MetricCell({ value, label }) {
+  return (
+    <div className="metric-cell">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function BucketStrip({ buckets }) {
+  if (buckets.length === 0) {
+    return <div className="bucket-strip empty" />;
+  }
+
+  return (
+    <div className="bucket-strip" aria-label="50k entity hp buckets">
+      {buckets.map((bucket) => (
+        <i
+          key={bucket.index}
+          style={{
+            height: `${Math.max(8, Math.min(100, bucket.avgHp))}%`,
+            opacity: 0.35 + Math.min(0.65, bucket.activeRows / Math.max(1, bucket.count))
+          }}
+          title={`bucket ${bucket.index}: hp ${formatNumber(bucket.avgHp, 1)}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 function FlowShowcase() {
   const initialGraph = useMemo(buildInitialGraph, []);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialGraph.nodes);
@@ -369,21 +773,6 @@ function FlowShowcase() {
 
   const publishInteraction = useCallback((next, important = false) => {
     window.__LUDOTS_REACT_FLOW_INTERACTION__ = next;
-    if (important && window.CefSharp?.PostMessage) {
-      window.CefSharp.PostMessage({
-        source: 'browser-react-flow-showcase',
-        type: 'interaction',
-        dragEvents: next.dragEvents,
-        dragStops: next.dragStops,
-        moveEvents: next.moveEvents,
-        wheelEvents: next.wheelEvents,
-        paneClicks: next.paneClicks,
-        lastEvent: next.lastEvent,
-        lastNode: next.lastNode,
-        lastPosition: next.lastPosition,
-        viewport: next.viewport
-      });
-    }
   }, []);
 
   const flushInteractionPanel = useCallback(() => {
@@ -626,19 +1015,6 @@ function FlowShowcase() {
 
       rawInputRef.current = next;
       window.__LUDOTS_REACT_FLOW_RAW_INPUT__ = next;
-      if ((eventName === 'down' || eventName === 'up' || eventName === 'wheel') && window.CefSharp?.PostMessage) {
-        window.CefSharp.PostMessage({
-          source: 'browser-react-flow-showcase',
-          type: 'raw-input',
-          event: eventName,
-          x: next.x,
-          y: next.y,
-          down: next.down,
-          move: next.move,
-          up: next.up,
-          wheel: next.wheel
-        });
-      }
 
       scheduleRawInputPanel();
     };
@@ -680,10 +1056,6 @@ function FlowShowcase() {
       alpha: 'transparent-body'
     };
 
-    if (window.CefSharp?.PostMessage) {
-      window.CefSharp.PostMessage(message);
-    }
-
     window.__LUDOTS_REACT_FLOW_READY__ = message;
   }, [initialGraph]);
 
@@ -697,9 +1069,6 @@ function FlowShowcase() {
         devicePixelRatio: window.devicePixelRatio || 1
       };
       window.__LUDOTS_REACT_FLOW_VIEWPORT__ = payload;
-      if (window.CefSharp?.PostMessage) {
-        window.CefSharp.PostMessage(payload);
-      }
     };
 
     publishResize();
@@ -755,57 +1124,13 @@ function FlowShowcase() {
           <div><strong>{dataPlane.state.tick}</strong><span>tick</span></div>
         </Panel>
         <Panel position="top-right" className="dataplane-panel">
-          <div className="keyboard-probe">
-            <label htmlFor="keyboard-probe-input">Keyboard probe</label>
-            <input
-              id="keyboard-probe-input"
-              value={keyboardProbe}
-              onChange={(event) => {
-                const value = event.target.value;
-                setKeyboardProbe(value);
-                setKeyboardStatus(`input: ${value || 'empty'}`);
-                window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
-                  ...(window.__LUDOTS_REACT_FLOW_KEYBOARD__ ?? {}),
-                  value,
-                  event: 'input'
-                };
-              }}
-              onKeyDown={(event) => {
-                window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
-                  value: event.currentTarget.value,
-                  key: event.key,
-                  code: event.code,
-                  event: 'keydown'
-                };
-                setKeyboardStatus(`key: ${event.key}`);
-              }}
-              placeholder="click and type"
-            />
-            <span>{keyboardStatus}</span>
-          </div>
-          <div className="dataplane-head">
-            <strong>{dataPlane.state.phase}</strong>
-            <span>{dataPlane.state.transport}</span>
-          </div>
-          <div className="dataplane-grid">
-            <div><strong>{dataPlane.state.lastPacket}</strong><span>packet</span></div>
-            <div><strong>{dataPlane.state.commandAcks}</strong><span>acks</span></div>
-            <div><strong>{dataPlane.state.coalescedPackets}</strong><span>coalesced</span></div>
-            <div><strong>{dataPlane.state.binaryBytes}</strong><span>binary bytes</span></div>
-          </div>
-          <div className="dataplane-list">
-            {dataPlane.state.rows.slice(0, 3).map((row) => (
-              <button
-                key={row.id ?? row.stableId ?? row.label}
-                type="button"
-                onClick={() => dataPlane.command('inspectEntity', { nodeId: row.id ?? row.label })}
-              >
-                <span>{row.label ?? row.id ?? row.stableId}</span>
-                <strong>{row.hp ?? row.changes?.hp ?? 'ok'}</strong>
-              </button>
-            ))}
-          </div>
-          <p>{dataPlane.state.error || dataPlane.state.topic}</p>
+          <DataPlaneStressPanel
+            dataPlane={dataPlane}
+            keyboardProbe={keyboardProbe}
+            setKeyboardProbe={setKeyboardProbe}
+            keyboardStatus={keyboardStatus}
+            setKeyboardStatus={setKeyboardStatus}
+          />
         </Panel>
         <Panel position="bottom-center" className="interaction-panel">
           <div><strong>{interaction.lastEvent}</strong><span>event</span></div>

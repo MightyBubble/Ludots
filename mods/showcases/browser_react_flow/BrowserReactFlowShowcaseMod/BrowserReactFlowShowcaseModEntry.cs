@@ -18,6 +18,7 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     private const string AssetIndexPath = "BrowserReactFlowShowcaseMod:Assets/react-flow-app/index.html";
     private const string PerfModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_MODE";
     private const string HitTestModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_HIT_TEST";
+    private const int WorldSharedBufferCapacityBytes = 32 * 1024 * 1024;
 
     private IBrowserSurface? _surface;
     private BrowserSurfaceCanvasContent? _browserContent;
@@ -91,8 +92,8 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         root.IsDirty = true;
 
         Uri navigationUri = _perfBaselineMode
-            ? new Uri("ludots-app://app/?perf=baseline")
-            : new Uri("ludots-app://app/");
+            ? BrowserLocalAppUri.Create("/", "perf=baseline")
+            : BrowserLocalAppUri.Root;
         await _surface.NavigateAsync(new BrowserNavigationRequest(navigationUri)).ConfigureAwait(false);
     }
 
@@ -105,7 +106,24 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         router.Register("inspectEntity", new BrowserReactFlowShowcaseCommandHandler(_worldTopic));
         router.Register("issueMoveOrder", new BrowserReactFlowShowcaseCommandHandler(_worldTopic));
 
-        var transport = new BrowserMessageBridgeDataTransport(surface.Messages);
+        if (surface is not IBrowserSharedBufferSurface sharedBufferSurface)
+        {
+            throw new InvalidOperationException(
+                "BrowserReactFlowShowcaseMod requires a browser surface with shared-buffer support.");
+        }
+
+        var store = new BrowserSharedMemoryBufferStore(sharedBufferSurface.SharedBuffers);
+        var transport = new BrowserSharedMemoryDataTransport(
+            surface.Messages,
+            store,
+            new[]
+            {
+                new BrowserSharedMemoryTopicBuffer(
+                    BrowserReactFlowShowcaseWorldTopicProducer.TopicName,
+                    "browser-react-flow.world.0",
+                    WebUiColumnarPacketSchemaRegistry.EntityCollectionSchemaId,
+                    WorldSharedBufferCapacityBytes)
+            });
         _dataPlaneRuntime = new WebUiDataPlaneRuntime(router);
         _dataPlaneRuntime.RegisterTopic(_worldTopic);
         _dataPlaneSession = _dataPlaneRuntime.AttachSession("browser-react-flow-showcase", transport);
@@ -126,16 +144,10 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         BrowserReactFlowShowcaseWorldTopicProducer worldTopic = _worldTopic;
         _publisherTask = Task.Run(async () =>
         {
-            int tick = 0;
-            while (!cancellationToken.IsCancellationRequested)
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(16));
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
             {
-                await Task.Delay(250, cancellationToken).ConfigureAwait(false);
-                tick++;
-                await runtime.PublishAsync(worldTopic.CreateDeltaPacket(session.SessionId), cancellationToken).ConfigureAwait(false);
-                if (tick % 12 == 0)
-                {
-                    await runtime.PublishAsync(worldTopic.CreateBinarySnapshotPacket(session.SessionId), cancellationToken).ConfigureAwait(false);
-                }
+                await runtime.PublishAsync(worldTopic.CreateFullUpdatePacket(session.SessionId), cancellationToken).ConfigureAwait(false);
             }
         }, cancellationToken);
     }

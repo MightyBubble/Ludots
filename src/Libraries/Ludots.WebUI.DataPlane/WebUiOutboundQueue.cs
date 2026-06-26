@@ -14,7 +14,8 @@ public sealed class WebUiOutboundQueue
 	private readonly object _sync = new();
 	private readonly SemaphoreSlim _flushGate = new(1, 1);
 	private readonly Queue<WebUiOutboundPacket> _reliable = new();
-	private readonly Dictionary<string, WebUiOutboundPacket> _latestWins = new(StringComparer.Ordinal);
+	private readonly Dictionary<LatestWinsKey, WebUiOutboundPacket> _latestWins = new();
+	private readonly List<WebUiOutboundPacket> _latestWinsDrain = new();
 	private readonly int _maxPacketBytes;
 	private long _sentPackets;
 	private long _sentBytes;
@@ -60,7 +61,7 @@ public sealed class WebUiOutboundQueue
 
 			if (packet.Delivery == WebUiDeliverySemantics.LatestWins)
 			{
-				string key = string.Concat(packet.SessionId, "|", packet.Topic, "|", packet.Kind.ToString());
+				var key = new LatestWinsKey(packet.SessionId, packet.Topic, packet.Kind);
 				if (_latestWins.ContainsKey(key))
 				{
 					_coalescedPackets++;
@@ -85,8 +86,8 @@ public sealed class WebUiOutboundQueue
 				await SendAsync(transport, reliable, cancellationToken).ConfigureAwait(false);
 			}
 
-			WebUiOutboundPacket[] latest = DrainLatestWins();
-			for (int i = 0; i < latest.Length; i++)
+			List<WebUiOutboundPacket> latest = DrainLatestWins();
+			for (int i = 0; i < latest.Count; i++)
 			{
 				await SendAsync(transport, latest[i], cancellationToken).ConfigureAwait(false);
 			}
@@ -103,12 +104,7 @@ public sealed class WebUiOutboundQueue
 		{
 			if (_reliable.Count == 0)
 			{
-				packet = new WebUiOutboundPacket(
-					string.Empty,
-					string.Empty,
-					WebUiPacketKind.Control,
-					WebUiDeliverySemantics.ReliableOrdered,
-					Array.Empty<byte>());
+				packet = default!;
 				return false;
 			}
 
@@ -117,18 +113,14 @@ public sealed class WebUiOutboundQueue
 		}
 	}
 
-	private WebUiOutboundPacket[] DrainLatestWins()
+	private List<WebUiOutboundPacket> DrainLatestWins()
 	{
 		lock (_sync)
 		{
-			if (_latestWins.Count == 0)
-			{
-				return Array.Empty<WebUiOutboundPacket>();
-			}
-
-			WebUiOutboundPacket[] latest = _latestWins.Values.ToArray();
+			_latestWinsDrain.Clear();
+			_latestWinsDrain.AddRange(_latestWins.Values);
 			_latestWins.Clear();
-			return latest;
+			return _latestWinsDrain;
 		}
 	}
 
@@ -200,4 +192,9 @@ public sealed class WebUiOutboundQueue
 			return _lastError;
 		}
 	}
+
+	private readonly record struct LatestWinsKey(
+		string SessionId,
+		string Topic,
+		WebUiPacketKind Kind);
 }
