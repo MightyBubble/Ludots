@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Globalization;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
@@ -12,6 +13,10 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Systems;
@@ -138,6 +143,7 @@ namespace Ludots.Adapter.Raylib
         }
 
         private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
+        private readonly record struct NavMeshDebugHudLines(bool Visible, string Line1, string Line2, string Line3);
 
         internal static bool ShouldCaptureWorldPointer(
             bool pointerCaptured,
@@ -275,6 +281,7 @@ namespace Ludots.Adapter.Raylib
                 ValidateRequiredContextBeforeLoop(engine);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                var navMeshDebugRenderer = new RaylibNavMeshDebugRenderer();
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
@@ -387,6 +394,7 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForFrame is IVisualHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
+                        bool drawNavMesh = renderDebug.DrawNavMesh && !cleanPerformanceMode;
                         bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
@@ -463,6 +471,7 @@ namespace Ludots.Adapter.Raylib
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
+                        NavMeshDebugHudLines navMeshDebugHud = default;
                         long mode3DStart = Stopwatch.GetTimestamp();
                         Restore3DDepthState();
                         BeginCoreMode3D(activeCamera, in activeCameraState);
@@ -506,6 +515,17 @@ namespace Ludots.Adapter.Raylib
                         else
                         {
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                        }
+
+                        if (drawNavMesh &&
+                            engine.TryGetService(CoreServiceKeys.NavQueryServices, out NavQueryServiceRegistry navQueryServices))
+                        {
+                            NavQueryServiceStoreSnapshot[] navStores = navQueryServices.SnapshotStores();
+                            if (navStores.Length > 0)
+                            {
+                                navMeshDebugRenderer.Draw(navStores);
+                                navMeshDebugHud = BuildNavMeshDebugHud(engine, navStores, navMeshDebugRenderer);
+                            }
                         }
 
                         if (drawFieldOverlays && globalFieldVisualBuffer != null)
@@ -642,6 +662,11 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
+                        }
+
+                        if (navMeshDebugHud.Visible)
+                        {
+                            DrawNavMeshDebugHud(navMeshDebugHud, lightweightDiagnosticHudEnabled ? 158 : 10);
                         }
 
                         bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;
@@ -917,6 +942,122 @@ namespace Ludots.Adapter.Raylib
             DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
         }
 
+        private static NavMeshDebugHudLines BuildNavMeshDebugHud(
+            GameEngine engine,
+            IReadOnlyList<NavQueryServiceStoreSnapshot> stores,
+            RaylibNavMeshDebugRenderer renderer)
+        {
+            string line1 = $"NAVMESH TILES {renderer.LastTileCount} TRIS {renderer.LastTriangleCount} STORES {renderer.LastStoreCount}";
+            string line2 = "MODE UNKNOWN ALG UNKNOWN LAYER UNKNOWN PROFILE UNKNOWN";
+            string line3 = "VOXEL UNKNOWN";
+
+            if (stores != null &&
+                stores.Count > 0 &&
+                engine.TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig bakeConfig) &&
+                engine.TryGetService(CoreServiceKeys.NavMeshProfiles, out NavMeshProfileRegistry navProfiles) &&
+                engine.TryGetService(CoreServiceKeys.AgentProfiles, out AgentProfileRegistry agentProfiles) &&
+                engine.LogicTerrain != null)
+            {
+                NavQueryServiceStoreSnapshot first = stores[0];
+                string profileId = navProfiles.GetId(first.Profile);
+                NavMeshAgentProfileConfig navProfile = FindNavProfileConfig(bakeConfig, profileId);
+                AgentProfileConfig agentProfile = agentProfiles.Require(profileId, "Raylib navmesh debug view");
+                int tileWidthCm = checked(engine.LogicTerrain.ChunkSizeCells * Math.Max(1, engine.LogicTerrain.HorizontalStepCm));
+                NavBakeProfileEstimate profile = NavBakeEstimator.EstimateProfile(agentProfile, navProfile, tileWidthCm);
+                NavLayerConfig layer = FindNavLayerConfig(bakeConfig, first.Layer);
+
+                string mode = SanitizeDiagnosticToken(NavBakeNames.FormatMode(bakeConfig.ParsedMode));
+                string algorithm = SanitizeDiagnosticToken(NavBakeNames.FormatAlgorithm(bakeConfig.ParsedAlgorithm));
+                string layerText = layer == null ? first.Layer.ToString(CultureInfo.InvariantCulture) : layer.Layer.ToString(CultureInfo.InvariantCulture);
+                string profileText = SanitizeDiagnosticToken(profileId);
+
+                line2 = $"MODE {mode} ALG {algorithm} LAYER {layerText} PROFILE {profileText}";
+                line3 =
+                    $"VOXEL CS {FormatDiagnosticFloat(profile.RecastCellSizeCm)}CM CH {FormatDiagnosticFloat(profile.RecastCellHeightCm)}CM " +
+                    $"H {profile.WalkableHeightVoxels} CLIMB {profile.WalkableClimbVoxels}";
+            }
+
+            return new NavMeshDebugHudLines(true, line1, line2, line3);
+        }
+
+        private static NavMeshAgentProfileConfig FindNavProfileConfig(NavMeshBakeConfig bakeConfig, string profileId)
+        {
+            for (int i = 0; i < bakeConfig.Profiles.Count; i++)
+            {
+                NavMeshAgentProfileConfig profile = bakeConfig.Profiles[i];
+                if (profile != null &&
+                    string.Equals(profile.Id, profileId, StringComparison.Ordinal))
+                {
+                    return profile;
+                }
+            }
+
+            throw new InvalidOperationException($"Raylib navmesh debug view cannot resolve NavMeshBakeConfig profile '{profileId}'.");
+        }
+
+        private static NavLayerConfig FindNavLayerConfig(NavMeshBakeConfig bakeConfig, int layer)
+        {
+            for (int i = 0; i < bakeConfig.Layers.Count; i++)
+            {
+                NavLayerConfig candidate = bakeConfig.Layers[i];
+                if (candidate != null && candidate.Layer == layer)
+                {
+                    return candidate;
+                }
+            }
+
+            throw new InvalidOperationException($"Raylib navmesh debug view cannot resolve NavMeshBakeConfig layer {layer}.");
+        }
+
+        private static string FormatDiagnosticFloat(float value) => value.ToString("0.#", CultureInfo.InvariantCulture);
+
+        private static string SanitizeDiagnosticToken(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "UNKNOWN";
+            }
+
+            Span<char> buffer = stackalloc char[Math.Min(text.Length, 32)];
+            int count = 0;
+            for (int i = 0; i < text.Length && count < buffer.Length; i++)
+            {
+                char c = char.ToUpperInvariant(text[i]);
+                if ((c >= 'A' && c <= 'Z') ||
+                    (c >= '0' && c <= '9') ||
+                    c == '-' ||
+                    c == '/' ||
+                    c == '.' ||
+                    c == ':' ||
+                    c == '|')
+                {
+                    buffer[count++] = c;
+                }
+                else
+                {
+                    buffer[count++] = '-';
+                }
+            }
+
+            return count == 0 ? "UNKNOWN" : new string(buffer.Slice(0, count));
+        }
+
+        private static void DrawNavMeshDebugHud(NavMeshDebugHudLines lines, int y)
+        {
+            const int x = 10;
+            const int fontSize = 20;
+            const int lineHeight = 25;
+            const int panelWidth = 820;
+            const int panelHeight = 87;
+            var background = new Color(0, 0, 0, 218);
+            var border = new Color(140, 220, 255, 255);
+            Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
+            Rl.DrawRectangleLines(x - 8, y - 8, panelWidth, panelHeight, border);
+            DrawDiagnosticText(lines.Line1, x, y, fontSize, new Color(190, 235, 255, 255));
+            DrawDiagnosticText(lines.Line2, x, y + lineHeight, fontSize, new Color(230, 240, 255, 255));
+            DrawDiagnosticText(lines.Line3, x, y + lineHeight * 2, fontSize, new Color(255, 235, 190, 255));
+        }
+
         private static string FormatFixed(float value, int width, int decimals)
         {
             string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
@@ -997,12 +1138,14 @@ namespace Ludots.Adapter.Raylib
                 'G' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111),
                 'H' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
                 'I' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111),
+                'J' => PackDiagnosticGlyph(0b00111, 0b00010, 0b00010, 0b00010, 0b10010, 0b10010, 0b01100),
                 'K' => PackDiagnosticGlyph(0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001),
                 'L' => PackDiagnosticGlyph(0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111),
                 'M' => PackDiagnosticGlyph(0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001),
                 'N' => PackDiagnosticGlyph(0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001),
                 'O' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
                 'P' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000),
+                'Q' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b10001, 0b10101, 0b10010, 0b01101),
                 'R' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001),
                 'S' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110),
                 'T' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
@@ -1011,6 +1154,7 @@ namespace Ludots.Adapter.Raylib
                 'W' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b10101, 0b01010),
                 'X' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001),
                 'Y' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100),
+                'Z' => PackDiagnosticGlyph(0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b10000, 0b11111),
                 '0' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110),
                 '1' => PackDiagnosticGlyph(0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110),
                 '2' => PackDiagnosticGlyph(0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111),

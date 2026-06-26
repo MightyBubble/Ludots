@@ -279,7 +279,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
-        private static NavBakeProfileEstimate EstimateProfile(
+        public static NavBakeProfileEstimate EstimateProfile(
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             int tileWidthCm)

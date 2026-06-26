@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -194,6 +195,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         NavMeshAgentProfileConfig navProfile = context.Config.Profiles[pi];
                         AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
                         bool success = algorithm.TryBake(context, target, layer, navProfile, agentProfile, out NavTile tile, out byte[] detourTileBytes, out NavBakeArtifact artifact);
+                        artifact = AttachProvenance(context, layer, navProfile, agentProfile, artifact);
                         int index = Interlocked.Increment(ref cursor);
                         entries[index] = new NavBakeResultEntry(target, navProfile.Id, layer.Layer, success, tile, detourTileBytes, artifact);
                     }
@@ -217,6 +219,30 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             return new NavBakeResult(entries);
         }
+
+        private static NavBakeArtifact AttachProvenance(
+            NavBakeContext context,
+            NavLayerConfig layer,
+            NavMeshAgentProfileConfig navProfile,
+            AgentProfileConfig agentProfile,
+            NavBakeArtifact artifact)
+        {
+            int tileWidthCm = checked(context.Terrain.ChunkSizeCells * Math.Max(1, context.Terrain.HorizontalStepCm));
+            NavBakeProfileEstimate profile = NavBakeEstimator.EstimateProfile(agentProfile, navProfile, tileWidthCm);
+            string sourceUnits =
+                $"terrain=centimeters;tile=centimeters;detour=meters;heightScaleMeters={FormatFloat(context.BuildConfig.HeightScaleMeters)}";
+            string voxelConfig =
+                $"mode={NavBakeNames.FormatMode(context.Mode)};algorithm={NavBakeNames.FormatAlgorithm(context.Algorithm)};" +
+                $"layer={layer.Id}:{layer.Layer};profile={navProfile.Id};" +
+                $"csCm={FormatFloat(profile.RecastCellSizeCm)};chCm={FormatFloat(profile.RecastCellHeightCm)};" +
+                $"columns={profile.RecastColumnsPerAxis};walkableHeightVoxels={profile.WalkableHeightVoxels};" +
+                $"walkableClimbVoxels={profile.WalkableClimbVoxels};maxSlopeDeg={FormatFloat(profile.MaxSlopeDeg)};" +
+                $"minWalkableUpDot={FormatFloat(profile.MinWalkableUpDot)}";
+
+            return artifact.WithProvenance(context.SourceUri, sourceUnits, navProfile.Id, voxelConfig);
+        }
+
+        private static string FormatFloat(float value) => value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
     internal static class NavTileLayerRewriter
@@ -256,7 +282,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 artifact.VertexCount,
                 artifact.TriangleCount,
                 artifact.PortalCount,
-                artifact.DebugLog);
+                artifact.DebugLog,
+                artifact.SourceUri,
+                artifact.SourceUnits,
+                artifact.SourceProfileId,
+                artifact.VoxelConfig);
         }
     }
 }

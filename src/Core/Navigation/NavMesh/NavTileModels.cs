@@ -211,6 +211,10 @@ namespace Ludots.Core.Navigation.NavMesh
         public readonly int TriangleCount;
         public readonly int PortalCount;
         public readonly string[] DebugLog;
+        public readonly string SourceUri;
+        public readonly string SourceUnits;
+        public readonly string SourceProfileId;
+        public readonly string VoxelConfig;
 
         public NavBakeArtifact(
             NavTileId tileId,
@@ -222,7 +226,11 @@ namespace Ludots.Core.Navigation.NavMesh
             int vertexCount,
             int triangleCount,
             int portalCount,
-            string[] debugLog = null)
+            string[] debugLog = null,
+            string sourceUri = null,
+            string sourceUnits = null,
+            string sourceProfileId = null,
+            string voxelConfig = null)
         {
             TileId = tileId;
             TileVersion = tileVersion;
@@ -234,6 +242,33 @@ namespace Ludots.Core.Navigation.NavMesh
             TriangleCount = triangleCount;
             PortalCount = portalCount;
             DebugLog = debugLog;
+            SourceUri = sourceUri ?? "";
+            SourceUnits = sourceUnits ?? "";
+            SourceProfileId = sourceProfileId ?? "";
+            VoxelConfig = voxelConfig ?? "";
+        }
+
+        public NavBakeArtifact WithProvenance(
+            string sourceUri,
+            string sourceUnits,
+            string sourceProfileId,
+            string voxelConfig)
+        {
+            return new NavBakeArtifact(
+                TileId,
+                TileVersion,
+                Stage,
+                ErrorCode,
+                Message,
+                WalkableTriangleCount,
+                VertexCount,
+                TriangleCount,
+                PortalCount,
+                DebugLog,
+                sourceUri,
+                sourceUnits,
+                sourceProfileId,
+                voxelConfig);
         }
     }
 

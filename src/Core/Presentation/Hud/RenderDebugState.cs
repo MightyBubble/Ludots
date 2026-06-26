@@ -9,6 +9,7 @@ namespace Ludots.Core.Presentation.Hud
         public bool DrawTerrain { get; set; } = true;
         public bool DrawPrimitives { get; set; } = true;
         public bool DrawDebugDraw { get; set; } = true;
+        public bool DrawNavMesh { get; set; } = true;
         public bool DrawSkiaUi { get; set; } = true;
         public bool DrawFieldOverlays { get; set; } = true;
         public bool DrawWorldHudBars { get; set; } = true;

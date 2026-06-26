@@ -2364,15 +2364,18 @@ namespace Ludots.Core.Engine
                         return uri;
                     }
 
+                    var knownTileIds = new List<NavTileId>(checked(widthChunks * heightChunks));
                     for (int cy = 0; cy < heightChunks; cy++)
                     {
                         for (int cx = 0; cx < widthChunks; cx++)
                         {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            var tileId = new NavTileId(cx, cy, layer);
+                            _ = ResolveTileUri(tileId);
+                            knownTileIds.Add(tileId);
                         }
                     }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)), knownTileIds);
                     stores[new NavQueryServiceKey(layer, profileIndex)] = store;
                 }
             }

@@ -78,6 +78,15 @@ namespace Ludots.Tests.Architecture
             Assert.That(result.Entries[0].Tile.VertexCount, Is.GreaterThan(0));
             Assert.That(result.Entries[0].Tile.TriangleCount, Is.GreaterThan(0));
             Assert.That(result.Entries[0].DetourTileBytes.Length, Is.GreaterThan(0));
+            Assert.That(result.Entries[0].Artifact.SourceUri, Is.EqualTo(context.SourceUri));
+            Assert.That(result.Entries[0].Artifact.SourceUnits, Does.Contain("terrain=centimeters"));
+            Assert.That(result.Entries[0].Artifact.SourceUnits, Does.Contain("detour=meters"));
+            Assert.That(result.Entries[0].Artifact.SourceProfileId, Is.EqualTo("Small"));
+            Assert.That(result.Entries[0].Artifact.VoxelConfig, Does.Contain("algorithm=recast"));
+            Assert.That(result.Entries[0].Artifact.VoxelConfig, Does.Contain("layer=Ground:0"));
+            Assert.That(result.Entries[0].Artifact.VoxelConfig, Does.Contain("profile=Small"));
+            Assert.That(result.Entries[0].Artifact.VoxelConfig, Does.Contain("csCm=10"));
+            Assert.That(result.Entries[0].Artifact.VoxelConfig, Does.Contain("chCm=5"));
         }
 
         [Test]

@@ -7,14 +7,29 @@ namespace Ludots.Core.Navigation.NavMesh
     public sealed class NavTileStore
     {
         private readonly Func<NavTileId, Stream> _openStream;
+        private readonly NavTileId[] _knownTileIds;
         private readonly object _gate = new object();
         private readonly Dictionary<NavTileId, NavTile> _loaded = new Dictionary<NavTileId, NavTile>(256);
         private uint _revision;
 
-        public NavTileStore(Func<NavTileId, Stream> openStream)
+        public NavTileStore(Func<NavTileId, Stream> openStream, IReadOnlyList<NavTileId> knownTileIds = null)
         {
             _openStream = openStream ?? throw new ArgumentNullException(nameof(openStream));
+            if (knownTileIds == null || knownTileIds.Count == 0)
+            {
+                _knownTileIds = Array.Empty<NavTileId>();
+            }
+            else
+            {
+                _knownTileIds = new NavTileId[knownTileIds.Count];
+                for (int i = 0; i < knownTileIds.Count; i++)
+                {
+                    _knownTileIds[i] = knownTileIds[i];
+                }
+            }
         }
+
+        public IReadOnlyList<NavTileId> KnownTileIds => _knownTileIds;
 
         public uint Revision
         {
