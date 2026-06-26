@@ -59,7 +59,12 @@ namespace Ludots.Tests.GAS
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
             var abilitySystem = new AbilitySystem(_world, effectRequests);
-            var proposalSystem = new EffectProposalProcessingSystem(_world, effectRequests, null, effectTemplates);
+            var proposalSystem = new EffectProposalProcessingSystem(
+                _world,
+                effectRequests,
+                null,
+                effectTemplates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             var appSystem = new EffectApplicationSystem(_world, effectRequests);
             var aggSystem = new AttributeAggregatorSystem(_world);
             var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, effectRequests);

@@ -36,6 +36,28 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class InputOrderAbilityAuditTests
     {
+        [Test]
+        public void AbilitySystem_MissingEffectRequestQueue_ThrowsStableErrorCode()
+        {
+            using var world = World.Create();
+
+            var ex = Throws<InvalidOperationException>(
+                () => new AbilitySystem(world, null!));
+
+            That(ex!.Message, Does.Contain("LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED"));
+        }
+
+        [Test]
+        public void EffectProposalProcessing_MissingResponseChainOrderTypes_ThrowsStableErrorCode()
+        {
+            using var world = World.Create();
+
+            var ex = Throws<InvalidOperationException>(
+                () => new EffectProposalProcessingSystem(world, new EffectRequestQueue(), templates: new EffectTemplateRegistry()));
+
+            That(ex!.Message, Does.Contain("LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_REQUIRED"));
+        }
+
         // ════════════════════════════════════════════════════════════════════
         // Region: OrderBuffer / PendingBuffer
         // ════════════════════════════════════════════════════════════════════

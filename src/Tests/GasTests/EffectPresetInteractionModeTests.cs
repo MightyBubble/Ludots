@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using NUnit.Framework;
@@ -66,6 +67,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
                         IsSkillMapping = true,
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity
@@ -73,7 +75,9 @@ namespace Ludots.Tests.GAS
                 }
             };
 
+            var bindings = new InteractionActionBindings();
             var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetInteractionActionBindings(bindings);
             using var world = World.Create();
             var actor = world.Create();
             var target = world.Create();
@@ -104,7 +108,7 @@ namespace Ludots.Tests.GAS
             input.Update();
             mapping.Update(0f);
 
-            // SC2 / AimCast: press skill -> enter aiming (no immediate order), then Select confirms
+            // SC2 / AimCast: press skill -> enter aiming (no immediate order), then configured confirm action confirms
             mapping.SetInteractionMode(InteractionModeType.AimCast);
             input.InjectButtonPress("SkillQ");
             input.Update();
@@ -112,14 +116,14 @@ namespace Ludots.Tests.GAS
             Assert.That(mapping.IsAiming, Is.True);
             Assert.That(orders.Count, Is.EqualTo(2));
 
-            input.InjectButtonPress("Select");
+            input.InjectButtonPress(bindings.ConfirmActionId);
             input.Update();
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.False);
             Assert.That(orders.Count, Is.EqualTo(3));
             Assert.That(orders[2].Target, Is.EqualTo(target));
 
-            // PressReleaseAimCast: press -> pending, release -> enter aiming, Select confirms
+            // PressReleaseAimCast: press -> pending, release -> enter aiming, configured confirm action confirms
             mapping.SetInteractionMode(InteractionModeType.PressReleaseAimCast);
             input.InjectButtonPress("SkillQ");
             input.Update();
@@ -132,7 +136,7 @@ namespace Ludots.Tests.GAS
             Assert.That(mapping.IsAiming, Is.True);
             Assert.That(orders.Count, Is.EqualTo(3));
 
-            input.InjectButtonPress("Select");
+            input.InjectButtonPress(bindings.ConfirmActionId);
             input.Update();
             mapping.Update(0f);
             Assert.That(mapping.IsAiming, Is.False);
@@ -187,6 +191,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "SkillQ", Name = "SkillQ", Type = InputActionType.Button },
                     new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
                     new() { Id = "Cancel", Name = "Cancel", Type = InputActionType.Button },
+                    new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                 },
                 Contexts = new List<InputContextDef>
                 {
@@ -219,4 +224,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

@@ -357,7 +357,7 @@ namespace Ludots.Tests.GAS
             PrepareScopeMember(world, barracks);
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
 
-            var system = new AbilitySystem(world, effectRequests: null, definitions, progressionRequirements: evaluator);
+            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, progressionRequirements: evaluator);
             Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
 
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
@@ -544,6 +544,7 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new GasConditionRegistry(),
                 templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 phaseExecutor: phaseExecutor,
                 graphApi: graphApi,
                 progressionEvaluator: evaluator);
@@ -595,7 +596,7 @@ namespace Ludots.Tests.GAS
             Entity barracks = world.Create(abilities);
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
 
-            var system = new AbilitySystem(world, effectRequests: null, definitions, progressionRequirements: evaluator);
+            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, progressionRequirements: evaluator);
             Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
 
             var args = new AbilitySystem.AbilityActivationArgs(barracks, ReadOnlySpan<Entity>.Empty, city);

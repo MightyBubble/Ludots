@@ -21,14 +21,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public AbilitySystem(
             World world,
-            EffectRequestQueue effectRequests = null,
+            EffectRequestQueue effectRequests,
             AbilityDefinitionRegistry abilityDefinitions = null,
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
             ProgressionRequirementEvaluator progressionRequirements = null) : base(world)
         {
-            _effectRequests = effectRequests;
+            _effectRequests = effectRequests ?? throw new InvalidOperationException(
+                "LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED: AbilitySystem requires EffectRequestQueue to publish activation effects.");
             _abilityDefinitions = abilityDefinitions;
             _tagOps = tagOps ?? new TagOps();
             _graphPrograms = graphPrograms;
@@ -124,7 +125,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return false;
                 }
 
-                if (_effectRequests == null) return true;
                 if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
 
                 var effects = def.OnActivateEffects;
@@ -196,8 +196,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 return false;
             }
-
-            if (_effectRequests == null) return true;
 
             ref var effectsEntity = ref World.TryGetRef<AbilityOnActivateEffects>(templateEntity, out bool hasOnActivateEntity);
             if (hasOnActivateEntity)

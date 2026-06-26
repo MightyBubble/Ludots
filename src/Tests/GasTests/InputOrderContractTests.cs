@@ -284,6 +284,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillR",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 3 },
                         SelectionType = OrderSelectionType.Direction,
                         RequireSelection = false,
                         IsSkillMapping = true,

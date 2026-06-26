@@ -97,7 +97,8 @@ namespace Ludots.Core.Input.Orders
 
                 if (!candidate.RequiresTarget)
                 {
-                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) && score > bestScore)
+                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) &&
+                        IsBetterCandidate(score, default, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
@@ -114,7 +115,8 @@ namespace Ludots.Core.Input.Orders
                         continue;
                     }
 
-                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score) && score > bestScore)
+                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score) &&
+                        IsBetterCandidate(score, target, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
@@ -259,6 +261,50 @@ namespace Ludots.Core.Input.Orders
             float dx = b.X - a.X;
             float dy = b.Y - a.Y;
             return MathF.Sqrt(dx * dx + dy * dy);
+        }
+
+        private static bool IsBetterCandidate(
+            float score,
+            Entity target,
+            int slotIndex,
+            float bestScore,
+            Entity bestTarget,
+            int bestSlotIndex)
+        {
+            if (score > bestScore)
+            {
+                return true;
+            }
+
+            if (score < bestScore)
+            {
+                return false;
+            }
+
+            int entityCompare = CompareEntityId(target, bestTarget);
+            if (entityCompare != 0)
+            {
+                return entityCompare < 0;
+            }
+
+            return bestSlotIndex < 0 || slotIndex < bestSlotIndex;
+        }
+
+        private static int CompareEntityId(Entity left, Entity right)
+        {
+            int id = left.Id.CompareTo(right.Id);
+            if (id != 0)
+            {
+                return id;
+            }
+
+            int worldId = left.WorldId.CompareTo(right.WorldId);
+            if (worldId != 0)
+            {
+                return worldId;
+            }
+
+            return left.Version.CompareTo(right.Version);
         }
 
         private static float ComputeAngleToTargetDeg(WorldCmInt2 actorWorldCm, WorldCmInt2 targetWorldCm, float facingAngleRad)

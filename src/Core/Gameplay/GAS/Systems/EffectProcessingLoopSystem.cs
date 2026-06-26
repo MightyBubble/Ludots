@@ -66,7 +66,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _chainOrders = chainOrders;
             _orderRequests = orderRequests;
 
-            _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, responseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
+            var configuredResponseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
+                responseChainOrderTypes,
+                nameof(EffectProcessingLoopSystem));
+            _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, configuredResponseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
             _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator);
             _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, exchangeRuntime, progressionEvaluator);
             _runtimeStateEntity = world.Create(new GasRuntimeState());

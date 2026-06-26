@@ -148,6 +148,19 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.heldPolicy StartEnd requires trigger Held.");
                 }
 
+                if (mapping.ArgsTemplate == null)
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ORDER_ARGS_TEMPLATE_REQUIRED: {path}.argsTemplate must be an object.");
+                }
+
+                if (mapping.IsSkillMapping &&
+                    (mapping.ArgsTemplate.I0 is not int priority || priority < 0))
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ORDER_SKILL_PRIORITY_REQUIRED: {path}.argsTemplate.i0 must define a non-negative skill priority.");
+                }
+
                 if (mapping.AutoTargetPolicy != AutoTargetPolicy.None && mapping.AutoTargetRangeCm <= 0)
                 {
                     throw new InvalidOperationException(
@@ -164,4 +177,3 @@ namespace Ludots.Core.Input.Orders
 
     }
 }
-
