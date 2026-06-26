@@ -1,5 +1,7 @@
 using System.Threading.Tasks;
+using Ludots.Core.Layers;
 using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassCrowd;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using MassNavigationMod.Systems;
@@ -11,6 +13,8 @@ public sealed class MassNavigationModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
+        LayerRegistry.Register(MassNavigationLayerNames.Agent);
+
         var runtime = new MassNavigationRuntime(context);
         var panelPresenter = new MassNavigationPanelPresenter();
         bool panelSystemInstalled = false;
