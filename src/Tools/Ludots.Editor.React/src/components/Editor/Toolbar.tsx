@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type BoardUpdateRequest, type BakedNavTilePayload, type EntityTemplatePayload, type JsonRecord } from './EditorStore';
 import { Minimap } from './Minimap';
-import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
+import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
 import { CHUNK_BYTE_SIZE, REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE } from '../../Core/Map/TerrainStore';
 import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
@@ -273,6 +273,59 @@ function parseDraftNumber(value: string): number {
 
 function isPositiveFinite(value: number): boolean {
     return Number.isFinite(value) && value > 0;
+}
+
+function asPlainRecord(value: unknown, label: string): Record<string, unknown> {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error(`${label} is missing or invalid.`);
+    }
+    return value as Record<string, unknown>;
+}
+
+function numberFieldValue(record: Record<string, unknown>, key: string, label: string): number {
+    const value = Number(record[key]);
+    if (!Number.isFinite(value)) throw new Error(`${label}.${key} is missing or invalid.`);
+    return value;
+}
+
+function int32ArrayField(record: Record<string, unknown>, key: string, label: string): Int32Array {
+    const raw = record[key];
+    if (!Array.isArray(raw)) throw new Error(`${label}.${key} is missing or invalid.`);
+    return Int32Array.from(raw.map((value) => Number(value) | 0));
+}
+
+function uint8ArrayField(record: Record<string, unknown>, key: string, label: string): Uint8Array {
+    const raw = record[key];
+    if (!Array.isArray(raw)) throw new Error(`${label}.${key} is missing or invalid.`);
+    return Uint8Array.from(raw.map((value) => Number(value) & 0xff));
+}
+
+function navTileFromDebugPayload(value: unknown): NavTile {
+    const debug = asPlainRecord(value, 'NavTile debug payload');
+    const tileId = asPlainRecord(debug.tileId, 'NavTile debug payload.tileId');
+    return {
+        tileId: {
+            chunkX: numberFieldValue(tileId, 'chunkX', 'NavTile debug payload.tileId'),
+            chunkY: numberFieldValue(tileId, 'chunkY', 'NavTile debug payload.tileId'),
+            layer: numberFieldValue(tileId, 'layer', 'NavTile debug payload.tileId'),
+        },
+        tileVersion: numberFieldValue(debug, 'tileVersion', 'NavTile debug payload'),
+        buildConfigHash: 0n,
+        checksum: 0n,
+        originXcm: numberFieldValue(debug, 'originXcm', 'NavTile debug payload'),
+        originZcm: numberFieldValue(debug, 'originZcm', 'NavTile debug payload'),
+        vertexXcm: int32ArrayField(debug, 'vertexXcm', 'NavTile debug payload'),
+        vertexYcm: int32ArrayField(debug, 'vertexYcm', 'NavTile debug payload'),
+        vertexZcm: int32ArrayField(debug, 'vertexZcm', 'NavTile debug payload'),
+        triA: int32ArrayField(debug, 'triA', 'NavTile debug payload'),
+        triB: int32ArrayField(debug, 'triB', 'NavTile debug payload'),
+        triC: int32ArrayField(debug, 'triC', 'NavTile debug payload'),
+        n0: int32ArrayField(debug, 'n0', 'NavTile debug payload'),
+        n1: int32ArrayField(debug, 'n1', 'NavTile debug payload'),
+        n2: int32ArrayField(debug, 'n2', 'NavTile debug payload'),
+        triAreaIds: uint8ArrayField(debug, 'triAreaIds', 'NavTile debug payload'),
+        portals: [],
+    };
 }
 
 export const Toolbar: React.FC = () => {
@@ -717,21 +770,12 @@ export const Toolbar: React.FC = () => {
         }
     };
 
-    const base64ToArrayBuffer = (b64: string) => {
-        const bin = atob(b64);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        return bytes.buffer;
-    };
-
     const navPayloadKey = (cx: number, cy: number, layer: number, profileId: string) => `${cx},${cy},${layer},${profileId}`;
 
     const getQueryablePayloads = (profileId: string, layer: number) => {
         return useEditorStore.getState().bakedNavTilePayloads.filter((tile) =>
             tile.profileId === profileId &&
             tile.layer === layer &&
-            tile.base64.length > 0 &&
-            !!tile.detourBase64 &&
             tile.detourBase64.length > 0 &&
             tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
     };
@@ -785,7 +829,6 @@ export const Toolbar: React.FC = () => {
                     const source = tile.source ?? null;
                     return tile.profileId === profileId &&
                         tile.layer === navQueryLayer &&
-                        !!tile.detourBase64 &&
                         tile.detourBase64.length > 0 &&
                         source !== LEGACY_FLAT_GRID_BASELINE_SOURCE;
                 })
@@ -818,22 +861,21 @@ export const Toolbar: React.FC = () => {
             throw new Error(json?.error ?? `Bridge error ${res.status}`);
         }
 
-        const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; base64: string; detourBase64?: string; source?: string }> = json.tiles ?? [];
+        const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; detourBase64?: string; debug?: unknown; source?: string }> = json.tiles ?? [];
         const tiles = [];
         const payloads: BakedNavTilePayload[] = [];
         for (let i = 0; i < tilesRaw.length; i++) {
             const raw = tilesRaw[i];
-            const buf = base64ToArrayBuffer(raw.base64);
-            const tile = readNavTile(buf);
+            const tile = navTileFromDebugPayload(raw.debug);
             const rawProfileId = raw.profileId == null ? profileId : String(raw.profileId);
             const layer = Number(raw.layer ?? tile.tileId.layer);
-            const detourBase64 = raw.detourBase64 == null ? null : String(raw.detourBase64);
+            const detourBase64 = String(raw.detourBase64 ?? '');
+            if (detourBase64.length === 0) throw new Error(`Bridge returned empty Detour payload for tile ${i}.`);
             tiles.push(tile);
             payloads.push({
                 key: navPayloadKey(tile.tileId.chunkX, tile.tileId.chunkY, layer, rawProfileId),
                 layer,
                 profileId: rawProfileId,
-                base64: raw.base64,
                 detourBase64,
                 source: raw.source ?? FLAT_GRID_BASELINE_SOURCE,
             });
@@ -1139,7 +1181,7 @@ export const Toolbar: React.FC = () => {
                 message: 'Bridge returned tile payloads. Decoding and installing into the editor.',
                 progress: 85,
             });
-            const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; base64: string; detourBase64?: string; source?: string }> = json.tiles ?? [];
+            const tilesRaw: Array<{ cx?: number; cy?: number; layer?: number; profileId?: string; detourBase64?: string; debug?: unknown; source?: string }> = json.tiles ?? [];
             if (tilesRaw.length === 0) {
                 const targetsCount = Number(json.targetsCount ?? 0);
                 if (targetsCount === 0) {
@@ -1158,16 +1200,15 @@ export const Toolbar: React.FC = () => {
             const payloads: BakedNavTilePayload[] = [];
             for (let i = 0; i < tilesRaw.length; i++) {
                 const raw = tilesRaw[i];
-                const buf = base64ToArrayBuffer(raw.base64);
-                const tile = readNavTile(buf);
+                const tile = navTileFromDebugPayload(raw.debug);
                 tiles.push(tile);
                 const profileId = raw.profileId == null ? null : String(raw.profileId);
-                const detourBase64 = raw.detourBase64 == null ? null : String(raw.detourBase64);
+                const detourBase64 = String(raw.detourBase64 ?? '');
+                if (detourBase64.length === 0) throw new Error(`Bridge returned empty Detour payload for tile ${i}.`);
                 payloads.push({
                     key: `${tile.tileId.chunkX},${tile.tileId.chunkY},${tile.tileId.layer},${profileId ?? ''}`,
                     layer: Number(raw.layer ?? tile.tileId.layer),
                     profileId,
-                    base64: raw.base64,
                     detourBase64,
                     source: raw.source ?? 'recast',
                 });
@@ -1275,7 +1316,6 @@ export const Toolbar: React.FC = () => {
                     tiles: queryPayloads.map((tile) => ({
                         profileId: tile.profileId,
                         layer: tile.layer,
-                        base64: tile.base64,
                         detourBase64: tile.detourBase64,
                         source: tile.source,
                     })),
@@ -1361,8 +1401,6 @@ export const Toolbar: React.FC = () => {
         return bakedNavTilePayloads.filter((tile) =>
             tile.profileId === profileId &&
             tile.layer === navQueryLayer &&
-            tile.base64.length > 0 &&
-            !!tile.detourBase64 &&
             tile.detourBase64.length > 0 &&
             tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
     }, [bakedNavTilePayloads, navQueryLayer, navQueryProfileId]);

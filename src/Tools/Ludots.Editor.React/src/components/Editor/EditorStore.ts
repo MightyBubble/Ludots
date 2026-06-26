@@ -74,8 +74,7 @@ export interface BakedNavTilePayload {
     key: string;
     layer: number;
     profileId: string | null;
-    base64: string;
-    detourBase64: string | null;
+    detourBase64: string;
     source?: string | null;
 }
 
