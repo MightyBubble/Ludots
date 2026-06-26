@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.Presentation.Skia\Ludots.Presentation.Skia.csproj" />
     <ProjectReference Include="..\..\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj" />

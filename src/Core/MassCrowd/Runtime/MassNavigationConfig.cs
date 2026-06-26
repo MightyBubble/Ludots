@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Presentation.Minimap;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -21,14 +20,12 @@ public sealed class MassNavigationConfig
     public MassNavigationScenarioRuntimeConfig ScenarioRuntime { get; set; } = new();
     public MassNavigationCadenceConfig Cadence { get; set; } = new();
     public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
-    public MassNavigationCameraProfilesConfig CameraProfiles { get; set; } = new();
-    public MassNavigationMinimapConfig Minimap { get; set; } = new();
     public TeamConfig TeamRelationships { get; set; } = new();
     public MassFlowTuning Flow { get; set; } = new();
     public MassFlowArrivalTuning Arrival { get; set; } = new();
     public MassFlowAvoidanceTuning Avoidance { get; set; } = new();
     public MassNavigationCrowdSemantics Semantics { get; set; } = new();
-    public MassNavigationViewResidencyConfig ViewResidency { get; set; } = new();
+    public MassNavigationStreamingConfig Streaming { get; set; } = new();
 
     public static MassNavigationConfig Load(JsonObject configObject)
     {
@@ -77,26 +74,19 @@ public sealed class MassNavigationConfig
         RequireProperty(root, "scenarioRuntime");
         RequireProperty(root, "cadence");
         RequireProperty(root, "agentProfiles");
-        RequireProperty(root, "cameraProfiles");
-        RequireProperty(root, "minimap");
         RequireProperty(root, "teamRelationships");
         RequireProperty(root, "flow");
         RequireProperty(root, "arrival");
         RequireProperty(root, "avoidance");
         RequireProperty(root, "semantics");
-        RequireProperty(root, "viewResidency");
+        RequireProperty(root, "streaming");
         JsonElement scenarioRuntime = RequireProperty(root, "scenarioRuntime");
         bool autoSpawnConfiguredScenario = RequireBooleanProperty(scenarioRuntime, "autoSpawnConfiguredScenario");
         RequireProperties(
             scenarioRuntime,
             "initialSelectionScratchCapacity",
             "initialSelectedEntityCapacity",
-            "runtimeCapacity",
-            "panel",
-            "panelControls");
-        RequireProperties(
-            RequireProperty(scenarioRuntime, "panel"),
-            "mode");
+            "runtimeCapacity");
         RequireProperties(
             RequireProperty(scenarioRuntime, "runtimeCapacity"),
             "navigationGroupCapacity",
@@ -107,31 +97,6 @@ public sealed class MassNavigationConfig
             "orderIngestionMemberCapacity",
             "loadedChunkCapacity",
             "metadataTeamCapacity");
-        RequireProperties(
-            RequireProperty(scenarioRuntime, "panelControls"),
-            "maxAgentsPerTeam",
-            "totalAgentStep",
-            "totalAgentPresets",
-            "panelRefreshIntervalSeconds",
-            "viewResidencyRetainSecondsStep",
-            "simulationBudgetStepMs",
-            "simulationBudgetMinMs",
-            "simulationBudgetMaxMs",
-            "simulationSliceStep",
-            "simulationSliceMin",
-            "simulationSliceMax",
-            "enginePolicyHzStep",
-            "enginePolicyHzMin",
-            "enginePolicyHzMax",
-            "enginePolicyMaxStepsStep",
-            "enginePolicyMaxStepsMin",
-            "enginePolicyMaxStepsMax",
-            "arrivalTimeoutStepMs",
-            "arrivalProgressStepCm",
-            "arrivalWakePushStepCm",
-            "arrivalRetryStep",
-            "flowIterationStep",
-            "flowCadenceHzStep");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
@@ -140,7 +105,6 @@ public sealed class MassNavigationConfig
             "solverWindowHeightCm",
             "streamingChunkSizeCm",
             "streamingRadiusCm",
-            "cameraFocusShiftThresholdCm",
             "commandFocusHoldTicks",
             "workAreaPaddingCm",
             "workAreaMaxWidthCm",
@@ -235,21 +199,10 @@ public sealed class MassNavigationConfig
         JsonElement relationships = RequireProperty(root, "teamRelationships");
         RequireProperty(relationships, "defaultRelationship");
         RequireProperty(relationships, "relationships");
-        JsonElement cameraProfiles = RequireProperty(root, "cameraProfiles");
-        RequireProperties(cameraProfiles, "tacticalProfileId", "strategicProfileId", "requestPolicy");
         RequireProperties(
-            RequireProperty(cameraProfiles, "requestPolicy"),
-            "blendDurationSeconds",
-            "resetRuntimeState",
-            "snapToFollowTargetWhenAvailable",
-            "strategicTargetXCm",
-            "strategicTargetYCm");
-        RequireProperties(
-            RequireProperty(root, "minimap"),
-            "visible",
-            "initialPreset",
-            "followCameraHalfExtentCm",
-            "rotateWithCamera");
+            RequireProperty(root, "streaming"),
+            "retainSeconds",
+            "radiusCm");
         RequireProperties(
             RequireProperty(root, "flow"),
             "enabled",
@@ -377,40 +330,6 @@ public sealed class MassNavigationConfig
             "coincidentPairHashBucketCount",
             "coincidentPairHashPrimeA",
             "coincidentPairHashPrimeB");
-        JsonElement viewResidency = RequireProperty(root, "viewResidency");
-        RequireProperties(
-            viewResidency,
-            "mode",
-            "retainSeconds",
-            "radiusCm",
-            "initialProbeId",
-            "cameraProbes");
-        JsonElement cameraProbes = RequireProperty(viewResidency, "cameraProbes");
-        if (cameraProbes.ValueKind != JsonValueKind.Array)
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes must be an explicit array.");
-        }
-
-        int probeIndex = 0;
-        foreach (JsonElement probe in cameraProbes.EnumerateArray())
-        {
-            RequireProperties(
-                probe,
-                "id",
-                "label",
-                "targetXCm",
-                "targetYCm",
-                "distanceCm",
-                "yaw",
-                "pitch",
-                "fovYDeg");
-            probeIndex++;
-        }
-
-        if (probeIndex <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes requires at least one explicit probe.");
-        }
     }
 
     private static JsonElement RequireProperty(JsonElement root, string propertyName)
@@ -455,9 +374,7 @@ public sealed class MassNavigationConfig
         Presentation.Validate(Scenario, ScenarioRuntime, World);
         Cadence.Validate();
         AgentProfiles.Validate();
-        CameraProfiles.Validate();
-        Minimap.Validate();
-        ViewResidency.Validate();
+        Streaming.Validate();
         Flow.Validate();
         Arrival.Validate();
         Avoidance.Validate();
@@ -468,7 +385,7 @@ public sealed class MassNavigationConfig
         }
 
         World.Validate(Solver);
-        ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, ViewResidency);
+        ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, Streaming);
 
         ValidateRelationships();
 
@@ -522,8 +439,6 @@ public sealed class MassNavigationScenarioRuntimeConfig
     public int InitialSelectionScratchCapacity { get; set; }
     public int InitialSelectedEntityCapacity { get; set; }
     public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
-    public MassNavigationPanelConfig Panel { get; set; } = new();
-    public MassNavigationPanelControlsConfig PanelControls { get; set; } = new();
 
     public void Validate()
     {
@@ -542,53 +457,7 @@ public sealed class MassNavigationScenarioRuntimeConfig
             throw new InvalidOperationException("Mass-nav scenarioRuntime.runtimeCapacity must be explicitly configured.");
         }
 
-        if (Panel == null)
-        {
-            throw new InvalidOperationException("Mass-nav scenarioRuntime.panel must be explicitly configured.");
-        }
-
-        Panel.Validate();
-
-        if (PanelControls == null)
-        {
-            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls must be explicitly configured.");
-        }
-
         RuntimeCapacity.Validate(this);
-        PanelControls.Validate();
-    }
-}
-
-public enum MassNavigationPanelMode : byte
-{
-    Owned = 1,
-    Hidden = 2,
-    External = 3,
-}
-
-public sealed class MassNavigationPanelConfig
-{
-    private MassNavigationPanelMode _parsedMode;
-
-    public string Mode { get; set; } = string.Empty;
-
-    [JsonIgnore]
-    public MassNavigationPanelMode ParsedMode => _parsedMode;
-
-    [JsonIgnore]
-    public bool IsOwned => _parsedMode == MassNavigationPanelMode.Owned;
-
-    public void Validate()
-    {
-        _parsedMode = Mode switch
-        {
-            "Owned" => MassNavigationPanelMode.Owned,
-            "Hidden" => MassNavigationPanelMode.Hidden,
-            "External" => MassNavigationPanelMode.External,
-            "" => throw new InvalidOperationException("Mass-nav scenarioRuntime.panel.mode must be explicit."),
-            _ => throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.panel.mode '{Mode}' is not configured.")
-        };
     }
 }
 
@@ -665,45 +534,25 @@ public sealed class MassNavigationRuntimeCapacityConfig
         }
     }
 
-    public void ValidateForStreaming(MassNavigationWorldConfig world, MassNavigationViewResidencyConfig viewResidency)
+    public void ValidateForStreaming(MassNavigationWorldConfig world, MassNavigationStreamingConfig streaming)
     {
         if (world == null)
         {
             throw new InvalidOperationException("Mass-nav runtimeCapacity streaming validation requires world config.");
         }
 
-        if (viewResidency == null)
+        if (streaming == null)
         {
-            throw new InvalidOperationException("Mass-nav runtimeCapacity streaming validation requires viewResidency config.");
+            throw new InvalidOperationException("Mass-nav runtimeCapacity streaming validation requires streaming config.");
         }
 
         int minimumWindowChunkCapacity = CountSquareChunksForRadius(
-            viewResidency.RadiusCm,
+            streaming.RadiusCm,
             world.StreamingChunkSizeCm);
         if (LoadedChunkCapacity < minimumWindowChunkCapacity)
         {
             throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.runtimeCapacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one view-residency window chunk count {minimumWindowChunkCapacity}.");
-        }
-    }
-
-    public void ValidateForPanelControls(int teamCount, MassNavigationPanelControlsConfig panelControls)
-    {
-        if (teamCount <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav runtimeCapacity panel validation requires a positive team count.");
-        }
-
-        if (panelControls == null)
-        {
-            throw new InvalidOperationException("Mass-nav runtimeCapacity panel validation requires panelControls.");
-        }
-
-        long maxPanelAgentCount = (long)teamCount * panelControls.MaxAgentsPerTeam;
-        if (maxPanelAgentCount > GroupMembershipAgentCapacity)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than panel max agent count {maxPanelAgentCount}.");
+                $"Mass-nav scenarioRuntime.runtimeCapacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one streaming window chunk count {minimumWindowChunkCapacity}.");
         }
     }
 
@@ -728,156 +577,6 @@ public sealed class MassNavigationRuntimeCapacityConfig
     }
 }
 
-public sealed class MassNavigationPanelControlsConfig
-{
-    public int MaxAgentsPerTeam { get; set; }
-    public int TotalAgentStep { get; set; }
-    public int[] TotalAgentPresets { get; set; } = Array.Empty<int>();
-    public float PanelRefreshIntervalSeconds { get; set; }
-    public float ViewResidencyRetainSecondsStep { get; set; }
-    public int SimulationBudgetStepMs { get; set; }
-    public int SimulationBudgetMinMs { get; set; }
-    public int SimulationBudgetMaxMs { get; set; }
-    public int SimulationSliceStep { get; set; }
-    public int SimulationSliceMin { get; set; }
-    public int SimulationSliceMax { get; set; }
-    public int EnginePolicyHzStep { get; set; }
-    public int EnginePolicyHzMin { get; set; }
-    public int EnginePolicyHzMax { get; set; }
-    public int EnginePolicyMaxStepsStep { get; set; }
-    public int EnginePolicyMaxStepsMin { get; set; }
-    public int EnginePolicyMaxStepsMax { get; set; }
-    public int ArrivalTimeoutStepMs { get; set; }
-    public int ArrivalProgressStepCm { get; set; }
-    public int ArrivalWakePushStepCm { get; set; }
-    public int ArrivalRetryStep { get; set; }
-    public int FlowIterationStep { get; set; }
-    public int FlowCadenceHzStep { get; set; }
-
-    public void Validate()
-    {
-        if (MaxAgentsPerTeam <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.maxAgentsPerTeam must be > 0.");
-        }
-
-        if (TotalAgentStep <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.totalAgentStep must be > 0.");
-        }
-
-        if (TotalAgentPresets == null || TotalAgentPresets.Length == 0)
-        {
-            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.totalAgentPresets must declare at least one value.");
-        }
-
-        var seen = new HashSet<int>(TotalAgentPresets.Length);
-        for (int i = 0; i < TotalAgentPresets.Length; i++)
-        {
-            int preset = TotalAgentPresets[i];
-            if (preset <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] must be > 0.");
-            }
-
-            if (!seen.Add(preset))
-            {
-                throw new InvalidOperationException(
-                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets contains duplicate total {preset}.");
-            }
-        }
-
-        RequirePositive(PanelRefreshIntervalSeconds, "panelRefreshIntervalSeconds");
-        RequirePositive(ViewResidencyRetainSecondsStep, "viewResidencyRetainSecondsStep");
-        RequirePositive(SimulationBudgetStepMs, "simulationBudgetStepMs");
-        RequireRange(SimulationBudgetMinMs, SimulationBudgetMaxMs, "simulationBudget");
-        RequirePositive(SimulationSliceStep, "simulationSliceStep");
-        RequireRange(SimulationSliceMin, SimulationSliceMax, "simulationSlice");
-        RequirePositive(EnginePolicyHzStep, "enginePolicyHzStep");
-        RequireNonNegativeRange(EnginePolicyHzMin, EnginePolicyHzMax, "enginePolicyHz");
-        RequirePositive(EnginePolicyMaxStepsStep, "enginePolicyMaxStepsStep");
-        RequireRange(EnginePolicyMaxStepsMin, EnginePolicyMaxStepsMax, "enginePolicyMaxSteps");
-        RequirePositive(ArrivalTimeoutStepMs, "arrivalTimeoutStepMs");
-        RequirePositive(ArrivalProgressStepCm, "arrivalProgressStepCm");
-        RequirePositive(ArrivalWakePushStepCm, "arrivalWakePushStepCm");
-        RequirePositive(ArrivalRetryStep, "arrivalRetryStep");
-        RequirePositive(FlowIterationStep, "flowIterationStep");
-        RequirePositive(FlowCadenceHzStep, "flowCadenceHzStep");
-    }
-
-    public void ValidateForTeamCount(int teamCount, int agentsPerTeam)
-    {
-        if (teamCount <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav panelControls validation requires a positive team count.");
-        }
-
-        if (agentsPerTeam > MaxAgentsPerTeam)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav scenario.agentsPerTeam {agentsPerTeam} exceeds scenarioRuntime.panelControls.maxAgentsPerTeam {MaxAgentsPerTeam}.");
-        }
-
-        if (TotalAgentStep % teamCount != 0)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.panelControls.totalAgentStep {TotalAgentStep} must divide evenly across {teamCount} teams.");
-        }
-
-        long maxTotal = (long)MaxAgentsPerTeam * teamCount;
-        for (int i = 0; i < TotalAgentPresets.Length; i++)
-        {
-            int preset = TotalAgentPresets[i];
-            if (preset % teamCount != 0)
-            {
-                throw new InvalidOperationException(
-                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] {preset} must divide evenly across {teamCount} teams.");
-            }
-
-            if (preset > maxTotal)
-            {
-                throw new InvalidOperationException(
-                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] {preset} exceeds max total {maxTotal}.");
-            }
-        }
-    }
-
-    private static void RequirePositive(int value, string fieldName)
-    {
-        if (value <= 0)
-        {
-            throw new InvalidOperationException($"Mass-nav scenarioRuntime.panelControls.{fieldName} must be > 0.");
-        }
-    }
-
-    private static void RequirePositive(float value, string fieldName)
-    {
-        if (!(value > 0f))
-        {
-            throw new InvalidOperationException($"Mass-nav scenarioRuntime.panelControls.{fieldName} must be > 0.");
-        }
-    }
-
-    private static void RequireRange(int min, int max, string fieldName)
-    {
-        if (min <= 0 || max < min)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.panelControls.{fieldName} range must have min > 0 and max >= min.");
-        }
-    }
-
-    private static void RequireNonNegativeRange(int min, int max, string fieldName)
-    {
-        if (min < 0 || max < min)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav scenarioRuntime.panelControls.{fieldName} range must have min >= 0 and max >= min.");
-        }
-    }
-}
-
 public sealed class MassNavigationConfigLoader
 {
     public const string DefaultRelativePath = "MassNavigationConfig.json";
@@ -894,6 +593,21 @@ public sealed class MassNavigationConfigLoader
         ConfigConflictReport report,
         string relativePath = DefaultRelativePath)
     {
+        if (TryLoad(catalog, report, out MassNavigationConfig? config, relativePath))
+        {
+            return config;
+        }
+
+        throw new InvalidOperationException($"MassCrowd runtime config '{relativePath}' must be registered in config_catalog.json.");
+    }
+
+    public bool TryLoad(
+        ConfigCatalog catalog,
+        ConfigConflictReport report,
+        out MassNavigationConfig? config,
+        string relativePath = DefaultRelativePath)
+    {
+        config = null;
         if (catalog == null)
         {
             throw new ArgumentNullException(nameof(catalog));
@@ -906,7 +620,7 @@ public sealed class MassNavigationConfigLoader
 
         if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            throw new InvalidOperationException($"MassCrowd runtime config '{relativePath}' must be registered in config_catalog.json.");
+            return false;
         }
 
         if (entry.MergePolicy != ConfigMergePolicy.Replace)
@@ -920,82 +634,26 @@ public sealed class MassNavigationConfigLoader
             throw new InvalidOperationException($"MassCrowd runtime requires config '{relativePath}' through ConfigPipeline.");
         }
 
-        return MassNavigationConfig.Load(merged);
+        config = MassNavigationConfig.Load(merged);
+        return true;
     }
 }
 
-public sealed class MassNavigationCameraProfilesConfig
+public sealed class MassNavigationStreamingConfig
 {
-    public string TacticalProfileId { get; set; } = string.Empty;
-    public string StrategicProfileId { get; set; } = string.Empty;
-    public MassNavigationCameraRequestPolicyConfig RequestPolicy { get; set; } = new();
+    public float RetainSeconds { get; set; }
+    public int RadiusCm { get; set; }
 
     public void Validate()
     {
-        if (string.IsNullOrWhiteSpace(TacticalProfileId))
+        if (RetainSeconds < 0f)
         {
-            throw new InvalidOperationException("Mass-nav cameraProfiles requires non-empty TacticalProfileId.");
+            throw new InvalidOperationException("Mass-nav streaming.retainSeconds must be >= 0.");
         }
 
-        if (string.IsNullOrWhiteSpace(StrategicProfileId))
+        if (RadiusCm <= 0)
         {
-            throw new InvalidOperationException("Mass-nav cameraProfiles requires non-empty StrategicProfileId.");
-        }
-
-        if (string.Equals(TacticalProfileId, StrategicProfileId, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Mass-nav cameraProfiles tactical and strategic profile ids must be distinct.");
-        }
-
-        RequestPolicy.Validate();
-    }
-}
-
-public sealed class MassNavigationCameraRequestPolicyConfig
-{
-    public float BlendDurationSeconds { get; set; }
-    public bool ResetRuntimeState { get; set; }
-    public bool SnapToFollowTargetWhenAvailable { get; set; }
-    public float StrategicTargetXCm { get; set; }
-    public float StrategicTargetYCm { get; set; }
-
-    public void Validate()
-    {
-        if (BlendDurationSeconds < 0f)
-        {
-            throw new InvalidOperationException("Mass-nav cameraProfiles.requestPolicy.blendDurationSeconds must be >= 0.");
-        }
-    }
-}
-
-public sealed class MassNavigationMinimapConfig
-{
-    private MinimapPreset _parsedInitialPreset;
-
-    public bool Visible { get; set; }
-    public string InitialPreset { get; set; } = string.Empty;
-    public float FollowCameraHalfExtentCm { get; set; }
-    public bool RotateWithCamera { get; set; }
-
-    [JsonIgnore]
-    public MinimapPreset ParsedInitialPreset => _parsedInitialPreset;
-
-    public void Validate()
-    {
-        _parsedInitialPreset = InitialPreset switch
-        {
-            "RtsFullMap" => MinimapPreset.RtsFullMap,
-            "FollowCamera" => MinimapPreset.FollowCamera,
-            "FollowEntity" => throw new InvalidOperationException(
-                "Mass-nav minimap.initialPreset cannot be FollowEntity without an authored follow entity."),
-            "" => throw new InvalidOperationException("Mass-nav minimap.initialPreset must be a non-empty semantic string."),
-            _ => throw new InvalidOperationException(
-                $"Mass-nav minimap.initialPreset '{InitialPreset}' is not configured. Use RtsFullMap or FollowCamera.")
-        };
-
-        if (FollowCameraHalfExtentCm <= 0f)
-        {
-            throw new InvalidOperationException("Mass-nav minimap.followCameraHalfExtentCm must be > 0.");
+            throw new InvalidOperationException("Mass-nav streaming.radiusCm must be > 0.");
         }
     }
 }
@@ -1263,7 +921,6 @@ public sealed class MassNavigationWorldConfig
     public int SolverWindowHeightCm { get; set; }
     public int StreamingChunkSizeCm { get; set; }
     public int StreamingRadiusCm { get; set; }
-    public int CameraFocusShiftThresholdCm { get; set; }
     public int CommandFocusHoldTicks { get; set; }
     public int WorkAreaPaddingCm { get; set; }
     public int WorkAreaMaxWidthCm { get; set; }
@@ -1369,11 +1026,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("Mass-nav world requires StreamingRadiusCm >= 0.");
         }
 
-        if (CameraFocusShiftThresholdCm <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav world requires CameraFocusShiftThresholdCm > 0.");
-        }
-
         if (CommandFocusHoldTicks < 0)
         {
             throw new InvalidOperationException("Mass-nav world requires CommandFocusHoldTicks >= 0.");
@@ -1413,140 +1065,6 @@ public sealed class MassNavigationWorldConfig
         }
 
         return -1;
-    }
-}
-
-public sealed class MassNavigationViewResidencyConfig
-{
-    private int _activeProbeIndex = -1;
-
-    public string Mode { get; set; } = "Camera";
-    public float RetainSeconds { get; set; }
-    public int RadiusCm { get; set; }
-    public string InitialProbeId { get; set; } = string.Empty;
-    public MassNavigationCameraProbeConfig[] CameraProbes { get; set; } = Array.Empty<MassNavigationCameraProbeConfig>();
-
-    [JsonIgnore]
-    public bool UsesProbeFocus => string.Equals(Mode, "Probe", StringComparison.Ordinal);
-
-    [JsonIgnore]
-    public MassNavigationCameraProbeConfig ActiveProbe => _activeProbeIndex >= 0 && _activeProbeIndex < CameraProbes.Length
-        ? CameraProbes[_activeProbeIndex]
-        : throw new InvalidOperationException("Mass-nav view residency active probe was not validated.");
-
-    public void SetActiveProbe(string probeId)
-    {
-        int index = FindProbeIndex(probeId);
-        if (index < 0)
-        {
-            throw new InvalidOperationException($"Mass-nav view residency probe '{probeId}' is not configured.");
-        }
-
-        _activeProbeIndex = index;
-        InitialProbeId = CameraProbes[index].Id;
-    }
-
-    public bool TryGetProbe(string probeId, out MassNavigationCameraProbeConfig probe)
-    {
-        int index = FindProbeIndex(probeId);
-        if (index < 0)
-        {
-            probe = null!;
-            return false;
-        }
-
-        probe = CameraProbes[index];
-        return true;
-    }
-
-    public void Validate()
-    {
-        if (!string.Equals(Mode, "Camera", StringComparison.Ordinal) &&
-            !string.Equals(Mode, "Probe", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Mass-nav viewResidency.mode must be 'Camera' or 'Probe', got '{Mode}'.");
-        }
-
-        if (RetainSeconds < 0f)
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.retainSeconds must be >= 0.");
-        }
-
-        if (RadiusCm <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.radiusCm must be > 0.");
-        }
-
-        if (CameraProbes.Length <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes requires at least one explicit probe.");
-        }
-
-        var ids = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < CameraProbes.Length; i++)
-        {
-            MassNavigationCameraProbeConfig probe = CameraProbes[i];
-            probe.Validate();
-            if (!ids.Add(probe.Id))
-            {
-                throw new InvalidOperationException($"Mass-nav viewResidency contains duplicate camera probe id '{probe.Id}'.");
-            }
-        }
-
-        if (string.IsNullOrWhiteSpace(InitialProbeId))
-        {
-            throw new InvalidOperationException("Mass-nav viewResidency.initialProbeId must be explicit.");
-        }
-
-        SetActiveProbe(InitialProbeId);
-    }
-
-    private int FindProbeIndex(string probeId)
-    {
-        for (int i = 0; i < CameraProbes.Length; i++)
-        {
-            if (string.Equals(CameraProbes[i].Id, probeId, StringComparison.Ordinal))
-            {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-}
-
-public sealed class MassNavigationCameraProbeConfig
-{
-    public string Id { get; set; } = string.Empty;
-    public string Label { get; set; } = string.Empty;
-    public float TargetXCm { get; set; }
-    public float TargetYCm { get; set; }
-    public float DistanceCm { get; set; }
-    public float Yaw { get; set; }
-    public float Pitch { get; set; }
-    public float FovYDeg { get; set; }
-
-    public void Validate()
-    {
-        if (string.IsNullOrWhiteSpace(Id))
-        {
-            throw new InvalidOperationException("Mass-nav camera probe requires a non-empty id.");
-        }
-
-        if (string.IsNullOrWhiteSpace(Label))
-        {
-            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires a non-empty label.");
-        }
-
-        if (DistanceCm <= 0f)
-        {
-            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires DistanceCm > 0.");
-        }
-
-        if (FovYDeg <= 0f || FovYDeg >= 180f)
-        {
-            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires 0 < FovYDeg < 180.");
-        }
     }
 }
 
@@ -1629,8 +1147,6 @@ public sealed class MassNavigationScenarioConfig
         }
 
         scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);
-        scenarioRuntime.PanelControls.ValidateForTeamCount(Teams.Length, AgentsPerTeam);
-        scenarioRuntime.RuntimeCapacity.ValidateForPanelControls(Teams.Length, scenarioRuntime.PanelControls);
 
         if (scenarioRuntime.AutoSpawnConfiguredScenario)
         {

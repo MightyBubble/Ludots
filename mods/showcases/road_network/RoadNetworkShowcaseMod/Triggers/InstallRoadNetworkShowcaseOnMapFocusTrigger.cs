@@ -16,22 +16,27 @@ using RoadNetworkShowcaseMod.Systems;
 
 namespace RoadNetworkShowcaseMod.Triggers
 {
-    internal sealed class InstallRoadNetworkShowcaseOnGameStartTrigger : Trigger
+    internal sealed class InstallRoadNetworkShowcaseOnMapFocusTrigger : Trigger
     {
         private readonly IModContext _context;
         private readonly RoadNetworkShowcaseRuntime _runtime;
 
-        public InstallRoadNetworkShowcaseOnGameStartTrigger(IModContext context, RoadNetworkShowcaseRuntime runtime)
+        public InstallRoadNetworkShowcaseOnMapFocusTrigger(IModContext context, RoadNetworkShowcaseRuntime runtime, EventKey eventKey)
         {
             _context = context;
             _runtime = runtime;
-            EventKey = GameEvents.GameStart;
+            EventKey = eventKey;
         }
 
         public override Task ExecuteAsync(ScriptContext context)
         {
             GameEngine? engine = context.GetEngine();
             if (engine == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (!RoadNetworkShowcaseIds.IsShowcaseMap(engine.CurrentMapSession?.MapId.Value))
             {
                 return Task.CompletedTask;
             }

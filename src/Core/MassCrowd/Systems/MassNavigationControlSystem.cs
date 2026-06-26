@@ -28,7 +28,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
+        if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
         {
             return;
         }
@@ -86,8 +86,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             _simulation,
             _engine.GetService(CoreServiceKeys.TeamEntityLookup)
                 ?? throw new InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
-        MassNavigationRuntime.RequestTacticalCameraReset(_engine);
-        MassNavigationRuntime.RequestMinimapStrategicWorldView(_engine);
 
         _simulation.MarkSceneResetExecuted();
         _simulation.MarkStructuralChange();

@@ -45,7 +45,7 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
+        if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
         {
             return;
         }

@@ -1,21 +1,15 @@
-using System.Threading.Tasks;
-using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
-using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Minimap;
-using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Hud;
+using Ludots.Core.MassCrowd.Systems;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
-using Ludots.Core.MassCrowd.Systems;
-using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -23,31 +17,79 @@ public sealed class MassNavigationRuntime
 {
     private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
-    private readonly IModContext _context;
     private MassNavigationConfig? _config;
+    private bool _configResolved;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
-    private RenderDebugSnapshot _savedRenderDebug;
-    private bool _savedRenderDebugValid;
     private ILoadedChunks? _savedLoadedChunks;
     private ILoadedChunks? _savedSpatialLoadedChunks;
     private ILoadedChunks? _activeLoadedChunksOverride;
     private bool _savedLoadedChunksValid;
     private bool _loadedChunksOverrideActive;
 
-    public MassNavigationRuntime(IModContext context)
+    public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
-        _context = context;
+        ArgumentNullException.ThrowIfNull(engine);
+        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        EnsureSystemsInstalled(engine, config);
+        BindBoardWorld(engine);
+        BindMassNavigationLoadedChunks(engine);
+        BindLocalSelectionOwner(engine);
+        RequireSimulationRuntime(engine, "activating map focus").SetWorldOperationsReady(true);
+        if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            EnsureScenario(engine);
+        }
+
+        return true;
     }
 
-    public void EnsureSystemsInstalled(GameEngine engine)
+    public bool HandleMapSuspended(GameEngine engine, MapId mapId)
+    {
+        return ReleaseMapState(engine, mapId, unloadScenario: false);
+    }
+
+    public bool HandleMapUnloaded(GameEngine engine, MapId mapId)
+    {
+        return ReleaseMapState(engine, mapId, unloadScenario: true);
+    }
+
+    private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (unloadScenario)
+        {
+            _scenarioSpawned = false;
+        }
+
+        if (engine.GetService(MassNavigationKeys.SimulationRuntime) is MassNavigationSimulationRuntime simulation)
+        {
+            simulation.SetWorldOperationsReady(false);
+        }
+
+        engine.RemoveService(MassNavigationKeys.RouteExecutionSink);
+        ReleaseMassNavigationLoadedChunks(engine);
+        return true;
+    }
+
+    private void EnsureSystemsInstalled(GameEngine engine, MassNavigationConfig config)
     {
         if (_systemsInstalled)
         {
             return;
         }
 
-        MassNavigationConfig config = EnsureConfig(engine);
         var simulation = new MassNavigationSimulationRuntime(config);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
@@ -72,101 +114,44 @@ public sealed class MassNavigationRuntime
             SystemGroup.PostMovement);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
-        engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
-        _context.Log("[MassCrowd runtime] Installed mass-navigation runtime.");
+        Log.Info(in LogChannels.Engine, "[MassCrowd runtime] Installed mass-navigation runtime.");
     }
 
-    private MassNavigationConfig EnsureConfig(GameEngine engine)
+    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig config)
     {
         if (_config != null)
         {
-            return _config;
+            config = _config;
+            return true;
+        }
+
+        if (_configResolved)
+        {
+            config = null!;
+            return false;
         }
 
         if (engine.ConfigPipeline == null)
         {
-            throw new System.InvalidOperationException("MassCrowd runtime requires ConfigPipeline before loading MassNavigationConfig.");
+            throw new InvalidOperationException("MassCrowd runtime requires ConfigPipeline before loading MassNavigationConfig.");
         }
 
-        _config = new MassNavigationConfigLoader(engine.ConfigPipeline).Load(
-            engine.ConfigCatalog,
-            engine.ConfigConflictReport);
+        var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
+        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded))
+        {
+            _configResolved = true;
+            config = null!;
+            return false;
+        }
+
         AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires AgentProfiles.");
-        _config.AgentProfiles.BindAgentProfiles(agentProfiles);
-        return _config;
-    }
-
-    public Task HandleMapFocusedAsync(ScriptContext context)
-    {
-        var engine = context.GetEngine();
-        if (engine == null)
-        {
-            return Task.CompletedTask;
-        }
-
-        MassNavigationConfig config = EnsureConfig(engine);
-        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
-        {
-            return Task.CompletedTask;
-        }
-
-        EnsureSystemsInstalled(engine);
-        BindBoardWorld(engine);
-        BindMassNavigationLoadedChunks(engine);
-        BindLocalSelectionOwner(engine);
-        ConfigureRenderDebug(engine);
-        ConfigureCoreMinimap(engine);
-        ApplyCullingFocusOverride(engine);
-        EnsureTacticalCamera(engine);
-        if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
-        {
-            EnsureScenario(engine);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    public Task HandleMapUnloadedAsync(ScriptContext context)
-    {
-        var engine = context.GetEngine();
-        if (engine == null)
-        {
-            return Task.CompletedTask;
-        }
-
-        MassNavigationConfig config = EnsureConfig(engine);
-        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
-        {
-            return Task.CompletedTask;
-        }
-
-        _scenarioSpawned = false;
-        ReleaseMassNavigationLoadedChunks(engine);
-        RestoreRenderDebug(engine);
-        ClearCullingFocusOverride(engine);
-        return Task.CompletedTask;
-    }
-
-    public Task HandleMapSuspendedAsync(ScriptContext context)
-    {
-        var engine = context.GetEngine();
-        if (engine == null)
-        {
-            return Task.CompletedTask;
-        }
-
-        MassNavigationConfig config = EnsureConfig(engine);
-        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
-        {
-            return Task.CompletedTask;
-        }
-
-        ReleaseMassNavigationLoadedChunks(engine);
-        RestoreRenderDebug(engine);
-        ClearCullingFocusOverride(engine);
-        return Task.CompletedTask;
+            ?? throw new InvalidOperationException("MassCrowd runtime requires AgentProfiles.");
+        loaded.AgentProfiles.BindAgentProfiles(agentProfiles);
+        _config = loaded;
+        _configResolved = true;
+        config = loaded;
+        return true;
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -179,30 +164,30 @@ public sealed class MassNavigationRuntime
         }
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
             engine,
             simulation,
             engine.GetService(CoreServiceKeys.TeamEntityLookup)
-                ?? throw new System.InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
+                ?? throw new InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
         _scenarioSpawned = true;
     }
 
     private static void BindBoardWorld(GameEngine engine)
     {
         MapSession session = engine.CurrentMapSession
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires an active MapSession.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires an active MapSession.");
         var board = session.PrimaryBoard
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires a primary board.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires a primary board.");
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         simulation.BindBoardWorld(board.WorldSize);
     }
 
     private void BindMassNavigationLoadedChunks(GameEngine engine)
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         if (_loadedChunksOverrideActive &&
             engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks current &&
             ReferenceEquals(current, simulation.LoadedChunks) &&
@@ -224,7 +209,7 @@ public sealed class MassNavigationRuntime
         _savedLoadedChunksValid = engine.GlobalContext.TryGetValue(CoreServiceKeys.LoadedChunks.Name, out object? savedRaw);
         if (savedRaw != null && savedRaw is not ILoadedChunks)
         {
-            throw new System.InvalidOperationException("MassCrowd runtime loaded chunks override found a non-ILoadedChunks service value.");
+            throw new InvalidOperationException("MassCrowd runtime loaded chunks override found a non-ILoadedChunks service value.");
         }
 
         _savedLoadedChunks = savedRaw as ILoadedChunks;
@@ -275,102 +260,10 @@ public sealed class MassNavigationRuntime
         _loadedChunksOverrideActive = false;
     }
 
-    private static void ConfigureCoreMinimap(GameEngine engine)
-    {
-        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "configuring minimap");
-        MinimapRuntime minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires core MinimapRuntime.");
-        ApplyConfiguredMinimapPreset(minimap, simulation.Config.Minimap);
-        minimap.Visible = simulation.Config.Minimap.Visible;
-    }
-
-    private static void ApplyConfiguredMinimapPreset(MinimapRuntime minimap, MassNavigationMinimapConfig config)
-    {
-        switch (config.ParsedInitialPreset)
-        {
-            case MinimapPreset.RtsFullMap:
-                minimap.UseRtsFullMapPreset();
-                minimap.SetRotateWithCamera(config.RotateWithCamera);
-                return;
-            case MinimapPreset.FollowCamera:
-                minimap.UseFollowCameraPreset(config.FollowCameraHalfExtentCm, config.RotateWithCamera);
-                return;
-            default:
-                throw new System.InvalidOperationException(
-                    $"MassCrowd runtime minimap preset '{config.InitialPreset}' was not validated.");
-        }
-    }
-
-    public static void ApplyCullingFocusOverride(GameEngine engine)
-    {
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime before culling focus override.");
-        if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not Ludots.Core.Presentation.Camera.CameraCullingFocusOverride focus)
-        {
-            if (simulation.ViewResidency.UsesProbeFocus)
-            {
-                throw new System.InvalidOperationException("MassCrowd runtime viewResidency mode 'Probe' requires CameraCullingFocusOverride service.");
-            }
-
-            return;
-        }
-
-        if (!simulation.ViewResidency.UsesProbeFocus)
-        {
-            focus.Enabled = false;
-            focus.SourceId = string.Empty;
-            return;
-        }
-
-        MassNavigationCameraProbeConfig probe = simulation.ViewResidency.ActiveProbe;
-        focus.Enabled = true;
-        focus.SourceId = probe.Id;
-        focus.TargetCm = new Vector2(probe.TargetXCm, probe.TargetYCm);
-        focus.DistanceCm = probe.DistanceCm;
-        focus.Yaw = probe.Yaw;
-        focus.Pitch = probe.Pitch;
-        focus.FovYDeg = probe.FovYDeg;
-    }
-
-    internal static void ClearCullingFocusOverride(GameEngine engine)
-    {
-        if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not Ludots.Core.Presentation.Camera.CameraCullingFocusOverride focus)
-        {
-            return;
-        }
-
-        focus.Enabled = false;
-        focus.SourceId = string.Empty;
-    }
-
-    public static void RequestMinimapStrategicWorldView(GameEngine engine)
-    {
-        ConfigureCoreMinimap(engine);
-    }
-
-    public static void RequestMinimapTacticalWorldView(GameEngine engine)
-    {
-        ConfigureCoreMinimap(engine);
-    }
-
-    public static void RequestCameraJump(GameEngine engine, Vector2 targetCm)
-    {
-        MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
-        string tacticalProfileId = cameraProfiles.TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
-            tacticalProfileId,
-            cameraProfiles.RequestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = tacticalProfileId,
-            TargetCm = targetCm
-        });
-    }
-
     private static void BindLocalSelectionOwner(GameEngine engine)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires SelectionRuntime.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires SelectionRuntime.");
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
             localObj is not Entity owner ||
             !engine.World.IsAlive(owner))
@@ -381,7 +274,7 @@ public sealed class MassNavigationRuntime
 
         if (!engine.World.Has<PlayerOwner>(owner))
         {
-            throw new System.InvalidOperationException("MassCrowd runtime LocalPlayerEntity must author PlayerOwner.");
+            throw new InvalidOperationException("MassCrowd runtime LocalPlayerEntity must author PlayerOwner.");
         }
 
         EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
@@ -400,16 +293,16 @@ public sealed class MassNavigationRuntime
         return count switch
         {
             1 => resolved,
-            0 => throw new System.InvalidOperationException("MassCrowd runtime requires the map to author exactly one PlayerOwner local player entity."),
-            _ => throw new System.InvalidOperationException("MassCrowd runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
+            0 => throw new InvalidOperationException("MassCrowd runtime requires the map to author exactly one PlayerOwner local player entity."),
+            _ => throw new InvalidOperationException("MassCrowd runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
         };
     }
 
-    private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
+    private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, Dictionary<string, object> globals)
     {
         if (!world.Has<SelectionDragState>(owner))
         {
-            throw new System.InvalidOperationException("MassCrowd runtime local player template must author SelectionDragState.");
+            throw new InvalidOperationException("MassCrowd runtime local player template must author SelectionDragState.");
         }
 
         if (!SelectionContextRuntime.TrySetCurrentView(
@@ -422,146 +315,15 @@ public sealed class MassNavigationRuntime
                 SelectionSetKeys.LivePrimary,
                 out _))
         {
-            throw new System.InvalidOperationException("MassCrowd runtime failed to bind LivePrimary as the primary selection view.");
+            throw new InvalidOperationException("MassCrowd runtime failed to bind LivePrimary as the primary selection view.");
         }
-    }
-
-    private static void EnsureTacticalCamera(GameEngine engine)
-    {
-        RequestTacticalCameraReset(engine);
-    }
-
-    private void ConfigureRenderDebug(GameEngine engine)
-    {
-        if (engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
-        {
-            return;
-        }
-
-        if (!_savedRenderDebugValid)
-        {
-            _savedRenderDebug = new RenderDebugSnapshot(
-                renderDebug.DrawTerrain,
-                renderDebug.DrawPrimitives,
-                renderDebug.DrawDebugDraw,
-                renderDebug.DrawSkiaUi,
-                renderDebug.DrawWorldHudBars,
-                renderDebug.DrawWorldHudText,
-                renderDebug.DrawCombatText,
-                renderDebug.AcceptanceScaleMultiplier);
-            _savedRenderDebugValid = true;
-        }
-
-        renderDebug.DrawTerrain = true;
-        renderDebug.DrawDebugDraw = false;
-        // Raylib currently routes the official performer ISM/static-mesh lane through this shared draw toggle.
-        renderDebug.DrawPrimitives = true;
-        renderDebug.DrawSkiaUi = false;
-        renderDebug.DrawWorldHudBars = true;
-        renderDebug.DrawWorldHudText = true;
-        renderDebug.DrawCombatText = true;
-    }
-
-    private void RestoreRenderDebug(GameEngine engine)
-    {
-        if (!_savedRenderDebugValid ||
-            engine.GetService(CoreServiceKeys.RenderDebugState) is not RenderDebugState renderDebug)
-        {
-            return;
-        }
-
-        renderDebug.DrawTerrain = _savedRenderDebug.DrawTerrain;
-        renderDebug.DrawPrimitives = _savedRenderDebug.DrawPrimitives;
-        renderDebug.DrawDebugDraw = _savedRenderDebug.DrawDebugDraw;
-        renderDebug.DrawSkiaUi = _savedRenderDebug.DrawSkiaUi;
-        renderDebug.DrawWorldHudBars = _savedRenderDebug.DrawWorldHudBars;
-        renderDebug.DrawWorldHudText = _savedRenderDebug.DrawWorldHudText;
-        renderDebug.DrawCombatText = _savedRenderDebug.DrawCombatText;
-        renderDebug.AcceptanceScaleMultiplier = _savedRenderDebug.AcceptanceScaleMultiplier;
-        _savedRenderDebugValid = false;
-    }
-
-    public static void RequestTacticalCameraReset(GameEngine engine)
-    {
-        Vector2 targetCm = ResolveCameraTarget(engine);
-        MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
-        string tacticalProfileId = cameraProfiles.TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
-            tacticalProfileId,
-            cameraProfiles.RequestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = tacticalProfileId,
-            TargetCm = targetCm
-        });
-    }
-
-    public static void RequestStrategicCameraReset(GameEngine engine)
-    {
-        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "strategic camera reset");
-        MassNavigationCameraRequestPolicyConfig requestPolicy = simulation.Config.CameraProfiles.RequestPolicy;
-        string strategicProfileId = simulation.Config.CameraProfiles.StrategicProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
-            strategicProfileId,
-            requestPolicy);
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = strategicProfileId,
-            TargetCm = new Vector2(requestPolicy.StrategicTargetXCm, requestPolicy.StrategicTargetYCm)
-        });
-    }
-
-    public static bool IsStrategicWorldCameraActive(GameEngine engine)
-    {
-        return string.Equals(
-            engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId,
-            RequireCameraProfiles(engine).StrategicProfileId,
-            System.StringComparison.Ordinal);
-    }
-
-    private static MassNavigationCameraProfilesConfig RequireCameraProfiles(GameEngine engine)
-    {
-        return RequireSimulationRuntime(engine, "resolving camera profile ids").Config.CameraProfiles;
     }
 
     private static MassNavigationSimulationRuntime RequireSimulationRuntime(GameEngine engine, string action)
     {
         return engine.GetService(MassNavigationKeys.SimulationRuntime) as MassNavigationSimulationRuntime
-            ?? throw new System.InvalidOperationException($"MassCrowd runtime requires simulation runtime before {action}.");
+            ?? throw new InvalidOperationException($"MassCrowd runtime requires simulation runtime before {action}.");
     }
-
-    private static VirtualCameraRequest CreateCameraRequest(
-        string profileId,
-        MassNavigationCameraRequestPolicyConfig policy)
-    {
-        return new VirtualCameraRequest
-        {
-            Id = profileId,
-            BlendDurationSeconds = policy.BlendDurationSeconds,
-            ResetRuntimeState = policy.ResetRuntimeState,
-            SnapToFollowTargetWhenAvailable = policy.SnapToFollowTargetWhenAvailable
-        };
-    }
-
-    private static Vector2 ResolveCameraTarget(GameEngine engine)
-    {
-        if (engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation)
-        {
-            throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime before camera reset.");
-        }
-
-        return new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm);
-    }
-
-    private readonly record struct RenderDebugSnapshot(
-        bool DrawTerrain,
-        bool DrawPrimitives,
-        bool DrawDebugDraw,
-        bool DrawSkiaUi,
-        bool DrawWorldHudBars,
-        bool DrawWorldHudText,
-        bool DrawCombatText,
-        float AcceptanceScaleMultiplier);
 }
 
 public sealed class MassNavigationPreSimulationStepSystem : ISystem<float>

@@ -147,15 +147,6 @@
       "ChunkSizeCells": 64
     }
   ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.MassNavigationTactical",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "Yaw": 180,
-    "Pitch": 52,
-    "DistanceCm": 14500,
-    "FovYDeg": 50
-  },
   "Entities": [
     {
       "InstanceId": "team-azure",

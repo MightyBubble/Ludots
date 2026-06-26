@@ -15,15 +15,6 @@
       "ChunkSizeCells": 64
     }
   ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.MassNavigationTactical",
-    "TargetXCm": 0,
-    "TargetYCm": -1800,
-    "Yaw": 180,
-    "Pitch": 47,
-    "DistanceCm": 15500,
-    "FovYDeg": 52
-  },
   "Entities": [
     {
       "Template": "mass_navigation_local_player",

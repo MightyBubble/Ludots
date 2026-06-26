@@ -115,7 +115,7 @@ public sealed class MassNavigationSimulationRuntime
     private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
     private readonly List<long> _loadedChunksToEvict;
     private readonly int _loadedChunkCapacity;
-    private float _viewResidencyClockSeconds;
+    private float _streamingClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
     private int _streamingMaxChunkX = int.MinValue;
     private int _streamingMinChunkY = int.MinValue;
@@ -128,10 +128,6 @@ public sealed class MassNavigationSimulationRuntime
     private float _simWindowWidthCm;
     private float _simWindowHeightCm;
     private int _commandFocusTicksRemaining;
-    private float _lastCameraFocusXCm;
-    private float _lastCameraFocusYCm;
-    private float _lastCameraViewWidthCm;
-    private float _lastCameraViewHeightCm;
     private bool _hasCommandFocus;
     private float _lastCommandFocusXCm;
     private float _lastCommandFocusYCm;
@@ -147,7 +143,6 @@ public sealed class MassNavigationSimulationRuntime
     private long _commandTick;
     private long _simTick;
     private long _performerTick;
-    private long _hudTick;
     private long _panelTick;
     private string _solverWindowDriver = "initial nav area";
 
@@ -156,7 +151,7 @@ public sealed class MassNavigationSimulationRuntime
     public int StructuralChangesFrame { get; private set; }
     public int StructuralChangeRevision { get; private set; }
     public int FlowReconcileCountFrame { get; private set; }
-    public int CameraBudgetUpdatesFrame { get; private set; }
+    public int FocusBudgetUpdatesFrame { get; private set; }
     public int SolverWindowMovesFrame { get; private set; }
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
@@ -174,7 +169,6 @@ public sealed class MassNavigationSimulationRuntime
     public float CommandHzObserved { get; private set; }
     public float SimHzObserved { get; private set; }
     public float PerformerHzObserved { get; private set; }
-    public float HudHzObserved { get; private set; }
     public float PanelHzObserved { get; private set; }
     public int CrowdInViewCount { get; private set; }
     public int CrowdSubmittedCount { get; private set; }
@@ -183,7 +177,7 @@ public sealed class MassNavigationSimulationRuntime
     public int StreamingWindowUpdatesFrame { get; private set; }
     public int CommandRejectsFrame { get; private set; }
     public int CommandRejectsTotal { get; private set; }
-    public int CameraBudgetUpdatesTotal { get; private set; }
+    public int FocusBudgetUpdatesTotal { get; private set; }
     public int SolverWindowMovesTotal { get; private set; }
     public int ScenarioSpawnCount { get; private set; }
     public int SceneResetCount { get; private set; }
@@ -200,7 +194,8 @@ public sealed class MassNavigationSimulationRuntime
     internal MassFlowSimulationState MassFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
     public WorldGridLoadedChunks LoadedChunks => _loadedChunks;
-    public MassNavigationViewResidencyConfig ViewResidency => Config.ViewResidency;
+    public MassNavigationStreamingConfig Streaming => Config.Streaming;
+    public bool IsReadyForWorldOperations { get; private set; }
 
     public int NavigationAgentCount => MassFlow.UnitCount;
     public int NavigationObstacleCount => MassFlow.ObstacleCount;
@@ -267,10 +262,6 @@ public sealed class MassNavigationSimulationRuntime
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
         _simWindowCenterXCm = WorldConfig.ActiveHotZone.CenterXCm;
         _simWindowCenterYCm = WorldConfig.ActiveHotZone.CenterYCm;
-        _lastCameraFocusXCm = _simWindowCenterXCm;
-        _lastCameraFocusYCm = _simWindowCenterYCm;
-        _lastCameraViewWidthCm = _simWindowWidthCm;
-        _lastCameraViewHeightCm = _simWindowHeightCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
         _flowWorkAreaCenterYCm = _simWindowCenterYCm;
         _flowWorkAreaWidthCm = _simWindowWidthCm;
@@ -356,8 +347,6 @@ public sealed class MassNavigationSimulationRuntime
         ValidateInitialSolverWindow(boardWorldSize);
         _boardWorldSize = boardWorldSize;
         _boardWorldBound = true;
-        _lastCameraFocusXCm = _simWindowCenterXCm;
-        _lastCameraFocusYCm = _simWindowCenterYCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
         _flowWorkAreaCenterYCm = _simWindowCenterYCm;
         MassFlow.SetWorldBounds(
@@ -372,6 +361,11 @@ public sealed class MassNavigationSimulationRuntime
             MassFlow.FieldHeightCm * 0.5f)));
     }
 
+    public void SetWorldOperationsReady(bool ready)
+    {
+        IsReadyForWorldOperations = ready;
+    }
+
     public void BeginFrame(float dt)
     {
         _frameIndex++;
@@ -381,11 +375,28 @@ public sealed class MassNavigationSimulationRuntime
         FlowReconcileCountFrame = 0;
         StreamingWindowUpdatesFrame = 0;
         CommandRejectsFrame = 0;
-        CameraBudgetUpdatesFrame = 0;
+        FocusBudgetUpdatesFrame = 0;
         SolverWindowMovesFrame = 0;
         FrameMs = dt > 0f ? dt * 1000f : 0f;
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
-        _viewResidencyClockSeconds += MathF.Max(0f, dt);
+        _streamingClockSeconds += MathF.Max(0f, dt);
+        AdvanceCommandFocus();
+    }
+
+    private void AdvanceCommandFocus()
+    {
+        if (_commandFocusTicksRemaining <= 0)
+        {
+            _hasCommandFocus = false;
+            return;
+        }
+
+        _commandFocusTicksRemaining--;
+        if (_commandFocusTicksRemaining == 0)
+        {
+            _hasCommandFocus = false;
+            UpdateStreamingWindow(ResolveStreamingFocus());
+        }
     }
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
@@ -517,7 +528,6 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
     public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
     public void ObservePerformerTick() => PerformerHzObserved = ObserveHz(ref _performerTick, PerformerHzObserved);
-    public void ObserveHudTick() => HudHzObserved = ObserveHz(ref _hudTick, HudHzObserved);
     public void ObservePanelTick() => PanelHzObserved = ObserveHz(ref _panelTick, PanelHzObserved);
 
     public Span<Entity> EnsureSelectionScratch(int required)
@@ -844,7 +854,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
     {
-        ObserveFlowWorkArea(worldCenterCm, ReadOnlySpan<Entity>.Empty, "manual focus");
+        ObserveFlowWorkArea(worldCenterCm, _simWindowWidthCm, _simWindowHeightCm, ReadOnlySpan<Entity>.Empty, "manual focus");
         MoveSolverWindow(worldCenterCm, "manual nav focus");
         UpdateStreamingWindow(ResolveStreamingFocus());
     }
@@ -856,7 +866,12 @@ public sealed class MassNavigationSimulationRuntime
         _lastCommandFocusYCm = worldCenterCm.Y;
         _lastCommandSelectionCount = selectedEntities.Length;
         _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
-        ObserveFlowWorkArea(worldCenterCm, selectedEntities, selectedEntities.Length > 0 ? "selection command" : "team command");
+        ObserveFlowWorkArea(
+            worldCenterCm,
+            _simWindowWidthCm,
+            _simWindowHeightCm,
+            selectedEntities,
+            selectedEntities.Length > 0 ? "selection command" : "team command");
         MoveSolverWindow(ResolveSolverFocusForWorkArea(), selectedEntities.Length > 0 ? "selection command" : "team command");
         UpdateStreamingWindow(ResolveStreamingFocus());
     }
@@ -866,37 +881,17 @@ public sealed class MassNavigationSimulationRuntime
         FocusCommandTarget(worldCenterCm, selectedEntities.AsSpan());
     }
 
-    public void ObserveCameraFocus(System.Numerics.Vector2 cameraCenterCm)
+    public void ObserveRuntimeFocus(System.Numerics.Vector2 focusCenterCm, float focusWidthCm, float focusHeightCm)
     {
-        ObserveCameraFocus(cameraCenterCm, _lastCameraViewWidthCm, _lastCameraViewHeightCm);
-    }
-
-    public void ObserveCameraFocus(System.Numerics.Vector2 cameraCenterCm, float viewWidthCm, float viewHeightCm)
-    {
-        _lastCameraFocusXCm = cameraCenterCm.X;
-        _lastCameraFocusYCm = cameraCenterCm.Y;
-        _lastCameraViewWidthCm = MathF.Max(1f, viewWidthCm);
-        _lastCameraViewHeightCm = MathF.Max(1f, viewHeightCm);
         ObserveFlowWorkArea(
-            cameraCenterCm,
+            focusCenterCm,
+            MathF.Max(1f, focusWidthCm),
+            MathF.Max(1f, focusHeightCm),
             ReadOnlySpan<Entity>.Empty,
-            _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "camera budget + command hold" : "camera budget");
-        CameraBudgetUpdatesFrame++;
-        CameraBudgetUpdatesTotal++;
-        if (_commandFocusTicksRemaining > 0)
-        {
-            _commandFocusTicksRemaining--;
-            if (_commandFocusTicksRemaining == 0)
-            {
-                _hasCommandFocus = false;
-            }
-
-            UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
-            return;
-        }
-
-        _hasCommandFocus = false;
-        UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
+            _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "runtime focus + command hold" : "runtime focus");
+        FocusBudgetUpdatesFrame++;
+        FocusBudgetUpdatesTotal++;
+        UpdateStreamingWindow(ResolveStreamingFocus());
     }
 
     public System.Numerics.Vector2 ToLocalCm(System.Numerics.Vector2 worldCm)
@@ -1347,7 +1342,7 @@ public sealed class MassNavigationSimulationRuntime
     {
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
-        int radius = ViewResidency.RadiusCm;
+        int radius = Streaming.RadiusCm;
         int chunkSize = _loadedChunks.ChunkSizeCm;
         int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
         int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
@@ -1389,63 +1384,34 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    public void SetViewResidencyProbe(string probeId)
+    public void AdjustStreamingRetainSeconds(float deltaSeconds)
     {
-        ViewResidency.SetActiveProbe(probeId);
-        InvalidateStreamingWindowCache();
-    }
-
-    public void SetViewResidencyMode(string mode)
-    {
-        if (!string.Equals(mode, "Camera", StringComparison.Ordinal) &&
-            !string.Equals(mode, "Probe", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"MassNavigation view residency mode '{mode}' is not configured.");
-        }
-
-        ViewResidency.Mode = mode;
-        InvalidateStreamingWindowCache();
-    }
-
-    public void AdjustViewResidencyRetainSeconds(float deltaSeconds)
-    {
-        float next = ViewResidency.RetainSeconds + deltaSeconds;
+        float next = Streaming.RetainSeconds + deltaSeconds;
         if (next < 0f)
         {
             throw new InvalidOperationException(
-                $"MassNavigation viewResidency.retainSeconds adjustment would produce invalid value {next:0.###}.");
+                $"MassNavigation streaming.retainSeconds adjustment would produce invalid value {next:0.###}.");
         }
 
-        ViewResidency.RetainSeconds = next;
+        Streaming.RetainSeconds = next;
     }
 
-    public void AdjustViewResidencyRadiusCm(int deltaCm)
+    public void AdjustStreamingRadiusCm(int deltaCm)
     {
-        int next = ViewResidency.RadiusCm + deltaCm;
+        int next = Streaming.RadiusCm + deltaCm;
         if (next < WorldConfig.StreamingChunkSizeCm)
         {
             throw new InvalidOperationException(
-                $"MassNavigation viewResidency.radiusCm adjustment would produce {next}, below streaming chunk size {WorldConfig.StreamingChunkSizeCm}.");
+                $"MassNavigation streaming.radiusCm adjustment would produce {next}, below streaming chunk size {WorldConfig.StreamingChunkSizeCm}.");
         }
 
-        ViewResidency.RadiusCm = next;
+        Streaming.RadiusCm = next;
         InvalidateStreamingWindowCache();
-    }
-
-    public System.Numerics.Vector2 ResolveViewResidencyFocus(System.Numerics.Vector2 cameraCenterCm)
-    {
-        if (!ViewResidency.UsesProbeFocus)
-        {
-            return cameraCenterCm;
-        }
-
-        MassNavigationCameraProbeConfig probe = ViewResidency.ActiveProbe;
-        return new System.Numerics.Vector2(probe.TargetXCm, probe.TargetYCm);
     }
 
     private void EvictExpiredStreamingChunks()
     {
-        float retainSeconds = ViewResidency.RetainSeconds;
+        float retainSeconds = Streaming.RetainSeconds;
         if (retainSeconds < 0f)
         {
             return;
@@ -1454,7 +1420,7 @@ public sealed class MassNavigationSimulationRuntime
         _loadedChunksToEvict.Clear();
         foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
         {
-            if (_viewResidencyClockSeconds - pair.Value > retainSeconds)
+            if (_streamingClockSeconds - pair.Value > retainSeconds)
             {
                 _loadedChunksToEvict.Add(pair.Key);
             }
@@ -1479,12 +1445,12 @@ public sealed class MassNavigationSimulationRuntime
                     $"MassNavigation streaming required more than configured scenarioRuntime.runtimeCapacity.loadedChunkCapacity {_loadedChunkCapacity} chunks.");
             }
 
-            _loadedChunkLastTouchedSeconds.Add(chunkKey, _viewResidencyClockSeconds);
+            _loadedChunkLastTouchedSeconds.Add(chunkKey, _streamingClockSeconds);
             _loadedChunks.SetLoaded(chunkKey, true);
             return;
         }
 
-        lastTouchedSeconds = _viewResidencyClockSeconds;
+        lastTouchedSeconds = _streamingClockSeconds;
     }
 
     private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)
@@ -1540,14 +1506,20 @@ public sealed class MassNavigationSimulationRuntime
             "y");
     }
 
-    private void ObserveFlowWorkArea(System.Numerics.Vector2 focusCm, ReadOnlySpan<Entity> selectedEntities, string reason)
+    private void ObserveFlowWorkArea(
+        System.Numerics.Vector2 focusCm,
+        float focusWidthCm,
+        float focusHeightCm,
+        ReadOnlySpan<Entity> selectedEntities,
+        string reason)
     {
-        float minX = _lastCameraFocusXCm - (_lastCameraViewWidthCm * 0.5f);
-        float maxX = _lastCameraFocusXCm + (_lastCameraViewWidthCm * 0.5f);
-        float minY = _lastCameraFocusYCm - (_lastCameraViewHeightCm * 0.5f);
-        float maxY = _lastCameraFocusYCm + (_lastCameraViewHeightCm * 0.5f);
+        float clampedWidth = MathF.Max(1f, focusWidthCm);
+        float clampedHeight = MathF.Max(1f, focusHeightCm);
+        float minX = focusCm.X - (clampedWidth * 0.5f);
+        float maxX = focusCm.X + (clampedWidth * 0.5f);
+        float minY = focusCm.Y - (clampedHeight * 0.5f);
+        float maxY = focusCm.Y + (clampedHeight * 0.5f);
 
-        IncludePoint(ref minX, ref maxX, ref minY, ref maxY, focusCm.X, focusCm.Y);
         if (_hasCommandFocus && _commandFocusTicksRemaining > 0)
         {
             IncludePoint(ref minX, ref maxX, ref minY, ref maxY, _lastCommandFocusXCm, _lastCommandFocusYCm);

@@ -21,6 +21,7 @@ using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
+using Ludots.Core.MassCrowd;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics;
@@ -43,6 +44,8 @@ namespace Ludots.Core.Config
 
         static ComponentRegistry()
         {
+            LayerRegistry.Register(MassNavigationLayerNames.Agent);
+
             Register<Position>("Position");
             Register<Velocity>("Velocity");
             Register<Health>("Health");

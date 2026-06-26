@@ -6,6 +6,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Scripting;
@@ -79,6 +80,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             ApplyInitialPlayableCamera(engine);
             PrimeInitialChunkWindow(engine);
             EnsurePrimaryPlayerControl(engine);
+            PublishLocalRoadColumnKnowledge(engine);
             RefreshPanel(engine);
 
             return Task.CompletedTask;
@@ -108,6 +110,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             EnsurePrimaryPlayerControl(engine);
+            PublishLocalRoadColumnKnowledge(engine);
 
             if (engine.GlobalContext.TryGetValue(RoadMoveOrderExpander.LastSubmitStatusKey, out var statusObj) &&
                 statusObj is string status &&
@@ -213,6 +216,45 @@ namespace RoadNetworkShowcaseMod.Runtime
         public RoadNetworkShowcasePanelState BuildPanelState(GameEngine engine)
         {
             return new RoadNetworkShowcasePanelStateBuilder(engine, this).Build();
+        }
+
+        private static void PublishLocalRoadColumnKnowledge(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer) ||
+                !engine.World.TryGet(viewer, out Team viewerTeam))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore store = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new System.InvalidOperationException("Road Network showcase requires KnowledgeProjectionStore before publishing local road column knowledge.");
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+            var empty = KnowledgeIdMask256.Empty;
+            var query = new QueryDescription().WithAll<RoadColumnTag, Team, SelectionSelectableTag>();
+            engine.World.Query(in query, (Entity entity, ref RoadColumnTag roadColumn, ref Team team, ref SelectionSelectableTag selectable) =>
+            {
+                if (team.Id != viewerTeam.Id)
+                {
+                    return;
+                }
+
+                store.Upsert(
+                    viewer,
+                    entity,
+                    new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        empty,
+                        empty,
+                        empty,
+                        viewer,
+                        observedTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0));
+            });
         }
 
         private void ActivateTacticalCamera(GameEngine engine)

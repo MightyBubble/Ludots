@@ -25,9 +25,10 @@ namespace RoadNetworkShowcaseMod
                 ViewModeRegistrar.RegisterFromVfs(context, engine.GlobalContext, sourceModId: context.ModId, activateWhenUnset: false);
                 return System.Threading.Tasks.Task.CompletedTask;
             });
-            context.OnEvent(GameEvents.GameStart, new InstallRoadNetworkShowcaseOnGameStartTrigger(context, runtime).ExecuteAsync);
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapLoaded, new InstallRoadNetworkShowcaseOnMapFocusTrigger(context, runtime, GameEvents.MapLoaded).ExecuteAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
+            context.OnEvent(GameEvents.MapResumed, new InstallRoadNetworkShowcaseOnMapFocusTrigger(context, runtime, GameEvents.MapResumed).ExecuteAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
         }
 

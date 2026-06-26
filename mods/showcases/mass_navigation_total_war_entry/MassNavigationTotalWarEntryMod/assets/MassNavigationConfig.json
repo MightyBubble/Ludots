@@ -5,7 +5,6 @@
     "solverWindowHeightCm": 10000,
     "streamingChunkSizeCm": 6400,
     "streamingRadiusCm": 16000,
-    "cameraFocusShiftThresholdCm": 3000,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 48000,
@@ -87,9 +86,6 @@
     "autoSpawnConfiguredScenario": false,
     "initialSelectionScratchCapacity": 512,
     "initialSelectedEntityCapacity": 128,
-    "panel": {
-      "mode": "Owned"
-    },
     "runtimeCapacity": {
       "navigationGroupCapacity": 512,
       "groupMembershipAgentCapacity": 80000,
@@ -99,36 +95,6 @@
       "orderIngestionMemberCapacity": 512,
       "loadedChunkCapacity": 512,
       "metadataTeamCapacity": 2
-    },
-    "panelControls": {
-      "maxAgentsPerTeam": 40000,
-      "totalAgentStep": 2000,
-      "totalAgentPresets": [
-        5000,
-        10000,
-        20000,
-        40000
-      ],
-      "panelRefreshIntervalSeconds": 0.25,
-      "viewResidencyRetainSecondsStep": 2,
-      "simulationBudgetStepMs": 1,
-      "simulationBudgetMinMs": 1,
-      "simulationBudgetMaxMs": 64,
-      "simulationSliceStep": 30,
-      "simulationSliceMin": 1,
-      "simulationSliceMax": 2048,
-      "enginePolicyHzStep": 5,
-      "enginePolicyHzMin": 0,
-      "enginePolicyHzMax": 240,
-      "enginePolicyMaxStepsStep": 1,
-      "enginePolicyMaxStepsMin": 1,
-      "enginePolicyMaxStepsMax": 32,
-      "arrivalTimeoutStepMs": 250,
-      "arrivalProgressStepCm": 10,
-      "arrivalWakePushStepCm": 10,
-      "arrivalRetryStep": 1,
-      "flowIterationStep": 512,
-      "flowCadenceHzStep": 1
     }
   },
   "cadence": {
@@ -172,23 +138,6 @@
       }
     ]
   },
-  "cameraProfiles": {
-    "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
-    "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
-    "requestPolicy": {
-      "blendDurationSeconds": 0,
-      "resetRuntimeState": true,
-      "snapToFollowTargetWhenAvailable": false,
-      "strategicTargetXCm": 0,
-      "strategicTargetYCm": -1800
-    }
-  },
-  "minimap": {
-    "visible": true,
-    "initialPreset": "RtsFullMap",
-    "followCameraHalfExtentCm": 7000,
-    "rotateWithCamera": true
-  },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
     "relationships": []
@@ -218,44 +167,6 @@
     "maxRetryCountMin": 0,
     "maxRetryCountMax": 16,
     "maxRetryCount": 2
-  },
-  "viewResidency": {
-    "mode": "Probe",
-    "retainSeconds": 12,
-    "radiusCm": 24000,
-    "initialProbeId": "battlefield_overview",
-    "cameraProbes": [
-      {
-        "id": "battlefield_overview",
-        "label": "Battlefield Overview",
-        "targetXCm": 0,
-        "targetYCm": -1800,
-        "distanceCm": 22000,
-        "yaw": 180,
-        "pitch": 54,
-        "fovYDeg": 50
-      },
-      {
-        "id": "left_flank",
-        "label": "Left Flank",
-        "targetXCm": -1200000,
-        "targetYCm": 400000,
-        "distanceCm": 20000,
-        "yaw": 135,
-        "pitch": 56,
-        "fovYDeg": 50
-      },
-      {
-        "id": "right_flank",
-        "label": "Right Flank",
-        "targetXCm": 1200000,
-        "targetYCm": 400000,
-        "distanceCm": 20000,
-        "yaw": 225,
-        "pitch": 56,
-        "fovYDeg": 50
-      }
-    ]
   },
   "avoidance": {
     "mode": "Separation",
@@ -356,5 +267,9 @@
       "coincidentPairHashPrimeA": 73856093,
       "coincidentPairHashPrimeB": 19349663
     }
+  },
+  "streaming": {
+    "retainSeconds": 12,
+    "radiusCm": 24000
   }
 }

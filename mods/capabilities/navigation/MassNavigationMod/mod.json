@@ -1,12 +1,11 @@
 {
   "name": "MassNavigationMod",
   "version": "1.0.0",
-  "description": "MassNavigation large-world pathing, avoidance, selection, order, performer, and minimap foundation.",
+  "description": "Data-only MassNavigation sample assets, config, maps, entity templates, GAS orders, and performers.",
   "main": "bin/net8.0/MassNavigationMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0",
-    "CameraProfilesMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
   "tags": ["navigation", "mass-navigation", "mass-flow", "large-world"]

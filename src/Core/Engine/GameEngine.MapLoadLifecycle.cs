@@ -355,6 +355,7 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(session.MapId, false);
                 ApplyDefaultCamera(mapConfig);
+                _massNavigationRuntime.HandleMapFocused(this, session.MapId);
             }
             else
             {
@@ -455,6 +456,7 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            _massNavigationRuntime.HandleMapFocused(this, session.MapId);
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);

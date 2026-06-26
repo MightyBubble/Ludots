@@ -77,6 +77,7 @@ using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
@@ -232,6 +233,7 @@ namespace Ludots.Core.Engine
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
+        private readonly MassNavigationRuntime _massNavigationRuntime = new();
 
         // Multithreading
         private JobScheduler _jobScheduler;
@@ -1691,6 +1693,7 @@ namespace Ludots.Core.Engine
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
             CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
+            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
@@ -1801,6 +1804,7 @@ namespace Ludots.Core.Engine
             // Fire MapSuspended on outer (scoped)
             if (outerSession != null)
             {
+                _massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);
                 var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
@@ -1840,6 +1844,7 @@ namespace Ludots.Core.Engine
             {
                 CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
 
+                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);

@@ -5,7 +5,6 @@
     "solverWindowHeightCm": 50000,
     "streamingChunkSizeCm": 6400,
     "streamingRadiusCm": 32000,
-    "cameraFocusShiftThresholdCm": 12000,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 50000,
@@ -65,9 +64,6 @@
     "autoSpawnConfiguredScenario": false,
     "initialSelectionScratchCapacity": 32,
     "initialSelectedEntityCapacity": 16,
-    "panel": {
-      "mode": "Hidden"
-    },
     "runtimeCapacity": {
       "navigationGroupCapacity": 32,
       "groupMembershipAgentCapacity": 128,
@@ -77,33 +73,6 @@
       "orderIngestionMemberCapacity": 32,
       "loadedChunkCapacity": 256,
       "metadataTeamCapacity": 2
-    },
-    "panelControls": {
-      "maxAgentsPerTeam": 64,
-      "totalAgentStep": 2,
-      "totalAgentPresets": [
-        6
-      ],
-      "panelRefreshIntervalSeconds": 0.25,
-      "viewResidencyRetainSecondsStep": 2,
-      "simulationBudgetStepMs": 1,
-      "simulationBudgetMinMs": 1,
-      "simulationBudgetMaxMs": 64,
-      "simulationSliceStep": 1,
-      "simulationSliceMin": 1,
-      "simulationSliceMax": 64,
-      "enginePolicyHzStep": 5,
-      "enginePolicyHzMin": 0,
-      "enginePolicyHzMax": 240,
-      "enginePolicyMaxStepsStep": 1,
-      "enginePolicyMaxStepsMin": 1,
-      "enginePolicyMaxStepsMax": 32,
-      "arrivalTimeoutStepMs": 250,
-      "arrivalProgressStepCm": 10,
-      "arrivalWakePushStepCm": 10,
-      "arrivalRetryStep": 1,
-      "flowIterationStep": 128,
-      "flowCadenceHzStep": 1
     }
   },
   "cadence": {
@@ -124,29 +93,12 @@
       {
         "id": "Small",
         "heavy": false,
-        "visualScale": 1.0,
+        "visualScale": 1,
         "speedCmPerSecond": 1400,
         "everyNth": 0,
         "nthOffset": 0
       }
     ]
-  },
-  "cameraProfiles": {
-    "tacticalProfileId": "RoadNetwork.Camera.Tactical",
-    "strategicProfileId": "RoadNetwork.Camera.Strategic",
-    "requestPolicy": {
-      "blendDurationSeconds": 0,
-      "resetRuntimeState": true,
-      "snapToFollowTargetWhenAvailable": false,
-      "strategicTargetXCm": 0,
-      "strategicTargetYCm": 0
-    }
-  },
-  "minimap": {
-    "visible": false,
-    "initialPreset": "RtsFullMap",
-    "followCameraHalfExtentCm": 14000,
-    "rotateWithCamera": true
   },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
@@ -177,24 +129,6 @@
     "maxRetryCountMin": 0,
     "maxRetryCountMax": 16,
     "maxRetryCount": 2
-  },
-  "viewResidency": {
-    "mode": "Camera",
-    "retainSeconds": 12,
-    "radiusCm": 32000,
-    "initialProbeId": "road_overview",
-    "cameraProbes": [
-      {
-        "id": "road_overview",
-        "label": "Road Overview",
-        "targetXCm": 0,
-        "targetYCm": 0,
-        "distanceCm": 26000,
-        "yaw": 180,
-        "pitch": 54,
-        "fovYDeg": 50
-      }
-    ]
   },
   "avoidance": {
     "mode": "Separation",
@@ -295,5 +229,9 @@
       "coincidentPairHashPrimeA": 73856093,
       "coincidentPairHashPrimeB": 19349663
     }
+  },
+  "streaming": {
+    "retainSeconds": 12,
+    "radiusCm": 32000
   }
 }

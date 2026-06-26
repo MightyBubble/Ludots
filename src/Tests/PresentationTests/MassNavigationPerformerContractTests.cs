@@ -371,8 +371,8 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "positive board world bounds");
             AssertSourceDoesNotContain(Path.Combine(coreSystemsRoot, "MassNavigationOrderIngestionSystem.cs"), "TryResolveMoveOrderType");
-            AssertSourceDoesNotContain(Path.Combine(coreSystemsRoot, "MassNavigationHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs"), "PresentationTimingDiagnostics? timing");
+            Assert.That(File.Exists(Path.Combine(coreSystemsRoot, "MassNavigationHudPresentationSystem.cs")), Is.False);
+            Assert.That(File.Exists(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs")), Is.False);
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "localIndex % 7");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "AgentBodyRadiusCm");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "ResolveHardBlockRadiusCm");

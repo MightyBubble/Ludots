@@ -474,19 +474,19 @@ namespace Ludots.Tests.Architecture
                     launcher.Resolve(
                         new[] { "$capability_standard_mass_nav_large_world_10k" },
                         LauncherPlatformIds.Raylib,
-                        LauncherBuildMode.Never).Plan,
+                    LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
                     expectedStartupMapId: "mass_navigation",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
                         new[] { "$capability_standard_total_war_like" },
                         LauncherPlatformIds.Raylib,
-                        LauncherBuildMode.Never).Plan,
+                    LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardTotalWarLikeMod",
                     expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardTotalWarLikeMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTotalWarLikeMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -499,8 +499,6 @@ namespace Ludots.Tests.Architecture
                     {
                         "LudotsCoreMod",
                         "CoreInputMod",
-                        "CameraProfilesMod",
-                        "MassNavigationMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
                     });

@@ -242,18 +242,28 @@ namespace Ludots.Tests.Presentation
                 "scenarioRuntime",
                 "cadence",
                 "agentProfiles",
-                "cameraProfiles",
-                "minimap",
                 "teamRelationships",
                 "flow",
                 "arrival",
                 "avoidance",
                 "semantics",
-                "viewResidency",
+                "streaming",
             };
             foreach (string property in required)
             {
                 Assert.That(config.ContainsKey(property), Is.True, $"TotalWar MassNavigationConfig must author '{property}'.");
+            }
+
+            string[] forbidden =
+            {
+                "cameraProfiles",
+                "minimap",
+                "viewResidency",
+            };
+            foreach (string property in forbidden)
+            {
+                Assert.That(config.ContainsKey(property), Is.False,
+                    $"MassNavigationConfig must stay data-only for MassCrowd and must not own '{property}'.");
             }
 
             Assert.That(RequireString(config, "mapId"), Is.EqualTo("mass_navigation_total_war"));
@@ -276,12 +286,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(scenarioRuntime["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
             Assert.That(scenarioRuntime["initialSelectionScratchCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(scenarioRuntime["initialSelectedEntityCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
-            JsonObject panelControls = scenarioRuntime["panelControls"]?.AsObject()
-                ?? throw new InvalidOperationException("scenarioRuntime.panelControls must be authored.");
-            Assert.That(panelControls["maxAgentsPerTeam"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(panelControls["totalAgentStep"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(panelControls["totalAgentPresets"]?.AsArray().Count, Is.GreaterThan(0));
-            Assert.That(panelControls["panelRefreshIntervalSeconds"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(scenarioRuntime.ContainsKey("panel"), Is.False);
+            Assert.That(scenarioRuntime.ContainsKey("panelControls"), Is.False);
             JsonObject scenario = config["scenario"]?.AsObject()
                 ?? throw new InvalidOperationException("scenario must be authored.");
             Assert.That(scenario["agentsPerTeam"]?.GetValue<int>(), Is.EqualTo(0),
@@ -338,35 +344,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(solver["fieldWidthCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowWidthCm"]!.GetValue<int>()));
             Assert.That(solver["fieldHeightCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowHeightCm"]!.GetValue<int>()));
 
-            JsonObject cameraProfiles = config["cameraProfiles"]?.AsObject()
-                ?? throw new InvalidOperationException("cameraProfiles must be authored.");
-            Assert.That(RequireString(cameraProfiles, "tacticalProfileId"), Is.EqualTo("Camera.Profile.MassNavigationTactical"));
-            Assert.That(RequireString(cameraProfiles, "strategicProfileId"), Is.EqualTo("Camera.Profile.MassNavigationStrategic"));
-            JsonObject cameraRequestPolicy = cameraProfiles["requestPolicy"]?.AsObject()
-                ?? throw new InvalidOperationException("cameraProfiles.requestPolicy must be authored.");
-            Assert.That(cameraRequestPolicy.ContainsKey("blendDurationSeconds"), Is.True);
-            Assert.That(cameraRequestPolicy.ContainsKey("resetRuntimeState"), Is.True);
-            Assert.That(cameraRequestPolicy.ContainsKey("snapToFollowTargetWhenAvailable"), Is.True);
-            Assert.That(cameraRequestPolicy.ContainsKey("strategicTargetXCm"), Is.True);
-            Assert.That(cameraRequestPolicy.ContainsKey("strategicTargetYCm"), Is.True);
-
-            JsonObject minimap = config["minimap"]?.AsObject()
-                ?? throw new InvalidOperationException("minimap must be authored.");
-            Assert.That(minimap.ContainsKey("visible"), Is.True);
-            Assert.That(RequireString(minimap, "initialPreset"), Is.EqualTo("RtsFullMap"));
-            Assert.That(minimap["followCameraHalfExtentCm"]?.GetValue<float>(), Is.GreaterThan(0f));
-            Assert.That(minimap.ContainsKey("rotateWithCamera"), Is.True);
-
-            JsonObject residency = config["viewResidency"]?.AsObject()
-                ?? throw new InvalidOperationException("viewResidency must be authored.");
-            Assert.That(RequireString(residency, "mode"), Is.EqualTo("Probe"));
-            Assert.That(residency["retainSeconds"]?.GetValue<float>(), Is.EqualTo(12f));
-            Assert.That(residency["radiusCm"]?.GetValue<int>(), Is.EqualTo(24000));
-            Assert.That(RequireString(residency, "initialProbeId"), Is.EqualTo("battlefield_overview"));
-            JsonArray probes = residency["cameraProbes"]?.AsArray()
-                ?? throw new InvalidOperationException("viewResidency.cameraProbes must be authored.");
-            Assert.That(probes.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
-                Is.EquivalentTo(new[] { "battlefield_overview", "left_flank", "right_flank" }));
+            JsonObject streaming = config["streaming"]?.AsObject()
+                ?? throw new InvalidOperationException("streaming must be authored.");
+            Assert.That(streaming["retainSeconds"]?.GetValue<float>(), Is.EqualTo(12f));
+            Assert.That(streaming["radiusCm"]?.GetValue<int>(), Is.EqualTo(24000));
 
             JsonObject avoidance = config["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("avoidance must be authored.");
@@ -1788,7 +1769,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void RuntimeTemplateSpawn_UsesGenericComponentRegistryForMassCrowdTemplates()
         {
-            LayerRegistry.Register(MassNavigationAgentLayerName);
             string templateJson = """
 [
   {
@@ -1864,6 +1844,14 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(spawned, Is.EqualTo(3));
         }
+
+        [Test]
+        public void CoreComponentRegistry_RegistersMassNavigationAgentLayer()
+        {
+            string source = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "Core", "Config", "ComponentRegistry.cs"));
+            Assert.That(source, Does.Contain("LayerRegistry.Register(MassNavigationLayerNames.Agent);"));
+        }
+
         [Test]
         public void MassNavigationFormationRuntime_UsesConfiguredSemanticSpacing()
         {
@@ -1912,7 +1900,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TotalWarPlayable_PlayerSelectionCancelMarkersMoveOutlinesAndCulling_WorkThroughFormalRuntimeChains()
+        public void TotalWarPlayable_PlayerSelectionCancelMarkersAndMoveOutlines_WorkThroughFormalRuntimeChains()
         {
             using GameEngine engine = CreatePlayableTotalWarEngine();
             engine.LoadMap("mass_navigation_total_war");
@@ -1939,7 +1927,7 @@ namespace Ludots.Tests.Presentation
 
             AssertFormationOutlines(engine);
             AssertObstacleOverlays(engine, simulation);
-            AssertCullingProbeAndDebugDraw(engine);
+            AssertMassNavigationDoesNotOwnCullingProbe(engine);
 
             Entity[] initialSelection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
@@ -2436,81 +2424,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationRuntime_UnloadGatesByMapAndClearsCullingOverride()
+        public void CoreMassCrowdSources_DoNotReferenceCameraMinimapHudOrCulling()
         {
-            var runtime = new MassNavigationRuntime(new NullModContext());
-            var engine = new Ludots.Core.Engine.GameEngine();
-            var focus = new CameraCullingFocusOverride
+            string coreMassCrowdRoot = Path.Combine(FindRepoRoot(), "src", "Core", "MassCrowd");
+            string[] forbidden =
             {
-                Enabled = true,
-                SourceId = "battlefield_overview",
+                "Camera",
+                "camera",
+                "Minimap",
+                "minimap",
+                "ViewController",
+                "CameraCullingFocus",
+                "Hud",
+                "HUD",
+                "viewResidency",
+                "ViewResidency",
             };
-            engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, focus);
-            engine.InitializeWithConfigPipeline(
-                new System.Collections.Generic.List<string>
+
+            foreach (string file in Directory.EnumerateFiles(coreMassCrowdRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                string source = File.ReadAllText(file);
+                foreach (string token in forbidden)
                 {
-                    Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod"),
-                    Path.Combine(FindRepoRoot(), "mods", "CoreInputMod"),
-                    Path.Combine(FindRepoRoot(), "mods", "capabilities", "camera", "CameraProfilesMod"),
-                    Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "MassNavigationMod")
-                },
-                Path.Combine(FindRepoRoot(), "assets"));
-
-            var unrelated = engine.CreateContext();
-            unrelated.Set(CoreServiceKeys.MapId, new MapId("unrelated_map"));
-            runtime.HandleMapUnloadedAsync(unrelated).GetAwaiter().GetResult();
-
-            Assert.That(focus.Enabled, Is.True);
-
-            var massNav = engine.CreateContext();
-            massNav.Set(CoreServiceKeys.MapId, new MapId("mass_navigation"));
-            runtime.HandleMapUnloadedAsync(massNav).GetAwaiter().GetResult();
-
-            Assert.That(focus.Enabled, Is.False);
-            Assert.That(focus.SourceId, Is.EqualTo(string.Empty));
-            engine.Dispose();
+                    Assert.That(source, Does.Not.Contain(token),
+                        $"Core MassCrowd must stay independent from presentation camera/minimap/HUD concerns. File: {file}");
+                }
+            }
         }
 
         [Test]
-        public void MassNavigationRuntime_SuspendClearsCullingOverrideWithoutResettingScenario()
+        public void GameEngineOwnsMassNavigationRuntimeLifecycle()
         {
-            var runtime = new MassNavigationRuntime(new NullModContext());
-            var engine = new Ludots.Core.Engine.GameEngine();
-            var focus = new CameraCullingFocusOverride
-            {
-                Enabled = true,
-                SourceId = "battlefield_overview",
-            };
-            engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, focus);
-            engine.InitializeWithConfigPipeline(MassNavigationDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
-            var simulation = new MassNavigationSimulationRuntime(MassNavigationConfig.Load(ReadObject(Path.Combine(
-                FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "assets",
-                "MassNavigationConfig.json"))));
-            simulation.MarkScenarioSpawned();
-            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-            Assert.That(simulation.ScenarioSpawnCount, Is.EqualTo(1));
+            string repoRoot = FindRepoRoot();
+            string engineSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
+            string lifecycleSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.MapLoadLifecycle.cs"));
+            string runtimeSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "MassCrowd", "Runtime", "MassNavigationRuntime.cs"));
 
-            var unrelated = engine.CreateContext();
-            unrelated.Set(CoreServiceKeys.MapId, new MapId("unrelated_map"));
-            runtime.HandleMapSuspendedAsync(unrelated).GetAwaiter().GetResult();
-
-            Assert.That(focus.Enabled, Is.True);
-            Assert.That(simulation.ScenarioSpawnCount, Is.EqualTo(1));
-
-            var massNav = engine.CreateContext();
-            massNav.Set(CoreServiceKeys.MapId, new MapId("mass_navigation"));
-            runtime.HandleMapSuspendedAsync(massNav).GetAwaiter().GetResult();
-
-            Assert.That(focus.Enabled, Is.False);
-            Assert.That(focus.SourceId, Is.EqualTo(string.Empty));
-            Assert.That(simulation.ScenarioSpawnCount, Is.EqualTo(1),
-                "MapSuspended must release global presentation ownership without treating the MassNavigation map as unloaded.");
-            engine.Dispose();
+            Assert.That(engineSource, Does.Contain("private readonly MassNavigationRuntime _massNavigationRuntime = new();"));
+            Assert.That(lifecycleSource, Does.Contain("_massNavigationRuntime.HandleMapFocused(this, session.MapId);"));
+            Assert.That(engineSource, Does.Contain("_massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);"));
+            Assert.That(engineSource, Does.Contain("_massNavigationRuntime.HandleMapUnloaded(this, mid);"));
+            Assert.That(runtimeSource, Does.Contain("public bool HandleMapFocused(GameEngine engine, MapId mapId)"));
+            Assert.That(runtimeSource, Does.Contain("public bool HandleMapSuspended(GameEngine engine, MapId mapId)"));
+            Assert.That(runtimeSource, Does.Contain("public bool HandleMapUnloaded(GameEngine engine, MapId mapId)"));
+            Assert.That(runtimeSource, Does.Not.Contain("IModContext"));
         }
 
         [Test]
@@ -2531,101 +2488,49 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationCameraRequests_UseVirtualCameraProfilesAsPoseSsot()
+        public void MassNavigationModEntry_IsDataOnlyAndDoesNotOwnRuntimeOrPanelLifecycle()
         {
-            string runtimeSource = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassCrowd",
-                "Runtime",
-                "MassNavigationRuntime.cs"));
+            string modRoot = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "MassNavigationMod");
+            string entrySource = File.ReadAllText(Path.Combine(modRoot, "MassNavigationModEntry.cs"));
+            string manifestSource = File.ReadAllText(Path.Combine(modRoot, "mod.json"));
+            string projectSource = File.ReadAllText(Path.Combine(modRoot, "MassNavigationMod.csproj"));
 
-            Assert.That(runtimeSource, Does.Not.Contain("MassNavigationTacticalCameraDistanceCm"));
-            Assert.That(runtimeSource, Does.Not.Contain("MassNavigationStrategicCameraDistanceCm"));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestCameraJump"), Does.Not.Contain("DistanceCm ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestTacticalCameraReset"), Does.Not.Contain("DistanceCm ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestStrategicCameraReset"), Does.Not.Contain("DistanceCm ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestCameraJump"), Does.Not.Contain("Pitch ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestTacticalCameraReset"), Does.Not.Contain("Pitch ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestStrategicCameraReset"), Does.Not.Contain("Pitch ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestCameraJump"), Does.Not.Contain("Yaw ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestTacticalCameraReset"), Does.Not.Contain("Yaw ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestStrategicCameraReset"), Does.Not.Contain("Yaw ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestCameraJump"), Does.Not.Contain("FovYDeg ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestTacticalCameraReset"), Does.Not.Contain("FovYDeg ="));
-            Assert.That(ExtractMethodBody(runtimeSource, "RequestStrategicCameraReset"), Does.Not.Contain("FovYDeg ="));
+            Assert.That(entrySource, Does.Contain("Loaded data-only MassNavigation assets"));
+            Assert.That(entrySource, Does.Not.Contain("MassNavigationRuntime"));
+            Assert.That(entrySource, Does.Not.Contain("RegisterSystem"));
+            Assert.That(entrySource, Does.Not.Contain("RegisterMapEvent"));
+            Assert.That(entrySource, Does.Not.Contain("MassNavigationPanel"));
+            Assert.That(entrySource, Does.Not.Contain("Camera"));
+            Assert.That(manifestSource, Does.Not.Contain("CameraProfilesMod"));
+            Assert.That(projectSource, Does.Not.Contain("<Compile Include=\"Systems"));
+            Assert.That(projectSource, Does.Not.Contain("<Compile Include=\"UI"));
+            Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
+            Assert.That(Directory.Exists(Path.Combine(modRoot, "Systems")), Is.False);
         }
 
         [Test]
-        public void MassNavigationPanel_HidesGenericAgentCountControlsForFormationOwnedScenario()
+        public void MassCrowdShowcaseMods_DoNotDependOnMassNavigationDataMod()
         {
-            string panelSource = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "UI",
-                "MassNavigationPanelController.cs"));
+            string modsRoot = Path.Combine(FindRepoRoot(), "mods");
+            string[] applyingMods =
+            {
+                Path.Combine(modsRoot, "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod"),
+                Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardTotalWarLikeMod"),
+                Path.Combine(modsRoot, "showcases", "road_network", "RoadNetworkShowcaseMod"),
+                Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardMassNavigationLargeWorld10kMod"),
+                Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardParticipantViewsMod"),
+            };
 
-            Assert.That(panelSource, Does.Contain("AutoSpawnConfiguredScenario"));
-            Assert.That(panelSource, Does.Contain("Externally-authored scenarios use their own authored agent config for unit counts."));
-        }
+            foreach (string modRoot in applyingMods)
+            {
+                string manifestSource = File.ReadAllText(Path.Combine(modRoot, "mod.json"));
+                Assert.That(manifestSource, Does.Not.Contain("\"MassNavigationMod\""),
+                    $"MassCrowd-using showcase mods must not depend on the MassNavigation data mod. Mod: {modRoot}");
 
-        [Test]
-        public void MassNavigationPanel_UsesConfiguredPresentationCadenceAndMountsOnMap()
-        {
-            string repoRoot = FindRepoRoot();
-            string entrySource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "MassNavigationModEntry.cs"));
-            string systemSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "Systems",
-                "MassNavigationPanelPresentationSystem.cs"));
-            string panelPresenterSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "UI",
-                "MassNavigationPanelPresenter.cs"));
-            string controllerSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "UI",
-                "MassNavigationPanelController.cs"));
-
-            Assert.That(entrySource, Does.Contain("new MassNavigationPanelPresentationSystem(engine, panelPresenter)"));
-            Assert.That(systemSource, Does.Contain("PanelRefreshIntervalSeconds"));
-            Assert.That(systemSource, Does.Contain("_refreshAccumulatorSeconds"));
-            Assert.That(panelPresenterSource, Does.Contain("MassNavigationKeys.SimulationRuntime"));
-            Assert.That(panelPresenterSource, Does.Contain("if (!simulation.Config.ScenarioRuntime.Panel.IsOwned)"));
-            Assert.That(panelPresenterSource, Does.Contain("ClearPanelIfOwned(engine)"));
-            Assert.That(panelPresenterSource, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
-            Assert.That(controllerSource, Does.Contain("PanelRefreshIntervalSeconds"));
-            Assert.That(controllerSource, Does.Not.Contain("TimeSpan.TicksPerSecond / 4"));
-            Assert.That(systemSource, Does.Not.Contain("PanelRefreshIntervalSeconds = 0.25f"));
-            string updateBody = ExtractMethodBody(systemSource, "public void Update");
-            int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = refreshIntervalSeconds;", StringComparison.Ordinal);
-            int returnIndex = updateBody.IndexOf("return;", resetIndex, StringComparison.Ordinal);
-            Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
-            Assert.That(returnIndex, Is.GreaterThan(resetIndex));
-            string nonNavigationMapBranch = updateBody.Substring(resetIndex, returnIndex - resetIndex);
-            Assert.That(nonNavigationMapBranch, Does.Not.Contain("_runtime.RefreshPanel(_engine)"));
+                string projectSource = File.ReadAllText(Directory.EnumerateFiles(modRoot, "*.csproj").Single());
+                Assert.That(projectSource, Does.Not.Contain("MassNavigationMod"),
+                    $"MassCrowd-using showcase projects must not reference the MassNavigation data mod. Mod: {modRoot}");
+            }
         }
 
         [Test]
@@ -2840,7 +2745,6 @@ namespace Ludots.Tests.Presentation
             {
                 Path.Combine(modsRoot, "LudotsCoreMod"),
                 Path.Combine(modsRoot, "CoreInputMod"),
-                Path.Combine(modsRoot, "capabilities", "camera", "CameraProfilesMod"),
                 Path.Combine(modsRoot, "capabilities", "navigation", "MassNavigationMod"),
             };
         }
@@ -2848,6 +2752,12 @@ namespace Ludots.Tests.Presentation
         private static List<string> TotalWarDependencyPaths()
         {
             List<string> paths = MassNavigationDependencyPaths();
+            paths.Add(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "camera",
+                "CameraProfilesMod"));
             paths.Add(Path.Combine(
                 FindRepoRoot(),
                 "mods",
@@ -2945,6 +2855,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
+            simulation.SetWorldOperationsReady(true);
             engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
             FocusCurrentMapSession(engine, config.MapId);
             return simulation;
@@ -3812,27 +3723,15 @@ namespace Ludots.Tests.Presentation
             return $"obstacleTemplateKey={obstacleTemplateKeyId} obstacleTemplates={obstacleTemplate} obstacleTemplateVisualStable={obstacleTemplateVisualStable} overlay={overlayOnly} overlayVisual={overlayVisual} overlayStable={overlayStable} overlayRenderable={overlayRenderable} groundOverlayCount={overlays.Count}";
         }
 
-        private static void AssertCullingProbeAndDebugDraw(GameEngine engine)
+        private static void AssertMassNavigationDoesNotOwnCullingProbe(GameEngine engine)
         {
-            CameraCullingFocusOverride focus = engine.GetService(CoreServiceKeys.CameraCullingFocusOverride)
-                ?? throw new InvalidOperationException("CameraCullingFocusOverride is missing.");
-            Assert.That(focus.Enabled, Is.True);
-            Assert.That(focus.SourceId, Is.EqualTo("battlefield_overview"));
+            if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not CameraCullingFocusOverride focus)
+            {
+                return;
+            }
 
-            CameraCullingDebugState culling = engine.GetService(CoreServiceKeys.CameraCullingDebugState)
-                ?? throw new InvalidOperationException("CameraCullingDebugState is missing.");
-            Assert.That(culling.VisibleEntityCount, Is.GreaterThan(0));
-
-            RenderCameraDebugState renderDebug = engine.GetService(CoreServiceKeys.RenderCameraDebugState)
-                ?? throw new InvalidOperationException("RenderCameraDebugState is missing.");
-            DebugDrawCommandBuffer debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer)
-                ?? throw new InvalidOperationException("DebugDrawCommandBuffer is missing.");
-            debugDraw.Clear();
-            renderDebug.Enabled = true;
-            renderDebug.DrawLogicalCullingDebug = true;
-            Tick(engine);
-            Assert.That(debugDraw.Boxes.Count, Is.GreaterThanOrEqualTo(1));
-            Assert.That(debugDraw.Circles.Count, Is.GreaterThanOrEqualTo(3));
+            Assert.That(focus.Enabled, Is.False);
+            Assert.That(focus.SourceId, Is.EqualTo(string.Empty));
         }
 
         private static string BuildSelectionDiagnostics(GameEngine engine)

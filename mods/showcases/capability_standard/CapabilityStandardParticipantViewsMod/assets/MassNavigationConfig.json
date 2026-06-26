@@ -5,7 +5,6 @@
     "solverWindowHeightCm": 10000,
     "streamingChunkSizeCm": 6400,
     "streamingRadiusCm": 16000,
-    "cameraFocusShiftThresholdCm": 3000,
     "commandFocusHoldTicks": 90,
     "workAreaPaddingCm": 4000,
     "workAreaMaxWidthCm": 48000,
@@ -69,9 +68,6 @@
     "autoSpawnConfiguredScenario": false,
     "initialSelectionScratchCapacity": 32,
     "initialSelectedEntityCapacity": 32,
-    "panel": {
-      "mode": "Hidden"
-    },
     "runtimeCapacity": {
       "navigationGroupCapacity": 32,
       "groupMembershipAgentCapacity": 64,
@@ -81,36 +77,6 @@
       "orderIngestionMemberCapacity": 32,
       "loadedChunkCapacity": 64,
       "metadataTeamCapacity": 4
-    },
-    "panelControls": {
-      "maxAgentsPerTeam": 32,
-      "totalAgentStep": 1,
-      "totalAgentPresets": [
-        1,
-        2,
-        4,
-        8
-      ],
-      "panelRefreshIntervalSeconds": 0.25,
-      "viewResidencyRetainSecondsStep": 2,
-      "simulationBudgetStepMs": 1,
-      "simulationBudgetMinMs": 1,
-      "simulationBudgetMaxMs": 8,
-      "simulationSliceStep": 1,
-      "simulationSliceMin": 1,
-      "simulationSliceMax": 32,
-      "enginePolicyHzStep": 5,
-      "enginePolicyHzMin": 0,
-      "enginePolicyHzMax": 60,
-      "enginePolicyMaxStepsStep": 1,
-      "enginePolicyMaxStepsMin": 1,
-      "enginePolicyMaxStepsMax": 8,
-      "arrivalTimeoutStepMs": 250,
-      "arrivalProgressStepCm": 10,
-      "arrivalWakePushStepCm": 10,
-      "arrivalRetryStep": 1,
-      "flowIterationStep": 16,
-      "flowCadenceHzStep": 1
     }
   },
   "cadence": {
@@ -137,23 +103,6 @@
         "nthOffset": 0
       }
     ]
-  },
-  "cameraProfiles": {
-    "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
-    "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
-    "requestPolicy": {
-      "blendDurationSeconds": 0,
-      "resetRuntimeState": true,
-      "snapToFollowTargetWhenAvailable": false,
-      "strategicTargetXCm": 0,
-      "strategicTargetYCm": 0
-    }
-  },
-  "minimap": {
-    "visible": true,
-    "initialPreset": "RtsFullMap",
-    "followCameraHalfExtentCm": 7000,
-    "rotateWithCamera": true
   },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
@@ -184,24 +133,6 @@
     "maxRetryCountMin": 0,
     "maxRetryCountMax": 16,
     "maxRetryCount": 2
-  },
-  "viewResidency": {
-    "mode": "Camera",
-    "retainSeconds": 6,
-    "radiusCm": 16000,
-    "initialProbeId": "central_overlook",
-    "cameraProbes": [
-      {
-        "id": "central_overlook",
-        "label": "Central Overlook",
-        "targetXCm": 0,
-        "targetYCm": 0,
-        "distanceCm": 18000,
-        "yaw": 225,
-        "pitch": 58,
-        "fovYDeg": 52
-      }
-    ]
   },
   "avoidance": {
     "mode": "Separation",
@@ -302,5 +233,9 @@
       "coincidentPairHashPrimeA": 73856093,
       "coincidentPairHashPrimeB": 19349663
     }
+  },
+  "streaming": {
+    "retainSeconds": 6,
+    "radiusCm": 16000
   }
 }

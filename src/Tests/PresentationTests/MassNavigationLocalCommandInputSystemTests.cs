@@ -398,7 +398,6 @@ namespace Ludots.Tests.Presentation
                     SolverWindowHeightCm = solver.FieldHeightCm,
                     StreamingChunkSizeCm = 500,
                     StreamingRadiusCm = 1000,
-                    CameraFocusShiftThresholdCm = 100,
                     CommandFocusHoldTicks = 3,
                     WorkAreaPaddingCm = 100,
                     WorkAreaMaxWidthCm = solver.FieldWidthCm,
@@ -416,6 +415,11 @@ namespace Ludots.Tests.Presentation
                             HeightCm = 1000,
                         },
                     },
+                },
+                Streaming = new MassNavigationStreamingConfig
+                {
+                    RetainSeconds = 6f,
+                    RadiusCm = 1000,
                 },
                 Scenario = new MassNavigationScenarioConfig
                 {
@@ -437,10 +441,6 @@ namespace Ludots.Tests.Presentation
                     AutoSpawnConfiguredScenario = true,
                     InitialSelectionScratchCapacity = 8,
                     InitialSelectedEntityCapacity = 8,
-                    Panel = new MassNavigationPanelConfig
-                    {
-                        Mode = "Owned",
-                    },
                     RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
                     {
                         NavigationGroupCapacity = 8,
@@ -449,34 +449,8 @@ namespace Ludots.Tests.Presentation
                         GroupMemberCapacity = 8,
                         OrderIngestionTokenCapacity = 8,
                         OrderIngestionMemberCapacity = 8,
-                        LoadedChunkCapacity = 16,
+                        LoadedChunkCapacity = 32,
                         MetadataTeamCapacity = 2,
-                    },
-                    PanelControls = new MassNavigationPanelControlsConfig
-                    {
-                        MaxAgentsPerTeam = 8,
-                        TotalAgentStep = 2,
-                        TotalAgentPresets = new[] { 2, 4, 8 },
-                        PanelRefreshIntervalSeconds = 0.25f,
-                        ViewResidencyRetainSecondsStep = 2f,
-                        SimulationBudgetStepMs = 1,
-                        SimulationBudgetMinMs = 1,
-                        SimulationBudgetMaxMs = 64,
-                        SimulationSliceStep = 30,
-                        SimulationSliceMin = 1,
-                        SimulationSliceMax = 2048,
-                        EnginePolicyHzStep = 5,
-                        EnginePolicyHzMin = 0,
-                        EnginePolicyHzMax = 240,
-                        EnginePolicyMaxStepsStep = 1,
-                        EnginePolicyMaxStepsMin = 1,
-                        EnginePolicyMaxStepsMax = 32,
-                        ArrivalTimeoutStepMs = 250,
-                        ArrivalProgressStepCm = 10,
-                        ArrivalWakePushStepCm = 10,
-                        ArrivalRetryStep = 1,
-                        FlowIterationStep = 512,
-                        FlowCadenceHzStep = 1,
                     },
                 },
                 AgentProfiles = new MassNavigationAgentProfileSetConfig
@@ -495,35 +469,14 @@ namespace Ludots.Tests.Presentation
                         },
                     },
                 },
-                CameraProfiles = new MassNavigationCameraProfilesConfig
-                {
-                    TacticalProfileId = "Camera.Profile.TestTactical",
-                    StrategicProfileId = "Camera.Profile.TestStrategic",
-                    RequestPolicy = new MassNavigationCameraRequestPolicyConfig
-                    {
-                        BlendDurationSeconds = 0f,
-                        ResetRuntimeState = true,
-                        SnapToFollowTargetWhenAvailable = false,
-                        StrategicTargetXCm = 0f,
-                        StrategicTargetYCm = 0f,
-                    },
-                },
-                Minimap = new MassNavigationMinimapConfig
-                {
-                    Visible = true,
-                    InitialPreset = "RtsFullMap",
-                    FollowCameraHalfExtentCm = 7000f,
-                    RotateWithCamera = true,
-                },
             };
             config.Solver.Validate();
             config.World.Validate(config.Solver);
+            config.Streaming.Validate();
             config.ScenarioRuntime.Validate();
             config.Scenario.Validate(config.ScenarioRuntime);
             config.AgentProfiles.Validate();
             config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
-            config.CameraProfiles.Validate();
-            config.Minimap.Validate();
             return config;
         }
 
