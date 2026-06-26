@@ -1,28 +1,43 @@
+using System.Text;
 using System.Text.Json;
 using Ludots.UI.Browser;
 using Ludots.WebUI.DataPlane;
 
 namespace Ludots.WebUI.Browser;
 
-public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
+public sealed class BrowserSharedMemoryDataTransport : IWebUiDataTransport
 {
-	public const string ControlChannel = BrowserDataPlaneMessageChannels.Control;
-	public const string BinaryChunkChannel = BrowserDataPlaneMessageChannels.BinaryChunk;
+	public const string SharedBufferChannel = BrowserDataPlaneMessageChannels.SharedBuffer;
 
 	private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 	private readonly IBrowserMessageBridge _bridge;
+	private readonly BrowserSharedMemoryBufferStore _store;
 	private readonly WebUiTransportCapabilities _capabilities;
-	private readonly int _chunkSize;
 	private bool _disposed;
 
-	public BrowserMessageBridgeDataTransport(
+	public BrowserSharedMemoryDataTransport(
 		IBrowserMessageBridge bridge,
-		WebUiTransportCapabilities? capabilities = null,
-		int chunkSize = 64 * 1024)
+		BrowserSharedMemoryBufferStore store,
+		IEnumerable<BrowserSharedMemoryTopicBuffer> buffers)
 	{
 		_bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-		_chunkSize = Math.Max(1, chunkSize);
-		_capabilities = capabilities ?? WebUiTransportCapabilities.MessageBridge(chunkSize: _chunkSize);
+		_store = store ?? throw new ArgumentNullException(nameof(store));
+		ArgumentNullException.ThrowIfNull(buffers);
+		foreach (BrowserSharedMemoryTopicBuffer buffer in buffers)
+		{
+			_store.AddBuffer(buffer);
+		}
+
+		WebUiSharedBufferDescriptor[] descriptors = _store.Descriptors;
+		if (descriptors.Length == 0)
+		{
+			throw new ArgumentException("At least one shared-memory buffer is required.", nameof(buffers));
+		}
+
+		_capabilities = WebUiTransportCapabilities.SharedMemory(
+			maxPacketBytes: descriptors.Max(static descriptor => descriptor.CapacityBytes),
+			chunkSize: descriptors.Max(static descriptor => descriptor.CapacityBytes),
+			sharedBuffers: descriptors);
 		_bridge.MessageReceived += OnMessageReceived;
 	}
 
@@ -33,61 +48,79 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 	public async ValueTask SendAsync(WebUiOutboundPacket packet, CancellationToken cancellationToken = default)
 	{
 		ThrowIfDisposed();
-		if (packet.ContentType == WebUiDataPlaneProtocol.BinaryContentType && !_capabilities.SupportsBinary)
+		if (packet.ContentType == WebUiDataPlaneProtocol.BinaryContentType)
 		{
-			await SendBinaryChunksAsync(packet, cancellationToken).ConfigureAwait(false);
+			if (!_store.HasTopic(packet.Topic))
+			{
+				throw new InvalidOperationException(
+					$"Topic '{packet.Topic}' does not have a shared-memory buffer.");
+			}
+
+			await SendSharedBufferDescriptorAsync(packet, cancellationToken).ConfigureAwait(false);
 			return;
 		}
 
 		await PostMessageOrMarkDisposedAsync(new BrowserScriptMessage(
-			ControlChannel,
+			BrowserMessageBridgeDataTransport.ControlChannel,
 			JsonSerializer.Serialize(CreateWirePacket(packet), Options)), cancellationToken).ConfigureAwait(false);
 	}
 
-	public ValueTask DisposeAsync()
+	public async ValueTask DisposeAsync()
 	{
 		if (_disposed)
 		{
-			return ValueTask.CompletedTask;
+			return;
 		}
 
 		_disposed = true;
 		_bridge.MessageReceived -= OnMessageReceived;
-		return ValueTask.CompletedTask;
+		await _store.DisposeAsync().ConfigureAwait(false);
 	}
 
-	private async ValueTask SendBinaryChunksAsync(WebUiOutboundPacket packet, CancellationToken cancellationToken)
+	private async ValueTask SendSharedBufferDescriptorAsync(
+		WebUiOutboundPacket packet,
+		CancellationToken cancellationToken)
 	{
-		byte[] bytes = packet.Payload.ToArray();
-		string packetId = $"{packet.SessionId}:{packet.Topic}:{packet.RequestId}:{packet.Kind}";
-		int totalChunks = Math.Max(1, (bytes.Length + _chunkSize - 1) / _chunkSize);
-		for (int index = 0; index < totalChunks; index++)
+		WebUiSharedBufferWriteResult result = _store.WriteLatestWins(
+			packet.Topic,
+			packet.Payload.Span,
+			packet.ClientSeq);
+		if (!result.Accepted)
 		{
-			int offset = index * _chunkSize;
-			int length = Math.Min(_chunkSize, bytes.Length - offset);
-			string data = Convert.ToBase64String(bytes, offset, length);
-			var chunkPayload = new
+			if (packet.Delivery == WebUiDeliverySemantics.ReliableOrdered)
 			{
-				packetId,
-				packet.SessionId,
-				packet.RequestId,
-				packet.Topic,
-				packet.Kind,
-				packet.Delivery,
-				packet.ContentType,
-				packet.ClientSeq,
-				index,
-				totalChunks,
-				byteOffset = offset,
-				byteLength = length,
-				totalByteLength = bytes.Length,
-				encoding = "base64",
-				data
-			};
-			await PostMessageOrMarkDisposedAsync(new BrowserScriptMessage(
-				BinaryChunkChannel,
-				JsonSerializer.Serialize(chunkPayload, Options)), cancellationToken).ConfigureAwait(false);
+				await PostMessageOrMarkDisposedAsync(new BrowserScriptMessage(
+					BrowserMessageBridgeDataTransport.ControlChannel,
+					JsonSerializer.Serialize(CreateWirePacket(WebUiDataPlaneProtocol.CreateControlResponse(
+						packet.SessionId,
+						packet.RequestId,
+						"error",
+						packet.Topic,
+						new { error = result.Error },
+						WebUiPacketKind.CommandError)), Options)), cancellationToken).ConfigureAwait(false);
+			}
+
+			return;
 		}
+
+		var wirePacket = new
+		{
+			schemaVersion = WebUiDataPlaneProtocol.CurrentSchemaVersion,
+			packet.SessionId,
+			packet.RequestId,
+			kind = packet.Kind.ToString(),
+			packet.Topic,
+			delivery = packet.Delivery.ToString(),
+			packet.ContentType,
+			packet.ClientSeq,
+			payload = new
+			{
+				sharedBuffer = result.Descriptor
+			}
+		};
+		await PostMessageOrMarkDisposedAsync(new BrowserScriptMessage(
+			SharedBufferChannel,
+			JsonSerializer.Serialize(wirePacket, Options)), cancellationToken).ConfigureAwait(false);
 	}
 
 	private async ValueTask PostMessageOrMarkDisposedAsync(
@@ -102,7 +135,7 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 		{
 			MarkDisposed();
 			throw new ObjectDisposedException(
-				nameof(BrowserMessageBridgeDataTransport),
+				nameof(BrowserSharedMemoryDataTransport),
 				"The browser message bridge was disposed while DataPlane was sending.");
 		}
 	}
@@ -120,7 +153,7 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 		}
 
 		if (!WebUiDataPlaneProtocol.TryParseControlEnvelope(
-			System.Text.Encoding.UTF8.GetBytes(payload),
+			Encoding.UTF8.GetBytes(payload),
 			out WebUiControlEnvelope envelope,
 			out _))
 		{
@@ -141,7 +174,7 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 	private static bool TryNormalizeIncomingPayload(BrowserScriptMessage message, out string payload)
 	{
 		payload = string.Empty;
-		if (message.Channel == ControlChannel)
+		if (message.Channel == BrowserMessageBridgeDataTransport.ControlChannel)
 		{
 			payload = message.Payload;
 			return true;
@@ -190,7 +223,7 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 	{
 		if (_disposed)
 		{
-			throw new ObjectDisposedException(nameof(BrowserMessageBridgeDataTransport));
+			throw new ObjectDisposedException(nameof(BrowserSharedMemoryDataTransport));
 		}
 	}
 
