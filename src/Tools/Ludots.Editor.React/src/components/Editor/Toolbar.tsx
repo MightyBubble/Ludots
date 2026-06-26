@@ -37,7 +37,7 @@ import { Minimap } from './Minimap';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
 import { CHUNK_BYTE_SIZE, REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE } from '../../Core/Map/TerrainStore';
-import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
+import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultVisualHeightmapMaxSamplesPerAxis, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, LogicDenseEquivalentBytesPerCell, MacroTileCells, TerrainChunkCells, VisualHeightmapR16BytesPerSample } from '../../Core/SpatialScaleDefaults';
 
 const FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline-v2';
 const LEGACY_FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline';
@@ -80,6 +80,11 @@ type NavBakeEstimateReport = {
     obstacleCount: number;
     terrainContentHash: string;
     terrainCellSampleCount: number;
+    visualHeightmapBytes: number;
+    logicDenseEquivalentBytes: number;
+    logicSparseResidentBytes: number;
+    logicSparseResidentStatus: string;
+    logicSparseResidentMessage: string;
     recastColumnBudgetTotal: number;
     budgetWorkUnitCount: number;
     estimatedTileBytesLow: number;
@@ -194,6 +199,18 @@ type BoardAllocationPreview = {
     allocatedHeightMeters: number;
 };
 
+type TerrainBudgetPreview = {
+    visualHeightmapBytes: number;
+    visualHeightmapSampleColumns: number;
+    visualHeightmapSampleRows: number;
+    logicDenseEquivalentBytes: number;
+    logicSparseResidentBytes: number;
+    logicSparseResidentStatus: string;
+    logicSparseResidentMessage: string;
+    recastBakeScopeChunks: number;
+    navMeshOutputMessage: string;
+};
+
 function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSizeCm: number): BoardAllocationPreview {
     const safeCellSizeCm = Math.max(1, Math.floor(Number(cellSizeCm) || CellCm));
     const requestedWidthMeters = Math.max(0, Number.isFinite(widthMeters) ? widthMeters : 0);
@@ -245,6 +262,22 @@ function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSi
         fullTerrainBytes,
         allocatedWidthMeters,
         allocatedHeightMeters,
+    };
+}
+
+function deriveTerrainBudgetPreview(allocation: BoardAllocationPreview): TerrainBudgetPreview {
+    const visualHeightmapSampleColumns = Math.min(allocation.allocatedWidthCells, DefaultVisualHeightmapMaxSamplesPerAxis);
+    const visualHeightmapSampleRows = Math.min(allocation.allocatedHeightCells, DefaultVisualHeightmapMaxSamplesPerAxis);
+    return {
+        visualHeightmapBytes: visualHeightmapSampleColumns * visualHeightmapSampleRows * VisualHeightmapR16BytesPerSample,
+        visualHeightmapSampleColumns,
+        visualHeightmapSampleRows,
+        logicDenseEquivalentBytes: allocation.allocatedWidthCells * allocation.allocatedHeightCells * LogicDenseEquivalentBytesPerCell,
+        logicSparseResidentBytes: 0,
+        logicSparseResidentStatus: 'not-measured-lower-bound',
+        logicSparseResidentMessage: '0 resident chunks before painting/save; .ltrn bytes are measured from written sparse chunks.',
+        recastBakeScopeChunks: allocation.totalTerrainChunks,
+        navMeshOutputMessage: 'Estimated after bake from emitted Detour tile bytes.',
     };
 }
 
@@ -436,9 +469,9 @@ export const Toolbar: React.FC = () => {
             ? 'Budget Large'
             : 'Budget Rejected';
     const estimateStatusHint = navEstimate?.budgetStatusText === 'large'
-        ? 'This job is above the automatic safe budget. Pressing Bake is the explicit run action; no extra checkbox is required.'
+        ? 'This job is above the normal editor budget. Bake runs it with the displayed estimate hash.'
         : navEstimate?.budgetStatusText === 'reject'
-            ? 'This bake exceeds the configured hard budget and will not run.'
+            ? 'This bake exceeds the configured editor budget and needs an external profiled flow.'
             : 'This bake is inside the safe auto-run budget.';
     const loadedCanvasLabel = canvasMapLoaded
         ? `${loadedMapId}/${loadedBoardName} / ${boardMetrics.topology} / ${terrain.widthChunks}x${terrain.heightChunks} chunks`
@@ -515,6 +548,14 @@ export const Toolbar: React.FC = () => {
         () => deriveBoardAllocation(newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue),
         [newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue],
     );
+    const newMapBudget = React.useMemo(
+        () => deriveTerrainBudgetPreview(newMapAllocation),
+        [newMapAllocation],
+    );
+    const newBoardBudget = React.useMemo(
+        () => deriveTerrainBudgetPreview(newBoardAllocation),
+        [newBoardAllocation],
+    );
     const newBoardWithinFullFileBudget =
         newBoardAllocation.widthMacroTiles > 0 &&
         newBoardAllocation.heightMacroTiles > 0 &&
@@ -533,7 +574,7 @@ export const Toolbar: React.FC = () => {
     const newMapCanCreate = newMapCreateDisabledReason.length === 0;
     const newBoardCreateWarning = newBoardWithinFullFileBudget
         ? ''
-        : `This board is ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles. Bridge will create MapConfig first; Save writes sparse terrain instead of the ${formatBytes(newBoardAllocation.fullTerrainBytes)} full-file equivalent.`;
+        : `This board is ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles. Bridge will create MapConfig first; Save writes sparse terrain chunks only when they are resident.`;
     const newBoardCreateDisabledReason = !newBoardName.trim()
         ? 'Board name is required.'
         : !isPositiveFinite(newBoardWidthMetersValue) || !isPositiveFinite(newBoardHeightMetersValue)
@@ -551,7 +592,7 @@ export const Toolbar: React.FC = () => {
             ? 'This bake can run directly.'
             : estimate.budgetStatusText === 'large'
                 ? 'This is a large budget job. Bake will pass the backend large-budget token for this estimate hash.'
-                : 'This bake exceeds the hard budget and must use a profiled bake-farm flow.';
+                : 'This bake exceeds the editor budget and must use a profiled bake-farm flow.';
         return [
             statusDetail,
             `Operations: ${estimate.bakeOperationCount.toLocaleString()}`,
@@ -1087,7 +1128,7 @@ export const Toolbar: React.FC = () => {
                 message: estimate.budgetStatusText === 'large'
                     ? 'Large means this bake is expensive. Press Bake to run it with the displayed estimate hash.'
                     : estimate.budgetStatusText === 'reject'
-                        ? 'This bake exceeds the hard budget and will not run from the editor.'
+                        ? 'This bake exceeds the editor budget and will not run from the editor.'
                         : 'Estimate is inside the normal editor budget.',
                 progress: 100,
             });
@@ -1727,6 +1768,45 @@ export const Toolbar: React.FC = () => {
         );
     };
 
+    const terrainBudgetPreview = (budget: TerrainBudgetPreview) => (
+        <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 p-2 text-[10px] leading-snug text-slate-400">
+            <div className="mb-2 uppercase tracking-wide text-slate-600">Terrain budget domains</div>
+            <div className="space-y-1.5">
+                <div className="flex justify-between gap-3">
+                    <span>VisualHeightmap saved estimate</span>
+                    <span className="font-mono text-slate-200">{formatBytes(budget.visualHeightmapBytes)}</span>
+                </div>
+                <div className="text-[9px] text-slate-500">
+                    {budget.visualHeightmapSampleColumns.toLocaleString()} x {budget.visualHeightmapSampleRows.toLocaleString()} R16 samples, capped at {DefaultVisualHeightmapMaxSamplesPerAxis.toLocaleString()} per axis.
+                </div>
+                <div className="flex justify-between gap-3">
+                    <span>LogicTerrain dense-equivalent, not saved</span>
+                    <span className="font-mono text-slate-200">{formatBytes(budget.logicDenseEquivalentBytes)}</span>
+                </div>
+                <div className="text-[9px] text-slate-500">
+                    Theoretical height/area/flags full grid at {LogicDenseEquivalentBytesPerCell} bytes per cell.
+                </div>
+                <div className="flex justify-between gap-3">
+                    <span>LogicTerrain sparse resident, not measured</span>
+                    <span className="font-mono text-slate-200">{formatBytes(budget.logicSparseResidentBytes)}</span>
+                </div>
+                <div className="text-[9px] text-slate-500">{budget.logicSparseResidentMessage}</div>
+                <div className="flex justify-between gap-3">
+                    <span>Recast bake-cost estimate</span>
+                    <span className="font-mono text-slate-200">{budget.recastBakeScopeChunks.toLocaleString()} target chunks</span>
+                </div>
+                <div className="text-[9px] text-slate-500">
+                    Bake-cost columns/work units require nav layers and agent profiles; this is not storage.
+                </div>
+                <div className="flex justify-between gap-3">
+                    <span>NavMesh output bytes, estimated</span>
+                    <span className="font-mono text-slate-200">after bake</span>
+                </div>
+                <div className="text-[9px] text-slate-500">{budget.navMeshOutputMessage}</div>
+            </div>
+        </div>
+    );
+
     const estimateCard = (
         <div className="space-y-2">
             <div className={`rounded border p-3 text-xs ${
@@ -1779,7 +1859,33 @@ export const Toolbar: React.FC = () => {
                         <div>work {navEstimate.budgetWorkUnitCount.toLocaleString()}</div>
                         <div>columns {navEstimate.recastColumnBudgetTotal.toLocaleString()}</div>
                         <div>tile {navEstimate.tileWorldWidthCm}x{navEstimate.tileWorldHeightCm}cm</div>
-                        <div>{(navEstimate.estimatedTileBytesLow / 1048576).toFixed(1)}-{(navEstimate.estimatedTileBytesHigh / 1048576).toFixed(1)}MB</div>
+                        <div>output {formatBytes(navEstimate.estimatedTileBytesLow)}-{formatBytes(navEstimate.estimatedTileBytesHigh)}</div>
+                    </div>
+                    <div className="mt-3 rounded border border-black/20 bg-black/20 p-2 text-[10px] leading-snug text-slate-200">
+                        <div className="mb-2 uppercase tracking-wide opacity-70">Budget domains</div>
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between gap-3">
+                                <span>VisualHeightmap saved estimate</span>
+                                <span className="font-mono">{formatBytes(navEstimate.visualHeightmapBytes)}</span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <span>LogicTerrain dense-equivalent, not saved</span>
+                                <span className="font-mono">{formatBytes(navEstimate.logicDenseEquivalentBytes)}</span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <span>LogicTerrain sparse resident, {navEstimate.logicSparseResidentStatus}</span>
+                                <span className="font-mono">{formatBytes(navEstimate.logicSparseResidentBytes)}</span>
+                            </div>
+                            <div className="text-[9px] opacity-75">{navEstimate.logicSparseResidentMessage}</div>
+                            <div className="flex justify-between gap-3">
+                                <span>Recast bake-cost estimate</span>
+                                <span className="font-mono">{navEstimate.recastColumnBudgetTotal.toLocaleString()} columns / {navEstimate.budgetWorkUnitCount.toLocaleString()} work</span>
+                            </div>
+                            <div className="flex justify-between gap-3">
+                                <span>NavMesh output bytes, estimated</span>
+                                <span className="font-mono">{formatBytes(navEstimate.estimatedTileBytesLow)}-{formatBytes(navEstimate.estimatedTileBytesHigh)}</span>
+                            </div>
+                        </div>
                     </div>
                     <div className="mt-2 font-mono text-[10px] text-slate-400">hash {navEstimate.estimateHash.slice(0, 12)}</div>
                     <div className="font-mono text-[10px] text-slate-500">terrain {navEstimate.terrainContentHash.slice(0, 12)}</div>
@@ -2876,15 +2982,8 @@ export const Toolbar: React.FC = () => {
                                         <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
                                         <div className="font-mono text-slate-200">{newMapAllocation.widthMacroTiles} x {newMapAllocation.heightMacroTiles}</div>
                                     </div>
-                                    <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Sparse resident</div>
-                                        <div className="font-mono text-slate-200">0 / {newMapAllocation.totalTerrainChunks.toLocaleString()}</div>
-                                    </div>
-                                    <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Full file equivalent</div>
-                                        <div className="font-mono text-slate-200">{formatBytes(newMapAllocation.fullTerrainBytes)}</div>
-                                    </div>
                                 </div>
+                                {terrainBudgetPreview(newMapBudget)}
                                 <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
                                     {newMapAllocation.snappedToMacroTile
                                         ? 'Local draft allocation snaps upward to whole MacroTiles. Empty terrain chunks are sparse and created only when painted.'
@@ -3025,15 +3124,8 @@ export const Toolbar: React.FC = () => {
                                         <div className="uppercase tracking-wide text-slate-600">Unit constants</div>
                                         <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.macroTileMeters)}m / {formatMeters(newBoardAllocation.terrainChunkMeters)}m</div>
                                     </div>
-                                    <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Full terrain file</div>
-                                        <div className="font-mono text-slate-200">{formatBytes(newBoardAllocation.fullTerrainBytes)}</div>
-                                    </div>
-                                    <div>
-                                        <div className="uppercase tracking-wide text-slate-600">Eager file threshold</div>
-                                        <div className="font-mono text-slate-200">{DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} x {DefaultEditorEagerFullTerrainFileMacroTilesPerAxis} MacroTiles</div>
-                                    </div>
                                 </div>
+                                {terrainBudgetPreview(newBoardBudget)}
                                 <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
                                     {newBoardAllocation.snappedToMacroTile
                                         ? 'The editor snaps allocation upward to whole MacroTiles. Large boards are created sparse; first save writes only resident terrain chunks.'
