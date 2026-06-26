@@ -10,7 +10,7 @@ TimeFlow provides domain-level time scaling without introducing a second simulat
 | `gas` | GAS clock policy | Ability/order/effect cadence |
 | `physics2d` | Physics clock policy | Physics integration cadence |
 
-The retired navigation execution domain has been removed. Navigation-domain movement now runs through MassFlow execution and the normal physics/GAS cadence as wired by the active runtime.
+The retired navigation execution domain has been removed. Navigation-domain movement now runs through MassNavigationFlow execution and the normal physics/GAS cadence as wired by the active runtime.
 
 ## Rules
 

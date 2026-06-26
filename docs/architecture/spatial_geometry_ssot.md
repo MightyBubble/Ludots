@@ -27,7 +27,7 @@ Core separates authored geometry intent from derived runtime state.
 | `ManifestationObstaclePolygon2D` | authored single polygon payload for obstacle intent | Core gameplay authoring |
 | `CompoundObstacle2D` | authored compound obstacle intent for one logical entity | Core gameplay authoring |
 | `Collider2D` | derived physics collider state | Physics2D runtime |
-| `NavObstacle2D` | derived navigation obstacle state | Navigation runtime |
+| `MassNavigationFlowObstacleProjection` | derived navigation obstacle projection state | MassNavigation runtime |
 | `CompoundObstacle2DState` | derived materialized obstacle slots | Physics2D/navigation bridge runtime |
 | `SelectionSelectableTag` | selection eligibility marker | Selection runtime |
 | `SelectionAcquisitionMode` | input acquisition policy | Selection runtime |
@@ -76,7 +76,7 @@ For obstacles:
 CompoundObstacle2D or ManifestationObstacleIntent2D
   -> ManifestationObstacleBridge2DSystem
   -> ShapeDataStorage2D
-  -> Collider2D / NavObstacle2D / CompoundObstacle2DState
+  -> Collider2D / MassNavigationFlowObstacleProjection / CompoundObstacle2DState
 ```
 
 For selection:

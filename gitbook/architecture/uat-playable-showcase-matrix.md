@@ -17,7 +17,7 @@
 | UAT | 主 showcase | 入口 map | 目标 | 复用重点 |
 |------|-------------|----------|------|----------|
 | `UAT-1` | `FormationPhysicsPlaygroundMod` | `formation_physics_playground` | 少量高价值方阵本体、碰撞、推挤、狭窄通过 | 复用 scenario config、panel 与 scenario selection tests |
-| `UAT-2` | `CapabilityStandardMassNavigationLargeWorld10kMod` | `mass_navigation` | 大规模 crowd、MassFlow 执行、drag-select、move command | 复用 `MassNavigationMod` runtime、panel、contract tests 与 performer tests |
+| `UAT-2` | `CapabilityStandardMassNavigationLargeWorld10kMod` | `mass_navigation` | 大规模 crowd、MassNavigationFlow 执行、drag-select、move command | 复用 `MassNavigationMod` runtime、panel、contract tests 与 performer tests |
 | `UAT-3` | `RelationshipShowcaseMod` | `relationship_showcase` | 预算、状态、前端场景卡、artifact 产出链路 | 复用 production battle-report / trace / path artifact 输出模式 |
 | `UAT-4` | `InteractionShowcaseMod` | `interaction_showcase_hub` | 统一入口、控制组、formation 视图、entity info、HUD 面板、跨系统联动 | 复用 hub/stress 双地图、selection dock、entity collection inspector、playable acceptance |
 
@@ -48,10 +48,10 @@
 
 ### 4.1 为什么是它
 
-- 它是当前 MassFlow 大规模执行基线
+- 它是当前 MassNavigationFlow 大规模执行基线
 - 它通过地图 `mass_navigation` 与 `MassNavigationMod` 使用正式执行引擎
 - 它覆盖 team-slot、direct target、邻居分离、硬解析、performer 展示与配置面板
-- NAV-6 到 NAV-9 的路由、per-agent target、move-plan 与 road 迁移都以 MassFlow 为执行 sink
+- NAV-6 到 NAV-9 的路由、per-agent target、move-plan 与 road 迁移都以 MassNavigationFlow 为执行 sink
 
 ### 4.2 建议操作脚本
 
@@ -59,12 +59,12 @@
 2. 拖框选中一片 crowd，右键下达 move goal
 3. 切换执行/避障相关配置 preset
 4. 观察 HUD、单位移动、局部避让、arrival 计数与 performer 展示
-5. 与 `RoadNetworkShowcaseMod` 的 road move-plan UAT 一起跑，确认路由与 MassFlow sink 共存
+5. 与 `RoadNetworkShowcaseMod` 的 road move-plan UAT 一起跑，确认路由与 MassNavigationFlow sink 共存
 
 ### 4.3 通过标准
 
 - crowd 在大规模下仍可选、可命令、可重现
-- MassFlow panel / runtime 不因规模增加而丢失交互
+- MassNavigationFlow panel / runtime 不因规模增加而丢失交互
 - route-to-execution 和 move-plan sink 都使用正式 runtime，不使用脚本桩
 - contract tests 能覆盖配置、执行、arrival、performer 与 road move-plan 回归
 
@@ -125,7 +125,7 @@
 这个顺序的目的：
 
 - 先把 `UAT-1` 和 `UAT-2` 的实体仿真主线入口定下来
-- 再用 road showcase 回归 route / move-plan / MassFlow sink
+- 再用 road showcase 回归 route / move-plan / MassNavigationFlow sink
 - 再用 `InteractionShowcaseMod` 做 `UAT-4` 统一入口
 - 最后用 `RelationshipShowcaseMod` 补强 artifact-first 的证据产出模板
 
@@ -139,7 +139,7 @@
 ## 9 后续实现建议
 
 - `FormationPhysicsPlaygroundMod` 继续补 UAT-1 操作说明与性能记录模板
-- `CapabilityStandardMassNavigationLargeWorld10kMod` 继续补 MassFlow 档位记录与统一性能字段
-- `RoadNetworkShowcaseMod` 继续承接 route / move-plan / MassFlow sink UAT
+- `CapabilityStandardMassNavigationLargeWorld10kMod` 继续补 MassNavigationFlow 档位记录与统一性能字段
+- `RoadNetworkShowcaseMod` 继续承接 route / move-plan / MassNavigationFlow sink UAT
 - `InteractionShowcaseMod` 作为 UAT-4 主入口，继续收敛 selection / entity-info / HUD 的正式 contract
 - `RelationshipShowcaseMod` 作为 artifact-first 模板，承接 AOI / LOD / budget 证据产出

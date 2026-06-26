@@ -4,8 +4,8 @@ This RFC has been superseded by the navigation-domain unification work in [Epic 
 
 Current facts live in:
 
-- `gitbook/reference/move-planning-massflow-road-execution.md`
+- `gitbook/reference/move-planning-mass-navigation-flow-road-execution.md`
 - `gitbook/reference/routing-to-mass-execution.md`
-- `gitbook/reference/massflow-routing-legacy-execution-removal.md`
+- `gitbook/reference/mass-navigation-flow-routing-legacy-execution-removal.md`
 
 The old proposal described a retired execution sink. Do not use this RFC as implementation guidance.

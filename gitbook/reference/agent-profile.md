@@ -29,11 +29,11 @@ Every profile id is case-sensitive. Missing fields, unknown fields, duplicate id
 
 | Field | Unit | Owner | Consumers | Rule |
 |---|---:|---|---|---|
-| `id` | name | AgentProfile registry | bake, route, MassFlow | Required, case-sensitive, no aliases |
-| `radiusCm` | cm | AgentProfile registry | navmesh clearance, MassFlow body radius | `> 0` |
+| `id` | name | AgentProfile registry | bake, route, MassNavigationFlow | Required, case-sensitive, no aliases |
+| `radiusCm` | cm | AgentProfile registry | navmesh clearance, MassNavigationFlow body radius | `> 0` |
 | `heightCm` | cm | AgentProfile registry | navmesh agent height | `> 0` |
 | `clearanceCm` | cm | AgentProfile registry | bake/pathing clearance decisions | `>= 0` |
-| `mass` | scalar | AgentProfile registry | MassFlow resolve share and dominance | `> 0` |
+| `mass` | scalar | AgentProfile registry | MassNavigationFlow resolve share and dominance | `> 0` |
 | `layer` | integer | AgentProfile registry | navmesh query layer | `>= 0` |
 
 Speed is not part of this registry. `speedCmPerSecond` stays in execution movement config such as `MassNavigationConfig.agentProfiles.profiles[]`, because speed is a movement strategy, not geometry.
@@ -42,16 +42,16 @@ Speed is not part of this registry. `speedCmPerSecond` stays in execution moveme
 
 - `Navigation/navmesh.json` keeps bake-only fields such as `maxClimbCm` and `maxSlopeDeg`. Its profile entries reference AgentProfile ids and must not define `radiusCm` or `heightCm`.
 - `Navigation/pathing.json` keeps route strategy fields. Its `agentTypes[]` entries reference AgentProfile ids and must not define `layer`; the layer comes from the AgentProfile.
-- `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `visualScale`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass` or `bodyRadiusCm`; MassFlow resolves `mass` and `radiusCm` through AgentProfile.
+- `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `visualScale`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass` or `bodyRadiusCm`; MassNavigationFlow resolves `mass` and `radiusCm` through AgentProfile.
 
 ## UAT Showcase
 
-Shared showcase preset: `nav_profile`.
+Shared showcase preset: `mass_navigation`.
 
 Command:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch nav_profile --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
 ```
 
 | Operation | Visible feedback |
@@ -62,15 +62,15 @@ Command:
 
 ## Config To Behavior Tests
 
-- Changing `radiusCm` changes navmesh passability and MassFlow body radius.
-- Changing `mass` changes MassFlow resolve share.
+- Changing `radiusCm` changes navmesh passability and MassNavigationFlow body radius.
+- Changing `mass` changes MassNavigationFlow resolve share.
 - Changing `layer` changes which navmesh layer pathing queries use.
 - Changing `speedCmPerSecond` in MassNavigation changes movement speed without changing bake geometry.
 
 ## Merge And Reuse
 
-No external branch is merged for NAV-2. It builds on the Core MassCrowd runtime already merged from PR #235 and uses existing config catalog / `ArrayById` infrastructure.
+No external branch is merged for NAV-2. It builds on the Core MassNavigation runtime already merged from PR #235 and uses existing config catalog / `ArrayById` infrastructure.
 
 ## DoD
 
-NAV-2 is complete when `Navigation/agent_profiles.json` is the single geometry registry, navmesh/pathing/MassFlow all reference it, old duplicate fields fail-fast, contract tests cover strict casing and unknown fields, gitbook indexes include this page, and this page links back to #281 / #284.
+NAV-2 is complete when `Navigation/agent_profiles.json` is the single geometry registry, navmesh/pathing/MassNavigationFlow all reference it, old duplicate fields fail-fast, contract tests cover strict casing and unknown fields, gitbook indexes include this page, and this page links back to #281 / #284.

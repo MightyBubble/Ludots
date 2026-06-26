@@ -54,7 +54,7 @@ The target editor flow is:
 8. Run estimate using the same inputs that real bake will use.
 9. Bake through CLI or Editor Bridge into `.ntil` nav tiles.
 10. Inspect the produced mesh in Web editor and Raylib debug view.
-11. Start runtime, select agents, issue movement, and verify route + MassFlow execution.
+11. Start runtime, select agents, issue movement, and verify route + MassNavigationFlow execution.
 
 `NodeGraph` boards use the short graph path and do not bake navmesh.
 
@@ -79,13 +79,13 @@ Ludots world-space authoring uses centimeters. This matches the Unreal-style con
 
 | Field | Unit | Bake meaning | Runtime meaning |
 |---|---:|---|---|
-| `radiusCm` | cm | clearance radius for Recast erosion and route passability | MassFlow body radius / spacing |
+| `radiusCm` | cm | clearance radius for Recast erosion and route passability | MassNavigationFlow body radius / spacing |
 | `heightCm` | cm | minimum vertical clearance for Recast walkable spans | visual/body metadata, not speed |
 | `clearanceCm` | cm | extra authored clearance budget; must be explicit when applied to bake/profile policy | route/passability metadata |
-| `mass` | scalar | not a bake knob | MassFlow resolve share / dominance |
+| `mass` | scalar | not a bake knob | MassNavigationFlow resolve share / dominance |
 | `layer` | integer | selects nav query layer for this profile | runtime pathing layer identity |
 
-Speed stays out of `AgentProfileRegistry`; it belongs to MassFlow movement strategy.
+Speed stays out of `AgentProfileRegistry`; it belongs to MassNavigationFlow movement strategy.
 
 ### Bake Profile
 
@@ -372,7 +372,7 @@ Raylib needs a precise navmesh debug view for production runtime investigation. 
 | `NavTile.TriAreaIds` | area coloring |
 | `Navigation/pathing.json` | per-agent cost legend |
 | `PathStore` / route output | selected route overlay |
-| `MassFlowSimulationState` | runtime agent movement overlay |
+| `MassNavigationFlowSolverState` | runtime agent movement overlay |
 
 ### Drawing Model
 

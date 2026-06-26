@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.Avoidance;
@@ -70,7 +70,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(runtime.NavigationObstacleCount, Is.EqualTo(1));
 
             Vector2 blockedLocal = new Vector2(runtime.ToLocalXCm(obstacle.WorldXCm), runtime.ToLocalYCm(obstacle.WorldYCm));
-            Vector2 resolvedLocal = runtime.MassFlowForTests().ResolveUnitNavigableTarget(
+            Vector2 resolvedLocal = runtime.GetFlowSolverForTests().ResolveUnitNavigableTarget(
                 0,
                 blockedLocal.X,
                 blockedLocal.Y,
@@ -119,8 +119,8 @@ namespace Ludots.Tests.Presentation
             runtime.SetAgentNavigationTargetWorldCm(1, 4_100f, 5_000f, resetRecovery: true);
             runtime.StepNavigationForTests(world, 0.05f, runHardResolve: true);
 
-            Vector2 velocity0 = runtime.MassFlowForTests().GetVelocityCmPerSecond(0);
-            Vector2 velocity1 = runtime.MassFlowForTests().GetVelocityCmPerSecond(1);
+            Vector2 velocity0 = runtime.GetFlowSolverForTests().GetVelocityCmPerSecond(0);
+            Vector2 velocity1 = runtime.GetFlowSolverForTests().GetVelocityCmPerSecond(1);
             Assert.That(velocity0.Length(), Is.GreaterThan(0f));
             Assert.That(velocity1.Length(), Is.GreaterThan(0f));
         }
@@ -175,7 +175,7 @@ namespace Ludots.Tests.Presentation
 
         private static MassNavigationConfig CreateConfig(string avoidanceMode)
         {
-            MassFlowSolverConfig solver = new()
+            MassNavigationFlowSolverConfig solver = new()
             {
                 FieldWidthCm = 10_000,
                 FieldHeightCm = 10_000,
@@ -233,13 +233,4 @@ namespace Ludots.Tests.Presentation
         }
     }
 
-    internal static class MassNavigationSimulationRuntimeTestAccess
-    {
-        public static MassFlowSimulationState MassFlowForTests(this MassNavigationSimulationRuntime runtime)
-        {
-            return (MassFlowSimulationState)typeof(MassNavigationSimulationRuntime)
-                .GetProperty("MassFlow", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
-                .GetValue(runtime)!;
-        }
-    }
 }

@@ -9,8 +9,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.MassCrowd;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
@@ -204,8 +204,8 @@ namespace RoadNetworkShowcaseMod.Runtime
                 ? $"{FormatVector2(intent.TargetWorldCm)} speed={intent.SpeedCmPerSec:0} stop={intent.StopRadiusCm:0}"
                 : "<none>";
             string massTarget = ResolveMassTargetText(actor);
-            string massAgent = _world.Has<MassCrowdAgentIndex>(actor)
-                ? _world.Get<MassCrowdAgentIndex>(actor).Value.ToString()
+            string massAgent = _world.Has<MassNavigationAgentIndex>(actor)
+                ? _world.Get<MassNavigationAgentIndex>(actor).Value.ToString()
                 : "<unbound>";
             return $"Move  intent={intentText} | massAgent={massAgent} | massTarget={massTarget}";
         }
@@ -393,7 +393,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private string ResolveMassTargetText(Entity actor)
         {
-            if (!_world.TryGet(actor, out MassCrowdAgentIndex index))
+            if (!_world.TryGet(actor, out MassNavigationAgentIndex index))
             {
                 return "<unbound>";
             }

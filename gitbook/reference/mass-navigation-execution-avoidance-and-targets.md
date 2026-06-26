@@ -4,16 +4,16 @@ Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). This pag
 
 ## Background
 
-Before NAV-6, `MassFlowSimulationState` was already the Core execution engine for mass movement, but it primarily served team-slot movement and direct flow targets. A retired point-target execution stack still owned several execution features.
+Before NAV-6, `MassNavigationFlowSolverState` was already the Core execution engine for mass movement, but it primarily served team-slot movement and direct flow targets. A retired point-target execution stack still owned several execution features.
 
 | Capability | Old owner | Problem |
 |---|---|---|
-| Per-agent arbitrary world target | Retired execution components | MassFlow callers could not address one unit as the execution sink |
-| Runtime obstacle stamp | MassFlow internals plus older bridges | No public Core runtime contract for dynamic obstacle snapshots |
-| Arrival event | MassFlow settled counters only | Callers could not drain per-agent arrival facts |
+| Per-agent arbitrary world target | Retired execution components | MassNavigationFlow callers could not address one unit as the execution sink |
+| Runtime obstacle stamp | MassNavigationFlow internals plus older bridges | No public Core runtime contract for dynamic obstacle snapshots |
+| Arrival event | MassNavigationFlow settled counters only | Callers could not drain per-agent arrival facts |
 | High quality local avoidance | Retired avoidance namespace | Pure math kernels were trapped under a deprecated namespace |
 
-NAV-6 moves the pure avoidance kernels into `Ludots.Core.Navigation.Avoidance` and makes MassFlow the execution owner for per-agent target, runtime obstacle stamp, arrival event, and optional ORCA/Sonar avoidance.
+NAV-6 moves the pure avoidance kernels into `Ludots.Core.Navigation.Avoidance` and makes MassNavigationFlow the execution owner for per-agent target, runtime obstacle stamp, arrival event, and optional ORCA/Sonar avoidance.
 
 ## Goal
 
@@ -31,14 +31,14 @@ The avoidance kernels live at:
 
 | Kernel | Namespace | Notes |
 |---|---|---|
-| `OrcaSolver2D` | `Ludots.Core.Navigation.Avoidance` | Stateless math kernel reused by MassFlow |
+| `OrcaSolver2D` | `Ludots.Core.Navigation.Avoidance` | Stateless math kernel reused by MassNavigationFlow |
 | `SonarSolver2D` | `Ludots.Core.Navigation.Avoidance` | `UsePreferredVelocityWhenBlocked` replaces the old fallback wording |
 
 ## User Story
 
 US-6.1: As an RTS player, I can issue separate target points to a few selected agents, so each unit can move to its own destination and stop.
 
-US-6.2: As a player, I can switch the MassFlow avoidance mode from `Separation` to `Orca` or `Sonar`, so narrow passages use a higher quality local avoidance kernel.
+US-6.2: As a player, I can switch the MassNavigationFlow avoidance mode from `Separation` to `Orca` or `Sonar`, so narrow passages use a higher quality local avoidance kernel.
 
 US-6.3: As a gameplay system, I can stamp runtime obstacles into the execution engine, so agents can project blocked targets and steer around dynamic blockers without reviving the retired execution stack.
 
@@ -46,7 +46,7 @@ US-6.3: As a gameplay system, I can stamp runtime obstacles into the execution e
 
 Shared showcase target from #288:
 
-`.\\scripts\\run-mod-launcher.cmd cli launch nav_squad --adapter raylib`
+`.\\scripts\\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib`
 
 | Operation | Visible feedback |
 |---|---|
@@ -86,16 +86,16 @@ Missing `avoidance.mode`, missing `orca`/`sonar` blocks, or wrong case such as `
 | `avoidance.mode: Sonar` | Reuses separation hash neighbors and calls `SonarSolver2D` | `Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutLegacyDependency` |
 | Missing/wrong-case mode | Loader fails fast | `MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode` |
 | Agent reaches target threshold | One `MassNavigationArrivalEvent` is emitted for that target | `Runtime_PerAgentWorldTargetProducesArrivalEvent` |
-| Runtime obstacle snapshots change | MassFlow obstacle stamp is rebuilt | `Runtime_RuntimeObstacleStampRebuildsAndBlocksTargetProjection` |
+| Runtime obstacle snapshots change | MassNavigationFlow obstacle stamp is rebuilt | `Runtime_RuntimeObstacleStampRebuildsAndBlocksTargetProjection` |
 
 ## Merge And Reuse
 
-NAV-6 builds on PR #235's Core-owned `MassCrowd` runtime and the NAV-3 obstacle SSOT. It reuses:
+NAV-6 builds on PR #235's Core-owned `MassNavigation` runtime and the NAV-3 obstacle SSOT. It reuses:
 
 | Reused item | Purpose |
 |---|---|
 | `MassNavigationSimulationRuntime` | Public execution facade |
-| `MassFlowSimulationState` | Single execution engine |
+| `MassNavigationFlowSolverState` | Single execution engine |
 | Separation hash | Neighbor query source for ORCA/Sonar |
 | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | Authored obstacle source upstream |
 | `MassNavigationObstacleSnapshot` | Runtime dynamic obstacle stamp input |

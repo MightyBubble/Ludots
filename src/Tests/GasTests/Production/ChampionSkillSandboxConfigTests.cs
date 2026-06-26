@@ -20,7 +20,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;

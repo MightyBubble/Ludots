@@ -21,7 +21,7 @@
           "roadNetwork.column"
         ]
       },
-      "MassCrowdAgent": {
+      "MassNavigationAgent": {
         "profileId": "Small"
       },
       "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1200 } },
@@ -60,7 +60,7 @@
           "roadNetwork.column"
         ]
       },
-      "MassCrowdAgent": {
+      "MassNavigationAgent": {
         "profileId": "Small"
       },
       "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1180 } },

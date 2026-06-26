@@ -1,6 +1,6 @@
 # 导航域配置迁移指南
 
-本页给要升级旧 Mod / showcase / 工具脚本的人用。目标是把旧导航配置迁到 Epic #281 后的新架构：尺度归 `SpatialScaleDefaults` / board，地形归 `LogicTerrainField`，障碍归 manifestation/shape/compound state，route 归 pathing policy，移动执行归 MassFlow。
+本页给要升级旧 Mod / showcase / 工具脚本的人用。目标是把旧导航配置迁到 Epic #281 后的新架构：尺度归 `SpatialScaleDefaults` / board，地形归 `LogicTerrainField`，障碍归 manifestation/shape/compound state，route 归 pathing policy，移动执行归 MassNavigationFlow。
 
 ## 迁移总原则
 
@@ -15,15 +15,15 @@
 |---|---|---|
 | `WidthInTiles` / `HeightInTiles` | `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` | 单位是 256-cell MacroTile 数量；旧键出现即 fail-fast。 |
 | 创建地图时手填 chunk 数 | 输入目标米数 + `GridCellSizeCm`，自动派生 MacroTiles / cells / Terrain/NavTiles | 编辑器 New / Add Board 已按这个模型工作。 |
-| 代码里 inline `256` / `64` / `100` | `SpatialScaleDefaults.MacroTileCells` / `TerrainChunkCells` / `CellCm` 等命名常量 | `NavigationSpatialScaleMagicNumberContractTests` 会扫 board/bake/MassFlow 代码。 |
+| 代码里 inline `256` / `64` / `100` | `SpatialScaleDefaults.MacroTileCells` / `TerrainChunkCells` / `CellCm` 等命名常量 | `NavigationSpatialScaleMagicNumberContractTests` 会扫 board/bake/MassNavigationFlow 代码。 |
 | 用 `NavTile` 命名地形块尺度 | `TerrainChunk` footprint | NavTile 是 bake 产物用途，不是新的尺度 owner。 |
-| 私有 obstacle json / loader | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与 MassFlow 执行消费同一障碍数据。 |
+| 私有 obstacle json / loader | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | bake 与 MassNavigationFlow 执行消费同一障碍数据。 |
 | `ObstacleGeometryProfile2D` | 不创建 | 主线不存在这个 owner。 |
 | 视觉高度图直接当 navmesh 输入 | 通过显式投影进入 `LogicTerrainField` | 视觉表现与逻辑通行分离。 |
 | 每条工具链单独写 bake 参数 | `NavBakeContext` + `NavBakeService` | CLI、Bridge、runtime incremental 共用同一对象。 |
 | 假 navmesh 平面 / 自造寻路 debug | DotRecast Recast/Detour artifact + query result | debug view 必须能说明 tile/profile/layer/query engine。 |
-| 旧二维导航移动执行 | MassFlow / MassCrowd execution sink | route 只产出路径/waypoints，执行统一进入 MassFlow。 |
-| road showcase 私有 move runtime | 通用 move-plan seam + MassFlow sink | road/waterway 只保留 policy 和 graph 数据。 |
+| 旧二维导航移动执行 | MassNavigationFlow / MassNavigation execution sink | route 只产出路径/waypoints，执行统一进入 MassNavigationFlow。 |
+| road showcase 私有 move runtime | 通用 move-plan seam + MassNavigationFlow sink | road/waterway 只保留 policy 和 graph 数据。 |
 
 ## MapConfig 迁移
 
@@ -115,7 +115,7 @@ Pathing policy 只引用 profile：
 
 迁移要求：
 
-- 不在 MassFlow、navmesh、road 三处复制 radius / height / clearance。
+- 不在 MassNavigationFlow、navmesh、road 三处复制 radius / height / clearance。
 - profile id 大小写严格；找不到 profile 应 fail-fast。
 - area cost / blocked layer 是 agent 与 navmesh profile 的配置，不是 terrain cell 的隐式语义。
 
@@ -142,7 +142,7 @@ Pathing policy 只引用 profile：
 }
 ```
 
-Bake、runtime incremental、MassFlow avoidance 都应从 manifestation / shape / compound state 读取障碍。不要给 Recast 单独造一份障碍 json。
+Bake、runtime incremental、MassNavigationFlow avoidance 都应从 manifestation / shape / compound state 读取障碍。不要给 Recast 单独造一份障碍 json。
 
 ## 地形与 area 迁移
 
@@ -216,14 +216,14 @@ order -> retired 2D navigation target -> custom movement step
 新执行：
 
 ```text
-order -> pathing policy -> route / mesh / graph -> move plan -> MassFlow target -> MassCrowd/MassFlow execution
+order -> pathing policy -> route / mesh / graph -> move plan -> MassNavigationFlow target -> MassNavigation/MassNavigationFlow execution
 ```
 
 迁移检查：
 
 - route 不直接写 `WorldPositionCm`。
 - road/waterway/mesh 只决定 path / waypoint / cost。
-- arrival、avoidance、动态障碍响应归 MassFlow 执行层。
+- arrival、avoidance、动态障碍响应归 MassNavigationFlow 执行层。
 - presentation debug 只读正式 runtime 状态，不写执行真相。
 
 ## 验证清单

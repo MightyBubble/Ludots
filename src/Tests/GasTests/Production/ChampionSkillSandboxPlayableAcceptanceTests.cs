@@ -25,7 +25,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
@@ -2213,7 +2213,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(intent.SinkNavigationObstacle, Is.EqualTo(1));
             Assert.That(world.TryGet(entity, out Collider2D collider), Is.True, $"{entityLabel} should bridge into physics collider.");
             Assert.That(collider.Type, Is.EqualTo(expectedColliderType));
-            Assert.That(world.TryGet(entity, out MassFlowObstacleProjection projection), Is.True, $"{entityLabel} should bridge into MassFlow obstacle projection.");
+            Assert.That(world.TryGet(entity, out MassNavigationFlowObstacleProjection projection), Is.True, $"{entityLabel} should bridge into MassNavigationFlow obstacle projection.");
             Assert.That(projection.PieceCount, Is.EqualTo(1));
             Assert.That(projection.GetShape(0), Is.EqualTo(expectedIntentShape));
             Assert.That(projection.GetRadiusCm(0), Is.GreaterThan(0));

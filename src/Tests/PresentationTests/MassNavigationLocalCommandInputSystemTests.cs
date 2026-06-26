@@ -10,9 +10,9 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Layers;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.MassCrowd;
-using Ludots.Core.MassCrowd.Runtime;
-using Ludots.Core.MassCrowd.Systems;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Registry;
@@ -229,7 +229,7 @@ namespace Ludots.Tests.Presentation
                 FindRepoRoot(),
                 "src",
                 "Core",
-                "MassCrowd",
+                "MassNavigation",
                 "Runtime",
                 "MassNavigationSimulationRuntime.cs"));
             Assert.That(source, Does.Not.Contain("Array.Resize(ref _selectionScratch"));
@@ -252,12 +252,12 @@ namespace Ludots.Tests.Presentation
             World world = engine.World;
             Entity localPlayer = world.Create(new PlayerOwner { PlayerId = LocalPlayerId });
             Entity agent = world.Create(
-                new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("light") },
+                new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("light") },
                 new Team { Id = LocalTeamId },
                 new PlayerOwner { PlayerId = LocalPlayerId },
                 OrderBuffer.CreateEmpty());
             Entity enemyAgent = world.Create(
-                new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.GetId("light") },
+                new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.GetId("light") },
                 new Team { Id = EnemyTeamId },
                 OrderBuffer.CreateEmpty());
 
@@ -387,7 +387,8 @@ namespace Ludots.Tests.Presentation
 
         internal static MassNavigationConfig CreateConfigForTests()
         {
-            MassFlowSolverConfig solver = CreateTestSolverConfig();
+            MassNavigationConfig baseConfig = LoadBaseMassNavigationConfig();
+            MassNavigationFlowSolverConfig solver = CreateTestSolverConfig();
             var config = new MassNavigationConfig
             {
                 MapId = "mass_navigation",
@@ -469,6 +470,13 @@ namespace Ludots.Tests.Presentation
                         },
                     },
                 },
+                Cadence = baseConfig.Cadence,
+                Presentation = baseConfig.Presentation,
+                TeamRelationships = baseConfig.TeamRelationships,
+                Flow = baseConfig.Flow,
+                Arrival = baseConfig.Arrival,
+                Avoidance = baseConfig.Avoidance,
+                Semantics = baseConfig.Semantics,
             };
             config.Solver.Validate();
             config.World.Validate(config.Solver);
@@ -478,6 +486,20 @@ namespace Ludots.Tests.Presentation
             config.AgentProfiles.Validate();
             config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
             return config;
+        }
+
+        private static MassNavigationConfig LoadBaseMassNavigationConfig()
+        {
+            string path = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "assets",
+                "MassNavigationConfig.json");
+            using FileStream stream = File.OpenRead(path);
+            return MassNavigationConfig.Load(stream);
         }
 
         private static AgentProfileRegistry CreateAgentProfilesForTests()
@@ -496,9 +518,9 @@ namespace Ludots.Tests.Presentation
             });
         }
 
-        private static MassFlowSolverConfig CreateTestSolverConfig()
+        private static MassNavigationFlowSolverConfig CreateTestSolverConfig()
         {
-            return new MassFlowSolverConfig
+            return new MassNavigationFlowSolverConfig
             {
                 FieldWidthCm = 10_000,
                 FieldHeightCm = 10_000,

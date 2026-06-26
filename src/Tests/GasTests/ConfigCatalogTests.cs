@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
         public void ConfigCatalog_PathsAreCaseExact()
         {
             var catalog = new ConfigCatalog();
-            catalog.Add(new ConfigCatalogEntry("MassNavigationConfig.json", ConfigMergePolicy.Replace));
+            catalog.Add(new ConfigCatalogEntry("MassNavigationConfig.json", ConfigMergePolicy.DeepObject));
 
             Assert.That(catalog.TryGet("MassNavigationConfig.json", out _), Is.True);
             Assert.That(catalog.TryGet("massnavigationconfig.json", out _), Is.False);

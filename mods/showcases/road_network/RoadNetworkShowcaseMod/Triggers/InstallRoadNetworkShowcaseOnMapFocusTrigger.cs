@@ -3,10 +3,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.MassCrowd;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Scripting;
@@ -49,7 +48,6 @@ namespace RoadNetworkShowcaseMod.Triggers
             }
 
             engine.GlobalContext[RoadNetworkShowcaseIds.InstalledKey] = true;
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
             OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new System.InvalidOperationException("RoadNetworkShowcaseMod requires Core OrderQueue.");

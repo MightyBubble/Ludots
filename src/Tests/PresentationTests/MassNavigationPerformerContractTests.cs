@@ -6,7 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
@@ -276,7 +276,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassFlowRuntime_IsConfigDrivenForCadenceAndAgentProfiles()
+        public void MassNavigationFlowRuntime_IsConfigDrivenForCadenceAndAgentProfiles()
         {
             string modRoot = MassNavigationModRoot();
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
@@ -354,34 +354,40 @@ namespace Ludots.Tests.Presentation
         {
             string repoRoot = FindRepoRoot();
             string modRoot = MassNavigationModRoot();
-            string coreMassCrowdRoot = Path.Combine(repoRoot, "src", "Core", "MassCrowd");
-            string coreRuntimeRoot = Path.Combine(coreMassCrowdRoot, "Runtime");
-            string coreSystemsRoot = Path.Combine(coreMassCrowdRoot, "Systems");
-            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "CacheDefaultObstacles");
+            string coreMassNavigationRoot = Path.Combine(repoRoot, "src", "Core", "MassNavigation");
+            string coreRuntimeRoot = Path.Combine(coreMassNavigationRoot, "Runtime");
+            string coreSystemsRoot = Path.Combine(coreMassNavigationRoot, "Systems");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "CacheDefaultObstacles");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationRuntime.cs"), "new PlayerOwner");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavigationModEntry.cs"), "GetResource");
-            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "must use Replace merge policy");
-            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "must use DeepObject merge policy");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
             AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "config_catalog.json");
             AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "PresentationEntityLifecycle.RequestDestroy");
-            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "RemoveMassCrowdRuntimeBindings");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "RemoveMassNavigationRuntimeBindings");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "PresentationOwnerHasPerformerPayload");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "positive board world bounds");
             AssertSourceDoesNotContain(Path.Combine(coreSystemsRoot, "MassNavigationOrderIngestionSystem.cs"), "TryResolveMoveOrderType");
-            Assert.That(File.Exists(Path.Combine(coreSystemsRoot, "MassNavigationHudPresentationSystem.cs")), Is.False);
-            Assert.That(File.Exists(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs")), Is.False);
-            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "localIndex % 7");
+            Assert.That(
+                Directory.EnumerateFiles(coreSystemsRoot, "*.cs")
+                    .Select(Path.GetFileName)
+                    .Any(name => name != null &&
+                                 (name.Contains("Presentation", StringComparison.Ordinal) ||
+                                  name.Contains("Hud", StringComparison.Ordinal))),
+                Is.False);
+            Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "localIndex % 7");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "AgentBodyRadiusCm");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "ResolveHardBlockRadiusCm");
-            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "GetObstacleHardBlockRadius");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "GetObstacleHardBlockRadius");
             AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "ObstacleAgentBodyRadiusCm");
             AssertSourceDoesNotContain(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "massNavigationMove");
-            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
-            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "MarkMovedEntitiesDirty()");
-            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "_entitySyncDirtyAgents");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "MarkMovedEntitiesDirty()");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationFlowSolverState.cs"), "_entitySyncDirtyAgents");
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPerformerSyncSystem.cs")),
                 Is.False,
@@ -442,7 +448,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ConfigLoader_UsesConfigPipelineReplaceMerge()
+        public void ConfigLoader_UsesConfigPipelineDeepObjectMerge()
         {
             string modRoot = MassNavigationModRoot();
             var vfs = new Ludots.Core.Modding.VirtualFileSystem();
@@ -455,7 +461,7 @@ namespace Ludots.Tests.Presentation
             var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
             var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
             Assert.That(catalog.TryGet("MassNavigationConfig.json", out Ludots.Core.Config.ConfigCatalogEntry entry), Is.True);
-            Assert.That(entry.MergePolicy, Is.EqualTo(Ludots.Core.Config.ConfigMergePolicy.Replace));
+            Assert.That(entry.MergePolicy, Is.EqualTo(Ludots.Core.Config.ConfigMergePolicy.DeepObject));
             var report = new Ludots.Core.Config.ConfigConflictReport();
             var config = new MassNavigationConfigLoader(pipeline).Load(catalog, report);
 
@@ -539,7 +545,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(obstacle["sinkNavigationObstacle"]?.GetValue<bool>(), Is.True,
                 $"{owner} must project into the navigation obstacle sink.");
             Assert.That(obstacle["sinkPhysicsCollider"]?.GetValue<bool>(), Is.False,
-                $"{owner} MassFlow blocker authoring must not implicitly duplicate a physics collider.");
+                $"{owner} MassNavigationFlow blocker authoring must not implicitly duplicate a physics collider.");
             Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
             Assert.That(obstacle["navRadiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
         }

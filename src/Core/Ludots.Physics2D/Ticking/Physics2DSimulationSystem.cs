@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 
