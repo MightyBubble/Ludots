@@ -722,7 +722,7 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
     var heightScale = ParseFloat(form.TryGetValue("heightScale", out var hsVal) ? hsVal.ToString() : null, 2.0f);
     var minUpDot = ParseFloat(form.TryGetValue("minUpDot", out var mudVal) ? mudVal.ToString() : null, 0.6f);
     var cliffThreshold = ParseInt(form.TryGetValue("cliffThreshold", out var ctVal) ? ctVal.ToString() : null, 1);
-    var tileVersion = ParseInt(form.TryGetValue("tileVersion", out var tvVal) ? tvVal.ToString() : null, 1);
+    var tileVersion = NavTileBinary.FormatVersion;
     var writeArtifact = ParseBool(form.TryGetValue("artifact", out var artVal) ? artVal.ToString() : null, defaultValue: true);
     var parallel = ParseBool(form.TryGetValue("parallel", out var parVal) ? parVal.ToString() : null, defaultValue: true);
     var maxDegree = ParseInt(form.TryGetValue("maxDegree", out var mdVal) ? mdVal.ToString() : null, Math.Max(1, Environment.ProcessorCount));
@@ -1080,7 +1080,7 @@ app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
     int chunkSizeCells = boardConfig.ChunkSizeCells > 0
         ? boardConfig.ChunkSizeCells
         : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
-    int tileVersion = payload.TileVersion <= 0 ? 1 : payload.TileVersion;
+    int tileVersion = NavTileBinary.FormatVersion;
     try
     {
         tileWidthCm = ResolveBoardTileWidthCm(boardConfig);
@@ -1547,7 +1547,7 @@ static IResult? TryReadRecastReactCommonOptions(
     heightScale = 2.0f;
     minUpDot = 0.6f;
     cliffThreshold = 1;
-    tileVersion = 1;
+    tileVersion = NavTileBinary.FormatVersion;
     parallel = true;
     maxDegree = Math.Max(1, Environment.ProcessorCount);
 
@@ -1556,14 +1556,12 @@ static IResult? TryReadRecastReactCommonOptions(
     if (TryReadOptionalFloat(form, "heightScale", 2.0f, out heightScale) is { } heightScaleError) return heightScaleError;
     if (TryReadOptionalFloat(form, "minUpDot", 0.6f, out minUpDot) is { } minUpDotError) return minUpDotError;
     if (TryReadOptionalInt(form, "cliffThreshold", 1, out cliffThreshold) is { } cliffThresholdError) return cliffThresholdError;
-    if (TryReadOptionalInt(form, "tileVersion", 1, out tileVersion) is { } tileVersionError) return tileVersionError;
     if (TryReadOptionalBool(form, "parallel", true, out parallel) is { } parallelError) return parallelError;
     if (TryReadOptionalInt(form, "maxDegree", Math.Max(1, Environment.ProcessorCount), out maxDegree) is { } maxDegreeError) return maxDegreeError;
 
     if (heightScale <= 0f) return Results.BadRequest(new { error = "Form field 'heightScale' must be > 0." });
     if (minUpDot <= 0f || minUpDot > 1f) return Results.BadRequest(new { error = "Form field 'minUpDot' must be > 0 and <= 1." });
     if (cliffThreshold < 0) return Results.BadRequest(new { error = "Form field 'cliffThreshold' must be >= 0." });
-    if (tileVersion <= 0) return Results.BadRequest(new { error = "Form field 'tileVersion' must be > 0." });
     if (maxDegree <= 0) return Results.BadRequest(new { error = "Form field 'maxDegree' must be > 0." });
     return null;
 }
@@ -3319,7 +3317,6 @@ sealed class FlatGridNavBootstrapRequest
     public string BoardName { get; set; } = string.Empty;
     public string ProfileId { get; set; } = string.Empty;
     public int Layer { get; set; }
-    public int TileVersion { get; set; } = 1;
     public List<NavBootstrapChunk> Chunks { get; set; } = new List<NavBootstrapChunk>();
 }
 

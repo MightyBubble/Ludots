@@ -340,7 +340,6 @@ export const Toolbar: React.FC = () => {
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
     const [navParallel, setNavParallel] = React.useState(true);
-    const [navTileVersion, setNavTileVersion] = React.useState(1);
     const [navHeightScale, setNavHeightScale] = React.useState(2.0);
     const [navMinUpDot, setNavMinUpDot] = React.useState(0.6);
     const [navCliffThreshold, setNavCliffThreshold] = React.useState(1);
@@ -554,7 +553,7 @@ export const Toolbar: React.FC = () => {
             state.phase === 'baking' || state.phase === 'estimating' || state.phase === 'complete'
                 ? state
                 : idleNavBakeState);
-    }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, loadedMapId, navigationConfigVersion]);
+    }, [mapId, navScope, navIncludeNeighbors, navParallel, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, loadedMapId, navigationConfigVersion]);
 
     React.useEffect(() => {
         if (!showNewMap && !showAddBoard) return;
@@ -706,7 +705,6 @@ export const Toolbar: React.FC = () => {
             `  --minUpDot ${navMinUpDot}`,
             `  --cliffThreshold ${navCliffThreshold}`,
             `  --maxDegree ${navMaxDegree}`,
-            `  --tileVersion ${navTileVersion}`,
             '  --artifact true',
             '  --parallel true',
         ].filter(Boolean).join('\r\n');
@@ -812,7 +810,6 @@ export const Toolbar: React.FC = () => {
                 boardName: loadedBoardName,
                 profileId,
                 layer: navQueryLayer,
-                tileVersion: navTileVersion,
                 chunks: missingChunks,
             }),
         });
@@ -999,7 +996,6 @@ export const Toolbar: React.FC = () => {
 
         form.append('includeNeighbors', navIncludeNeighbors ? 'true' : 'false');
         form.append('parallel', navParallel ? 'true' : 'false');
-        form.append('tileVersion', String(navTileVersion));
         form.append('heightScale', String(navHeightScale));
         form.append('minUpDot', String(navMinUpDot));
         form.append('cliffThreshold', String(navCliffThreshold));
@@ -2361,20 +2357,8 @@ export const Toolbar: React.FC = () => {
                             {numberField('Min Up Dot', navMinUpDot, setNavMinUpDot, { step: '0.05', min: '-1', max: '1' })}
                             {numberField('Cliff', navCliffThreshold, (value) => setNavCliffThreshold(Math.max(0, Math.floor(value || 0))), { step: '1', min: '0' })}
                             {numberField('Workers', navMaxDegree, (value) => setNavMaxDegree(Math.max(1, Math.floor(value || 1))), { step: '1', min: '1' })}
-                            <label className={fieldLabelClass}>
-                                Tile Artifact
-                                <select
-                                    value={String(navTileVersion)}
-                                    onChange={(e) => setNavTileVersion(parseInt(e.target.value) || 1)}
-                                    className={inputClass}
-                                    title="NavTile artifact format version. This is not the agent profile or agent size."
-                                >
-                                    <option value="1">Artifact 1</option>
-                                    <option value="2">Artifact 2</option>
-                                </select>
-                            </label>
-                            <div className="rounded border border-slate-800 bg-slate-900/50 p-2 text-[10px] text-slate-500">
-                                Artifact version controls the `.ntil` payload contract. Agent size comes from the selected profile radius.
+                            <div className="col-span-2 rounded border border-slate-800 bg-slate-900/50 p-2 text-[10px] text-slate-500">
+                                NavTile binary format is fixed by Core. Agent size comes from the selected profile radius.
                             </div>
                         </div>
                     </section>

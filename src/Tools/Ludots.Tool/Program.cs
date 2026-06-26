@@ -171,7 +171,6 @@ namespace Ludots.Tool
             var navArtifactOption = new Option<bool>("--artifact", () => true, "Write BakeArtifact json for each tile");
             var navParallelOption = new Option<bool>("--parallel", () => true, "Bake tiles in parallel");
             var navMaxDegreeOption = new Option<int>("--maxDegree", () => Math.Max(1, Environment.ProcessorCount), "Max degree of parallelism");
-            var navTileVersionOption = new Option<int>("--tileVersion", () => 1, "TileVersion written into each NavTile");
             var navLargeBakeOption = new Option<bool>("--large-bake", () => false, "Allow a large nav bake after reviewing the matching estimate");
             var navEstimateHashOption = new Option<string?>("--estimateHash", () => null, "Estimate hash returned by nav estimate-recast-react");
             bakeNavCommand.AddOption(navInOption);
@@ -182,7 +181,6 @@ namespace Ludots.Tool
             bakeNavCommand.AddOption(navArtifactOption);
             bakeNavCommand.AddOption(navParallelOption);
             bakeNavCommand.AddOption(navMaxDegreeOption);
-            bakeNavCommand.AddOption(navTileVersionOption);
             bakeNavCommand.SetHandler((InvocationContext ctx) =>
             {
                 var inputPath = ctx.ParseResult.GetValueForOption(navInOption);
@@ -193,7 +191,7 @@ namespace Ludots.Tool
                 var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                var tileVersion = (int)NavTileBinary.FormatVersion;
                 ctx.ExitCode = BakeNav(inputPath, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(bakeNavCommand);
@@ -211,7 +209,6 @@ namespace Ludots.Tool
             bakeReactNavCommand.AddOption(navArtifactOption);
             bakeReactNavCommand.AddOption(navParallelOption);
             bakeReactNavCommand.AddOption(navMaxDegreeOption);
-            bakeReactNavCommand.AddOption(navTileVersionOption);
             bakeReactNavCommand.AddOption(reactIncludeNeighborsOption);
             bakeReactNavCommand.SetHandler((InvocationContext ctx) =>
             {
@@ -225,7 +222,7 @@ namespace Ludots.Tool
                 var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                var tileVersion = (int)NavTileBinary.FormatVersion;
                 ctx.ExitCode = BakeNavFromReact(inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(bakeReactNavCommand);
@@ -245,7 +242,6 @@ namespace Ludots.Tool
             bakeRecastReactNavCommand.AddOption(navArtifactOption);
             bakeRecastReactNavCommand.AddOption(navParallelOption);
             bakeRecastReactNavCommand.AddOption(navMaxDegreeOption);
-            bakeRecastReactNavCommand.AddOption(navTileVersionOption);
             bakeRecastReactNavCommand.AddOption(navLargeBakeOption);
             bakeRecastReactNavCommand.AddOption(navEstimateHashOption);
             bakeRecastReactNavCommand.SetHandler((InvocationContext ctx) =>
@@ -262,7 +258,7 @@ namespace Ludots.Tool
                 var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                var tileVersion = (int)NavTileBinary.FormatVersion;
                 var largeBake = ctx.ParseResult.GetValueForOption(navLargeBakeOption);
                 var estimateHash = ctx.ParseResult.GetValueForOption(navEstimateHashOption);
                 ctx.ExitCode = BakeNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion, largeBake, estimateHash);
@@ -281,7 +277,6 @@ namespace Ludots.Tool
             estimateRecastReactNavCommand.AddOption(navCliffThresholdOption);
             estimateRecastReactNavCommand.AddOption(navParallelOption);
             estimateRecastReactNavCommand.AddOption(navMaxDegreeOption);
-            estimateRecastReactNavCommand.AddOption(navTileVersionOption);
             estimateRecastReactNavCommand.SetHandler((InvocationContext ctx) =>
             {
                 var mapId = ctx.ParseResult.GetValueForOption(mapIdOption);
@@ -295,7 +290,7 @@ namespace Ludots.Tool
                 var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
                 var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
                 var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = ctx.ParseResult.GetValueForOption(navTileVersionOption);
+                var tileVersion = (int)NavTileBinary.FormatVersion;
                 ctx.ExitCode = EstimateNavFromReactRecast(mapId, modId, inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, parallel, maxDegree, tileVersion);
             });
             navCommand.AddCommand(estimateRecastReactNavCommand);
