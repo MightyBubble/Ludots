@@ -13,7 +13,6 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using Ludots.UI;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
@@ -119,11 +118,7 @@ public sealed class FogVisionDecayShowcaseAcceptanceTests
             Path.Combine(repoRoot, "assets"));
         InstallInput(engine);
 
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        AcceptanceUiHostInstaller.Install(engine);
         return engine;
     }
 
