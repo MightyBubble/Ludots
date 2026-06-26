@@ -122,9 +122,57 @@ namespace Ludots.Tests.Gas
             engine.LoadMap("outer_map");
 
             IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
-            Assert.That(heightmap, Is.TypeOf<VisualHeightmapRuntime>());
+            Assert.That(heightmap, Is.TypeOf<FlatVisualHeightmap>());
+            Assert.That(heightmap, Is.AssignableTo<IVisualHeightmapRenderSource>());
             Assert.That(heightmap.TrySampleHeightCm(50f, 50f, out float heightCm), Is.True);
             Assert.That(heightCm, Is.EqualTo(50f).Within(0.001f));
+
+            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            Assert.That(renderSource.TryGetChunk(0, 0, out VisualHeightmapRenderChunk chunk), Is.True);
+            Assert.That(chunk.TryReadHeightCm(1, 1, out float chunkHeightCm), Is.True);
+            Assert.That(chunkHeightCm, Is.EqualTo(50f).Within(0.001f));
+        }
+
+        [Test]
+        public void LoadMap_RoundTrippedVisualHeightmapPreservesSamplingPrecision()
+        {
+            var asset = new VisualHeightmapAsset(
+                new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 300, 300),
+                sampleColumns: 4,
+                sampleRows: 4,
+                new short[]
+                {
+                    0, 10, 20, 30,
+                    40, 50, 60, 70,
+                    80, 90, 100, 110,
+                    120, 130, 140, 150,
+                },
+                new[]
+                {
+                    new VisualHeightmapLayerDefinition(0, "base", 0, 16),
+                },
+                VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters);
+            var expected = new VisualHeightmapRuntime(asset);
+            Assert.That(expected.TrySampleHeightCm(125f, 175f, out float expectedHeight), Is.True);
+
+            using (var stream = File.Create(Path.Combine(_modRoot, "assets", "terrain", "gradient.vhtm")))
+            {
+                VisualHeightmapBinary.Write(stream, asset);
+            }
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmapAsset": "assets/terrain/gradient.vhtm"
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.That(heightmap, Is.TypeOf<VisualHeightmapRuntime>());
+            Assert.That(heightmap.TrySampleHeightCm(125f, 175f, out float actualHeight), Is.True);
+            Assert.That(actualHeight, Is.EqualTo(expectedHeight).Within(0.001f));
         }
 
         [Test]

@@ -29,6 +29,11 @@ namespace Ludots.Core.Presentation.Terrain
 
             using Stream stream = OpenDeclaredAsset(vfs, loadedModIds, assetPath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            if (VisualHeightmapBinary.TryGetFlatHeightCm(asset, out float flatHeightCm))
+            {
+                return new FlatVisualHeightmap(asset.Bounds, flatHeightCm);
+            }
+
             return new VisualHeightmapRuntime(asset);
         }
 

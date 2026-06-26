@@ -688,6 +688,90 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapBinary_RoundTripsChunkedPayloadWithoutSamplingDrift()
+        {
+            var asset = new VisualHeightmapAsset(
+                new WorldAabbCm(0, 0, 300, 300),
+                sampleColumns: 4,
+                sampleRows: 4,
+                new short[]
+                {
+                    0, 10, 20, 30,
+                    40, 50, 60, 70,
+                    80, 90, 100, 110,
+                    120, 130, 140, 150,
+                },
+                new[]
+                {
+                    new VisualHeightmapLayerDefinition(0, "base", sampleOffset: 0, sampleCount: 16),
+                },
+                VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
+                interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
+            var expectedRuntime = new VisualHeightmapRuntime(asset);
+            Assert.That(expectedRuntime.TrySampleHeightCm(125f, 175f, out float expectedHeightCm), Is.True);
+
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            stream.Position = 0;
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+            var actualRuntime = new VisualHeightmapRuntime(roundTripped);
+
+            Assert.That(roundTripped.StorageLayout, Is.EqualTo(VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters));
+            Assert.That(roundTripped.HeightSamplesCm, Is.EqualTo(asset.HeightSamplesCm));
+            Assert.That(actualRuntime.TrySampleHeightCm(125f, 175f, out float actualHeightCm), Is.True);
+            Assert.That(actualHeightCm, Is.EqualTo(expectedHeightCm).Within(0.001f));
+        }
+
+        [Test]
+        public void VisualHeightmapBinary_FlatPayloadDoesNotPersistFullSampleGrid()
+        {
+            var flatSamples = new short[128 * 128];
+            Array.Fill(flatSamples, (short)35);
+            var flatAsset = VisualHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 12700, 12700),
+                sampleColumns: 128,
+                sampleRows: 128,
+                flatSamples);
+
+            short[] raisedSamples = (short[])flatSamples.Clone();
+            raisedSamples[raisedSamples.Length - 1] = 36;
+            var raisedAsset = VisualHeightmapAsset.CreateSingleLayer(
+                flatAsset.Bounds,
+                sampleColumns: 128,
+                sampleRows: 128,
+                raisedSamples);
+
+            using var flatStream = new MemoryStream();
+            using var raisedStream = new MemoryStream();
+            VisualHeightmapBinary.Write(flatStream, flatAsset);
+            VisualHeightmapBinary.Write(raisedStream, raisedAsset);
+            flatStream.Position = 0;
+
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(flatStream);
+
+            Assert.That(VisualHeightmapBinary.TryGetFlatHeightCm(roundTripped, out float flatHeightCm), Is.True);
+            Assert.That(flatHeightCm, Is.EqualTo(35f).Within(0.001f));
+            Assert.That(flatStream.Length, Is.LessThan(raisedStream.Length / 8));
+            Assert.That(flatStream.Length, Is.LessThan(flatSamples.Length * sizeof(short)));
+        }
+
+        [Test]
+        public void VisualHeightmapBinary_ReadFailsFastOnRetiredV2()
+        {
+            using var stream = new MemoryStream();
+            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                writer.Write(System.Text.Encoding.ASCII.GetBytes("VHTM"));
+                writer.Write(2);
+            }
+
+            stream.Position = 0;
+            Assert.That(
+                () => VisualHeightmapBinary.Read(stream),
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("version: 2"));
+        }
+
+        [Test]
         public void VisualHeightmapRuntime_SupportsBatchSamplingAndSoaRaycast()
         {
             var runtime = CreateRuntime();

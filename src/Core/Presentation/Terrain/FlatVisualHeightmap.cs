@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
@@ -8,12 +9,90 @@ namespace Ludots.Core.Presentation.Terrain
     /// Explicit flat-ground heightmap for maps that author a flat visual terrain surface.
     /// Consumers still read a single height SSOT instead of inventing independent ground projection rules.
     /// </summary>
-    public sealed class FlatVisualHeightmap : IVisualHeightmap
+    public sealed class FlatVisualHeightmap : IVisualHeightmap, IVisualHeightmapRenderSource
     {
+        private readonly float _heightCm;
+        private readonly WorldAabbCm _bounds;
+        private readonly bool _hasBounds;
+        private readonly short[] _renderSamplesCm;
+        private readonly bool _hasRenderSamples;
+
+        public FlatVisualHeightmap()
+        {
+            _heightCm = 0f;
+            _bounds = default;
+            _hasBounds = false;
+            _renderSamplesCm = CreateRenderSamplesCm(_heightCm, out _hasRenderSamples);
+        }
+
+        public FlatVisualHeightmap(float heightCm)
+        {
+            if (!float.IsFinite(heightCm)) throw new ArgumentOutOfRangeException(nameof(heightCm));
+
+            _heightCm = heightCm;
+            _bounds = default;
+            _hasBounds = false;
+            _renderSamplesCm = CreateRenderSamplesCm(_heightCm, out _hasRenderSamples);
+        }
+
+        public FlatVisualHeightmap(WorldAabbCm bounds, float heightCm = 0f)
+        {
+            if (!float.IsFinite(heightCm)) throw new ArgumentOutOfRangeException(nameof(heightCm));
+
+            _heightCm = heightCm;
+            _bounds = bounds;
+            _hasBounds = true;
+            _renderSamplesCm = CreateRenderSamplesCm(_heightCm, out _hasRenderSamples);
+        }
+
+        public WorldAabbCm Bounds => _bounds;
+
+        public int ChunkColumns => _hasBounds ? 1 : 0;
+
+        public int ChunkRows => _hasBounds ? 1 : 0;
+
+        public int SamplesPerChunkColumn => 2;
+
+        public int SamplesPerChunkRow => 2;
+
+        public int DefaultLayerIndex => 0;
+
+        public int Revision => 0;
+
+        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        {
+            if (!_hasBounds ||
+                !_hasRenderSamples ||
+                chunkX != 0 ||
+                chunkY != 0)
+            {
+                chunk = default;
+                return false;
+            }
+
+            chunk = new VisualHeightmapRenderChunk(
+                chunkX,
+                chunkY,
+                _bounds,
+                SamplesPerChunkColumn,
+                SamplesPerChunkRow,
+                _bounds.Width,
+                _bounds.Height,
+                _renderSamplesCm,
+                ReadOnlyMemory<ushort>.Empty,
+                VisualHeightSampleScale.IdentityCentimeters,
+                VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
+                SamplesPerChunkColumn,
+                0,
+                Revision);
+            return true;
+        }
+
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = -1)
         {
-            heightCm = 0f;
-            return ResolveLayerIndex(layerIndex) == 0;
+            heightCm = _heightCm;
+            return ResolveLayerIndex(layerIndex) == 0 &&
+                Contains(worldXCm, worldYCm);
         }
 
         public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = -1)
@@ -28,7 +107,13 @@ namespace Ludots.Core.Presentation.Terrain
                 return false;
             }
 
-            outHeightCm.Clear();
+            for (int i = 0; i < outHeightCm.Length; i++)
+            {
+                outHeightCm[i] = Contains(worldXCm[i], worldYCm[i])
+                    ? _heightCm
+                    : float.NaN;
+            }
+
             return true;
         }
 
@@ -52,7 +137,7 @@ namespace Ludots.Core.Presentation.Terrain
                 return false;
             }
 
-            float t = -originY / dirY;
+            float t = ((_heightCm * 0.01f) - originY) / dirY;
             if (!float.IsFinite(t) || t < 0f)
             {
                 return false;
@@ -63,11 +148,15 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 return false;
             }
+            if (!Contains(point.X * 100f, point.Z * 100f))
+            {
+                return false;
+            }
 
             hit = new VisualGroundHit(
                 worldXCm: point.X * 100f,
                 worldYCm: point.Z * 100f,
-                heightCm: 0f,
+                heightCm: _heightCm,
                 layerIndex: 0,
                 distanceMeters: t,
                 normal: Vector3.UnitY);
@@ -133,7 +222,7 @@ namespace Ludots.Core.Presentation.Terrain
                     continue;
                 }
 
-                float t = -originY / dirY;
+                float t = ((_heightCm * 0.01f) - originY) / dirY;
                 if (!float.IsFinite(t) || t < 0f)
                 {
                     outHitMask[i] = 0;
@@ -147,10 +236,15 @@ namespace Ludots.Core.Presentation.Terrain
                     outHitMask[i] = 0;
                     continue;
                 }
+                if (!Contains(x * 100f, z * 100f))
+                {
+                    outHitMask[i] = 0;
+                    continue;
+                }
 
                 outWorldXCm[i] = x * 100f;
                 outWorldYCm[i] = z * 100f;
-                outHeightCm[i] = 0f;
+                outHeightCm[i] = _heightCm;
                 outDistanceMeters[i] = t;
                 outNormalX[i] = 0f;
                 outNormalY[i] = 1f;
@@ -165,6 +259,36 @@ namespace Ludots.Core.Presentation.Terrain
         private static int ResolveLayerIndex(int layerIndex)
         {
             return layerIndex < 0 ? 0 : layerIndex;
+        }
+
+        private bool Contains(float worldXCm, float worldYCm)
+        {
+            if (!_hasBounds)
+            {
+                return true;
+            }
+
+            return float.IsFinite(worldXCm) &&
+                float.IsFinite(worldYCm) &&
+                worldXCm >= _bounds.Left &&
+                worldXCm <= _bounds.Right &&
+                worldYCm >= _bounds.Top &&
+                worldYCm <= _bounds.Bottom;
+        }
+
+        private static short[] CreateRenderSamplesCm(float heightCm, out bool canRender)
+        {
+            float roundedHeightCm = MathF.Round(heightCm);
+            canRender = MathF.Abs(heightCm - roundedHeightCm) <= 0.0001f &&
+                roundedHeightCm >= short.MinValue &&
+                roundedHeightCm <= short.MaxValue;
+            if (!canRender)
+            {
+                return Array.Empty<short>();
+            }
+
+            short sample = (short)roundedHeightCm;
+            return new[] { sample, sample, sample, sample };
         }
     }
 }

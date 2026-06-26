@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Reflection;
 using Arch.Core;
@@ -15,6 +16,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -278,6 +280,36 @@ namespace Ludots.Tests.Presentation
             Vector3 up = Vector3.Transform(Vector3.UnitY, rotations[0]);
             Assert.That(positions[0].Y, Is.EqualTo(1.2f).Within(0.001f));
             Assert.That(Vector3.Dot(Vector3.Normalize(up), surfaceNormal), Is.GreaterThan(0.999f));
+        }
+
+        [Test]
+        public void ResolveBatch_UsesRoundTrippedVisualHeightmapWithoutSamplingDrift()
+        {
+            var asset = VisualHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 1000, 1000),
+                sampleColumns: 2,
+                sampleRows: 2,
+                new short[]
+                {
+                    0, 100,
+                    100, 200,
+                });
+            var expectedHeightmap = new VisualHeightmapRuntime(asset);
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            stream.Position = 0;
+            var actualHeightmap = new VisualHeightmapRuntime(VisualHeightmapBinary.Read(stream));
+
+            Vector3[] expectedPositions = [new Vector3(5f, 0f, 5f)];
+            Vector3[] actualPositions = [new Vector3(5f, 0f, 5f)];
+            GroundingMode[] modes = [GroundingMode.SnapToGround];
+            float[] offsets = [0.25f];
+
+            PerformerGroundingUtility.ResolveBatch(expectedPositions, modes, offsets, expectedHeightmap);
+            PerformerGroundingUtility.ResolveBatch(actualPositions, modes, offsets, actualHeightmap);
+
+            Assert.That(actualPositions[0].Y, Is.EqualTo(expectedPositions[0].Y).Within(0.001f));
+            Assert.That(actualPositions[0].Y, Is.EqualTo(1.25f).Within(0.001f));
         }
 
         [Test]
