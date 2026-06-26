@@ -533,6 +533,10 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
+            Assert.That(estimate.VisualHeightmapBytes, Is.EqualTo(8L * 4L * NavBakeEstimator.VisualHeightmapR16BytesPerSample));
+            Assert.That(estimate.LogicDenseEquivalentBytes, Is.EqualTo(8L * 4L * NavBakeEstimator.LogicDenseEquivalentBytesPerCell));
+            Assert.That(estimate.LogicSparseResidentBytes, Is.EqualTo(0));
+            Assert.That(estimate.LogicSparseResidentStatus, Is.EqualTo(NavBakeEstimator.LogicSparseResidentNotMeasuredStatus));
             Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
             Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
@@ -551,6 +555,37 @@ namespace Ludots.Tests.Architecture
             Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
             Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
             Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
+        }
+
+        [Test]
+        public void NavBakeEstimator_ReportsFiveTerrainBudgetDomainsWithoutTreatingDenseEquivalentAsOutput()
+        {
+            var context = new NavBakeContext
+            {
+                MapId = "nav_estimate_terrain_budget_domains",
+                SourceUri = "Core:Maps/nav_estimate_terrain_budget_domains.ltrn",
+                Terrain = new FlatGridLogicTerrainField(64_000, 64_000, SpatialScaleDefaults.CellCm),
+                Obstacles = new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 2,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Recast,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
+
+            Assert.That(estimate.LogicDenseEquivalentBytes, Is.EqualTo(16_384_000_000L));
+            Assert.That(estimate.LogicDenseEquivalentBytes / 1024d / 1024d / 1024d, Is.EqualTo(15.2587890625d).Within(0.0001d));
+            Assert.That(estimate.VisualHeightmapBytes, Is.EqualTo(134_217_728L));
+            Assert.That(estimate.VisualHeightmapBytes, Is.LessThan(estimate.LogicDenseEquivalentBytes / 100));
+            Assert.That(estimate.LogicSparseResidentBytes, Is.EqualTo(0));
+            Assert.That(estimate.LogicSparseResidentStatus, Is.EqualTo(NavBakeEstimator.LogicSparseResidentNotMeasuredStatus));
+            Assert.That(estimate.EstimatedTileBytesLow, Is.Not.EqualTo(estimate.LogicDenseEquivalentBytes));
+            Assert.That(estimate.EstimatedTileBytesHigh, Is.Not.EqualTo(estimate.LogicDenseEquivalentBytes));
         }
 
         [Test]

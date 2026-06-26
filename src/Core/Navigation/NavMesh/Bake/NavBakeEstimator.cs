@@ -91,6 +91,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public required long TerrainCellSampleCount { get; init; }
 
+        public required long VisualHeightmapBytes { get; init; }
+
+        public required long LogicDenseEquivalentBytes { get; init; }
+
+        public required long LogicSparseResidentBytes { get; init; }
+
+        public required string LogicSparseResidentStatus { get; init; }
+
+        public required string LogicSparseResidentMessage { get; init; }
+
         public required long RecastColumnBudgetTotal { get; init; }
 
         public required long BudgetWorkUnitCount { get; init; }
@@ -134,6 +144,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public const long CdtReferenceWorkUnitsPerOperation =
             (long)SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.TerrainChunkCells;
         public const long RecastReferenceWorkUnitsPerOperation = 160_000L;
+        public const int VisualHeightmapR16BytesPerSample = 2;
+        public const int DefaultVisualHeightmapMaxSamplesPerAxis = 8192;
+        public const int LogicDenseEquivalentBytesPerCell = 4;
+        public const string LogicSparseResidentNotMeasuredStatus = "not-measured-lower-bound";
 
         public static NavBakeEstimateReport Estimate(NavBakeContext context)
         {
@@ -162,6 +176,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int tileWidthCm = checked(context.Terrain.ChunkSizeCells * cellCm);
             int tileHeightCm = checked(context.Terrain.ChunkSizeCells * verticalCellCm);
             long terrainCellSampleCount = CountTargetTerrainCells(context);
+            long visualHeightmapBytes = EstimateVisualHeightmapBytes(context.Terrain.WidthCells, context.Terrain.HeightCells);
+            long logicDenseEquivalentBytes = EstimateLogicDenseEquivalentBytes(context.Terrain.WidthCells, context.Terrain.HeightCells);
             long recastColumnBudgetTotal = 0;
 
             for (int i = 0; i < context.Config.Profiles.Count; i++)
@@ -212,6 +228,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 BakeOperationCount = operationCount,
                 ObstacleCount = context.Obstacles.Obstacles.Count,
                 TerrainCellSampleCount = terrainCellSampleCount,
+                VisualHeightmapBytes = visualHeightmapBytes,
+                LogicDenseEquivalentBytes = logicDenseEquivalentBytes,
+                LogicSparseResidentBytes = 0,
+                LogicSparseResidentStatus = LogicSparseResidentNotMeasuredStatus,
+                LogicSparseResidentMessage = "LogicTerrain sparse resident bytes are not measured before .ltrn chunk persistence; this value is a lower bound, not a dense fallback.",
                 RecastColumnBudgetTotal = recastColumnBudgetTotal,
                 BudgetWorkUnitCount = budgetWorkUnitCount,
                 EstimatedTileBytesLow = estimatedBytesLow,
@@ -355,6 +376,24 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             return count;
+        }
+
+        public static long EstimateVisualHeightmapBytes(int widthCells, int heightCells)
+        {
+            if (widthCells <= 0) throw new ArgumentOutOfRangeException(nameof(widthCells));
+            if (heightCells <= 0) throw new ArgumentOutOfRangeException(nameof(heightCells));
+
+            int sampleColumns = Math.Min(widthCells, DefaultVisualHeightmapMaxSamplesPerAxis);
+            int sampleRows = Math.Min(heightCells, DefaultVisualHeightmapMaxSamplesPerAxis);
+            return checked((long)sampleColumns * sampleRows * VisualHeightmapR16BytesPerSample);
+        }
+
+        public static long EstimateLogicDenseEquivalentBytes(int widthCells, int heightCells)
+        {
+            if (widthCells <= 0) throw new ArgumentOutOfRangeException(nameof(widthCells));
+            if (heightCells <= 0) throw new ArgumentOutOfRangeException(nameof(heightCells));
+
+            return checked((long)widthCells * heightCells * LogicDenseEquivalentBytesPerCell);
         }
 
         private static string ComputeTargetTerrainHash(NavBakeContext context)
