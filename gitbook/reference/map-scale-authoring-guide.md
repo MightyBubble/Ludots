@@ -60,9 +60,30 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 8. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。
 9. 定表现容量：大地图不等于所有 performer 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
 
+## 预算口径先读法
+
+落参数前先看 [`Terrain Data Budget SSOT`](../architecture/terrain-data-budget-ssot.md) 和 [TERR-0 #400](https://github.com/MightyBubble/Ludots/issues/400)。本页的 preset 只使用同一套五域预算口径：
+
+| 域 | 在 preset 里怎么读 |
+|---|---|
+| VisualHeightmap saved estimate | `visual spacing` 是视觉高度图采样间距。R16 单层按 `sampleColumns * sampleRows * 2` 估算，并受当前 8K 单轴上限约束；它是保存的表现高度资产预算。 |
+| LogicTerrain dense-equivalent | 只用于比较尺度，按 `widthCells * heightCells * 4`。它不是保存文件大小，也不是 sparse resident 内存。 |
+| LogicTerrain actual sparse resident | 只统计已加载、已写入或 dirty 的 board-field chunks；默认空 chunk 不实例化、不落盘。 |
+| Recast bake estimate | 这是 bake-cost。按 `targetTileCount * layerCount * sum(profile.recastColumnBudgetPerTile)`，不是存盘大小。 |
+| NavMesh output estimate | 用当前 bake 真实发出的 tile bytes 测量，不能拿 LogicTerrain dense-equivalent 替代。 |
+
+下面表格里的 tile 数都按 `TerrainChunkCells = 64` 推导。`GridCellSizeCm = 100` 时，一个 NavTile footprint 是 `64m x 64m`，一个 MacroTile 是 `256m x 256m`，因此每个 MacroTile 轴向包含 4 个 NavTile。
+
 ## RTS / 战场型
 
 目标：同屏大量单位，局部战区很细，世界可以很大但每次只在几个战区发生密集互动。
+
+可套用预设：
+
+| Preset | 世界 / Board | Cell | Visual spacing | Recast / Nav | Layers / Profiles | 为什么 |
+|---|---|---|---|---|---|---|
+| 小战术全量 bake | `2 x 2` MacroTiles，约 `512m x 512m`，Grid | `100cm` | 约 `1m`，未触发 8K 上限 | `radiusCm = 30` 时 `recastCellSizeCm = 10`；`8 x 8 = 64` target tiles | 1 layer，1-2 profiles | 适合局部战场、门洞、坡面和小队精确路径。单 profile 单层约 `64 * 409600` Recast columns，仍是可显式评估的战术规模。 |
+| 大 RTS 世界 | `250 x 250` MacroTiles，约 `64km x 64km`，Grid | `100cm` | 约 `7.8m`，受 8K 上限约束 | 不默认 full Recast；远程走 NodeGraph/road，局部战区走 MassFlow 或 windowed bake | 全图 mesh 0-1 profile；局部窗口 1 layer，1-2 profiles | LogicTerrain dense-equivalent 约 `15.3 GiB` 只是尺度对比；full Recast 是 `1000 x 1000` target tiles，会把 bake-cost 推到不可随手执行的量级。 |
 
 常见思路：
 
@@ -118,6 +139,13 @@ MassFlow 起点：
 
 目标：世界范围大，局部互动少，路径通常更偏图/区域/道路，单位不是每米都要精确避让。
 
+可套用预设：
+
+| Preset | 世界 / Board | Cell | Visual spacing | Recast / Nav | Layers / Profiles | 为什么 |
+|---|---|---|---|---|---|---|
+| 区域 / Token 大陆 | `64 x 64` MacroTiles，约 `16.384km x 16.384km`，NodeGraph | `100cm` 仅用于范围口径 | 约 `2m`，受 8K 上限约束 | NavMesh 关闭或不参与主移动；路径走 NodeGraph | 0 navmesh layers，0 mesh profiles | 大战略单位按区域、城市、道路、海线移动，navmesh operation count 为 0，避免把大陆误做成逐米 Recast 问题。 |
+| 局部战斗子板 | `4 x 4` MacroTiles，约 `1024m x 1024m`，Grid | `100cm` | 约 `1m`，未触发 8K 上限 | `radiusCm = 30-50` 时 `recastCellSizeCm = 10-16.7`；`16 x 16 = 256` target tiles | 1 layer，1-2 profiles | 大地图只负责战略移动；真正战斗切到战术 board 或窗口 bake，把 Recast bake-cost 限定在当前战场。 |
+
 常见思路：
 
 - 世界可以仍用 `GridCellSizeCm = 100` 保持 cm 坐标一致，但“玩法格”不一定等于 engine cell。
@@ -166,6 +194,13 @@ Routing 起点：
 ## 开放大世界 / Streaming 型
 
 目标：世界大、相机/玩家局部活动，必须控制 loaded window、表现驻留、运行时结构变化。
+
+可套用预设：
+
+| Preset | 世界 / Board | Cell | Visual spacing | Recast / Nav | Layers / Profiles | 为什么 |
+|---|---|---|---|---|---|---|
+| 区域窗口 / 离线 bake | `32 x 32` MacroTiles，约 `8.192km x 8.192km`，Grid | `100cm` | 约 `1m`，正好到 8K 单轴上限 | 离线按区域或窗口 bake；整区是 `128 x 128 = 16384` target tiles，运行时只加载窗口 | 1 layer，1-2 profiles | VisualHeightmap saved estimate 可控，但 Recast 是 bake-cost，不应等同于存盘大小；用窗口和离线队列约束 CPU 与 scratch 内存。 |
+| 超大 streaming 世界 | `250 x 250` MacroTiles，约 `64km x 64km`，Grid | `100cm` | 约 `7.8m`，受 8K 上限约束 | 长程路由走图或预烘区域；持久结构变化用 `runtime-incremental` + `cdt`，`tileBudgetPerFixedTick = 1` | runtime 1 layer，1 profile | sparse LogicTerrain 只驻留 loaded/dirty chunks；临时 blocker 留给 MassFlow，避免把全世界变成持续 navmesh rebuild。 |
 
 常见思路：
 
