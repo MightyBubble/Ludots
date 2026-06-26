@@ -55,7 +55,7 @@ namespace Ludots.Core.Vision
                 FogCell occupantCell = field.WorldToCell(occupant.Position);
                 CellVisibility visibility = field.GetVisibility(occupantCell);
                 KnowledgeDisclosureRecord record;
-                if (visibility == CellVisibility.Visible && exposesOnLayer && detectionStrength >= occupant.StealthLevel)
+                if (visibility == CellVisibility.Visible && detectionStrength >= occupant.StealthLevel)
                 {
                     if (!_concealment.Allows(viewerCell, occupantCell, trueSightActive, in policy))
                     {

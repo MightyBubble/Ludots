@@ -212,6 +212,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Rendering.PresentationVisualProxyBuffer _visualProxyBuffer;
         private Ludots.Core.Presentation.Rendering.SkinnedVisualBatchBuffer _skinnedVisualBatchBuffer;
         private Ludots.Core.Presentation.Requests.PresentationRequestBuffer _presentationRequestBuffer;
+        private Ludots.Core.Presentation.Rendering.GlobalFieldVisualBuffer _globalFieldVisualBuffer;
         private Ludots.Core.Presentation.Requests.SoundRequestBuffer _soundRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
@@ -637,9 +638,13 @@ namespace Ludots.Core.Engine
             var visionFogLayerRegistry = new FogLayerRegistry();
             var visionFogFieldStore = new FogFieldStore();
             var visionFogSnapshotStore = new FogSnapshotStore(relationships: relationshipRuntime);
+            var visionFogCellMap = new FogCellMap();
+            var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
             var visionResolver = new VisionResolver(
                 visionFogLayerRegistry,
                 visionFogFieldStore,
+                elevation: visionFogCellMap,
+                occlusion: visionFogCellMap,
                 relationships: relationshipRuntime);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
@@ -814,6 +819,10 @@ namespace Ludots.Core.Engine
             var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
             var presentationTargetGeneration = new PresentationTargetGeneration();
             var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.PresentationRequestCapacity);
+            var globalFieldVisualBuffer = new GlobalFieldVisualBuffer(
+                presentationConfig.GlobalFieldVisualRecordCapacity,
+                presentationConfig.GlobalFieldVisualCellCapacity,
+                presentationConfig.GlobalFieldVisualDirtyRectCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
             var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.RoadSplineCapacity);
@@ -1116,7 +1125,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
             SetService(CoreServiceKeys.VisionFogFieldStore, visionFogFieldStore);
             SetService(CoreServiceKeys.VisionFogSnapshotStore, visionFogSnapshotStore);
+            SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
+            SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
@@ -1180,6 +1191,7 @@ namespace Ludots.Core.Engine
             _visualProxyBuffer = visualProxyBuffer;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _presentationRequestBuffer = presentationRequestBuffer;
+            _globalFieldVisualBuffer = globalFieldVisualBuffer;
             _soundRequestBuffer = soundRequestBuffer;
             _instancedBatchRequestBuffer = instancedBatchRequests;
             _instancedBatchOperationBuffer = instancedBatchOperations;
@@ -1192,6 +1204,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationVisualProxyBuffer, visualProxyBuffer);
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
             SetService(CoreServiceKeys.PresentationRequestBuffer, presentationRequestBuffer);
+            SetService(CoreServiceKeys.GlobalFieldVisualBuffer, globalFieldVisualBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
@@ -1253,6 +1266,16 @@ namespace Ludots.Core.Engine
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
+            RegisterSystem(
+                new VisionSystem(
+                    World,
+                    GameSession,
+                    visionFogLayerRegistry,
+                    visionFogFieldStore,
+                    visionResolver,
+                    fogKnowledgeProjector,
+                    knowledgeProjectionStore),
+                SystemGroup.PostMovement);
             RegisterSystem(
                 new UtilityAiDecisionSystem(
                     World,

@@ -1,6 +1,9 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Vision;
 using NUnit.Framework;
@@ -195,6 +198,42 @@ namespace Ludots.Tests.GAS
                     FogRulesPolicy.Default,
                     new FogRelationshipRule(sourceHost, relationshipTypeId: 0)),
                 Throws.TypeOf<InvalidOperationException>().With.Message.Contains("RelationshipRuntime"));
+        }
+
+        [Test]
+        public void VisionSystem_DrivesFogResolveAndKnowledgeProjectionFromEcsComponents()
+        {
+            using World world = World.Create();
+            var session = new GameSession();
+            var registry = new FogLayerRegistry();
+            FogLayerId layerId = registry.Register("ground", cellSizeCm: 100, updateHz: 10);
+            uint layerMask = registry.ToMask(layerId);
+            var fields = new FogFieldStore();
+            var knowledge = new KnowledgeProjectionStore();
+            var cellMap = new FogCellMap();
+            var resolver = new VisionResolver(registry, fields, elevation: cellMap, occlusion: cellMap);
+            var projector = new FogKnowledgeProjector(knowledge, cellMap);
+            var system = new VisionSystem(world, session, registry, fields, resolver, projector, knowledge);
+
+            Entity viewer = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new VisionEmitterCm
+                {
+                    ScopeKeyId = 1,
+                    LayerMask = layerMask,
+                    Polarity = VisionPolarity.Reveal,
+                    Aperture = VisionAperture.Disk(150)
+                });
+            Entity target = world.Create(
+                WorldPositionCm.FromCm(50, 50),
+                new FogOccupantCm { ExposeLayerMask = layerMask });
+
+            system.Update(1f / 60f);
+
+            Assert.That(fields.TryGet(1, layerId, out FogField field), Is.True);
+            Assert.That(field.GetVisibility(new FogCell(0, 0)), Is.EqualTo(CellVisibility.Visible));
+            Assert.That(knowledge.TryGet(viewer, target, session.CurrentTick, out KnowledgeDisclosureRecord record), Is.True);
+            Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
         }
 
         private static RelationshipRuntime CreateRelationshipRuntime(World world, out RelationshipTypeRegistry types)

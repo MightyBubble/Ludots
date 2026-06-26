@@ -1153,7 +1153,11 @@ namespace GasTests
             string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
             string testsProjectPath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj");
             string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "FogOfWarShowcaseAcceptanceTests.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+            string coreServiceKeysPath = Path.Combine(repoRoot, "src", "Core", "Scripting", "CoreServiceKeys.cs");
             string testsProject = File.ReadAllText(testsProjectPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+            string coreServiceKeys = File.ReadAllText(coreServiceKeysPath);
             string[] visionFiles = Directory.GetFiles(visionRoot, "*.cs", SearchOption.AllDirectories);
             string[] forbiddenVisionTokens =
             {
@@ -1192,6 +1196,17 @@ namespace GasTests
                 Is.Empty,
                 "FOG-9 #314 keeps Core Vision cell-keyed, topic-neutral, and allocation-conscious:\n" +
                 string.Join("\n", hits));
+            Assert.Multiple(() =>
+            {
+                Assert.That(coreServiceKeys, Does.Contain("VisionFogCellMap"), "FOG runtime must expose the shared elevation/occlusion/concealment source.");
+                Assert.That(coreServiceKeys, Does.Contain("FogKnowledgeProjector"), "FOG runtime must expose the fog-to-Knowledge bridge.");
+                Assert.That(gameEngine, Does.Contain("new FogCellMap"), "GameEngine must construct the runtime fog cell map.");
+                Assert.That(gameEngine, Does.Contain("new FogKnowledgeProjector"), "GameEngine must register the fog-to-Knowledge bridge outside tests.");
+                Assert.That(gameEngine, Does.Contain("elevation: visionFogCellMap"), "VisionResolver must receive elevation data in the real engine loop.");
+                Assert.That(gameEngine, Does.Contain("occlusion: visionFogCellMap"), "VisionResolver must receive LoS occlusion data in the real engine loop.");
+                Assert.That(gameEngine, Does.Contain("new VisionSystem"), "GameEngine must drive resolve/project from the simulation loop.");
+                Assert.That(gameEngine, Does.Contain("SystemGroup.PostMovement"), "VisionSystem belongs after movement so it reads authoritative positions.");
+            });
 
             ShowcaseCapabilitySpec[] specs =
             {
@@ -1305,6 +1320,31 @@ namespace GasTests
             if (!File.Exists(entryPath))
             {
                 missing.Add($"{spec.Issue}: missing mod entry {ToRepoRelativePath(repoRoot, entryPath)}");
+            }
+            else
+            {
+                string entry = File.ReadAllText(entryPath);
+                if (!entry.Contains("context.OnEvent(GameEvents.GameStart", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not install runtime on GameStart");
+                }
+
+                if (!entry.Contains("context.OnEvent(GameEvents.MapLoaded", StringComparison.Ordinal) ||
+                    !entry.Contains("context.OnEvent(GameEvents.MapResumed", StringComparison.Ordinal) ||
+                    !entry.Contains("context.OnEvent(GameEvents.MapUnloaded", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not handle MapLoaded/MapResumed/MapUnloaded");
+                }
+
+                if (!entry.Contains("RegisterSystem(", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not register a simulation system");
+                }
+
+                if (!entry.Contains("RegisterPresentationSystem(", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not register a presentation system");
+                }
             }
 
             if (!File.Exists(projectPath))

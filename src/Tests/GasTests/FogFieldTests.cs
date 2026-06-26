@@ -114,5 +114,51 @@ namespace Ludots.Tests.GAS
             Assert.That(visible, Is.GreaterThan(0));
             Assert.That(allocated, Is.EqualTo(0));
         }
+
+        [Test]
+        public void FogField_WarmWriteAgeCopyAndDirtyHotPathAllocatesZeroAfterMigration()
+        {
+            var registry = new FogLayerRegistry();
+            FogLayerId layerId = registry.Register("ground", cellSizeCm: 100, updateHz: 10);
+            var field = new FogField(1, registry.Get(layerId), chunkSizeCells: 16, initialChunkCapacity: 16);
+
+            for (int i = 0; i < 256; i++)
+            {
+                field.SetVisible(new FogCell(i & 15, i >> 4));
+            }
+
+            field.ClearDirty();
+            Span<FogCell> dirty = stackalloc FogCell[256];
+            Span<FogCellState> states = stackalloc FogCellState[256];
+            field.SetExplored(new FogCell(0, 0));
+            field.SetVisible(new FogCell(0, 0));
+            field.AgeVisibleToExplored();
+            field.CopyCells(states);
+            field.EnumerateDirtyCells(dirty);
+            field.ClearDirty();
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            int copied = 0;
+            for (int iteration = 0; iteration < 1_000; iteration++)
+            {
+                for (int i = 0; i < 256; i++)
+                {
+                    field.SetVisible(new FogCell(i & 15, i >> 4));
+                }
+
+                field.AgeVisibleToExplored();
+                copied += field.CopyCells(states);
+                field.EnumerateDirtyCells(dirty);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(copied, Is.GreaterThan(0));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
     }
 }

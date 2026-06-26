@@ -37,6 +37,42 @@ namespace Ludots.Core.Vision
             return true;
         }
 
+        public int Count
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 1; i < _registered.Length; i++)
+                {
+                    if (_registered[i])
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
+        public int CopyLayerIds(Span<FogLayerId> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int i = 1; i < _registered.Length && written < destination.Length; i++)
+            {
+                if (_registered[i])
+                {
+                    destination[written++] = _definitions[i].Id;
+                }
+            }
+
+            return written;
+        }
+
         public FogLayerDefinition Get(FogLayerId id)
         {
             if (!TryGet(id, out FogLayerDefinition definition))

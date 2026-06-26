@@ -17,6 +17,8 @@
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
 - [Core Minimap Authoring](core-minimap-authoring.md)
+- [Core Field2D](core-field2d.md)
+- [Global Field Rendering](global-field-rendering.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)

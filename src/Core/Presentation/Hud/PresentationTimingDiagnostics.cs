@@ -151,6 +151,8 @@ namespace Ludots.Core.Presentation.Hud
         public float TerrainChunkBuildMs { get; private set; }
         public float TerrainHeightSyncMs { get; private set; }
         public float LastTerrainHeightSyncMs { get; private set; }
+        public float GlobalFieldRenderMs { get; private set; }
+        public float LastGlobalFieldRenderMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
         public float LastPrimitiveRenderMs { get; private set; }
         public float PrimitiveMatrixBuildMs { get; private set; }
@@ -192,6 +194,10 @@ namespace Ludots.Core.Presentation.Hud
         public int TerrainChunksDrawnLastFrame { get; private set; }
         public int TerrainChunksBuiltLastFrame { get; private set; }
         public int TerrainHeightSamplesLastFrame { get; private set; }
+        public int GlobalFieldTexturesLastFrame { get; private set; }
+        public int GlobalFieldDirtyUploadsLastFrame { get; private set; }
+        public int GlobalFieldDirtyUploadAreaLastFrame { get; private set; }
+        public int GlobalFieldDrawsLastFrame { get; private set; }
         public int PrimitiveInstancesLastFrame { get; private set; }
         public int PrimitiveBatchesLastFrame { get; private set; }
         public int SkinnedRawLastFrame { get; private set; }
@@ -540,6 +546,21 @@ namespace Ludots.Core.Presentation.Hud
             LastTerrainHeightSyncMs = (float)sampleMs;
             TerrainHeightSyncMs = Smooth(TerrainHeightSyncMs, (float)sampleMs);
             TerrainHeightSamplesLastFrame = sampledCount;
+        }
+
+        public void ObserveGlobalFieldRender(
+            double sampleMs,
+            int textureCount,
+            int dirtyUploadCount,
+            int dirtyUploadArea,
+            int drawCount)
+        {
+            LastGlobalFieldRenderMs = (float)sampleMs;
+            GlobalFieldRenderMs = Smooth(GlobalFieldRenderMs, (float)sampleMs);
+            GlobalFieldTexturesLastFrame = textureCount;
+            GlobalFieldDirtyUploadsLastFrame = dirtyUploadCount;
+            GlobalFieldDirtyUploadAreaLastFrame = dirtyUploadArea;
+            GlobalFieldDrawsLastFrame = drawCount;
         }
 
         public void ObservePrimitiveRender(double sampleMs, int instances, int batches)

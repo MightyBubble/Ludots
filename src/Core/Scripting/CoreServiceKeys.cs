@@ -195,7 +195,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
+        public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
         public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");
+        public static readonly ServiceKey<FogKnowledgeProjector> FogKnowledgeProjector = new("Vision.FogKnowledgeProjector");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
@@ -268,6 +270,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PresentationAdapterCapabilities> PresentationAdapterCapabilities = new("PresentationAdapterCapabilities");
         public static readonly ServiceKey<SkinnedVisualBatchBuffer> PresentationSkinnedVisualBatchBuffer = new("PresentationSkinnedVisualBatchBuffer");
         public static readonly ServiceKey<PresentationRequestBuffer> PresentationRequestBuffer = new("PresentationRequestBuffer");
+        public static readonly ServiceKey<GlobalFieldVisualBuffer> GlobalFieldVisualBuffer = new("GlobalFieldVisualBuffer");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
