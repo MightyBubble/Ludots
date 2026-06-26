@@ -5,6 +5,7 @@
 ## 核心主题
 
 - [运行时总览](runtime-overview.md)
+- [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [Exchange Operations](exchange-operations.md)

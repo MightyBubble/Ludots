@@ -11,6 +11,7 @@
   - [共享 Skill 治理](contributing/shared-skill-governance.md)
 - [架构](architecture/README.md)
   - [运行时总览](architecture/runtime-overview.md)
+  - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [Exchange Operations](architecture/exchange-operations.md)
