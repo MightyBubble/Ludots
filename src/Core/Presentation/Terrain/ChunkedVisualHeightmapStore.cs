@@ -26,6 +26,8 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int LoadedChunkCount => _chunks.Count;
 
+        public int MaxMipLevel { get; private set; }
+
         public void SubscribeToLoadedChunks(ILoadedChunks source)
         {
             UnsubscribeFromLoadedChunks();
@@ -59,8 +61,23 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new ArgumentException("Chunk sample payload does not match the descriptor storage encoding.", nameof(chunk));
             }
 
+            ValidateChunkMips(chunk, expectsRaw);
+
             long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
+            bool replacesCurrentMax =
+                _chunks.TryGetValue(key, out ChunkedVisualHeightmapChunk? previous) &&
+                previous.MipLevels.Length == MaxMipLevel &&
+                chunk.MipLevels.Length < MaxMipLevel;
             _chunks[key] = chunk;
+            if (replacesCurrentMax)
+            {
+                RecomputeMaxMipLevel();
+            }
+            else if (chunk.MipLevels.Length > MaxMipLevel)
+            {
+                MaxMipLevel = chunk.MipLevels.Length;
+            }
+
             Revision++;
             ThreadCache cache = GetThreadCache();
             if (ReferenceEquals(cache.Owner, this) && cache.Key == key)
@@ -78,6 +95,7 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 Revision++;
                 InvalidateThreadCache(key);
+                RecomputeMaxMipLevel();
             }
 
             return removed;
@@ -133,6 +151,7 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 Revision++;
                 InvalidateThreadCache(chunkKey);
+                RecomputeMaxMipLevel();
             }
         }
 
@@ -162,6 +181,39 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkY));
             }
+        }
+
+        private void ValidateChunkMips(ChunkedVisualHeightmapChunk chunk, bool expectsRaw)
+        {
+            for (int i = 0; i < chunk.MipLevels.Length; i++)
+            {
+                ChunkedVisualHeightmapChunkMipLevel mip = chunk.MipLevels[i];
+                if (mip.UsesRawUInt16Samples != expectsRaw)
+                {
+                    throw new ArgumentException("Chunk mip payload does not match the descriptor storage encoding.", nameof(chunk));
+                }
+
+                int expectedSamples = checked(mip.SamplesPerLayerPerChunk * Descriptor.Layers.Length);
+                int actualSamples = mip.UsesRawUInt16Samples ? mip.HeightSamplesRaw.Length : mip.HeightSamplesCm.Length;
+                if (actualSamples != expectedSamples)
+                {
+                    throw new ArgumentException("Chunk mip sample payload does not match descriptor layer count.", nameof(chunk));
+                }
+            }
+        }
+
+        private void RecomputeMaxMipLevel()
+        {
+            int max = 0;
+            foreach (ChunkedVisualHeightmapChunk chunk in _chunks.Values)
+            {
+                if (chunk.MipLevels.Length > max)
+                {
+                    max = chunk.MipLevels.Length;
+                }
+            }
+
+            MaxMipLevel = max;
         }
 
         private sealed class ThreadCache

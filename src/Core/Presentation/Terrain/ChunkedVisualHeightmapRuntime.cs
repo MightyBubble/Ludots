@@ -9,7 +9,7 @@ namespace Ludots.Core.Presentation.Terrain
     /// IVisualHeightmap runtime over a sparse loaded chunk store.
     /// Missing chunks return false instead of inventing implicit global terrain.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
+    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapMipRenderSource, IVisualHeightmapSampleAccessor
     {
         private readonly ChunkedVisualHeightmapDescriptor _descriptor;
         private readonly ChunkedVisualHeightmapStore _store;
@@ -38,13 +38,26 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int Revision => _store.Revision;
 
+        public int MaxRenderMipLevel => _store.MaxMipLevel;
+
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
         {
+            return TryGetChunk(chunkX, chunkY, mipLevel: 0, out chunk);
+        }
+
+        public bool TryGetChunk(int chunkX, int chunkY, int mipLevel, out VisualHeightmapRenderChunk chunk)
+        {
             chunk = default;
-            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk source) ||
+            if (mipLevel < 0 ||
+                !_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk source) ||
                 !TryResolveLayerIndex(_descriptor.DefaultLayerIndex, out int layerIndex))
             {
                 return false;
+            }
+
+            if (mipLevel > 0)
+            {
+                return TryGetMipChunk(source, mipLevel, layerIndex, out chunk);
             }
 
             VisualHeightmapLayerDefinition layer = _descriptor.Layers[layerIndex];
@@ -86,6 +99,42 @@ namespace Ludots.Core.Presentation.Terrain
                        worldXCm,
                        worldYCm,
                        out heightCm);
+        }
+
+        private bool TryGetMipChunk(
+            ChunkedVisualHeightmapChunk source,
+            int mipLevel,
+            int layerIndex,
+            out VisualHeightmapRenderChunk chunk)
+        {
+            if (!source.TryGetMipLevel(mipLevel, out ChunkedVisualHeightmapChunkMipLevel mip))
+            {
+                chunk = default;
+                return false;
+            }
+
+            WorldAabbCm bounds = new WorldAabbCm(
+                _descriptor.Bounds.Left + (source.ChunkX * _descriptor.ChunkWorldWidthCm),
+                _descriptor.Bounds.Top + (source.ChunkY * _descriptor.ChunkWorldHeightCm),
+                _descriptor.ChunkWorldWidthCm,
+                _descriptor.ChunkWorldHeightCm);
+            int layerSampleOffset = checked(layerIndex * mip.SamplesPerLayerPerChunk);
+            chunk = new VisualHeightmapRenderChunk(
+                source.ChunkX,
+                source.ChunkY,
+                bounds,
+                mip.SamplesPerChunkColumn,
+                mip.SamplesPerChunkRow,
+                _descriptor.ChunkWorldWidthCm / (float)(mip.SamplesPerChunkColumn - 1),
+                _descriptor.ChunkWorldHeightCm / (float)(mip.SamplesPerChunkRow - 1),
+                mip.HeightSamplesCm,
+                mip.HeightSamplesRaw,
+                _descriptor.SampleScale,
+                _descriptor.StorageLayout,
+                mip.SamplesPerChunkColumn,
+                layerSampleOffset,
+                HashCode.Combine(_store.Revision, source.Generation, mipLevel));
+            return true;
         }
 
         public bool TrySampleSurface(float worldXCm, float worldYCm, out float heightCm, out Vector3 normal, int layerIndex = 0)

@@ -9,7 +9,7 @@ namespace Ludots.Core.Presentation.Terrain
     /// Explicit flat-ground heightmap for maps that author a flat visual terrain surface.
     /// Consumers still read a single height SSOT instead of inventing independent ground projection rules.
     /// </summary>
-    public sealed class FlatVisualHeightmap : IVisualHeightmap, IVisualHeightmapRenderSource
+    public sealed class FlatVisualHeightmap : IVisualHeightmap, IVisualHeightmapMipRenderSource
     {
         private readonly float _heightCm;
         private readonly WorldAabbCm _bounds;
@@ -59,10 +59,18 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int Revision => 0;
 
+        public int MaxRenderMipLevel => 0;
+
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        {
+            return TryGetChunk(chunkX, chunkY, mipLevel: 0, out chunk);
+        }
+
+        public bool TryGetChunk(int chunkX, int chunkY, int mipLevel, out VisualHeightmapRenderChunk chunk)
         {
             if (!_hasBounds ||
                 !_hasRenderSamples ||
+                mipLevel != 0 ||
                 chunkX != 0 ||
                 chunkY != 0)
             {

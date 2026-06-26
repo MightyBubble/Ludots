@@ -66,12 +66,13 @@ namespace Ludots.Client.Raylib.Rendering
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int minChunkY = ResolveChunkIndex((camera.target.Z * 100f) - VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
             int maxChunkY = ResolveChunkIndex((camera.target.Z * 100f) + VisibleRadiusCm, source.Bounds.Top, source.Bounds.Height, source.ChunkRows);
+            IVisualHeightmapMipRenderSource? mipSource = source as IVisualHeightmapMipRenderSource;
 
             for (int y = minChunkY; y <= maxChunkY; y++)
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    if (!source.TryGetChunk(x, y, out VisualHeightmapRenderChunk chunk))
+                    if (!TryGetRenderChunk(source, mipSource, x, y, in camera, out VisualHeightmapRenderChunk chunk))
                     {
                         MissingChunkCountLastFrame++;
                         continue;
@@ -90,6 +91,67 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EvictUnusedChunks(240);
+        }
+
+        private static bool TryGetRenderChunk(
+            IVisualHeightmapRenderSource source,
+            IVisualHeightmapMipRenderSource? mipSource,
+            int chunkX,
+            int chunkY,
+            in Camera3D camera,
+            out VisualHeightmapRenderChunk chunk)
+        {
+            if (mipSource == null || mipSource.MaxRenderMipLevel <= 0)
+            {
+                return source.TryGetChunk(chunkX, chunkY, out chunk);
+            }
+
+            int requestedMipLevel = ResolveRenderMipLevel(source, mipSource.MaxRenderMipLevel, chunkX, chunkY, in camera);
+            for (int mipLevel = requestedMipLevel; mipLevel > 0; mipLevel--)
+            {
+                if (mipSource.TryGetChunk(chunkX, chunkY, mipLevel, out chunk))
+                {
+                    return true;
+                }
+            }
+
+            return source.TryGetChunk(chunkX, chunkY, out chunk);
+        }
+
+        private static int ResolveRenderMipLevel(
+            IVisualHeightmapRenderSource source,
+            int maxMipLevel,
+            int chunkX,
+            int chunkY,
+            in Camera3D camera)
+        {
+            if (maxMipLevel <= 0)
+            {
+                return 0;
+            }
+
+            float chunkWidthCm = source.Bounds.Width / (float)Math.Max(1, source.ChunkColumns);
+            float chunkHeightCm = source.Bounds.Height / (float)Math.Max(1, source.ChunkRows);
+            float centerXCm = source.Bounds.Left + ((chunkX + 0.5f) * chunkWidthCm);
+            float centerYCm = source.Bounds.Top + ((chunkY + 0.5f) * chunkHeightCm);
+            float dx = centerXCm - (camera.target.X * 100f);
+            float dy = centerYCm - (camera.target.Z * 100f);
+            float distanceCm = MathF.Sqrt((dx * dx) + (dy * dy));
+            float nearDistanceCm = MathF.Sqrt((chunkWidthCm * chunkWidthCm) + (chunkHeightCm * chunkHeightCm)) * 2f;
+            if (!float.IsFinite(distanceCm) || distanceCm <= nearDistanceCm)
+            {
+                return 0;
+            }
+
+            int mipLevel = 0;
+            float ratio = distanceCm / Math.Max(1f, nearDistanceCm);
+            while (ratio >= 2f && mipLevel < maxMipLevel)
+            {
+                mipLevel++;
+                ratio *= 0.5f;
+            }
+
+            return mipLevel;
         }
 
         private void EnsureInitialized()

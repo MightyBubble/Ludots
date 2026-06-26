@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Terrain
     public static class VisualHeightmapBinary
     {
         private const string Magic = "VHTM";
-        public const int FormatVersion = 3;
+        public const int FormatVersion = 4;
         private const int ChunkSampleColumns = 64;
         private const int ChunkSampleRows = 64;
 
@@ -92,6 +92,7 @@ namespace Ludots.Core.Presentation.Terrain
                 }
 
                 ushort[] heightSamplesRaw = ReadChunkedUInt16Payload(reader, sampleColumns, sampleRows, layers, sampleCount);
+                VisualHeightmapMipLevel[] mipLevels = ReadMipLevels(reader, usesRawUInt16Samples: true, layers.Length);
                 return new VisualHeightmapAsset(
                     bounds,
                     sampleColumns,
@@ -101,7 +102,8 @@ namespace Ludots.Core.Presentation.Terrain
                     sampleScale,
                     storageLayout,
                     defaultLayerIndex,
-                    interpolationMode);
+                    interpolationMode,
+                    mipLevels);
             }
 
             if (payloadKind != SamplePayloadKind.ChunkedInt16Centimeters)
@@ -110,6 +112,7 @@ namespace Ludots.Core.Presentation.Terrain
             }
 
             short[] heightSamplesCm = ReadChunkedInt16Payload(reader, sampleColumns, sampleRows, layers, sampleCount);
+            VisualHeightmapMipLevel[] int16MipLevels = ReadMipLevels(reader, usesRawUInt16Samples: false, layers.Length);
             return new VisualHeightmapAsset(
                 bounds,
                 sampleColumns,
@@ -118,7 +121,8 @@ namespace Ludots.Core.Presentation.Terrain
                 layers,
                 storageLayout,
                 defaultLayerIndex,
-                interpolationMode);
+                interpolationMode,
+                int16MipLevels);
         }
 
         public static void Write(Stream stream, VisualHeightmapAsset asset)
@@ -157,12 +161,15 @@ namespace Ludots.Core.Presentation.Terrain
                 writer.Write((int)SamplePayloadKind.ChunkedUInt16Scaled);
                 writer.Write(asset.HeightSamplesRaw.Length);
                 WriteChunkedUInt16Payload(writer, asset.HeightSamplesRaw, asset.SampleColumns, asset.SampleRows, asset.Layers);
-                return;
+            }
+            else
+            {
+                writer.Write((int)SamplePayloadKind.ChunkedInt16Centimeters);
+                writer.Write(asset.HeightSamplesCm.Length);
+                WriteChunkedInt16Payload(writer, asset.HeightSamplesCm, asset.SampleColumns, asset.SampleRows, asset.Layers);
             }
 
-            writer.Write((int)SamplePayloadKind.ChunkedInt16Centimeters);
-            writer.Write(asset.HeightSamplesCm.Length);
-            WriteChunkedInt16Payload(writer, asset.HeightSamplesCm, asset.SampleColumns, asset.SampleRows, asset.Layers);
+            WriteMipLevels(writer, asset);
         }
 
         public static bool TryGetFlatHeightCm(VisualHeightmapAsset asset, out float heightCm)
@@ -212,6 +219,278 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
+        private static VisualHeightmapMipLevel[] ReadMipLevels(BinaryReader reader, bool usesRawUInt16Samples, int baseLayerCount)
+        {
+            int mipLevelCount = reader.ReadInt32();
+            if (mipLevelCount < 0 || mipLevelCount > 16)
+            {
+                throw new InvalidDataException("Visual heightmap mip level count is outside the supported range.");
+            }
+
+            if (mipLevelCount == 0)
+            {
+                return Array.Empty<VisualHeightmapMipLevel>();
+            }
+
+            var mipLevels = new VisualHeightmapMipLevel[mipLevelCount];
+            for (int i = 0; i < mipLevelCount; i++)
+            {
+                int level = reader.ReadInt32();
+                if (level != i + 1)
+                {
+                    throw new InvalidDataException("Visual heightmap mip levels must be contiguous from level 1.");
+                }
+
+                int sampleColumns = reader.ReadInt32();
+                int sampleRows = reader.ReadInt32();
+                if (sampleColumns < 2 || sampleRows < 2)
+                {
+                    throw new InvalidDataException("Visual heightmap mip dimensions must be at least 2x2.");
+                }
+
+                int layerCount = reader.ReadInt32();
+                if (layerCount != baseLayerCount)
+                {
+                    throw new InvalidDataException("Visual heightmap mip layer count does not match level 0.");
+                }
+
+                var layers = new VisualHeightmapLayerDefinition[layerCount];
+                for (int layerIndex = 0; layerIndex < layerCount; layerIndex++)
+                {
+                    layers[layerIndex] = new VisualHeightmapLayerDefinition(
+                        reader.ReadInt32(),
+                        reader.ReadString(),
+                        reader.ReadInt32(),
+                        reader.ReadInt32());
+                }
+
+                var payloadKind = (SamplePayloadKind)reader.ReadInt32();
+                int sampleCount = reader.ReadInt32();
+                int samplesPerLayer = checked(sampleColumns * sampleRows);
+                int expectedSampleCount = ComputeExpectedSampleCount(layers, samplesPerLayer);
+                if (sampleCount != expectedSampleCount)
+                {
+                    throw new InvalidDataException($"Visual heightmap mip sample count mismatch. Expected {expectedSampleCount}, actual {sampleCount}.");
+                }
+
+                if (usesRawUInt16Samples)
+                {
+                    if (payloadKind != SamplePayloadKind.ChunkedUInt16Scaled)
+                    {
+                        throw new InvalidDataException("Visual heightmap mip payload kind does not match uint16-scaled storage layout.");
+                    }
+
+                    ushort[] raw = ReadChunkedUInt16Payload(reader, sampleColumns, sampleRows, layers, sampleCount);
+                    mipLevels[i] = new VisualHeightmapMipLevel(level, sampleColumns, sampleRows, raw, layers);
+                }
+                else
+                {
+                    if (payloadKind != SamplePayloadKind.ChunkedInt16Centimeters)
+                    {
+                        throw new InvalidDataException("Visual heightmap mip payload kind does not match int16-centimeter storage layout.");
+                    }
+
+                    short[] cm = ReadChunkedInt16Payload(reader, sampleColumns, sampleRows, layers, sampleCount);
+                    mipLevels[i] = new VisualHeightmapMipLevel(level, sampleColumns, sampleRows, cm, layers);
+                }
+            }
+
+            return mipLevels;
+        }
+
+        private static void WriteMipLevels(BinaryWriter writer, VisualHeightmapAsset asset)
+        {
+            VisualHeightmapMipLevel[] mipLevels = asset.MipLevels.Length == 0
+                ? GenerateMipLevels(asset)
+                : asset.MipLevels;
+
+            writer.Write(mipLevels.Length);
+            for (int i = 0; i < mipLevels.Length; i++)
+            {
+                VisualHeightmapMipLevel mip = mipLevels[i];
+                writer.Write(mip.Level);
+                writer.Write(mip.SampleColumns);
+                writer.Write(mip.SampleRows);
+                writer.Write(mip.Layers.Length);
+                for (int layerIndex = 0; layerIndex < mip.Layers.Length; layerIndex++)
+                {
+                    VisualHeightmapLayerDefinition layer = mip.Layers[layerIndex];
+                    writer.Write(layer.LayerId);
+                    writer.Write(layer.Name ?? string.Empty);
+                    writer.Write(layer.SampleOffset);
+                    writer.Write(layer.SampleCount);
+                }
+
+                if (asset.UsesRawUInt16Samples)
+                {
+                    writer.Write((int)SamplePayloadKind.ChunkedUInt16Scaled);
+                    writer.Write(mip.HeightSamplesRaw.Length);
+                    WriteChunkedUInt16Payload(writer, mip.HeightSamplesRaw, mip.SampleColumns, mip.SampleRows, mip.Layers);
+                }
+                else
+                {
+                    writer.Write((int)SamplePayloadKind.ChunkedInt16Centimeters);
+                    writer.Write(mip.HeightSamplesCm.Length);
+                    WriteChunkedInt16Payload(writer, mip.HeightSamplesCm, mip.SampleColumns, mip.SampleRows, mip.Layers);
+                }
+            }
+        }
+
+        private static VisualHeightmapMipLevel[] GenerateMipLevels(VisualHeightmapAsset asset)
+        {
+            int levelCount = CountGeneratedMipLevels(asset.SampleColumns, asset.SampleRows);
+            if (levelCount == 0)
+            {
+                return Array.Empty<VisualHeightmapMipLevel>();
+            }
+
+            var mipLevels = new VisualHeightmapMipLevel[levelCount];
+            int sourceColumns = asset.SampleColumns;
+            int sourceRows = asset.SampleRows;
+            VisualHeightmapLayerDefinition[] sourceLayers = asset.Layers;
+            if (asset.UsesRawUInt16Samples)
+            {
+                ushort[] sourceRaw = asset.HeightSamplesRaw;
+                for (int level = 1; level <= levelCount; level++)
+                {
+                    int mipColumns = Math.Max(2, DivideRoundUp(sourceColumns, 2));
+                    int mipRows = Math.Max(2, DivideRoundUp(sourceRows, 2));
+                    VisualHeightmapLayerDefinition[] layers = CreateMipLayers(sourceLayers, mipColumns, mipRows);
+                    ushort[] mipSamples = DownsampleUInt16(sourceRaw, sourceColumns, sourceRows, sourceLayers, mipColumns, mipRows, layers);
+                    mipLevels[level - 1] = new VisualHeightmapMipLevel(level, mipColumns, mipRows, mipSamples, layers);
+                    sourceRaw = mipSamples;
+                    sourceColumns = mipColumns;
+                    sourceRows = mipRows;
+                    sourceLayers = layers;
+                }
+            }
+            else
+            {
+                short[] sourceCm = asset.HeightSamplesCm;
+                for (int level = 1; level <= levelCount; level++)
+                {
+                    int mipColumns = Math.Max(2, DivideRoundUp(sourceColumns, 2));
+                    int mipRows = Math.Max(2, DivideRoundUp(sourceRows, 2));
+                    VisualHeightmapLayerDefinition[] layers = CreateMipLayers(sourceLayers, mipColumns, mipRows);
+                    short[] mipSamples = DownsampleInt16(sourceCm, sourceColumns, sourceRows, sourceLayers, mipColumns, mipRows, layers);
+                    mipLevels[level - 1] = new VisualHeightmapMipLevel(level, mipColumns, mipRows, mipSamples, layers);
+                    sourceCm = mipSamples;
+                    sourceColumns = mipColumns;
+                    sourceRows = mipRows;
+                    sourceLayers = layers;
+                }
+            }
+
+            return mipLevels;
+        }
+
+        private static int CountGeneratedMipLevels(int sampleColumns, int sampleRows)
+        {
+            int count = 0;
+            while (sampleColumns > 2 || sampleRows > 2)
+            {
+                int nextColumns = Math.Max(2, DivideRoundUp(sampleColumns, 2));
+                int nextRows = Math.Max(2, DivideRoundUp(sampleRows, 2));
+                if (nextColumns == sampleColumns && nextRows == sampleRows)
+                {
+                    break;
+                }
+
+                count++;
+                sampleColumns = nextColumns;
+                sampleRows = nextRows;
+            }
+
+            return count;
+        }
+
+        private static VisualHeightmapLayerDefinition[] CreateMipLayers(VisualHeightmapLayerDefinition[] sourceLayers, int sampleColumns, int sampleRows)
+        {
+            int samplesPerLayer = checked(sampleColumns * sampleRows);
+            var layers = new VisualHeightmapLayerDefinition[sourceLayers.Length];
+            for (int i = 0; i < sourceLayers.Length; i++)
+            {
+                VisualHeightmapLayerDefinition sourceLayer = sourceLayers[i];
+                layers[i] = new VisualHeightmapLayerDefinition(
+                    sourceLayer.LayerId,
+                    sourceLayer.Name,
+                    checked(i * samplesPerLayer),
+                    samplesPerLayer);
+            }
+
+            return layers;
+        }
+
+        private static short[] DownsampleInt16(
+            short[] source,
+            int sourceColumns,
+            int sourceRows,
+            VisualHeightmapLayerDefinition[] sourceLayers,
+            int mipColumns,
+            int mipRows,
+            VisualHeightmapLayerDefinition[] mipLayers)
+        {
+            var mip = new short[checked(mipColumns * mipRows * mipLayers.Length)];
+            for (int layerIndex = 0; layerIndex < mipLayers.Length; layerIndex++)
+            {
+                int sourceLayerOffset = sourceLayers[layerIndex].SampleOffset;
+                int mipLayerOffset = mipLayers[layerIndex].SampleOffset;
+                for (int y = 0; y < mipRows; y++)
+                {
+                    int sourceY0 = Math.Min(sourceRows - 1, y * 2);
+                    int sourceY1 = Math.Min(sourceRows - 1, sourceY0 + 1);
+                    for (int x = 0; x < mipColumns; x++)
+                    {
+                        int sourceX0 = Math.Min(sourceColumns - 1, x * 2);
+                        int sourceX1 = Math.Min(sourceColumns - 1, sourceX0 + 1);
+                        int sum =
+                            source[sourceLayerOffset + (sourceY0 * sourceColumns) + sourceX0] +
+                            source[sourceLayerOffset + (sourceY0 * sourceColumns) + sourceX1] +
+                            source[sourceLayerOffset + (sourceY1 * sourceColumns) + sourceX0] +
+                            source[sourceLayerOffset + (sourceY1 * sourceColumns) + sourceX1];
+                        mip[mipLayerOffset + (y * mipColumns) + x] = checked((short)Math.Clamp((int)MathF.Round(sum / 4f), short.MinValue, short.MaxValue));
+                    }
+                }
+            }
+
+            return mip;
+        }
+
+        private static ushort[] DownsampleUInt16(
+            ushort[] source,
+            int sourceColumns,
+            int sourceRows,
+            VisualHeightmapLayerDefinition[] sourceLayers,
+            int mipColumns,
+            int mipRows,
+            VisualHeightmapLayerDefinition[] mipLayers)
+        {
+            var mip = new ushort[checked(mipColumns * mipRows * mipLayers.Length)];
+            for (int layerIndex = 0; layerIndex < mipLayers.Length; layerIndex++)
+            {
+                int sourceLayerOffset = sourceLayers[layerIndex].SampleOffset;
+                int mipLayerOffset = mipLayers[layerIndex].SampleOffset;
+                for (int y = 0; y < mipRows; y++)
+                {
+                    int sourceY0 = Math.Min(sourceRows - 1, y * 2);
+                    int sourceY1 = Math.Min(sourceRows - 1, sourceY0 + 1);
+                    for (int x = 0; x < mipColumns; x++)
+                    {
+                        int sourceX0 = Math.Min(sourceColumns - 1, x * 2);
+                        int sourceX1 = Math.Min(sourceColumns - 1, sourceX0 + 1);
+                        int sum =
+                            source[sourceLayerOffset + (sourceY0 * sourceColumns) + sourceX0] +
+                            source[sourceLayerOffset + (sourceY0 * sourceColumns) + sourceX1] +
+                            source[sourceLayerOffset + (sourceY1 * sourceColumns) + sourceX0] +
+                            source[sourceLayerOffset + (sourceY1 * sourceColumns) + sourceX1];
+                        mip[mipLayerOffset + (y * mipColumns) + x] = checked((ushort)Math.Clamp((int)MathF.Round(sum / 4f), ushort.MinValue, ushort.MaxValue));
+                    }
+                }
+            }
+
+            return mip;
+        }
+
         private static short[] ReadChunkedInt16Payload(BinaryReader reader, int sampleColumns, int sampleRows, VisualHeightmapLayerDefinition[] layers, int sampleCount)
         {
             ReadChunkHeader(reader, sampleColumns, sampleRows, out int chunkColumns, out int chunkRows, out int defaultValue, out int recordCount);
@@ -220,12 +499,13 @@ namespace Ludots.Core.Presentation.Terrain
 
             for (int i = 0; i < recordCount; i++)
             {
-                ReadChunkRecordHeader(reader, layers.Length, chunkColumns, chunkRows, out int layerIndex, out int chunkX, out int chunkY, out ChunkPayloadKind recordKind);
+                ReadChunkRecordHeader(reader, layers.Length, chunkColumns, chunkRows, out int layerIndex, out int chunkX, out int chunkY, out ChunkPayloadKind recordKind, out VisualHeightmapChunkCompression compression);
                 GetChunkDimensions(sampleColumns, sampleRows, chunkX, chunkY, out int width, out int height);
                 int layerOffset = layers[layerIndex].SampleOffset;
 
                 if (recordKind == ChunkPayloadKind.Flat)
                 {
+                    RequireUncompressedFlatChunk(compression);
                     short value = reader.ReadInt16();
                     FillChunk(samples, sampleColumns, layerOffset, chunkX, chunkY, width, height, value);
                     continue;
@@ -236,7 +516,7 @@ namespace Ludots.Core.Presentation.Terrain
                     throw new InvalidDataException($"Unsupported visual heightmap chunk payload kind: {recordKind}.");
                 }
 
-                ReadRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                ReadRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height, compression);
             }
 
             return samples;
@@ -250,12 +530,13 @@ namespace Ludots.Core.Presentation.Terrain
 
             for (int i = 0; i < recordCount; i++)
             {
-                ReadChunkRecordHeader(reader, layers.Length, chunkColumns, chunkRows, out int layerIndex, out int chunkX, out int chunkY, out ChunkPayloadKind recordKind);
+                ReadChunkRecordHeader(reader, layers.Length, chunkColumns, chunkRows, out int layerIndex, out int chunkX, out int chunkY, out ChunkPayloadKind recordKind, out VisualHeightmapChunkCompression compression);
                 GetChunkDimensions(sampleColumns, sampleRows, chunkX, chunkY, out int width, out int height);
                 int layerOffset = layers[layerIndex].SampleOffset;
 
                 if (recordKind == ChunkPayloadKind.Flat)
                 {
+                    RequireUncompressedFlatChunk(compression);
                     ushort value = reader.ReadUInt16();
                     FillChunk(samples, sampleColumns, layerOffset, chunkX, chunkY, width, height, value);
                     continue;
@@ -266,7 +547,7 @@ namespace Ludots.Core.Presentation.Terrain
                     throw new InvalidDataException($"Unsupported visual heightmap chunk payload kind: {recordKind}.");
                 }
 
-                ReadRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                ReadRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height, compression);
             }
 
             return samples;
@@ -339,18 +620,26 @@ namespace Ludots.Core.Presentation.Terrain
             out int layerIndex,
             out int chunkX,
             out int chunkY,
-            out ChunkPayloadKind recordKind)
+            out ChunkPayloadKind recordKind,
+            out VisualHeightmapChunkCompression compression)
         {
             layerIndex = reader.ReadInt32();
             chunkX = reader.ReadInt32();
             chunkY = reader.ReadInt32();
             recordKind = (ChunkPayloadKind)reader.ReadByte();
+            compression = (VisualHeightmapChunkCompression)reader.ReadByte();
 
             if ((uint)layerIndex >= (uint)layerCount ||
                 (uint)chunkX >= (uint)chunkColumns ||
                 (uint)chunkY >= (uint)chunkRows)
             {
                 throw new InvalidDataException("Visual heightmap chunk record is outside the declared layout.");
+            }
+
+            if (compression != VisualHeightmapChunkCompression.None &&
+                compression != VisualHeightmapChunkCompression.RunLength)
+            {
+                throw new InvalidDataException($"Unsupported visual heightmap chunk compression: {compression}.");
             }
         }
 
@@ -407,12 +696,17 @@ namespace Ludots.Core.Presentation.Terrain
                         if (flat)
                         {
                             writer.Write((byte)ChunkPayloadKind.Flat);
+                            writer.Write((byte)VisualHeightmapChunkCompression.None);
                             WriteValue(writer, value);
                             continue;
                         }
 
                         writer.Write((byte)ChunkPayloadKind.Raw);
-                        WriteRawChunk(writer, samples, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                        VisualHeightmapChunkCompression compression = ShouldUseRunLengthCompression(samples, sampleColumns, layerOffset, chunkX, chunkY, width, height)
+                            ? VisualHeightmapChunkCompression.RunLength
+                            : VisualHeightmapChunkCompression.None;
+                        writer.Write((byte)compression);
+                        WriteRawChunk(writer, samples, sampleColumns, layerOffset, chunkX, chunkY, width, height, compression);
                     }
                 }
             }
@@ -481,7 +775,65 @@ namespace Ludots.Core.Presentation.Terrain
             }
         }
 
-        private static void ReadRawChunk(short[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
+        private static void RequireUncompressedFlatChunk(VisualHeightmapChunkCompression compression)
+        {
+            if (compression != VisualHeightmapChunkCompression.None)
+            {
+                throw new InvalidDataException("Visual heightmap flat chunks must not declare compression.");
+            }
+        }
+
+        private static void ReadRawChunk(
+            short[] samples,
+            BinaryReader reader,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int width,
+            int height,
+            VisualHeightmapChunkCompression compression)
+        {
+            if (compression == VisualHeightmapChunkCompression.None)
+            {
+                ReadUncompressedRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                return;
+            }
+
+            if (compression != VisualHeightmapChunkCompression.RunLength)
+            {
+                throw new InvalidDataException($"Unsupported visual heightmap chunk compression: {compression}.");
+            }
+
+            ReadRunLengthChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+        }
+
+        private static void ReadRawChunk(
+            ushort[] samples,
+            BinaryReader reader,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int width,
+            int height,
+            VisualHeightmapChunkCompression compression)
+        {
+            if (compression == VisualHeightmapChunkCompression.None)
+            {
+                ReadUncompressedRawChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                return;
+            }
+
+            if (compression != VisualHeightmapChunkCompression.RunLength)
+            {
+                throw new InvalidDataException($"Unsupported visual heightmap chunk compression: {compression}.");
+            }
+
+            ReadRunLengthChunk(samples, reader, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+        }
+
+        private static void ReadUncompressedRawChunk(short[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
         {
             int startX = chunkX * ChunkSampleColumns;
             int startY = chunkY * ChunkSampleRows;
@@ -495,7 +847,7 @@ namespace Ludots.Core.Presentation.Terrain
             }
         }
 
-        private static void ReadRawChunk(ushort[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
+        private static void ReadUncompressedRawChunk(ushort[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
         {
             int startX = chunkX * ChunkSampleColumns;
             int startY = chunkY * ChunkSampleRows;
@@ -509,6 +861,65 @@ namespace Ludots.Core.Presentation.Terrain
             }
         }
 
+        private static void ReadRunLengthChunk(short[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
+        {
+            int total = checked(width * height);
+            int written = 0;
+            while (written < total)
+            {
+                int runLength = reader.ReadInt32();
+                if (runLength <= 0 || runLength > total - written)
+                {
+                    throw new InvalidDataException("Visual heightmap RLE chunk has an invalid run length.");
+                }
+
+                short value = reader.ReadInt16();
+                FillRun(samples, sampleColumns, layerOffset, chunkX, chunkY, width, written, runLength, value);
+                written += runLength;
+            }
+        }
+
+        private static void ReadRunLengthChunk(ushort[] samples, BinaryReader reader, int sampleColumns, int layerOffset, int chunkX, int chunkY, int width, int height)
+        {
+            int total = checked(width * height);
+            int written = 0;
+            while (written < total)
+            {
+                int runLength = reader.ReadInt32();
+                if (runLength <= 0 || runLength > total - written)
+                {
+                    throw new InvalidDataException("Visual heightmap RLE chunk has an invalid run length.");
+                }
+
+                ushort value = reader.ReadUInt16();
+                FillRun(samples, sampleColumns, layerOffset, chunkX, chunkY, width, written, runLength, value);
+                written += runLength;
+            }
+        }
+
+        private static void FillRun<T>(
+            T[] samples,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int chunkWidth,
+            int runStart,
+            int runLength,
+            T value)
+        {
+            int startX = chunkX * ChunkSampleColumns;
+            int startY = chunkY * ChunkSampleRows;
+            for (int i = 0; i < runLength; i++)
+            {
+                int localIndex = runStart + i;
+                int x = localIndex % chunkWidth;
+                int y = localIndex / chunkWidth;
+                int sampleIndex = layerOffset + ((startY + y) * sampleColumns) + startX + x;
+                samples[sampleIndex] = value;
+            }
+        }
+
         private static void WriteRawChunk<T>(
             BinaryWriter writer,
             T[] samples,
@@ -517,9 +928,21 @@ namespace Ludots.Core.Presentation.Terrain
             int chunkX,
             int chunkY,
             int width,
-            int height)
-            where T : unmanaged
+            int height,
+            VisualHeightmapChunkCompression compression)
+            where T : unmanaged, IEquatable<T>
         {
+            if (compression == VisualHeightmapChunkCompression.RunLength)
+            {
+                WriteRunLengthChunk(writer, samples, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+                return;
+            }
+
+            if (compression != VisualHeightmapChunkCompression.None)
+            {
+                throw new InvalidOperationException($"Unsupported visual heightmap chunk compression: {compression}.");
+            }
+
             int startX = chunkX * ChunkSampleColumns;
             int startY = chunkY * ChunkSampleRows;
             for (int y = 0; y < height; y++)
@@ -529,6 +952,108 @@ namespace Ludots.Core.Presentation.Terrain
                 {
                     WriteValue(writer, samples[rowOffset + x]);
                 }
+            }
+        }
+
+        private static bool ShouldUseRunLengthCompression<T>(
+            T[] samples,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int width,
+            int height)
+            where T : unmanaged, IEquatable<T>
+        {
+            int runCount = CountRuns(samples, sampleColumns, layerOffset, chunkX, chunkY, width, height);
+            int sampleSizeBytes = typeof(T) == typeof(short) || typeof(T) == typeof(ushort)
+                ? 2
+                : throw new InvalidOperationException($"Unsupported visual heightmap sample type: {typeof(T).Name}.");
+            int rawBytes = checked(width * height * sampleSizeBytes);
+            int rleBytes = checked(runCount * (sizeof(int) + sampleSizeBytes));
+            return rleBytes < rawBytes;
+        }
+
+        private static int CountRuns<T>(
+            T[] samples,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int width,
+            int height)
+            where T : unmanaged, IEquatable<T>
+        {
+            int startX = chunkX * ChunkSampleColumns;
+            int startY = chunkY * ChunkSampleRows;
+            int runCount = 0;
+            bool hasPrevious = false;
+            T previous = default;
+            for (int y = 0; y < height; y++)
+            {
+                int rowOffset = layerOffset + ((startY + y) * sampleColumns) + startX;
+                for (int x = 0; x < width; x++)
+                {
+                    T current = samples[rowOffset + x];
+                    if (!hasPrevious || !current.Equals(previous))
+                    {
+                        runCount++;
+                        previous = current;
+                        hasPrevious = true;
+                    }
+                }
+            }
+
+            return runCount;
+        }
+
+        private static void WriteRunLengthChunk<T>(
+            BinaryWriter writer,
+            T[] samples,
+            int sampleColumns,
+            int layerOffset,
+            int chunkX,
+            int chunkY,
+            int width,
+            int height)
+            where T : unmanaged, IEquatable<T>
+        {
+            int startX = chunkX * ChunkSampleColumns;
+            int startY = chunkY * ChunkSampleRows;
+            bool hasRun = false;
+            T runValue = default;
+            int runLength = 0;
+            for (int y = 0; y < height; y++)
+            {
+                int rowOffset = layerOffset + ((startY + y) * sampleColumns) + startX;
+                for (int x = 0; x < width; x++)
+                {
+                    T current = samples[rowOffset + x];
+                    if (!hasRun)
+                    {
+                        runValue = current;
+                        runLength = 1;
+                        hasRun = true;
+                        continue;
+                    }
+
+                    if (current.Equals(runValue))
+                    {
+                        runLength++;
+                        continue;
+                    }
+
+                    writer.Write(runLength);
+                    WriteValue(writer, runValue);
+                    runValue = current;
+                    runLength = 1;
+                }
+            }
+
+            if (hasRun)
+            {
+                writer.Write(runLength);
+                WriteValue(writer, runValue);
             }
         }
 

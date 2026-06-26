@@ -4,7 +4,7 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
+    public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapMipRenderSource, IVisualHeightmapSampleAccessor
     {
         private const int PreferredRenderChunkSampleSpan = 33;
         private readonly VisualHeightmapAsset _asset;
@@ -38,14 +38,27 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int Revision => 0;
 
+        public int MaxRenderMipLevel => _asset.MipLevels.Length;
+
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        {
+            return TryGetChunk(chunkX, chunkY, mipLevel: 0, out chunk);
+        }
+
+        public bool TryGetChunk(int chunkX, int chunkY, int mipLevel, out VisualHeightmapRenderChunk chunk)
         {
             if ((uint)chunkX >= (uint)_renderChunkColumns ||
                 (uint)chunkY >= (uint)_renderChunkRows ||
+                (uint)mipLevel > (uint)_asset.MipLevels.Length ||
                 !TryResolveLayerIndex(_asset.DefaultLayerIndex, out int resolvedLayer))
             {
                 chunk = default;
                 return false;
+            }
+
+            if (mipLevel > 0)
+            {
+                return TryGetMipChunk(chunkX, chunkY, mipLevel, resolvedLayer, out chunk);
             }
 
             VisualHeightmapLayerDefinition layer = _asset.Layers[resolvedLayer];
@@ -242,6 +255,60 @@ namespace Ludots.Core.Presentation.Terrain
             }
         }
 
+        private bool TryGetMipChunk(
+            int chunkX,
+            int chunkY,
+            int mipLevel,
+            int resolvedLayer,
+            out VisualHeightmapRenderChunk chunk)
+        {
+            VisualHeightmapMipLevel mip = _asset.MipLevels[mipLevel - 1];
+            if (mip.SampleColumns < 2 || mip.SampleRows < 2)
+            {
+                chunk = default;
+                return false;
+            }
+
+            int sampleX = ResolveMipChunkStart(chunkX, _renderChunkColumns, mip.SampleColumns);
+            int sampleY = ResolveMipChunkStart(chunkY, _renderChunkRows, mip.SampleRows);
+            int sampleEndX = ResolveMipChunkEnd(chunkX, _renderChunkColumns, mip.SampleColumns);
+            int sampleEndY = ResolveMipChunkEnd(chunkY, _renderChunkRows, mip.SampleRows);
+            if (sampleEndX <= sampleX || sampleEndY <= sampleY)
+            {
+                chunk = default;
+                return false;
+            }
+
+            VisualHeightmapLayerDefinition layer = mip.Layers[resolvedLayer];
+            float sampleStepXCm = _asset.Bounds.Width / (float)(mip.SampleColumns - 1);
+            float sampleStepYCm = _asset.Bounds.Height / (float)(mip.SampleRows - 1);
+            int boundsLeft = RoundSampleWorldCm(_asset.Bounds.Left, sampleX, sampleStepXCm);
+            int boundsTop = RoundSampleWorldCm(_asset.Bounds.Top, sampleY, sampleStepYCm);
+            int boundsRight = RoundSampleWorldCm(_asset.Bounds.Left, sampleEndX, sampleStepXCm);
+            int boundsBottom = RoundSampleWorldCm(_asset.Bounds.Top, sampleEndY, sampleStepYCm);
+
+            chunk = new VisualHeightmapRenderChunk(
+                chunkX,
+                chunkY,
+                new WorldAabbCm(
+                    boundsLeft,
+                    boundsTop,
+                    boundsRight - boundsLeft,
+                    boundsBottom - boundsTop),
+                sampleEndX - sampleX + 1,
+                sampleEndY - sampleY + 1,
+                sampleStepXCm,
+                sampleStepYCm,
+                mip.HeightSamplesCm,
+                mip.HeightSamplesRaw,
+                _asset.SampleScale,
+                _asset.StorageLayout,
+                mip.SampleColumns,
+                layer.SampleOffset + (sampleY * mip.SampleColumns) + sampleX,
+                HashCode.Combine(Revision, mipLevel));
+            return true;
+        }
+
         private bool TryResolveLayerIndex(int layerIndex, out int resolvedLayer)
         {
             resolvedLayer = layerIndex >= 0 ? layerIndex : _asset.DefaultLayerIndex;
@@ -282,5 +349,24 @@ namespace Ludots.Core.Presentation.Terrain
         {
             return originCm + (int)MathF.Round(sampleIndex * sampleStepCm);
         }
+
+        private static int ResolveMipChunkStart(int chunkIndex, int chunkCount, int sampleCount)
+        {
+            int sampleSteps = sampleCount - 1;
+            return Math.Clamp((int)Math.Floor(chunkIndex * sampleSteps / (double)chunkCount), 0, sampleSteps - 1);
+        }
+
+        private static int ResolveMipChunkEnd(int chunkIndex, int chunkCount, int sampleCount)
+        {
+            int sampleSteps = sampleCount - 1;
+            if (chunkIndex == chunkCount - 1)
+            {
+                return sampleSteps;
+            }
+
+            int end = (int)Math.Ceiling((chunkIndex + 1) * sampleSteps / (double)chunkCount);
+            return Math.Clamp(end, 1, sampleSteps);
+        }
+
     }
 }

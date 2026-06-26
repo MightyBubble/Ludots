@@ -13,7 +13,8 @@ namespace Ludots.Core.Presentation.Terrain
             VisualHeightmapLayerDefinition[] layers,
             VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
             int defaultLayerIndex = 0,
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield,
+            VisualHeightmapMipLevel[]? mipLevels = null)
         {
             if (sampleColumns <= 0) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
             if (sampleRows <= 0) throw new ArgumentOutOfRangeException(nameof(sampleRows));
@@ -45,6 +46,7 @@ namespace Ludots.Core.Presentation.Terrain
             DefaultLayerIndex = defaultLayerIndex;
             InterpolationMode = interpolationMode;
             SampleScale = VisualHeightSampleScale.IdentityCentimeters;
+            MipLevels = ValidateMipLevels(mipLevels, layers.Length, usesRawUInt16Samples: false);
         }
 
         public VisualHeightmapAsset(
@@ -56,7 +58,8 @@ namespace Ludots.Core.Presentation.Terrain
             VisualHeightSampleScale sampleScale,
             VisualHeightmapStorageLayout storageLayout = VisualHeightmapStorageLayout.RowMajorUInt16Scaled,
             int defaultLayerIndex = 0,
-            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield)
+            VisualHeightmapInterpolationMode interpolationMode = VisualHeightmapInterpolationMode.BilinearHeightfield,
+            VisualHeightmapMipLevel[]? mipLevels = null)
         {
             if (sampleColumns <= 0) throw new ArgumentOutOfRangeException(nameof(sampleColumns));
             if (sampleRows <= 0) throw new ArgumentOutOfRangeException(nameof(sampleRows));
@@ -89,6 +92,7 @@ namespace Ludots.Core.Presentation.Terrain
             DefaultLayerIndex = defaultLayerIndex;
             InterpolationMode = interpolationMode;
             SampleScale = sampleScale;
+            MipLevels = ValidateMipLevels(mipLevels, layers.Length, usesRawUInt16Samples: true);
         }
 
         public WorldAabbCm Bounds { get; }
@@ -114,6 +118,8 @@ namespace Ludots.Core.Presentation.Terrain
         public int SamplesPerLayer => checked(SampleColumns * SampleRows);
 
         public bool UsesRawUInt16Samples => HeightSamplesRaw.Length > 0;
+
+        public VisualHeightmapMipLevel[] MipLevels { get; }
 
         public static VisualHeightmapAsset CreateSingleLayer(
             WorldAabbCm bounds,
@@ -185,6 +191,39 @@ namespace Ludots.Core.Presentation.Terrain
             {
                 throw new ArgumentOutOfRangeException(paramName, "This visual heightmap constructor requires a uint16 scaled storage layout.");
             }
+        }
+
+        private static VisualHeightmapMipLevel[] ValidateMipLevels(
+            VisualHeightmapMipLevel[]? mipLevels,
+            int layerCount,
+            bool usesRawUInt16Samples)
+        {
+            if (mipLevels == null || mipLevels.Length == 0)
+            {
+                return Array.Empty<VisualHeightmapMipLevel>();
+            }
+
+            for (int i = 0; i < mipLevels.Length; i++)
+            {
+                VisualHeightmapMipLevel mip = mipLevels[i]
+                    ?? throw new ArgumentException("Visual heightmap mip levels must not contain null entries.", nameof(mipLevels));
+                if (mip.Level != i + 1)
+                {
+                    throw new ArgumentException("Visual heightmap mip levels must be contiguous from level 1.", nameof(mipLevels));
+                }
+
+                if (mip.UsesRawUInt16Samples != usesRawUInt16Samples)
+                {
+                    throw new ArgumentException("Visual heightmap mip encoding must match the base asset encoding.", nameof(mipLevels));
+                }
+
+                if (mip.Layers.Length != layerCount)
+                {
+                    throw new ArgumentException("Visual heightmap mip layer count must match the base asset layer count.", nameof(mipLevels));
+                }
+            }
+
+            return mipLevels;
         }
     }
 }

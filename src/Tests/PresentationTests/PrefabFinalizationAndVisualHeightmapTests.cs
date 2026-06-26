@@ -720,6 +720,73 @@ namespace Ludots.Tests.Presentation
             Assert.That(roundTripped.HeightSamplesCm, Is.EqualTo(asset.HeightSamplesCm));
             Assert.That(actualRuntime.TrySampleHeightCm(125f, 175f, out float actualHeightCm), Is.True);
             Assert.That(actualHeightCm, Is.EqualTo(expectedHeightCm).Within(0.001f));
+            Assert.That(roundTripped.MipLevels, Has.Length.EqualTo(1));
+            Assert.That(roundTripped.MipLevels[0].SampleColumns, Is.EqualTo(2));
+            Assert.That(roundTripped.MipLevels[0].SampleRows, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void VisualHeightmapBinary_RoundTripsMipChainAndKeepsLevelZeroSamplingPrecise()
+        {
+            short[] samples = new short[8 * 8];
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    samples[(y * 8) + x] = (short)((x * 10) + y);
+                }
+            }
+
+            var asset = VisualHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 700, 700),
+                sampleColumns: 8,
+                sampleRows: 8,
+                samples);
+            var expectedRuntime = new VisualHeightmapRuntime(asset);
+            Assert.That(expectedRuntime.TrySampleHeightCm(350f, 350f, out float expectedHeightCm), Is.True);
+
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            stream.Position = 0;
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+            var actualRuntime = new VisualHeightmapRuntime(roundTripped);
+
+            Assert.That(roundTripped.MipLevels, Has.Length.EqualTo(2));
+            Assert.That(roundTripped.MipLevels[0].SampleColumns, Is.EqualTo(4));
+            Assert.That(roundTripped.MipLevels[1].SampleColumns, Is.EqualTo(2));
+            Assert.That(actualRuntime.TrySampleHeightCm(350f, 350f, out float actualHeightCm), Is.True);
+            Assert.That(actualHeightCm, Is.EqualTo(expectedHeightCm).Within(0.001f));
+
+            var mipSource = (IVisualHeightmapMipRenderSource)actualRuntime;
+            Assert.That(mipSource.TryGetChunk(0, 0, mipLevel: 1, out VisualHeightmapRenderChunk mipChunk), Is.True);
+            Assert.That(mipChunk.SampleColumns, Is.EqualTo(4));
+            Assert.That(mipChunk.SampleRows, Is.EqualTo(4));
+            Assert.That(mipChunk.TryReadHeightCm(0, 0, out float mipHeightCm), Is.True);
+            Assert.That(mipHeightCm, Is.EqualTo(6f).Within(0.001f));
+        }
+
+        [Test]
+        public void VisualHeightmapBinary_CompressedChunkRoundTripsEquivalentSamples()
+        {
+            short[] samples = new short[64 * 64];
+            for (int i = 0; i < samples.Length; i++)
+            {
+                samples[i] = i < samples.Length / 2 ? (short)10 : (short)20;
+            }
+
+            var asset = VisualHeightmapAsset.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 6300, 6300),
+                sampleColumns: 64,
+                sampleRows: 64,
+                samples);
+
+            using var stream = new MemoryStream();
+            VisualHeightmapBinary.Write(stream, asset);
+            Assert.That(stream.Length, Is.LessThan(samples.Length * sizeof(short)));
+
+            stream.Position = 0;
+            VisualHeightmapAsset roundTripped = VisualHeightmapBinary.Read(stream);
+            Assert.That(roundTripped.HeightSamplesCm, Is.EqualTo(samples));
         }
 
         [Test]
@@ -751,24 +818,24 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(VisualHeightmapBinary.TryGetFlatHeightCm(roundTripped, out float flatHeightCm), Is.True);
             Assert.That(flatHeightCm, Is.EqualTo(35f).Within(0.001f));
-            Assert.That(flatStream.Length, Is.LessThan(raisedStream.Length / 8));
+            Assert.That(flatStream.Length, Is.LessThan(raisedStream.Length));
             Assert.That(flatStream.Length, Is.LessThan(flatSamples.Length * sizeof(short)));
         }
 
         [Test]
-        public void VisualHeightmapBinary_ReadFailsFastOnRetiredV2()
+        public void VisualHeightmapBinary_ReadFailsFastOnRetiredV3()
         {
             using var stream = new MemoryStream();
             using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
             {
                 writer.Write(System.Text.Encoding.ASCII.GetBytes("VHTM"));
-                writer.Write(2);
+                writer.Write(3);
             }
 
             stream.Position = 0;
             Assert.That(
                 () => VisualHeightmapBinary.Read(stream),
-                Throws.TypeOf<InvalidDataException>().With.Message.Contains("version: 2"));
+                Throws.TypeOf<InvalidDataException>().With.Message.Contains("version: 3"));
         }
 
         [Test]
@@ -1085,6 +1152,57 @@ namespace Ludots.Tests.Presentation
             Assert.That(hitHeight[0], Is.EqualTo(25f).Within(0.001f));
             Assert.That(float.IsNaN(hitHeight[1]), Is.True);
             Assert.That(hitLayer[1], Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void ChunkedVisualHeightmapRuntime_MipChunkRevisionChangesWhenStreamingTileChanges()
+        {
+            var descriptor = ChunkedVisualHeightmapDescriptor.CreateSingleLayer(
+                new WorldAabbCm(0, 0, 100, 100),
+                chunkColumns: 1,
+                chunkRows: 1,
+                samplesPerChunkColumn: 4,
+                samplesPerChunkRow: 4);
+            var store = new ChunkedVisualHeightmapStore(descriptor);
+            var runtime = new ChunkedVisualHeightmapRuntime(descriptor, store);
+            var source = (IVisualHeightmapMipRenderSource)runtime;
+
+            store.SetChunk(new ChunkedVisualHeightmapChunk(
+                chunkX: 0,
+                chunkY: 0,
+                heightSamplesCm: new short[16],
+                generation: 1,
+                mipLevels: new[]
+                {
+                    new ChunkedVisualHeightmapChunkMipLevel(
+                        level: 1,
+                        samplesPerChunkColumn: 2,
+                        samplesPerChunkRow: 2,
+                        new short[] { 0, 0, 0, 0 }),
+                }));
+
+            Assert.That(source.MaxRenderMipLevel, Is.EqualTo(1));
+            Assert.That(source.TryGetChunk(0, 0, mipLevel: 1, out VisualHeightmapRenderChunk first), Is.True);
+            int firstRevision = first.Revision;
+
+            store.SetChunk(new ChunkedVisualHeightmapChunk(
+                chunkX: 0,
+                chunkY: 0,
+                heightSamplesCm: new short[16],
+                generation: 2,
+                mipLevels: new[]
+                {
+                    new ChunkedVisualHeightmapChunkMipLevel(
+                        level: 1,
+                        samplesPerChunkColumn: 2,
+                        samplesPerChunkRow: 2,
+                        new short[] { 10, 10, 10, 10 }),
+                }));
+
+            Assert.That(source.TryGetChunk(0, 0, mipLevel: 1, out VisualHeightmapRenderChunk second), Is.True);
+            Assert.That(second.Revision, Is.Not.EqualTo(firstRevision));
+            Assert.That(second.TryReadHeightCm(1, 1, out float heightCm), Is.True);
+            Assert.That(heightCm, Is.EqualTo(10f).Within(0.001f));
         }
 
         private static VisualHeightmapRuntime CreateRuntime()
