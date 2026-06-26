@@ -1,6 +1,6 @@
 ﻿# 空间尺度与分辨率 SSOT
 
-所属总单：[Epic #281](https://github.com/MightyBubble/Ludots/issues/281)。本页落实 [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282)，是后续 NAV-1 到 NAV-10 的尺度词汇唯一来源。
+所属总单：[Epic #281](https://github.com/MightyBubble/Ludots/issues/281)。本页落实 [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282)，是后续 NAV-1 到 NAV-10 的尺度词汇唯一来源。地形预算单位、owner 与 dense-equivalent / 存盘 / bake-cost 口径见 [Terrain Data Budget SSOT](terrain-data-budget-ssot.md)。
 
 ## 背景（现状）
 
