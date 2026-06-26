@@ -307,12 +307,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             var triA = new int[triCount];
             var triB = new int[triCount];
             var triC = new int[triCount];
+            var triAreaIds = new byte[triCount];
 
             for (int i = 0; i < triCount; i++)
             {
                 triA[i] = triMesh.Triangles[i * 3 + 0];
                 triB[i] = triMesh.Triangles[i * 3 + 1];
                 triC[i] = triMesh.Triangles[i * 3 + 2];
+                triAreaIds[i] = SampleAreaId(terrain, mapWidth, mapHeight, startC, startR, triMesh, i);
             }
 
             // Build adjacency
@@ -359,6 +361,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 vx, vy, vz,
                 triA, triB, triC,
                 n0, n1, n2,
+                triAreaIds,
                 portals);
 
             // Serialize and deserialize for checksum
@@ -393,6 +396,28 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             byte h = terrain.GetCell(c, r).HeightLevel;
             return h * heightScale;
+        }
+
+        private static byte SampleAreaId(
+            LogicTerrainField terrain,
+            int mapWidth,
+            int mapHeight,
+            int startC,
+            int startR,
+            TriMesh triMesh,
+            int triangleIndex)
+        {
+            Vector2 a = triMesh.Vertices[triMesh.Triangles[triangleIndex * 3 + 0]];
+            Vector2 b = triMesh.Vertices[triMesh.Triangles[triangleIndex * 3 + 1]];
+            Vector2 c = triMesh.Vertices[triMesh.Triangles[triangleIndex * 3 + 2]];
+            int globalC = startC + (int)MathF.Floor((a.X + b.X + c.X) / 3f);
+            int globalR = startR + (int)MathF.Floor((a.Y + b.Y + c.Y) / 3f);
+            if ((uint)globalC >= (uint)mapWidth || (uint)globalR >= (uint)mapHeight)
+            {
+                return 0;
+            }
+
+            return terrain.GetCell(globalC, globalR).AreaId;
         }
 
         private readonly struct EdgeKey : IEquatable<EdgeKey>

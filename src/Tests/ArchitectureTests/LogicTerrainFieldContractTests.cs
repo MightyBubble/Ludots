@@ -1,7 +1,9 @@
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Map.Fields;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Terrain;
@@ -72,6 +74,57 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(afterVisualOnly, Is.EqualTo(before), "Visual heightmap must not implicitly mutate logic terrain.");
             Assert.That(projected.GetCell(32, 32).HeightLevel, Is.GreaterThan(terrain.GetCell(32, 32).HeightLevel));
+        }
+
+        [Test]
+        public void VisualHeightmapProjection_CarriesAreaIdFromPolygonAreaAuthoring()
+        {
+            var visual = CreateRaisedVisualHeightmap(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells);
+            var source = new NavObstacleAreaProjectionSource(
+                CreateAreaAuthoring(areaId: 7),
+                "Ground");
+
+            var projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                visual,
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.CellCm,
+                LogicTerrainProjectionOptions.Default,
+                source);
+
+            Assert.That(projected.GetCell(2, 2).AreaId, Is.EqualTo(7));
+            Assert.That(projected.GetCell(0, 0).AreaId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void VisualProjectedAreaIds_FlowIntoNavTileAsCostTableKeys()
+        {
+            var visual = CreateRaisedVisualHeightmap(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells);
+            var source = new NavObstacleAreaProjectionSource(
+                CreateAreaAuthoring(areaId: 7),
+                "Ground");
+            var terrain = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
+                visual,
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.CellCm,
+                LogicTerrainProjectionOptions.Default,
+                source);
+            var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
+
+            bool ok = NavTileBuilder.TryBuildTile(terrain, 0, 0, 1, config, out NavTile tile, out NavBakeArtifact artifact);
+
+            Assert.That(ok, Is.True, artifact.Message);
+            Assert.That(ContainsArea(tile, 7), Is.True);
+            Assert.That(typeof(LogicTerrainCell).GetProperty("Cost"), Is.Null);
+
+            NavAreaCostTable infantryCosts = CreateAreaCosts(areaId: 7, cost: 1.25f);
+            NavAreaCostTable cavalryCosts = CreateAreaCosts(areaId: 7, cost: 4.5f);
+            Assert.That(infantryCosts.Get(7), Is.Not.EqualTo(cavalryCosts.Get(7)));
         }
 
         [Test]
@@ -331,6 +384,58 @@ namespace Ludots.Tests.Architecture
                 samples,
                 interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
             return new VisualHeightmapRuntime(asset);
+        }
+
+        private static NavObstacleSet CreateAreaAuthoring(byte areaId)
+        {
+            int min = SpatialScaleDefaults.CellCm;
+            int max = SpatialScaleDefaults.CellCm * 4;
+            return new NavObstacleSet
+            {
+                Obstacles =
+                {
+                    new NavObstacle
+                    {
+                        Id = "road-area",
+                        Enabled = true,
+                        Kind = NavObstacleKind.Polygon,
+                        LayerId = "Ground",
+                        AreaId = areaId,
+                        Points =
+                        {
+                            new NavPointCm(min, min),
+                            new NavPointCm(max, min),
+                            new NavPointCm(max, max),
+                            new NavPointCm(min, max)
+                        }
+                    }
+                }
+            };
+        }
+
+        private static bool ContainsArea(NavTile tile, byte areaId)
+        {
+            for (int i = 0; i < tile.TriAreaIds.Length; i++)
+            {
+                if (tile.TriAreaIds[i] == areaId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static NavAreaCostTable CreateAreaCosts(byte areaId, float cost)
+        {
+            var costs = new Fix64[256];
+            for (int i = 0; i < costs.Length; i++)
+            {
+                costs[i] = Fix64.OneValue;
+            }
+
+            costs[areaId] = Fix64.FromFloat(cost);
+            return new NavAreaCostTable(costs);
         }
 
         private static void WriteReactStride4Map(

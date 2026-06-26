@@ -123,6 +123,61 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             return false;
         }
 
+        public static bool TryResolveAreaIdAtPoint(
+            int xcm,
+            int zcm,
+            NavObstacleSet obstacles,
+            string layerId,
+            out byte areaId)
+        {
+            areaId = 0;
+            if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0)
+            {
+                return false;
+            }
+
+            RequireLayerId(layerId);
+
+            for (int i = 0; i < obstacles.Obstacles.Count; i++)
+            {
+                NavObstacle obstacle = obstacles.Obstacles[i]
+                    ?? throw new InvalidOperationException($"NavObstacleSet.obstacles[{i}] is null.");
+                if (!obstacle.Enabled ||
+                    !obstacle.AreaId.HasValue ||
+                    !string.Equals(obstacle.LayerId, layerId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                bool contains = obstacle.Kind switch
+                {
+                    NavObstacleKind.Circle => PointInCircle(xcm, zcm, obstacle.Center.Xcm, obstacle.Center.Zcm, obstacle.RadiusCm),
+                    NavObstacleKind.Polygon => PointInPolygon(xcm, zcm, obstacle.Points),
+                    _ => throw new InvalidOperationException($"Nav obstacle '{obstacle.Id}' kind '{obstacle.Kind}' is not supported by navmesh area projection.")
+                };
+
+                if (!contains)
+                {
+                    continue;
+                }
+
+                areaId = checked((byte)obstacle.AreaId.Value);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool PointInCircle(int xcm, int zcm, int centerX, int centerZ, int radiusCm)
+        {
+            if (radiusCm <= 0)
+            {
+                throw new InvalidOperationException("Circle nav obstacle radiusCm must be > 0.");
+            }
+
+            return DistanceSq(xcm, zcm, centerX, centerZ) <= (long)radiusCm * radiusCm;
+        }
+
         private static bool TriangleIntersectsCircle(
             int ax,
             int az,

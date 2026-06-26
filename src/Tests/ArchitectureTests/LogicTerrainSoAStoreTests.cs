@@ -59,8 +59,7 @@ namespace Ludots.Tests.Architecture
                     heightLevel,
                     waterLevel,
                     flags,
-                    areaId: (byte)rng.Next(byte.MaxValue + 1),
-                    cost: 0.5f + (float)rng.NextDouble() * 8f);
+                    areaId: (byte)rng.Next(byte.MaxValue + 1));
 
                 terrain.SetCell(col, row, value);
                 dense[row * width + col] = value;
@@ -92,13 +91,15 @@ namespace Ludots.Tests.Architecture
             Assert.That(chunkFields.Any(f => f.Name.Contains("height", StringComparison.OrdinalIgnoreCase) && f.FieldType == typeof(byte[])), Is.True);
             Assert.That(chunkFields.Any(f => f.Name.Contains("area", StringComparison.OrdinalIgnoreCase) && f.FieldType == typeof(byte[])), Is.True);
             Assert.That(chunkFields.Any(f => f.Name.Contains("flag", StringComparison.OrdinalIgnoreCase) && f.FieldType == typeof(ulong[])), Is.True);
+            Assert.That(typeof(LogicTerrainCell).GetProperty("Cost"), Is.Null);
+            Assert.That(chunkFields.Any(f => f.Name.Contains("cost", StringComparison.OrdinalIgnoreCase)), Is.False);
         }
 
         [Test]
         public void ResidentHotPaths_GetSetAndSampleEquivalentOperations_AreAllocationFree()
         {
             var terrain = new SparseGridLogicTerrainField(128, 128);
-            var value = new LogicTerrainCell(7, 0, LogicTerrainSurfaceFlags.Ramp, areaId: 9, cost: 3f);
+            var value = new LogicTerrainCell(7, 0, LogicTerrainSurfaceFlags.Ramp, areaId: 9);
             terrain.SetCell(5, 5, value);
             terrain.ClearDirty();
 

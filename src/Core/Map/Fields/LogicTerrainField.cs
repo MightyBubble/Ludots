@@ -29,14 +29,12 @@ namespace Ludots.Core.Map.Fields
             byte heightLevel,
             byte waterHeightLevel,
             LogicTerrainSurfaceFlags surfaceFlags,
-            byte areaId = 0,
-            float cost = 1f)
+            byte areaId = 0)
         {
             HeightLevel = ClampHeight(heightLevel);
             WaterHeightLevel = ClampHeight(waterHeightLevel);
             SurfaceFlags = surfaceFlags;
             AreaId = areaId;
-            Cost = cost > 0f && !float.IsNaN(cost) ? cost : throw new ArgumentOutOfRangeException(nameof(cost));
         }
 
         public byte HeightLevel { get; }
@@ -46,8 +44,6 @@ namespace Ludots.Core.Map.Fields
         public LogicTerrainSurfaceFlags SurfaceFlags { get; }
 
         public byte AreaId { get; }
-
-        public float Cost { get; }
 
         public bool IsRamp => (SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0;
 
@@ -59,14 +55,13 @@ namespace Ludots.Core.Map.Fields
             => HeightLevel == other.HeightLevel &&
                WaterHeightLevel == other.WaterHeightLevel &&
                SurfaceFlags == other.SurfaceFlags &&
-               AreaId == other.AreaId &&
-               Cost.Equals(other.Cost);
+               AreaId == other.AreaId;
 
         public override bool Equals(object? obj)
             => obj is LogicTerrainCell other && Equals(other);
 
         public override int GetHashCode()
-            => HashCode.Combine(HeightLevel, WaterHeightLevel, SurfaceFlags, AreaId, Cost);
+            => HashCode.Combine(HeightLevel, WaterHeightLevel, SurfaceFlags, AreaId);
 
         private static byte ClampHeight(byte value)
             => value > SpatialScaleDefaults.LogicTerrainMaxHeightLevel
@@ -205,7 +200,7 @@ namespace Ludots.Core.Map.Fields
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            _cell = cell.Cost > 0f ? cell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
+            _cell = cell;
         }
 
         public override LogicTerrainTopology Topology => LogicTerrainTopology.Grid;
@@ -298,12 +293,11 @@ namespace Ludots.Core.Map.Fields
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
             CellSizeCm = cellSizeCm;
-            LogicTerrainCell normalizedDefault = defaultCell.Cost > 0f ? defaultCell : LogicTerrainCell.Default;
             _store = new BoardFieldStore<LogicTerrainCell>(
                 widthCells,
                 heightCells,
                 cellSizeCm,
-                normalizedDefault,
+                defaultCell,
                 LogicTerrainChunkCodec.Instance,
                 chunkSizeCells);
         }
@@ -376,7 +370,6 @@ namespace Ludots.Core.Map.Fields
 
         private readonly byte[] _heightWaterLevels;
         private readonly byte[] _areaIds;
-        private readonly float[] _costs;
         private readonly ulong[] _surfaceFlagPlanes;
         private readonly int _wordsPerPlane;
 
@@ -385,19 +378,12 @@ namespace Ludots.Core.Map.Fields
         {
             _heightWaterLevels = new byte[cellCount];
             _areaIds = new byte[cellCount];
-            _costs = new float[cellCount];
             _wordsPerPlane = (cellCount + 63) >> 6;
             _surfaceFlagPlanes = new ulong[checked(_wordsPerPlane * SurfaceFlagPlaneCount)];
         }
 
         public override LogicTerrainCell GetCell(int index)
         {
-            float cost = _costs[index];
-            if (cost <= 0f || float.IsNaN(cost))
-            {
-                return default;
-            }
-
             byte packed = _heightWaterLevels[index];
             var flags = LogicTerrainSurfaceFlags.None;
             if (GetFlag(index, WaterFlagPlane)) flags |= LogicTerrainSurfaceFlags.Water;
@@ -408,15 +394,13 @@ namespace Ludots.Core.Map.Fields
                 (byte)(packed & 0x0F),
                 (byte)((packed >> 4) & 0x0F),
                 flags,
-                _areaIds[index],
-                cost);
+                _areaIds[index]);
         }
 
         public override void SetCell(int index, LogicTerrainCell value)
         {
             _heightWaterLevels[index] = PackHeightWater(value.HeightLevel, value.WaterHeightLevel);
             _areaIds[index] = value.AreaId;
-            _costs[index] = value.Cost;
             SetFlag(index, WaterFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0);
             SetFlag(index, RampFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0);
             SetFlag(index, BlockedFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0);
@@ -426,7 +410,6 @@ namespace Ludots.Core.Map.Fields
         {
             Array.Fill(_heightWaterLevels, PackHeightWater(value.HeightLevel, value.WaterHeightLevel));
             Array.Fill(_areaIds, value.AreaId);
-            Array.Fill(_costs, value.Cost);
             FillFlagPlane(WaterFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Water) != 0);
             FillFlagPlane(RampFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Ramp) != 0);
             FillFlagPlane(BlockedFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0);
@@ -455,8 +438,6 @@ namespace Ludots.Core.Map.Fields
             {
                 _surfaceFlagPlanes[i] = reader.ReadUInt64();
             }
-
-            Array.Fill(_costs, 1f);
         }
 
         private static byte PackHeightWater(byte heightLevel, byte waterHeightLevel)
@@ -517,6 +498,11 @@ namespace Ludots.Core.Map.Fields
             new LogicTerrainProjectionOptions(SpatialScaleDefaults.CellCm);
     }
 
+    public interface ILogicTerrainAreaSource
+    {
+        bool TryGetAreaId(int col, int row, int worldXCm, int worldYCm, out byte areaId);
+    }
+
     public static class VisualHeightmapLogicTerrainProjection
     {
         public static MutableGridLogicTerrainField ProjectToGrid(
@@ -524,7 +510,8 @@ namespace Ludots.Core.Map.Fields
             int widthCells,
             int heightCells,
             int cellSizeCm,
-            LogicTerrainProjectionOptions options)
+            LogicTerrainProjectionOptions options,
+            ILogicTerrainAreaSource? areaSource = null)
         {
             if (visualHeightmap == null) throw new ArgumentNullException(nameof(visualHeightmap));
 
@@ -533,8 +520,8 @@ namespace Ludots.Core.Map.Fields
             {
                 for (int col = 0; col < widthCells; col++)
                 {
-                    float xCm = col * cellSizeCm;
-                    float yCm = row * cellSizeCm;
+                    int xCm = col * cellSizeCm;
+                    int yCm = row * cellSizeCm;
                     if (!visualHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
                     {
                         throw new InvalidOperationException(
@@ -543,7 +530,13 @@ namespace Ludots.Core.Map.Fields
 
                     int level = (int)MathF.Round(heightCm / options.HeightStepCm);
                     level = Math.Clamp(level, 0, SpatialScaleDefaults.LogicTerrainMaxHeightLevel);
-                    field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, LogicTerrainSurfaceFlags.None));
+                    byte areaId = 0;
+                    if (areaSource != null && areaSource.TryGetAreaId(col, row, xCm, yCm, out byte projectedAreaId))
+                    {
+                        areaId = projectedAreaId;
+                    }
+
+                    field.SetCell(col, row, new LogicTerrainCell((byte)level, 0, LogicTerrainSurfaceFlags.None, areaId));
                 }
             }
 
