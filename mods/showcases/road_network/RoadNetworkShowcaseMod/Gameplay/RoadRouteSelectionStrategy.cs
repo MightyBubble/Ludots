@@ -1,5 +1,6 @@
 using System;
-using Ludots.Core.Mathematics.FixedPoint;
+using System.Numerics;
+using Ludots.Core.MovePlanning;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -7,9 +8,9 @@ namespace RoadNetworkShowcaseMod.Gameplay
     {
         public readonly bool Completed;
         public readonly int WaypointIndex;
-        public readonly Fix64Vec2 Target;
+        public readonly Vector2 Target;
 
-        public RoadRouteSelection(bool completed, int waypointIndex, Fix64Vec2 target)
+        public RoadRouteSelection(bool completed, int waypointIndex, Vector2 target)
         {
             Completed = completed;
             WaypointIndex = waypointIndex;
@@ -19,7 +20,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
     internal sealed class RoadRouteSelectionStrategy
     {
-        public bool TrySelect(in RoadNavPlanView plan, Fix64Vec2 position, int currentWaypointIndex, float stopRadiusCm, out RoadRouteSelection selection)
+        public bool TrySelect(in MovePlanView plan, Vector2 position, int currentWaypointIndex, float stopRadiusCm, out RoadRouteSelection selection)
         {
             selection = default;
             int pointCount = plan.Count;
@@ -32,7 +33,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             int currentIndex = Math.Clamp(currentWaypointIndex, 0, pointCount - 1);
             while (currentIndex < pointCount)
             {
-                if (!plan.TryGetWaypoint(currentIndex, out Fix64Vec2 target))
+                if (!plan.TryGetWaypoint(currentIndex, out Vector2 target))
                 {
                     currentIndex++;
                     continue;
@@ -51,16 +52,16 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
-        private static bool ShouldConsumeWaypoint(Fix64Vec2 position, Fix64Vec2 target, float stopRadiusCm)
+        private static bool ShouldConsumeWaypoint(Vector2 position, Vector2 target, float stopRadiusCm)
         {
             return DistanceSquaredCm(position, target) <= stopRadiusCm * stopRadiusCm;
         }
 
-        private static float DistanceSquaredCm(Fix64Vec2 current, Fix64Vec2 target)
+        private static float DistanceSquaredCm(Vector2 current, Vector2 target)
         {
             var delta = target - current;
-            float dx = delta.X.ToFloat();
-            float dy = delta.Y.ToFloat();
+            float dx = delta.X;
+            float dy = delta.Y;
             return (dx * dx) + (dy * dy);
         }
     }

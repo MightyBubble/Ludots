@@ -49,21 +49,23 @@ namespace Physics2DPlaygroundMod.Triggers
                     var debugDrawBuffer = new DebugDrawCommandBuffer();
                     engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
 
-                    var clock = context.Get(CoreServiceKeys.Clock);
-                    var tickPolicy = context.Get(CoreServiceKeys.Physics2DTickPolicy);
                     var solverConfig = context.Get(CoreServiceKeys.Physics2DSolverConfig)
                         ?? throw new System.InvalidOperationException("Physics2DPlaygroundMod requires Physics2DSolverConfig.");
                     var shapeStorage = context.Get(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
                         ?? throw new System.InvalidOperationException("Physics2DPlaygroundMod requires Physics2D shape storage.");
 
-                    _sim = new Physics2DSimulationSystem(engine.World, clock, tickPolicy, solverConfig, shapeStorage);
-                    engine.RegisterSystem(_sim, SystemGroup.InputCollection);
-                    engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
+                    _sim = engine.GlobalContext.TryGetValue(
+                            "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem",
+                            out object? systemObj) &&
+                        systemObj is Physics2DSimulationSystem coreSimulation
+                            ? coreSimulation
+                            : throw new System.InvalidOperationException(
+                                "Physics2DPlaygroundMod requires the Core Physics2D simulation system registered from Physics2D/clock.json.");
                     engine.RegisterSystem(new Physics2DPlaygroundInteractionSystem(engine, _sim, shapeStorage, solverConfig), SystemGroup.InputCollection);
                     engine.RegisterPresentationSystem(new Physics2DDebugDrawSystem(engine.World, debugDrawBuffer, shapeStorage));
 
                     _installed = true;
-                    _ctx.Log("[Physics2DPlaygroundMod] Installed simulation, interaction, and debug presentation systems.");
+                    _ctx.Log("[Physics2DPlaygroundMod] Attached to Core Physics2D simulation and installed interaction/debug presentation systems.");
                 }
 
                 Physics2DPlaygroundState.Enabled = true;

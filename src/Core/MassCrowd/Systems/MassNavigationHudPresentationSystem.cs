@@ -28,6 +28,11 @@ internal sealed class MassNavigationHudPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
+        if (!_simulation.Config.ScenarioRuntime.Panel.IsOwned)
+        {
+            return;
+        }
+
         if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
         {
             return;

@@ -40,8 +40,8 @@ public sealed class CapabilityStandardPhysics2DStressShowcaseAcceptanceTests
         using var engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods);
         Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(config.MapId));
         Assert.That(engine.MergedConfig.Physics2D.Enabled, Is.True);
-        Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.False);
-        Assert.That(engine.GetService(CoreServiceKeys.Navigation2DRuntime), Is.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.Physics2DTickPolicy), Is.Not.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.Physics2DShapeStorage), Is.Not.Null);
 
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
@@ -210,7 +210,7 @@ public sealed class CapabilityStandardPhysics2DStressShowcaseAcceptanceTests
         builder.AppendLine();
         builder.AppendLine("| Check | Evidence |");
         builder.AppendLine("| --- | --- |");
-        builder.AppendLine("| Pure Physics2D startup | `physics2D.enabled=true`, `navigation2D.enabled=false`, no `Navigation2DRuntime` service |");
+        builder.AppendLine("| Pure Physics2D startup | `physics2D.enabled=true`, tick policy and shape storage services registered |");
         builder.AppendLine($"| Spawn path | Config-driven RuntimeEntitySpawnQueue batch produced `{config.DynamicBodies}` dynamic bodies and `{config.StaticColumns}` static columns |");
         builder.AppendLine($"| Throughput budget | avg measured tick `{avgMeasuredMs.ToString("0.###", CultureInfo.InvariantCulture)}` ms, budget `{config.AvgStepBudgetMs.ToString("0.###", CultureInfo.InvariantCulture)}` ms |");
         builder.AppendLine($"| Pipeline steady-state allocation | measured `{allocatedBytes}` bytes over `{config.MeasuredFrames}` frames, budget `{config.AllocationBudgetBytes}` bytes |");

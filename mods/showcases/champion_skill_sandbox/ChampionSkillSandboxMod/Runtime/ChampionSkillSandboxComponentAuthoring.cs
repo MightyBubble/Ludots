@@ -5,7 +5,6 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Config;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
@@ -17,7 +16,6 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             Ludots.Core.Config.ComponentRegistry.Register("Collider2D", SetCollider2D, modId);
             Ludots.Core.Config.ComponentRegistry.Register("PhysicsMaterial2D", SetPhysicsMaterial2D, modId);
-            Ludots.Core.Config.ComponentRegistry.Register("NavKinematics2D", SetNavKinematics2D, modId);
         }
 
         private static void SetCollider2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
@@ -40,30 +38,6 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 Type = type,
                 ShapeDataIndex = shapeDataIndex
-            });
-        }
-
-        private static void SetNavKinematics2D(Entity entity, JsonNode data)
-        {
-            JsonObject obj = RequireObject(data, "NavKinematics2D");
-            ValidateProperties(
-                obj,
-                "NavKinematics2D",
-                "maxSpeedCmPerSec",
-                "maxAccelCmPerSec2",
-                "radiusCm",
-                "neighborDistCm",
-                "timeHorizonSec",
-                "maxNeighbors");
-
-            entity.Add(new NavKinematics2D
-            {
-                MaxSpeedCmPerSec = Fix64.FromFloat(ReadRequiredFloat(obj, "maxSpeedCmPerSec", "NavKinematics2D")),
-                MaxAccelCmPerSec2 = Fix64.FromFloat(ReadRequiredFloat(obj, "maxAccelCmPerSec2", "NavKinematics2D")),
-                RadiusCm = Fix64.FromFloat(ReadRequiredFloat(obj, "radiusCm", "NavKinematics2D")),
-                NeighborDistCm = Fix64.FromFloat(ReadRequiredFloat(obj, "neighborDistCm", "NavKinematics2D")),
-                TimeHorizonSec = Fix64.FromFloat(ReadRequiredFloat(obj, "timeHorizonSec", "NavKinematics2D")),
-                MaxNeighbors = ReadRequiredInt(obj, "maxNeighbors", "NavKinematics2D")
             });
         }
 

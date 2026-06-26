@@ -14,6 +14,7 @@ using Ludots.Core.MassCrowd;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.MassCrowd.Systems;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -415,16 +416,6 @@ namespace Ludots.Tests.Presentation
                             HeightCm = 1000,
                         },
                     },
-                    Obstacles = new[]
-                    {
-                        new MassNavigationObstacleConfig
-                        {
-                            Id = "blocker",
-                            LocalXCm = 5000f,
-                            LocalYCm = 5000f,
-                            RadiusCm = 100f,
-                        },
-                    },
                 },
                 Scenario = new MassNavigationScenarioConfig
                 {
@@ -497,9 +488,7 @@ namespace Ludots.Tests.Presentation
                         {
                             Id = "light",
                             Heavy = false,
-                            NavMass = 1f,
                             VisualScale = 0.22f,
-                            BodyRadiusCm = 20f,
                             SpeedCmPerSecond = 800f,
                             EveryNth = 0,
                             NthOffset = 0,
@@ -532,9 +521,26 @@ namespace Ludots.Tests.Presentation
             config.ScenarioRuntime.Validate();
             config.Scenario.Validate(config.ScenarioRuntime);
             config.AgentProfiles.Validate();
+            config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
             config.CameraProfiles.Validate();
             config.Minimap.Validate();
             return config;
+        }
+
+        private static AgentProfileRegistry CreateAgentProfilesForTests()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "light",
+                    RadiusCm = 20,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
         }
 
         private static MassFlowSolverConfig CreateTestSolverConfig()

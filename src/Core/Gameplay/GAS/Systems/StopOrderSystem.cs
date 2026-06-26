@@ -6,7 +6,6 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Navigation2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -50,12 +49,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (World.Has<AbilityExecInstance>(entity))
                     {
                         _commandBuffer.Remove<AbilityExecInstance>(in entity);
-                    }
-
-                    if (World.Has<NavGoal2D>(entity))
-                    {
-                        ref var goal = ref World.Get<NavGoal2D>(entity);
-                        goal.Kind = NavGoalKind2D.None;
                     }
 
                     _completedOrders.Add(entity);

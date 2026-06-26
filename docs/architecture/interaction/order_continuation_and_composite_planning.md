@@ -1,7 +1,7 @@
 # Order Continuation And Composite Planning
 
 > SSOT scope: `CoreInputMod` raw order submit seam之后，通用的“复合命令规划 + 完成后续接”基建。  
-> 本文只覆盖 `move-then-cast` 这类组合命令如何进入现有 GAS order 体系，不覆盖后续 `Navigation2D` move runtime、路径可视化 performer、或 UI queue 面板。
+> 本文只覆盖 `move-then-cast` 这类组合命令如何进入现有 GAS order 体系，不覆盖 MassFlow move runtime、路径可视化 performer、或 UI queue 面板。
 
 ## 1. 现状缺口
 
@@ -143,7 +143,7 @@
 
 本切片不覆盖：
 
-- `Navigation2D` 驱动的真正移动执行
+- MassFlow 驱动的真正移动执行
 - queued path / hover path 的 performer 可视化
 - 多段 continuation 链的专用 UI 展示
 - “目标移动后重新规划 cast 点”的 runtime replanning
@@ -164,6 +164,6 @@
 下一切片直接在这条基建上推进：
 
 - `move-runtime-navigation`
-  - 让 `moveTo` 不再直接 step `WorldPositionCm`，而是改由 `Navigation2D` 执行。
+  - 让 `moveTo` 不再直接 step `WorldPositionCm`，而是改由 MassFlow 执行。
 - `order-indicator-and-acceptance`
   - 把移动路径、队列路径、接受范围等统一并入 indicator performer。

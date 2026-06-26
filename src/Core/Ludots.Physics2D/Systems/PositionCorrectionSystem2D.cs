@@ -54,6 +54,8 @@ namespace Ludots.Core.Physics2D.Systems
 
                 if (pair.Penetration <= Slop) return;
 
+                ref var massA = ref pair.EntityA.Get<Mass2D>();
+                ref var massB = ref pair.EntityB.Get<Mass2D>();
                 Fix64 effectivePenetration = pair.Penetration - Slop;
                 Fix64 correctionAmount = effectivePenetration * CorrectionPercentage;
 

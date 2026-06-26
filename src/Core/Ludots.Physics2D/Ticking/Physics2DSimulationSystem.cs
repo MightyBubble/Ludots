@@ -25,6 +25,7 @@ namespace Ludots.Core.Physics2D.Ticking
         private readonly World _world;
         private readonly IClock _clock;
         private readonly Physics2DTickPolicy _tickPolicy;
+        private readonly Physics2DBroadphasePolicy _broadphasePolicy;
         private Entity _statsEntity;
         private Entity _runtimeStateEntity;
         private QueryDescription _activePairsQuery;
@@ -44,6 +45,23 @@ namespace Ludots.Core.Physics2D.Ticking
             Physics2DTickPolicy tickPolicy,
             Physics2DSolverConfig solverConfig,
             ShapeDataStorage2D shapeStorage)
+            : this(
+                world,
+                clock,
+                tickPolicy,
+                solverConfig,
+                shapeStorage,
+                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()))
+        {
+        }
+
+        public Physics2DSimulationSystem(
+            World world,
+            IClock clock,
+            Physics2DTickPolicy tickPolicy,
+            Physics2DSolverConfig solverConfig,
+            ShapeDataStorage2D shapeStorage,
+            Physics2DBroadphasePolicy broadphasePolicy)
         {
             _world = world;
             _clock = clock;
@@ -51,7 +69,9 @@ namespace Ludots.Core.Physics2D.Ticking
 
             ArgumentNullException.ThrowIfNull(solverConfig);
             ArgumentNullException.ThrowIfNull(shapeStorage);
+            ArgumentNullException.ThrowIfNull(broadphasePolicy);
 
+            _broadphasePolicy = broadphasePolicy;
             _pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, shapeStorage);
             Build = _pipeline.Build;
             Spatial = _pipeline.Spatial;
@@ -144,7 +164,13 @@ namespace Ludots.Core.Physics2D.Ticking
                 PhysicsStepsLastFixedTick = stepsToRun,
                 PhysicsUpdateMs = _stopwatch.Elapsed.TotalMilliseconds,
                 PotentialPairs = potentialPairs,
-                ContactPairs = contactPairs
+                ContactPairs = contactPairs,
+                DynamicBodies = Build.DynamicRigidBodyDescriptors.Count,
+                StaticBodies = Build.StaticRigidBodyDescriptors.Count,
+                DirtyStaticBodies = Build.DirtyStaticBodyCountLastUpdate,
+                BroadphaseStrategy = (int)Spatial.CurrentStrategyKind,
+                BroadphaseCellSizeCm = Spatial.CurrentCellSizeCm,
+                DroppedPairs = Spatial.DroppedPairsLastUpdate
             };
             _world.Set(_statsEntity, stats);
         }
@@ -159,6 +185,7 @@ namespace Ludots.Core.Physics2D.Ticking
 
         private void StepOnce(float dt)
         {
+            Spatial.ApplyBroadphasePolicy(_broadphasePolicy);
             ReadOnlySpan<ISystem<float>> systems = _pipeline.Systems;
             for (int i = 0; i < systems.Length; i++)
             {

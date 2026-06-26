@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Spatial;
 
 namespace CapabilityStandardTotalWarLikeMod.Runtime;
@@ -197,13 +198,15 @@ internal sealed class CapabilityStandardTotalWarLikeConfig
         }
     }
 
-    public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet)
+    public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet, AgentProfileRegistry geometryProfiles)
     {
         MassNavigationAgentProfileConfig formationProfile = ResolveFormationAgentProfile(profileSet);
+        geometryProfiles.Require(FormationAgent.ProfileId, "formationAgent.profileId");
         for (int i = 0; i < Formations.Length; i++)
         {
             CapabilityStandardTotalWarLikeFormationConfig formation = Formations[i];
             MassNavigationAgentProfileConfig soldierProfile = ResolveSoldierAgentProfile(profileSet, i);
+            geometryProfiles.Require(formation.SoldierAgent.ProfileId, $"formations[{i}].soldierAgent.profileId");
             if (!(soldierProfile.SpeedCmPerSecond > formationProfile.SpeedCmPerSecond))
             {
                 throw new InvalidOperationException(

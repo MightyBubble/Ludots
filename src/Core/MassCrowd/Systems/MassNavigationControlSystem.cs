@@ -68,7 +68,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             else
             {
                 ResetRuntimeState();
-                MassNavigationScenarioBootstrap.EnqueueConfiguredObstacleBlockers(_engine, _simulation);
                 _simulation.MarkSceneResetExecuted();
                 _simulation.MarkStructuralChange();
             }

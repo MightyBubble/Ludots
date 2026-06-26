@@ -62,7 +62,6 @@ Rules:
 dotnet test src/Tests/GasTests/GasTests.csproj
 dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
 dotnet test src/Tests/PresentationTests/PresentationTests.csproj
-dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 

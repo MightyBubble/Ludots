@@ -21,8 +21,8 @@ namespace RoadNetworkShowcaseMod.Runtime
     internal sealed class RoadNetworkShowcaseRuntime
     {
         private const string PrimaryPlayerColumnName = "Blue Vanguard";
-        private const string TacticalCameraModeId = "Camera.Mode.Tactical";
-        private const string TacticalCameraId = "Camera.Profile.Tactical";
+        private const string TacticalCameraModeId = "RoadNetwork.Camera.Mode.Tactical";
+        private const string TacticalCameraId = "RoadNetwork.Camera.Tactical";
         private string? _activeMapId;
         private readonly RoadNetworkShowcasePanelController _panelController;
         private readonly RoadNetworkShowcaseDebugLogWriter _debugLogWriter;
@@ -72,6 +72,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             ActiveBoard = board;
             Scenario = RoadNetworkScenarioDefinition.Create(board.LoadedChunksSource.ChunkSizeCm);
             engine.GlobalContext[RoadNetworkShowcaseIds.ScenarioServiceKey] = Scenario;
+            engine.GlobalContext[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = board.LoadedChunksSource;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
             EnsureShowcaseProfiles(engine.World);
@@ -151,6 +152,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 VirtualCameraId = TacticalCameraId,
                 TargetCm = new Vector2(landmarkWorldCm.X, landmarkWorldCm.Z)
             });
+            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
             LastSubmitStatus = status;
             RefreshPanel(engine);
             return true;
@@ -218,8 +220,10 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out object? managerObj) &&
                 managerObj is ViewModeManager viewModeManager)
             {
-                viewModeManager.SwitchTo(TacticalCameraModeId);
+                viewModeManager.SwitchTo(TacticalCameraModeId, applyCamera: false);
             }
+
+            ClearPendingCameraRequests(engine);
 
             if (engine.GetService(CoreServiceKeys.VirtualCameraRegistry) is not VirtualCameraRegistry registry ||
                 !registry.TryGet(TacticalCameraId, out VirtualCameraDefinition? definition) ||
@@ -236,14 +240,22 @@ namespace RoadNetworkShowcaseMod.Runtime
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
         }
 
+        private static void ClearPendingCameraRequests(GameEngine engine)
+        {
+            engine.GlobalContext.Remove(CoreServiceKeys.VirtualCameraRequest.Name);
+            engine.GlobalContext.Remove(CoreServiceKeys.CameraPoseRequest.Name);
+        }
+
         private void ApplyInitialPlayableCamera(GameEngine engine)
         {
             ActivateTacticalCamera(engine);
+            Vector2 target = ResolveInitialCameraTarget(engine);
             engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = TacticalCameraId,
-                TargetCm = ResolveInitialCameraTarget(engine)
+                TargetCm = target
             });
+            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
         }
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
@@ -455,6 +467,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (engine != null)
             {
                 engine.GlobalContext.Remove(RoadNetworkShowcaseIds.ScenarioServiceKey);
+                engine.GlobalContext.Remove(RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey);
             }
 
             _activeMapId = null;

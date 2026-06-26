@@ -7,11 +7,11 @@
       "profileId": "road_surface",
       "geometrySource": {
         "controlPointSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "road_network_chunk_segments"
         },
         "widthSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "road_network_chunk_width"
         },
         "segmentationPolicy": "Bezier12"

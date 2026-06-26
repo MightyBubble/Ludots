@@ -415,7 +415,16 @@
         "base": {}
       },
       "GameplayTagContainer": {},
-      "TagCountContainer": {}
+      "TagCountContainer": {},
+      "ManifestationObstacleIntent2D": {
+        "shape": "Circle",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 100,
+        "radiusCm": 100,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
     }
   },
   {

@@ -9,6 +9,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.MassCrowd.Systems;
@@ -233,6 +234,7 @@ internal sealed class MassCrowdAuthoredAgentBindingSystem : ISystem<float>
 
         string profileKey = MassCrowdProfileRegistry.GetName(agent.ProfileId);
         MassNavigationAgentProfileConfig profile = _simulation.Config.AgentProfiles.Resolve(profileKey);
+        AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
         float worldXCm = worldPosition.Value.X.ToFloat();
         float worldYCm = worldPosition.Value.Y.ToFloat();
         return new MassNavigationAgentSeed(
@@ -240,9 +242,9 @@ internal sealed class MassCrowdAuthoredAgentBindingSystem : ISystem<float>
             _simulation.ToLocalXCm(worldXCm),
             _simulation.ToLocalYCm(worldYCm),
             profile.Heavy,
-            profile.NavMass,
+            geometry.Mass,
             profile.VisualScale,
-            profile.BodyRadiusCm,
+            geometry.RadiusCm,
             profile.SpeedCmPerSecond,
             new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
     }

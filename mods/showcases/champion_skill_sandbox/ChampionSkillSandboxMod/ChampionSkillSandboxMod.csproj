@@ -14,4 +14,8 @@
     <ProjectReference Include="..\..\..\EntityCommandPanelMod\EntityCommandPanelMod.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="assets\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,25 +1,90 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three-stdlib';
-import { useEditorStore } from './EditorStore';
+import { useEditorStore, type BakedNavTileVisual, type EntityTemplatePayload, type JsonRecord } from './EditorStore';
 import { ChunkRenderer } from '../../Core/Render/ChunkRenderer';
-import { HEX_WIDTH, ROW_SPACING, getHexPosition } from '../../Core/Map/HexMetrics';
-import { TerrainStore } from '../../Core/Map/TerrainStore';
+import {
+    cellToWorldPosition,
+    getBrushVisualRadius,
+    getMapWorldSizeM,
+    getTopologyNeighbors,
+    worldPointToCell,
+} from '../../Core/Map/TopologyMetrics';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 
-// Helper for Neighbors (Axial coords)
-function getNeighbors(c: number, r: number) {
-    const isOdd = (r & 1) === 1;
-    const offsets = isOdd 
-        ? [[1,0], [1,1], [0,1], [-1,0], [0,-1], [1,-1]] 
-        : [[1,0], [0,1], [-1,1], [-1,0], [-1,-1], [0,-1]];
-    
-    return offsets.map(o => ({ c: c + o[0], r: r + o[1] }));
+const FULL_RENDER_CHUNK_LIMIT = 64;
+const MEDIUM_RENDER_CHUNK_LIMIT = 1024;
+const INITIAL_RENDER_FRAME_BUDGET_MS = 12;
+type MouseAction = (typeof THREE.MOUSE)[keyof typeof THREE.MOUSE];
+const DISABLED_MOUSE_BUTTON = -1 as MouseAction;
+
+type RenderableObject = THREE.Object3D & {
+    geometry?: { dispose?: () => void };
+    material?: THREE.Material | THREE.Material[];
+};
+
+function asRecord(value: unknown): JsonRecord | null {
+    return value != null && typeof value === 'object' && !Array.isArray(value)
+        ? value as JsonRecord
+        : null;
 }
+
+const disposeThreeObject = (object: THREE.Object3D) => {
+    object.traverse((child) => {
+        const renderable = child as RenderableObject;
+        renderable.geometry?.dispose?.();
+        const material = renderable.material;
+        if (Array.isArray(material)) {
+            for (const mat of material) mat?.dispose?.();
+        } else {
+            material?.dispose?.();
+        }
+    });
+};
 
 export const HexRenderer: React.FC = () => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const { terrain, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, registerCamera, reportDirtyChunks, setLoading, placeEntityAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const { terrain, boardMetrics, activeCategory, activeMode, brushSize, brushValue, activeLayer, showGrid, showChunkBorders, showNavMesh, bakedNavTiles, bakedNavTilesVersion, navSimulation, navSimulationVersion, navPanelTab, navQueryProfileId, navQueryLayer, navQueryStartCell, navQueryGoalCell, navigationConfig, navigationConfigVersion, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, setNavQueryStartCell, setNavQueryGoalCell, registerCamera, reportDirtyChunks, reportMinimapDirtyChunks, setLoading, placeEntityAt, placeObstacleAt, removeEntityAt, selectEntityAt, templates, spawnEntities, selectedEntityIndex, entitiesVersion } = useEditorStore();
+    const canvasHasRepoSession = Boolean(canvasSessionKind === 'repo' && loadedModId && loadedMapId && loadedBoardName);
+    const canvasHasVisibleSession = canvasSessionKind === 'local' || canvasHasRepoSession;
+    const canvasMapLoaded = Boolean(canvasHasRepoSession && selectedModId && selectedMapId && selectedBoardName && loadedModId === selectedModId && loadedMapId === selectedMapId && loadedBoardName === selectedBoardName);
+    const canvasEditable = Boolean(canvasSessionKind === 'local' || (canvasMapLoaded && loadedBoardInfo?.canEditTerrain));
+    const canvasCanSim = canvasMapLoaded;
+    const canvasInputLocked = navPanelTab === 'simulation' ? !canvasCanSim : !canvasEditable;
+    const canvasLockTitle = canvasSessionKind === 'local' && navPanelTab === 'simulation'
+        ? 'Simulation needs an opened repo board'
+        : canvasHasRepoSession && !canvasMapLoaded
+            ? 'Selected board is not open'
+            : canvasSessionKind === 'empty'
+                ? 'No board open'
+                : 'Canvas is read-only';
+    const canvasLockMessage = canvasSessionKind === 'local' && navPanelTab === 'simulation'
+        ? `${canvasSessionLabel ?? 'Local draft'} can be edited and exported. Open a repo board to run C# nav simulation.`
+        : canvasHasRepoSession && !canvasMapLoaded
+            ? `Canvas still contains ${loadedMapId}/${loadedBoardName}. Open ${selectedMapId ?? 'a map'}/${selectedBoardName ?? 'a board'} from Map And Board before editing or simulating.`
+            : canvasSessionKind === 'empty'
+                ? 'Select a map and board, then open it from Map And Board before editing.'
+                : 'This board is loaded for viewing, but terrain edits are disabled by its board metadata.';
+    const visibleBakedNavTiles = React.useMemo(() => {
+        const filtered = new Map<string, BakedNavTileVisual>();
+        bakedNavTiles.forEach((visual, key) => {
+            if (visual.profileId === null) {
+                filtered.set(key, visual);
+                return;
+            }
+            if (visual.profileId === navQueryProfileId && visual.layer === navQueryLayer) {
+                filtered.set(key, visual);
+            }
+        });
+        return filtered;
+    }, [bakedNavTiles, bakedNavTilesVersion, navQueryProfileId, navQueryLayer]);
+    const selectedAgentRadiusCm = React.useMemo(() => {
+        const profiles = Array.isArray(navigationConfig?.agentProfiles)
+            ? navigationConfig.agentProfiles.filter((p): p is JsonRecord => p != null && typeof p === 'object' && !Array.isArray(p))
+            : [];
+        const profile = profiles.find((p, i: number) => String(p?.id ?? p?.Id ?? `profile_${i}`) === navQueryProfileId);
+        return Number(profile?.radiusCm ?? profile?.RadiusCm ?? profile?.bodyRadiusCm ?? 0);
+    }, [navigationConfig, navigationConfigVersion, navQueryProfileId]);
     
     // Refs for mutable state in animation loop
     const sceneRef = useRef<THREE.Scene | null>(null);
@@ -29,9 +94,11 @@ export const HexRenderer: React.FC = () => {
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const controlsRef = useRef<OrbitControls | null>(null);
     const chunkRendererRef = useRef<ChunkRenderer | null>(null);
+    const terrainLodRef = useRef<THREE.Group | null>(null);
     const terrainGroupRef = useRef<THREE.Group | null>(null);
     const cursorMeshRef = useRef<THREE.Mesh | null>(null);
     const entityGroupRef = useRef<THREE.Group | null>(null);
+    const navQueryPointGroupRef = useRef<THREE.Group | null>(null);
     const raycasterRef = useRef(new THREE.Raycaster());
     const mouseRef = useRef(new THREE.Vector2());
     const inputPlaneRef = useRef<THREE.Mesh | null>(null);
@@ -40,21 +107,295 @@ export const HexRenderer: React.FC = () => {
     // We need to store current terrain in a ref for the animation loop
     // because the animation loop closure captures the initial terrain instance.
     const terrainRef = useRef(terrain);
+    const boardMetricsRef = useRef(boardMetrics);
+    const viewStateRef = useRef({
+        showGrid,
+        showChunkBorders,
+        showNavMesh,
+        hasBakedNavTiles: bakedNavTiles.size > 0,
+    });
     // Track initialization progress
     const totalInitChunksRef = useRef(0);
+    const renderDirtyChunksRef = useRef<Set<string>>(new Set());
+    const renderedWindowKeyRef = useRef<string | null>(null);
+    const canvasHasVisibleSessionRef = useRef(canvasHasVisibleSession);
+
+    const getChunkCount = (currentTerrain = terrainRef.current) => currentTerrain.widthChunks * currentTerrain.heightChunks;
+
+    const isFullRenderBoard = (currentTerrain = terrainRef.current) => getChunkCount(currentTerrain) <= FULL_RENDER_CHUNK_LIMIT;
+
+    const getVisibleChunkRadius = (currentTerrain = terrainRef.current) => {
+        const chunkCount = getChunkCount(currentTerrain);
+        if (chunkCount <= FULL_RENDER_CHUNK_LIMIT) return Math.max(currentTerrain.widthChunks, currentTerrain.heightChunks);
+        if (chunkCount <= MEDIUM_RENDER_CHUNK_LIMIT) return 3;
+        return 2;
+    };
+
+    const getLodColor = (height: number, water: number, biome: number) => {
+        const color = new THREE.Color();
+        if (water > height) {
+            color.setRGB(0.05, Math.min(0.8, 0.35 + water * 0.03), Math.min(1.0, 0.65 + water * 0.025));
+            return color;
+        }
+
+        switch (biome) {
+            case 1: color.setHex(0x9f7a3d); break;
+            case 2: color.setHex(0x6f7378); break;
+            case 3: color.setHex(0x3d6c2e); break;
+            case 4: color.setHex(0x5a5d5a); break;
+            case 5: color.setHex(0x435322); break;
+            default: color.setHex(0x8b4f24); break;
+        }
+
+        const hsl = { h: 0, s: 0, l: 0 };
+        color.getHSL(hsl);
+        color.setHSL(hsl.h, hsl.s, Math.min(0.76, hsl.l + height * 0.018));
+        return color;
+    };
+
+    const isValidChunk = (cx: number, cy: number, currentTerrain = terrainRef.current) =>
+        Number.isInteger(cx) &&
+        Number.isInteger(cy) &&
+        cx >= 0 &&
+        cy >= 0 &&
+        cx < currentTerrain.widthChunks &&
+        cy < currentTerrain.heightChunks;
+
+    const enqueueRenderChunk = (cx: number, cy: number, currentTerrain = terrainRef.current) => {
+        if (!isValidChunk(cx, cy, currentTerrain)) return;
+        renderDirtyChunksRef.current.add(`${cx},${cy}`);
+    };
+
+    const getCameraCenterChunk = (currentTerrain = terrainRef.current) => {
+        const metrics = boardMetricsRef.current;
+        const target = controlsRef.current?.target ?? cameraRef.current?.position ?? new THREE.Vector3(0, 0, 0);
+        const cell = worldPointToCell(target.x, target.z, metrics);
+        const chunkSize = metrics.chunkSizeCells;
+        return {
+            cx: Math.max(0, Math.min(currentTerrain.widthChunks - 1, Math.floor(cell.col / chunkSize))),
+            cy: Math.max(0, Math.min(currentTerrain.heightChunks - 1, Math.floor(cell.row / chunkSize))),
+        };
+    };
+
+    const evictChunksOutsideWindow = (center: { cx: number; cy: number }, retainRadius: number) => {
+        const group = terrainGroupRef.current;
+        if (!group) return;
+        const minX = center.cx - retainRadius;
+        const maxX = center.cx + retainRadius;
+        const minY = center.cy - retainRadius;
+        const maxY = center.cy + retainRadius;
+
+        for (const [key, chunk] of chunksRef.current) {
+            const [cx, cy] = key.split(',').map(Number);
+            if (cx >= minX && cx <= maxX && cy >= minY && cy <= maxY) continue;
+            group.remove(chunk);
+            disposeThreeObject(chunk);
+            chunksRef.current.delete(key);
+            renderDirtyChunksRef.current.delete(key);
+        }
+    };
+
+    const enqueueVisibleRenderWindow = (force: boolean) => {
+        const currentTerrain = terrainRef.current;
+        if (currentTerrain.widthChunks <= 0 || currentTerrain.heightChunks <= 0) return;
+
+        if (isFullRenderBoard(currentTerrain)) {
+            const windowKey = `full:${currentTerrain.widthChunks}x${currentTerrain.heightChunks}:${boardMetricsRef.current.topology}:${boardMetricsRef.current.cellSizeCm}`;
+            if (!force && renderedWindowKeyRef.current === windowKey) return;
+            renderedWindowKeyRef.current = windowKey;
+            for (let cy = 0; cy < currentTerrain.heightChunks; cy++) {
+                for (let cx = 0; cx < currentTerrain.widthChunks; cx++) {
+                    enqueueRenderChunk(cx, cy, currentTerrain);
+                }
+            }
+            return;
+        }
+
+        const center = getCameraCenterChunk(currentTerrain);
+        const radius = getVisibleChunkRadius(currentTerrain);
+        const windowKey = `${center.cx},${center.cy},r${radius}:${currentTerrain.widthChunks}x${currentTerrain.heightChunks}:${boardMetricsRef.current.topology}:${boardMetricsRef.current.cellSizeCm}`;
+        if (!force && renderedWindowKeyRef.current === windowKey) return;
+        renderedWindowKeyRef.current = windowKey;
+
+        for (let cy = center.cy - radius; cy <= center.cy + radius; cy++) {
+            for (let cx = center.cx - radius; cx <= center.cx + radius; cx++) {
+                enqueueRenderChunk(cx, cy, currentTerrain);
+            }
+        }
+
+        evictChunksOutsideWindow(center, radius + 2);
+    };
+
+    const moveTerrainDirtyChunksToRenderQueue = (currentTerrain: typeof terrainRef.current) => {
+        if (currentTerrain.dirtyChunks.size === 0) return;
+        const authoredKeys = Array.from(currentTerrain.dirtyChunks.values());
+        currentTerrain.dirtyChunks.clear();
+        for (const key of authoredKeys) {
+            const [cx, cy] = key.split(',').map(Number);
+            enqueueRenderChunk(cx, cy, currentTerrain);
+        }
+        rebuildTerrainLod();
+    };
+
+    const rebuildTerrainLod = () => {
+        const group = terrainLodRef.current;
+        if (!group) return;
+        group.children.forEach(disposeThreeObject);
+        group.clear();
+
+        const currentTerrain = terrainRef.current;
+        if (!canvasHasVisibleSessionRef.current || isFullRenderBoard(currentTerrain)) return;
+
+        const metrics = boardMetricsRef.current;
+        const chunkSize = metrics.chunkSizeCells;
+        const worldSize = getMapWorldSizeM(currentTerrain.widthChunks, currentTerrain.heightChunks, metrics);
+        const chunkWorldW = worldSize.width / currentTerrain.widthChunks;
+        const chunkWorldH = worldSize.height / currentTerrain.heightChunks;
+        const positions: number[] = [];
+        const colors: number[] = [];
+        const indices: number[] = [];
+        const lines: number[] = [];
+        const lodCornerHeights = new Map<string, number>();
+
+        const pushVertex = (x: number, y: number, z: number, color: THREE.Color) => {
+            const index = positions.length / 3;
+            positions.push(x, y, z);
+            colors.push(color.r, color.g, color.b);
+            return index;
+        };
+
+        const sampleGridLodCornerHeight = (cornerC: number, cornerR: number) => {
+            const key = `${cornerC},${cornerR}`;
+            const cached = lodCornerHeights.get(key);
+            if (cached !== undefined) return cached;
+
+            const maxC = currentTerrain.widthChunks * chunkSize;
+            const maxR = currentTerrain.heightChunks * chunkSize;
+            let sum = 0;
+            let count = 0;
+            for (let dr = -1; dr <= 0; dr++) {
+                for (let dc = -1; dc <= 0; dc++) {
+                    const c = cornerC + dc;
+                    const r = cornerR + dr;
+                    if (c < 0 || r < 0 || c >= maxC || r >= maxR) continue;
+                    sum += currentTerrain.getHeight(c, r);
+                    count++;
+                }
+            }
+
+            if (count === 0) {
+                throw new Error(`Grid LOD corner (${cornerC},${cornerR}) has no owning cells.`);
+            }
+
+            const height = sum / count;
+            lodCornerHeights.set(key, height);
+            return height;
+        };
+
+        for (let cy = 0; cy < currentTerrain.heightChunks; cy++) {
+            for (let cx = 0; cx < currentTerrain.widthChunks; cx++) {
+                const sampleC = Math.min(currentTerrain.widthChunks * chunkSize - 1, cx * chunkSize + Math.floor(chunkSize / 2));
+                const sampleR = Math.min(currentTerrain.heightChunks * chunkSize - 1, cy * chunkSize + Math.floor(chunkSize / 2));
+                const height = currentTerrain.getHeight(sampleC, sampleR);
+                const water = currentTerrain.getWater(sampleC, sampleR);
+                const biome = currentTerrain.getBiome(sampleC, sampleR);
+                const color = getLodColor(height, water, biome);
+                const x0 = cx * chunkWorldW;
+                const x1 = (cx + 1) * chunkWorldW;
+                const z0 = cy * chunkWorldH;
+                const z1 = (cy + 1) * chunkWorldH;
+                const flatY = Math.max(height, water) * 2.0 - 0.18;
+                const c0 = cx * chunkSize;
+                const c1 = Math.min((cx + 1) * chunkSize, currentTerrain.widthChunks * chunkSize);
+                const r0 = cy * chunkSize;
+                const r1 = Math.min((cy + 1) * chunkSize, currentTerrain.heightChunks * chunkSize);
+                const y00 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r0) * 2.0 - 0.18 : flatY;
+                const y10 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r0) * 2.0 - 0.18 : flatY;
+                const y11 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c1, r1) * 2.0 - 0.18 : flatY;
+                const y01 = metrics.topology === 'Grid' ? sampleGridLodCornerHeight(c0, r1) * 2.0 - 0.18 : flatY;
+
+                const i0 = pushVertex(x0, y00, z0, color);
+                const i1 = pushVertex(x1, y10, z0, color);
+                const i2 = pushVertex(x1, y11, z1, color);
+                const i3 = pushVertex(x0, y01, z1, color);
+                indices.push(i0, i1, i2, i0, i2, i3);
+
+                lines.push(
+                    x0, y00 + 0.04, z0, x1, y10 + 0.04, z0,
+                    x1, y10 + 0.04, z0, x1, y11 + 0.04, z1,
+                    x1, y11 + 0.04, z1, x0, y01 + 0.04, z1,
+                    x0, y01 + 0.04, z1, x0, y00 + 0.04, z0);
+            }
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        geometry.setIndex(indices);
+        geometry.computeVertexNormals();
+        const material = new THREE.MeshBasicMaterial({
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.72,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.name = 'ChunkLodTerrain';
+        mesh.renderOrder = -20;
+        group.add(mesh);
+
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
+        const lineMaterial = new THREE.LineBasicMaterial({
+            color: 0x00e5ff,
+            transparent: true,
+            opacity: showChunkBorders ? 0.42 : 0.0,
+            depthWrite: false,
+        });
+        const lineMesh = new THREE.LineSegments(lineGeometry, lineMaterial);
+        lineMesh.name = 'ChunkLodGrid';
+        lineMesh.renderOrder = -10;
+        lineMesh.visible = showChunkBorders;
+        group.add(lineMesh);
+    };
 
     useEffect(() => {
         terrainRef.current = terrain;
-        // On new terrain, reset init counter if we are in loading state?
-        // Actually, initMap sets loadingState. 
-        // We can check if dirtyChunks is massive (init scenario)
-        if (terrain.dirtyChunks.size > 100) {
-            totalInitChunksRef.current = terrain.dirtyChunks.size;
-        } else {
-            totalInitChunksRef.current = 0;
-            setLoading(false); // Clear if small update
-        }
     }, [terrain, setLoading]);
+
+    useEffect(() => {
+        canvasHasVisibleSessionRef.current = canvasHasVisibleSession;
+    }, [canvasHasVisibleSession]);
+
+    useEffect(() => {
+        boardMetricsRef.current = boardMetrics;
+    }, [boardMetrics]);
+
+    useEffect(() => {
+        viewStateRef.current = {
+            showGrid,
+            showChunkBorders,
+            showNavMesh,
+            hasBakedNavTiles: bakedNavTiles.size > 0,
+        };
+        if (terrainGroupRef.current) {
+            applyChunkLayerVisibility(terrainGroupRef.current);
+        }
+        if (terrainLodRef.current) {
+            const lodGrid = terrainLodRef.current.getObjectByName('ChunkLodGrid');
+            if (lodGrid) lodGrid.visible = showChunkBorders;
+        }
+    }, [showGrid, showChunkBorders, showNavMesh, bakedNavTiles.size]);
+
+    useEffect(() => {
+        const controls = controlsRef.current;
+        if (!controls) return;
+        controls.mouseButtons.LEFT = DISABLED_MOUSE_BUTTON;
+        controls.mouseButtons.RIGHT = navPanelTab === 'simulation'
+            ? DISABLED_MOUSE_BUTTON
+            : THREE.MOUSE.ROTATE;
+    }, [navPanelTab]);
 
     // Interaction State
     const isDraggingRef = useRef(false);
@@ -84,6 +425,7 @@ export const HexRenderer: React.FC = () => {
         });
         renderer.setSize(width, height);
         containerRef.current.appendChild(renderer.domElement);
+        renderer.domElement.style.visibility = canvasHasVisibleSession ? 'visible' : 'hidden';
         rendererRef.current = renderer;
 
         // 4. Lights
@@ -103,13 +445,12 @@ export const HexRenderer: React.FC = () => {
         controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't go below ground
         controls.zoomSpeed = 1.2;
         controls.mouseButtons = {
-            LEFT: THREE.MOUSE.ROTATE, 
+            LEFT: DISABLED_MOUSE_BUTTON,
             MIDDLE: THREE.MOUSE.PAN,
-            RIGHT: THREE.MOUSE.ROTATE
+            RIGHT: useEditorStore.getState().navPanelTab === 'simulation'
+                ? DISABLED_MOUSE_BUTTON
+                : THREE.MOUSE.ROTATE
         };
-        // Disable Left click for OrbitControls so we can use it for painting
-        // @ts-ignore
-        controls.mouseButtons.LEFT = THREE.MOUSE.UNKNOWN; 
         controlsRef.current = controls;
 
         // Register Camera to Store (for Minimap)
@@ -139,7 +480,12 @@ export const HexRenderer: React.FC = () => {
         scene.add(cursorMesh);
         cursorMeshRef.current = cursorMesh;
 
-        // 8. Terrain Group
+        // 8. Terrain Groups
+        const terrainLodGroup = new THREE.Group();
+        terrainLodGroup.name = "terrainLodGroup";
+        scene.add(terrainLodGroup);
+        terrainLodRef.current = terrainLodGroup;
+
         const terrainGroup = new THREE.Group();
         terrainGroup.name = "terrainGroup";
         scene.add(terrainGroup);
@@ -154,6 +500,11 @@ export const HexRenderer: React.FC = () => {
         entityGroup.name = "entityGroup";
         scene.add(entityGroup);
         entityGroupRef.current = entityGroup;
+
+        const navQueryPointGroup = new THREE.Group();
+        navQueryPointGroup.name = "navQueryPointGroup";
+        scene.add(navQueryPointGroup);
+        navQueryPointGroupRef.current = navQueryPointGroup;
 
         // 9. Resize Handler
         const handleResize = () => {
@@ -183,6 +534,12 @@ export const HexRenderer: React.FC = () => {
             if (containerRef.current && rendererRef.current) {
                 containerRef.current.removeChild(rendererRef.current.domElement);
             }
+            chunksRef.current.forEach(disposeThreeObject);
+            chunksRef.current.clear();
+            if (terrainLodRef.current) {
+                terrainLodRef.current.children.forEach(disposeThreeObject);
+                terrainLodRef.current.clear();
+            }
             renderer.dispose();
             // Unregister? Maybe not needed as ref will be overwritten or component unmounts
         };
@@ -194,52 +551,80 @@ export const HexRenderer: React.FC = () => {
         if (!terrainGroupRef.current) return;
         
         // Clear old meshes
+        chunksRef.current.forEach(disposeThreeObject);
+        chunksRef.current.clear();
+        if (terrainLodRef.current) {
+            terrainLodRef.current.children.forEach(disposeThreeObject);
+            terrainLodRef.current.clear();
+        }
         terrainGroupRef.current.clear();
+        renderDirtyChunksRef.current.clear();
+        renderedWindowKeyRef.current = null;
+        totalInitChunksRef.current = 0;
+        terrain.clearDirty();
+
+        if (!canvasHasVisibleSession) {
+            setLoading(false);
+            return;
+        }
         
-        chunkRendererRef.current = new ChunkRenderer(terrain);
+        chunkRendererRef.current = new ChunkRenderer(terrain, boardMetrics);
+        rebuildTerrainLod();
         
-        // Initial Full Render
-        terrain.clearDirty(); // Reset dirty flags
-        // Mark all as dirty to force render
-        for(let y=0; y<terrain.heightChunks; y++) {
-            for(let x=0; x<terrain.widthChunks; x++) {
-                terrain.dirtyChunks.add(`${x},${y}`);
-            }
+        enqueueVisibleRenderWindow(true);
+        const initialChunkCount = renderDirtyChunksRef.current.size;
+        totalInitChunksRef.current = initialChunkCount;
+        if (initialChunkCount > 0) {
+            setLoading(true, `Generating visible terrain... 0%`, 0);
+        } else {
+            setLoading(false);
         }
         updateDirtyChunks();
         
         // Update Input Plane Size/Pos
         if (inputPlaneRef.current) {
-            const totalW = terrain.widthChunks * 64 * HEX_WIDTH;
-            const totalH = terrain.heightChunks * 64 * ROW_SPACING;
+            const worldSize = getMapWorldSizeM(terrain.widthChunks, terrain.heightChunks, boardMetrics);
+            const totalW = worldSize.width;
+            const totalH = worldSize.height;
             inputPlaneRef.current.scale.set(totalW, totalH, 1);
             inputPlaneRef.current.position.set(totalW/2, 0, totalH/2);
             inputPlaneRef.current.updateMatrixWorld();
         }
 
-    }, [terrain]); // Re-run when terrain object changes (load map)
+    }, [terrain, boardMetrics, canvasHasVisibleSession]); // Re-run when terrain, topology, or session visibility changes
+
+    useEffect(() => {
+        if (terrainLodRef.current) terrainLodRef.current.visible = canvasHasVisibleSession && !isFullRenderBoard();
+        if (terrainGroupRef.current) terrainGroupRef.current.visible = canvasHasVisibleSession;
+        if (entityGroupRef.current) entityGroupRef.current.visible = canvasHasVisibleSession;
+        if (inputPlaneRef.current) inputPlaneRef.current.visible = canvasHasVisibleSession;
+        if (navQueryPointGroupRef.current) navQueryPointGroupRef.current.visible = canvasCanSim;
+        if (cursorMeshRef.current && !canvasHasVisibleSession) cursorMeshRef.current.visible = false;
+        if (controlsRef.current) controlsRef.current.enabled = canvasHasVisibleSession;
+        if (rendererRef.current) rendererRef.current.domElement.style.visibility = canvasHasVisibleSession ? 'visible' : 'hidden';
+    }, [canvasHasVisibleSession, canvasCanSim]);
 
     useEffect(() => {
         if (!navMeshRef.current) return;
-        navMeshRef.current.visible = showNavMesh && bakedNavTiles.size > 0;
-    }, [showNavMesh, bakedNavTiles.size]);
+        navMeshRef.current.visible = showNavMesh && canvasCanSim && visibleBakedNavTiles.size > 0;
+    }, [showNavMesh, canvasCanSim, visibleBakedNavTiles.size]);
 
     useEffect(() => {
         if (!navMeshRef.current) return;
-        if (!showNavMesh || bakedNavTiles.size === 0) {
+        if (!showNavMesh || !canvasCanSim || visibleBakedNavTiles.size === 0) {
             navMeshRef.current.clear();
             return;
         }
         navMeshRef.current.clear();
-        navMeshRef.current.add(buildBakedNavMeshGroup(bakedNavTiles));
-    }, [showNavMesh, bakedNavTilesVersion]);
+        navMeshRef.current.add(buildBakedNavMeshGroup(visibleBakedNavTiles, navSimulation, selectedAgentRadiusCm));
+    }, [showNavMesh, canvasCanSim, bakedNavTilesVersion, navSimulationVersion, navQueryProfileId, navQueryLayer, selectedAgentRadiusCm]);
 
     useEffect(() => {
         if (!entityGroupRef.current) return;
         const group = entityGroupRef.current;
         group.clear();
 
-        const templatesById = new Map<string, any>();
+        const templatesById = new Map<string, EntityTemplatePayload>();
         for (let i = 0; i < templates.length; i++) {
             const t = templates[i];
             const id = String(t?.Id ?? t?.id ?? '');
@@ -261,8 +646,8 @@ export const HexRenderer: React.FC = () => {
         for (let i = 0; i < spawnEntities.length; i++) {
             const e = spawnEntities[i];
             const t = templatesById.get(e.template);
-            const components = t?.components ?? t?.Components ?? {};
-            const visual = (e.overrides?.VisualModel ?? components?.VisualModel ?? components?.visualModel) ?? null;
+            const components = asRecord(t?.components) ?? asRecord(t?.Components) ?? {};
+            const visual = asRecord(e.overrides?.VisualModel) ?? asRecord(components?.VisualModel) ?? asRecord(components?.visualModel);
             const meshId = Number(visual?.MeshId ?? visual?.meshId ?? 0);
 
             const geo = meshId === 2 ? sphereGeo : cubeGeo;
@@ -270,7 +655,7 @@ export const HexRenderer: React.FC = () => {
 
             const m = new THREE.Mesh(geo, mat);
             const h = terrain.getHeight(e.position.x, e.position.y);
-            const pos = getHexPosition(e.position.x, e.position.y, h, 2.0);
+            const pos = cellToWorldPosition(e.position.x, e.position.y, h, boardMetrics, 2.0);
             m.position.set(pos.x, pos.y + 1.0, pos.z);
             m.renderOrder = 10;
 
@@ -279,7 +664,7 @@ export const HexRenderer: React.FC = () => {
                 (m.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.0;
             }
 
-            const bindings = e.overrides?.PerformerBindings ?? e.overrides?.performerBindings ?? null;
+            const bindings = asRecord(e.overrides?.PerformerBindings) ?? asRecord(e.overrides?.performerBindings);
             const ids = bindings?.Ids ?? bindings?.ids ?? bindings?.DefinitionIds ?? bindings?.definitionIds ?? null;
             if (Array.isArray(ids) && ids.length > 0) {
                 const sprite = buildTextSprite(String(ids[0]));
@@ -289,7 +674,17 @@ export const HexRenderer: React.FC = () => {
 
             group.add(m);
         }
-    }, [entitiesVersion, terrain, templates, spawnEntities, selectedEntityIndex]);
+    }, [entitiesVersion, terrain, boardMetrics, templates, spawnEntities, selectedEntityIndex]);
+
+    useEffect(() => {
+        if (!navQueryPointGroupRef.current) return;
+        const group = navQueryPointGroupRef.current;
+        group.clear();
+        if (!canvasCanSim) return;
+
+        group.add(buildNavQueryPointMarker(navQueryStartCell.col, navQueryStartCell.row, 'S', 0x38bdf8, selectedAgentRadiusCm));
+        group.add(buildNavQueryPointMarker(navQueryGoalCell.col, navQueryGoalCell.row, 'G', 0x34d399, selectedAgentRadiusCm));
+    }, [navQueryStartCell, navQueryGoalCell, terrain, boardMetrics, selectedAgentRadiusCm, canvasCanSim]);
 
     const buildTextSprite = (text: string) => {
         const canvas = document.createElement('canvas');
@@ -314,22 +709,83 @@ export const HexRenderer: React.FC = () => {
         return sp;
     };
 
+    const buildNavQueryPointMarker = (col: number, row: number, label: string, color: number, agentRadiusCm: number) => {
+        const h = terrain.getHeight(col, row);
+        const pos = cellToWorldPosition(col, row, h, boardMetrics, 2.0);
+        const group = new THREE.Group();
+        group.position.set(pos.x, pos.y + 0.75, pos.z);
+
+        const agentRadiusM = Math.max(0, Number(agentRadiusCm) / 100.0);
+        if (agentRadiusM > 0) {
+            const footprintGeo = new THREE.CircleGeometry(agentRadiusM, 48);
+            footprintGeo.rotateX(-Math.PI / 2);
+            const footprintMat = new THREE.MeshBasicMaterial({
+                color,
+                transparent: true,
+                opacity: 0.12,
+                depthWrite: false,
+                depthTest: false,
+                side: THREE.DoubleSide,
+            });
+            const footprint = new THREE.Mesh(footprintGeo, footprintMat);
+            footprint.position.y = 0.02;
+            footprint.renderOrder = 998;
+            group.add(footprint);
+
+            const radiusGeo = new THREE.RingGeometry(agentRadiusM * 0.96, agentRadiusM, 48);
+            radiusGeo.rotateX(-Math.PI / 2);
+            const radiusMat = new THREE.MeshBasicMaterial({
+                color,
+                transparent: true,
+                opacity: 0.72,
+                depthTest: false,
+                side: THREE.DoubleSide,
+            });
+            const radiusRing = new THREE.Mesh(radiusGeo, radiusMat);
+            radiusRing.position.y = 0.04;
+            radiusRing.renderOrder = 1000;
+            group.add(radiusRing);
+        }
+
+        const ringGeo = new THREE.RingGeometry(1.4, 1.8, 28);
+        ringGeo.rotateX(-Math.PI / 2);
+        const ringMat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.renderOrder = 1001;
+        group.add(ring);
+
+        const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 2.2, 8);
+        const poleMat = new THREE.MeshBasicMaterial({ color, depthTest: false });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.y = 1.1;
+        pole.renderOrder = 1001;
+        group.add(pole);
+
+        const sprite = buildTextSprite(label);
+        sprite.position.set(0, 3.0, 0);
+        sprite.scale.set(3.5, 2.0, 1);
+        group.add(sprite);
+        return group;
+    };
+
     const updateDirtyChunks = () => {
+        if (!canvasHasVisibleSessionRef.current) return;
         const currentTerrain = terrainRef.current;
-        if (!chunkRendererRef.current || !terrainGroupRef.current || currentTerrain.dirtyChunks.size === 0) return;
+        moveTerrainDirtyChunksToRenderQueue(currentTerrain);
+        enqueueVisibleRenderWindow(false);
+        if (!chunkRendererRef.current || !terrainGroupRef.current || renderDirtyChunksRef.current.size === 0) return;
 
         const group = terrainGroupRef.current;
         const renderer = chunkRendererRef.current;
 
         // Time Budget for Frame (e.g. 10ms)
         const startTime = performance.now();
-        const TIME_BUDGET = 12; // ms
 
         // We can't easily iterate and delete from Set partially without copying or using iterator.
         // Copying huge Set is expensive.
         // Using iterator is best.
         
-        const dirtyIterator = currentTerrain.dirtyChunks.values();
+        const dirtyIterator = renderDirtyChunksRef.current.values();
         const processedKeys: string[] = [];
 
         // Note: Set iterator order is insertion order.
@@ -358,37 +814,43 @@ export const HexRenderer: React.FC = () => {
 
             const key = next.value;
             const [cx, cy] = key.split(',').map(Number);
+            if (!isValidChunk(cx, cy, currentTerrain)) {
+                processedKeys.push(key);
+                continue;
+            }
 
             // Remove old chunk
-            const oldChunk = group.getObjectByName(`chunk_${cx}_${cy}`);
-            if (oldChunk) group.remove(oldChunk);
+            const oldChunk = chunksRef.current.get(key);
+            if (oldChunk) {
+                group.remove(oldChunk);
+                disposeThreeObject(oldChunk);
+                chunksRef.current.delete(key);
+            }
 
             // Generate new
             const newChunk = renderer.generateChunk(cx, cy, 0, 0, 2.0); 
 
-            const fastNavVisible = showNavMesh && bakedNavTiles.size === 0;
-            newChunk.traverse((obj) => {
-                if (obj.name === "NavMesh") obj.visible = fastNavVisible;
-                if (obj.type === 'Points') obj.visible = !(showNavMesh && bakedNavTiles.size > 0);
-            });
+            applyChunkLayerVisibility(newChunk);
             group.add(newChunk);
+            chunksRef.current.set(key, newChunk);
 
             processedKeys.push(key);
 
-            if (performance.now() - startTime > TIME_BUDGET) {
+            if (performance.now() - startTime > INITIAL_RENDER_FRAME_BUDGET_MS) {
                 break;
             }
         }
 
         // Remove processed from dirty set
-        processedKeys.forEach(k => currentTerrain.dirtyChunks.delete(k));
+        processedKeys.forEach(k => renderDirtyChunksRef.current.delete(k));
 
-        // Sync to Minimap (Only processed ones, to spread load there too)
-        reportDirtyChunks(processedKeys);
+        // Sync render rebuilds to the minimap only. Nav dirty is authored by terrain/area/obstacle edits,
+        // not by the renderer consuming its own rebuild queue after Open.
+        reportMinimapDirtyChunks(processedKeys);
 
         // Update Progress
         if (totalInitChunksRef.current > 0) {
-            const remaining = currentTerrain.dirtyChunks.size;
+            const remaining = renderDirtyChunksRef.current.size;
             const total = totalInitChunksRef.current;
             const progress = Math.floor(((total - remaining) / total) * 100);
             
@@ -402,77 +864,193 @@ export const HexRenderer: React.FC = () => {
                 totalInitChunksRef.current = 0;
             } else {
                  // Update every 5% or so?
-                 setLoading(true, `Generating Terrain... ${progress}%`, progress);
+                 setLoading(true, `Generating visible terrain... ${progress}%`, progress);
             }
         }
     };
 
-    const buildBakedNavMeshGroup = (tiles: Map<string, NavTile>) => {
+    const buildBakedNavMeshGroup = (tiles: Map<string, BakedNavTileVisual>, simulation: { points?: Array<{ xCm: number; zCm: number }> } | null, agentRadiusCm: number) => {
         const group = new THREE.Group();
-        group.name = "bakedNavMesh";
+        group.name = "BakedRecastNavTiles";
 
         const triMat = new THREE.MeshBasicMaterial({
-            color: 0x00ff66,
             transparent: true,
-            opacity: 0.18,
+            opacity: 0.46,
             side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: false,
+            vertexColors: true,
         });
-
-        const portalMat = new THREE.LineBasicMaterial({
-            color: 0xffaa00,
+        const wireMat = new THREE.LineBasicMaterial({
+            color: 0xe0f2fe,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.78,
             depthTest: false,
         });
-
         const boundaryMat = new THREE.LineBasicMaterial({
-            color: 0x00e5ff,
+            color: 0xffffff,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.94,
             depthTest: false,
         });
-
-        const vertexMat = new THREE.PointsMaterial({
-            color: 0xffff66,
-            size: 1.2,
-            depthTest: false,
+        const portalMat = new THREE.LineBasicMaterial({
+            color: 0xfbbf24,
             transparent: true,
             opacity: 0.95,
+            depthTest: false,
         });
 
         const tileMeshes: THREE.Object3D[] = [];
-        tiles.forEach((tile) => {
+        tiles.forEach((visual) => {
+            const tile = visual.tile;
             const geo = buildTileTriangleGeometry(tile);
             if (geo) {
                 const mesh = new THREE.Mesh(geo, triMat);
-                mesh.name = `bakedNavTile_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${tile.tileId.layer}`;
+                mesh.name = `RecastNavTileTriangles_${visual.profileId ?? 'manual'}_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${visual.layer}`;
                 mesh.renderOrder = 200;
                 tileMeshes.push(mesh);
             }
-
+            const wire = buildTileTriangleWireLines(tile, wireMat);
+            if (wire) {
+                wire.name = `RecastNavTileTriangleEdges_${visual.profileId ?? 'manual'}_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${visual.layer}`;
+                wire.renderOrder = 230;
+                tileMeshes.push(wire);
+            }
             const boundary = buildTileBoundaryLines(tile, boundaryMat);
             if (boundary) {
-                boundary.renderOrder = 202;
+                boundary.name = `RecastNavTileBoundary_${visual.profileId ?? 'manual'}_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${visual.layer}`;
+                boundary.renderOrder = 240;
                 tileMeshes.push(boundary);
             }
-
-            const portalLines = buildTilePortalLines(tile, portalMat);
-            if (portalLines) {
-                portalLines.renderOrder = 201;
-                tileMeshes.push(portalLines);
-            }
-
-            const points = buildTileVertexPoints(tile, vertexMat);
-            if (points) {
-                points.renderOrder = 203;
-                tileMeshes.push(points);
+            const portals = buildTilePortalLines(tile, portalMat);
+            if (portals) {
+                portals.name = `RecastNavTilePortals_${visual.profileId ?? 'manual'}_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${visual.layer}`;
+                portals.renderOrder = 245;
+                tileMeshes.push(portals);
             }
         });
 
         for (let i = 0; i < tileMeshes.length; i++) group.add(tileMeshes[i]);
+        const pathGroup = buildNavSimulationPathGroup(simulation, tiles, agentRadiusCm);
+        if (pathGroup) group.add(pathGroup);
         return group;
+    };
+
+    const buildNavSimulationPathGroup = (simulation: { points?: Array<{ xCm: number; zCm: number }> } | null, tiles: Map<string, BakedNavTileVisual>, agentRadiusCm: number) => {
+        const points = simulation?.points ?? [];
+        if (points.length < 2) return null;
+
+        const pathPoints: THREE.Vector3[] = [];
+        for (let i = 0; i < points.length; i++) {
+            pathPoints.push(new THREE.Vector3(
+                points[i].xCm / 100.0,
+                sampleBakedNavHeightM(tiles, points[i].xCm, points[i].zCm) + 0.28,
+                points[i].zCm / 100.0));
+        }
+
+        const group = new THREE.Group();
+        group.name = 'NavPathSimulation';
+
+        const agentRadiusM = Math.max(0, Number(agentRadiusCm) / 100.0);
+        const radiusWidthM = Math.max(0.55, agentRadiusM * 2.0);
+        const radiusGeo = buildPathRibbonGeometry(pathPoints, radiusWidthM);
+        if (radiusGeo) {
+            const radiusMat = new THREE.MeshBasicMaterial({
+                color: 0x22d3ee,
+                transparent: true,
+                opacity: 0.20,
+                depthWrite: false,
+                depthTest: false,
+                side: THREE.DoubleSide,
+            });
+            const radiusMesh = new THREE.Mesh(radiusGeo, radiusMat);
+            radiusMesh.name = 'NavPathAgentRadiusBand';
+            radiusMesh.renderOrder = 260;
+            group.add(radiusMesh);
+        }
+
+        const centerWidthM = Math.max(0.38, Math.min(1.35, radiusWidthM * 0.32));
+        const centerGeo = buildPathRibbonGeometry(pathPoints, centerWidthM);
+        if (centerGeo) {
+            const centerMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.96,
+                depthWrite: false,
+                depthTest: false,
+                side: THREE.DoubleSide,
+            });
+            const centerMesh = new THREE.Mesh(centerGeo, centerMat);
+            centerMesh.name = 'NavPathCenterRibbon';
+            centerMesh.renderOrder = 270;
+            group.add(centerMesh);
+        }
+
+        return group.children.length > 0 ? group : null;
+    };
+
+    const buildPathRibbonGeometry = (points: THREE.Vector3[], widthM: number) => {
+        if (points.length < 2 || !(widthM > 0)) return null;
+        const positions: number[] = [];
+        const halfWidth = widthM * 0.5;
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const a = points[i];
+            const b = points[i + 1];
+            const dx = b.x - a.x;
+            const dz = b.z - a.z;
+            const len = Math.hypot(dx, dz);
+            if (len <= 1e-5) continue;
+
+            const nx = -dz / len;
+            const nz = dx / len;
+            pushRibbonVertex(positions, a.x + nx * halfWidth, a.y, a.z + nz * halfWidth);
+            pushRibbonVertex(positions, a.x - nx * halfWidth, a.y, a.z - nz * halfWidth);
+            pushRibbonVertex(positions, b.x - nx * halfWidth, b.y, b.z - nz * halfWidth);
+            pushRibbonVertex(positions, a.x + nx * halfWidth, a.y, a.z + nz * halfWidth);
+            pushRibbonVertex(positions, b.x - nx * halfWidth, b.y, b.z - nz * halfWidth);
+            pushRibbonVertex(positions, b.x + nx * halfWidth, b.y, b.z + nz * halfWidth);
+        }
+
+        if (positions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        return geo;
+    };
+
+    const pushRibbonVertex = (dst: number[], x: number, y: number, z: number) => {
+        dst.push(x, y, z);
+    };
+
+    const sampleBakedNavHeightM = (tiles: Map<string, BakedNavTileVisual>, xCm: number, zCm: number) => {
+        for (const visual of tiles.values()) {
+            const tile = visual.tile;
+            const localX = xCm - tile.originXcm;
+            const localZ = zCm - tile.originZcm;
+            const tCount = tile.triA.length;
+            for (let i = 0; i < tCount; i++) {
+                const height = sampleTriangleHeightCm(tile, tile.triA[i], tile.triB[i], tile.triC[i], localX, localZ);
+                if (height !== null) return height / 100.0;
+            }
+        }
+        return 0.45;
+    };
+
+    const sampleTriangleHeightCm = (tile: NavTile, ia: number, ib: number, ic: number, x: number, z: number) => {
+        const ax = tile.vertexXcm[ia], az = tile.vertexZcm[ia];
+        const bx = tile.vertexXcm[ib], bz = tile.vertexZcm[ib];
+        const cx = tile.vertexXcm[ic], cz = tile.vertexZcm[ic];
+        const v0x = bx - ax, v0z = bz - az;
+        const v1x = cx - ax, v1z = cz - az;
+        const v2x = x - ax, v2z = z - az;
+        const den = v0x * v1z - v1x * v0z;
+        if (Math.abs(den) < 1e-5) return null;
+        const u = (v2x * v1z - v1x * v2z) / den;
+        const v = (v0x * v2z - v2x * v0z) / den;
+        const w = 1 - u - v;
+        const eps = -1e-4;
+        if (u < eps || v < eps || w < eps) return null;
+        return tile.vertexYcm[ia] * w + tile.vertexYcm[ib] * u + tile.vertexYcm[ic] * v;
     };
 
     const buildTileTriangleGeometry = (tile: NavTile) => {
@@ -489,8 +1067,49 @@ export const HexRenderer: React.FC = () => {
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(buildTileTriangleColors(tile), 3));
         geo.computeVertexNormals();
         return geo;
+    };
+
+    const buildTileTriangleColors = (tile: NavTile) => {
+        const tCount = tile.triA.length;
+        const color = new Float32Array(tCount * 3 * 3);
+        let o = 0;
+        for (let i = 0; i < tCount; i++) {
+            const c = getAreaColor(tile.triAreaIds[i] ?? 0);
+            for (let v = 0; v < 3; v++) {
+                color[o++] = c.r;
+                color[o++] = c.g;
+                color[o++] = c.b;
+            }
+        }
+        return color;
+    };
+
+    const getAreaColor = (areaId: number) => {
+        switch (areaId) {
+            case 0: return new THREE.Color(0x38bdf8);
+            case 1: return new THREE.Color(0x9ca3af);
+            case 2: return new THREE.Color(0x22d3ee);
+            case 3: return new THREE.Color(0xa78bfa);
+            case 4: return new THREE.Color(0x60a5fa);
+            case 5: return new THREE.Color(0xf59e0b);
+            default: {
+                const hue = ((areaId * 47) % 360) / 360;
+                return new THREE.Color().setHSL(hue, 0.72, 0.55);
+            }
+        }
+    };
+
+    const applyChunkLayerVisibility = (chunk: THREE.Object3D) => {
+        const view = viewStateRef.current;
+        const fastNavVisible = view.showNavMesh && !view.hasBakedNavTiles;
+        chunk.traverse((obj) => {
+            if (obj.name === 'NavMesh') obj.visible = fastNavVisible;
+            if (obj.name === 'CellGrid' || obj.name === 'CellPoints') obj.visible = view.showGrid;
+            if (obj.name === 'ChunkBorder') obj.visible = view.showChunkBorders;
+        });
     };
 
     const buildTilePortalLines = (tile: NavTile, mat: THREE.LineBasicMaterial) => {
@@ -510,6 +1129,20 @@ export const HexRenderer: React.FC = () => {
 
         const geo = new THREE.BufferGeometry();
         geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        return new THREE.LineSegments(geo, mat);
+    };
+
+    const buildTileTriangleWireLines = (tile: NavTile, mat: THREE.LineBasicMaterial) => {
+        const tCount = tile.triA.length;
+        if (tCount === 0) return null;
+        const positions: number[] = [];
+        for (let i = 0; i < tCount; i++) {
+            pushEdge(tile, tile.triA[i], tile.triB[i], positions);
+            pushEdge(tile, tile.triB[i], tile.triC[i], positions);
+            pushEdge(tile, tile.triC[i], tile.triA[i], positions);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
         return new THREE.LineSegments(geo, mat);
     };
 
@@ -685,23 +1318,6 @@ export const HexRenderer: React.FC = () => {
         return group;
     };
 
-    const buildTileVertexPoints = (tile: NavTile, mat: THREE.PointsMaterial) => {
-        const vCount = tile.vertexXcm.length;
-        if (vCount === 0) return null;
-        const pos = new Float32Array(vCount * 3);
-        let o = 0;
-        for (let i = 0; i < vCount; i++) {
-            pos[o++] = (tile.originXcm + tile.vertexXcm[i]) / 100.0;
-            pos[o++] = (tile.vertexYcm[i]) / 100.0 + 0.12;
-            pos[o++] = (tile.originZcm + tile.vertexZcm[i]) / 100.0;
-        }
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-        const pts = new THREE.Points(geo, mat);
-        pts.name = `bakedNavVerts_${tile.tileId.chunkX}_${tile.tileId.chunkY}_${tile.tileId.layer}`;
-        return pts;
-    };
-
     const pushEdge = (tile: NavTile, ia: number, ib: number, dst: number[]) => {
         const yOffset = 0.08;
         writeVertexToList(tile, ia, yOffset, dst);
@@ -739,20 +1355,32 @@ export const HexRenderer: React.FC = () => {
         if (intersects.length === 0) return null;
 
         const point = intersects[0].point;
-        
-        // Hex logic from editor_v2
-        // r = Math.round((z - offsetZ) / ROW_SPACING)
-        // c = Math.round((x - offsetX) / HEX_WIDTH - 0.5 * (r & 1))
-        
-        const r = Math.round(point.z / ROW_SPACING);
-        const c = Math.round(point.x / HEX_WIDTH - 0.5 * (r & 1));
+        const cell = worldPointToCell(point.x, point.z, boardMetricsRef.current);
+        const c = cell.col;
+        const r = cell.row;
         
         return { c, r, point };
     };
 
     const applyBrush = (c: number, r: number) => {
+        if (!canvasEditable) return;
         const size = brushSize;
         const range = size - 1;
+        const navTouchedChunks = new Set<string>();
+        const markNavDirtyCell = (col: number, row: number, includeNeighborCells = false) => {
+            const chunkSize = boardMetricsRef.current.chunkSizeCells;
+            const minCol = includeNeighborCells ? col - 1 : col;
+            const maxCol = includeNeighborCells ? col + 1 : col;
+            const minRow = includeNeighborCells ? row - 1 : row;
+            const maxRow = includeNeighborCells ? row + 1 : row;
+            for (let yy = minRow; yy <= maxRow; yy++) {
+                for (let xx = minCol; xx <= maxCol; xx++) {
+                    const cx = Math.floor(xx / chunkSize);
+                    const cy = Math.floor(yy / chunkSize);
+                    if (terrain.isValidChunk(cx, cy)) navTouchedChunks.add(`${cx},${cy}`);
+                }
+            }
+        };
         
         // Simple circle brush
         for (let dy = -range; dy <= range; dy++) {
@@ -772,15 +1400,21 @@ export const HexRenderer: React.FC = () => {
                     // Apply Logic based on Tool
                     switch (activeCategory) {
                         case 'Height':
+                        {
                             const curH = terrain.getHeight(tc, tr);
                             let newH = curH;
                             if (activeMode === 'Set') newH = brushValue;
                             else if (activeMode === 'Raise') newH = Math.min(15, curH + 1); // Clamp to 15
                             else if (activeMode === 'Lower') newH = Math.max(0, curH - 1);
                             
-                            if (newH !== curH) terrain.setHeight(tc, tr, newH);
+                            if (newH !== curH) {
+                                terrain.setHeight(tc, tr, newH);
+                                markNavDirtyCell(tc, tr, true);
+                            }
                             break;
+                        }
                         case 'Water':
+                        {
                              // BUCKET TOOL: Fill Water
                              if (activeMode === 'Bucket') {
                                  // Target Water Height is current brush value (or 0 if erasing?)
@@ -791,7 +1425,6 @@ export const HexRenderer: React.FC = () => {
                                  // Condition: Expand if (TerrainHeight < TargetWaterH)
                                  // Boundary: TerrainHeight >= TargetWaterH
                                  
-                                 const startKey = `${tc},${tr}`;
                                  const visited = new Set<string>();
                                  const queue: {c: number, r: number}[] = [{c: tc, r: tr}];
                                  
@@ -818,9 +1451,10 @@ export const HexRenderer: React.FC = () => {
                                      if (h < targetWaterH) {
                                          // Set Water
                                          terrain.setWater(c, r, targetWaterH);
+                                         markNavDirtyCell(c, r);
                                          
                                          // Neighbors
-                                         const neighbors = getNeighbors(c, r);
+                                         const neighbors = getTopologyNeighbors(c, r, boardMetricsRef.current);
                                          for(const n of neighbors) {
                                              if (!visited.has(`${n.c},${n.r}`)) {
                                                  queue.push(n);
@@ -836,24 +1470,59 @@ export const HexRenderer: React.FC = () => {
                              if (activeMode === 'Set') newW = brushValue;
                              else if (activeMode === 'Raise') newW = Math.min(15, curW + 1); // Clamp to 15
                              else if (activeMode === 'Lower') newW = Math.max(0, curW - 1);
-                             if (newW !== curW) terrain.setWater(tc, tr, newW);
+                             if (newW !== curW) {
+                                 terrain.setWater(tc, tr, newW);
+                                 markNavDirtyCell(tc, tr);
+                             }
                              break;
+                        }
                         
                         case 'Territory':
+                        {
                              const curT = terrain.getTerritory(tc, tr);
                              if (activeMode === 'Set') {
-                                 if (curT !== brushValue) terrain.setTerritory(tc, tr, brushValue);
+                                 if (curT !== brushValue) {
+                                     terrain.setTerritory(tc, tr, brushValue);
+                                     markNavDirtyCell(tc, tr);
+                                 }
                              }
                              // Territory doesn't make sense to Raise/Lower usually, but maybe cycle IDs?
                              // Let's keep it simple: Set mode paints the ID.
                              break;
+                        }
                         case 'Biome':
                             if (activeMode === 'Set') terrain.setBiome(tc, tr, brushValue);
+                            break;
+                        case 'Area':
+                            {
+                                const oldArea = terrain.getAreaId(tc, tr);
+                                let newArea = oldArea;
+                                if (activeMode === 'Set') newArea = brushValue;
+                                else if (activeMode === 'Raise') newArea = Math.min(255, oldArea + 1);
+                                else if (activeMode === 'Lower') newArea = Math.max(0, oldArea - 1);
+                                if (newArea !== oldArea) {
+                                    terrain.setAreaId(tc, tr, newArea);
+                                    markNavDirtyCell(tc, tr);
+                                }
+                            }
+                            break;
+                        case 'Blocked':
+                            {
+                                let blocked = terrain.getBlocked(tc, tr);
+                                if (activeMode === 'Set') blocked = brushValue > 0;
+                                else if (activeMode === 'Raise') blocked = true;
+                                else if (activeMode === 'Lower') blocked = false;
+                                if (blocked !== terrain.getBlocked(tc, tr)) {
+                                    terrain.setBlocked(tc, tr, blocked);
+                                    markNavDirtyCell(tc, tr);
+                                }
+                            }
                             break;
                         case 'Vegetation':
                              if (activeMode === 'Set') terrain.setVeg(tc, tr, brushValue);
                              break;
                         case 'Ramp':
+                        {
                             // Support Raise/Lower as On/Off shortcut
                             let isRamp = terrain.isRamp(tc, tr);
                             if (activeMode === 'Set') isRamp = brushValue > 0;
@@ -862,9 +1531,12 @@ export const HexRenderer: React.FC = () => {
                             
                             if (isRamp !== terrain.isRamp(tc, tr)) {
                                 terrain.setRamp(tc, tr, isRamp);
+                                markNavDirtyCell(tc, tr, true);
                             }
                             break;
+                        }
                         case 'Layers':
+                        {
                             if (!activeLayer) break;
                             let val = false;
                             
@@ -884,23 +1556,55 @@ export const HexRenderer: React.FC = () => {
                                 if (activeLayer === 'Snow') terrain.setSnow(tc, tr, target);
                                 else if (activeLayer === 'Mud') terrain.setMud(tc, tr, target);
                                 else if (activeLayer === 'Ice') terrain.setIce(tc, tr, target);
+                                markNavDirtyCell(tc, tr);
                             }
                             break;
+                        }
                     }
                 }
             }
         }
+        if (navTouchedChunks.size > 0) reportDirtyChunks(navTouchedChunks);
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (canvasInputLocked) {
+            if (e.button === 0 || e.button === 2) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            isDraggingRef.current = false;
+            lastDragCellRef.current = null;
+            return;
+        }
+        if (navPanelTab === 'simulation') {
+            if (e.button !== 0 && e.button !== 2) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const cell = getCellFromEvent(e.clientX, e.clientY);
+            if (cell) {
+                if (e.button === 0) {
+                    setNavQueryStartCell({ col: cell.c, row: cell.r });
+                } else {
+                    setNavQueryGoalCell({ col: cell.c, row: cell.r });
+                }
+            }
+            isDraggingRef.current = false;
+            lastDragCellRef.current = null;
+            return;
+        }
+
         if (e.button !== 0) return; // Left Click Only
-        isDraggingRef.current = true;
         const cell = getCellFromEvent(e.clientX, e.clientY);
         if (cell) {
+            isDraggingRef.current = true;
             if (activeCategory === 'Entities') {
                 if (activeMode === 'Set') placeEntityAt(cell.c, cell.r);
                 else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
                 else if (activeMode === 'Raise') selectEntityAt(cell.c, cell.r);
+            } else if (activeCategory === 'Obstacle') {
+                if (activeMode === 'Set' || activeMode === 'Raise') placeObstacleAt(cell.c, cell.r);
+                else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
             } else {
                 applyBrush(cell.c, cell.r);
             }
@@ -912,21 +1616,27 @@ export const HexRenderer: React.FC = () => {
         const cell = getCellFromEvent(e.clientX, e.clientY);
         
         // Update Cursor
-        if (cursorMeshRef.current && cell) {
+        if (cursorMeshRef.current && (navPanelTab === 'simulation' || !canvasEditable)) {
+            cursorMeshRef.current.visible = false;
+        } else if (cursorMeshRef.current && cell) {
             const h = terrain.getHeight(cell.c, cell.r);
-            const pos = getHexPosition(cell.c, cell.r, h, 2.0); // hScale=2
+            const pos = cellToWorldPosition(cell.c, cell.r, h, boardMetricsRef.current, 2.0);
             cursorMeshRef.current.position.set(pos.x, pos.y + 0.2, pos.z);
-            cursorMeshRef.current.scale.set(brushSize, brushSize, brushSize);
+            const radius = getBrushVisualRadius(boardMetricsRef.current, brushSize);
+            cursorMeshRef.current.scale.set(radius, radius, radius);
             cursorMeshRef.current.visible = true;
         } else if (cursorMeshRef.current) {
             cursorMeshRef.current.visible = false;
         }
 
         // Drag Paint
-        if (isDraggingRef.current && cell) {
+        if (canvasEditable && navPanelTab !== 'simulation' && isDraggingRef.current && cell) {
             if (!lastDragCellRef.current || lastDragCellRef.current.c !== cell.c || lastDragCellRef.current.r !== cell.r) {
                 if (activeCategory === 'Entities') {
                     if (activeMode === 'Set') placeEntityAt(cell.c, cell.r);
+                    else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
+                } else if (activeCategory === 'Obstacle') {
+                    if (activeMode === 'Set' || activeMode === 'Raise') placeObstacleAt(cell.c, cell.r);
                     else if (activeMode === 'Lower') removeEntityAt(cell.c, cell.r);
                 } else {
                     applyBrush(cell.c, cell.r);
@@ -949,6 +1659,25 @@ export const HexRenderer: React.FC = () => {
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
-        />
+            onContextMenu={(e) => {
+                if (navPanelTab === 'simulation') e.preventDefault();
+            }}
+        >
+            {!canvasHasVisibleSession ? (
+                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
+                    <div className="max-w-[420px] rounded-lg border border-slate-700 bg-slate-900/95 p-5 text-center text-slate-200 shadow-2xl">
+                        <div className="text-sm font-semibold text-white">No Board Open</div>
+                        <div className="mt-2 text-xs leading-5 text-slate-400">
+                            Select a map and board in the top bar, then use Map And Board / Board Session / Open Selected before editing terrain, baking nav, or running simulation.
+                        </div>
+                    </div>
+                </div>
+            ) : canvasInputLocked ? (
+                <div className="pointer-events-none absolute left-1/2 top-28 z-20 w-[340px] -translate-x-1/2 rounded-lg border border-amber-700/70 bg-slate-950/90 p-3 text-center text-amber-100 shadow-2xl backdrop-blur-md">
+                    <div className="text-xs font-semibold">{canvasLockTitle}</div>
+                    <div className="mt-1 text-[11px] leading-4 text-amber-100/80">{canvasLockMessage}</div>
+                </div>
+            ) : null}
+        </div>
     );
 };

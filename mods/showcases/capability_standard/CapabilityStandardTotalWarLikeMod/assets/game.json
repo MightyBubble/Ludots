@@ -45,8 +45,5 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
     }
-  },
-  "navigation2D": {
-    "enabled": false
   }
 }

@@ -1,4 +1,5 @@
 using Ludots.Core.Config;
+using Ludots.Core.Layers;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -6,6 +7,7 @@ namespace RoadNetworkShowcaseMod.Runtime
     {
         public static void Register(string modId)
         {
+            LayerRegistry.Register(RoadNetworkShowcaseLayerNames.Column);
             ComponentRegistry.Register<RoadColumnTag>("RoadColumnTag", modId);
             ComponentRegistry.Register<RoadFortTag>("RoadFortTag", modId);
             ComponentRegistry.Register<RoadAiControlledTag>("RoadAiControlledTag", modId);

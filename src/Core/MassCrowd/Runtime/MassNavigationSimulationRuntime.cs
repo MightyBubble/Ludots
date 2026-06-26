@@ -30,6 +30,14 @@ public readonly struct MassNavigationObstacleSnapshot
     public float RadiusCm { get; }
 }
 
+public readonly record struct MassNavigationArrivalEvent(
+    int AgentIndex,
+    Entity Agent,
+    float LocalXCm,
+    float LocalYCm,
+    float WorldXCm,
+    float WorldYCm);
+
 public readonly record struct MassNavigationCarriedRangeSyncResult(
     float CarrierLocalXCm,
     float CarrierLocalYCm,
@@ -287,24 +295,7 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.ArrivalTuning.MaxRetryCountMin = config.Arrival.MaxRetryCountMin;
         MassFlow.ArrivalTuning.MaxRetryCountMax = config.Arrival.MaxRetryCountMax;
         MassFlow.ArrivalTuning.MaxRetryCount = config.Arrival.MaxRetryCount;
-        MassFlow.AvoidanceTuning.DominantMassRatio = config.Avoidance.DominantMassRatio;
-        MassFlow.AvoidanceTuning.FriendlyResponseScale = config.Avoidance.FriendlyResponseScale;
-        MassFlow.AvoidanceTuning.FriendlyResponseMin = config.Avoidance.FriendlyResponseMin;
-        MassFlow.AvoidanceTuning.FriendlyResponseMax = config.Avoidance.FriendlyResponseMax;
-        MassFlow.AvoidanceTuning.NonFriendlyResponseScale = config.Avoidance.NonFriendlyResponseScale;
-        MassFlow.AvoidanceTuning.NonFriendlyResponseMin = config.Avoidance.NonFriendlyResponseMin;
-        MassFlow.AvoidanceTuning.NonFriendlyResponseMax = config.Avoidance.NonFriendlyResponseMax;
-        MassFlow.AvoidanceTuning.DominantPushResponseScale = config.Avoidance.DominantPushResponseScale;
-        MassFlow.AvoidanceTuning.DominantPushResponseMin = config.Avoidance.DominantPushResponseMin;
-        MassFlow.AvoidanceTuning.DominantPushResponseMax = config.Avoidance.DominantPushResponseMax;
-        MassFlow.AvoidanceTuning.FriendlyCorrectionShareMin = config.Avoidance.FriendlyCorrectionShareMin;
-        MassFlow.AvoidanceTuning.FriendlyCorrectionShareMax = config.Avoidance.FriendlyCorrectionShareMax;
-        MassFlow.AvoidanceTuning.DominantCorrectionOtherMassWeight = config.Avoidance.DominantCorrectionOtherMassWeight;
-        MassFlow.AvoidanceTuning.DominantCorrectionShareMin = config.Avoidance.DominantCorrectionShareMin;
-        MassFlow.AvoidanceTuning.DominantCorrectionShareMax = config.Avoidance.DominantCorrectionShareMax;
-        MassFlow.AvoidanceTuning.NonFriendlyCorrectionOtherMassWeight = config.Avoidance.NonFriendlyCorrectionOtherMassWeight;
-        MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMin = config.Avoidance.NonFriendlyCorrectionShareMin;
-        MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMax = config.Avoidance.NonFriendlyCorrectionShareMax;
+        MassFlow.AvoidanceTuning.CopyFrom(config.Avoidance);
         MassFlow.Semantics.Obstacle.HardResolveCandidateDistanceCm = config.Semantics.Obstacle.HardResolveCandidateDistanceCm;
         MassFlow.Semantics.Obstacle.SoftPushPaddingCm = config.Semantics.Obstacle.SoftPushPaddingCm;
         MassFlow.Semantics.Obstacle.SoftPushForceScale = config.Semantics.Obstacle.SoftPushForceScale;
@@ -777,7 +768,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ResetRuntimeState(World world, ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         ResetRuntimeState(world);
-        MassFlow.ResetAuthoredAgents(agentSeeds, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(agentSeeds);
     }
 
     public void ClearAuthoredRuntimeBindings(World world)
@@ -786,7 +777,7 @@ public sealed class MassNavigationSimulationRuntime
         ClearSelection();
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
-        MassFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
         MarkAuthoredRuntimeBindingChanged();
     }
 
@@ -812,7 +803,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         ClearAuthoredRuntimeBindings(world);
-        MassFlow.ResetAuthoredAgents(agentSeeds, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
         {
             BindSpawnedAgent(world, entities[i], i, controllableFlags[i]);
@@ -934,6 +925,26 @@ public sealed class MassNavigationSimulationRuntime
     public System.Numerics.Vector2 GetAgentWorldPositionCm(int agentIndex)
     {
         return ToWorldCm(GetAgentLocalPositionCm(agentIndex));
+    }
+
+    public bool TryGetAgentWorldPositionCm(World world, Entity agent, out System.Numerics.Vector2 worldCm)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        worldCm = default;
+        if (!world.IsAlive(agent) ||
+            !world.TryGet(agent, out MassCrowdAgentIndex index))
+        {
+            return false;
+        }
+
+        int agentIndex = index.Value;
+        if ((uint)agentIndex >= (uint)MassFlow.UnitCount)
+        {
+            return false;
+        }
+
+        worldCm = GetAgentWorldPositionCm(agentIndex);
+        return true;
     }
 
     public MassNavigationGroupSemantics GetRuntimeGroupSemantics()
@@ -1061,10 +1072,93 @@ public sealed class MassNavigationSimulationRuntime
         return MassFlow.TryGetUnitTarget(agentIndex, out xCm, out yCm);
     }
 
+    public bool TryGetAgentNavigationTargetWorldCm(int agentIndex, out float xCm, out float yCm)
+    {
+        RequireAgentIndex(agentIndex);
+        if (!MassFlow.TryGetUnitTarget(agentIndex, out float localX, out float localY))
+        {
+            xCm = 0f;
+            yCm = 0f;
+            return false;
+        }
+
+        xCm = ToWorldXCm(localX);
+        yCm = ToWorldYCm(localY);
+        return true;
+    }
+
     public bool SetAgentNavigationTargetLocalCm(int agentIndex, float xCm, float yCm, bool resetRecovery = false)
     {
         RequireAgentIndex(agentIndex);
         return MassFlow.SetUnitTarget(agentIndex, xCm, yCm, resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetLocalCm(
+        int agentIndex,
+        float xCm,
+        float yCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.SetUnitTarget(agentIndex, xCm, yCm, stopThresholdCm, resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(int agentIndex, float worldXCm, float worldYCm, bool resetRecovery = false)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.SetUnitTarget(agentIndex, ToLocalXCm(worldXCm), ToLocalYCm(worldYCm), resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(
+        int agentIndex,
+        float worldXCm,
+        float worldYCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.SetUnitTarget(
+            agentIndex,
+            ToLocalXCm(worldXCm),
+            ToLocalYCm(worldYCm),
+            stopThresholdCm,
+            resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(Entity agent, Vector2 worldCm, bool resetRecovery = false)
+    {
+        if (!AgentState.TryGetControllableIndex(agent, out int agentIndex))
+        {
+            return false;
+        }
+
+        return SetAgentNavigationTargetWorldCm(agentIndex, worldCm.X, worldCm.Y, resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(
+        Entity agent,
+        Vector2 worldCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        if (!AgentState.TryGetControllableIndex(agent, out int agentIndex))
+        {
+            return false;
+        }
+
+        return SetAgentNavigationTargetWorldCm(agentIndex, worldCm.X, worldCm.Y, stopThresholdCm, resetRecovery);
+    }
+
+    public void ReleaseAgentNavigationTarget(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        MassFlow.ReleaseUnitToTeamTarget(agentIndex);
+    }
+
+    public int DrainArrivalEvents(Span<MassNavigationArrivalEvent> destination)
+    {
+        return MassFlow.DrainArrivalEvents(destination, AgentState, SolverWindowMinXCm, SolverWindowMinYCm);
     }
 
     public void StepNavigationForTests(World world, float dt, bool runHardResolve = false, int hardResolveCandidateThresholdAgents = 1)
@@ -1144,9 +1238,7 @@ public sealed class MassNavigationSimulationRuntime
         {
             ProfileId = profileId,
             Heavy = MassFlow.IsHeavyProfile(agentIndex),
-            NavMass = MassFlow.GetNavMass(agentIndex),
             VisualScale = MassFlow.GetVisualScale(agentIndex),
-            BodyRadiusCm = MassFlow.GetBodyRadiusCm(agentIndex),
             SpeedCmPerSecond = MassFlow.GetSpeedCmPerSecond(agentIndex),
         });
         AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);

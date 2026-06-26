@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Presentation.Components;
 using Schedulers;
 
@@ -72,17 +74,24 @@ public sealed class MassFlowSimulationState
     private int[] _separationHashSearchRadiusCellsByAgent = Array.Empty<int>();
     private int[] _hardResolveHashSearchRadiusCellsByAgent = Array.Empty<int>();
     private float[] _unitTargetsCm = Array.Empty<float>();
+    private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
     private byte[] _unitSettledFlags = Array.Empty<byte>();
+    private byte[] _arrivalEventEmittedFlags = Array.Empty<byte>();
     private byte[] _unitRetryCounts = Array.Empty<byte>();
     private float[] _unitStuckSeconds = Array.Empty<float>();
     private int[] _separationAgents = Array.Empty<int>();
     private int[] _hardResolveAgents = Array.Empty<int>();
     private int[] _entitySyncDirtyAgents = Array.Empty<int>();
+    private int[] _arrivalEventAgentIndices = Array.Empty<int>();
+    private int[] _avoidanceNeighborScratch = Array.Empty<int>();
+    private OrcaSolver2D.OrcaLine[] _orcaLineScratch = Array.Empty<OrcaSolver2D.OrcaLine>();
+    private OrcaSolver2D.OrcaLine[] _orcaProjectionLineScratch = Array.Empty<OrcaSolver2D.OrcaLine>();
+    private SonarSolver2D.Interval[] _sonarIntervalScratch = Array.Empty<SonarSolver2D.Interval>();
     private readonly UnitStepJob[] _stepJobs;
     private readonly JobHandle[] _stepHandles;
 
@@ -95,6 +104,7 @@ public sealed class MassFlowSimulationState
     private int _frameCount;
     private bool _useCandidateGating;
     private int _entitySyncDirtyCount;
+    private int _arrivalEventCount;
     private bool _flowDirty = true;
     private float _maxBodyRadiusCm;
     private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
@@ -114,6 +124,7 @@ public sealed class MassFlowSimulationState
     public int ObstacleCount { get; private set; }
     public int SettledUnitCount { get; private set; }
     public int PendingEntitySyncCount => _entitySyncDirtyCount;
+    public int PendingArrivalEventCount => _arrivalEventCount;
     public float LastFlowFieldRebuildMs { get; private set; }
     public MassFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassFlowAvoidanceTuning AvoidanceTuning { get; } = new();
@@ -288,7 +299,6 @@ public sealed class MassFlowSimulationState
     public void Reset(
         ReadOnlySpan<int> teamIds,
         int unitsPerTeam,
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles,
         MassNavigationAgentProfileSetConfig profileSet,
         MassNavigationAgentLayer layer,
         MassNavigationScenarioSpawnLayoutConfig spawnLayout)
@@ -311,27 +321,27 @@ public sealed class MassFlowSimulationState
         UnitCount = checked(unitsPerTeam * teamIds.Length);
         EnsureCapacity(UnitCount);
         InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
-        CacheAuthoredObstacles(obstacles);
+        ClearRuntimeObstacles();
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
         _frameCount = 0;
         SettledUnitCount = 0;
+        _arrivalEventCount = 0;
     }
 
-    public void ResetAuthoredAgents(
-        ReadOnlySpan<MassNavigationAgentSeed> agentSeeds,
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
+    public void ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         UnitCount = agentSeeds.Length;
         EnsureCapacity(UnitCount);
         InitializeTeams(agentSeeds);
-        CacheAuthoredObstacles(obstacles);
+        ClearRuntimeObstacles();
         InitializeUnits(agentSeeds);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
         _frameCount = 0;
         SettledUnitCount = 0;
+        _arrivalEventCount = 0;
     }
 
     public void SetTeamTarget(int teamId, Vector2 targetCm)
@@ -514,7 +524,19 @@ public sealed class MassFlowSimulationState
         ForceFlowRebuild();
     }
 
+    private void ClearRuntimeObstacles()
+    {
+        int previousCount = ObstacleCount;
+        ObstacleCount = 0;
+        ClearStaleObstacles(0, previousCount);
+    }
+
     public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
+    {
+        return SetUnitTarget(index, xCm, yCm, stopThresholdCm: 0f, resetRecovery);
+    }
+
+    public bool SetUnitTarget(int index, float xCm, float yCm, float stopThresholdCm, bool resetRecovery = false)
     {
         if ((uint)index >= (uint)UnitCount)
         {
@@ -522,10 +544,19 @@ public sealed class MassFlowSimulationState
                 $"MassFlow unit target index {index} exceeds current unit count {UnitCount}.");
         }
 
+        if (stopThresholdCm < 0f)
+        {
+            throw new InvalidOperationException("MassFlow unit target stop threshold requires stopThresholdCm >= 0.");
+        }
+
         int offset = index << 1;
         bool wasInactive = _hasUnitTarget[index] == 0;
         ClampLocalToWorldBounds(ref xCm, ref yCm, _bodyRadiiCm[index]);
-        bool targetChanged = wasInactive || _unitTargetsCm[offset] != xCm || _unitTargetsCm[offset + 1] != yCm;
+        bool targetChanged =
+            wasInactive ||
+            _unitTargetsCm[offset] != xCm ||
+            _unitTargetsCm[offset + 1] != yCm ||
+            _unitTargetStopThresholdsCm[index] != stopThresholdCm;
         if (!targetChanged && !resetRecovery)
         {
             return false;
@@ -533,9 +564,11 @@ public sealed class MassFlowSimulationState
 
         _unitTargetsCm[offset] = xCm;
         _unitTargetsCm[offset + 1] = yCm;
+        _unitTargetStopThresholdsCm[index] = stopThresholdCm;
         _hasUnitTarget[index] = 1;
         if (targetChanged)
         {
+            _arrivalEventEmittedFlags[index] = 0;
             MarkEntityDirty(index);
         }
 
@@ -566,6 +599,42 @@ public sealed class MassFlowSimulationState
         xCm = _unitTargetsCm[offset];
         yCm = _unitTargetsCm[offset + 1];
         return true;
+    }
+
+    public int DrainArrivalEvents(
+        Span<MassNavigationArrivalEvent> destination,
+        MassNavigationAgentState agentState,
+        float worldOriginXCm,
+        float worldOriginYCm)
+    {
+        ArgumentNullException.ThrowIfNull(agentState);
+        int count = Math.Min(destination.Length, _arrivalEventCount);
+        for (int i = 0; i < count; i++)
+        {
+            int agentIndex = _arrivalEventAgentIndices[i];
+            int offset = agentIndex << 1;
+            agentState.TryGetAgentEntity(agentIndex, out Entity entity);
+            float localX = _positionsCm[offset];
+            float localY = _positionsCm[offset + 1];
+            destination[i] = new MassNavigationArrivalEvent(
+                agentIndex,
+                entity,
+                localX,
+                localY,
+                worldOriginXCm + localX,
+                worldOriginYCm + localY);
+        }
+
+        if (count == _arrivalEventCount)
+        {
+            _arrivalEventCount = 0;
+            return count;
+        }
+
+        int remaining = _arrivalEventCount - count;
+        Array.Copy(_arrivalEventAgentIndices, count, _arrivalEventAgentIndices, 0, remaining);
+        _arrivalEventCount = remaining;
+        return count;
     }
 
     public void ApplyExternalDisplacementRange(
@@ -666,6 +735,8 @@ public sealed class MassFlowSimulationState
 
         ResetUnitArrivalState(index, clearRetryCount: true);
         _hasUnitTarget[index] = 0;
+        _unitTargetStopThresholdsCm[index] = 0f;
+        _arrivalEventEmittedFlags[index] = 0;
         MarkEntityDirty(index);
     }
 
@@ -682,8 +753,10 @@ public sealed class MassFlowSimulationState
         float y = _positionsCm[offset + 1];
         _unitTargetsCm[offset] = x;
         _unitTargetsCm[offset + 1] = y;
+        _unitTargetStopThresholdsCm[index] = 0f;
         _hasUnitTarget[index] = 1;
         _unitRetryCounts[index] = 0;
+        _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
         MarkEntityDirty(index);
     }
@@ -1079,17 +1152,44 @@ public sealed class MassFlowSimulationState
             Array.Resize(ref _speedsCmPerSecond, unitCount);
             Array.Resize(ref _separationHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
+            Array.Resize(ref _unitTargetStopThresholdsCm, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
             Array.Resize(ref _heavyProfileFlags, unitCount);
             Array.Resize(ref _entitySyncDirtyFlags, unitCount);
             Array.Resize(ref _unitSettledFlags, unitCount);
+            Array.Resize(ref _arrivalEventEmittedFlags, unitCount);
             Array.Resize(ref _unitRetryCounts, unitCount);
             Array.Resize(ref _unitStuckSeconds, unitCount);
             Array.Resize(ref _separationAgents, unitCount);
             Array.Resize(ref _hardResolveAgents, unitCount);
             Array.Resize(ref _entitySyncDirtyAgents, unitCount);
+            Array.Resize(ref _arrivalEventAgentIndices, unitCount);
+        }
+
+        int avoidanceNeighborCapacity = Math.Max(0, unitCount * MassFlowAvoidanceTuning.MaxKernelNeighbors);
+        if (_avoidanceNeighborScratch.Length < avoidanceNeighborCapacity)
+        {
+            Array.Resize(ref _avoidanceNeighborScratch, avoidanceNeighborCapacity);
+        }
+
+        int orcaLineCapacity = Math.Max(0, unitCount * MassFlowAvoidanceTuning.MaxKernelNeighbors);
+        if (_orcaLineScratch.Length < orcaLineCapacity)
+        {
+            Array.Resize(ref _orcaLineScratch, orcaLineCapacity);
+        }
+
+        int orcaProjectionLineCapacity = Math.Max(0, unitCount * OrcaSolver2D.MaxProjectionLines);
+        if (_orcaProjectionLineScratch.Length < orcaProjectionLineCapacity)
+        {
+            Array.Resize(ref _orcaProjectionLineScratch, orcaProjectionLineCapacity);
+        }
+
+        int sonarIntervalCapacity = Math.Max(0, unitCount * SonarSolver2D.MaxIntervals);
+        if (_sonarIntervalScratch.Length < sonarIntervalCapacity)
+        {
+            Array.Resize(ref _sonarIntervalScratch, sonarIntervalCapacity);
         }
     }
 
@@ -1177,6 +1277,7 @@ public sealed class MassFlowSimulationState
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
+        Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
@@ -1188,6 +1289,7 @@ public sealed class MassFlowSimulationState
         Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledFlags, 0, UnitCount);
+        Array.Clear(_arrivalEventEmittedFlags, 0, UnitCount);
         Array.Clear(_unitRetryCounts, 0, UnitCount);
         Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
@@ -1213,17 +1315,18 @@ public sealed class MassFlowSimulationState
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
                 MassNavigationAgentProfileConfig profile = profileSet.ResolveForLocalIndex(localIndex);
+                var geometry = profileSet.ResolveGeometry(profile.Id);
                 _teams[unitIndex] = team.TeamId;
                 _teamRuntimeIndices[unitIndex] = teamStateIndex;
                 _teamLocalIndices[unitIndex] = localIndex;
                 _flowRuntimeIndices[unitIndex] = flowStateIndex;
                 _layerCategoryMasks[unitIndex] = layer.CategoryMask;
                 _layerInteractionMasks[unitIndex] = layer.InteractionMask;
-                _navMasses[unitIndex] = profile.NavMass;
+                _navMasses[unitIndex] = geometry.Mass;
                 _visualScales[unitIndex] = profile.VisualScale;
-                _bodyRadiiCm[unitIndex] = profile.BodyRadiusCm;
+                _bodyRadiiCm[unitIndex] = geometry.RadiusCm;
                 _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
-                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, profile.BodyRadiusCm);
+                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, geometry.RadiusCm);
                 _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
                 _positionsCm[i2] = ClampXPosition(xCm);
                 _positionsCm[i2 + 1] = ClampYPosition(yCm);
@@ -1235,27 +1338,6 @@ public sealed class MassFlowSimulationState
         }
 
         _maxInteractingBodyRadiiDirty = true;
-    }
-
-    private void CacheAuthoredObstacles(ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
-    {
-        if (obstacles.Length <= 0)
-        {
-            throw new InvalidOperationException("MassFlowSimulationState requires authored obstacles.");
-        }
-
-        if (obstacles.Length > _maxObstacleCount)
-        {
-            throw new InvalidOperationException(
-                $"MassFlowSimulationState obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.");
-        }
-
-        ObstacleCount = obstacles.Length;
-        for (int i = 0; i < obstacles.Length; i++)
-        {
-            MassNavigationObstacleConfig obstacle = obstacles[i];
-            CacheObstacle(i, obstacle.LocalXCm, obstacle.LocalYCm, obstacle.RadiusCm);
-        }
     }
 
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)
@@ -1439,6 +1521,7 @@ public sealed class MassFlowSimulationState
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
+        Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
@@ -1450,6 +1533,7 @@ public sealed class MassFlowSimulationState
         Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledFlags, 0, UnitCount);
+        Array.Clear(_arrivalEventEmittedFlags, 0, UnitCount);
         Array.Clear(_unitRetryCounts, 0, UnitCount);
         Array.Clear(_unitStuckSeconds, 0, UnitCount);
 
@@ -1752,19 +1836,24 @@ public sealed class MassFlowSimulationState
             float unitArrivalFactor = 1f;
             bool suppressTargetMotion = false;
             bool hasGoalTarget = false;
+            bool hasUnitNavigationTarget = false;
+            float activeTargetStopThresholdSq = unitTargetStopThresholdSq;
             float speed = _speedsCmPerSecond[i];
 
             if (_hasUnitTarget[i] != 0)
             {
                 hasGoalTarget = true;
+                hasUnitNavigationTarget = true;
                 targetX = _unitTargetsCm[i2];
                 targetY = _unitTargetsCm[i2 + 1];
+                float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
+                activeTargetStopThresholdSq = targetStopThresholdSq;
                 float toTargetX = targetX - px;
                 float toTargetY = targetY - py;
                 float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
                 if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
                 {
-                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, unitTargetStopThresholdSq))
+                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
                     {
                         ExitSettledState(i, px, py);
                     }
@@ -1774,13 +1863,21 @@ public sealed class MassFlowSimulationState
                     }
                 }
 
-                if (!suppressTargetMotion && ArrivalTuning.Enabled && targetDistSq > unitTargetStopThresholdSq)
+                if (!suppressTargetMotion && ArrivalTuning.Enabled)
                 {
-                    UpdateUnitStuckTimer(i, px, py, clampedDt);
-                    if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                    if (targetDistSq <= targetStopThresholdSq)
                     {
                         EnterSettledState(i, px, py);
                         suppressTargetMotion = true;
+                    }
+                    else
+                    {
+                        UpdateUnitStuckTimer(i, px, py, clampedDt);
+                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        {
+                            EnterSettledState(i, px, py);
+                            suppressTargetMotion = true;
+                        }
                     }
                 }
                 else if (!suppressTargetMotion)
@@ -1788,7 +1885,7 @@ public sealed class MassFlowSimulationState
                     ResetUnitProgressAnchor(i, px, py);
                 }
 
-                if (!suppressTargetMotion && targetDistSq > unitTargetStopThresholdSq)
+                if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
                 {
                     float invDist = FastInvSqrt(targetDistSq);
                     desiredX = toTargetX * invDist;
@@ -1885,13 +1982,21 @@ public sealed class MassFlowSimulationState
                     }
                 }
 
-                if (!suppressTargetMotion && ArrivalTuning.Enabled && slotDistSq > unitTargetStopThresholdSq)
+                if (!suppressTargetMotion && ArrivalTuning.Enabled)
                 {
-                    UpdateUnitStuckTimer(i, px, py, clampedDt);
-                    if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                    if (slotDistSq <= unitTargetStopThresholdSq)
                     {
                         EnterSettledState(i, px, py);
                         suppressTargetMotion = true;
+                    }
+                    else
+                    {
+                        UpdateUnitStuckTimer(i, px, py, clampedDt);
+                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        {
+                            EnterSettledState(i, px, py);
+                            suppressTargetMotion = true;
+                        }
                     }
                 }
                 else if (!suppressTargetMotion)
@@ -1931,6 +2036,11 @@ public sealed class MassFlowSimulationState
             float effectiveArrivalCm = inFormation
                 ? Semantics.Group.FormationFlowSlowRadiusCm
                 : arrivalRadiusCm;
+            if (hasUnitNavigationTarget)
+            {
+                effectiveArrivalCm = MathF.Sqrt(MathF.Max(activeTargetStopThresholdSq, Semantics.Solver.DirectionEpsilonSq));
+            }
+
             float effectiveArrivalSq = effectiveArrivalCm * effectiveArrivalCm;
             if (!suppressTargetMotion && hasGoalTarget && directTargetSq < effectiveArrivalSq)
             {
@@ -1939,6 +2049,14 @@ public sealed class MassFlowSimulationState
 
             float separationX = 0f;
             float separationY = 0f;
+            int neighborScratchBase = i * MassFlowAvoidanceTuning.MaxKernelNeighbors;
+            int avoidanceNeighborCount = 0;
+            int avoidanceNeighborLimit = AvoidanceTuning.ParsedMode switch
+            {
+                MassFlowAvoidanceMode.Orca => AvoidanceTuning.Orca.MaxNeighbors,
+                MassFlowAvoidanceMode.Sonar => AvoidanceTuning.Sonar.MaxNeighbors,
+                _ => 0
+            };
             int cellX = (int)(px * invHashCell);
             int cellY = (int)(py * invHashCell);
             cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
@@ -1966,6 +2084,12 @@ public sealed class MassFlowSimulationState
                             if (!CanAgentsInteract(i, j))
                             {
                                 continue;
+                            }
+
+                            if (avoidanceNeighborCount < avoidanceNeighborLimit)
+                            {
+                                _avoidanceNeighborScratch[neighborScratchBase + avoidanceNeighborCount] = j;
+                                avoidanceNeighborCount++;
                             }
 
                             int j2 = j << 1;
@@ -2030,6 +2154,17 @@ public sealed class MassFlowSimulationState
                 desiredVelocityX *= scale;
                 desiredVelocityY *= scale;
             }
+
+            ApplyConfiguredAvoidanceMode(
+                i,
+                neighborScratchBase,
+                avoidanceNeighborCount,
+                px,
+                py,
+                speed,
+                clampedDt,
+                ref desiredVelocityX,
+                ref desiredVelocityY);
 
             float mix = MathF.Min(clampedDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
             float velocityX = _readVelocitiesCm[i2] + ((desiredVelocityX - _readVelocitiesCm[i2]) * mix);
@@ -2174,6 +2309,88 @@ public sealed class MassFlowSimulationState
             (_layerInteractionMasks[otherUnitIndex] & selfCategory) != 0u;
     }
 
+    private void ApplyConfiguredAvoidanceMode(
+        int unitIndex,
+        int neighborScratchBase,
+        int neighborCount,
+        float positionXCm,
+        float positionYCm,
+        float maxSpeed,
+        float deltaTime,
+        ref float desiredVelocityX,
+        ref float desiredVelocityY)
+    {
+        if (neighborCount <= 0 || maxSpeed <= 0f)
+        {
+            return;
+        }
+
+        MassFlowAvoidanceMode mode = AvoidanceTuning.ParsedMode;
+        if (mode == MassFlowAvoidanceMode.Separation)
+        {
+            return;
+        }
+
+        int velocityOffset = unitIndex << 1;
+        var position = new Vector2(positionXCm, positionYCm);
+        var velocity = new Vector2(_readVelocitiesCm[velocityOffset], _readVelocitiesCm[velocityOffset + 1]);
+        var preferredVelocity = new Vector2(desiredVelocityX, desiredVelocityY);
+        if (preferredVelocity.LengthSquared() <= Semantics.Solver.NormalizationEpsilonSq)
+        {
+            return;
+        }
+
+        ReadOnlySpan<int> neighborIndices = _avoidanceNeighborScratch.AsSpan(neighborScratchBase, neighborCount);
+        ReadOnlySpan<Vector2> neighborPositions = MemoryMarshal.Cast<float, Vector2>(_readPositionsCm.AsSpan(0, UnitCount * 2));
+        ReadOnlySpan<Vector2> neighborVelocities = MemoryMarshal.Cast<float, Vector2>(_readVelocitiesCm.AsSpan(0, UnitCount * 2));
+        ReadOnlySpan<float> neighborRadii = _bodyRadiiCm.AsSpan(0, UnitCount);
+        Vector2 solvedVelocity = mode switch
+        {
+            MassFlowAvoidanceMode.Orca => OrcaSolver2D.ComputeDesiredVelocity(
+                position,
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                _bodyRadiiCm[unitIndex],
+                AvoidanceTuning.Orca.TimeHorizonSeconds,
+                deltaTime,
+                neighborIndices,
+                neighborPositions,
+                neighborVelocities,
+                neighborRadii,
+                _orcaLineScratch.AsSpan(unitIndex * MassFlowAvoidanceTuning.MaxKernelNeighbors, MassFlowAvoidanceTuning.MaxKernelNeighbors),
+                _orcaProjectionLineScratch.AsSpan(unitIndex * OrcaSolver2D.MaxProjectionLines, OrcaSolver2D.MaxProjectionLines)),
+            MassFlowAvoidanceMode.Sonar => SonarSolver2D.ComputeDesiredVelocity(
+                position,
+                velocity,
+                preferredVelocity,
+                maxSpeed,
+                _bodyRadiiCm[unitIndex],
+                AvoidanceTuning.Sonar.TimeHorizonSeconds,
+                neighborIndices,
+                neighborPositions,
+                neighborVelocities,
+                neighborRadii,
+                CreateSonarSolveConfig(AvoidanceTuning.Sonar),
+                _sonarIntervalScratch.AsSpan(unitIndex * SonarSolver2D.MaxIntervals, SonarSolver2D.MaxIntervals)),
+            _ => preferredVelocity
+        };
+
+        desiredVelocityX = solvedVelocity.X;
+        desiredVelocityY = solvedVelocity.Y;
+    }
+
+    private static SonarSolver2D.SolveConfig CreateSonarSolveConfig(MassFlowSonarAvoidanceConfig config)
+    {
+        return new SonarSolver2D.SolveConfig(
+            maxSteerAngle: SonarSolver2D.DegreesToRadians(config.MaxSteerAngleDeg) * 0.5f,
+            backwardPenaltyAngle: SonarSolver2D.DegreesToRadians(config.BackwardPenaltyAngleDeg) * 0.5f,
+            predictionTimeScale: config.PredictionTimeScale,
+            ignoreBehindMovingAgents: config.IgnoreBehindMovingAgents,
+            blockedStop: config.BlockedStop,
+            usePreferredVelocityWhenBlocked: config.UsePreferredVelocityWhenBlocked);
+    }
+
     private float ResolvePairBodyRadiusSumCm(int selfUnitIndex, int otherUnitIndex)
     {
         return _bodyRadiiCm[selfUnitIndex] + _bodyRadiiCm[otherUnitIndex];
@@ -2271,6 +2488,14 @@ public sealed class MassFlowSimulationState
         return (dx * dx) + (dy * dy) >= wakeDistanceCm * wakeDistanceCm;
     }
 
+    private float ResolveUnitTargetStopThresholdSq(int index, float configuredStopThresholdSq)
+    {
+        float explicitStopThresholdCm = _unitTargetStopThresholdsCm[index];
+        return explicitStopThresholdCm > 0f
+            ? explicitStopThresholdCm * explicitStopThresholdCm
+            : configuredStopThresholdSq;
+    }
+
     private void EnterSettledState(int index, float px, float py)
     {
         int i2 = index << 1;
@@ -2282,6 +2507,7 @@ public sealed class MassFlowSimulationState
         _unitStuckSeconds[index] = 0f;
         _velocitiesCm[i2] = 0f;
         _velocitiesCm[i2 + 1] = 0f;
+        EnqueueArrivalEvent(index);
     }
 
     private void ExitSettledState(int index, float px, float py)
@@ -2307,6 +2533,7 @@ public sealed class MassFlowSimulationState
         float py = _positionsCm.Length > i2 + 1 ? _positionsCm[i2 + 1] : 0f;
         _unitStuckSeconds[index] = 0f;
         _unitSettledFlags[index] = 0;
+        _arrivalEventEmittedFlags[index] = 0;
         _unitProgressAnchorCm[i2] = px;
         _unitProgressAnchorCm[i2 + 1] = py;
         _unitSettledAnchorCm[i2] = px;
@@ -2315,6 +2542,17 @@ public sealed class MassFlowSimulationState
         {
             _unitRetryCounts[index] = 0;
         }
+    }
+
+    private void EnqueueArrivalEvent(int index)
+    {
+        if (_arrivalEventEmittedFlags[index] != 0 || _arrivalEventCount >= UnitCount)
+        {
+            return;
+        }
+
+        _arrivalEventAgentIndices[_arrivalEventCount++] = index;
+        _arrivalEventEmittedFlags[index] = 1;
     }
 
     private void ResetTeamArrivalState(int teamId)

@@ -138,7 +138,7 @@ internal sealed class CapabilityStandardTotalWarLikeRuntime
             SystemGroup.PostMovement);
         CapabilityStandardTotalWarLikeConfig config = EnsureConfig(engine);
         engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
+        engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
     }
 
@@ -554,7 +554,9 @@ internal sealed class CapabilityStandardTotalWarLikeRuntime
     private void BuildAgentPlans(GameEngine engine, MassNavigationSimulationRuntime simulation, CapabilityStandardTotalWarLikeConfig config)
     {
         MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
-        config.ValidateAgentProfileReferences(profileSet);
+        var geometryProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("Capability Standard Total War showcase requires AgentProfiles.");
+        config.ValidateAgentProfileReferences(profileSet, geometryProfiles);
 
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)

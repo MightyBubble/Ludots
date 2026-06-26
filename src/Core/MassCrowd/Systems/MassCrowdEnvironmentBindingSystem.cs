@@ -16,7 +16,7 @@ namespace Ludots.Core.MassCrowd.Systems;
 internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
 {
     private static readonly QueryDescription BlockersQuery = new QueryDescription()
-        .WithAll<MassCrowdBlocker, WorldPositionCm>()
+        .WithAll<MassFlowObstacleProjection, WorldPositionCm>()
         .WithNone<PresentationDestroyPending>();
 
     private static readonly QueryDescription MarkersQuery = new QueryDescription()
@@ -73,18 +73,27 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
         foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
-            Span<MassCrowdBlocker> blockers = chunk.GetSpan<MassCrowdBlocker>();
+            Span<MassFlowObstacleProjection> blockers = chunk.GetSpan<MassFlowObstacleProjection>();
             Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
             foreach (int index in chunk)
             {
                 Entity entity = Unsafe.Add(ref entityFirst, index);
-                MassCrowdBlocker blocker = blockers[index];
+                MassFlowObstacleProjection blocker = blockers[index];
                 WorldPositionCm position = positions[index];
-                blockerCount++;
+                blockerCount += blocker.PieceCount;
                 hash = Mix(hash, entity.Id);
-                hash = Mix(hash, blocker.RadiusCm.GetHashCode());
+                hash = Mix(hash, blocker.PieceCount);
+                hash = Mix(hash, blocker.ShapeSignature);
+                hash = Mix(hash, blocker.PoseSignature);
                 hash = Mix(hash, position.Value.X.GetHashCode());
                 hash = Mix(hash, position.Value.Y.GetHashCode());
+                for (int pieceIndex = 0; pieceIndex < blocker.PieceCount; pieceIndex++)
+                {
+                    hash = Mix(hash, (int)blocker.GetShape(pieceIndex));
+                    hash = Mix(hash, blocker.GetOffsetXCm(pieceIndex));
+                    hash = Mix(hash, blocker.GetOffsetYCm(pieceIndex));
+                    hash = Mix(hash, blocker.GetRadiusCm(pieceIndex));
+                }
             }
         }
 
@@ -112,19 +121,38 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
         foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
         {
             ref Entity entityFirst = ref chunk.Entity(0);
-            Span<MassCrowdBlocker> blockers = chunk.GetSpan<MassCrowdBlocker>();
+            Span<MassFlowObstacleProjection> blockers = chunk.GetSpan<MassFlowObstacleProjection>();
             Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
             foreach (int index in chunk)
             {
                 Entity entity = Unsafe.Add(ref entityFirst, index);
-                MassCrowdBlocker blocker = blockers[index];
+                MassFlowObstacleProjection blocker = blockers[index];
                 WorldPositionCm position = positions[index];
-                if (!(blocker.RadiusCm > 0f))
+                if (blocker.PieceCount <= 0)
                 {
-                    throw new InvalidOperationException($"MassCrowdBlocker entity {entity.Id} requires radiusCm > 0.");
+                    throw new InvalidOperationException($"MassFlow obstacle projection entity {entity.Id} requires at least one obstacle piece.");
                 }
 
-                var profile = new MassCrowdBlockerProfile { RadiusCm = blocker.RadiusCm };
+                float maxRadiusCm = 0f;
+                for (int pieceIndex = 0; pieceIndex < blocker.PieceCount; pieceIndex++)
+                {
+                    int radiusCm = blocker.GetRadiusCm(pieceIndex);
+                    if (radiusCm <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"MassFlow obstacle projection entity {entity.Id} piece {pieceIndex} requires radiusCm > 0.");
+                    }
+
+                    maxRadiusCm = MathF.Max(maxRadiusCm, radiusCm);
+                    Fix64 worldX = position.Value.X + Fix64.FromInt(blocker.GetOffsetXCm(pieceIndex));
+                    Fix64 worldY = position.Value.Y + Fix64.FromInt(blocker.GetOffsetYCm(pieceIndex));
+                    _blockerObstacles.Add(new MassNavigationObstacleSnapshot(
+                        worldX.ToFloat(),
+                        worldY.ToFloat(),
+                        radiusCm));
+                }
+
+                var profile = new MassCrowdBlockerProfile { RadiusCm = maxRadiusCm };
                 if (_engine.World.Has<MassCrowdBlockerProfile>(entity))
                 {
                     _engine.World.Set(entity, profile);
@@ -135,10 +163,6 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
                 }
 
                 _simulation.AgentState.RegisterBlocker(entity);
-                _blockerObstacles.Add(new MassNavigationObstacleSnapshot(
-                    position.Value.X.ToFloat(),
-                    position.Value.Y.ToFloat(),
-                    blocker.RadiusCm));
             }
         }
 

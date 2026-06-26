@@ -62,17 +62,18 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
@@ -162,6 +163,7 @@ namespace Ludots.Core.Engine
         public World World { get; private set; }
         public WorldMap WorldMap { get; private set; }
         public VertexMap VertexMap { get; private set; }
+        public LogicTerrainField LogicTerrain { get; private set; }
         public PhysicsWorld PhysicsWorld { get; private set; }
         public GameSession GameSession { get; private set; }
         public WorldSizeSpec WorldSizeSpec { get; private set; }
@@ -226,7 +228,6 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
         private TimeFlowService _timeFlow;
         private int _physics2DBaseHz;
-        private int _navigation2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -304,6 +305,7 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.World, World);
             ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
             ctx.Set(CoreServiceKeys.VertexMap, VertexMap);
+            ctx.Set(CoreServiceKeys.LogicTerrain, LogicTerrain);
             ctx.Set(CoreServiceKeys.GameSession, GameSession);
             ctx.Set(CoreServiceKeys.Engine, this);
             ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
@@ -410,6 +412,8 @@ namespace Ludots.Core.Engine
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
+            RebuildAiRuntime();
 
             // Apply log config from merged game.json
             LogConfigApplier.Apply(MergedConfig.Logging);
@@ -424,18 +428,17 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
 
             // 4. Setup ECS & Session using merged config values
-            InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
             SetService(CoreServiceKeys.World, World);
-            WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            WorldMap = new WorldMap(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
             SetService(CoreServiceKeys.WorldMap, WorldMap);
             GameSession = new GameSession();
             SetService(CoreServiceKeys.GameSession, GameSession);
             int gridCellSizeCm = MergedConfig.GridCellSizeCm;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
+            WorldSizeSpec = new WorldExtentSpec(
+                MergedConfig.WorldWidthInMacroTiles,
+                MergedConfig.WorldHeightInMacroTiles,
+                gridCellSizeCm).ToWorldSizeSpec();
             SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
             _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
             SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
@@ -490,12 +493,26 @@ namespace Ludots.Core.Engine
             Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
         }
 
+        private void LoadAgentProfiles()
+        {
+            if (ConfigPipeline == null)
+            {
+                RemoveService(CoreServiceKeys.AgentProfiles);
+                return;
+            }
+
+            AgentProfileRegistry agentProfiles = new AgentProfileConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.AgentProfiles, agentProfiles);
+        }
+
         public void ReloadConfigs(string? group = null, string? relativePath = null)
         {
             if (ConfigPipeline == null) return;
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
 
             bool reloadAi = string.IsNullOrWhiteSpace(group)
                          || string.Equals(group, "AI", StringComparison.OrdinalIgnoreCase)
@@ -520,10 +537,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
-        private void InitializeWorld(int widthInTiles, int heightInTiles)
+        private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
         {
             World = World.Create();
-            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInTiles, heightInChunks: heightInTiles);
+            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInMacroTiles, heightInChunks: heightInMacroTiles);
             EventBus = new GameplayEventBus(); // Initialize EventBus
             
             // Initialize JobScheduler if not already set (Static per AppDomain usually, but we manage it here)
@@ -617,10 +634,7 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
-            var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
-            var navigation2dClockConfig = navigation2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
-            _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
             var componentAuthoringContext = new ComponentAuthoringContext();
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
@@ -1018,7 +1032,7 @@ namespace Ludots.Core.Engine
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
-            var navigation2dTickPolicy = new Navigation2DTickPolicy(navigation2dClockConfig.NavigationHz, navigation2dClockConfig.MaxStepsPerFixedTick);
+            var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
             var simulationLoopController = new SimulationLoopController(this);
             _gasController = new Ludots.Core.Gameplay.GAS.GasController(World, clockStepPolicy, simulationLoopController, CreateContext, TriggerManager.FireEvent);
@@ -1082,7 +1096,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasClocks, gasClocks);
             SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
             SetService(CoreServiceKeys.Physics2DSolverConfig, physics2dSolverConfig);
-            SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
+            SetService(CoreServiceKeys.Physics2DBroadphasePolicy, physics2dBroadphasePolicy);
             SetService(CoreServiceKeys.Physics2DController, _physics2DController);
             SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
             SetService(CoreServiceKeys.GasController, _gasController);
@@ -1256,142 +1270,12 @@ namespace Ludots.Core.Engine
                     gasGraphApi,
                     orderQueue),
                 SystemGroup.PostMovement);
-
-            const string physics2dAssemblyName = "Ludots.Physics2D";
-            const string shapeStorageTypeName = "Ludots.Core.Physics2D.ShapeDataStorage2D";
-            const string physics2dSystemFactoryName = "Physics2D.ProductionSimulation";
-            const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
-            const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
-
-            void EnsurePhysics2DAssemblyLoaded()
-            {
-                AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(physics2dAssemblyName));
-            }
-
-            object EnsurePhysics2DShapeStorage()
-            {
-                object existing = GetService(CoreServiceKeys.Physics2DShapeStorage);
-                if (existing != null)
-                {
-                    return existing;
-                }
-
-                var shapeStorageType = Type.GetType($"{shapeStorageTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                if (shapeStorageType == null)
-                {
-                    EnsurePhysics2DAssemblyLoaded();
-                    shapeStorageType = Type.GetType($"{shapeStorageTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                }
-
-                if (shapeStorageType == null)
-                {
-                    throw new InvalidOperationException("Physics2D shape storage type is not loadable.");
-                }
-
-                object shapeStorage = Activator.CreateInstance(shapeStorageType)
-                    ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
-                componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
-                MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
-                SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
-                return shapeStorage;
-            }
-
-            void RegisterPhysics2DSystemFactory()
-            {
-                SystemFactoryRegistry.Register(physics2dSystemFactoryName, SystemGroup.InputCollection, ctx =>
-                {
-                    var physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    if (physics2dSystemType == null)
-                    {
-                        EnsurePhysics2DAssemblyLoaded();
-                        physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    }
-
-                    if (physics2dSystemType == null)
-                    {
-                        throw new InvalidOperationException("Physics2D.Enabled=true requires Physics2DSimulationSystem to be loadable.");
-                    }
-
-                    var shapeStorage = EnsurePhysics2DShapeStorage();
-                    var systemObj = Activator.CreateInstance(
-                        physics2dSystemType,
-                        World,
-                        clock,
-                        physics2dTickPolicy,
-                        physics2dSolverConfig,
-                        shapeStorage);
-                    if (systemObj is ISystem<float> system)
-                    {
-                        return system;
-                    }
-
-                    throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
-                });
-            }
-
-            void RegisterPhysics2DWorldSyncSystem()
-            {
-                var worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                if (worldSyncSystemType == null)
-                {
-                    EnsurePhysics2DAssemblyLoaded();
-                    worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                }
-
-                if (worldSyncSystemType == null)
-                {
-                    throw new InvalidOperationException("Physics2D.Enabled=true requires Physics2DToWorldPositionSyncSystem to be loadable.");
-                }
-
-                if (Activator.CreateInstance(worldSyncSystemType, World) is ISystem<float> worldSyncSystem)
-                {
-                    RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
-                    return;
-                }
-
-                throw new InvalidOperationException($"Failed to create Physics2D world sync system '{worldSyncSystemTypeName}'.");
-            }
-
-            RegisterPhysics2DSystemFactory();
-
-            bool physics2DEnabled = config.Physics2D.Enabled || config.Navigation2D.Enabled;
-            if (config.Navigation2D.Enabled)
-            {
-                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
-                SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
-
-                const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
-                var nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                if (nav2dSystemType == null)
-                {
-                    EnsurePhysics2DAssemblyLoaded();
-                    nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                }
-
-                if (nav2dSystemType == null)
-                {
-                    throw new InvalidOperationException("Navigation2D.Enabled=true requires Ludots.Physics2D and Navigation2DSimulationSystem2D to be loadable.");
-                }
-                else
-                {
-                    var physics2dShapeStorage = EnsurePhysics2DShapeStorage();
-
-                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavOrderAgentBootstrapSystem(World), SystemGroup.InputCollection);
-
-                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy, physics2dShapeStorage);
-                    if (nav2dSystemObj is ISystem<float> nav2dSystem)
-                    {
-                        RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
-                    }
-                }
-            }
-
-            if (physics2DEnabled)
-            {
-                EnsurePhysics2DShapeStorage();
-                SystemFactoryRegistry.TryActivate(physics2dSystemFactoryName, CreateContext(), this);
-                RegisterPhysics2DWorldSyncSystem();
-            }
+            RegisterPhysics2DSystems(
+                clock,
+                physics2dTickPolicy,
+                physics2dSolverConfig,
+                physics2dBroadphasePolicy,
+                componentAuthoringContext);
             
             // Phase 2: AbilityActivation
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
@@ -1436,7 +1320,8 @@ namespace Ludots.Core.Engine
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)
             {
-                object shapeStorage = EnsurePhysics2DShapeStorage();
+                object shapeStorage = GetService(CoreServiceKeys.Physics2DShapeStorage)
+                    ?? throw new InvalidOperationException("Manifestation obstacle bridge requires Physics2D shape storage to be registered.");
                 if (Activator.CreateInstance(manifestationObstacleBridgeType, World, shapeStorage) is ISystem<float> manifestationObstacleBridgeSystem)
                 {
                     RegisterSystem(manifestationObstacleBridgeSystem, SystemGroup.EffectProcessing);
@@ -1444,6 +1329,19 @@ namespace Ludots.Core.Engine
                 else
                 {
                     throw new InvalidOperationException($"Failed to create manifestation obstacle bridge system '{manifestationObstacleBridgeSystemTypeName}'.");
+                }
+            }
+            const string runtimeNavMeshObstacleSystemTypeName = "Ludots.Core.Physics2D.Systems.RuntimeNavMeshObstacleDirtySystem";
+            var runtimeNavMeshObstacleType = Type.GetType($"{runtimeNavMeshObstacleSystemTypeName}, Ludots.Physics2D", throwOnError: false);
+            if (runtimeNavMeshObstacleType != null)
+            {
+                if (Activator.CreateInstance(runtimeNavMeshObstacleType, this) is ISystem<float> runtimeNavMeshObstacleSystem)
+                {
+                    RegisterSystem(runtimeNavMeshObstacleSystem, SystemGroup.EffectProcessing);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
                 }
             }
             RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
@@ -1557,11 +1455,6 @@ namespace Ludots.Core.Engine
             {
                 physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
             }
-
-            if (GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy navigation2dTickPolicy)
-            {
-                navigation2dTickPolicy.SetTargetHz(ScaleRateHz(_navigation2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Navigation2D)));
-            }
         }
 
         private static int ScaleRateHz(int baseHz, int scalePermille)
@@ -1574,6 +1467,88 @@ namespace Ludots.Core.Engine
             long scaled = (long)baseHz * scalePermille;
             int targetHz = (int)((scaled + 999) / 1000);
             return Math.Max(1, targetHz);
+        }
+
+        private void RegisterPhysics2DSystems(
+            IClock clock,
+            Physics2DTickPolicy physics2dTickPolicy,
+            Physics2DSolverConfig physics2dSolverConfig,
+            Physics2DBroadphasePolicy physics2dBroadphasePolicy,
+            ComponentAuthoringContext componentAuthoringContext)
+        {
+            const string physics2dAssemblyName = "Ludots.Physics2D";
+            const string shapeStorageTypeName = "Ludots.Core.Physics2D.ShapeDataStorage2D";
+            const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
+            const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
+
+            ArgumentNullException.ThrowIfNull(physics2dSolverConfig);
+            ArgumentNullException.ThrowIfNull(physics2dBroadphasePolicy);
+            ArgumentNullException.ThrowIfNull(componentAuthoringContext);
+
+            Type? physics2dSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, physics2dSystemTypeName);
+            Type? worldSyncSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, worldSyncSystemTypeName);
+            Type? shapeStorageType = TryResolveOptionalAssemblyType(physics2dAssemblyName, shapeStorageTypeName);
+            if (physics2dSystemType == null && worldSyncSystemType == null && shapeStorageType == null)
+            {
+                return;
+            }
+
+            if (physics2dSystemType == null || worldSyncSystemType == null || shapeStorageType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{physics2dSystemTypeName}', '{worldSyncSystemTypeName}', and '{shapeStorageTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object shapeStorage = GetService(CoreServiceKeys.Physics2DShapeStorage)
+                ?? Activator.CreateInstance(shapeStorageType)
+                ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
+            MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
+            SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
+
+            object? physics2dSystemObj = Activator.CreateInstance(
+                physics2dSystemType,
+                World,
+                clock,
+                physics2dTickPolicy,
+                physics2dSolverConfig,
+                shapeStorage,
+                physics2dBroadphasePolicy);
+            if (physics2dSystemObj is not ISystem<float> physics2dSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
+            }
+
+            object? worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
+            if (worldSyncSystemObj is not ISystem<float> worldSyncSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D world sync system '{worldSyncSystemTypeName}'.");
+            }
+
+            RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
+            RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+            GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
+            GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
+        }
+
+        private static Type? TryResolveOptionalAssemblyType(string assemblyName, string typeName)
+        {
+            Type? type = Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
+            if (type != null)
+            {
+                return type;
+            }
+
+            try
+            {
+                AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(assemblyName));
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+
+            return Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
         }
 
         private static int RequireConfiguredOrderTypeId(
@@ -2074,11 +2049,6 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.LoadedGraphRuntime);
             }
 
-            if (TryGetService(CoreServiceKeys.Navigation2DRuntime, out Navigation2DRuntime navigation2dRuntime))
-            {
-                navigation2dRuntime.BindLoadedChunks(loadedChunks);
-            }
-
             // Update GlobalContext with rebuilt services
             SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
             SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
@@ -2094,35 +2064,64 @@ namespace Ludots.Core.Engine
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
             VertexMap = null;
+            LogicTerrain = null;
+            RemoveService(CoreServiceKeys.VertexMap);
+            RemoveService(CoreServiceKeys.LogicTerrain);
 
             foreach (var board in session.AllBoards)
             {
                 if (board is ITerrainBoard terrainBoard)
                 {
-                    string dataFile = FindDataFileForBoard(board.Name, mapConfig);
+                    BoardConfig boardConfig = FindConfigForBoard(board.Name, mapConfig);
+                    string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
                         var vtxMap = LoadVertexMapFromFile(dataFile);
                         if (vtxMap != null)
                         {
                             terrainBoard.VertexMap = vtxMap;
+                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
                             VertexMap = vtxMap;
+                            LogicTerrain = terrainBoard.LogicTerrain;
                             SetService(CoreServiceKeys.VertexMap, vtxMap);
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
                             Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         }
+
+                        continue;
+                    }
+
+                    if (board is GridBoard gridBoard && boardConfig != null)
+                    {
+                        int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                            widthCells,
+                            heightCells,
+                            boardConfig.GridCellSizeCm,
+                            boardConfig.ChunkSizeCells);
+                        if (LogicTerrain == null)
+                        {
+                            LogicTerrain = gridBoard.LogicTerrain;
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                        }
+
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
         }
 
-        private string FindDataFileForBoard(string boardName, MapConfig mapConfig)
+        private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
         {
             if (mapConfig.Boards == null) return null;
             foreach (var b in mapConfig.Boards)
             {
                 if (string.Equals(b.Name, boardName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return b.DataFile;
+                    return b;
                 }
             }
             return null;
@@ -2287,19 +2286,21 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}'.");
+            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
 
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
-            var profileRegistry = new NavMeshProfileRegistry(bakeConfig);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMesh bootstrap requires AgentProfiles.");
+            var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = VertexMap.WidthInChunks;
-            int heightChunks = VertexMap.HeightInChunks;
+            int widthChunks = LogicTerrain.WidthChunks;
+            int heightChunks = LogicTerrain.HeightChunks;
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -2333,7 +2334,42 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
+            var navRegistry = new NavQueryServiceRegistry(stores);
+            SetService(CoreServiceKeys.NavQueryServices, navRegistry);
+            if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
+            {
+                var runtimeObstacles = new NavObstacleSet();
+                SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
+                var runtimeContext = new NavBakeContext
+                {
+                    MapId = mapId,
+                    ModId = string.Empty,
+                    SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
+                    Terrain = LogicTerrain,
+                    Obstacles = runtimeObstacles,
+                    Config = bakeConfig,
+                    AgentProfiles = agentProfiles,
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(
+                        bakeConfig.RuntimeIncremental.HeightScaleMeters,
+                        bakeConfig.RuntimeIncremental.MinWalkableUpDot,
+                        bakeConfig.RuntimeIncremental.CliffHeightThreshold),
+                    TileVersion = 1,
+                    Mode = bakeConfig.ParsedMode,
+                    Algorithm = bakeConfig.ParsedAlgorithm,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                };
+                var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    runtimeContext,
+                    navRegistry,
+                    profileRegistry);
+                SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, runtimeQueue);
+            }
+            if (MapSessions?.FocusedSession?.PrimaryBoard is INavigableBoard navigableBoard)
+            {
+                navigableBoard.NavServices = navRegistry;
+            }
         }
 
         private void ClearNavServices()
@@ -2341,6 +2377,8 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }
 
         private void LoadPathingForSession(MapSession session)
@@ -2367,11 +2405,14 @@ namespace Ludots.Core.Engine
 
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
+            bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
 
-            if (loadedGraphRuntime == null && !hasNavServices)
+            if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
@@ -2393,10 +2434,10 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore);
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
@@ -2406,7 +2447,11 @@ namespace Ludots.Core.Engine
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, pathStore, pathingConfig);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig);
+            }
+            else
+            {
+                pathService = new DirectPathService(pathStore);
             }
 
             SetService(CoreServiceKeys.PathingConfig, pathingConfig);
@@ -2476,10 +2521,30 @@ namespace Ludots.Core.Engine
             return false;
         }
 
+        private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
+        {
+            if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            {
+                var agent = pathingConfig.AgentTypes[i];
+                if (agent == null || agent.Selection?.Mode != PathSelectionMode.Direct)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static IPathService CreateDefaultNavMeshPathService(
             PathingConfig pathingConfig,
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
             PathStore pathStore)
         {
             if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
@@ -2494,11 +2559,12 @@ namespace Ludots.Core.Engine
                     $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
             }
 
+            AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agent.Layer, profileIndex, areaCosts, out var query))
+            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
             {
                 throw new InvalidOperationException(
-                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agent.Layer}, profile '{agent.ProfileId}'.");
+                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
             }
 
             return new NavMeshPathServiceAdapter(query, pathStore);
@@ -2541,7 +2607,9 @@ namespace Ludots.Core.Engine
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
-            return new NavMeshBakeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
+            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
         }
 
         private string ResolveSingleExistingUri(string relPath)

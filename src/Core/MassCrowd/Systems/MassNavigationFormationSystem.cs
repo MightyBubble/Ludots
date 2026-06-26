@@ -52,6 +52,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                     _simulation.AgentState,
                     _simulation.SelectedEntities,
                     _simulation.FrameIndex);
+                ApplyRouteExecutionTargets();
                 _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
             }
 
@@ -83,6 +84,24 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                 _simulation.MassFlow.SyncEntities(_engine.World, _simulation.AgentState);
                 _simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
             }
+        }
+    }
+
+    private void ApplyRouteExecutionTargets()
+    {
+        MassNavigationRouteExecutionSink? routeSink = _engine.GetService(MassNavigationKeys.RouteExecutionSink);
+        if (routeSink == null || routeSink.ActiveRouteCount <= 0)
+        {
+            return;
+        }
+
+        MassNavigationRouteSinkResult result = routeSink.TryApplyTrackedRouteTargets(
+            _simulation,
+            _engine.World);
+        if (!result.Applied)
+        {
+            throw new System.InvalidOperationException(
+                $"MassNavigation route execution failed for order {result.OrderToken}, agent {result.AgentIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}.");
         }
     }
 

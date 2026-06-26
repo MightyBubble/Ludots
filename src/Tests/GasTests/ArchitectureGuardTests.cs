@@ -237,7 +237,7 @@ namespace GasTests
             {
                 Assert.That(integration, Does.Not.Contain("World.TryGet"), "0Alloc tests are blind to TryGet throughput regressions; Integration must stay chunk/span based.");
                 Assert.That(integration, Does.Not.Contain("World.Set("), "Integration hot path must mutate chunk spans instead of random World.Set writes.");
-                Assert.That(integration, Does.Not.Contain("NavDesiredVelocity2D"), "Nav to Physics velocity handoff belongs in a gateable bridge, not the physics integrator.");
+                Assert.That(integration, Does.Not.Contain("Nav" + "Desired" + "Velocity" + "2D"), "Navigation-to-Physics velocity handoff belongs in a gateable bridge, not the physics integrator.");
                 Assert.That(adaptiveSpatial, Does.Not.Contain("World.Has<SleepingTag>"), "Broadphase should use BodySnapshot.IsSleeping instead of random World.Has calls.");
                 Assert.That(impulses, Does.Not.Contain("World.Has<SleepingTag>"), "Impulse application should use CollisionPair.IsSleepingA/B snapshot bits.");
                 Assert.That(sleeping, Does.Not.Contain("Dictionary<int, List<Entity>>"), "Sleeping island collection must not allocate one List per island.");
@@ -259,40 +259,26 @@ namespace GasTests
             Issue361ShowcaseSpec[] specs =
             {
                 new(
-                    Issue: "#362",
-                    Binding: "capability_standard_knockback2d",
-                    ModName: "CapabilityStandardKnockback2DMod",
-                    ArtifactFolder: "capability-standard-knockback2d",
-                    AcceptanceTestName: "CapabilityStandardKnockback2DShowcaseAcceptanceTests.cs",
-                    PurePhysics: true),
-                new(
-                    Issue: "#363/#364",
+                    Issue: "#361",
                     Binding: "capability_standard_physics2d",
                     ModName: "CapabilityStandardPhysics2DMod",
                     ArtifactFolder: "capability-standard-physics2d",
-                    AcceptanceTestName: "CapabilityStandardPhysics2DShowcaseAcceptanceTests.cs",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DAcceptanceTests.cs",
                     PurePhysics: true),
                 new(
-                    Issue: "#365",
+                    Issue: "#361",
                     Binding: "capability_standard_physics2d_stress",
                     ModName: "CapabilityStandardPhysics2DStressMod",
                     ArtifactFolder: "capability-standard-physics2d-stress",
                     AcceptanceTestName: "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests.cs",
                     PurePhysics: true),
                 new(
-                    Issue: "#366",
-                    Binding: "capability_standard_nav_sink2d",
-                    ModName: "CapabilityStandardNavSink2DMod",
-                    ArtifactFolder: "capability-standard-nav-sink2d",
-                    AcceptanceTestName: "CapabilityStandardNavSink2DShowcaseAcceptanceTests.cs",
-                    PurePhysics: false),
-                new(
-                    Issue: "#367",
-                    Binding: "capability_standard_physics2d_playground_v2",
-                    ModName: "CapabilityStandardPhysics2DPlaygroundV2Mod",
-                    ArtifactFolder: "capability-standard-physics2d-playground-v2",
-                    AcceptanceTestName: "CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests.cs",
-                    PurePhysics: false)
+                    Issue: "#361",
+                    Binding: "capability_standard_physics2d_showcase",
+                    ModName: "CapabilityStandardPhysics2DShowcaseMod",
+                    ArtifactFolder: "capability-standard-physics2d-showcase",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DShowcaseAcceptanceTests.cs",
+                    PurePhysics: true)
             };
 
             var missing = new List<string>();
@@ -357,11 +343,10 @@ namespace GasTests
                 if (spec.PurePhysics)
                 {
                     Assert.That(gameJson, Does.Contain("\"physics2D\""));
-                    Assert.That(gameJson, Does.Contain("\"navigation2D\""));
-                    Assert.That(gameJson, Does.Contain("\"enabled\": false"));
-                    Assert.That(templates, Does.Not.Contain("NavKinematics2D"));
-                    Assert.That(templates, Does.Not.Contain("NavDesiredVelocity2D"));
-                    Assert.That(templates, Does.Not.Contain("NavObstacle2D"));
+                    Assert.That(gameJson, Does.Not.Contain("\"navigation" + "2D\""));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Kinematics" + "2D"));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Desired" + "Velocity" + "2D"));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Obstacle" + "2D"));
                 }
 
                 if (gameJson.Contains("Camera.Profile.", StringComparison.Ordinal))

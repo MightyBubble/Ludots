@@ -2,6 +2,7 @@ using System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AOI;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Board
@@ -19,6 +20,7 @@ namespace Ludots.Core.Map.Board
         public ISpatialQueryService QueryService { get; }
         public ILoadedChunks LoadedChunks => HexGridAOI;
         public VertexMap VertexMap { get; set; }
+        public LogicTerrainField LogicTerrain { get; set; }
         public Navigation.NavMesh.NavQueryServiceRegistry NavServices { get; set; }
 
         public HexGridAOI HexGridAOI { get; }
@@ -31,12 +33,11 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            int gridCellSizeCm = config.GridCellSizeCm;
-            int worldWidthCm = config.WidthInTiles * 256 * gridCellSizeCm;
-            int worldHeightCm = config.HeightInTiles * 256 * gridCellSizeCm;
-            WorldSize = new WorldSizeSpec(
-                new Mathematics.WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm);
+            var worldExtent = new WorldExtentSpec(
+                config.WidthInMacroTiles,
+                config.HeightInMacroTiles,
+                config.GridCellSizeCm);
+            WorldSize = worldExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);

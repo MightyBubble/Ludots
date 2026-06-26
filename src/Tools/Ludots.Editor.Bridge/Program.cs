@@ -5,20 +5,29 @@ using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Physics2D.Navigation;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.FileProviders;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Linq;
+using System.Globalization;
 
 var repoRoot = FindAssetsRoot();
 var launcher = new LauncherService(repoRoot);
 var launcherDistPath = Path.Combine(repoRoot, "src", "Tools", "Ludots.Launcher.React", "dist");
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.ConfigureKestrel(o =>
+{
+    o.Limits.MaxRequestBodySize = 1024L * 1024L * 256L;
+});
 
 builder.Services.Configure<FormOptions>(o =>
 {
@@ -258,7 +267,8 @@ app.MapGet("/api/mods/{modId}/maps", (string modId) =>
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
         var maps = EditorRepo.DiscoverMaps(ctx);
-        return Results.Ok(new { ok = true, maps });
+        var mapInfos = EditorRepo.DescribeMaps(ctx, maps);
+        return Results.Ok(new { ok = true, maps, mapInfos });
     }
     catch (Exception ex)
     {
@@ -306,9 +316,103 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}", async (string modId, string mapId, 
     map.Id = mapId;
     string outFile = EditorRepo.ResolveWritableMapConfigPath(ctx, mapId);
     Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-    File.WriteAllText(outFile, JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true }));
+    string? previous = File.Exists(outFile) ? File.ReadAllText(outFile) : null;
+    try
+    {
+        File.WriteAllText(outFile, JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true }));
+        var reloaded = EditorRepo.LoadMergedMapConfig(ctx, mapId);
+        if (!reloaded.Found)
+        {
+            throw new InvalidOperationException($"Saved MapConfig '{mapId}' could not be loaded after write.");
+        }
+    }
+    catch (Exception ex)
+    {
+        RestoreNavigationConfigFile(outFile, previous);
+        return Results.BadRequest(new { ok = false, error = $"Saved MapConfig failed validation: {ex.Message}", path = outFile });
+    }
 
     return Results.Ok(new { ok = true, path = outFile });
+});
+
+app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string mapId, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var request = await JsonSerializer.DeserializeAsync<BoardCreateRequest>(
+            req.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request == null) return Results.BadRequest(new { ok = false, error = "Empty board create body." });
+
+        var result = EditorRepo.CreateBoard(ctx, mapId, request);
+        return Results.Ok(new
+        {
+            ok = true,
+            map = result.Map,
+            mapInfo = result.MapInfo,
+            board = result.BoardInfo,
+            mapPath = result.MapPath,
+            dataPath = result.DataPath
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPut("/api/mods/{modId}/maps/{mapId}/boards/{boardName}", async (string modId, string mapId, string boardName, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var request = await JsonSerializer.DeserializeAsync<BoardUpdateRequest>(
+            req.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request == null) return Results.BadRequest(new { ok = false, error = "Empty board update body." });
+
+        var result = EditorRepo.UpdateBoard(ctx, mapId, boardName, request);
+        return Results.Ok(new
+        {
+            ok = true,
+            map = result.Map,
+            mapInfo = result.MapInfo,
+            board = result.BoardInfo,
+            mapPath = result.MapPath,
+            dataPath = result.DataPath
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapDelete("/api/mods/{modId}/maps/{mapId}/boards/{boardName}", (string modId, string mapId, string boardName) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var result = EditorRepo.DeleteBoard(ctx, mapId, boardName);
+        return Results.Ok(new
+        {
+            ok = true,
+            map = result.Map,
+            mapInfo = result.MapInfo,
+            removedBoard = result.BoardInfo,
+            mapPath = result.MapPath,
+            dataPath = result.DataPath,
+            dataFileKept = true
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
 });
 
 app.MapGet("/api/mods/{modId}/entity-templates", (string modId) =>
@@ -351,28 +455,40 @@ app.MapGet("/api/mods/{modId}/mesh-assets", (string modId) =>
     return Results.Ok(new { ok = true, primitives });
 });
 
-app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string mapId) =>
+app.MapGet("/api/mods/{modId}/navigation-config", (string modId) =>
 {
     string repoRoot = FindAssetsRoot();
     try
     {
         var ctx = EditorRepo.CreateContext(repoRoot, modId);
-        var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
-        if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-        var dataFile = EditorRepo.ResolvePrimaryBoardDataFile(mapR.Map);
-        if (string.IsNullOrWhiteSpace(dataFile))
-            return Results.BadRequest(new { ok = false, error = "MapConfig.Boards[*].DataFile is empty." });
+        JsonNode agentProfiles = EditorRepo.LoadMergedNavigationJson(
+            ctx,
+            "agent_profiles.json",
+            defaultValue: new JsonArray(),
+            out List<string> agentSources);
+        JsonNode navmesh = EditorRepo.LoadMergedNavigationJson(
+            ctx,
+            "navmesh.json",
+            defaultValue: new JsonObject(),
+            out List<string> navmeshSources);
 
-        if (!EditorRepo.TryResolveDataFile(ctx, dataFile, out var fullPath, out var checkedPaths))
+        NavMeshBakeConfigContext loaded = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId);
+        return Results.Ok(new
         {
-            return Results.NotFound(new { ok = false, error = $"DataFile not found: {dataFile}", checkedPaths });
-        }
-
-        using var fs = File.OpenRead(fullPath);
-        using var ms = new MemoryStream();
-        EditorTerrainConverter.ConvertVertexMapBinaryToReactTerrain(fs, ms);
-        ms.Position = 0;
-        return Results.File(ms.ToArray(), "application/octet-stream", fileDownloadName: $"{mapId}_map_data.bin");
+            ok = true,
+            agentProfiles,
+            navmesh,
+            sources = new { agentProfiles = agentSources, navmesh = navmeshSources },
+            validated = new
+            {
+                profileCount = loaded.AgentProfiles.Count,
+                bakeProfileCount = loaded.Config.Profiles.Count,
+                layerCount = loaded.Config.Layers.Count,
+                areaCount = loaded.Config.Areas.Count,
+                mode = loaded.Config.Mode,
+                algorithm = loaded.Config.Algorithm
+            }
+        });
     }
     catch (Exception ex)
     {
@@ -380,7 +496,140 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
     }
 });
 
-app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, string mapId, HttpRequest req) =>
+app.MapPut("/api/mods/{modId}/navigation-config", async (string modId, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    EditorRepo.ModContext ctx;
+    try
+    {
+        ctx = EditorRepo.CreateContext(repoRoot, modId);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
+    string json = await sr.ReadToEndAsync();
+    if (string.IsNullOrWhiteSpace(json)) return Results.BadRequest(new { ok = false, error = "Empty body." });
+
+    JsonNode? root;
+    try
+    {
+        root = JsonNode.Parse(json);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Invalid JSON: {ex.Message}" });
+    }
+
+    if (root is not JsonObject obj)
+    {
+        return Results.BadRequest(new { ok = false, error = "Body must be a JSON object." });
+    }
+
+    JsonNode? agentProfiles = obj["agentProfiles"];
+    JsonNode? navmesh = obj["navmesh"];
+    if (agentProfiles is not JsonArray)
+    {
+        return Results.BadRequest(new { ok = false, error = "agentProfiles must be an array." });
+    }
+
+    if (navmesh is not JsonObject)
+    {
+        return Results.BadRequest(new { ok = false, error = "navmesh must be an object." });
+    }
+
+    string agentFile = EditorRepo.ResolveWritableNavigationConfigPath(ctx, "agent_profiles.json");
+    string navmeshFile = EditorRepo.ResolveWritableNavigationConfigPath(ctx, "navmesh.json");
+    Directory.CreateDirectory(Path.GetDirectoryName(agentFile)!);
+    Directory.CreateDirectory(Path.GetDirectoryName(navmeshFile)!);
+
+    string? previousAgentProfiles = File.Exists(agentFile) ? File.ReadAllText(agentFile) : null;
+    string? previousNavmesh = File.Exists(navmeshFile) ? File.ReadAllText(navmeshFile) : null;
+    string agentProfilesText = agentProfiles.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+    string navmeshText = navmesh.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
+
+    try
+    {
+        File.WriteAllText(agentFile, agentProfilesText);
+        File.WriteAllText(navmeshFile, navmeshText);
+        NavMeshBakeConfigContext loaded = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId);
+        return Results.Ok(new
+        {
+            ok = true,
+            paths = new { agentProfiles = agentFile, navmesh = navmeshFile },
+            validated = new
+            {
+                profileCount = loaded.AgentProfiles.Count,
+                bakeProfileCount = loaded.Config.Profiles.Count,
+                layerCount = loaded.Config.Layers.Count,
+                areaCount = loaded.Config.Areas.Count,
+                mode = loaded.Config.Mode,
+                algorithm = loaded.Config.Algorithm
+            }
+        });
+    }
+    catch (Exception ex)
+    {
+        RestoreNavigationConfigFile(agentFile, previousAgentProfiles);
+        RestoreNavigationConfigFile(navmeshFile, previousNavmesh);
+        return Results.BadRequest(new
+        {
+            ok = false,
+            error = $"Saved files failed validation: {ex.Message}",
+            paths = new { agentProfiles = agentFile, navmesh = navmeshFile }
+        });
+    }
+});
+
+app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string mapId, string? boardName) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
+        var board = EditorRepo.ResolveRequiredBoardByName(mapR.Map, boardName);
+        var dataFile = board.DataFile;
+        if (string.IsNullOrWhiteSpace(dataFile))
+            return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
+
+        if (!EditorRepo.TryResolveDataFile(ctx, dataFile, out var fullPath, out var checkedPaths))
+        {
+            return Results.NotFound(new { ok = false, error = $"DataFile not found for board '{board.Name}': {dataFile}", checkedPaths });
+        }
+
+        if (EditorRepo.IsGridBoard(board))
+        {
+            using var validation = File.OpenRead(fullPath);
+            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                fullPath,
+                validation,
+                EditorRepo.RequireGridCellSizeCm(board));
+
+            return Results.File(File.ReadAllBytes(fullPath), "application/octet-stream", fileDownloadName: $"{mapId}_{board.Name}_map_data.bin");
+        }
+
+        if (EditorRepo.IsHexGridBoard(board))
+        {
+            using var fs = File.OpenRead(fullPath);
+            using var ms = new MemoryStream();
+            EditorTerrainConverter.ConvertVertexMapBinaryToReactTerrain(fs, ms);
+            ms.Position = 0;
+            return Results.File(ms.ToArray(), "application/octet-stream", fileDownloadName: $"{mapId}_{board.Name}_map_data.bin");
+        }
+
+        return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' does not support React terrain editing." });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
+app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, string mapId, string? boardName, HttpRequest req) =>
 {
     string repoRoot = FindAssetsRoot();
     EditorRepo.ModContext ctx;
@@ -395,9 +644,19 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
 
     var mapR = EditorRepo.LoadMergedMapConfig(ctx, mapId);
     if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {mapId}" });
-    var dataFile = EditorRepo.ResolvePrimaryBoardDataFile(mapR.Map);
+    Ludots.Core.Map.Board.BoardConfig board;
+    try
+    {
+        board = EditorRepo.ResolveRequiredBoardByName(mapR.Map, boardName);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var dataFile = board.DataFile;
     if (string.IsNullOrWhiteSpace(dataFile))
-        return Results.BadRequest(new { ok = false, error = "MapConfig.Boards[*].DataFile is empty." });
+        return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
 
     string outFile = EditorRepo.ResolveWritableDataFilePath(ctx, dataFile);
     Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
@@ -410,13 +669,28 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
             await req.Body.CopyToAsync(fs);
         }
 
-        using var vtxmStream = new MemoryStream();
-        _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
-        vtxmStream.Position = 0;
-
-        await using (var outFs = File.Create(outFile))
+        if (EditorRepo.IsGridBoard(board))
         {
+            await using var validation = File.OpenRead(tempPath);
+            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                tempPath,
+                validation,
+                EditorRepo.RequireGridCellSizeCm(board));
+
+            File.Copy(tempPath, outFile, overwrite: true);
+        }
+        else if (EditorRepo.IsHexGridBoard(board))
+        {
+            using var vtxmStream = new MemoryStream();
+            _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
+            vtxmStream.Position = 0;
+
+            await using var outFs = File.Create(outFile);
             await vtxmStream.CopyToAsync(outFs);
+        }
+        else
+        {
+            return Results.BadRequest(new { ok = false, error = $"Board SpatialType '{board.SpatialType}' does not support React terrain editing." });
         }
     }
     finally
@@ -458,7 +732,11 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
         vtxmStream.Position = 0;
         var map = VertexMapBinary.Read(vtxmStream);
 
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
+        IReadOnlyList<NavBakeTileCoord> targets = NavBakeTileSelection.Resolve(
+            new VertexMapLogicTerrainField(map),
+            dirtyJson,
+            includeNeighbors,
+            dirtyOnly);
         if (targets.Count == 0)
         {
             return Results.Ok(new
@@ -472,73 +750,10 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
                 config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
             });
         }
-        var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-
-        var results = new TileBakeResult[targets.Count];
-
-        void BakeOne(int i)
+        return Results.BadRequest(new
         {
-            var t = targets[i];
-            
-            // Use new CDT pipeline
-            var pipelineResult = BakePipeline.Execute(map, t.cx, t.cy, (uint)tileVersion, cfg);
-            
-            // Log debug info to console
-            if (pipelineResult.Artifact.DebugLog != null)
-            {
-                Console.WriteLine($"[Bake ({t.cx},{t.cy})] Debug log:");
-                foreach (var line in pipelineResult.Artifact.DebugLog)
-                {
-                    Console.WriteLine($"  {line}");
-                }
-            }
-            
-            if (pipelineResult.Success && pipelineResult.Tile != null)
-            {
-                using var ms = new MemoryStream();
-                NavTileBinary.Write(ms, pipelineResult.Tile);
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: true, Convert.ToBase64String(ms.ToArray()), writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-            else
-            {
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: false, null, writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-        }
-
-        if (parallel)
-        {
-            Parallel.For(0, targets.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-        }
-        else
-        {
-            for (int i = 0; i < targets.Count; i++) BakeOne(i);
-        }
-
-        int okCount = 0;
-        int failCount = 0;
-        var tiles = new List<object>(results.Length);
-        var artifacts = new List<object>();
-        for (int i = 0; i < results.Length; i++)
-        {
-            var r = results[i];
-            if (r.Ok) okCount++; else failCount++;
-            if (!string.IsNullOrEmpty(r.NavTileBase64))
-            {
-                tiles.Add(new { cx = r.Cx, cy = r.Cy, layer = 0, base64 = r.NavTileBase64 });
-            }
-            if (!string.IsNullOrEmpty(r.ArtifactJson))
-            {
-                artifacts.Add(new { cx = r.Cx, cy = r.Cy, json = r.ArtifactJson });
-            }
-        }
-
-        return Results.Ok(new
-        {
-            ok = true,
-            okCount,
-            failCount,
-            tiles,
-            artifacts,
+            ok = false,
+            error = "Editor CDT preview requires an authored NavMeshBakeConfig from the unified config pipeline; generated layer/profile defaults are forbidden.",
             targetsCount = targets.Count,
             config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
         });
@@ -557,17 +772,27 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     if (mapFile == null) return Results.BadRequest(new { error = "Missing form file 'map' (map_data.bin)" });
     var mapId = form.TryGetValue("mapId", out var mapIdVal) ? mapIdVal.ToString() : null;
     if (string.IsNullOrWhiteSpace(mapId)) return Results.BadRequest(new { error = "Missing form field 'mapId'" });
-
+    var modId = form.TryGetValue("modId", out var modIdVal) ? modIdVal.ToString() : null;
+    var boardName = form.TryGetValue("boardName", out var boardNameVal) ? boardNameVal.ToString() : null;
     var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
-    var dirtyOnly = ParseBool(form.TryGetValue("dirtyOnly", out var dirtyOnlyVal) ? dirtyOnlyVal.ToString() : null, defaultValue: false);
-    var includeNeighbors = ParseBool(form.TryGetValue("includeNeighbors", out var inclVal) ? inclVal.ToString() : null, defaultValue: true);
-    var heightScale = ParseFloat(form.TryGetValue("heightScale", out var hsVal) ? hsVal.ToString() : null, 2.0f);
-    var minUpDot = ParseFloat(form.TryGetValue("minUpDot", out var mudVal) ? mudVal.ToString() : null, 0.6f);
-    var cliffThreshold = ParseInt(form.TryGetValue("cliffThreshold", out var ctVal) ? ctVal.ToString() : null, 1);
-    var tileVersion = ParseInt(form.TryGetValue("tileVersion", out var tvVal) ? tvVal.ToString() : null, 1);
-    var writeArtifact = ParseBool(form.TryGetValue("artifact", out var artVal) ? artVal.ToString() : null, defaultValue: true);
-    var parallel = ParseBool(form.TryGetValue("parallel", out var parVal) ? parVal.ToString() : null, defaultValue: true);
-    var maxDegree = ParseInt(form.TryGetValue("maxDegree", out var mdVal) ? mdVal.ToString() : null, Math.Max(1, Environment.ProcessorCount));
+
+    if (TryReadRecastReactCommonOptions(
+        form,
+        out bool dirtyOnly,
+        out bool includeNeighbors,
+        out float heightScale,
+        out float minUpDot,
+        out int cliffThreshold,
+        out int tileVersion,
+        out bool parallel,
+        out int maxDegree) is { } commonError)
+    {
+        return commonError;
+    }
+
+    if (TryReadOptionalBool(form, "artifact", true, out bool writeArtifact) is { } artifactError) return artifactError;
+    if (TryReadOptionalBool(form, "largeBake", false, out bool largeBakeApproved) is { } largeBakeError) return largeBakeError;
+    string? acceptedEstimateHash = ReadOptionalString(form, "estimateHash");
 
     string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
     try
@@ -577,134 +802,536 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             await mapFile.CopyToAsync(fs);
         }
 
-        using var vtxmStream = new MemoryStream();
-        _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
-        vtxmStream.Position = 0;
-        var map = VertexMapBinary.Read(vtxmStream);
-
-        string repoRoot = FindAssetsRoot();
-        NavMeshBakeConfig bakeConfig;
-        try
+        if (TryBuildEditorUploadRecastContext(
+            tempPath,
+            mapFile.FileName,
+            mapId,
+            modId,
+            boardName,
+            dirtyJson,
+            dirtyOnly,
+            includeNeighbors,
+            heightScale,
+            minUpDot,
+            cliffThreshold,
+            tileVersion,
+            parallel,
+            maxDegree,
+            out string repoRoot,
+            out NavBakeContext navBakeContext,
+            out NavObstacleSet obstacles,
+            out IReadOnlyList<NavBakeTileCoord> targets,
+            out IResult? buildError))
         {
-            bakeConfig = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
-        }
-        catch (Exception ex)
-        {
-            return Results.BadRequest(new { error = $"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}" });
-        }
-
-        var profiles = bakeConfig.Profiles;
-
-        NavObstacleSet obstacles = new NavObstacleSet();
-        string obsRel = NavAssetPaths.GetObstacleRelativePath(mapId);
-        string obsPath = Path.Combine(repoRoot, obsRel.Replace('/', Path.DirectorySeparatorChar));
-        if (File.Exists(obsPath))
-        {
-            obstacles = JsonSerializer.Deserialize<NavObstacleSet>(File.ReadAllText(obsPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavObstacleSet();
-        }
-
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
-        if (targets.Count == 0)
-        {
-            return Results.Ok(new
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(navBakeContext);
+            try
             {
-                ok = true,
-                okCount = 0,
-                failCount = 0,
-                tiles = Array.Empty<object>(),
-                artifacts = Array.Empty<object>(),
-                message = "No targets to bake (dirtyOnly=true and dirty set is empty).",
-                config = new { mapId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
-            });
-        }
-        var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-
-        var results = new TileBakeResult[targets.Count];
-
-        void BakeOne(int i)
-        {
-            var t = targets[i];
-            bool okAny = false;
-            string? base64 = null;
-            string? artJson = null;
-
-            for (int li = 0; li < bakeConfig.Layers.Count; li++)
+                NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
+            }
+            catch (Exception ex)
             {
-                int layer = bakeConfig.Layers[li].Layer;
-                for (int pi = 0; pi < profiles.Count; pi++)
+                return Results.BadRequest(new { ok = false, error = ex.Message, estimate });
+            }
+
+            if (targets.Count == 0)
+            {
+                return Results.Ok(new
                 {
-                    if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, profiles[pi], layer, obstacles, out var tile, out var artifact))
-                    {
-                        string profileId = profiles[pi].Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
-                        string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                        using (var fs = File.Create(outFile))
-                        {
-                            NavTileBinary.Write(fs, tile);
-                        }
+                    ok = true,
+                    okCount = 0,
+                    failCount = 0,
+                    tiles = Array.Empty<object>(),
+                    artifacts = Array.Empty<object>(),
+                    message = "No targets to bake (dirtyOnly=true and dirty set is empty).",
+                    estimate,
+                    config = new { mapId, modId, boardName, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
+                });
+            }
 
-                        if (layer == 0 && pi == 0)
-                        {
-                            using var ms = new MemoryStream();
-                            NavTileBinary.Write(ms, tile);
-                            base64 = Convert.ToBase64String(ms.ToArray());
-                            if (writeArtifact) artJson = SerializeArtifact(artifact);
-                        }
-                        okAny = true;
-                    }
-                    else
-                    {
-                        if (layer == 0 && pi == 0 && writeArtifact) artJson = SerializeArtifact(artifact);
-                    }
+            var navBakeResult = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(navBakeContext);
+            var artifacts = new List<object>(navBakeResult.Entries.Count);
+            for (int i = 0; i < navBakeResult.Entries.Count; i++)
+            {
+                var r = navBakeResult.Entries[i];
+                if (writeArtifact)
+                {
+                    artifacts.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, layer = r.Layer, profileId = r.ProfileId, json = SerializeArtifact(r.Artifact) });
                 }
             }
 
-            results[i] = new TileBakeResult(t.cx, t.cy, okAny, base64, artJson);
-        }
-
-        if (parallel)
-        {
-            Parallel.For(0, targets.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-        }
-        else
-        {
-            for (int i = 0; i < targets.Count; i++) BakeOne(i);
-        }
-
-        int okCount = 0;
-        int failCount = 0;
-        var tiles = new List<object>(results.Length);
-        var artifacts = new List<object>();
-        for (int i = 0; i < results.Length; i++)
-        {
-            var r = results[i];
-            if (r.Ok) okCount++; else failCount++;
-            if (!string.IsNullOrEmpty(r.NavTileBase64))
+            if (navBakeResult.FailureCount > 0)
             {
-                tiles.Add(new { cx = r.Cx, cy = r.Cy, layer = 0, base64 = r.NavTileBase64 });
+                return Results.BadRequest(new
+                {
+                    ok = false,
+                    error = "Nav bake failed; no NavTile artifacts were written.",
+                    okCount = navBakeResult.SuccessCount,
+                    failCount = navBakeResult.FailureCount,
+                    artifacts,
+                    targetsCount = targets.Count,
+                    estimate,
+                    config = new { mapId, modId, boardName, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
+                });
             }
-            if (!string.IsNullOrEmpty(r.ArtifactJson))
+
+            var tiles = new List<object>(navBakeResult.SuccessCount);
+            for (int i = 0; i < navBakeResult.Entries.Count; i++)
             {
-                artifacts.Add(new { cx = r.Cx, cy = r.Cy, json = r.ArtifactJson });
+                var r = navBakeResult.Entries[i];
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
+                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+                using (var fs = File.Create(outFile))
+                {
+                    NavTileBinary.Write(fs, r.Tile);
+                }
+
+                tiles.Add(new
+                {
+                    cx = r.Target.ChunkX,
+                    cy = r.Target.ChunkY,
+                    layer = r.Layer,
+                    profileId = r.ProfileId,
+                    base64 = Convert.ToBase64String(r.ToTileBytes()),
+                    detourBase64 = Convert.ToBase64String(r.DetourTileBytes)
+                });
             }
+
+            return Results.Ok(new
+            {
+                ok = true,
+                okCount = navBakeResult.SuccessCount,
+                failCount = navBakeResult.FailureCount,
+                tiles,
+                artifacts,
+                targetsCount = targets.Count,
+                estimate,
+                config = new { mapId, modId, boardName, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
+            });
         }
 
-        return Results.Ok(new
-        {
-            ok = true,
-            okCount,
-            failCount,
-            tiles,
-            artifacts,
-            targetsCount = targets.Count,
-            config = new { mapId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
-        });
+        return buildError!;
     }
     finally
     {
         try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
     }
+});
+
+app.MapPost("/api/nav/estimate-recast-react", async (HttpRequest req) =>
+{
+    if (!req.HasFormContentType) return Results.BadRequest(new { error = "Expected multipart/form-data" });
+    var form = await req.ReadFormAsync();
+    var mapFile = form.Files.GetFile("map");
+    if (mapFile == null) return Results.BadRequest(new { error = "Missing form file 'map' (map_data.bin)" });
+    var mapId = form.TryGetValue("mapId", out var mapIdVal) ? mapIdVal.ToString() : null;
+    if (string.IsNullOrWhiteSpace(mapId)) return Results.BadRequest(new { error = "Missing form field 'mapId'" });
+    var modId = form.TryGetValue("modId", out var modIdVal) ? modIdVal.ToString() : null;
+    var boardName = form.TryGetValue("boardName", out var boardNameVal) ? boardNameVal.ToString() : null;
+    var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
+
+    if (TryReadRecastReactCommonOptions(
+        form,
+        out bool dirtyOnly,
+        out bool includeNeighbors,
+        out float heightScale,
+        out float minUpDot,
+        out int cliffThreshold,
+        out int tileVersion,
+        out bool parallel,
+        out int maxDegree) is { } commonError)
+    {
+        return commonError;
+    }
+
+    string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
+    try
+    {
+        await using (var fs = File.Create(tempPath))
+        {
+            await mapFile.CopyToAsync(fs);
+        }
+
+        if (TryBuildEditorUploadRecastContext(
+            tempPath,
+            mapFile.FileName,
+            mapId,
+            modId,
+            boardName,
+            dirtyJson,
+            dirtyOnly,
+            includeNeighbors,
+            heightScale,
+            minUpDot,
+            cliffThreshold,
+            tileVersion,
+            parallel,
+            maxDegree,
+            out _,
+            out NavBakeContext navBakeContext,
+            out NavObstacleSet obstacles,
+            out _,
+            out IResult? buildError))
+        {
+            NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(navBakeContext);
+            return Results.Ok(new
+            {
+                ok = true,
+                estimate,
+                config = new { mapId, modId, boardName, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
+            });
+        }
+
+        return buildError!;
+    }
+    finally
+    {
+        try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+    }
+});
+
+app.MapPost("/api/nav/bootstrap-flat-grid-react", async (HttpRequest req) =>
+{
+    FlatGridNavBootstrapRequest? payload;
+    try
+    {
+        payload = await JsonSerializer.DeserializeAsync<FlatGridNavBootstrapRequest>(
+            req.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Invalid JSON: {ex.Message}" });
+    }
+
+    if (payload == null) return Results.BadRequest(new { ok = false, error = "Request body is required." });
+    if (string.IsNullOrWhiteSpace(payload.MapId)) return Results.BadRequest(new { ok = false, error = "mapId is required." });
+    if (string.IsNullOrWhiteSpace(payload.BoardName)) return Results.BadRequest(new { ok = false, error = "boardName is required." });
+    if (string.IsNullOrWhiteSpace(payload.ProfileId)) return Results.BadRequest(new { ok = false, error = "profileId is required." });
+    if (payload.Chunks == null || payload.Chunks.Count == 0) return Results.BadRequest(new { ok = false, error = "At least one chunk is required." });
+
+    string repoRoot = FindAssetsRoot();
+    Ludots.Core.Map.Board.BoardConfig boardConfig;
+    EditorRepo.BoardInfo boardInfo;
+    NavMeshBakeConfigContext bakeConfigContext;
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, payload.ModId);
+        var mapR = EditorRepo.LoadMergedMapConfig(ctx, payload.MapId);
+        if (!mapR.Found) return Results.NotFound(new { ok = false, error = $"Map not found: {payload.MapId}" });
+        boardConfig = EditorRepo.ResolveRequiredBoardByName(mapR.Map, payload.BoardName);
+        boardInfo = EditorRepo.DescribeBoard(ctx, boardConfig);
+        if (!boardConfig.NavigationEnabled)
+        {
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+        }
+
+        if (!EditorRepo.IsGridBoard(boardConfig))
+        {
+            return Results.BadRequest(new { ok = false, error = $"Flat baseline NavTile bootstrap only supports Grid boards. Board '{boardConfig.Name}' is {EditorRepo.NormalizeSpatialType(boardConfig)}." });
+        }
+
+        bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, payload.ModId);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    int layer = payload.Layer;
+    try
+    {
+        var profileRegistry = new NavMeshProfileRegistry(bakeConfigContext.Config, bakeConfigContext.AgentProfiles);
+        if (!profileRegistry.TryGetIndex(payload.ProfileId, out _))
+        {
+            return Results.BadRequest(new { ok = false, error = $"NavMesh profile '{payload.ProfileId}' is not declared in Navigation/navmesh.json." });
+        }
+
+        bool layerDeclared = false;
+        for (int i = 0; i < bakeConfigContext.Config.Layers.Count; i++)
+        {
+            if (bakeConfigContext.Config.Layers[i].Layer == layer)
+            {
+                layerDeclared = true;
+                break;
+            }
+        }
+
+        if (!layerDeclared)
+        {
+            return Results.BadRequest(new { ok = false, error = $"NavMesh layer {layer} is not declared in Navigation/navmesh.json." });
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    int tileWidthCm;
+    int tileHeightCm;
+    int chunkSizeCells = boardConfig.ChunkSizeCells > 0
+        ? boardConfig.ChunkSizeCells
+        : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+    int tileVersion = payload.TileVersion <= 0 ? 1 : payload.TileVersion;
+    try
+    {
+        tileWidthCm = ResolveBoardTileWidthCm(boardConfig);
+        tileHeightCm = ResolveBoardTileHeightCm(boardConfig);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var seen = new HashSet<string>(StringComparer.Ordinal);
+    var tiles = new List<object>(payload.Chunks.Count);
+    try
+    {
+        for (int i = 0; i < payload.Chunks.Count; i++)
+        {
+            NavBootstrapChunk? chunk = payload.Chunks[i];
+            if (chunk == null) continue;
+            int cx = chunk.Cx;
+            int cy = chunk.Cy;
+            if (cx < 0 || cy < 0 || cx >= boardInfo.WidthChunks || cy >= boardInfo.HeightChunks)
+            {
+                return Results.BadRequest(new { ok = false, error = $"chunks[{i}] ({cx},{cy}) is outside board '{boardInfo.Name}' bounds {boardInfo.WidthChunks}x{boardInfo.HeightChunks}." });
+            }
+
+            string key = $"{cx},{cy},{layer},{payload.ProfileId}";
+            if (!seen.Add(key)) continue;
+
+            NavTile tile = DefaultGridNavTileFactory.CreateFlatTile(
+                cx,
+                cy,
+                layer,
+                checked((uint)tileVersion),
+                tileWidthCm,
+                tileHeightCm,
+                chunkSizeCells,
+                chunkSizeCells);
+            byte[] tileBytes = SerializeNavTile(tile);
+            byte[] detourBytes = DetourNavQueryEngine.BuildFlatGridBaselineDetourTileBytes(tile, tileWidthCm, tileHeightCm);
+            tiles.Add(new
+            {
+                cx,
+                cy,
+                layer,
+                profileId = payload.ProfileId,
+                base64 = Convert.ToBase64String(tileBytes),
+                detourBase64 = Convert.ToBase64String(detourBytes),
+                source = DefaultGridNavTileFactory.SourceId
+            });
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    return Results.Ok(new
+    {
+        ok = true,
+        source = DefaultGridNavTileFactory.SourceId,
+        tiles,
+        requestedChunkCount = payload.Chunks.Count,
+        returnedTileCount = tiles.Count,
+        tileWidthCm,
+        tileHeightCm,
+        chunkSizeCells,
+        tileVersion,
+        board = new { boardInfo.Name, boardInfo.WidthChunks, boardInfo.HeightChunks }
+    });
+});
+
+app.MapPost("/api/nav/query-recast-react", async (HttpRequest req) =>
+{
+    NavPathQueryRequest? payload;
+    try
+    {
+        payload = await JsonSerializer.DeserializeAsync<NavPathQueryRequest>(
+            req.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Invalid JSON: {ex.Message}" });
+    }
+
+    if (payload == null) return Results.BadRequest(new { ok = false, error = "Request body is required." });
+    if (string.IsNullOrWhiteSpace(payload.MapId)) return Results.BadRequest(new { ok = false, error = "mapId is required." });
+    if (string.IsNullOrWhiteSpace(payload.BoardName)) return Results.BadRequest(new { ok = false, error = "boardName is required." });
+    if (string.IsNullOrWhiteSpace(payload.ProfileId)) return Results.BadRequest(new { ok = false, error = "profileId is required." });
+    if (payload.Tiles == null || payload.Tiles.Count == 0) return Results.BadRequest(new { ok = false, error = "At least one current NavTile payload is required." });
+
+    string repoRoot = FindAssetsRoot();
+    Ludots.Core.Map.Board.BoardConfig boardConfig;
+    NavMeshBakeConfigContext bakeConfigContext;
+    try
+    {
+        var mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, payload.MapId, payload.ModId);
+        boardConfig = EditorRepo.ResolveRequiredBoardByName(mapConfig, payload.BoardName);
+        if (!boardConfig.NavigationEnabled)
+        {
+            return Results.BadRequest(new { ok = false, error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false." });
+        }
+
+        bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, payload.ModId);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    int layer = payload.Layer;
+    int profileIndex;
+    try
+    {
+        var profileRegistry = new NavMeshProfileRegistry(bakeConfigContext.Config, bakeConfigContext.AgentProfiles);
+        if (!profileRegistry.TryGetIndex(payload.ProfileId, out profileIndex))
+        {
+            return Results.BadRequest(new { ok = false, error = $"NavMesh profile '{payload.ProfileId}' is not declared in Navigation/navmesh.json." });
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    bool layerDeclared = false;
+    for (int i = 0; i < bakeConfigContext.Config.Layers.Count; i++)
+    {
+        if (bakeConfigContext.Config.Layers[i].Layer == layer)
+        {
+            layerDeclared = true;
+            break;
+        }
+    }
+
+    if (!layerDeclared)
+    {
+        return Results.BadRequest(new { ok = false, error = $"NavMesh layer {layer} is not declared in Navigation/navmesh.json." });
+    }
+
+    int tileWidthCm;
+    int tileHeightCm;
+    try
+    {
+        tileWidthCm = ResolveBoardTileWidthCm(boardConfig);
+        tileHeightCm = ResolveBoardTileHeightCm(boardConfig);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    var detourTiles = new List<byte[]>(payload.Tiles.Count);
+    var tileSources = new HashSet<string>(StringComparer.Ordinal);
+    int acceptedTiles = 0;
+    int ignoredTiles = 0;
+    try
+    {
+        for (int i = 0; i < payload.Tiles.Count; i++)
+        {
+            var t = payload.Tiles[i];
+            if (t == null || string.IsNullOrWhiteSpace(t.Base64))
+            {
+                ignoredTiles++;
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(t.DetourBase64))
+            {
+                return Results.BadRequest(new { ok = false, error = $"tiles[{i}] is missing detourBase64. Re-run Recast Bake; manually loaded .ntil files are visual-only." });
+            }
+
+            if (!string.Equals(t.ProfileId, payload.ProfileId, StringComparison.Ordinal))
+            {
+                return Results.BadRequest(new { ok = false, error = $"tiles[{i}].profileId '{t.ProfileId ?? "<null>"}' does not match requested profileId '{payload.ProfileId}'." });
+            }
+
+            if (t.Layer != layer)
+            {
+                return Results.BadRequest(new { ok = false, error = $"tiles[{i}].layer {t.Layer} does not match requested layer {layer}." });
+            }
+
+            detourTiles.Add(Convert.FromBase64String(t.DetourBase64));
+            if (!string.IsNullOrWhiteSpace(t.Source))
+            {
+                tileSources.Add(t.Source);
+            }
+            acceptedTiles++;
+        }
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = $"Failed to decode Detour tile payload: {ex.Message}" });
+    }
+
+    if (acceptedTiles == 0)
+    {
+        return Results.BadRequest(new { ok = false, error = $"No supplied Detour tile payload matched layer {layer}." });
+    }
+
+    NavAreaCostTable areaCosts;
+    try
+    {
+        areaCosts = BuildEditorNavAreaCostTable(bakeConfigContext.Config, payload.AreaCosts);
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+
+    int maxPortals = payload.MaxPortals <= 0 ? 256 : payload.MaxPortals;
+    var sw = Stopwatch.StartNew();
+    NavPathResult result = DetourNavQueryEngine.FindPathFromDetourTileBytes(
+        detourTiles,
+        layer,
+        areaCosts,
+        payload.Start.XCm,
+        payload.Start.ZCm,
+        payload.Goal.XCm,
+        payload.Goal.ZCm,
+        maxPortals);
+    sw.Stop();
+
+    var points = new List<object>(result.PathXcm.Length);
+    int count = Math.Min(result.PathXcm.Length, result.PathZcm.Length);
+    for (int i = 0; i < count; i++)
+    {
+        points.Add(new { xCm = result.PathXcm[i], zCm = result.PathZcm[i] });
+    }
+
+    bool usesFlatBaseline = tileSources.Contains(DefaultGridNavTileFactory.SourceId);
+    string tileSource = tileSources.Count == 0
+        ? "editor-supplied-detour-tile-bytes"
+        : $"editor-supplied-detour-tile-bytes ({string.Join("+", tileSources.OrderBy(x => x, StringComparer.Ordinal))})";
+
+    return Results.Ok(new
+    {
+        ok = true,
+        status = result.Status.ToString(),
+        points,
+        travelCost = result.TravelCost.ToDouble(),
+        elapsedMs = sw.Elapsed.TotalMilliseconds,
+        engine = "Ludots.Core.DetourNavQueryEngine + DotRecast.Detour",
+        algorithmSource = usesFlatBaseline
+            ? "Default Grid flat NavTile footprint -> convex DotRecast DtMeshData poly -> DtNavMeshQuery FindNearestPoly/Raycast visibility shortcut/FindPath/FindStraightPath fallback"
+            : "Recast bake RcPolyMesh/RcPolyMeshDetail -> official DotRecast DtMeshData -> DtNavMeshQuery FindNearestPoly/Raycast visibility shortcut/FindPath/FindStraightPath fallback",
+        profileId = payload.ProfileId,
+        profileIndex,
+        layer,
+        maxPortals,
+        acceptedTiles,
+        ignoredTiles,
+        tileWidthCm,
+        tileHeightCm,
+        tileSource,
+        warning = string.Equals(EditorRepo.NormalizeSpatialType(boardConfig), "Grid", StringComparison.Ordinal)
+            ? null
+            : "Hex boards use pointy-hex world spacing; query uses the board-derived tile footprint."
+    });
 });
 
 app.MapPost("/api/mods/create", async (HttpRequest req) =>
@@ -896,6 +1523,337 @@ app.MapDelete("/api/bindings/{name}", (string name) =>
 
 app.Run("http://localhost:5299");
 
+static IResult? TryReadRecastReactCommonOptions(
+    IFormCollection form,
+    out bool dirtyOnly,
+    out bool includeNeighbors,
+    out float heightScale,
+    out float minUpDot,
+    out int cliffThreshold,
+    out int tileVersion,
+    out bool parallel,
+    out int maxDegree)
+{
+    dirtyOnly = false;
+    includeNeighbors = true;
+    heightScale = 2.0f;
+    minUpDot = 0.6f;
+    cliffThreshold = 1;
+    tileVersion = 1;
+    parallel = true;
+    maxDegree = Math.Max(1, Environment.ProcessorCount);
+
+    if (TryReadOptionalBool(form, "dirtyOnly", false, out dirtyOnly) is { } dirtyOnlyError) return dirtyOnlyError;
+    if (TryReadOptionalBool(form, "includeNeighbors", true, out includeNeighbors) is { } includeNeighborsError) return includeNeighborsError;
+    if (TryReadOptionalFloat(form, "heightScale", 2.0f, out heightScale) is { } heightScaleError) return heightScaleError;
+    if (TryReadOptionalFloat(form, "minUpDot", 0.6f, out minUpDot) is { } minUpDotError) return minUpDotError;
+    if (TryReadOptionalInt(form, "cliffThreshold", 1, out cliffThreshold) is { } cliffThresholdError) return cliffThresholdError;
+    if (TryReadOptionalInt(form, "tileVersion", 1, out tileVersion) is { } tileVersionError) return tileVersionError;
+    if (TryReadOptionalBool(form, "parallel", true, out parallel) is { } parallelError) return parallelError;
+    if (TryReadOptionalInt(form, "maxDegree", Math.Max(1, Environment.ProcessorCount), out maxDegree) is { } maxDegreeError) return maxDegreeError;
+
+    if (heightScale <= 0f) return Results.BadRequest(new { error = "Form field 'heightScale' must be > 0." });
+    if (minUpDot <= 0f || minUpDot > 1f) return Results.BadRequest(new { error = "Form field 'minUpDot' must be > 0 and <= 1." });
+    if (cliffThreshold < 0) return Results.BadRequest(new { error = "Form field 'cliffThreshold' must be >= 0." });
+    if (tileVersion <= 0) return Results.BadRequest(new { error = "Form field 'tileVersion' must be > 0." });
+    if (maxDegree <= 0) return Results.BadRequest(new { error = "Form field 'maxDegree' must be > 0." });
+    return null;
+}
+
+static IResult? TryReadOptionalBool(IFormCollection form, string field, bool defaultValue, out bool value)
+{
+    value = defaultValue;
+    string? text = ReadOptionalString(form, field);
+    if (text == null) return null;
+    if (string.Equals(text, "true", StringComparison.Ordinal))
+    {
+        value = true;
+        return null;
+    }
+
+    if (string.Equals(text, "false", StringComparison.Ordinal))
+    {
+        value = false;
+        return null;
+    }
+
+    return Results.BadRequest(new { error = $"Form field '{field}' must be exactly 'true' or 'false'." });
+}
+
+static IResult? TryReadOptionalFloat(IFormCollection form, string field, float defaultValue, out float value)
+{
+    value = defaultValue;
+    string? text = ReadOptionalString(form, field);
+    if (text == null) return null;
+    if (float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) &&
+        !float.IsNaN(parsed) &&
+        !float.IsInfinity(parsed))
+    {
+        value = parsed;
+        return null;
+    }
+
+    return Results.BadRequest(new { error = $"Form field '{field}' must be a finite number using invariant culture." });
+}
+
+static IResult? TryReadOptionalInt(IFormCollection form, string field, int defaultValue, out int value)
+{
+    value = defaultValue;
+    string? text = ReadOptionalString(form, field);
+    if (text == null) return null;
+    if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
+    {
+        value = parsed;
+        return null;
+    }
+
+    return Results.BadRequest(new { error = $"Form field '{field}' must be an integer using invariant culture." });
+}
+
+static string? ReadOptionalString(IFormCollection form, string field)
+{
+    if (!form.TryGetValue(field, out var values)) return null;
+    string text = values.ToString();
+    return string.IsNullOrWhiteSpace(text) ? null : text;
+}
+
+static void RestoreNavigationConfigFile(string path, string? previousText)
+{
+    if (previousText == null)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+
+        return;
+    }
+
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    File.WriteAllText(path, previousText);
+}
+
+static bool TryBuildEditorUploadRecastContext(
+    string inputReactBinPath,
+    string fileName,
+    string mapId,
+    string? modId,
+    string? boardName,
+    string? dirtyJson,
+    bool dirtyOnly,
+    bool includeNeighbors,
+    float heightScale,
+    float minUpDot,
+    int cliffThreshold,
+    int tileVersion,
+    bool parallel,
+    int maxDegree,
+    out string repoRoot,
+    out NavBakeContext navBakeContext,
+    out NavObstacleSet obstacles,
+    out IReadOnlyList<NavBakeTileCoord> targets,
+    out IResult? error)
+{
+    repoRoot = FindAssetsRoot();
+    navBakeContext = null!;
+    obstacles = null!;
+    targets = Array.Empty<NavBakeTileCoord>();
+    error = null;
+
+    Ludots.Core.Config.MapConfig mapConfig;
+    Ludots.Core.Map.Board.BoardConfig boardConfig;
+    try
+    {
+        mapConfig = ToolMapConfigResolver.LoadMap(repoRoot, mapId, modId);
+        boardConfig = !string.IsNullOrWhiteSpace(boardName)
+            ? EditorRepo.ResolveRequiredBoardByName(mapConfig, boardName)
+            : ToolMapConfigResolver.ResolvePrimaryNavigationBoard(mapConfig);
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { error = $"Failed to resolve navigation board for map '{mapId}': {ex.Message}" });
+        return false;
+    }
+
+    if (!boardConfig.NavigationEnabled)
+    {
+        error = Results.BadRequest(new { error = $"Map board '{boardConfig.Name}' has NavigationEnabled=false and cannot bake navmesh." });
+        return false;
+    }
+
+    NavMeshBakeConfigContext bakeConfigContext;
+    try
+    {
+        bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot, modId);
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { error = $"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}" });
+        return false;
+    }
+
+    try
+    {
+        obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { error = $"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}" });
+        return false;
+    }
+
+    try
+    {
+        var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
+        targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
+        NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+        navBakeContext = new NavBakeContext
+        {
+            MapId = mapId,
+            ModId = modId ?? string.Empty,
+            SourceUri = ToEditorUploadSourceUri(fileName),
+            Terrain = terrain,
+            Obstacles = obstacles,
+            Config = bakeConfig,
+            AgentProfiles = bakeConfigContext.AgentProfiles,
+            Targets = targets,
+            BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
+            TileVersion = (uint)tileVersion,
+            Mode = bakeConfig.ParsedMode,
+            Algorithm = bakeConfig.ParsedAlgorithm,
+            Execution = new NavBakeExecutionOptions
+            {
+                Parallel = parallel,
+                MaxDegreeOfParallelism = maxDegree
+            }
+        };
+        return true;
+    }
+    catch (Exception ex)
+    {
+        error = Results.BadRequest(new { error = $"Failed to build nav bake context for '{mapId}': {ex.Message}" });
+        return false;
+    }
+}
+
+static byte[] SerializeNavTile(NavTile tile)
+{
+    using var stream = new MemoryStream();
+    NavTileBinary.Write(stream, tile);
+    return stream.ToArray();
+}
+
+static NavAreaCostTable BuildEditorNavAreaCostTable(
+    NavMeshBakeConfig cfg,
+    IReadOnlyList<NavAreaCostOverride>? overrides)
+{
+    var arr = new Fix64[256];
+    for (int i = 0; i < arr.Length; i++) arr[i] = Fix64.OneValue;
+
+    if (cfg?.Areas != null)
+    {
+        for (int i = 0; i < cfg.Areas.Count; i++)
+        {
+            NavAreaCostConfig? area = cfg.Areas[i];
+            if (area == null) continue;
+            if (area.AreaId < 0 || area.AreaId > 255)
+                throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid areaId: {area.AreaId}");
+            if (area.Cost <= 0f || float.IsNaN(area.Cost))
+                throw new InvalidOperationException($"NavMeshBakeConfig.areas has invalid cost for areaId={area.AreaId}");
+            arr[area.AreaId] = Fix64.FromFloat(area.Cost);
+        }
+    }
+
+    if (overrides != null)
+    {
+        for (int i = 0; i < overrides.Count; i++)
+        {
+            NavAreaCostOverride? area = overrides[i];
+            if (area == null) continue;
+            if (area.AreaId < 0 || area.AreaId > 255)
+                throw new InvalidOperationException($"areaCosts[{i}].areaId must be 0..255.");
+            if (area.Cost <= 0f || float.IsNaN(area.Cost))
+                throw new InvalidOperationException($"areaCosts[{i}].cost must be > 0.");
+            arr[area.AreaId] = Fix64.FromFloat(area.Cost);
+        }
+    }
+
+    return new NavAreaCostTable(arr);
+}
+
+static int ResolveBoardTileWidthCm(Ludots.Core.Map.Board.BoardConfig board)
+{
+    int chunkSizeCells = board.ChunkSizeCells > 0
+        ? board.ChunkSizeCells
+        : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+
+    string spatialType = EditorRepo.NormalizeSpatialType(board);
+    if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
+    {
+        return checked(chunkSizeCells * EditorRepo.RequireGridCellSizeCm(board));
+    }
+
+    if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+    {
+        return checked((int)MathF.Round(Ludots.Core.Map.Hex.HexCoordinates.HexWidth * chunkSizeCells * 100f));
+    }
+
+    throw new InvalidOperationException($"Map board '{board.Name}' is {spatialType}; only Grid and HexGrid boards can query navmesh.");
+}
+
+static int ResolveBoardTileHeightCm(Ludots.Core.Map.Board.BoardConfig board)
+{
+    int chunkSizeCells = board.ChunkSizeCells > 0
+        ? board.ChunkSizeCells
+        : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+
+    string spatialType = EditorRepo.NormalizeSpatialType(board);
+    if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
+    {
+        return checked(chunkSizeCells * EditorRepo.RequireGridCellSizeCm(board));
+    }
+
+    if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+    {
+        return checked((int)MathF.Round(Ludots.Core.Map.Hex.HexCoordinates.RowSpacing * chunkSizeCells * 100f));
+    }
+
+    throw new InvalidOperationException($"Map board '{board.Name}' is {spatialType}; only Grid and HexGrid boards can query navmesh.");
+}
+
+static LogicTerrainField CreateReactEditorLogicTerrain(
+    string inputReactBinPath,
+    Ludots.Core.Map.Board.BoardConfig boardConfig)
+{
+    if (boardConfig == null) throw new ArgumentNullException(nameof(boardConfig));
+    string spatialType = EditorRepo.NormalizeSpatialType(boardConfig);
+
+    if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
+    {
+        return ReactMapDataBinConverter.ReadGridLogicTerrainField(
+            inputReactBinPath,
+            EditorRepo.RequireGridCellSizeCm(boardConfig));
+    }
+
+    if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+    {
+        using var ms = new MemoryStream();
+        _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
+        ms.Position = 0;
+        VertexMap map = VertexMapBinary.Read(ms);
+        return new VertexMapLogicTerrainField(map);
+    }
+
+    if (string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            $"Map board '{boardConfig.Name}' is NodeGraph; NodeGraph boards use graph data and do not bake navmesh.");
+    }
+
+    throw new InvalidOperationException(
+        $"Map board '{boardConfig.Name}' has unsupported SpatialType '{boardConfig.SpatialType}'. Expected Grid, HexGrid, or NodeGraph.");
+}
+
 static float ParseFloat(string? s, float fallback)
 {
     if (string.IsNullOrWhiteSpace(s)) return fallback;
@@ -1039,62 +1997,6 @@ static string NormalizeBindingName(string raw)
     return raw.Trim().TrimStart('$');
 }
 
-static List<(int cx, int cy)> ResolveTargets(VertexMap map, string? dirtyJson, bool includeNeighbors, bool fallbackToFullWhenNoTargets)
-{
-    if (string.IsNullOrWhiteSpace(dirtyJson))
-    {
-        if (!fallbackToFullWhenNoTargets) return new List<(int cx, int cy)>(0);
-        var all = new List<(int cx, int cy)>(map.WidthInChunks * map.HeightInChunks);
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
-                all.Add((cx, cy));
-        return all;
-    }
-
-    string[] keys;
-    try
-    {
-        keys = JsonSerializer.Deserialize<string[]>(dirtyJson) ?? Array.Empty<string>();
-    }
-    catch
-    {
-        keys = dirtyJson
-            .Split(new[] { '\r', '\n', '\t', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries);
-    }
-    var set = new HashSet<(int cx, int cy)>();
-    for (int i = 0; i < keys.Length; i++)
-    {
-        var raw = keys[i].Trim().Trim('"');
-        var parts = raw.Split(',');
-        if (parts.Length != 2) continue;
-        if (!int.TryParse(parts[0], out int cx)) continue;
-        if (!int.TryParse(parts[1], out int cy)) continue;
-        set.Add((cx, cy));
-        if (includeNeighbors)
-        {
-            set.Add((cx - 1, cy));
-            set.Add((cx + 1, cy));
-            set.Add((cx, cy - 1));
-            set.Add((cx, cy + 1));
-        }
-    }
-
-    var targets = new List<(int cx, int cy)>(set.Count);
-    foreach (var t in set)
-    {
-        if (t.cx < 0 || t.cy < 0 || t.cx >= map.WidthInChunks || t.cy >= map.HeightInChunks) continue;
-        targets.Add(t);
-    }
-    if (targets.Count == 0)
-    {
-        if (!fallbackToFullWhenNoTargets) return targets;
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
-                targets.Add((cx, cy));
-    }
-    return targets;
-}
-
 static async Task<(int exitCode, string output)> RunProcessAsync(string fileName, string arguments, string workingDirectory, int timeoutMs = 60000)
 {
     var psi = new System.Diagnostics.ProcessStartInfo(fileName, arguments)
@@ -1134,7 +2036,11 @@ static string FindAssetsRoot()
     return Directory.GetCurrentDirectory();
 }
 
-readonly record struct TileBakeResult(int Cx, int Cy, bool Ok, string? NavTileBase64, string? ArtifactJson);
+static string ToEditorUploadSourceUri(string fileName)
+{
+    string leaf = Path.GetFileName(string.IsNullOrWhiteSpace(fileName) ? "map_data.bin" : fileName);
+    return "EditorUpload:" + leaf;
+}
 
 static class EditorRepo
 {
@@ -1153,6 +2059,48 @@ static class EditorRepo
     }
 
     public sealed record MergedMapResult(bool Found, Ludots.Core.Config.MapConfig Map, List<string> Sources);
+    public sealed record BoardMutationResult(
+        Ludots.Core.Config.MapConfig Map,
+        MapInfo MapInfo,
+        BoardInfo BoardInfo,
+        string MapPath,
+        string? DataPath);
+
+    public sealed record MapInfo(
+        string Id,
+        bool Found,
+        bool HasBoards,
+        string? BoardName,
+        string? SpatialType,
+        int WidthChunks,
+        int HeightChunks,
+        int CellSizeCm,
+        int HexEdgeLengthCm,
+        int ChunkSizeCells,
+        bool NavigationEnabled,
+        bool HasDataFile,
+        bool DataFileExists,
+        string? DataFile,
+        bool CanEditTerrain,
+        bool CanBake,
+        string Reason,
+        IReadOnlyList<BoardInfo> Boards);
+
+    public sealed record BoardInfo(
+        string Name,
+        string? SpatialType,
+        int WidthChunks,
+        int HeightChunks,
+        int CellSizeCm,
+        int HexEdgeLengthCm,
+        int ChunkSizeCells,
+        bool NavigationEnabled,
+        bool HasDataFile,
+        bool DataFileExists,
+        string? DataFile,
+        bool CanEditTerrain,
+        bool CanBake,
+        string Reason);
 
     public static List<ModInfo> DiscoverMods(string repoRoot)
     {
@@ -1221,6 +2169,166 @@ static class EditorRepo
         return set.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
+    public static List<MapInfo> DescribeMaps(ModContext ctx, IReadOnlyList<string> mapIds)
+    {
+        var result = new List<MapInfo>(mapIds.Count);
+        for (int i = 0; i < mapIds.Count; i++)
+        {
+            result.Add(DescribeMap(ctx, mapIds[i]));
+        }
+
+        return result;
+    }
+
+    public static MapInfo DescribeMap(ModContext ctx, string mapId)
+    {
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found)
+        {
+            return new MapInfo(
+                mapId,
+                Found: false,
+                HasBoards: false,
+                BoardName: null,
+                SpatialType: null,
+                WidthChunks: 0,
+                HeightChunks: 0,
+                CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+                ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
+                NavigationEnabled: false,
+                HasDataFile: false,
+                DataFileExists: false,
+                DataFile: null,
+                CanEditTerrain: false,
+                CanBake: false,
+                Reason: "Map config was discovered but could not be merged.",
+                Boards: Array.Empty<BoardInfo>());
+        }
+
+        var board = ResolvePrimaryBoard(mapR.Map);
+        if (board == null)
+        {
+            return new MapInfo(
+                mapId,
+                Found: true,
+                HasBoards: false,
+                BoardName: null,
+                SpatialType: null,
+                WidthChunks: 0,
+                HeightChunks: 0,
+                CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+                ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
+                NavigationEnabled: false,
+                HasDataFile: false,
+                DataFileExists: false,
+                DataFile: null,
+                CanEditTerrain: false,
+                CanBake: false,
+                Reason: "Map has no BoardConfig entries.",
+                Boards: Array.Empty<BoardInfo>());
+        }
+
+        var boards = DescribeBoards(ctx, mapR.Map);
+        var primary = boards.FirstOrDefault(b => string.Equals(b.Name, board.Name, StringComparison.Ordinal))
+            ?? DescribeBoard(ctx, board);
+
+        return new MapInfo(
+            mapId,
+            Found: true,
+            HasBoards: true,
+            BoardName: board.Name,
+            SpatialType: primary.SpatialType,
+            WidthChunks: primary.WidthChunks,
+            HeightChunks: primary.HeightChunks,
+            CellSizeCm: primary.CellSizeCm,
+            HexEdgeLengthCm: primary.HexEdgeLengthCm,
+            ChunkSizeCells: primary.ChunkSizeCells,
+            NavigationEnabled: primary.NavigationEnabled,
+            HasDataFile: primary.HasDataFile,
+            DataFileExists: primary.DataFileExists,
+            DataFile: primary.DataFile,
+            CanEditTerrain: primary.CanEditTerrain,
+            CanBake: primary.CanBake,
+            Reason: primary.Reason,
+            Boards: boards);
+    }
+
+    public static IReadOnlyList<BoardInfo> DescribeBoards(ModContext ctx, Ludots.Core.Config.MapConfig map)
+    {
+        if (map?.Boards == null || map.Boards.Count == 0)
+            return Array.Empty<BoardInfo>();
+
+        var result = new List<BoardInfo>(map.Boards.Count);
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var board = map.Boards[i];
+            if (board == null) continue;
+            result.Add(DescribeBoard(ctx, board));
+        }
+
+        return result;
+    }
+
+    public static BoardInfo DescribeBoard(ModContext ctx, Ludots.Core.Map.Board.BoardConfig board)
+    {
+        int chunkSizeCells = board.ChunkSizeCells > 0
+            ? board.ChunkSizeCells
+            : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int widthChunks = checked(board.WidthInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
+        int heightChunks = checked(board.HeightInMacroTiles * (Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells));
+        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
+        {
+            widthChunks = checked((board.WidthInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
+            heightChunks = checked((board.HeightInMacroTiles * Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells) / chunkSizeCells);
+        }
+
+        string? spatialType = null;
+        string? topologyError = null;
+        try
+        {
+            spatialType = NormalizeSpatialType(board);
+        }
+        catch (Exception ex)
+        {
+            topologyError = ex.Message;
+        }
+
+        bool supportedTerrainTopology = string.Equals(spatialType, "Grid", StringComparison.Ordinal) ||
+            string.Equals(spatialType, "HexGrid", StringComparison.Ordinal);
+        bool hasDataFile = !string.IsNullOrWhiteSpace(board.DataFile);
+        bool dataFileExists = hasDataFile && TryResolveDataFile(ctx, board.DataFile, out _, out _);
+        bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && dataFileExists;
+        bool canBake = canEditTerrain && board.NavigationEnabled;
+        string reason =
+            topologyError != null ? topologyError :
+            canBake ? "Ready for nav bake." :
+            !board.NavigationEnabled ? "Board NavigationEnabled is false." :
+            !supportedTerrainTopology ? $"Board SpatialType '{board.SpatialType}' is not terrain-editable." :
+            !chunkSizeEditable ? $"React terrain editor requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; map uses {chunkSizeCells}." :
+            !hasDataFile ? "Board DataFile is empty." :
+            !dataFileExists ? "Board DataFile could not be resolved." :
+            "Not bakeable.";
+
+        return new BoardInfo(
+            Name: board.Name,
+            SpatialType: spatialType,
+            WidthChunks: widthChunks,
+            HeightChunks: heightChunks,
+            CellSizeCm: board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+            HexEdgeLengthCm: board.HexEdgeLengthCm > 0 ? board.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+            ChunkSizeCells: chunkSizeCells,
+            NavigationEnabled: board.NavigationEnabled,
+            HasDataFile: hasDataFile,
+            DataFileExists: dataFileExists,
+            DataFile: hasDataFile ? board.DataFile : null,
+            CanEditTerrain: canEditTerrain,
+            CanBake: canBake,
+            Reason: reason);
+    }
+
     public static MergedMapResult LoadMergedMapConfig(ModContext ctx, string mapId)
     {
         var sources = new List<string>();
@@ -1272,29 +2380,288 @@ static class EditorRepo
         return Path.Combine(mod.RootPath, "assets", "Maps", $"{SanitizeId(mapId)}.json");
     }
 
-    public static string? ResolvePrimaryBoardDataFile(Ludots.Core.Config.MapConfig map)
+    public static BoardMutationResult CreateBoard(ModContext ctx, string mapId, BoardCreateRequest request)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        string name = RequireBoardName(request.Name);
+        string spatialType = NormalizeRequestedSpatialType(request.SpatialType);
+        if (string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("NodeGraph board creation needs graph-data authoring and is not supported by the terrain editor yet.");
+        }
+
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found) throw new InvalidOperationException($"Map not found: {mapId}");
+        var map = mapR.Map;
+        map.Id = mapId;
+        map.Boards ??= new List<Ludots.Core.Map.Board.BoardConfig>();
+        EnsureNoBoardNameConflict(map, name);
+
+        int widthMacroTiles = request.WidthInMacroTiles > 0
+            ? request.WidthInMacroTiles
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        int heightMacroTiles = request.HeightInMacroTiles > 0
+            ? request.HeightInMacroTiles
+            : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        int chunkSizeCells = request.ChunkSizeCells > 0
+            ? request.ChunkSizeCells
+            : Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int cellSizeCm = request.CellSizeCm > 0
+            ? request.CellSizeCm
+            : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm;
+
+        ValidateBoardDimensions(widthMacroTiles, heightMacroTiles, chunkSizeCells);
+        string dataFile = string.IsNullOrWhiteSpace(request.DataFile)
+            ? BuildDefaultBoardDataFile(mapId, name, spatialType)
+            : request.DataFile.Trim();
+
+        var board = new Ludots.Core.Map.Board.BoardConfig
+        {
+            Name = name,
+            SpatialType = spatialType,
+            WidthInMacroTiles = widthMacroTiles,
+            HeightInMacroTiles = heightMacroTiles,
+            GridCellSizeCm = cellSizeCm,
+            HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
+            ChunkSizeCells = chunkSizeCells,
+            DataFile = dataFile,
+            NavigationEnabled = request.NavigationEnabled,
+        };
+
+        string? dataPath = null;
+        if (!string.IsNullOrWhiteSpace(board.DataFile))
+        {
+            dataPath = ResolveWritableDataFilePath(ctx, board.DataFile);
+            if (File.Exists(dataPath))
+            {
+                throw new InvalidOperationException($"Board DataFile already exists: {board.DataFile}");
+            }
+
+            CreateEmptyTerrainDataFile(board, dataPath);
+        }
+
+        map.Boards.Add(board);
+        string mapPath = WriteWritableMapConfig(ctx, mapId, map);
+        var mapInfo = DescribeMap(ctx, mapId);
+        var boardInfo = DescribeBoard(ctx, board);
+        return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, dataPath);
+    }
+
+    public static BoardMutationResult UpdateBoard(ModContext ctx, string mapId, string boardName, BoardUpdateRequest request)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        string name = RequireBoardName(boardName);
+
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found) throw new InvalidOperationException($"Map not found: {mapId}");
+        var map = mapR.Map;
+        map.Id = mapId;
+        if (map.Boards == null || map.Boards.Count == 0)
+            throw new InvalidOperationException("MapConfig.Boards is empty.");
+
+        Ludots.Core.Map.Board.BoardConfig? board = null;
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var candidate = map.Boards[i];
+            if (candidate == null) continue;
+            if (string.Equals(candidate.Name, name, StringComparison.Ordinal))
+            {
+                board = candidate;
+                break;
+            }
+        }
+
+        if (board == null)
+        {
+            string available = string.Join(", ", map.Boards.Where(b => b != null).Select(b => b.Name));
+            throw new InvalidOperationException($"Map board '{name}' was not found. Board names are case-sensitive. Available boards: {available}");
+        }
+
+        if (request.CellSizeCm.HasValue)
+        {
+            if (request.CellSizeCm.Value <= 0)
+                throw new InvalidOperationException("CellSizeCm must be positive.");
+            board.GridCellSizeCm = request.CellSizeCm.Value;
+        }
+
+        if (request.HexEdgeLengthCm.HasValue)
+        {
+            if (!string.Equals(board.SpatialType, "HexGrid", StringComparison.Ordinal))
+                throw new InvalidOperationException("HexEdgeLengthCm can only be updated on HexGrid boards.");
+            if (request.HexEdgeLengthCm.Value <= 0)
+                throw new InvalidOperationException("HexEdgeLengthCm must be positive.");
+            board.HexEdgeLengthCm = request.HexEdgeLengthCm.Value;
+        }
+
+        if (request.NavigationEnabled.HasValue)
+        {
+            board.NavigationEnabled = request.NavigationEnabled.Value;
+        }
+
+        string mapPath = WriteWritableMapConfig(ctx, mapId, map);
+        var mapInfo = DescribeMap(ctx, mapId);
+        var boardInfo = DescribeBoard(ctx, board);
+        return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, null);
+    }
+
+    public static BoardMutationResult DeleteBoard(ModContext ctx, string mapId, string boardName)
+    {
+        string name = RequireBoardName(boardName);
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found) throw new InvalidOperationException($"Map not found: {mapId}");
+        var map = mapR.Map;
+        map.Id = mapId;
+        if (map.Boards == null || map.Boards.Count == 0)
+            throw new InvalidOperationException("MapConfig.Boards is empty.");
+        if (map.Boards.Count == 1)
+            throw new InvalidOperationException("Cannot delete the last board from a map.");
+
+        int index = -1;
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var candidate = map.Boards[i];
+            if (candidate == null) continue;
+            if (string.Equals(candidate.Name, name, StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            string available = string.Join(", ", map.Boards.Where(b => b != null).Select(b => b.Name));
+            throw new InvalidOperationException($"Map board '{name}' was not found. Board names are case-sensitive. Available boards: {available}");
+        }
+
+        var removed = map.Boards[index];
+        var removedInfo = DescribeBoard(ctx, removed);
+        string? dataPath = null;
+        if (!string.IsNullOrWhiteSpace(removed.DataFile))
+        {
+            dataPath = ResolveWritableDataFilePath(ctx, removed.DataFile);
+        }
+
+        map.Boards.RemoveAt(index);
+        string mapPath = WriteWritableMapConfig(ctx, mapId, map);
+        var mapInfo = DescribeMap(ctx, mapId);
+        return new BoardMutationResult(map, mapInfo, removedInfo, mapPath, dataPath);
+    }
+
+    public static Ludots.Core.Map.Board.BoardConfig? ResolvePrimaryBoard(Ludots.Core.Config.MapConfig map)
     {
         if (map?.Boards == null || map.Boards.Count == 0)
             return null;
 
+        Ludots.Core.Map.Board.BoardConfig? firstNavigationBoard = null;
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase)) continue;
-            if (!string.IsNullOrWhiteSpace(board.DataFile))
-                return board.DataFile;
+            if (!board.NavigationEnabled) continue;
+
+            firstNavigationBoard ??= board;
+            if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
+                return board;
         }
+
+        if (firstNavigationBoard != null)
+            return firstNavigationBoard;
 
         for (int i = 0; i < map.Boards.Count; i++)
         {
             var board = map.Boards[i];
             if (board == null) continue;
-            if (!string.IsNullOrWhiteSpace(board.DataFile))
-                return board.DataFile;
+            if (string.Equals(board.Name, "default", StringComparison.OrdinalIgnoreCase))
+                return board;
+        }
+
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            if (map.Boards[i] != null)
+                return map.Boards[i];
         }
 
         return null;
+    }
+
+    public static Ludots.Core.Map.Board.BoardConfig ResolveRequiredBoardByName(Ludots.Core.Config.MapConfig map, string? boardName)
+    {
+        if (map?.Boards == null || map.Boards.Count == 0)
+            throw new InvalidOperationException("MapConfig.Boards is empty.");
+
+        if (string.IsNullOrWhiteSpace(boardName))
+            throw new InvalidOperationException("boardName query/form field is required when loading, saving, or baking editor terrain.");
+
+        string requested = boardName.Trim();
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var board = map.Boards[i];
+            if (board == null) continue;
+            if (string.Equals(board.Name, requested, StringComparison.Ordinal))
+                return board;
+        }
+
+        string available = string.Join(", ", map.Boards.Where(b => b != null).Select(b => b.Name));
+        throw new InvalidOperationException(
+            $"Map board '{requested}' was not found. Board names are case-sensitive. Available boards: {available}");
+    }
+
+    public static string? ResolvePrimaryBoardDataFile(Ludots.Core.Config.MapConfig map)
+    {
+        return ResolvePrimaryBoard(map)?.DataFile;
+    }
+
+    public static bool IsGridBoard(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        return string.Equals(NormalizeSpatialType(board), "Grid", StringComparison.Ordinal);
+    }
+
+    public static bool IsHexGridBoard(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        return string.Equals(NormalizeSpatialType(board), "HexGrid", StringComparison.Ordinal);
+    }
+
+    public static string NormalizeSpatialType(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (board == null) throw new ArgumentNullException(nameof(board));
+        string? raw = board.SpatialType;
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            throw new InvalidOperationException(
+                $"Map board '{board.Name}' has empty SpatialType. Expected exact value Grid, HexGrid, or NodeGraph.");
+        }
+
+        string spatialType = raw.Trim();
+        if (string.Equals(spatialType, "Grid", StringComparison.Ordinal))
+        {
+            return "Grid";
+        }
+
+        if (string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+        {
+            return "HexGrid";
+        }
+
+        if (string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
+        {
+            return "NodeGraph";
+        }
+
+        throw new InvalidOperationException(
+            $"Map board '{board.Name}' has unsupported SpatialType '{board.SpatialType}'. Expected exact value Grid, HexGrid, or NodeGraph.");
+    }
+
+    public static int RequireGridCellSizeCm(Ludots.Core.Map.Board.BoardConfig board)
+    {
+        if (board == null) throw new ArgumentNullException(nameof(board));
+        if (board.GridCellSizeCm <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Map board '{board.Name}' has invalid GridCellSizeCm {board.GridCellSizeCm}; value must be positive.");
+        }
+
+        return board.GridCellSizeCm;
     }
 
     public static bool TryResolveDataFile(ModContext ctx, string dataFile, out string fullPath, out List<string> checkedPaths)
@@ -1371,6 +2738,123 @@ static class EditorRepo
         return Path.Combine(mod.RootPath, "assets", "Data", "Maps", rel);
     }
 
+    private static string WriteWritableMapConfig(ModContext ctx, string mapId, Ludots.Core.Config.MapConfig map)
+    {
+        map.Id = mapId;
+        string outFile = ResolveWritableMapConfigPath(ctx, mapId);
+        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+        File.WriteAllText(outFile, JsonSerializer.Serialize(map, new JsonSerializerOptions { WriteIndented = true }));
+        return outFile;
+    }
+
+    private static string RequireBoardName(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            throw new InvalidOperationException("Board name is required.");
+
+        string name = raw.Trim();
+        if (name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || name.Contains('/') || name.Contains('\\'))
+            throw new InvalidOperationException($"Board name '{name}' is invalid for editor-managed board data files.");
+
+        return name;
+    }
+
+    private static string NormalizeRequestedSpatialType(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            throw new InvalidOperationException("SpatialType is required. Expected exact value Grid, HexGrid, or NodeGraph.");
+
+        string spatialType = raw.Trim();
+        if (string.Equals(spatialType, "Grid", StringComparison.Ordinal) ||
+            string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ||
+            string.Equals(spatialType, "NodeGraph", StringComparison.Ordinal))
+        {
+            return spatialType;
+        }
+
+        throw new InvalidOperationException($"Unsupported SpatialType '{raw}'. Expected exact value Grid, HexGrid, or NodeGraph.");
+    }
+
+    private static void EnsureNoBoardNameConflict(Ludots.Core.Config.MapConfig map, string name)
+    {
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var board = map.Boards[i];
+            if (board == null) continue;
+            if (string.Equals(board.Name, name, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Board '{name}' already exists.");
+            if (string.Equals(board.Name, name, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException($"Board name '{name}' conflicts with existing board '{board.Name}'. Board names are case-sensitive.");
+        }
+    }
+
+    private static void ValidateBoardDimensions(int widthMacroTiles, int heightMacroTiles, int chunkSizeCells)
+    {
+        if (widthMacroTiles <= 0) throw new InvalidOperationException("WidthInMacroTiles must be positive.");
+        if (heightMacroTiles <= 0) throw new InvalidOperationException("HeightInMacroTiles must be positive.");
+        if (chunkSizeCells != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
+        {
+            throw new InvalidOperationException(
+                $"React terrain editor creates boards with ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; requested {chunkSizeCells}.");
+        }
+    }
+
+    private static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
+    {
+        string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".vtxm" : ".bin";
+        return $"{SanitizeId(mapId)}_{SanitizeId(boardName)}{extension}";
+    }
+
+    private static void CreateEmptyTerrainDataFile(Ludots.Core.Map.Board.BoardConfig board, string outFile)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+        int chunksPerMacro = Ludots.Core.Spatial.SpatialScaleDefaults.MacroTileCells / Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int widthChunks = checked(board.WidthInMacroTiles * chunksPerMacro);
+        int heightChunks = checked(board.HeightInMacroTiles * chunksPerMacro);
+
+        string tempReactPath = Path.Combine(Path.GetTempPath(), $"ludots_empty_board_{Guid.NewGuid():N}.bin");
+        try
+        {
+            WriteEmptyReactTerrainBin(tempReactPath, widthChunks, heightChunks);
+            if (string.Equals(board.SpatialType, "Grid", StringComparison.Ordinal))
+            {
+                File.Copy(tempReactPath, outFile, overwrite: false);
+                return;
+            }
+
+            if (string.Equals(board.SpatialType, "HexGrid", StringComparison.Ordinal))
+            {
+                using var vtxmStream = File.Create(outFile);
+                _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempReactPath, vtxmStream);
+                return;
+            }
+
+            throw new InvalidOperationException($"SpatialType '{board.SpatialType}' does not support terrain data creation.");
+        }
+        finally
+        {
+            try { if (File.Exists(tempReactPath)) File.Delete(tempReactPath); } catch { }
+        }
+    }
+
+    private static void WriteEmptyReactTerrainBin(string path, int widthChunks, int heightChunks)
+    {
+        const int stride = 4;
+        int chunkSize = Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
+        int chunkBytes = checked(chunkSize * chunkSize * stride);
+        byte[] emptyChunk = new byte[chunkBytes];
+
+        using var fs = File.Create(path);
+        using var bw = new BinaryWriter(fs, Encoding.UTF8, leaveOpen: true);
+        bw.Write(widthChunks);
+        bw.Write(heightChunks);
+        bw.Write((byte)stride);
+        for (int i = 0; i < checked(widthChunks * heightChunks); i++)
+        {
+            bw.Write(emptyChunk);
+        }
+    }
+
     public static JsonNode[] LoadMergedEntityTemplates(ModContext ctx, bool includeSources, out List<string> sources)
     {
         var sourcesLocal = new List<string>();
@@ -1441,6 +2925,108 @@ static class EditorRepo
 
         sources = sourcesLocal;
         return defs.OrderBy(kvp => kvp.Key).Select(kvp => kvp.Value).ToArray();
+    }
+
+    public static JsonNode LoadMergedNavigationJson(
+        ModContext ctx,
+        string fileName,
+        JsonNode defaultValue,
+        out List<string> sources)
+    {
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+        if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("fileName is required.", nameof(fileName));
+        if (Path.GetFileName(fileName) != fileName)
+        {
+            throw new InvalidOperationException($"Navigation config file name must be a leaf name: {fileName}");
+        }
+
+        var sourceList = new List<string>();
+        JsonNode? merged = null;
+
+        void Load(string path)
+        {
+            if (!File.Exists(path)) return;
+            JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
+            if (node == null) return;
+            sourceList.Add(path);
+
+            if (merged == null)
+            {
+                merged = node.DeepClone();
+                return;
+            }
+
+            if (merged is JsonArray targetArray && node is JsonArray sourceArray)
+            {
+                MergeArrayById(targetArray, sourceArray);
+                return;
+            }
+
+            if (merged is JsonObject targetObject && node is JsonObject sourceObject)
+            {
+                Ludots.Core.Config.JsonMerger.Merge(targetObject, sourceObject);
+                return;
+            }
+
+            throw new InvalidOperationException($"Navigation config '{fileName}' has incompatible JSON root types across sources.");
+        }
+
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Configs", "Navigation", fileName));
+        Load(Path.Combine(ctx.RepoRoot, "assets", "Navigation", fileName));
+        for (int i = 0; i < ctx.LoadOrder.Count; i++)
+        {
+            var mod = ctx.ModsById[ctx.LoadOrder[i]];
+            Load(Path.Combine(mod.RootPath, "assets", "Navigation", fileName));
+            Load(Path.Combine(mod.RootPath, "assets", "Configs", "Navigation", fileName));
+        }
+
+        sources = sourceList;
+        return merged ?? defaultValue.DeepClone();
+    }
+
+    public static string ResolveWritableNavigationConfigPath(ModContext ctx, string fileName)
+    {
+        if (ctx == null) throw new ArgumentNullException(nameof(ctx));
+        if (string.IsNullOrWhiteSpace(fileName)) throw new ArgumentException("fileName is required.", nameof(fileName));
+        if (Path.GetFileName(fileName) != fileName)
+        {
+            throw new InvalidOperationException($"Navigation config file name must be a leaf name: {fileName}");
+        }
+
+        var mod = ctx.ModsById[ctx.TargetModId];
+        return Path.Combine(mod.RootPath, "assets", "Configs", "Navigation", fileName);
+    }
+
+    private static void MergeArrayById(JsonArray target, JsonArray source)
+    {
+        for (int i = 0; i < source.Count; i++)
+        {
+            if (source[i] is not JsonObject sourceObject || !TryReadId(sourceObject, out string id))
+            {
+                continue;
+            }
+
+            JsonObject? targetObject = null;
+            for (int j = 0; j < target.Count; j++)
+            {
+                if (target[j] is JsonObject candidate &&
+                    TryReadId(candidate, out string candidateId) &&
+                    string.Equals(candidateId, id, StringComparison.Ordinal))
+                {
+                    targetObject = candidate;
+                    break;
+                }
+            }
+
+            if (targetObject == null)
+            {
+                target.Add(sourceObject.DeepClone());
+            }
+            else
+            {
+                Ludots.Core.Config.JsonMerger.Merge(targetObject, sourceObject);
+            }
+        }
     }
 
 
@@ -1649,4 +3235,76 @@ static class EditorRepo
         }
         return sb.ToString();
     }
+}
+
+sealed class BoardCreateRequest
+{
+    public string Name { get; set; } = string.Empty;
+    public string SpatialType { get; set; } = "Grid";
+    public int WidthInMacroTiles { get; set; }
+    public int HeightInMacroTiles { get; set; }
+    public int CellSizeCm { get; set; }
+    public int HexEdgeLengthCm { get; set; }
+    public int ChunkSizeCells { get; set; }
+    public bool NavigationEnabled { get; set; } = true;
+    public string? DataFile { get; set; }
+}
+
+sealed class BoardUpdateRequest
+{
+    public int? CellSizeCm { get; set; }
+    public int? HexEdgeLengthCm { get; set; }
+    public bool? NavigationEnabled { get; set; }
+}
+
+sealed class FlatGridNavBootstrapRequest
+{
+    public string? ModId { get; set; }
+    public string MapId { get; set; } = string.Empty;
+    public string BoardName { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
+    public int Layer { get; set; }
+    public int TileVersion { get; set; } = 1;
+    public List<NavBootstrapChunk> Chunks { get; set; } = new List<NavBootstrapChunk>();
+}
+
+sealed class NavBootstrapChunk
+{
+    public int Cx { get; set; }
+    public int Cy { get; set; }
+}
+
+sealed class NavPathQueryRequest
+{
+    public string? ModId { get; set; }
+    public string MapId { get; set; } = string.Empty;
+    public string BoardName { get; set; } = string.Empty;
+    public string ProfileId { get; set; } = string.Empty;
+    public int Layer { get; set; }
+    public NavPointCm Start { get; set; } = new NavPointCm();
+    public NavPointCm Goal { get; set; } = new NavPointCm();
+    public int MaxPortals { get; set; } = 256;
+    public List<NavAreaCostOverride>? AreaCosts { get; set; }
+    public List<NavTilePayload> Tiles { get; set; } = new List<NavTilePayload>();
+}
+
+sealed class NavPointCm
+{
+    public int XCm { get; set; }
+    public int ZCm { get; set; }
+}
+
+sealed class NavAreaCostOverride
+{
+    public int AreaId { get; set; }
+    public float Cost { get; set; } = 1f;
+}
+
+sealed class NavTilePayload
+{
+    public string? ProfileId { get; set; }
+    public int Layer { get; set; }
+    public string Base64 { get; set; } = string.Empty;
+    public string DetourBase64 { get; set; } = string.Empty;
+    public string? Source { get; set; }
 }

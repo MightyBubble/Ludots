@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Libraries\DotRecast\src\DotRecast.Detour\DotRecast.Detour.csproj" />
     <ProjectReference Include="..\..\Libraries\DotRecast\src\DotRecast.Recast\DotRecast.Recast.csproj" />
   </ItemGroup>
 

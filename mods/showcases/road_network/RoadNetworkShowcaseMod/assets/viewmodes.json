@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "RoadNetwork.Camera.Mode.Tactical",
+    "DisplayName": "Road Tactical",
+    "VirtualCameraId": "RoadNetwork.Camera.Tactical",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeTactical"
+  },
+  {
+    "Id": "RoadNetwork.Camera.Mode.Strategic",
+    "DisplayName": "Road Strategic",
+    "VirtualCameraId": "RoadNetwork.Camera.Strategic",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CameraModeInspect"
+  }
+]

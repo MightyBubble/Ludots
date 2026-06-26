@@ -12,15 +12,73 @@ namespace Ludots.Tests.Gas
     public sealed class MapVisualHeightmapContractTests
     {
         private string _root = string.Empty;
+        private string _coreRoot = string.Empty;
         private string _modRoot = string.Empty;
 
         [SetUp]
         public void SetUp()
         {
             _root = Path.Combine(Path.GetTempPath(), "Ludots_MapVisualHeightmapContractTests", Guid.NewGuid().ToString("N"));
+            _coreRoot = Path.Combine(_root, "assets");
             _modRoot = Path.Combine(_root, "mods", "TestMapMod");
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Maps"));
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Navigation"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Configs", "Maps"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "terrain"));
+
+            string repoRoot = FindRepoRoot();
+            CopyDirectory(Path.Combine(repoRoot, "assets", "Configs"), Path.Combine(_coreRoot, "Configs"));
+
+            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
+            {
+              "startupMapId": "outer_map",
+              "worldWidthInMacroTiles": 16,
+              "worldHeightInMacroTiles": 16,
+              "gridCellSizeCm": 100
+            }
+            """);
+
+            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "agent_profiles.json"), """
+            [
+              {
+                "id": "Small",
+                "radiusCm": 30,
+                "heightCm": 180,
+                "clearanceCm": 40,
+                "mass": 1,
+                "layer": 0
+              }
+            ]
+            """);
+
+            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "pathing.json"), """
+            {
+              "agentTypes": [
+                {
+                  "id": "Humanoid",
+                  "profileId": "Small",
+                  "selection": {
+                    "mode": "AutoCheapest",
+                    "graphBias": 0.0,
+                    "meshBias": 0.0,
+                    "graphCostWeight": 1.0,
+                    "meshCostWeight": 1.0
+                  },
+                  "navMesh": {
+                    "areaCosts": [
+                      { "areaId": 0, "cost": 1.0 }
+                    ]
+                  },
+                  "nodeGraph": {
+                    "projectionMaxRadiusCm": 200000,
+                    "forbiddenTagsAny": [],
+                    "requiredTagsAll": [],
+                    "tagCostRules": []
+                  }
+                }
+              ]
+            }
+            """);
 
             File.WriteAllText(Path.Combine(_modRoot, "mod.json"), """
             {
@@ -188,19 +246,8 @@ namespace Ludots.Tests.Gas
         public void LoadMap_WhenVisualHeightAssetResolvesToMultipleMountedSources_ThrowsExplicitly()
         {
             WriteHeightmap("shared.vhtm", 80);
-            string duplicateModRoot = Path.Combine(_root, "mods", "DuplicateAssetMod");
-            Directory.CreateDirectory(Path.Combine(duplicateModRoot, "assets", "terrain"));
-            File.WriteAllText(Path.Combine(duplicateModRoot, "mod.json"), """
-            {
-              "name": "DuplicateAssetMod",
-              "version": "1.0.0",
-              "description": "duplicate asset test mod",
-              "main": "",
-              "priority": 0,
-              "dependencies": {}
-            }
-            """);
-            using (var stream = File.Create(Path.Combine(duplicateModRoot, "assets", "terrain", "shared.vhtm")))
+            Directory.CreateDirectory(Path.Combine(_coreRoot, "assets", "terrain"));
+            using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.vhtm")))
             {
                 VisualHeightmapBinary.Write(stream, VisualHeightmapAsset.CreateSingleLayer(
                     new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
@@ -229,12 +276,10 @@ namespace Ludots.Tests.Gas
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 _modRoot,
-                Directory.Exists(Path.Combine(_root, "mods", "DuplicateAssetMod")) ? Path.Combine(_root, "mods", "DuplicateAssetMod") : null,
             }.ToList();
-            modPaths.RemoveAll(string.IsNullOrWhiteSpace);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths!, Path.Combine(repoRoot, "assets"));
+            engine.InitializeWithConfigPipeline(modPaths, _coreRoot);
             engine.Start();
             return engine;
         }
@@ -271,6 +316,22 @@ namespace Ludots.Tests.Gas
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root containing mods/LudotsCoreMod and mods/CoreInputMod.");
+        }
+
+        private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+        {
+            Directory.CreateDirectory(destinationDirectory);
+            foreach (string sourceFile in Directory.EnumerateFiles(sourceDirectory))
+            {
+                string destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(sourceFile));
+                File.Copy(sourceFile, destinationFile, overwrite: true);
+            }
+
+            foreach (string sourceChildDirectory in Directory.EnumerateDirectories(sourceDirectory))
+            {
+                string destinationChildDirectory = Path.Combine(destinationDirectory, Path.GetFileName(sourceChildDirectory));
+                CopyDirectory(sourceChildDirectory, destinationChildDirectory);
+            }
         }
     }
 }

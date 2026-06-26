@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -6,6 +7,13 @@ public sealed class MassNavigationAgentProfileSetConfig
 {
     public string DefaultProfileId { get; set; } = string.Empty;
     public MassNavigationAgentProfileConfig[] Profiles { get; set; } = Array.Empty<MassNavigationAgentProfileConfig>();
+    private AgentProfileRegistry? _agentProfiles;
+
+    public void BindAgentProfiles(AgentProfileRegistry agentProfiles)
+    {
+        _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
+        ValidateAgentProfileReferences();
+    }
 
     public void Validate()
     {
@@ -33,6 +41,19 @@ public sealed class MassNavigationAgentProfileSetConfig
         if (!foundDefault)
         {
             throw new InvalidOperationException($"Mass-nav agentProfiles defaultProfileId '{DefaultProfileId}' is not defined.");
+        }
+    }
+
+    public void ValidateAgentProfileReferences()
+    {
+        if (_agentProfiles == null)
+        {
+            throw new InvalidOperationException("Mass-nav agentProfiles requires the unified AgentProfileRegistry before runtime use.");
+        }
+
+        for (int i = 0; i < Profiles.Length; i++)
+        {
+            _agentProfiles.Require(Profiles[i].Id, $"MassNavigationConfig.agentProfiles.profiles[{i}]");
         }
     }
 
@@ -68,15 +89,23 @@ public sealed class MassNavigationAgentProfileSetConfig
 
         throw new InvalidOperationException($"Mass-nav agent profile '{id}' is not configured.");
     }
+
+    public AgentProfileConfig ResolveGeometry(string id)
+    {
+        if (_agentProfiles == null)
+        {
+            throw new InvalidOperationException("Mass-nav agent profile geometry was requested before AgentProfileRegistry was bound.");
+        }
+
+        return _agentProfiles.Require(id, "MassNavigationConfig.agentProfiles");
+    }
 }
 
 public sealed class MassNavigationAgentProfileConfig
 {
     public string Id { get; set; } = string.Empty;
     public bool Heavy { get; set; }
-    public float NavMass { get; set; }
     public float VisualScale { get; set; }
-    public float BodyRadiusCm { get; set; }
     public float SpeedCmPerSecond { get; set; }
     public int EveryNth { get; set; }
     public int NthOffset { get; set; }
@@ -88,19 +117,9 @@ public sealed class MassNavigationAgentProfileConfig
             throw new InvalidOperationException($"Mass-nav agentProfiles.profiles[{index}] requires id.");
         }
 
-        if (!(NavMass > 0f))
-        {
-            throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires NavMass > 0.");
-        }
-
         if (!(VisualScale > 0f))
         {
             throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires VisualScale > 0.");
-        }
-
-        if (!(BodyRadiusCm > 0f))
-        {
-            throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires BodyRadiusCm > 0.");
         }
 
         if (!(SpeedCmPerSecond > 0f))

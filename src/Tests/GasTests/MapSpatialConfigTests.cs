@@ -1,6 +1,7 @@
 using System.Text.Json;
 using NUnit.Framework;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Spatial;
 
 namespace GasTests
 {
@@ -18,8 +19,8 @@ namespace GasTests
             var config = new BoardConfig();
             Assert.That(config.Name, Is.EqualTo("default"));
             Assert.That(config.SpatialType, Is.EqualTo("Grid"));
-            Assert.That(config.WidthInTiles, Is.EqualTo(64));
-            Assert.That(config.HeightInTiles, Is.EqualTo(64));
+            Assert.That(config.WidthInMacroTiles, Is.EqualTo(64));
+            Assert.That(config.HeightInMacroTiles, Is.EqualTo(64));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(100));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(400));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(64));
@@ -34,8 +35,8 @@ namespace GasTests
             {
                 Name = "battle",
                 SpatialType = "Hex",
-                WidthInTiles = 128,
-                HeightInTiles = 128,
+                WidthInMacroTiles = 128,
+                HeightInMacroTiles = 128,
                 GridCellSizeCm = 200,
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
@@ -46,8 +47,8 @@ namespace GasTests
 
             Assert.That(config.Name, Is.EqualTo("battle"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInTiles, Is.EqualTo(128));
+            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
             Assert.That(config.GridCellSizeCm, Is.EqualTo(200));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
@@ -63,7 +64,7 @@ namespace GasTests
             {
                 Name = "world",
                 SpatialType = "Hex",
-                WidthInTiles = 256,
+                WidthInMacroTiles = 256,
                 DataFile = "terrain.vtxm",
                 VisualHeightmapAsset = "terrain.vhtm"
             };
@@ -71,14 +72,14 @@ namespace GasTests
             var clone = original.Clone();
             Assert.That(clone.Name, Is.EqualTo("world"));
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(clone.WidthInTiles, Is.EqualTo(256));
+            Assert.That(clone.WidthInMacroTiles, Is.EqualTo(256));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.vtxm"));
             Assert.That(clone.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
 
             // Modify clone, original unchanged
-            clone.WidthInTiles = 512;
+            clone.WidthInMacroTiles = 512;
             clone.VisualHeightmapAsset = "other.vhtm";
-            Assert.That(original.WidthInTiles, Is.EqualTo(256));
+            Assert.That(original.WidthInMacroTiles, Is.EqualTo(256));
             Assert.That(original.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
         }
 
@@ -89,8 +90,8 @@ namespace GasTests
             {
                 "name": "strategic",
                 "spatialType": "Hex",
-                "widthInTiles": 128,
-                "heightInTiles": 128,
+                "widthInMacroTiles": 128,
+                "heightInMacroTiles": 128,
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
                 "navigationEnabled": true,
@@ -102,12 +103,26 @@ namespace GasTests
             Assert.That(config, Is.Not.Null);
             Assert.That(config!.Name, Is.EqualTo("strategic"));
             Assert.That(config.SpatialType, Is.EqualTo("Hex"));
-            Assert.That(config.WidthInTiles, Is.EqualTo(128));
-            Assert.That(config.HeightInTiles, Is.EqualTo(128));
+            Assert.That(config.WidthInMacroTiles, Is.EqualTo(128));
+            Assert.That(config.HeightInMacroTiles, Is.EqualTo(128));
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/strategic.vhtm"));
+        }
+
+        [Test]
+        public void WorldExtentSpec_ConvertsMacroTilesIntoWorldSizeSpec()
+        {
+            var extent = new WorldExtentSpec(widthInMacroTiles: 2, heightInMacroTiles: 3, cellCm: 100);
+
+            var worldSize = extent.ToWorldSizeSpec();
+
+            Assert.That(extent.WidthInCells, Is.EqualTo(512));
+            Assert.That(extent.HeightInCells, Is.EqualTo(768));
+            Assert.That(worldSize.GridCellSizeCm, Is.EqualTo(100));
+            Assert.That(worldSize.Bounds.Width, Is.EqualTo(51_200));
+            Assert.That(worldSize.Bounds.Height, Is.EqualTo(76_800));
         }
     }
 }

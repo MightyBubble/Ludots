@@ -25,6 +25,7 @@ using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.MassCrowd.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.DebugDraw;
@@ -263,7 +264,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(profiles.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
                 Is.EquivalentTo(new[] { "formation", "heavy", "light" }));
             JsonObject formationProfile = FindAgentProfileById(agentProfiles, "formation");
-            Assert.That(formationProfile["bodyRadiusCm"]?.GetValue<float>(), Is.EqualTo(720f));
+            Assert.That(formationProfile.ContainsKey("bodyRadiusCm"), Is.False,
+                "MassNavigationConfig.agentProfiles no longer owns geometry; radius comes from Navigation/agent_profiles.json.");
+            AgentProfileRegistry geometryProfiles = LoadTotalWarAgentProfiles();
+            AgentProfileConfig formationGeometry = geometryProfiles.Require("formation", "TotalWar formation geometry");
+            Assert.That(formationGeometry.RadiusCm, Is.EqualTo(720f));
+            Assert.That(formationGeometry.Mass, Is.EqualTo(12f));
             Assert.That(formationProfile["speedCmPerSecond"]?.GetValue<float>(), Is.EqualTo(360f));
             JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
                 ?? throw new InvalidOperationException("scenarioRuntime must be authored.");
@@ -365,9 +371,9 @@ namespace Ludots.Tests.Presentation
             JsonObject avoidance = config["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("avoidance must be authored.");
             Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
-                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+                "TotalWar agent mass must be owned only by Navigation/agent_profiles.json.");
             Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
-                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+                "TotalWar agent mass must be owned only by Navigation/agent_profiles.json.");
             Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
                 "TotalWar agent visualScale must be owned only by MassNavigationConfig.agentProfiles.");
             Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
@@ -434,14 +440,15 @@ namespace Ludots.Tests.Presentation
             JsonObject massNavConfig = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
             TotalWarShowcaseConfig loaded = TotalWarShowcaseConfig.Load(config);
             MassNavigationConfig loadedMassNav = MassNavigationConfig.Load(massNavConfig);
-            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles));
+            AgentProfileRegistry geometryProfiles = LoadTotalWarAgentProfiles();
+            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles));
 
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
             formationAgent["profileId"] = "missing_formation_profile";
             loaded = TotalWarShowcaseConfig.Load(config);
             InvalidOperationException missingFormationProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(missingFormationProfile.Message, Does.Contain("formationAgent.profileId"));
             Assert.That(missingFormationProfile.Message, Does.Contain("missing_formation_profile"));
 
@@ -455,7 +462,7 @@ namespace Ludots.Tests.Presentation
             soldierAgent["profileId"] = "missing_soldier_profile";
             loaded = TotalWarShowcaseConfig.Load(config);
             InvalidOperationException missingSoldierProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(missingSoldierProfile.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(missingSoldierProfile.Message, Does.Contain("missing_soldier_profile"));
 
@@ -489,7 +496,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("formation profile speed must be numeric.");
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
             InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(equalSpeed.Message, Does.Contain("formationAgent.profileId"));
 
@@ -500,7 +507,7 @@ namespace Ludots.Tests.Presentation
             profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]!.GetValue<float>() - 1f;
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
             InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.profileId"));
         }
@@ -662,8 +669,19 @@ namespace Ludots.Tests.Presentation
             using (engine)
             {
                 Entity blocker = engine.World.Create(
-                    new MassCrowdBlocker { RadiusCm = 175f },
                     new WorldPositionCm { Value = Fix64Vec2.FromInt(1234, 2345) });
+                var projection = new MassFlowObstacleProjection
+                {
+                    ShapeSignature = 17,
+                    PoseSignature = 23,
+                };
+                projection.SetPiece(
+                    0,
+                    ManifestationObstacleShape2D.Circle,
+                    offsetXCm: 10,
+                    offsetYCm: -20,
+                    radiusCm: 175);
+                engine.World.Add(blocker, projection);
                 ISystem<float> environmentSystem = CreateMassCrowdRuntimeSystem(
                     "Ludots.Core.MassCrowd.Systems.MassCrowdEnvironmentBindingSystem",
                     engine,
@@ -676,8 +694,8 @@ namespace Ludots.Tests.Presentation
                 Assert.That(simulation.AgentState.BlockerCount, Is.EqualTo(1));
                 Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(1));
                 MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(0);
-                Assert.That(obstacle.WorldXCm, Is.EqualTo(1234f).Within(0.001f));
-                Assert.That(obstacle.WorldYCm, Is.EqualTo(2345f).Within(0.001f));
+                Assert.That(obstacle.WorldXCm, Is.EqualTo(1244f).Within(0.001f));
+                Assert.That(obstacle.WorldYCm, Is.EqualTo(2325f).Within(0.001f));
                 Assert.That(obstacle.RadiusCm, Is.EqualTo(175f).Within(0.001f));
             }
         }
@@ -692,7 +710,15 @@ namespace Ludots.Tests.Presentation
     "id": "mass_navigation_test_blocker_override",
     "components": {
       "Name": { "Value": "MassNavigation.TestBlockerOverride" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Circle",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "radiusCm": 260,
+        "navRadiusCm": 260,
+        "localOffsetCm": { "x": 0, "y": 0 }
+      }
     }
   }
 ]
@@ -717,17 +743,11 @@ namespace Ludots.Tests.Presentation
                     TemplateId = templateId,
                     WorldPositionCm = Fix64Vec2.FromInt(2222, 3333),
                     HasWorldPosition = 1,
-                    ComponentPatches =
-                    [
-                        new RuntimeEntitySpawnComponentPatch(
-                            "MassCrowdBlocker",
-                            new JsonObject
-                            {
-                                ["radiusCm"] = 260f,
-                            }),
-                    ],
                 }), Is.True);
                 spawnSystem.Update(0f);
+                var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as Ludots.Core.Physics2D.ShapeDataStorage2D
+                    ?? throw new InvalidOperationException("Physics2D shape storage service must be registered before manifestation obstacle bridge update.");
+                new Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem(engine.World, shapeStorage).Update(0f);
 
                 ISystem<float> environmentSystem = CreateMassCrowdRuntimeSystem(
                     "Ludots.Core.MassCrowd.Systems.MassCrowdEnvironmentBindingSystem",
@@ -867,7 +887,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(outlineSource, Does.Not.Contain("TotalWarFormationOutlineShape.Rectangle => 4"));
             Assert.That(outlineSource, Does.Not.Contain("TotalWarFormationOutlineShape.Circle => 1"));
             Assert.That(runtimeSource, Does.Contain("new TotalWarFormationOutlinePresentationSystem(engine, this, config)"));
-            Assert.That(runtimeSource, Does.Contain("new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length)"));
+            Assert.That(runtimeSource, Does.Contain("new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount)"));
             Assert.That(configSource, Does.Contain("InitialSelectionEntityCapacity { get; set; }"));
             Assert.That(runtimeSource, Does.Contain("config.InitialSelectionEntityCapacity"));
             Assert.That(runtimeSource, Does.Not.Contain("config.InitialSelectionScratchCapacity"));
@@ -1100,7 +1120,7 @@ namespace Ludots.Tests.Presentation
             Entity agent = world.Create(
                 new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("light") },
                 new MassCrowdAgentIndex { Value = 0 },
-                new MassCrowdAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f, BodyRadiusCm = 20f },
+                new MassCrowdAgentProfile { Heavy = false, VisualScale = 0.2f, SpeedCmPerSecond = 800f },
                 new PresentationStableId { Value = 1001 },
                 new PresentationDestroyEventPublished(),
                 new PresentationOwnerHasPerformerPayload { Count = 1, RootCount = 1, SingleRootPerformer = performerRoot });
@@ -1188,12 +1208,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            var obstacles = new[]
-            {
-                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
-            };
-
-            flow.ResetAuthoredAgents(seeds, obstacles);
+            flow.ResetAuthoredAgents(seeds);
 
             Assert.Throws<InvalidOperationException>(() => flow.SetUnitRuntimeProfile(0, 1, 0f, 1f, 20f, 800f, layer));
             Assert.That(flow.GetNavMass(0), Is.EqualTo(1f));
@@ -1224,12 +1239,7 @@ namespace Ludots.Tests.Presentation
                     layer),
             };
 
-            var obstacles = new[]
-            {
-                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
-            };
-
-            flow.ResetAuthoredAgents(seeds, obstacles);
+            flow.ResetAuthoredAgents(seeds);
 
             Assert.Throws<InvalidOperationException>(() => flow.SetUnitTarget(flow.UnitCount, 100f, 100f));
             Assert.Throws<InvalidOperationException>(() => flow.ReleaseUnitToTeamTarget(flow.UnitCount));
@@ -1264,10 +1274,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.ResetAuthoredAgents(seeds, new[]
-            {
-                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
-            });
+            flow.ResetAuthoredAgents(seeds);
 
             Assert.That(flow.SetUnitTarget(1, 400f, 500f), Is.True);
             flow.ApplyExternalDisplacementRange(startIndex: 1, count: 1, deltaXCm: 30f, deltaYCm: -20f);
@@ -1301,10 +1308,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.ResetAuthoredAgents(seeds, new[]
-            {
-                new MassNavigationObstacleConfig { Id = "anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
-            });
+            flow.ResetAuthoredAgents(seeds);
 
             var world = World.Create();
             try
@@ -1367,10 +1371,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.ResetAuthoredAgents(seeds, new[]
-            {
-                new MassNavigationObstacleConfig { Id = "follower-anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
-            });
+            flow.ResetAuthoredAgents(seeds);
 
             var world = World.Create();
             try
@@ -1551,10 +1552,7 @@ namespace Ludots.Tests.Presentation
                 DefaultRelationship = "Hostile",
                 Relationships = new List<RelationshipEntry>(),
             });
-            flow.ResetAuthoredAgents(seeds, new[]
-            {
-                new MassNavigationObstacleConfig { Id = "far_contract_obstacle", LocalXCm = 9_000f, LocalYCm = 9_000f, RadiusCm = 100f },
-            });
+            flow.ResetAuthoredAgents(seeds);
             flow.Step(
                 dt: 0f,
                 world: World.Create(),
@@ -1588,9 +1586,10 @@ namespace Ludots.Tests.Presentation
                     layer),
             };
 
-            flow.ResetAuthoredAgents(seeds, new[]
+            flow.ResetAuthoredAgents(seeds);
+            flow.ResetRuntimeObstaclesFromWorld(new[]
             {
-                new MassNavigationObstacleConfig { Id = "target-projection-obstacle", LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 200f },
+                new MassNavigationObstacleSnapshot(5_000f, 5_000f, 200f),
             });
 
             Vector2 resolved = flow.ResolveUnitNavigableTarget(
@@ -2858,6 +2857,14 @@ namespace Ludots.Tests.Presentation
             return paths;
         }
 
+        private static AgentProfileRegistry LoadTotalWarAgentProfiles()
+        {
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            return engine.GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("TotalWar test expected AgentProfiles service.");
+        }
+
         private static GameEngine CreatePlayableTotalWarEngine()
         {
             EnsureTotalWarEntryAssemblyPreloaded();
@@ -3634,23 +3641,24 @@ namespace Ludots.Tests.Presentation
             return simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
                    CountFormationAgents(engine) == TotalWarAcceptance.ExpectedTotalFormations &&
                    CountFormationSoldiers(engine) == TotalWarAcceptance.ExpectedTotalSoldiers &&
-                   CountMassCrowdBlockers(engine) == simulation.WorldConfig.Obstacles.Length &&
-                   simulation.NavigationObstacleCount == simulation.WorldConfig.Obstacles.Length;
+                   CountMassFlowObstacleProjections(engine) == simulation.AgentState.BlockerCount &&
+                   simulation.NavigationObstacleCount > 0;
         }
 
         private static void AssertConfiguredObstaclesAreEcsBlockers(GameEngine engine, MassNavigationSimulationRuntime simulation)
         {
-            Assert.That(CountMassCrowdBlockers(engine), Is.EqualTo(simulation.WorldConfig.Obstacles.Length),
-                "Configured MassNavigation obstacles must seed ECS MassCrowdBlocker entities before solver binding.");
-            Assert.That(simulation.AgentState.BlockerCount, Is.EqualTo(simulation.WorldConfig.Obstacles.Length));
-            Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(simulation.WorldConfig.Obstacles.Length));
+            int projectionCount = CountMassFlowObstacleProjections(engine);
+            Assert.That(projectionCount, Is.GreaterThan(0),
+                "Map-authored ManifestationObstacle/CompoundObstacle entities must be projected into MassFlow obstacle projections.");
+            Assert.That(simulation.AgentState.BlockerCount, Is.EqualTo(projectionCount));
+            Assert.That(simulation.NavigationObstacleCount, Is.GreaterThanOrEqualTo(projectionCount));
         }
 
-        private static int CountMassCrowdBlockers(GameEngine engine)
+        private static int CountMassFlowObstacleProjections(GameEngine engine)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<MassCrowdBlocker, MassCrowdBlockerProfile, WorldPositionCm>();
-            engine.World.Query(in query, (ref MassCrowdBlocker _, ref MassCrowdBlockerProfile _, ref WorldPositionCm _) => count++);
+            var query = new QueryDescription().WithAll<MassFlowObstacleProjection, MassCrowdBlockerProfile, WorldPositionCm>();
+            engine.World.Query(in query, (ref MassFlowObstacleProjection _, ref MassCrowdBlockerProfile _, ref WorldPositionCm _) => count++);
             return count;
         }
 
@@ -3901,7 +3909,7 @@ namespace Ludots.Tests.Presentation
             foreach (string field in forbiddenProfileFields)
             {
                 Assert.That(agentAuthoring.ContainsKey(field), Is.False,
-                    $"{label}.{field} must be owned by MassNavigationConfig.agentProfiles.");
+                    $"{label}.{field} must be owned by the navigation profile config layers.");
             }
         }
 
@@ -3996,10 +4004,7 @@ namespace Ludots.Tests.Presentation
                     layer);
             }
 
-            flow.ResetAuthoredAgents(seeds, new[]
-            {
-                new MassNavigationObstacleConfig { Id = "group-fixture-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
-            });
+            flow.ResetAuthoredAgents(seeds);
 
             var world = World.Create();
             var agentState = new MassNavigationAgentState();

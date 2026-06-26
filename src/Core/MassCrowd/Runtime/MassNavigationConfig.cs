@@ -146,8 +146,7 @@ public sealed class MassNavigationConfig
             "workAreaMaxWidthCm",
             "workAreaMaxHeightCm",
             "activeHotZoneId",
-            "hotZones",
-            "obstacles");
+            "hotZones");
         RequireProperties(
             RequireProperty(root, "solver"),
             "fieldWidthCm",
@@ -221,9 +220,7 @@ public sealed class MassNavigationConfig
                 profile,
                 "id",
                 "heavy",
-                "navMass",
                 "visualScale",
-                "bodyRadiusCm",
                 "speedCmPerSecond",
                 "everyNth",
                 "nthOffset");
@@ -281,6 +278,9 @@ public sealed class MassNavigationConfig
             "maxRetryCount");
         RequireProperties(
             RequireProperty(root, "avoidance"),
+            "mode",
+            "orca",
+            "sonar",
             "dominantMassRatio",
             "friendlyResponseScale",
             "friendlyResponseMin",
@@ -299,6 +299,20 @@ public sealed class MassNavigationConfig
             "nonFriendlyCorrectionOtherMassWeight",
             "nonFriendlyCorrectionShareMin",
             "nonFriendlyCorrectionShareMax");
+        RequireProperties(
+            RequireProperty(RequireProperty(root, "avoidance"), "orca"),
+            "timeHorizonSeconds",
+            "maxNeighbors");
+        RequireProperties(
+            RequireProperty(RequireProperty(root, "avoidance"), "sonar"),
+            "maxSteerAngleDeg",
+            "backwardPenaltyAngleDeg",
+            "predictionTimeScale",
+            "ignoreBehindMovingAgents",
+            "blockedStop",
+            "usePreferredVelocityWhenBlocked",
+            "timeHorizonSeconds",
+            "maxNeighbors");
         JsonElement semantics = RequireProperty(root, "semantics");
         RequireProperties(
             RequireProperty(semantics, "obstacle"),
@@ -1021,11 +1035,6 @@ public sealed class MassNavigationPresentationConfig
             }
         }
 
-        if (world is { Obstacles.Length: > 0 })
-        {
-            RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
-        }
-
         if (!scenarioRuntime.AutoSpawnConfiguredScenario)
         {
             if (Teams.Length != 0)
@@ -1261,7 +1270,6 @@ public sealed class MassNavigationWorldConfig
     public int WorkAreaMaxHeightCm { get; set; }
     public string ActiveHotZoneId { get; set; } = string.Empty;
     public MassNavigationHotZoneConfig[] HotZones { get; set; } = Array.Empty<MassNavigationHotZoneConfig>();
-    public MassNavigationObstacleConfig[] Obstacles { get; set; } = Array.Empty<MassNavigationObstacleConfig>();
 
     [JsonIgnore]
     public MassNavigationHotZoneConfig ActiveHotZone => _activeHotZoneIndex >= 0 && _activeHotZoneIndex < HotZones.Length
@@ -1332,17 +1340,6 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("Mass-nav world requires at least one configured hotspot debug landmark.");
         }
 
-        if (Obstacles.Length <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav world requires explicitly authored obstacles.");
-        }
-
-        if (Obstacles.Length > solver.MaxObstacleCount)
-        {
-            throw new InvalidOperationException(
-                $"Mass-nav world obstacle count {Obstacles.Length} exceeds configured solver capacity {solver.MaxObstacleCount}.");
-        }
-
         if (SolverWindowWidthCm != solver.FieldWidthCm ||
             SolverWindowHeightCm != solver.FieldHeightCm)
         {
@@ -1360,28 +1357,6 @@ public sealed class MassNavigationWorldConfig
                 throw new InvalidOperationException($"Mass-nav world contains duplicate hot zone id '{zone.Id}'.");
             }
 
-        }
-
-        var obstacleIds = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < Obstacles.Length; i++)
-        {
-            MassNavigationObstacleConfig obstacle = Obstacles[i];
-            obstacle.Validate();
-            if (!obstacleIds.Add(obstacle.Id))
-            {
-                throw new InvalidOperationException($"Mass-nav world contains duplicate obstacle id '{obstacle.Id}'.");
-            }
-
-            float minX = obstacle.LocalXCm - obstacle.RadiusCm;
-            float maxX = obstacle.LocalXCm + obstacle.RadiusCm;
-            float minY = obstacle.LocalYCm - obstacle.RadiusCm;
-            float maxY = obstacle.LocalYCm + obstacle.RadiusCm;
-            if (minX < 0f || maxX > SolverWindowWidthCm ||
-                minY < 0f || maxY > SolverWindowHeightCm)
-            {
-                throw new InvalidOperationException(
-                    $"Mass-nav obstacle '{obstacle.Id}' must fit inside the authored solver window.");
-            }
         }
 
         if (StreamingChunkSizeCm <= 0)
@@ -1571,27 +1546,6 @@ public sealed class MassNavigationCameraProbeConfig
         if (FovYDeg <= 0f || FovYDeg >= 180f)
         {
             throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires 0 < FovYDeg < 180.");
-        }
-    }
-}
-
-public sealed class MassNavigationObstacleConfig
-{
-    public string Id { get; set; } = string.Empty;
-    public float LocalXCm { get; set; }
-    public float LocalYCm { get; set; }
-    public float RadiusCm { get; set; }
-
-    public void Validate()
-    {
-        if (string.IsNullOrWhiteSpace(Id))
-        {
-            throw new InvalidOperationException("Mass-nav obstacle requires a non-empty id.");
-        }
-
-        if (RadiusCm <= 0f)
-        {
-            throw new InvalidOperationException($"Mass-nav obstacle '{Id}' requires RadiusCm > 0.");
         }
     }
 }

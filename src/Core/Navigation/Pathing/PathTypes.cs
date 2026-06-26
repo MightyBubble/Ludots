@@ -87,7 +87,7 @@ namespace Ludots.Core.Navigation.Pathing
             RequestId = requestId;
             Actor = actor;
             Domain = domain;
-            AgentTypeId = null;
+            AgentTypeId = string.Empty;
             Start = start;
             Goal = goal;
             Budget = budget;
@@ -113,8 +113,16 @@ namespace Ludots.Core.Navigation.Pathing
         public readonly PathHandle Handle;
         public readonly int Expanded;
         public readonly int ErrorCode;
+        public readonly PathDomain ResolvedDomain;
 
-        public PathResult(int requestId, Entity actor, PathStatus status, PathHandle handle, int expanded, int errorCode)
+        public PathResult(
+            int requestId,
+            Entity actor,
+            PathStatus status,
+            PathHandle handle,
+            int expanded,
+            int errorCode,
+            PathDomain resolvedDomain = PathDomain.None)
         {
             RequestId = requestId;
             Actor = actor;
@@ -122,6 +130,7 @@ namespace Ludots.Core.Navigation.Pathing
             Handle = handle;
             Expanded = expanded;
             ErrorCode = errorCode;
+            ResolvedDomain = resolvedDomain;
         }
     }
 }

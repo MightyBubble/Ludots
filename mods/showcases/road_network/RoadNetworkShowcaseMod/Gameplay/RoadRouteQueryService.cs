@@ -207,7 +207,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             RoadNetworkScenarioDefinition? scenario,
             in RoadRoutePlannerProfile planner)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.LoadedChunks.Name, out object? loadedChunksObj) ||
+            if (!_globals.TryGetValue(RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey, out object? loadedChunksObj) ||
                 loadedChunksObj is not WorldGridLoadedChunks loadedChunks)
             {
                 return;

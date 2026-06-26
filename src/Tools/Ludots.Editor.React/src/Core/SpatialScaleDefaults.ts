@@ -1,0 +1,17 @@
+export const CellCm = 100;
+export const DefaultHexEdgeLengthCm = 400;
+export const MacroTileCells = 256;
+export const DefaultWorldWidthMacroTiles = 64;
+export const DefaultWorldHeightMacroTiles = 64;
+export const DefaultTerrainWidthChunks = 64;
+export const DefaultTerrainHeightChunks = 64;
+export const PartitionChunkCells = 64;
+export const TerrainChunkCells = 64;
+export const DefaultBoardMacroTilesPerAxis = 16;
+export const DefaultNavQueryMaxPortals = 256;
+export const FlowCellCm = CellCm;
+export const AvoidanceSeparationHashCellCm = CellCm;
+export const AvoidanceHardResolveHashCellCm = 50;
+export const PhysicsBroadphaseCellCm = CellCm;
+export const LogicTerrainHeightLevels = 16;
+export const LogicTerrainMaxHeightLevel = LogicTerrainHeightLevels - 1;

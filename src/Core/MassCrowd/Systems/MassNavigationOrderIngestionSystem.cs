@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.Navigation.Pathing;
+using Ludots.Core.Navigation.Pathing.Config;
 
 namespace Ludots.Core.MassCrowd.Systems;
 
@@ -25,6 +27,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
     private readonly List<OrderBucket> _buckets;
     private readonly HashSet<int> _activeTokens;
     private readonly List<int> _completedTokens;
+    private MassNavigationRouteExecutionSink? _routeSink;
     private int _usedBucketCount;
     private int _moveOrderTypeId;
     private int _lastIdleScanFrame;
@@ -118,6 +121,8 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             }
         }
 
+        MassNavigationRouteExecutionSink? routeSink = ResolveRouteSink();
+        routeSink?.BeginSync();
         for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
             OrderBucket bucket = _buckets[bucketIndex];
@@ -135,6 +140,11 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 bucket.Destination,
                 bucket.FormationMode,
                 bucket.RotationRadians);
+
+            if (routeSink != null)
+            {
+                ApplyRoutedAgentTargets(routeSink, bucket);
+            }
         }
 
         OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
@@ -164,6 +174,16 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             _simulation.NavGroupRuntime.CompleteOrderGroup(_simulation.MassFlow, _completedTokens[i]);
         }
 
+        MassNavigationRouteExecutionSink? pruningRouteSink = routeSink ?? ResolveRouteSink();
+        if (pruningRouteSink != null)
+        {
+            pruningRouteSink.EndSync();
+            for (int i = 0; i < _completedTokens.Count; i++)
+            {
+                pruningRouteSink.RemoveOrderToken(_completedTokens[i]);
+            }
+        }
+
         _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.MassFlow, _activeTokens);
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
         {
@@ -185,6 +205,66 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         return _moveOrderTypeId;
+    }
+
+    private MassNavigationRouteExecutionSink? ResolveRouteSink()
+    {
+        if (_routeSink != null)
+        {
+            return _routeSink;
+        }
+
+        IPathService? pathService = _engine.GetService(CoreServiceKeys.PathService);
+        PathStore? pathStore = _engine.GetService(CoreServiceKeys.PathStore);
+        PathingConfig? pathingConfig = _engine.GetService(CoreServiceKeys.PathingConfig);
+        if (pathService == null && pathStore == null && pathingConfig == null)
+        {
+            return null;
+        }
+
+        if (pathService == null || pathStore == null || pathingConfig == null)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation route execution requires PathService, PathStore, and PathingConfig to be registered together.");
+        }
+
+        _routeSink = new MassNavigationRouteExecutionSink(pathService, pathStore, pathingConfig);
+        _engine.SetService(MassNavigationKeys.RouteExecutionSink, _routeSink);
+        return _routeSink;
+    }
+
+    private void ApplyRoutedAgentTargets(MassNavigationRouteExecutionSink routeSink, OrderBucket bucket)
+    {
+        for (int i = 0; i < bucket.Members.Count; i++)
+        {
+            int memberIndex = bucket.Members[i];
+            Entity member = ResolveControllableAgent(memberIndex, bucket.Token);
+            if (!_simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(memberIndex, out float destinationX, out float destinationY))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation route execution could not resolve the order target for token {bucket.Token}, agent {memberIndex}.");
+            }
+
+            MassNavigationRouteSinkResult result = routeSink.TrackRouteTarget(
+                _simulation,
+                _engine.World,
+                member,
+                memberIndex,
+                new Vector2(destinationX, destinationY),
+                bucket.Token,
+                maxExpanded: 2048,
+                maxPoints: 64);
+            if (result.Status == MassNavigationRouteSinkStatus.NoConfiguredAgentType)
+            {
+                continue;
+            }
+
+            if (!result.Tracked)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation route execution failed for order {bucket.Token}, agent {memberIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}.");
+            }
+        }
     }
 
     private Entity ResolveControllableAgent(int agentIndex, int orderToken)

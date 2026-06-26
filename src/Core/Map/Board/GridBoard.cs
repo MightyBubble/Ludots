@@ -1,4 +1,7 @@
 using System;
+using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Board
@@ -6,7 +9,7 @@ namespace Ludots.Core.Map.Board
     /// <summary>
     /// Simple grid-based Board. The default board type for most maps.
     /// </summary>
-    public sealed class GridBoard : IBoard
+    public sealed class GridBoard : ITerrainBoard, INavigableBoard
     {
         public BoardId Id { get; }
         public string Name { get; }
@@ -15,6 +18,11 @@ namespace Ludots.Core.Map.Board
         public ISpatialPartitionWorld SpatialPartition { get; }
         public ISpatialQueryService QueryService { get; }
         public ILoadedChunks LoadedChunks => null;
+        public VertexMap VertexMap { get; set; }
+        public LogicTerrainField LogicTerrain { get; set; }
+        public NavQueryServiceRegistry NavServices { get; set; }
+        public int GridCellSizeCm { get; }
+        public int ChunkSizeCells { get; }
 
         private bool _disposed;
 
@@ -23,13 +31,14 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            int gridCellSizeCm = config.GridCellSizeCm;
-            int worldWidthCm = config.WidthInTiles * 256 * gridCellSizeCm;
-            int worldHeightCm = config.HeightInTiles * 256 * gridCellSizeCm;
-            WorldSize = new WorldSizeSpec(
-                new Mathematics.WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm);
+            var worldExtent = new WorldExtentSpec(
+                config.WidthInMacroTiles,
+                config.HeightInMacroTiles,
+                config.GridCellSizeCm);
+            WorldSize = worldExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
+            GridCellSizeCm = config.GridCellSizeCm;
+            ChunkSizeCells = config.ChunkSizeCells;
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
             SpatialPartition = partition;

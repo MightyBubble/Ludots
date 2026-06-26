@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.MassCrowd.Systems;
+using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -26,7 +27,6 @@ public sealed class MassNavigationRuntime
     private MassNavigationConfig? _config;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
-    private bool _obstacleBlockersSeeded;
     private RenderDebugSnapshot _savedRenderDebug;
     private bool _savedRenderDebugValid;
     private ILoadedChunks? _savedLoadedChunks;
@@ -92,6 +92,9 @@ public sealed class MassNavigationRuntime
         _config = new MassNavigationConfigLoader(engine.ConfigPipeline).Load(
             engine.ConfigCatalog,
             engine.ConfigConflictReport);
+        AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires AgentProfiles.");
+        _config.AgentProfiles.BindAgentProfiles(agentProfiles);
         return _config;
     }
 
@@ -121,10 +124,7 @@ public sealed class MassNavigationRuntime
         {
             EnsureScenario(engine);
         }
-        else
-        {
-            EnsureConfiguredObstacleBlockers(engine);
-        }
+
         return Task.CompletedTask;
     }
 
@@ -143,7 +143,6 @@ public sealed class MassNavigationRuntime
         }
 
         _scenarioSpawned = false;
-        _obstacleBlockersSeeded = false;
         ReleaseMassNavigationLoadedChunks(engine);
         RestoreRenderDebug(engine);
         ClearCullingFocusOverride(engine);
@@ -187,20 +186,6 @@ public sealed class MassNavigationRuntime
             engine.GetService(CoreServiceKeys.TeamEntityLookup)
                 ?? throw new System.InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
         _scenarioSpawned = true;
-        _obstacleBlockersSeeded = true;
-    }
-
-    private void EnsureConfiguredObstacleBlockers(GameEngine engine)
-    {
-        if (_obstacleBlockersSeeded)
-        {
-            return;
-        }
-
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
-        MassNavigationScenarioBootstrap.EnqueueConfiguredObstacleBlockers(engine, simulation);
-        _obstacleBlockersSeeded = true;
     }
 
     private static void BindBoardWorld(GameEngine engine)

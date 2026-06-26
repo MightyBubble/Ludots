@@ -142,7 +142,7 @@ internal sealed class TotalWarShowcaseRuntime
             SystemGroup.PostMovement);
         TotalWarShowcaseConfig config = EnsureConfig(engine);
         engine.RegisterPresentationSystem(new TotalWarFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
+        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
     }
 
@@ -562,7 +562,9 @@ internal sealed class TotalWarShowcaseRuntime
     private void BuildAgentPlans(GameEngine engine, MassNavigationSimulationRuntime simulation, TotalWarShowcaseConfig config)
     {
         MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
-        config.ValidateAgentProfileReferences(profileSet);
+        var geometryProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("Total War showcase requires AgentProfiles.");
+        config.ValidateAgentProfileReferences(profileSet, geometryProfiles);
 
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)
