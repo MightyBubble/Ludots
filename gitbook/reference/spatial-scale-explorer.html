@@ -859,6 +859,7 @@
       <nav class="doc-links" aria-label="文档入口">
         <a href="spatial-scale-configuration.md">查表 Markdown</a>
         <a href="../architecture/spatial-scale-and-resolution-ssot.md">架构 SSOT</a>
+        <a href="../architecture/terrain-data-budget-ssot.md">地形预算 SSOT</a>
       </nav>
     </header>
 
@@ -936,6 +937,7 @@
         <div class="preset-row" aria-label="演算 preset">
           <button type="button" data-preset="default">默认</button>
           <button type="button" data-preset="dense-flow">细流场</button>
+          <button type="button" data-preset="large-world">64km @1m</button>
           <button type="button" data-preset="invalid-flow">错误演示</button>
         </div>
       </div>
@@ -957,12 +959,20 @@
               <input id="macroTileCells" type="number" value="256" readonly>
             </div>
             <div class="field">
+              <label for="targetWidthMeters">目标宽度 m</label>
+              <input id="targetWidthMeters" type="number" min="1" step="1" value="16384">
+            </div>
+            <div class="field">
+              <label for="targetHeightMeters">目标高度 m</label>
+              <input id="targetHeightMeters" type="number" min="1" step="1" value="16384">
+            </div>
+            <div class="field">
               <label for="widthMacro">WidthInMacroTiles</label>
-              <input id="widthMacro" type="number" min="1" step="1" value="64">
+              <input id="widthMacro" type="number" min="1" step="1" value="64" readonly>
             </div>
             <div class="field">
               <label for="heightMacro">HeightInMacroTiles</label>
-              <input id="heightMacro" type="number" min="1" step="1" value="64">
+              <input id="heightMacro" type="number" min="1" step="1" value="64" readonly>
             </div>
             <div class="field">
               <label for="partitionChunk">PartitionChunkCells</label>
@@ -1018,6 +1028,50 @@
             <div class="metric"><span>Broadphase relation</span><strong id="broadphaseRelation">-</strong></div>
           </div>
           <div class="status" id="flowStatus">-</div>
+        </section>
+
+        <section class="calc-card">
+          <h3>五域地形数据预算</h3>
+          <div class="field-grid">
+            <div class="field">
+              <label for="visualSamplesX">Visual samples X</label>
+              <input id="visualSamplesX" type="number" min="1" step="1" value="8192">
+            </div>
+            <div class="field">
+              <label for="visualSamplesY">Visual samples Y</label>
+              <input id="visualSamplesY" type="number" min="1" step="1" value="8192">
+            </div>
+            <div class="field">
+              <label for="navLayerCount">Nav layers</label>
+              <input id="navLayerCount" type="number" min="1" step="1" value="1">
+            </div>
+            <div class="field">
+              <label for="navProfileCount">Nav profiles</label>
+              <input id="navProfileCount" type="number" min="1" step="1" value="1">
+            </div>
+            <div class="field">
+              <label for="recastAgentRadiusCm">Agent radius cm</label>
+              <input id="recastAgentRadiusCm" type="number" min="1" step="1" value="30">
+            </div>
+          </div>
+          <div class="results">
+            <div class="metric" title="存盘估算：R16 single-layer visual heightmap bytes">
+              <span>VisualHeightmap saved estimate</span><strong id="visualBudget">-</strong>
+            </div>
+            <div class="metric" title="理论满格 dense-equivalent，绝不等于存盘大小">
+              <span>LogicTerrain dense-equivalent, not saved</span><strong id="logicDenseBudget">-</strong>
+            </div>
+            <div class="metric" title="实际 sparse resident 需要 .ltrn resident/dirty chunk 实测">
+              <span>LogicTerrain sparse resident</span><strong id="logicSparseBudget">未实测下界</strong>
+            </div>
+            <div class="metric" title="Recast voxel columns，表示 bake-time cost，不是文件大小">
+              <span>Recast bake-cost estimate</span><strong id="recastBudget">-</strong>
+            </div>
+            <div class="metric" title="NavMesh output bytes 只能按 tile payload 低高带或实测统计">
+              <span>NavMesh output estimate</span><strong id="navOutputBudget">-</strong>
+            </div>
+          </div>
+          <div class="status" id="terrainBudgetStatus">-</div>
         </section>
       </div>
 
@@ -1738,6 +1792,8 @@
       "cellCm",
       "hexEdgeLengthCm",
       "macroTileCells",
+      "targetWidthMeters",
+      "targetHeightMeters",
       "widthMacro",
       "heightMacro",
       "partitionChunk",
@@ -1747,7 +1803,12 @@
       "flowCellSizeCm",
       "separationHashCellSizeCm",
       "hardResolveHashCellSizeCm",
-      "physicsBroadphaseCellCm"
+      "physicsBroadphaseCellCm",
+      "visualSamplesX",
+      "visualSamplesY",
+      "navLayerCount",
+      "navProfileCount",
+      "recastAgentRadiusCm"
     ];
 
     function value(id) {
@@ -1774,6 +1835,21 @@
 
     function formatMeters(cm) {
       return `${formatNumber(cm / 100)} m`;
+    }
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes) || bytes < 0) {
+        return "-";
+      }
+
+      const units = ["B", "KiB", "MiB", "GiB", "TiB"];
+      let value = bytes;
+      let unit = 0;
+      while (value >= 1024 && unit < units.length - 1) {
+        value /= 1024;
+        unit += 1;
+      }
+      return `${formatNumber(value)} ${units[unit]}`;
     }
 
     function selectBoardLayer(layerId) {
@@ -1831,6 +1907,12 @@
       const cellCm = value("cellCm");
       const hexEdgeLengthCm = value("hexEdgeLengthCm");
       const macroTileCells = value("macroTileCells");
+      const targetWidthMeters = Math.max(1, value("targetWidthMeters"));
+      const targetHeightMeters = Math.max(1, value("targetHeightMeters"));
+      const derivedWidthMacro = Math.max(1, Math.ceil((targetWidthMeters * 100) / Math.max(1, cellCm) / macroTileCells));
+      const derivedHeightMacro = Math.max(1, Math.ceil((targetHeightMeters * 100) / Math.max(1, cellCm) / macroTileCells));
+      document.getElementById("widthMacro").value = derivedWidthMacro;
+      document.getElementById("heightMacro").value = derivedHeightMacro;
       const widthMacro = value("widthMacro");
       const heightMacro = value("heightMacro");
       const partitionChunk = value("partitionChunk");
@@ -1903,6 +1985,39 @@
           ? "OK：FlowWindow 可被 FlowCell 与两个 AvoidanceHashCell 整除。"
           : "Fail-fast：MassFlow fieldWidth/fieldHeight 必须被 flow/hash cell 整除，不能靠 fallback 修正。"
       );
+
+      const visualSamplesX = Math.max(1, value("visualSamplesX"));
+      const visualSamplesY = Math.max(1, value("visualSamplesY"));
+      const navLayerCount = Math.max(1, value("navLayerCount"));
+      const navProfileCount = Math.max(1, value("navProfileCount"));
+      const recastAgentRadiusCm = Math.max(1, value("recastAgentRadiusCm"));
+      const visualBytes = visualSamplesX * visualSamplesY * 2;
+      const logicDenseBytes = widthCells * heightCells * 4;
+      const fullTileCountX = Math.ceil(widthCells / terrainChunk);
+      const fullTileCountY = Math.ceil(heightCells / terrainChunk);
+      const fullTileCount = fullTileCountX * fullTileCountY;
+      const recastCellSizeCm = Math.max(5, Math.min(50, recastAgentRadiusCm / 3));
+      const recastColumnsPerAxis = Math.ceil((terrainChunk * cellCm) / recastCellSizeCm);
+      const recastColumnsPerTile = recastColumnsPerAxis * recastColumnsPerAxis;
+      const recastColumnBudget = fullTileCount * navLayerCount * navProfileCount * recastColumnsPerTile;
+      const navOperations = fullTileCount * navLayerCount * navProfileCount;
+      const navOutputLow = navOperations * 48 * 1024;
+      const navOutputHigh = navOperations * terrainChunk * 1024;
+      document.getElementById("visualBudget").textContent =
+        `${formatBytes(visualBytes)} saved`;
+      document.getElementById("logicDenseBudget").textContent =
+        `${formatBytes(logicDenseBytes)} dense-equivalent`;
+      document.getElementById("logicSparseBudget").textContent =
+        "未实测下界；只写 resident/dirty chunk";
+      document.getElementById("recastBudget").textContent =
+        `${formatInt(recastColumnBudget)} columns bake-cost`;
+      document.getElementById("navOutputBudget").textContent =
+        `${formatBytes(navOutputLow)} - ${formatBytes(navOutputHigh)} tile bytes`;
+      setStatus(
+        "terrainBudgetStatus",
+        true,
+        `五域分离：VisualHeightmap 是存盘估算；Logic dense-equivalent 非存盘；sparse resident 待 .ltrn 实测；Recast 是 bake-cost；NavMesh output 需按 tile bytes 实测。`
+      );
       updateBoard();
     }
 
@@ -1915,6 +2030,8 @@
       default: {
         cellCm: 100,
         hexEdgeLengthCm: 400,
+        targetWidthMeters: 16384,
+        targetHeightMeters: 16384,
         widthMacro: 64,
         heightMacro: 64,
         partitionChunk: 64,
@@ -1923,11 +2040,18 @@
         flowCellSizeCm: 100,
         separationHashCellSizeCm: 100,
         hardResolveHashCellSizeCm: 50,
-        physicsBroadphaseCellCm: 100
+        physicsBroadphaseCellCm: 100,
+        visualSamplesX: 8192,
+        visualSamplesY: 8192,
+        navLayerCount: 1,
+        navProfileCount: 1,
+        recastAgentRadiusCm: 30
       },
       "dense-flow": {
         cellCm: 100,
         hexEdgeLengthCm: 400,
+        targetWidthMeters: 8192,
+        targetHeightMeters: 8192,
         widthMacro: 32,
         heightMacro: 32,
         partitionChunk: 64,
@@ -1936,11 +2060,38 @@
         flowCellSizeCm: 50,
         separationHashCellSizeCm: 100,
         hardResolveHashCellSizeCm: 50,
-        physicsBroadphaseCellCm: 100
+        physicsBroadphaseCellCm: 100,
+        visualSamplesX: 4096,
+        visualSamplesY: 4096,
+        navLayerCount: 1,
+        navProfileCount: 2,
+        recastAgentRadiusCm: 30
+      },
+      "large-world": {
+        cellCm: 100,
+        hexEdgeLengthCm: 400,
+        targetWidthMeters: 64000,
+        targetHeightMeters: 64000,
+        widthMacro: 250,
+        heightMacro: 250,
+        partitionChunk: 64,
+        fieldWidthCm: 12800,
+        fieldHeightCm: 12800,
+        flowCellSizeCm: 100,
+        separationHashCellSizeCm: 100,
+        hardResolveHashCellSizeCm: 50,
+        physicsBroadphaseCellCm: 100,
+        visualSamplesX: 8192,
+        visualSamplesY: 8192,
+        navLayerCount: 1,
+        navProfileCount: 1,
+        recastAgentRadiusCm: 30
       },
       "invalid-flow": {
         cellCm: 100,
         hexEdgeLengthCm: 0,
+        targetWidthMeters: 16384,
+        targetHeightMeters: 16384,
         widthMacro: 64,
         heightMacro: 64,
         partitionChunk: 48,
@@ -1949,7 +2100,12 @@
         flowCellSizeCm: 96,
         separationHashCellSizeCm: 100,
         hardResolveHashCellSizeCm: 50,
-        physicsBroadphaseCellCm: 100
+        physicsBroadphaseCellCm: 100,
+        visualSamplesX: 8192,
+        visualSamplesY: 8192,
+        navLayerCount: 1,
+        navProfileCount: 1,
+        recastAgentRadiusCm: 30
       }
     };
 
