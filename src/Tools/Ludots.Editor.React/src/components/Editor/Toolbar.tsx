@@ -245,6 +245,17 @@ function formatMeters(value: number): string {
     return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+function parseDraftNumber(value: string): number {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return Number.NaN;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+function isPositiveFinite(value: number): boolean {
+    return Number.isFinite(value) && value > 0;
+}
+
 export const Toolbar: React.FC = () => {
     const {
         activeCategory, setCategory,
@@ -290,17 +301,18 @@ export const Toolbar: React.FC = () => {
 
     const [showNewMap, setShowNewMap] = React.useState(false);
     const [showAddBoard, setShowAddBoard] = React.useState(false);
-    const [newMapWidthMeters, setNewMapWidthMeters] = React.useState(MacroTileCells * CellCm / 100);
-    const [newMapHeightMeters, setNewMapHeightMeters] = React.useState(MacroTileCells * CellCm / 100);
+    const defaultMacroTileMeters = String(MacroTileCells * CellCm / 100);
+    const [newMapWidthMeters, setNewMapWidthMeters] = React.useState(defaultMacroTileMeters);
+    const [newMapHeightMeters, setNewMapHeightMeters] = React.useState(defaultMacroTileMeters);
     const [newTopology, setNewTopology] = React.useState<BoardTopology>('Grid');
-    const [newMapCellSizeCm, setNewMapCellSizeCm] = React.useState(CellCm);
-    const [newMapHexEdgeLengthCm, setNewMapHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
+    const [newMapCellSizeCm, setNewMapCellSizeCm] = React.useState(String(CellCm));
+    const [newMapHexEdgeLengthCm, setNewMapHexEdgeLengthCm] = React.useState(String(DefaultHexEdgeLengthCm));
     const [newBoardName, setNewBoardName] = React.useState('board_2');
     const [newBoardTopology, setNewBoardTopology] = React.useState<BoardTopology>('Grid');
-    const [newBoardWidthMeters, setNewBoardWidthMeters] = React.useState(MacroTileCells * CellCm / 100);
-    const [newBoardHeightMeters, setNewBoardHeightMeters] = React.useState(MacroTileCells * CellCm / 100);
-    const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(CellCm);
-    const [newBoardHexEdgeLengthCm, setNewBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
+    const [newBoardWidthMeters, setNewBoardWidthMeters] = React.useState(defaultMacroTileMeters);
+    const [newBoardHeightMeters, setNewBoardHeightMeters] = React.useState(defaultMacroTileMeters);
+    const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(String(CellCm));
+    const [newBoardHexEdgeLengthCm, setNewBoardHexEdgeLengthCm] = React.useState(String(DefaultHexEdgeLengthCm));
     const [newBoardNavigationEnabled, setNewBoardNavigationEnabled] = React.useState(true);
     const [editBoardCellSizeCm, setEditBoardCellSizeCm] = React.useState(CellCm);
     const [editBoardHexEdgeLengthCm, setEditBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
@@ -416,27 +428,43 @@ export const Toolbar: React.FC = () => {
     const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
     const boardScaleNavChanged = editBoardNavigationEnabled !== (selectedBoardInfo?.navigationEnabled ?? selectedMapInfo?.navigationEnabled ?? true);
     const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || boardScaleNavChanged;
+    const newMapWidthMetersValue = parseDraftNumber(newMapWidthMeters);
+    const newMapHeightMetersValue = parseDraftNumber(newMapHeightMeters);
+    const newMapCellSizeCmValue = parseDraftNumber(newMapCellSizeCm);
+    const newMapHexEdgeLengthCmValue = parseDraftNumber(newMapHexEdgeLengthCm);
+    const newBoardWidthMetersValue = parseDraftNumber(newBoardWidthMeters);
+    const newBoardHeightMetersValue = parseDraftNumber(newBoardHeightMeters);
+    const newBoardCellSizeCmValue = parseDraftNumber(newBoardCellSizeCm);
+    const newBoardHexEdgeLengthCmValue = parseDraftNumber(newBoardHexEdgeLengthCm);
     const newMapAllocation = React.useMemo(
-        () => deriveBoardAllocation(newMapWidthMeters, newMapHeightMeters, newMapCellSizeCm),
-        [newMapWidthMeters, newMapHeightMeters, newMapCellSizeCm],
+        () => deriveBoardAllocation(newMapWidthMetersValue, newMapHeightMetersValue, newMapCellSizeCmValue),
+        [newMapWidthMetersValue, newMapHeightMetersValue, newMapCellSizeCmValue],
     );
     const newBoardAllocation = React.useMemo(
-        () => deriveBoardAllocation(newBoardWidthMeters, newBoardHeightMeters, newBoardCellSizeCm),
-        [newBoardWidthMeters, newBoardHeightMeters, newBoardCellSizeCm],
+        () => deriveBoardAllocation(newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue),
+        [newBoardWidthMetersValue, newBoardHeightMetersValue, newBoardCellSizeCmValue],
     );
-    const newMapCreateDisabledReason = !newMapAllocation.isValid
+    const newMapCreateDisabledReason = !isPositiveFinite(newMapWidthMetersValue) || !isPositiveFinite(newMapHeightMetersValue)
         ? 'Enter positive map width and height in meters.'
-        : !newMapAllocation.withinEditorBudget
-            ? `Requested size allocates ${newMapAllocation.widthMacroTiles}x${newMapAllocation.heightMacroTiles} MacroTiles; editor draft cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
-            : '';
+        : !isPositiveFinite(newMapCellSizeCmValue)
+            ? 'Enter a positive grid cell size in centimeters.'
+            : newTopology === 'HexGrid' && !isPositiveFinite(newMapHexEdgeLengthCmValue)
+                ? 'Enter a positive hex edge length in centimeters.'
+                : !newMapAllocation.withinEditorBudget
+                    ? `Requested size allocates ${newMapAllocation.widthMacroTiles}x${newMapAllocation.heightMacroTiles} MacroTiles; editor draft cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
+                    : '';
     const newMapCanCreate = newMapCreateDisabledReason.length === 0;
     const newBoardCreateDisabledReason = !newBoardName.trim()
         ? 'Board name is required.'
-        : !newBoardAllocation.isValid
+        : !isPositiveFinite(newBoardWidthMetersValue) || !isPositiveFinite(newBoardHeightMetersValue)
             ? 'Enter positive board width and height in meters.'
-            : !newBoardAllocation.withinEditorBudget
-                ? `Requested size allocates ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles; editor create cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
-                : '';
+            : !isPositiveFinite(newBoardCellSizeCmValue)
+                ? 'Enter a positive grid cell size in centimeters.'
+                : newBoardTopology === 'HexGrid' && !isPositiveFinite(newBoardHexEdgeLengthCmValue)
+                    ? 'Enter a positive hex edge length in centimeters.'
+                    : !newBoardAllocation.withinEditorBudget
+                        ? `Requested size allocates ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles; editor create cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
+                        : '';
     const newBoardCanCreate = newBoardCreateDisabledReason.length === 0;
     const bakeButtonDisabled = !selectedNavReady || navBakeState.phase === 'estimating' || navBakeState.phase === 'baking';
 
@@ -502,6 +530,19 @@ export const Toolbar: React.FC = () => {
                 : idleNavBakeState);
     }, [mapId, navScope, navIncludeNeighbors, navParallel, navTileVersion, navHeightScale, navMinUpDot, navCliffThreshold, navMaxDegree, terrain, navDirtyChunks.size, selectedModId, loadedMapId, navigationConfigVersion]);
 
+    React.useEffect(() => {
+        if (!showNewMap && !showAddBoard) return;
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') return;
+            setShowNewMap(false);
+            setShowAddBoard(false);
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [showNewMap, showAddBoard]);
+
     const downloadBlob = (filename: string, blob: Blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -524,8 +565,8 @@ export const Toolbar: React.FC = () => {
         }
         initMap(newMapAllocation.widthTerrainChunks, newMapAllocation.heightTerrainChunks, {
             topology: newTopology,
-            cellSizeCm: Math.max(1, Math.floor(newMapCellSizeCm || 1)),
-            hexEdgeLengthCm: Math.max(1, Math.floor(newMapHexEdgeLengthCm || 1)),
+            cellSizeCm: Math.max(1, Math.floor(newMapCellSizeCmValue)),
+            hexEdgeLengthCm: Math.max(1, Math.floor(newTopology === 'HexGrid' ? newMapHexEdgeLengthCmValue : DefaultHexEdgeLengthCm)),
             chunkSizeCells: TerrainChunkCells,
         });
         setShowNewMap(false);
@@ -541,11 +582,11 @@ export const Toolbar: React.FC = () => {
             spatialType: newBoardTopology,
             widthInMacroTiles: newBoardAllocation.widthMacroTiles,
             heightInMacroTiles: newBoardAllocation.heightMacroTiles,
-            cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCm || 1)),
+            cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCmValue)),
             navigationEnabled: newBoardNavigationEnabled,
         };
         if (newBoardTopology === 'HexGrid') {
-            request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCm || 1));
+            request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCmValue));
         }
         try {
             await createBoard(request);
@@ -2709,54 +2750,56 @@ export const Toolbar: React.FC = () => {
             </section>
 
             {showNewMap ? (
-                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowNewMap(false)}>
-                    <div className="max-h-[calc(100vh-48px)] w-[440px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl">
                         <h3 className="mb-4 text-lg font-semibold text-white">Create New Map</h3>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <label className="block text-sm text-slate-400">
                                     Desired width m
                                     <input
-                                        type="number"
-                                        min="1"
-                                        step="1"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={newMapWidthMeters}
-                                        onChange={(e) => setNewMapWidthMeters(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => setNewMapWidthMeters(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newMapWidthMetersValue)}
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
                                     Desired height m
                                     <input
-                                        type="number"
-                                        min="1"
-                                        step="1"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={newMapHeightMeters}
-                                        onChange={(e) => setNewMapHeightMeters(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => setNewMapHeightMeters(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newMapHeightMetersValue)}
                                     />
                                 </label>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <label className="block text-sm text-slate-400">
                                     Grid cell cm
                                     <input
-                                        type="number"
-                                        min="1"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={newMapCellSizeCm}
-                                        onChange={(e) => setNewMapCellSizeCm(parseInt(e.target.value) || CellCm)}
+                                        onChange={(e) => setNewMapCellSizeCm(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newMapCellSizeCmValue)}
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
                                     Hex edge cm
                                     <input
-                                        type="number"
-                                        min="1"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={newMapHexEdgeLengthCm}
-                                        onChange={(e) => setNewMapHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
+                                        onChange={(e) => setNewMapHexEdgeLengthCm(e.target.value)}
                                         className={inputClass}
                                         disabled={newTopology !== 'HexGrid'}
+                                        aria-invalid={newTopology === 'HexGrid' && !isPositiveFinite(newMapHexEdgeLengthCmValue)}
                                         title={newTopology === 'HexGrid' ? 'Hex edge length for the local HexGrid draft.' : 'Hex edge length only applies to HexGrid.'}
                                     />
                                 </label>
@@ -2824,8 +2867,8 @@ export const Toolbar: React.FC = () => {
             ) : null}
 
             {showAddBoard ? (
-                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowAddBoard(false)}>
-                    <div className="max-h-[calc(100vh-48px)] w-[460px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-sm">
+                    <div className="max-h-[calc(100vh-48px)] w-[560px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl">
                         <h3 className="mb-4 text-lg font-semibold text-white">Add Board</h3>
                         <div className="space-y-4">
                             <label className="block text-sm text-slate-400">
@@ -2847,50 +2890,52 @@ export const Toolbar: React.FC = () => {
                                     <option value="HexGrid">HexGrid</option>
                                 </select>
                             </label>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <label className="block text-sm text-slate-400">
                                     Desired width m
                                     <input
-                                        type="number"
-                                        min="1"
-                                        step="1"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={newBoardWidthMeters}
-                                        onChange={(e) => setNewBoardWidthMeters(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => setNewBoardWidthMeters(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newBoardWidthMetersValue)}
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
                                     Desired height m
                                     <input
-                                        type="number"
-                                        min="1"
-                                        step="1"
+                                        type="text"
+                                        inputMode="decimal"
                                         value={newBoardHeightMeters}
-                                        onChange={(e) => setNewBoardHeightMeters(parseFloat(e.target.value) || 0)}
+                                        onChange={(e) => setNewBoardHeightMeters(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newBoardHeightMetersValue)}
                                     />
                                 </label>
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <label className="block text-sm text-slate-400">
                                     Grid cell cm
                                     <input
-                                        type="number"
-                                        min="1"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={newBoardCellSizeCm}
-                                        onChange={(e) => setNewBoardCellSizeCm(parseInt(e.target.value) || CellCm)}
+                                        onChange={(e) => setNewBoardCellSizeCm(e.target.value)}
                                         className={inputClass}
+                                        aria-invalid={!isPositiveFinite(newBoardCellSizeCmValue)}
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
                                     Hex edge cm
                                     <input
-                                        type="number"
-                                        min="1"
+                                        type="text"
+                                        inputMode="numeric"
                                         value={newBoardHexEdgeLengthCm}
-                                        onChange={(e) => setNewBoardHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
+                                        onChange={(e) => setNewBoardHexEdgeLengthCm(e.target.value)}
                                         className={inputClass}
                                         disabled={newBoardTopology !== 'HexGrid'}
+                                        aria-invalid={newBoardTopology === 'HexGrid' && !isPositiveFinite(newBoardHexEdgeLengthCmValue)}
                                         title={newBoardTopology === 'HexGrid' ? 'Hex edge length for this HexGrid board.' : 'Hex edge length only applies to HexGrid boards.'}
                                     />
                                 </label>
