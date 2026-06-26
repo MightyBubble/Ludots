@@ -109,6 +109,56 @@ public sealed class UiShowcaseAcceptanceTests
     }
 
     [Test]
+    public void UIRoot_ClickThatClearsScene_CompletesInputFrame()
+    {
+        var root = new UIRoot(new NullUiRenderer());
+        root.Resize(320f, 200f);
+
+        UiScene scene = UiSceneComposer.Compose(
+            new FixedTextMeasurer(),
+            new NullImageSizeProvider(),
+            Ui.Column(
+                    Ui.Button("Clear", _ => root.ClearScene())
+                        .Id("clear-scene-button")
+                        .Width(120f)
+                        .Height(32f))
+                .Width(320f)
+                .Height(200f)
+                .Padding(8f));
+
+        root.MountScene(scene);
+        scene.Layout(320f, 200f);
+        UiNode button = scene.FindByElementId("clear-scene-button")!;
+        float x = button.LayoutRect.X + 2f;
+        float y = button.LayoutRect.Y + 2f;
+
+        bool downHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Down,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+
+        bool upHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Up,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+
+        Assert.That(downHandled, Is.True);
+        Assert.That(upHandled, Is.True);
+        Assert.That(root.Scene, Is.Null);
+        Assert.That(root.IsDirty, Is.True);
+    }
+
+    [Test]
     public void ReactiveScene_ThemeSwitch_ChangesRootComputedStyle()
     {
         var page = UiShowcaseFactory.CreateReactivePage(TextMeasurer, ImageSizeProvider);
@@ -270,5 +320,36 @@ public sealed class UiShowcaseAcceptanceTests
              + (0.7152d * Linearize(color.Green))
              + (0.0722d * Linearize(color.Blue));
     }
-}
 
+    private sealed class NullUiRenderer : IUiRenderer
+    {
+        public void Render(UiScene scene, float width, float height)
+        {
+        }
+    }
+
+    private sealed class FixedTextMeasurer : IUiTextMeasurer
+    {
+        public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
+        {
+            float width = MeasureWidth(text, style);
+            float lineHeight = Math.Max(1f, style.FontSize);
+            return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, lineHeight, lineHeight);
+        }
+
+        public float MeasureWidth(string? text, UiStyle style)
+        {
+            return (text?.Length ?? 0) * 8f;
+        }
+    }
+
+    private sealed class NullImageSizeProvider : IUiImageSizeProvider
+    {
+        public bool TryGetSize(string? source, out float width, out float height)
+        {
+            width = 0f;
+            height = 0f;
+            return false;
+        }
+    }
+}
