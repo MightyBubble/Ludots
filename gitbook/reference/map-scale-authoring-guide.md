@@ -9,6 +9,7 @@
 | 层 | 你在问什么 | 主要配置 | 不要混用 |
 |---|---|---|---|
 | 世界范围 | 地图到底有多大，坐标能走到哪里 | map `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` / `GridCellSizeCm` | 不要拿 `FlowWindow` 或 `TerrainChunk` 当世界大小 |
+| 拓扑几何 | Grid/Hex/NodeGraph 的几何语义是什么 | `SpatialType`、Grid 的 `GridCellSizeCm`、HexGrid 的 `HexEdgeLengthCm` | 不要把 Hex edge 当 Grid cell，也不要把 NodeGraph 节点间距塞进 CellCm |
 | 空间组织 | 查询、地形、bake、streaming 的块多粗 | `ChunkSizeCells`、`TerrainChunkCells` owner、`Navigation/navmesh.json`、streaming/window 配置 | `PartitionChunk` 不是 navmesh tile，`NavTile footprint` 不是新尺度 owner |
 | 运行精度 | 单位移动、避障、路径、表现更新多细 | `MassNavigationConfig.json` solver/cadence/agent profiles、`Navigation/agent_profiles.json`、`Navigation/pathing.json` | `FlowCell` 默认可等于 `CellCm`，但不是 board cell 的别名 |
 
@@ -21,6 +22,8 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 
 `GridCellSizeCm = 100` 时，1 个 `MacroTile` 是 `256m x 256m`。`WidthInMacroTiles = 250` 的地图宽度约为 `64km`。
 
+编辑器里的正式 board 创建入口不要求作者填写 chunk 数量，也不要求作者直接填写 `WidthInMacroTiles`。作者输入“目标米数 + `GridCellSizeCm` / `HexEdgeLengthCm` 等尺度参数”，编辑器按 `MacroTileCells` 向上对齐分配范围，再派生出 grid cells、`WidthInMacroTiles` / `HeightInMacroTiles` 与 Terrain/NavTile 数量。`assets/Maps/<map>.json` 仍保存 `WidthInMacroTiles` / `HeightInMacroTiles`，因为这是 runtime 与 IO 的配置真相；米数只是 authoring UI。
+
 ## 配置入口速查
 
 | 文件 | 字段 | 作用 |
@@ -28,6 +31,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | `assets/Maps/<map>.json` | `Boards[].SpatialType` | `Grid` / `HexGrid` / `NodeGraph`，决定地图 board 类型 |
 | `assets/Maps/<map>.json` | `Boards[].WidthInMacroTiles` / `HeightInMacroTiles` | 世界范围，单位是 256-cell MacroTile 数量 |
 | `assets/Maps/<map>.json` | `Boards[].GridCellSizeCm` | `CellCm` 输入，决定每个 sim cell 的厘米边长 |
+| `assets/Maps/<map>.json` | `Boards[].HexEdgeLengthCm` | HexGrid 专属 hex 边长；Grid / NodeGraph 不受它影响 |
 | `assets/Maps/<map>.json` | `Boards[].ChunkSizeCells` | `PartitionChunkCells`，只控制 spatial query/AOI 分区 |
 | `assets/game.json` | `startupMapId` | 启动地图 id |
 | `assets/game.json` | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
@@ -47,9 +51,10 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 
 1. 定玩家尺度：玩家同屏看到 50m、500m、5km，还是整个大陆？
 2. 定 `GridCellSizeCm`：1 cell 是 1m、2m、5m，还是更粗。越小越精细，cells 总数越大。
-3. 定世界范围：用 `WidthInMacroTiles * 256 * GridCellSizeCm` 算出世界厘米/米/公里。
-4. 定分区粒度：`ChunkSizeCells` 影响 spatial query/AOI，不改变世界大小。当前默认 64 cells，必须为 2 的幂。
-5. 定导航粒度：agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
+3. 定拓扑几何：Grid 用 `GridCellSizeCm` 做 cell 边长；HexGrid 另用 `HexEdgeLengthCm` 做 hex 边长；NodeGraph 的节点/边由图数据表达。
+4. 定世界范围：用 `WidthInMacroTiles * 256 * GridCellSizeCm` 算出世界厘米/米/公里。
+5. 定分区粒度：`ChunkSizeCells` 影响 spatial query/AOI，不改变世界大小。当前默认 64 cells，必须为 2 的幂。
+6. 定导航粒度：agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
 6. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
 7. 定执行窗口：MassFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
 8. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。

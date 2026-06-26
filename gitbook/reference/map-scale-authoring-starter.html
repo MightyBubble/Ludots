@@ -466,16 +466,24 @@
             <input id="spatialType" value="Grid">
           </div>
           <div class="field">
-            <label for="widthMacro">WidthInMacroTiles</label>
-            <input id="widthMacro" type="number" min="1" step="1" value="250">
+            <label for="desiredWidthMeters">目标宽度 m</label>
+            <input id="desiredWidthMeters" type="number" min="1" step="1" value="64000">
           </div>
           <div class="field">
-            <label for="heightMacro">HeightInMacroTiles</label>
-            <input id="heightMacro" type="number" min="1" step="1" value="250">
+            <label for="desiredHeightMeters">目标高度 m</label>
+            <input id="desiredHeightMeters" type="number" min="1" step="1" value="64000">
           </div>
           <div class="field">
             <label for="cellCm">GridCellSizeCm / CellCm</label>
             <input id="cellCm" type="number" min="1" step="1" value="100">
+          </div>
+          <div class="field">
+            <label for="widthMacro">WidthInMacroTiles（派生）</label>
+            <input id="widthMacro" type="number" value="250" readonly>
+          </div>
+          <div class="field">
+            <label for="heightMacro">HeightInMacroTiles（派生）</label>
+            <input id="heightMacro" type="number" value="250" readonly>
           </div>
           <div class="field">
             <label for="macroTileCells">MacroTileCells</label>
@@ -708,8 +716,8 @@
       rts: {
         summary: "RTS / 战场：世界可以很大，但每次只在局部战区做高频 MassFlow 和避障。",
         spatialType: "Grid",
-        widthMacro: 250,
-        heightMacro: 250,
+        desiredWidthMeters: 64000,
+        desiredHeightMeters: 64000,
         cellCm: 100,
         partitionChunkCells: 64,
         flowWindowCm: 10000,
@@ -736,7 +744,7 @@
         tileBudgetPerTick: 1,
         routing: "大军 MassFlow；小队可按 profile PreferMesh/PreferGraph",
         advice: {
-          world: ["250 x 250 MacroTiles 约 64km x 64km。", "不要让 FlowWindow 覆盖全图。", "用 hot zone / view residency 管局部活动。"],
+          world: ["目标 64km x 64km；配置会派生 250 x 250 MacroTiles。", "不要让 FlowWindow 覆盖全图。", "用 hot zone / view residency 管局部活动。"],
           nav: ["FlowCell 100cm 适合 1m 级单位。", "hard resolve 50cm 可处理更细拥挤。", "门洞/道路小队用 pathing profile 精确路由。"],
           perf: ["表现容量按常驻 agents 和 marker 估算。", "camera culling LOD 距离要小于全图尺度。", "minimap 可用 RTS full-map preset。"]
         }
@@ -744,8 +752,8 @@
       grand: {
         summary: "大战略 / 4X：世界范围重要，局部避障通常不需要每米级全图模拟。",
         spatialType: "NodeGraph",
-        widthMacro: 64,
-        heightMacro: 64,
+        desiredWidthMeters: 16384,
+        desiredHeightMeters: 16384,
         cellCm: 100,
         partitionChunkCells: 64,
         flowWindowCm: 6400,
@@ -772,7 +780,7 @@
         tileBudgetPerTick: 1,
         routing: "商队/军队 PreferGraph 或 AutoCheapest；局部战斗再进 MassFlow",
         advice: {
-          world: ["64 x 64 MacroTiles 约 16.4km x 16.4km。", "玩法格/省份不必等于 engine Cell。", "NodeGraph 适合道路、航线和区域连接。"],
+          world: ["目标 16.4km x 16.4km；配置会派生 64 x 64 MacroTiles。", "玩法格/省份不必等于 engine Cell。", "NodeGraph 适合道路、航线和区域连接。"],
           nav: ["大地图优先 route domain，而不是全图 FlowCell。", "agent radius 表达通行能力，不表达军团规模。", "区域战斗可切局部 MassFlow 窗口。"],
           perf: ["小地图 full-map 更重要。", "城市/军团 marker 数决定 minimap 容量。", "表现对象数量通常低于 RTS。"]
         }
@@ -780,8 +788,8 @@
       open: {
         summary: "开放大世界：先控 loaded window，再控局部导航；结构变化用 runtime-incremental。",
         spatialType: "Grid",
-        widthMacro: 250,
-        heightMacro: 250,
+        desiredWidthMeters: 64000,
+        desiredHeightMeters: 64000,
         cellCm: 100,
         partitionChunkCells: 64,
         flowWindowCm: 12800,
@@ -817,9 +825,11 @@
 
     const fieldIds = [
       "spatialType",
+      "desiredWidthMeters",
+      "desiredHeightMeters",
+      "cellCm",
       "widthMacro",
       "heightMacro",
-      "cellCm",
       "partitionChunkCells",
       "flowWindowCm",
       "flowCellCm",
@@ -880,6 +890,22 @@
 
     function isPowerOfTwo(value) {
       return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
+    }
+
+    function deriveMacroTilesFromMeters(widthMeters, heightMeters, cellCm) {
+      const safeCellCm = Math.max(1, Math.floor(cellCm || 1));
+      const widthCells = Math.max(1, Math.ceil((Math.max(1, widthMeters) * 100) / safeCellCm));
+      const heightCells = Math.max(1, Math.ceil((Math.max(1, heightMeters) * 100) / safeCellCm));
+      const widthMacro = Math.max(1, Math.ceil(widthCells / macroTileCells));
+      const heightMacro = Math.max(1, Math.ceil(heightCells / macroTileCells));
+      return {
+        widthMacro,
+        heightMacro,
+        requestedWidthCells: widthCells,
+        requestedHeightCells: heightCells,
+        allocatedWidthCells: widthMacro * macroTileCells,
+        allocatedHeightCells: heightMacro * macroTileCells
+      };
     }
 
     function setPreset(id) {
@@ -1060,9 +1086,16 @@
 
     function update() {
       const preset = presets[activePreset];
-      const widthMacro = number("widthMacro");
-      const heightMacro = number("heightMacro");
       const cellCm = number("cellCm");
+      const allocation = deriveMacroTilesFromMeters(
+        number("desiredWidthMeters"),
+        number("desiredHeightMeters"),
+        cellCm
+      );
+      document.getElementById("widthMacro").value = allocation.widthMacro;
+      document.getElementById("heightMacro").value = allocation.heightMacro;
+      const widthMacro = allocation.widthMacro;
+      const heightMacro = allocation.heightMacro;
       const partitionChunk = number("partitionChunkCells");
       const flowWindow = number("flowWindowCm");
       const flowCell = number("flowCellCm");
@@ -1134,8 +1167,8 @@
         "worldStatus",
         worldOk ? "ok" : "bad",
         worldOk
-          ? "OK：世界范围由 MacroTile 数量和 CellCm 派生，PartitionChunk 只影响查询分区。"
-          : "Fail-fast：MacroTile 数量、CellCm 必须 > 0；PartitionChunk 必须为 2 的幂并整除世界 cells。"
+          ? "OK：作者输入目标米数；配置字段由 MacroTileCells 和 CellCm 派生，PartitionChunk 只影响查询分区。"
+          : "Fail-fast：目标米数、CellCm 必须 > 0；PartitionChunk 必须为 2 的幂并整除世界 cells。"
       );
 
       const flowOk =

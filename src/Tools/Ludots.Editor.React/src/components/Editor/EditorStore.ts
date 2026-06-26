@@ -30,6 +30,7 @@ export interface BoardInfo {
     widthChunks: number;
     heightChunks: number;
     cellSizeCm: number;
+    hexEdgeLengthCm: number;
     chunkSizeCells: number;
     navigationEnabled: boolean;
     hasDataFile: boolean;
@@ -48,6 +49,12 @@ export interface BoardCreateRequest {
     cellSizeCm: number;
     hexEdgeLengthCm?: number;
     navigationEnabled: boolean;
+}
+
+export interface BoardUpdateRequest {
+    cellSizeCm?: number;
+    hexEdgeLengthCm?: number;
+    navigationEnabled?: boolean;
 }
 
 export interface MapInfo extends BoardInfo {
@@ -165,6 +172,7 @@ export interface EditorState {
     selectMap: (mapId: string) => void;
     selectBoard: (boardName: string) => void;
     createBoard: (request: BoardCreateRequest) => Promise<void>;
+    updateSelectedBoard: (request: BoardUpdateRequest) => Promise<void>;
     deleteSelectedBoard: () => Promise<void>;
     loadSelectedMap: () => Promise<void>;
     saveSelectedMap: () => Promise<void>;
@@ -562,7 +570,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 widthInMacroTiles: request.widthInMacroTiles,
                 heightInMacroTiles: request.heightInMacroTiles,
                 cellSizeCm: request.cellSizeCm,
-                hexEdgeLengthCm: request.hexEdgeLengthCm ?? 400,
+                hexEdgeLengthCm: request.hexEdgeLengthCm ?? DEFAULT_BOARD_METRICS.hexEdgeLengthCm,
                 chunkSizeCells: DEFAULT_BOARD_METRICS.chunkSizeCells,
                 navigationEnabled: request.navigationEnabled,
             }),
@@ -582,6 +590,74 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             navSimulation: null,
             navSimulationVersion: Date.now(),
         }));
+    },
+
+    updateSelectedBoard: async (request) => {
+        const current = get();
+        const { bridgeBaseUrl, selectedModId, selectedMapId, selectedBoardName, loadedModId, loadedMapId, loadedBoardName, terrain } = current;
+        if (!selectedModId || !selectedMapId || !selectedBoardName) return;
+
+        const res = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/boards/${encodeURIComponent(selectedBoardName)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                cellSizeCm: request.cellSizeCm,
+                hexEdgeLengthCm: request.hexEdgeLengthCm,
+                navigationEnabled: request.navigationEnabled,
+            }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok || json?.ok === false) throw new Error(json?.error ?? `Bridge error ${res.status}`);
+
+        const mapInfo = normalizeMapInfo(json.mapInfo);
+        const updatedBoardInfo = findBoardInfo(mapInfo, selectedBoardName) ?? pickDefaultBoardInfo(mapInfo);
+        const loadedMapSame = loadedModId === selectedModId && loadedMapId === selectedMapId;
+        const loadedBoardSame = loadedMapSame && loadedBoardName === selectedBoardName;
+        const loadedBoardInfo = loadedMapSame && loadedBoardName ? findBoardInfo(mapInfo, loadedBoardName) ?? updatedBoardInfo : current.loadedBoardInfo;
+        const nextMapConfig = loadedMapSame ? (json.map ?? current.mapConfig) : current.mapConfig;
+        const nextBoardMetrics = loadedBoardSame
+            ? resolveBoardMetricsFromMapConfig(nextMapConfig, mapInfo, loadedBoardName, loadedBoardInfo ?? updatedBoardInfo)
+            : current.boardMetrics;
+        const scaleChanged = loadedBoardSame && (
+            nextBoardMetrics.topology !== current.boardMetrics.topology ||
+            nextBoardMetrics.cellSizeCm !== current.boardMetrics.cellSizeCm ||
+            nextBoardMetrics.hexEdgeLengthCm !== current.boardMetrics.hexEdgeLengthCm ||
+            nextBoardMetrics.chunkSizeCells !== current.boardMetrics.chunkSizeCells
+        );
+
+        set((state) => {
+            const next: Partial<EditorState> = {
+                mapInfos: replaceMapInfo(state.mapInfos, mapInfo),
+                selectedMapInfo: mapInfo,
+                selectedBoardName: updatedBoardInfo?.name ?? state.selectedBoardName,
+                selectedBoardInfo: updatedBoardInfo,
+                mapConfig: nextMapConfig,
+                navSimulation: null,
+                navSimulationVersion: Date.now(),
+            };
+
+            if (loadedMapSame) {
+                next.loadedMapInfo = mapInfo;
+                next.loadedBoardInfo = loadedBoardInfo;
+            }
+
+            if (scaleChanged) {
+                const dirtyChunks = new Set<string>();
+                for (let y = 0; y < terrain.heightChunks; y++) {
+                    for (let x = 0; x < terrain.widthChunks; x++) {
+                        dirtyChunks.add(`${x},${y}`);
+                    }
+                }
+
+                next.boardMetrics = nextBoardMetrics;
+                next.navDirtyChunks = dirtyChunks;
+                next.bakedNavTiles = new Map();
+                next.bakedNavTilePayloads = [];
+                next.bakedNavTilesVersion = Date.now();
+            }
+
+            return next;
+        });
     },
 
     deleteSelectedBoard: async () => {
@@ -990,6 +1066,7 @@ function normalizeBoardInfo(raw: any): BoardInfo {
         widthChunks: numberOr(raw?.widthChunks ?? raw?.WidthChunks, 0),
         heightChunks: numberOr(raw?.heightChunks ?? raw?.HeightChunks, 0),
         cellSizeCm: numberOr(raw?.cellSizeCm ?? raw?.CellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
+        hexEdgeLengthCm: numberOr(raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm, DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: numberOr(raw?.chunkSizeCells ?? raw?.ChunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
         navigationEnabled: Boolean(raw?.navigationEnabled ?? raw?.NavigationEnabled ?? false),
         hasDataFile: Boolean(raw?.hasDataFile ?? raw?.HasDataFile ?? false),
@@ -1009,6 +1086,7 @@ function normalizeMapInfo(raw: any): MapInfo {
         WidthChunks: raw?.widthChunks ?? raw?.WidthChunks,
         HeightChunks: raw?.heightChunks ?? raw?.HeightChunks,
         CellSizeCm: raw?.cellSizeCm ?? raw?.CellSizeCm,
+        HexEdgeLengthCm: raw?.hexEdgeLengthCm ?? raw?.HexEdgeLengthCm,
         ChunkSizeCells: raw?.chunkSizeCells ?? raw?.ChunkSizeCells,
         NavigationEnabled: raw?.navigationEnabled ?? raw?.NavigationEnabled,
         HasDataFile: raw?.hasDataFile ?? raw?.HasDataFile,
@@ -1054,6 +1132,12 @@ function resolveBoardMetricsFromMapConfig(
             boardInfo?.cellSizeCm ??
             mapInfo?.cellSizeCm,
             DEFAULT_BOARD_METRICS.cellSizeCm),
+        hexEdgeLengthCm: numberOr(
+            selectedBoard?.HexEdgeLengthCm ??
+            selectedBoard?.hexEdgeLengthCm ??
+            boardInfo?.hexEdgeLengthCm ??
+            mapInfo?.hexEdgeLengthCm,
+            DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: numberOr(
             selectedBoard?.ChunkSizeCells ??
             selectedBoard?.chunkSizeCells ??

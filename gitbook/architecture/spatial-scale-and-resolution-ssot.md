@@ -9,6 +9,7 @@
 | 名称 | 实际含义 | 值 | 位置 |
 |---|---:|---:|---|
 | `GridCellSizeCm` | sim 原子 cell 边长 | 100 cm | `src/Core/Map/Board/BoardConfig.cs` |
+| `HexEdgeLengthCm` | hex 边长 | 400 cm | `src/Core/Map/Board/BoardConfig.cs` / `src/Core/Map/Hex/HexMetrics.cs` |
 | `MapTile.Size` / `WorldMap.TileSize` | 256-cell IO/寻址宏块 | 256 cells | `src/Core/Map/MapTile.cs` / `src/Core/Map/WorldMap.cs` |
 | `BoardConfig.WidthInTiles` / `HeightInTiles` | 名为 tiles，实为 256-cell 宏块数量 | 默认 64 | `src/Core/Map/Board/BoardConfig.cs` |
 | `BoardConfig.ChunkSizeCells` | 空间分区/AOI 块边长 | 默认 64 cells | `src/Core/Map/Board/BoardConfig.cs` |
@@ -50,6 +51,7 @@ Out of scope：
 | 名称 | cells | cm | owner | 用途 | 是否可配 | 约束 |
 |---|---:|---:|---|---|---|---|
 | `Cell` / `CellCm` | 1 | `CellCm`，默认 100 | `SpatialScaleDefaults.CellCm`，board 配置字段仍为 `GridCellSizeCm` | sim 原子单位、board 世界尺寸、bake cm 换算、默认 flow/hash cell | 是，当前经 `BoardConfig.GridCellSizeCm` 与 MassFlow solver 配置显式给出 | 必须 > 0；后续所有派生值必须是整数倍或显式说明 |
+| `HexEdgeLengthCm` | hex 边长，非 cell 派生 | 默认 400 | `SpatialScaleDefaults.DefaultHexEdgeLengthCm`，board 配置字段为 `HexEdgeLengthCm` | HexGrid board 的 hex 轴长、world position / AOI / render layout | 是，仅 HexGrid board 生效 | 必须 > 0；不影响 Grid / NodeGraph board |
 | `PartitionChunk` | `PartitionChunkCells`，默认 64 | `PartitionChunkCells * CellCm` | `BoardConfig.ChunkSizeCells` / `SpatialScaleDefaults.PartitionChunkCells` | 空间分区、AOI、query backend | 是 | 必须 > 0 且为 2 的幂 |
 | `TerrainChunk` | `TerrainChunkCells`，固定 64 | `TerrainChunkCells * CellCm` 的逻辑足迹；hex bake 还会乘 hex metric | `VertexChunk.ChunkSize` / `SpatialScaleDefaults.TerrainChunkCells` | 逻辑地形块；当前等于 NavTile 足迹 | 否 | 当前固定 64；grid/hex 共用抽象在 #286 落地 |
 | `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`) | navmesh 产物 tile 足迹 | 否 | 只作为 `TerrainChunk` 的用途，不再单独命名尺度 |
@@ -66,6 +68,7 @@ Out of scope：
 ## 命名 Taxonomy
 
 - `Cell`：sim 原子格。唯一基准字段名为 `CellCm`；历史 `GridCellSizeCm` 仍作为 board config 输入。
+- `HexEdgeLengthCm`：HexGrid board 的 hex 边长。它只影响 `HexMetrics`、`HexGridBoard`、hex 位置/查询/渲染，不改 Grid / NodeGraph board。
 - `PartitionChunk`：空间分区块。只描述 query/AOI 分区，不描述地形或 navmesh。
 - `TerrainChunk`：逻辑地形块。当前 hex owner 是 `VertexChunk`；#286 后 grid/hex 共用地形抽象仍沿用此名。
 - `MacroTile`：256-cell IO/寻址宏块。owner 是 `MapTile.Size`，常量模块只引用它。
@@ -80,6 +83,7 @@ Out of scope：
 | 现状名 | 目标名 | NAV-0 动作 | 后续动作 |
 |---|---|---|---|
 | `BoardConfig.GridCellSizeCm` | `CellCm` | 默认值引用 `SpatialScaleDefaults.CellCm` | 继续作为 `WorldExtentSpec` 输入；是否改字段名另立 |
+| `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | 默认值引用 `SpatialScaleDefaults.DefaultHexEdgeLengthCm` | 仅 HexGrid board 生效；由 `HexMetrics` / `HexGridBoard` 消费 |
 | `MapTile.Size` | `MacroTileCells` | `SpatialScaleDefaults.MacroTileCells` 引用它 | 保持 owner，不复制新 owner |
 | `WorldMap.TileSize` | `MacroTileCells` | 引用 `SpatialScaleDefaults.MacroTileCells` | 后续可移除重复旧名 |
 | `BoardConfig.WidthInTiles` | `WidthInMacroTiles` | 仅文档映射，不改 JSON/API | #283 破坏式迁移；旧键 fail-fast，无别名兼容 |
@@ -122,6 +126,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | 配置项 | 目标概念 | 单位 | 范围 / 约束 | 归属 |
 |---|---|---:|---|---|
 | `BoardConfig.GridCellSizeCm` | `CellCm` | cm | > 0 | board authoring |
+| `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | > 0；仅 HexGrid 生效 | HexGrid board authoring |
 | `BoardConfig.WidthInMacroTiles` | `WidthInMacroTiles` | macro tiles | 旧键 fail-fast | board/world extent authoring |
 | `BoardConfig.HeightInMacroTiles` | `HeightInMacroTiles` | macro tiles | 旧键 fail-fast | board/world extent authoring |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | > 0 且 2 的幂 | spatial partition |

@@ -14,6 +14,8 @@ This section collects current runbooks and reference pages.
 - [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md)
 - [Navmesh Authoring Bake Toolchain](navmesh-authoring-bake-toolchain.md)
 - [Runtime Incremental Navmesh Rebuild](runtime-incremental-navmesh-rebuild.md)
+- [Nav Domain Unification Epic Report](nav-domain-unification-epic-report.md)
+- [Nav Domain Configuration Migration Guide](nav-domain-configuration-migration-guide.md)
 - [MassNavigation Execution Avoidance and Targets](mass-navigation-execution-avoidance-and-targets.md)
 - [Routing To Mass Execution](routing-to-mass-execution.md)
 - [Move Planning MassFlow Road Execution](move-planning-massflow-road-execution.md)

@@ -363,6 +363,34 @@ app.MapPost("/api/mods/{modId}/maps/{mapId}/boards", async (string modId, string
     }
 });
 
+app.MapPut("/api/mods/{modId}/maps/{mapId}/boards/{boardName}", async (string modId, string mapId, string boardName, HttpRequest req) =>
+{
+    string repoRoot = FindAssetsRoot();
+    try
+    {
+        var ctx = EditorRepo.CreateContext(repoRoot, modId);
+        var request = await JsonSerializer.DeserializeAsync<BoardUpdateRequest>(
+            req.Body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        if (request == null) return Results.BadRequest(new { ok = false, error = "Empty board update body." });
+
+        var result = EditorRepo.UpdateBoard(ctx, mapId, boardName, request);
+        return Results.Ok(new
+        {
+            ok = true,
+            map = result.Map,
+            mapInfo = result.MapInfo,
+            board = result.BoardInfo,
+            mapPath = result.MapPath,
+            dataPath = result.DataPath
+        });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { ok = false, error = ex.Message });
+    }
+});
+
 app.MapDelete("/api/mods/{modId}/maps/{mapId}/boards/{boardName}", (string modId, string mapId, string boardName) =>
 {
     string repoRoot = FindAssetsRoot();
@@ -2047,6 +2075,7 @@ static class EditorRepo
         int WidthChunks,
         int HeightChunks,
         int CellSizeCm,
+        int HexEdgeLengthCm,
         int ChunkSizeCells,
         bool NavigationEnabled,
         bool HasDataFile,
@@ -2063,6 +2092,7 @@ static class EditorRepo
         int WidthChunks,
         int HeightChunks,
         int CellSizeCm,
+        int HexEdgeLengthCm,
         int ChunkSizeCells,
         bool NavigationEnabled,
         bool HasDataFile,
@@ -2164,6 +2194,7 @@ static class EditorRepo
                 WidthChunks: 0,
                 HeightChunks: 0,
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
                 NavigationEnabled: false,
                 HasDataFile: false,
@@ -2187,6 +2218,7 @@ static class EditorRepo
                 WidthChunks: 0,
                 HeightChunks: 0,
                 CellSizeCm: Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                HexEdgeLengthCm: Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
                 ChunkSizeCells: Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells,
                 NavigationEnabled: false,
                 HasDataFile: false,
@@ -2211,6 +2243,7 @@ static class EditorRepo
             WidthChunks: primary.WidthChunks,
             HeightChunks: primary.HeightChunks,
             CellSizeCm: primary.CellSizeCm,
+            HexEdgeLengthCm: primary.HexEdgeLengthCm,
             ChunkSizeCells: primary.ChunkSizeCells,
             NavigationEnabled: primary.NavigationEnabled,
             HasDataFile: primary.HasDataFile,
@@ -2285,6 +2318,7 @@ static class EditorRepo
             WidthChunks: widthChunks,
             HeightChunks: heightChunks,
             CellSizeCm: board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+            HexEdgeLengthCm: board.HexEdgeLengthCm > 0 ? board.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells: chunkSizeCells,
             NavigationEnabled: board.NavigationEnabled,
             HasDataFile: hasDataFile,
@@ -2388,7 +2422,7 @@ static class EditorRepo
             WidthInMacroTiles = widthMacroTiles,
             HeightInMacroTiles = heightMacroTiles,
             GridCellSizeCm = cellSizeCm,
-            HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : 400,
+            HexEdgeLengthCm = request.HexEdgeLengthCm > 0 ? request.HexEdgeLengthCm : Ludots.Core.Spatial.SpatialScaleDefaults.DefaultHexEdgeLengthCm,
             ChunkSizeCells = chunkSizeCells,
             DataFile = dataFile,
             NavigationEnabled = request.NavigationEnabled,
@@ -2411,6 +2445,63 @@ static class EditorRepo
         var mapInfo = DescribeMap(ctx, mapId);
         var boardInfo = DescribeBoard(ctx, board);
         return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, dataPath);
+    }
+
+    public static BoardMutationResult UpdateBoard(ModContext ctx, string mapId, string boardName, BoardUpdateRequest request)
+    {
+        if (request == null) throw new ArgumentNullException(nameof(request));
+        string name = RequireBoardName(boardName);
+
+        var mapR = LoadMergedMapConfig(ctx, mapId);
+        if (!mapR.Found) throw new InvalidOperationException($"Map not found: {mapId}");
+        var map = mapR.Map;
+        map.Id = mapId;
+        if (map.Boards == null || map.Boards.Count == 0)
+            throw new InvalidOperationException("MapConfig.Boards is empty.");
+
+        Ludots.Core.Map.Board.BoardConfig? board = null;
+        for (int i = 0; i < map.Boards.Count; i++)
+        {
+            var candidate = map.Boards[i];
+            if (candidate == null) continue;
+            if (string.Equals(candidate.Name, name, StringComparison.Ordinal))
+            {
+                board = candidate;
+                break;
+            }
+        }
+
+        if (board == null)
+        {
+            string available = string.Join(", ", map.Boards.Where(b => b != null).Select(b => b.Name));
+            throw new InvalidOperationException($"Map board '{name}' was not found. Board names are case-sensitive. Available boards: {available}");
+        }
+
+        if (request.CellSizeCm.HasValue)
+        {
+            if (request.CellSizeCm.Value <= 0)
+                throw new InvalidOperationException("CellSizeCm must be positive.");
+            board.GridCellSizeCm = request.CellSizeCm.Value;
+        }
+
+        if (request.HexEdgeLengthCm.HasValue)
+        {
+            if (!string.Equals(board.SpatialType, "HexGrid", StringComparison.Ordinal))
+                throw new InvalidOperationException("HexEdgeLengthCm can only be updated on HexGrid boards.");
+            if (request.HexEdgeLengthCm.Value <= 0)
+                throw new InvalidOperationException("HexEdgeLengthCm must be positive.");
+            board.HexEdgeLengthCm = request.HexEdgeLengthCm.Value;
+        }
+
+        if (request.NavigationEnabled.HasValue)
+        {
+            board.NavigationEnabled = request.NavigationEnabled.Value;
+        }
+
+        string mapPath = WriteWritableMapConfig(ctx, mapId, map);
+        var mapInfo = DescribeMap(ctx, mapId);
+        var boardInfo = DescribeBoard(ctx, board);
+        return new BoardMutationResult(map, mapInfo, boardInfo, mapPath, null);
     }
 
     public static BoardMutationResult DeleteBoard(ModContext ctx, string mapId, string boardName)
@@ -3157,6 +3248,13 @@ sealed class BoardCreateRequest
     public int ChunkSizeCells { get; set; }
     public bool NavigationEnabled { get; set; } = true;
     public string? DataFile { get; set; }
+}
+
+sealed class BoardUpdateRequest
+{
+    public int? CellSizeCm { get; set; }
+    public int? HexEdgeLengthCm { get; set; }
+    public bool? NavigationEnabled { get; set; }
 }
 
 sealed class FlatGridNavBootstrapRequest

@@ -38,6 +38,7 @@ flowchart TD
     IndependentOwner["FlowCell / AvoidanceHashCell / PhysicsBroadphaseCell<br/>默认值可等于 CellCm，但 owner 独立"]
 
     CellCm --> MacroOwner
+    HexEdge["HexEdgeLengthCm<br/>单位：cm<br/>HexGrid 专属 hex 边长"]
     MacroOwner --> WorldExtent
     MacroCount --> WorldExtent
     CellCm --> WorldExtent
@@ -49,6 +50,7 @@ flowchart TD
     Partition --> Streaming
     Terrain --> Streaming
     CellCm --> Streaming
+    HexEdge -.-> Terrain
 
     CellCm --> FlowWindow
     FlowCell --> FlowWindow
@@ -66,6 +68,7 @@ flowchart TD
 |---|---|---:|---:|---|---|
 | `SpatialScaleDefaults.CellCm` | `CellCm` | cm | 100 | 全局原子尺度。board 世界尺寸、nav bake cm 换算、默认 flow/hash cell 都从它解释。 | 唯一基准单位，必须 > 0。 |
 | `BoardConfig.GridCellSizeCm` | `CellCm` | cm | 100 | board authoring 输入，决定 grid board 每个 sim cell 的厘米边长，并进入 `WorldExtentSpec`。 | 仍保留历史字段名；语义按 `CellCm` 解释。 |
+| `BoardConfig.HexEdgeLengthCm` | `HexEdgeLengthCm` | cm | 400 | HexGrid board 的 hex 边长，影响 `HexMetrics`、HexGrid 坐标/查询/渲染布局。 | 仅 HexGrid 生效；Grid / NodeGraph 不受它影响，必须 > 0。 |
 | `MapTile.Size` | `MacroTileCells` | cells | 256 | 256-cell IO/寻址宏块。世界大小的 `WidthInMacroTiles` / `HeightInMacroTiles` 以它为倍率。 | `MapTile.Size` 是 owner；`SpatialScaleDefaults.MacroTileCells` 只引用它。 |
 | `BoardConfig.WidthInMacroTiles` | `WorldExtent` width | macro tiles | 64 | board/world 宽度 authoring 数量，不是 TerrainChunk 数量，也不是 NavTile 数量。 | #283 正名；旧 `WidthInTiles` fail-fast。 |
 | `BoardConfig.HeightInMacroTiles` | `WorldExtent` height | macro tiles | 64 | board/world 高度 authoring 数量，不是 TerrainChunk 数量，也不是 NavTile 数量。 | #283 正名；旧 `HeightInTiles` fail-fast。 |
@@ -85,7 +88,9 @@ flowchart TD
 
 - `WidthInTiles` / `HeightInTiles` 是历史字段名；实际含义是 `WidthInMacroTiles` / `HeightInMacroTiles`。
 - #283 进行破坏式迁移，旧键出现即 fail-fast，不提供别名兼容。
+- Authoring UI 可以让作者输入目标米数，但写入 MapConfig 时必须显式反推为 `WidthInMacroTiles` / `HeightInMacroTiles`；不要让作者手填 TerrainChunk/NavTile 个数。
 - `WorldExtentSpec` 是 authoring/计算对象，产出既有 `WorldSizeSpec`；不要替换 `WorldSizeSpec`。
+- `HexEdgeLengthCm` 只用于 HexGrid board 的 hex 几何；不要拿它解释 Grid board cell、FlowCell 或 NavTile footprint。
 - `NavTile footprint` 是 `TerrainChunk` 的用途，不是独立尺度 owner。
 - `PartitionChunk` 只用于空间分区/AOI/query；不要拿它解释 terrain/navmesh tile。
 - `MacroTile` 只用于 IO/寻址宏块和世界范围 authoring；不要拿它解释 streaming chunk 或 terrain chunk。

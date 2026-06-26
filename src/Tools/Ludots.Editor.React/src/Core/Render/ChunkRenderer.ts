@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TerrainStore } from '../Map/TerrainStore';
-import { HEX_WIDTH, getHexPosition } from '../Map/HexMetrics';
+import { getHexLayout } from '../Map/HexMetrics';
 import {
     DEFAULT_BOARD_METRICS,
     type BoardMetrics,
@@ -1032,6 +1032,8 @@ export class ChunkRenderer {
     ): number | null {
         if (edgeIndex !== 0) return null;
 
+        const { hexWidth } = getHexLayout(this.metrics.hexEdgeLengthCm);
+
         const hBase = this.store.getHeight(baseC, baseR);
         const hN = this.store.getHeight(nC, nR);
         if (hBase === hN) return null;
@@ -1053,7 +1055,7 @@ export class ChunkRenderer {
         const strictDown = strictCheck(baseR + 1);
 
         if (strictUp && strictDown) {
-            return HEX_WIDTH * (baseC + 0.75) + offsetX;
+            return hexWidth * (baseC + 0.75) + offsetX;
         }
 
         // --- Stagger check: cliff at shifted column on adjacent rows ---
@@ -1091,11 +1093,11 @@ export class ChunkRenderer {
             if (staggerUp && staggerDown) {
                 // Both sides are stagger → full stagger adjustment
                 const staggerAdj = (baseR & 1) ? 0.5 : -0.5;
-                return HEX_WIDTH * (baseC + 0.75 + staggerAdj) + offsetX;
+                return hexWidth * (baseC + 0.75 + staggerAdj) + offsetX;
             }
             // Mixed (one strict, one stagger) → use standard formula as safe fallback.
             // This avoids spikes at cliff corners where stagger meets straight sections.
-            return HEX_WIDTH * (baseC + 0.75) + offsetX;
+            return hexWidth * (baseC + 0.75) + offsetX;
         }
 
         return null;

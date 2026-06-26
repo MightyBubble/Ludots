@@ -1,5 +1,6 @@
 import { CHUNK_SIZE } from './TerrainStore';
-import { HEX_WIDTH, ROW_SPACING, getHexPosition, hexToWorldCm, worldCmToHex } from './HexMetrics';
+import { CellCm, DefaultHexEdgeLengthCm, TerrainChunkCells } from '../SpatialScaleDefaults';
+import { getHexLayout, getHexPosition, hexToWorldCm, worldCmToHex } from './HexMetrics';
 
 export type BoardTopology = 'HexGrid' | 'Grid';
 export type SpatialTopology = BoardTopology | 'NodeGraph';
@@ -7,12 +8,14 @@ export type SpatialTopology = BoardTopology | 'NodeGraph';
 export interface BoardMetrics {
     topology: BoardTopology;
     cellSizeCm: number;
+    hexEdgeLengthCm: number;
     chunkSizeCells: number;
 }
 
 export const DEFAULT_BOARD_METRICS: BoardMetrics = {
     topology: 'HexGrid',
-    cellSizeCm: 100,
+    cellSizeCm: CellCm,
+    hexEdgeLengthCm: DefaultHexEdgeLengthCm,
     chunkSizeCells: CHUNK_SIZE,
 };
 
@@ -36,6 +39,7 @@ export function normalizeBoardMetrics(input?: Partial<BoardMetrics> | null): Boa
     return {
         topology: normalizeTopology(input?.topology ?? DEFAULT_BOARD_METRICS.topology),
         cellSizeCm: positiveInt(input?.cellSizeCm, DEFAULT_BOARD_METRICS.cellSizeCm),
+        hexEdgeLengthCm: positiveInt(input?.hexEdgeLengthCm, DEFAULT_BOARD_METRICS.hexEdgeLengthCm),
         chunkSizeCells: positiveInt(input?.chunkSizeCells, DEFAULT_BOARD_METRICS.chunkSizeCells),
     };
 }
@@ -58,7 +62,7 @@ export function cellToWorldPosition(
         };
     }
 
-    return getHexPosition(col, row, height, hScale, offsetX, offsetZ);
+    return getHexPosition(col, row, height, hScale, offsetX, offsetZ, metrics.hexEdgeLengthCm);
 }
 
 export function cellToWorldCm(col: number, row: number, metrics: BoardMetrics): { xCm: number; yCm: number } {
@@ -70,7 +74,7 @@ export function cellToWorldCm(col: number, row: number, metrics: BoardMetrics): 
         };
     }
 
-    return hexToWorldCm(col, row);
+    return hexToWorldCm(col, row, metrics.hexEdgeLengthCm);
 }
 
 export function worldCmToCell(xCm: number, yCm: number, metrics: BoardMetrics): { col: number; row: number } {
@@ -81,7 +85,7 @@ export function worldCmToCell(xCm: number, yCm: number, metrics: BoardMetrics): 
         };
     }
 
-    return worldCmToHex(xCm, yCm);
+    return worldCmToHex(xCm, yCm, metrics.hexEdgeLengthCm);
 }
 
 export function worldPointToCell(x: number, z: number, metrics: BoardMetrics): { col: number; row: number } {
@@ -93,8 +97,9 @@ export function worldPointToCell(x: number, z: number, metrics: BoardMetrics): {
         };
     }
 
-    const row = Math.round(z / ROW_SPACING);
-    const col = Math.round(x / HEX_WIDTH - 0.5 * (row & 1));
+    const { hexWidth, rowSpacing } = getHexLayout(metrics.hexEdgeLengthCm);
+    const row = Math.round(z / rowSpacing);
+    const col = Math.round(x / hexWidth - 0.5 * (row & 1));
     return { col, row };
 }
 
@@ -127,9 +132,10 @@ export function getMapWorldSizeM(widthChunks: number, heightChunks: number, metr
         };
     }
 
+    const { hexWidth, rowSpacing } = getHexLayout(metrics.hexEdgeLengthCm);
     return {
-        width: widthCells * HEX_WIDTH,
-        height: heightCells * ROW_SPACING,
+        width: widthCells * hexWidth,
+        height: heightCells * rowSpacing,
     };
 }
 

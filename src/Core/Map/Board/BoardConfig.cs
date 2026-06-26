@@ -24,7 +24,7 @@ namespace Ludots.Core.Map.Board
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
 
         /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
-        public int HexEdgeLengthCm { get; set; } = 400;
+        public int HexEdgeLengthCm { get; set; } = SpatialScaleDefaults.DefaultHexEdgeLengthCm;
 
         /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;

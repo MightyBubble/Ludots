@@ -886,6 +886,7 @@
             <path class="edge" data-from="macroCount" data-to="worldExtent" d="M 406 218 C 482 194, 536 163, 594 138"></path>
             <path class="edge" data-from="cellCm" data-to="worldExtent" d="M 130 118 C 304 176, 430 182, 590 145"></path>
             <path class="edge" data-from="worldExtent" data-to="worldSize" d="M 747 125 C 806 124, 838 124, 894 124"></path>
+            <path class="edge soft" data-from="hexEdgeLengthCm" data-to="hexGeometry" d="M 128 228 C 250 228, 290 260, 390 294"></path>
             <path class="edge" data-from="cellCm" data-to="partitionChunk" d="M 110 133 C 182 230, 218 304, 308 349"></path>
             <path class="edge" data-from="cellCm" data-to="terrainChunk" d="M 120 130 C 228 266, 382 296, 500 354"></path>
             <path class="edge" data-from="terrainChunk" data-to="navFootprint" d="M 612 354 C 686 348, 754 346, 826 354"></path>
@@ -929,6 +930,7 @@
           <p>
             这里用当前 taxonomy 做演算：左边是 board/world/chunk 链路，右边是 MassFlow 滑窗链路。
             数值演算只解释单位关系，真实配置仍由对应 owner 和 loader fail-fast 负责。
+            生产编辑器可让作者输入目标米数，并反推这里展示的 `WidthInMacroTiles` / `HeightInMacroTiles`；Terrain/NavTile 数量始终是派生结果。
           </p>
         </div>
         <div class="preset-row" aria-label="演算 preset">
@@ -945,6 +947,10 @@
             <div class="field">
               <label for="cellCm">CellCm</label>
               <input id="cellCm" type="number" min="1" step="1" value="100">
+            </div>
+            <div class="field">
+              <label for="hexEdgeLengthCm">HexEdgeLengthCm</label>
+              <input id="hexEdgeLengthCm" type="number" min="1" step="1" value="400">
             </div>
             <div class="field">
               <label for="macroTileCells">MacroTileCells</label>
@@ -972,6 +978,7 @@
             <div class="metric"><span>WorldExtent meters</span><strong id="worldMeters">-</strong></div>
             <div class="metric"><span>Partition chunks</span><strong id="partitionChunks">-</strong></div>
             <div class="metric"><span>NavTile footprint</span><strong id="navFootprint">-</strong></div>
+            <div class="metric"><span>HexGrid geometry</span><strong id="hexGeometry">-</strong></div>
           </div>
           <div class="status" id="worldStatus">-</div>
         </section>
@@ -1035,6 +1042,7 @@
       <p class="footnote">
         Source of truth: `gitbook/architecture/spatial-scale-and-resolution-ssot.md` and `src/Core/Spatial/SpatialScaleDefaults.cs`.
         `NavTile footprint` 是 `TerrainChunk` 的用途，`FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。
+        `HexEdgeLengthCm` 只属于 HexGrid 几何，不是 `CellCm` 的别名，也不改变 Grid / NodeGraph board。
       </p>
     </section>
 
@@ -1049,6 +1057,7 @@
         </div>
         <div class="layer-toggles" aria-label="板子图层开关">
           <label><input type="checkbox" data-layer-toggle="cellSample" checked>Cell 抽样</label>
+          <label><input type="checkbox" data-layer-toggle="hexGeometry" checked>Hex edge</label>
           <label><input type="checkbox" data-layer-toggle="partitionChunk" checked>PartitionChunk</label>
           <label><input type="checkbox" data-layer-toggle="terrainChunk" checked>Terrain/NavTile</label>
           <label><input type="checkbox" data-layer-toggle="macroTile" checked>MacroTile</label>
@@ -1099,6 +1108,13 @@
             <g id="boardLayer-cellSample" class="board-layer" data-board-layer="cellSample">
               <rect x="40" y="80" width="480" height="480" fill="url(#cellSamplePattern)" opacity="0.62"/>
               <text x="52" y="544" class="board-note">Cell 抽样线：每 16 cells 画一条，避免把 65,536 个 cell 全画出来。</text>
+            </g>
+
+            <g id="boardLayer-hexGeometry" class="board-layer" data-board-layer="hexGeometry">
+              <polygon points="704,114 744,91 784,114 784,160 744,183 704,160" fill="rgba(40, 103, 216, 0.08)" stroke="#2867d8" stroke-width="2.5"/>
+              <line x1="704" y1="114" x2="744" y2="91" stroke="#2867d8" stroke-width="4"/>
+              <text x="636" y="84" class="board-label" fill="#2867d8">HexEdgeLengthCm</text>
+              <text x="636" y="204" class="board-note">HexGrid 专属边长；Grid cell 仍由 CellCm 定义。</text>
             </g>
 
             <g id="boardLayer-partitionChunk" class="board-layer" data-board-layer="partitionChunk">
@@ -1173,6 +1189,42 @@
         summary: "sim 原子 cell 的厘米边长。它是 board 世界尺寸、nav bake 厘米换算、默认 flow/hash/broadphase 尺度的共同参照。",
         dependsOn: [],
         usedBy: ["macroTile", "worldExtent", "partitionChunk", "terrainChunk", "streamingChunk", "flowWindow", "flowCell", "avoidanceHashCell", "physicsBroadphase"]
+      },
+      hexEdgeLengthCm: {
+        title: "HexEdgeLengthCm",
+        group: "geometry",
+        scope: "HexGrid 几何",
+        x: 12,
+        y: 22,
+        w: "188px",
+        h: "88px",
+        badges: ["required", "configurable"],
+        unit: "cm",
+        defaultValue: "400",
+        owner: "BoardConfig.HexEdgeLengthCm / SpatialScaleDefaults.DefaultHexEdgeLengthCm",
+        configurable: "是，仅 HexGrid board 生效",
+        constraint: "不是 CellCm 的别名；不改变 Grid / NodeGraph board 的 cell 边长。",
+        summary: "HexGrid 的 hex 边长 owner。它控制 hex 布局和渲染几何，但不会替代 CellCm。",
+        dependsOn: [],
+        usedBy: ["hexGeometry"]
+      },
+      hexGeometry: {
+        title: "HexGridGeometry",
+        group: "geometry",
+        scope: "派生几何",
+        x: 30,
+        y: 26,
+        w: "190px",
+        h: "90px",
+        badges: ["derived"],
+        unit: "layout",
+        defaultValue: "derived",
+        owner: "HexMetrics / HexGridBoard",
+        configurable: "否；由 HexEdgeLengthCm 驱动",
+        constraint: "只描述 HexGrid 的布局几何，不替代 board cell，也不影响 Grid / NodeGraph board。",
+        summary: "HexGrid 的布局和渲染几何。Hex edge 决定它的宽度、行距和坐标映射。",
+        dependsOn: ["hexEdgeLengthCm"],
+        usedBy: []
       },
       macroTile: {
         title: "MacroTileCells",
@@ -1480,6 +1532,22 @@
           ];
         }
       },
+      hexGeometry: {
+        title: "HexEdgeLengthCm",
+        nodeId: "hexEdgeLengthCm",
+        color: "#2867d8",
+        summary: "HexEdgeLengthCm 只属于 HexGrid 几何。它控制 hex 边长、布局和渲染，不改 Grid/NodeGraph 的 board cell。",
+        stats: () => {
+          const edge = value("hexEdgeLengthCm");
+          const hexWidth = Math.sqrt(3) * edge;
+          const rowSpacing = 1.5 * edge;
+          return [
+            ["边长", `${edge} cm`],
+            ["宽度", `${formatNumber(hexWidth)} cm`],
+            ["行距", `${formatNumber(rowSpacing)} cm`]
+          ];
+        }
+      },
       flowCell: {
         title: "FlowCell",
         nodeId: "flowCell",
@@ -1668,6 +1736,7 @@
 
     const fields = [
       "cellCm",
+      "hexEdgeLengthCm",
       "macroTileCells",
       "widthMacro",
       "heightMacro",
@@ -1760,6 +1829,7 @@
 
     function updateCalculations() {
       const cellCm = value("cellCm");
+      const hexEdgeLengthCm = value("hexEdgeLengthCm");
       const macroTileCells = value("macroTileCells");
       const widthMacro = value("widthMacro");
       const heightMacro = value("heightMacro");
@@ -1776,9 +1846,12 @@
         `${formatInt(widthCells / partitionChunk)} x ${formatInt(heightCells / partitionChunk)}`;
       document.getElementById("navFootprint").textContent =
         `${terrainChunk} cells = ${formatMeters(terrainChunk * cellCm)}`;
+      document.getElementById("hexGeometry").textContent =
+        `${formatNumber(Math.sqrt(3) * hexEdgeLengthCm)} cm width / ${formatNumber(1.5 * hexEdgeLengthCm)} cm row spacing`;
 
       const worldValid =
         cellCm > 0 &&
+        hexEdgeLengthCm > 0 &&
         widthMacro > 0 &&
         heightMacro > 0 &&
         macroTileCells === 256 &&
@@ -1790,8 +1863,8 @@
         "worldStatus",
         worldValid,
         worldValid
-          ? "OK：WorldExtent 由 MacroTile 数量派生；PartitionChunk 只改变分区粒度。"
-          : "Fail-fast：CellCm/宏块数量必须 > 0，MacroTileCells 必须引用 256，PartitionChunkCells 必须为 2 的幂并整除世界 cells。"
+          ? "OK：WorldExtent 由 MacroTile 数量派生；Hex edge 只影响 HexGrid 几何；PartitionChunk 只改变分区粒度。"
+          : "Fail-fast：CellCm/HexEdgeLengthCm/宏块数量必须 > 0，MacroTileCells 必须引用 256，PartitionChunkCells 必须为 2 的幂并整除世界 cells。"
       );
 
       const fieldWidthCm = value("fieldWidthCm");
@@ -1841,6 +1914,7 @@
     const presets = {
       default: {
         cellCm: 100,
+        hexEdgeLengthCm: 400,
         widthMacro: 64,
         heightMacro: 64,
         partitionChunk: 64,
@@ -1853,6 +1927,7 @@
       },
       "dense-flow": {
         cellCm: 100,
+        hexEdgeLengthCm: 400,
         widthMacro: 32,
         heightMacro: 32,
         partitionChunk: 64,
@@ -1865,6 +1940,7 @@
       },
       "invalid-flow": {
         cellCm: 100,
+        hexEdgeLengthCm: 0,
         widthMacro: 64,
         heightMacro: 64,
         partitionChunk: 48,

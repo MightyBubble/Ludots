@@ -8,6 +8,7 @@ namespace Ludots.Core.Spatial
     public static class SpatialScaleDefaults
     {
         public const int CellCm = 100;
+        public const int DefaultHexEdgeLengthCm = 400;
         public const int MacroTileCells = MapTile.Size;
         public const int DefaultWorldWidthMacroTiles = 64;
         public const int DefaultWorldHeightMacroTiles = 64;

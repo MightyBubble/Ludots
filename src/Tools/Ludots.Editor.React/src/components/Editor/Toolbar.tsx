@@ -32,10 +32,11 @@ import {
     Type,
     Upload,
 } from 'lucide-react';
-import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type BoardInfo, type BakedNavTilePayload, type NavPanelTab } from './EditorStore';
+import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type BoardInfo, type BoardUpdateRequest, type BakedNavTilePayload, type NavPanelTab } from './EditorStore';
 import { Minimap } from './Minimap';
 import { readNavTile } from '../../Core/NavMesh/NavTileBinary';
 import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
+import { CellCm, DefaultBoardMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, MacroTileCells, TerrainChunkCells } from '../../Core/SpatialScaleDefaults';
 
 const FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline-v2';
 const LEGACY_FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline';
@@ -139,6 +140,82 @@ const idleNavQueryState: NavQueryUiState = {
     message: 'Choose a profile/layer and run a C# query. Grid boards auto-create flat baseline tiles; other topologies require Bake.',
 };
 
+type BoardAllocationPreview = {
+    isValid: boolean;
+    withinEditorBudget: boolean;
+    snappedToMacroTile: boolean;
+    requestedWidthMeters: number;
+    requestedHeightMeters: number;
+    cellSizeCm: number;
+    macroTileMeters: number;
+    terrainChunkMeters: number;
+    requestedWidthCells: number;
+    requestedHeightCells: number;
+    widthMacroTiles: number;
+    heightMacroTiles: number;
+    allocatedWidthCells: number;
+    allocatedHeightCells: number;
+    widthTerrainChunks: number;
+    heightTerrainChunks: number;
+    allocatedWidthMeters: number;
+    allocatedHeightMeters: number;
+};
+
+function deriveBoardAllocation(widthMeters: number, heightMeters: number, cellSizeCm: number): BoardAllocationPreview {
+    const safeCellSizeCm = Math.max(1, Math.floor(Number(cellSizeCm) || CellCm));
+    const requestedWidthMeters = Math.max(0, Number.isFinite(widthMeters) ? widthMeters : 0);
+    const requestedHeightMeters = Math.max(0, Number.isFinite(heightMeters) ? heightMeters : 0);
+    const requestedWidthCells = requestedWidthMeters > 0
+        ? Math.max(1, Math.ceil((requestedWidthMeters * 100) / safeCellSizeCm))
+        : 0;
+    const requestedHeightCells = requestedHeightMeters > 0
+        ? Math.max(1, Math.ceil((requestedHeightMeters * 100) / safeCellSizeCm))
+        : 0;
+    const widthMacroTiles = requestedWidthCells > 0 ? Math.ceil(requestedWidthCells / MacroTileCells) : 0;
+    const heightMacroTiles = requestedHeightCells > 0 ? Math.ceil(requestedHeightCells / MacroTileCells) : 0;
+    const allocatedWidthCells = widthMacroTiles * MacroTileCells;
+    const allocatedHeightCells = heightMacroTiles * MacroTileCells;
+    const chunksPerMacroTile = MacroTileCells / TerrainChunkCells;
+    const widthTerrainChunks = widthMacroTiles * chunksPerMacroTile;
+    const heightTerrainChunks = heightMacroTiles * chunksPerMacroTile;
+    const allocatedWidthMeters = allocatedWidthCells * safeCellSizeCm / 100;
+    const allocatedHeightMeters = allocatedHeightCells * safeCellSizeCm / 100;
+    const macroTileMeters = MacroTileCells * safeCellSizeCm / 100;
+    const terrainChunkMeters = TerrainChunkCells * safeCellSizeCm / 100;
+    const snappedToMacroTile =
+        Math.abs(allocatedWidthMeters - requestedWidthMeters) > 0.0001 ||
+        Math.abs(allocatedHeightMeters - requestedHeightMeters) > 0.0001;
+
+    return {
+        isValid: requestedWidthMeters > 0 && requestedHeightMeters > 0,
+        withinEditorBudget:
+            widthMacroTiles > 0 &&
+            heightMacroTiles > 0 &&
+            widthMacroTiles <= DefaultBoardMacroTilesPerAxis &&
+            heightMacroTiles <= DefaultBoardMacroTilesPerAxis,
+        snappedToMacroTile,
+        requestedWidthMeters,
+        requestedHeightMeters,
+        cellSizeCm: safeCellSizeCm,
+        macroTileMeters,
+        terrainChunkMeters,
+        requestedWidthCells,
+        requestedHeightCells,
+        widthMacroTiles,
+        heightMacroTiles,
+        allocatedWidthCells,
+        allocatedHeightCells,
+        widthTerrainChunks,
+        heightTerrainChunks,
+        allocatedWidthMeters,
+        allocatedHeightMeters,
+    };
+}
+
+function formatMeters(value: number): string {
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
 export const Toolbar: React.FC = () => {
     const {
         activeCategory, setCategory,
@@ -150,7 +227,7 @@ export const Toolbar: React.FC = () => {
         bridgeBaseUrl,
         mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics,
         refreshMods, selectMod, selectMap, selectBoard, loadSelectedMap, saveSelectedMap,
-        createBoard, deleteSelectedBoard,
+        createBoard, updateSelectedBoard, deleteSelectedBoard,
         loadNavigationConfig, saveNavigationConfig, navigationConfig, navigationConfigVersion, setNavigationConfig,
         templates, selectedTemplateId, selectTemplate,
         obstacleTemplateId, setObstacleTemplate, obstacleShape, setObstacleShape, obstacleRadiusCm, setObstacleRadiusCm, obstacleHalfWidthCm, obstacleHalfHeightCm, setObstacleHalfSizeCm,
@@ -184,15 +261,21 @@ export const Toolbar: React.FC = () => {
 
     const [showNewMap, setShowNewMap] = React.useState(false);
     const [showAddBoard, setShowAddBoard] = React.useState(false);
-    const [newWidth, setNewWidth] = React.useState(8);
-    const [newHeight, setNewHeight] = React.useState(8);
+    const [newMapWidthMeters, setNewMapWidthMeters] = React.useState(MacroTileCells * CellCm / 100);
+    const [newMapHeightMeters, setNewMapHeightMeters] = React.useState(MacroTileCells * CellCm / 100);
     const [newTopology, setNewTopology] = React.useState<BoardTopology>('Grid');
+    const [newMapCellSizeCm, setNewMapCellSizeCm] = React.useState(CellCm);
+    const [newMapHexEdgeLengthCm, setNewMapHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
     const [newBoardName, setNewBoardName] = React.useState('board_2');
     const [newBoardTopology, setNewBoardTopology] = React.useState<BoardTopology>('Grid');
-    const [newBoardWidthMacroTiles, setNewBoardWidthMacroTiles] = React.useState(1);
-    const [newBoardHeightMacroTiles, setNewBoardHeightMacroTiles] = React.useState(1);
-    const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(100);
+    const [newBoardWidthMeters, setNewBoardWidthMeters] = React.useState(MacroTileCells * CellCm / 100);
+    const [newBoardHeightMeters, setNewBoardHeightMeters] = React.useState(MacroTileCells * CellCm / 100);
+    const [newBoardCellSizeCm, setNewBoardCellSizeCm] = React.useState(CellCm);
+    const [newBoardHexEdgeLengthCm, setNewBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
     const [newBoardNavigationEnabled, setNewBoardNavigationEnabled] = React.useState(true);
+    const [editBoardCellSizeCm, setEditBoardCellSizeCm] = React.useState(CellCm);
+    const [editBoardHexEdgeLengthCm, setEditBoardHexEdgeLengthCm] = React.useState(DefaultHexEdgeLengthCm);
+    const [editBoardNavigationEnabled, setEditBoardNavigationEnabled] = React.useState(true);
     const [mapId, setMapId] = React.useState('');
     const [navScope, setNavScope] = React.useState<'dirty' | 'full'>('dirty');
     const [navIncludeNeighbors, setNavIncludeNeighbors] = React.useState(true);
@@ -206,7 +289,7 @@ export const Toolbar: React.FC = () => {
     const [navEstimateError, setNavEstimateError] = React.useState<string | null>(null);
     const [navBakeState, setNavBakeState] = React.useState<NavBakeState>(idleNavBakeState);
     const [navQueryState, setNavQueryState] = React.useState<NavQueryUiState>(idleNavQueryState);
-    const [navQueryMaxPortals, setNavQueryMaxPortals] = React.useState(256);
+    const [navQueryMaxPortals, setNavQueryMaxPortals] = React.useState(DefaultNavQueryMaxPortals);
     const navAbortRef = React.useRef<AbortController | null>(null);
 
     const mapInfoById = React.useMemo(() => new Map(mapInfos.map((m) => [m.id, m])), [mapInfos]);
@@ -277,17 +360,55 @@ export const Toolbar: React.FC = () => {
     const boardPropertyTopology = canvasMapLoaded
         ? boardMetrics.topology
         : (selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? boardMetrics.topology);
-    const boardPropertyChunks = canvasMapLoaded
-        ? `${terrain.widthChunks} x ${terrain.heightChunks}`
-        : selectedBoardInfo
-            ? `${selectedBoardInfo.widthChunks} x ${selectedBoardInfo.heightChunks}`
-            : `${terrain.widthChunks} x ${terrain.heightChunks}`;
+    const boardPropertyWidthChunks = canvasMapLoaded
+        ? terrain.widthChunks
+        : (selectedBoardInfo?.widthChunks ?? selectedMapInfo?.widthChunks ?? terrain.widthChunks);
+    const boardPropertyHeightChunks = canvasMapLoaded
+        ? terrain.heightChunks
+        : (selectedBoardInfo?.heightChunks ?? selectedMapInfo?.heightChunks ?? terrain.heightChunks);
+    const boardPropertyChunks = `${boardPropertyWidthChunks} x ${boardPropertyHeightChunks}`;
     const boardPropertyCellSizeCm = canvasMapLoaded
         ? boardMetrics.cellSizeCm
         : (selectedBoardInfo?.cellSizeCm ?? selectedMapInfo?.cellSizeCm ?? boardMetrics.cellSizeCm);
+    const boardPropertyHexEdgeLengthCm = canvasMapLoaded
+        ? boardMetrics.hexEdgeLengthCm
+        : (selectedBoardInfo?.hexEdgeLengthCm ?? selectedMapInfo?.hexEdgeLengthCm ?? boardMetrics.hexEdgeLengthCm);
     const boardPropertyChunkSizeCells = canvasMapLoaded
         ? boardMetrics.chunkSizeCells
         : (selectedBoardInfo?.chunkSizeCells ?? selectedMapInfo?.chunkSizeCells ?? boardMetrics.chunkSizeCells);
+    const boardScalePreviewCellSizeCm = Math.max(1, Math.floor(editBoardCellSizeCm || CellCm));
+    const boardScalePreviewHexEdgeLengthCm = Math.max(1, Math.floor(editBoardHexEdgeLengthCm || DefaultHexEdgeLengthCm));
+    const boardScalePreviewWidthCells = boardPropertyWidthChunks * boardPropertyChunkSizeCells;
+    const boardScalePreviewHeightCells = boardPropertyHeightChunks * boardPropertyChunkSizeCells;
+    const boardScalePreviewWidthCm = boardScalePreviewWidthCells * boardScalePreviewCellSizeCm;
+    const boardScalePreviewHeightCm = boardScalePreviewHeightCells * boardScalePreviewCellSizeCm;
+    const boardScalePreviewChunkCm = boardPropertyChunkSizeCells * boardScalePreviewCellSizeCm;
+    const boardScaleCellChanged = boardScalePreviewCellSizeCm !== boardPropertyCellSizeCm;
+    const boardScaleHexChanged = boardPropertyTopology === 'HexGrid' && boardScalePreviewHexEdgeLengthCm !== boardPropertyHexEdgeLengthCm;
+    const boardScaleNavChanged = editBoardNavigationEnabled !== (selectedBoardInfo?.navigationEnabled ?? selectedMapInfo?.navigationEnabled ?? true);
+    const boardScaleHasChanges = boardScaleCellChanged || boardScaleHexChanged || boardScaleNavChanged;
+    const newMapAllocation = React.useMemo(
+        () => deriveBoardAllocation(newMapWidthMeters, newMapHeightMeters, newMapCellSizeCm),
+        [newMapWidthMeters, newMapHeightMeters, newMapCellSizeCm],
+    );
+    const newBoardAllocation = React.useMemo(
+        () => deriveBoardAllocation(newBoardWidthMeters, newBoardHeightMeters, newBoardCellSizeCm),
+        [newBoardWidthMeters, newBoardHeightMeters, newBoardCellSizeCm],
+    );
+    const newMapCreateDisabledReason = !newMapAllocation.isValid
+        ? 'Enter positive map width and height in meters.'
+        : !newMapAllocation.withinEditorBudget
+            ? `Requested size allocates ${newMapAllocation.widthMacroTiles}x${newMapAllocation.heightMacroTiles} MacroTiles; editor draft cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
+            : '';
+    const newMapCanCreate = newMapCreateDisabledReason.length === 0;
+    const newBoardCreateDisabledReason = !newBoardName.trim()
+        ? 'Board name is required.'
+        : !newBoardAllocation.isValid
+            ? 'Enter positive board width and height in meters.'
+            : !newBoardAllocation.withinEditorBudget
+                ? `Requested size allocates ${newBoardAllocation.widthMacroTiles}x${newBoardAllocation.heightMacroTiles} MacroTiles; editor create cap is ${DefaultBoardMacroTilesPerAxis}x${DefaultBoardMacroTilesPerAxis}.`
+                : '';
+    const newBoardCanCreate = newBoardCreateDisabledReason.length === 0;
     const bakeButtonDisabled = !selectedNavReady || navBakeState.phase === 'estimating' || navBakeState.phase === 'baking';
 
     const formatEstimateBudgetDetail = (estimate: NavBakeEstimateReport) => {
@@ -326,6 +447,13 @@ export const Toolbar: React.FC = () => {
     }, [selectedMapId]);
 
     React.useEffect(() => {
+        const source = selectedBoardInfo ?? selectedMapInfo;
+        setEditBoardCellSizeCm(source?.cellSizeCm ?? CellCm);
+        setEditBoardHexEdgeLengthCm(source?.hexEdgeLengthCm ?? DefaultHexEdgeLengthCm);
+        setEditBoardNavigationEnabled(source?.navigationEnabled ?? true);
+    }, [selectedBoardInfo, selectedMapInfo, selectedMapId, selectedBoardName]);
+
+    React.useEffect(() => {
         const existing = new Set(selectedBoards.map((board) => board.name));
         let index = selectedBoards.length + 1;
         let candidate = `board_${index}`;
@@ -361,25 +489,60 @@ export const Toolbar: React.FC = () => {
     };
 
     const handleNewMap = () => {
-        initMap(newWidth, newHeight, { topology: newTopology, cellSizeCm: 100, chunkSizeCells: 64 });
+        if (!newMapCanCreate) {
+            alert(newMapCreateDisabledReason);
+            return;
+        }
+        initMap(newMapAllocation.widthTerrainChunks, newMapAllocation.heightTerrainChunks, {
+            topology: newTopology,
+            cellSizeCm: Math.max(1, Math.floor(newMapCellSizeCm || 1)),
+            hexEdgeLengthCm: Math.max(1, Math.floor(newMapHexEdgeLengthCm || 1)),
+            chunkSizeCells: TerrainChunkCells,
+        });
         setShowNewMap(false);
     };
 
     const handleCreateBoard = async () => {
+        if (!newBoardCanCreate) {
+            alert(newBoardCreateDisabledReason);
+            return;
+        }
         const request: BoardCreateRequest = {
             name: newBoardName.trim(),
             spatialType: newBoardTopology,
-            widthInMacroTiles: Math.max(1, Math.floor(newBoardWidthMacroTiles || 1)),
-            heightInMacroTiles: Math.max(1, Math.floor(newBoardHeightMacroTiles || 1)),
+            widthInMacroTiles: newBoardAllocation.widthMacroTiles,
+            heightInMacroTiles: newBoardAllocation.heightMacroTiles,
             cellSizeCm: Math.max(1, Math.floor(newBoardCellSizeCm || 1)),
-            hexEdgeLengthCm: Math.max(1, Math.floor(newBoardCellSizeCm || 1)),
             navigationEnabled: newBoardNavigationEnabled,
         };
+        if (newBoardTopology === 'HexGrid') {
+            request.hexEdgeLengthCm = Math.max(1, Math.floor(newBoardHexEdgeLengthCm || 1));
+        }
         try {
             await createBoard(request);
             setShowAddBoard(false);
         } catch (err: any) {
             alert(`Create board failed: ${err?.message ?? err}`);
+        }
+    };
+
+    const handleUpdateBoard = async () => {
+        if (!boardScaleHasChanges) return;
+
+        const request: BoardUpdateRequest = {};
+        if (boardScaleCellChanged) {
+            request.cellSizeCm = boardScalePreviewCellSizeCm;
+        }
+        if (boardScaleHexChanged) {
+            request.hexEdgeLengthCm = boardScalePreviewHexEdgeLengthCm;
+        }
+        if (boardScaleNavChanged) {
+            request.navigationEnabled = editBoardNavigationEnabled;
+        }
+        try {
+            await updateSelectedBoard(request);
+        } catch (err: any) {
+            alert(`Update board failed: ${err?.message ?? err}`);
         }
     };
 
@@ -1639,17 +1802,109 @@ export const Toolbar: React.FC = () => {
                                 <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
                             </div>
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Cell</div>
+                                <div className="text-[10px] text-slate-500">Grid cell</div>
                                 <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
                             </div>
                             <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
-                                <div className="text-[10px] text-slate-500">Chunk</div>
+                                <div className="text-[10px] text-slate-500">Chunk size</div>
                                 <div className="font-medium text-slate-200">{boardPropertyChunkSizeCells} cells</div>
                             </div>
                         </div>
                         <div className={`rounded border p-2 text-[11px] ${selectedMapInfo?.canBake ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200' : 'border-amber-700/60 bg-amber-950/30 text-amber-200'}`}>
                             <div>{selectedBoardName ?? 'No board'} / {selectedBoardInfo?.spatialType ?? selectedMapInfo?.spatialType ?? 'Unknown'} / {selectedBoardInfo?.reason ?? selectedMapInfo?.reason ?? 'Select a map from the top bar.'}</div>
                             <div className="mt-1 text-slate-400">Nav dirty chunks: {dirtyChunkCount}</div>
+                        </div>
+                    </section>
+
+                    <section className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <div className={sectionTitleClass}>Board Editor</div>
+                            <Settings2 size={14} className="text-slate-500" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Grid cell</div>
+                                <div className="font-medium text-slate-200">{boardPropertyCellSizeCm} cm</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Hex edge</div>
+                                <div className="font-medium text-slate-200">{boardPropertyHexEdgeLengthCm} cm</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Topology</div>
+                                <div className="font-medium text-slate-200">{boardPropertyTopology}</div>
+                            </div>
+                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2">
+                                <div className="text-[10px] text-slate-500">Chunks</div>
+                                <div className="font-medium text-slate-200">{boardPropertyChunks}</div>
+                            </div>
+                        </div>
+                        <div className="space-y-2 rounded border border-slate-800 bg-slate-900/45 p-2">
+                            <label className={fieldLabelClass}>
+                                Grid cell cm
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={editBoardCellSizeCm}
+                                    onChange={(e) => setEditBoardCellSizeCm(parseInt(e.target.value) || CellCm)}
+                                    className={inputClass}
+                                />
+                            </label>
+                            <label className={fieldLabelClass}>
+                                Hex edge cm
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={editBoardHexEdgeLengthCm}
+                                    onChange={(e) => setEditBoardHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
+                                    className={inputClass}
+                                    disabled={boardPropertyTopology !== 'HexGrid'}
+                                    title={boardPropertyTopology === 'HexGrid' ? 'Hex edge length for this board.' : 'Hex edge length only applies to HexGrid boards.'}
+                                />
+                            </label>
+                            <div className="grid grid-cols-2 gap-2 rounded border border-slate-800 bg-slate-950/70 p-2 text-[10px] text-slate-400">
+                                <div>
+                                    <div className="uppercase tracking-wide text-slate-600">Board cells</div>
+                                    <div className="font-mono text-slate-200">{boardScalePreviewWidthCells.toLocaleString()} x {boardScalePreviewHeightCells.toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <div className="uppercase tracking-wide text-slate-600">World extent</div>
+                                    <div className="font-mono text-slate-200">{(boardScalePreviewWidthCm / 100).toLocaleString()}m x {(boardScalePreviewHeightCm / 100).toLocaleString()}m</div>
+                                </div>
+                                <div>
+                                    <div className="uppercase tracking-wide text-slate-600">Terrain/NavTile</div>
+                                    <div className="font-mono text-slate-200">{boardPropertyChunkSizeCells} cells / {(boardScalePreviewChunkCm / 100).toLocaleString()}m</div>
+                                </div>
+                                <div>
+                                    <div className="uppercase tracking-wide text-slate-600">Hex geometry</div>
+                                    <div className="font-mono text-slate-200">{boardPropertyTopology === 'HexGrid' ? `${boardScalePreviewHexEdgeLengthCm}cm edge` : 'not used'}</div>
+                                </div>
+                                <div className="col-span-2 rounded border border-slate-800 bg-slate-900/60 px-2 py-1 text-slate-500">
+                                    {boardScaleCellChanged || boardScaleHexChanged
+                                        ? 'Scale change: loaded canvas metrics update, Recast tiles are invalidated, dirty chunks need bake.'
+                                        : 'Scale unchanged: Apply only persists changed board toggles.'}
+                                </div>
+                            </div>
+                            <label className="flex items-center gap-2 text-sm text-slate-300">
+                                <input
+                                    type="checkbox"
+                                    checked={editBoardNavigationEnabled}
+                                    onChange={(e) => setEditBoardNavigationEnabled(e.target.checked)}
+                                />
+                                <span>Navigation enabled</span>
+                            </label>
+                            <button
+                                onClick={() => handleUpdateBoard()}
+                                className={darkButtonClass}
+                                title={!selectedBoardName ? 'Select a board first.' : boardScaleHasChanges ? 'Persist changed board scale and nav settings through Bridge' : 'No board settings changed.'}
+                                disabled={!selectedBoardName || !boardScaleHasChanges}
+                            >
+                                <Save size={13} className="text-emerald-300" />
+                                Apply Board Settings
+                            </button>
+                            <div className="text-[10px] text-slate-500">
+                                Board edits rewrite MapConfig only. If the open board matches, the canvas scale and nav cache refresh together.
+                            </div>
                         </div>
                     </section>
 
@@ -1753,6 +2008,7 @@ export const Toolbar: React.FC = () => {
                                                 <span>{board.spatialType ?? 'Unknown'}</span>
                                                 <span>{board.widthChunks}x{board.heightChunks}</span>
                                                 <span>{board.cellSizeCm}cm</span>
+                                                <span>{board.hexEdgeLengthCm}cm hex</span>
                                                 <span>{board.navigationEnabled ? 'nav' : 'no-nav'}</span>
                                                 <span>{board.canEditTerrain ? 'edit' : 'view'}</span>
                                                 <span>{board.dataFileExists ? 'data' : 'no-data'}</span>
@@ -2424,31 +2680,57 @@ export const Toolbar: React.FC = () => {
 
             {showNewMap ? (
                 <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowNewMap(false)}>
-                    <div className="w-80 rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="max-h-[calc(100vh-48px)] w-[440px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-4 text-lg font-semibold text-white">Create New Map</h3>
                         <div className="space-y-4">
-                            <label className="block text-sm text-slate-400">
-                                Width (Chunks)
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="32"
-                                    value={newWidth}
-                                    onChange={(e) => setNewWidth(parseInt(e.target.value) || 1)}
-                                    className={inputClass}
-                                />
-                            </label>
-                            <label className="block text-sm text-slate-400">
-                                Height (Chunks)
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="32"
-                                    value={newHeight}
-                                    onChange={(e) => setNewHeight(parseInt(e.target.value) || 1)}
-                                    className={inputClass}
-                                />
-                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-sm text-slate-400">
+                                    Desired width m
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={newMapWidthMeters}
+                                        onChange={(e) => setNewMapWidthMeters(parseFloat(e.target.value) || 0)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <label className="block text-sm text-slate-400">
+                                    Desired height m
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={newMapHeightMeters}
+                                        onChange={(e) => setNewMapHeightMeters(parseFloat(e.target.value) || 0)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-sm text-slate-400">
+                                    Grid cell cm
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={newMapCellSizeCm}
+                                        onChange={(e) => setNewMapCellSizeCm(parseInt(e.target.value) || CellCm)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <label className="block text-sm text-slate-400">
+                                    Hex edge cm
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={newMapHexEdgeLengthCm}
+                                        onChange={(e) => setNewMapHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
+                                        className={inputClass}
+                                        disabled={newTopology !== 'HexGrid'}
+                                        title={newTopology === 'HexGrid' ? 'Hex edge length for the local HexGrid draft.' : 'Hex edge length only applies to HexGrid.'}
+                                    />
+                                </label>
+                            </div>
                             <label className="block text-sm text-slate-400">
                                 Topology
                                 <select
@@ -2460,6 +2742,36 @@ export const Toolbar: React.FC = () => {
                                     <option value="HexGrid">HexGrid</option>
                                 </select>
                             </label>
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newMapAllocation.withinEditorBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-amber-800/80 bg-amber-950/30 text-amber-100'}`}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Allocated extent</div>
+                                        <div className="font-mono text-slate-200">{formatMeters(newMapAllocation.allocatedWidthMeters)}m x {formatMeters(newMapAllocation.allocatedHeightMeters)}m</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Terrain/NavTiles</div>
+                                        <div className="font-mono text-slate-200">{newMapAllocation.widthTerrainChunks} x {newMapAllocation.heightTerrainChunks}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Grid cells</div>
+                                        <div className="font-mono text-slate-200">{newMapAllocation.allocatedWidthCells.toLocaleString()} x {newMapAllocation.allocatedHeightCells.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
+                                        <div className="font-mono text-slate-200">{newMapAllocation.widthMacroTiles} x {newMapAllocation.heightMacroTiles}</div>
+                                    </div>
+                                </div>
+                                <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
+                                    {newMapAllocation.snappedToMacroTile
+                                        ? 'Local draft allocation snaps upward to whole MacroTiles; chunk count is derived.'
+                                        : 'Meters align exactly with MacroTile allocation; no chunk count is authored.'}
+                                </div>
+                                {!newMapAllocation.withinEditorBudget ? (
+                                    <div className="mt-2 rounded border border-amber-700/70 bg-amber-950/50 px-2 py-1 text-amber-100">
+                                        {newMapCreateDisabledReason}
+                                    </div>
+                                ) : null}
+                            </div>
                             <div className="flex gap-2 pt-2">
                                 <button
                                     onClick={() => setShowNewMap(false)}
@@ -2469,7 +2781,9 @@ export const Toolbar: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleNewMap}
-                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600"
+                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={!newMapCanCreate}
+                                    title={newMapCanCreate ? 'Create local terrain draft from desired meters and SSOT constants' : newMapCreateDisabledReason}
                                 >
                                     Create
                                 </button>
@@ -2481,7 +2795,7 @@ export const Toolbar: React.FC = () => {
 
             {showAddBoard ? (
                 <div className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-sm" onClick={() => setShowAddBoard(false)}>
-                    <div className="w-[360px] rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="max-h-[calc(100vh-48px)] w-[460px] max-w-[calc(100vw-32px)] overflow-auto rounded-lg border border-slate-700 bg-slate-950 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
                         <h3 className="mb-4 text-lg font-semibold text-white">Add Board</h3>
                         <div className="space-y-4">
                             <label className="block text-sm text-slate-400">
@@ -2505,38 +2819,52 @@ export const Toolbar: React.FC = () => {
                             </label>
                             <div className="grid grid-cols-2 gap-2">
                                 <label className="block text-sm text-slate-400">
-                                    Width Macro
+                                    Desired width m
                                     <input
                                         type="number"
                                         min="1"
-                                        max="16"
-                                        value={newBoardWidthMacroTiles}
-                                        onChange={(e) => setNewBoardWidthMacroTiles(parseInt(e.target.value) || 1)}
+                                        step="1"
+                                        value={newBoardWidthMeters}
+                                        onChange={(e) => setNewBoardWidthMeters(parseFloat(e.target.value) || 0)}
                                         className={inputClass}
                                     />
                                 </label>
                                 <label className="block text-sm text-slate-400">
-                                    Height Macro
+                                    Desired height m
                                     <input
                                         type="number"
                                         min="1"
-                                        max="16"
-                                        value={newBoardHeightMacroTiles}
-                                        onChange={(e) => setNewBoardHeightMacroTiles(parseInt(e.target.value) || 1)}
+                                        step="1"
+                                        value={newBoardHeightMeters}
+                                        onChange={(e) => setNewBoardHeightMeters(parseFloat(e.target.value) || 0)}
                                         className={inputClass}
                                     />
                                 </label>
                             </div>
-                            <label className="block text-sm text-slate-400">
-                                Cell cm
-                                <input
-                                    type="number"
-                                    min="1"
-                                    value={newBoardCellSizeCm}
-                                    onChange={(e) => setNewBoardCellSizeCm(parseInt(e.target.value) || 100)}
-                                    className={inputClass}
-                                />
-                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <label className="block text-sm text-slate-400">
+                                    Grid cell cm
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={newBoardCellSizeCm}
+                                        onChange={(e) => setNewBoardCellSizeCm(parseInt(e.target.value) || CellCm)}
+                                        className={inputClass}
+                                    />
+                                </label>
+                                <label className="block text-sm text-slate-400">
+                                    Hex edge cm
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        value={newBoardHexEdgeLengthCm}
+                                        onChange={(e) => setNewBoardHexEdgeLengthCm(parseInt(e.target.value) || DefaultHexEdgeLengthCm)}
+                                        className={inputClass}
+                                        disabled={newBoardTopology !== 'HexGrid'}
+                                        title={newBoardTopology === 'HexGrid' ? 'Hex edge length for this HexGrid board.' : 'Hex edge length only applies to HexGrid boards.'}
+                                    />
+                                </label>
+                            </div>
                             <label className="flex items-center gap-2 text-sm text-slate-300">
                                 <input
                                     type="checkbox"
@@ -2545,8 +2873,43 @@ export const Toolbar: React.FC = () => {
                                 />
                                 <span>Navigation enabled</span>
                             </label>
-                            <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[10px] text-slate-500">
-                                One macro tile is 256 cells. The editor creates 64-cell terrain chunks, so 1x1 macro creates a 4x4 chunk board.
+                            <div className={`rounded border p-2 text-[10px] leading-snug ${newBoardAllocation.withinEditorBudget ? 'border-slate-800 bg-slate-900/60 text-slate-500' : 'border-amber-800/80 bg-amber-950/30 text-amber-100'}`}>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Requested</div>
+                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.requestedWidthMeters)}m x {formatMeters(newBoardAllocation.requestedHeightMeters)}m</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Allocated extent</div>
+                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.allocatedWidthMeters)}m x {formatMeters(newBoardAllocation.allocatedHeightMeters)}m</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Grid cells</div>
+                                        <div className="font-mono text-slate-200">{newBoardAllocation.allocatedWidthCells.toLocaleString()} x {newBoardAllocation.allocatedHeightCells.toLocaleString()}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">MacroTiles</div>
+                                        <div className="font-mono text-slate-200">{newBoardAllocation.widthMacroTiles} x {newBoardAllocation.heightMacroTiles}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Terrain/NavTiles</div>
+                                        <div className="font-mono text-slate-200">{newBoardAllocation.widthTerrainChunks} x {newBoardAllocation.heightTerrainChunks}</div>
+                                    </div>
+                                    <div>
+                                        <div className="uppercase tracking-wide text-slate-600">Unit constants</div>
+                                        <div className="font-mono text-slate-200">{formatMeters(newBoardAllocation.macroTileMeters)}m / {formatMeters(newBoardAllocation.terrainChunkMeters)}m</div>
+                                    </div>
+                                </div>
+                                <div className="mt-2 rounded border border-slate-800 bg-slate-950/70 px-2 py-1 text-slate-400">
+                                    {newBoardAllocation.snappedToMacroTile
+                                        ? 'The editor snaps allocation upward to whole MacroTiles, then derives Terrain/NavTile count from TerrainChunkCells.'
+                                        : 'Meters align exactly with MacroTile allocation. No chunk count is authored by the user.'}
+                                </div>
+                                {!newBoardAllocation.withinEditorBudget ? (
+                                    <div className="mt-2 rounded border border-amber-700/70 bg-amber-950/50 px-2 py-1 text-amber-100">
+                                        {newBoardCreateDisabledReason}
+                                    </div>
+                                ) : null}
                             </div>
                             <div className="flex gap-2 pt-2">
                                 <button
@@ -2557,7 +2920,9 @@ export const Toolbar: React.FC = () => {
                                 </button>
                                 <button
                                     onClick={handleCreateBoard}
-                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600"
+                                    className="flex-1 rounded bg-sky-700 py-2 font-medium text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={!newBoardCanCreate}
+                                    title={newBoardCanCreate ? 'Create board from desired meters and SSOT constants' : newBoardCreateDisabledReason}
                                 >
                                     Create Board
                                 </button>

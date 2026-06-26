@@ -38,6 +38,8 @@
   - [Nav 烘焙预算与耗时估算](reference/nav-bake-budget-and-estimation.md)
   - [Navmesh 作者工具链与烘焙 Cookbook](reference/navmesh-authoring-bake-toolchain.md)
   - [Runtime Incremental Navmesh Rebuild](reference/runtime-incremental-navmesh-rebuild.md)
+  - [导航域统一 Epic 汇报](reference/nav-domain-unification-epic-report.md)
+  - [导航域配置迁移指南](reference/nav-domain-configuration-migration-guide.md)
   - [MassNavigation 执行避障与目标](reference/mass-navigation-execution-avoidance-and-targets.md)
   - [Routing To Mass Execution](reference/routing-to-mass-execution.md)
   - [Move Planning MassFlow Road Execution](reference/move-planning-massflow-road-execution.md)
