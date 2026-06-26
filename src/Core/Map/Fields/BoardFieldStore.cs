@@ -1,3 +1,4 @@
+using System.IO;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Fields
@@ -45,6 +46,25 @@ namespace Ludots.Core.Map.Fields
         public T DefaultValue { get; }
 
         public int ResidentChunkCount => _chunks.Count;
+
+        internal int DirtyChunkCount
+        {
+            get
+            {
+                int count = 0;
+                foreach (KeyValuePair<long, BoardFieldChunk<T>> pair in _chunks)
+                {
+                    if (pair.Value.Dirty)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
+
+        internal IEnumerable<KeyValuePair<long, BoardFieldChunk<T>>> ResidentChunks => _chunks;
 
         public T GetCell(int col, int row)
         {
@@ -164,6 +184,31 @@ namespace Ludots.Core.Map.Fields
 
         public static long ChunkKey(int chunkX, int chunkY)
             => ((long)chunkY << 32) | (uint)chunkX;
+
+        internal static void DecodeChunkKey(long chunkKey, out int chunkX, out int chunkY)
+        {
+            chunkX = unchecked((int)(uint)chunkKey);
+            chunkY = (int)(chunkKey >> 32);
+        }
+
+        internal void SetResidentChunk(long chunkKey, BoardFieldChunk<T> chunk, bool dirty)
+        {
+            if (chunk == null) throw new ArgumentNullException(nameof(chunk));
+            DecodeChunkKey(chunkKey, out int chunkX, out int chunkY);
+            if (!IsChunkInBounds(chunkX, chunkY))
+            {
+                throw new InvalidDataException($"Board field chunk ({chunkX},{chunkY}) is outside {WidthChunks}x{HeightChunks} chunks.");
+            }
+
+            int expected = checked(ChunkSizeCells * ChunkSizeCells);
+            if (chunk.CellCount != expected)
+            {
+                throw new InvalidDataException($"Board field chunk cell count {chunk.CellCount} does not match expected {expected}.");
+            }
+
+            chunk.Dirty = dirty;
+            _chunks[chunkKey] = chunk;
+        }
 
         private BoardFieldChunk<T> GetOrCreateChunk(int chunkX, int chunkY)
         {

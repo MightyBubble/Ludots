@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
@@ -247,6 +248,8 @@ namespace Ludots.Core.Map.Fields
 
         public int ResidentChunkCount => _store.ResidentChunkCount;
 
+        internal BoardFieldStore<LogicTerrainCell> Store => _store;
+
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
@@ -310,6 +313,8 @@ namespace Ludots.Core.Map.Fields
         public int CellSizeCm { get; }
 
         public int ResidentChunkCount => _store.ResidentChunkCount;
+
+        internal BoardFieldStore<LogicTerrainCell> Store => _store;
 
         public override int HorizontalStepCm => CellSizeCm;
 
@@ -427,6 +432,33 @@ namespace Ludots.Core.Map.Fields
             FillFlagPlane(BlockedFlagPlane, (value.SurfaceFlags & LogicTerrainSurfaceFlags.Blocked) != 0);
         }
 
+        internal int PortablePayloadByteLength
+            => checked(_heightWaterLevels.Length + _areaIds.Length + (_surfaceFlagPlanes.Length * sizeof(ulong)));
+
+        internal void WritePortablePayload(BinaryWriter writer)
+        {
+            if (writer == null) throw new ArgumentNullException(nameof(writer));
+            writer.Write(_heightWaterLevels);
+            writer.Write(_areaIds);
+            for (int i = 0; i < _surfaceFlagPlanes.Length; i++)
+            {
+                writer.Write(_surfaceFlagPlanes[i]);
+            }
+        }
+
+        internal void ReadPortablePayload(BinaryReader reader)
+        {
+            if (reader == null) throw new ArgumentNullException(nameof(reader));
+            ReadExactly(reader, _heightWaterLevels, nameof(_heightWaterLevels));
+            ReadExactly(reader, _areaIds, nameof(_areaIds));
+            for (int i = 0; i < _surfaceFlagPlanes.Length; i++)
+            {
+                _surfaceFlagPlanes[i] = reader.ReadUInt64();
+            }
+
+            Array.Fill(_costs, 1f);
+        }
+
         private static byte PackHeightWater(byte heightLevel, byte waterHeightLevel)
             => (byte)((heightLevel & 0x0F) | ((waterHeightLevel & 0x0F) << 4));
 
@@ -450,6 +482,21 @@ namespace Ludots.Core.Map.Fields
         {
             int offset = plane * _wordsPerPlane;
             Array.Fill(_surfaceFlagPlanes, value ? ulong.MaxValue : 0UL, offset, _wordsPerPlane);
+        }
+
+        private static void ReadExactly(BinaryReader reader, byte[] destination, string layerName)
+        {
+            int offset = 0;
+            while (offset < destination.Length)
+            {
+                int read = reader.Read(destination, offset, destination.Length - offset);
+                if (read <= 0)
+                {
+                    throw new EndOfStreamException($"LogicTerrain chunk payload truncated while reading {layerName}.");
+                }
+
+                offset += read;
+            }
         }
     }
 
