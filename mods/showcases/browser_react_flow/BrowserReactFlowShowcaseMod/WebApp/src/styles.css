@@ -293,7 +293,7 @@ body,
 }
 
 .dataplane-panel {
-  width: min(360px, calc(100vw - 32px));
+  width: min(520px, calc(100vw - 32px));
   display: grid;
   gap: 10px;
   border: 1px solid rgba(100, 210, 255, 0.34);
@@ -301,6 +301,207 @@ body,
   background: rgba(4, 10, 18, 0.78);
   padding: 10px;
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+}
+
+.dataplane-stress {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.stress-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.stress-head h2 {
+  margin: 3px 0 0;
+  color: white;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.stress-head > strong {
+  border: 1px solid rgba(126, 231, 178, 0.44);
+  border-radius: 6px;
+  background: rgba(126, 231, 178, 0.14);
+  color: #dfffee;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.stress-profile-grid,
+.stress-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stress-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-cell {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  border-radius: 6px;
+  background: rgba(100, 210, 255, 0.1);
+  padding: 7px;
+}
+
+.metric-cell strong {
+  color: white;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-cell span {
+  color: rgba(215, 242, 255, 0.7);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.stress-meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stress-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(224, 243, 255, 0.74);
+  font-size: 10px;
+  padding: 6px 7px;
+}
+
+.bucket-strip {
+  height: 70px;
+  display: grid;
+  grid-template-columns: repeat(64, minmax(2px, 1fr));
+  gap: 2px;
+  align-items: end;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(2, 8, 16, 0.48);
+  padding: 8px;
+}
+
+.bucket-strip i {
+  display: block;
+  min-height: 8px;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #7ee7b2, #64d2ff);
+}
+
+.bucket-strip.empty i {
+  height: 8px;
+}
+
+.entity-window-control {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(126, 231, 178, 0.26);
+  border-radius: 8px;
+  background: rgba(7, 18, 28, 0.62);
+  padding: 8px;
+}
+
+.entity-window-control label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(218, 255, 234, 0.74);
+  font-size: 11px;
+}
+
+.entity-window-control strong {
+  color: white;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.entity-window-control input {
+  width: 100%;
+  accent-color: #7ee7b2;
+}
+
+.entity-attribute-list {
+  max-height: min(342px, calc(100vh - 480px));
+  min-height: 168px;
+  overflow: hidden auto;
+  display: grid;
+  gap: 5px;
+  padding-right: 2px;
+}
+
+.entity-attribute-list button {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 38px 38px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+  padding: 7px 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entity-attribute-list button:hover {
+  border-color: rgba(126, 231, 178, 0.68);
+  background: rgba(126, 231, 178, 0.14);
+}
+
+.entity-attribute-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.entity-id {
+  color: #f8d66d;
+  font-weight: 800;
+}
+
+.entity-hp {
+  position: relative;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.entity-hp i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8ee6a8, #f8d66d);
+}
+
+.entity-hp strong {
+  position: relative;
+  display: block;
+  color: #06101f;
+  font-size: 11px;
+  line-height: 18px;
+  padding-left: 6px;
 }
 
 .keyboard-probe {
@@ -336,90 +537,6 @@ body,
 .perf-panel input:focus {
   border-color: rgba(126, 231, 178, 0.95);
   box-shadow: 0 0 0 3px rgba(126, 231, 178, 0.22);
-}
-
-.dataplane-head {
-  display: grid;
-  gap: 2px;
-}
-
-.dataplane-head strong {
-  color: white;
-  font-size: 14px;
-}
-
-.dataplane-head span,
-.dataplane-panel p {
-  margin: 0;
-  color: rgba(224, 243, 255, 0.72);
-  font-size: 11px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dataplane-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.dataplane-grid div {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-  border-radius: 6px;
-  background: rgba(100, 210, 255, 0.1);
-  padding: 7px;
-}
-
-.dataplane-grid strong {
-  color: white;
-  font-size: 13px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dataplane-grid span {
-  color: rgba(215, 242, 255, 0.68);
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.dataplane-list {
-  display: grid;
-  gap: 5px;
-}
-
-.dataplane-list button {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.07);
-  color: white;
-  padding: 7px 8px;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.dataplane-list button:hover {
-  border-color: rgba(100, 210, 255, 0.7);
-  background: rgba(100, 210, 255, 0.16);
-}
-
-.dataplane-list span,
-.dataplane-list strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
 }
 
 .alpha-panel {

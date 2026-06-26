@@ -11,6 +11,19 @@ namespace Ludots.Tests.WebUiDataPlane;
 public sealed class BrowserMessageBridgeDataTransportTests
 {
 	[Test]
+	public void BrowserTransportAssembly_DoesNotContainProviderPrivateGlobals()
+	{
+		byte[] bytes = File.ReadAllBytes(typeof(BrowserMessageBridgeDataTransport).Assembly.Location);
+
+		Assert.That(ContainsEncoded(bytes, "CefSharp"), Is.False);
+		Assert.That(ContainsEncoded(bytes, "cefsharp"), Is.False);
+		Assert.That(ContainsEncoded(bytes, "BLUI"), Is.False);
+		Assert.That(ContainsEncoded(bytes, "V8"), Is.False);
+		Assert.That(ContainsEncoded(bytes, "Unreal"), Is.False);
+		Assert.That(ContainsEncoded(bytes, "UE5"), Is.False);
+	}
+
+	[Test]
 	public async Task InboundControlMessage_FromBrowserBridge_PublishesInboundPacket()
 	{
 		var bridge = new FakeBrowserMessageBridge();
@@ -82,6 +95,25 @@ public sealed class BrowserMessageBridgeDataTransportTests
 	}
 
 	[Test]
+	public async Task DefaultCapabilities_DeclareMessageBridgeBase64ChunkMode()
+	{
+		var bridge = new FakeBrowserMessageBridge();
+		await using var transport = new BrowserMessageBridgeDataTransport(bridge, chunkSize: 2048);
+
+		WebUiTransportCapabilities capabilities = transport.Capabilities;
+
+		Assert.That(capabilities.ModeName, Is.EqualTo("message"));
+		Assert.That(capabilities.SupportsBinary, Is.False);
+		Assert.That(capabilities.SupportsSharedMemory, Is.False);
+		Assert.That(capabilities.SupportsBase64Chunks, Is.True);
+		Assert.That(capabilities.SupportsChunking, Is.True);
+		Assert.That(capabilities.ChunkSize, Is.EqualTo(2048));
+		Assert.That(capabilities.ExpectedManagedCopiesPerPayload, Is.EqualTo(2));
+		Assert.That(capabilities.Satisfies("binary.base64"), Is.True);
+		Assert.That(capabilities.Satisfies("shared-memory"), Is.False);
+	}
+
+	[Test]
 	public async Task Dispose_DetachesBridgeAndRepeatDisposeDoesNotThrow()
 	{
 		var bridge = new FakeBrowserMessageBridge();
@@ -132,5 +164,34 @@ public sealed class BrowserMessageBridgeDataTransportTests
 				WebUiDataPlaneProtocol.CreateControlEnvelope("session-a", 2, "subscribe", "topic", new { })))));
 
 		Assert.That(received, Is.EqualTo(0));
+	}
+
+	private static bool ContainsEncoded(byte[] haystack, string needle)
+	{
+		return ContainsBytes(haystack, Encoding.ASCII.GetBytes(needle)) ||
+			ContainsBytes(haystack, Encoding.Unicode.GetBytes(needle));
+	}
+
+	private static bool ContainsBytes(byte[] haystack, byte[] needleBytes)
+	{
+		for (int i = 0; i <= haystack.Length - needleBytes.Length; i++)
+		{
+			bool matched = true;
+			for (int j = 0; j < needleBytes.Length; j++)
+			{
+				if (haystack[i + j] != needleBytes[j])
+				{
+					matched = false;
+					break;
+				}
+			}
+
+			if (matched)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 }
