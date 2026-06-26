@@ -25,7 +25,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
@@ -175,10 +175,11 @@ namespace Ludots.Tests.GAS.Production
             Vector2 moveTargetScreen = GetGroundScreenFromWorld(engine, ezrealStart + new Vector2(220f, 0f));
             int baselineMoveLines = CountOverlays(overlays, GroundOverlayShape.Line);
             RightClickWorld(engine, backend, moveTargetScreen, frameTimesMs);
-            TickUntil(
+            WaitForMoveOverlay(
                 engine,
                 frameTimesMs,
-                () => CountOverlays(overlays, GroundOverlayShape.Line) > baselineMoveLines,
+                overlays,
+                baselineMoveLines,
                 maxFrames: 8);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
@@ -216,15 +217,22 @@ namespace Ludots.Tests.GAS.Production
             float ezrealDistanceToDummy = ReadDistance(engine.World, "Ezreal Alpha", "Target Dummy A");
             Assert.That(ezrealDistanceToDummy, Is.LessThanOrEqualTo(840f), "Sandbox layout should keep Target Dummy A inside Ezreal Q range for the opening smart-cast proof.");
             float dummyHealthBeforeQ = ReadHealth(engine.World, "Target Dummy A");
-            SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            SetMouseGroundWorld(engine, backend, ReadPosition(engine.World, "Target Dummy A"), frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthBeforeQ, maxFrames: 24);
+            TickUntilHealthChanges(
+                engine,
+                frameTimesMs,
+                "Target Dummy A",
+                dummyHealthBeforeQ,
+                maxFrames: 24,
+                () => $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildLastOrderDiagnostics(engine)} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildEzrealQRuntimeDiagnostics(engine, "Ezreal Alpha")} || {BuildGasPresentationDiagnostics(engine)} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             float dummyHealthAfterQ = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
                 dummyHealthAfterQ,
                 Is.LessThan(dummyHealthBeforeQ),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)} || distanceToDummy={ezrealDistanceToDummy:0.##}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Smart cast hit should emit visible pulse markers.");
+            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Smart cast hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "smartcast_hit");
             timeline.Add($"[T+008] Ezreal Alpha.Cast(Mystic Shot) -> Target Dummy A | Hit | HP {dummyHealthBeforeQ:0} -> {dummyHealthAfterQ:0}");
@@ -268,6 +276,7 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthBeforeR),
                 $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Ezreal Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Indicator release hit should emit visible pulse markers.");
+            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Indicator release hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "indicator_release_hit");
             timeline.Add($"[T+010] Indicator mode hold-release previews Trueshot Barrage, then fires on release | HP {dummyHealthBeforeR:0} -> {dummyHealthAfterR:0}");
@@ -282,13 +291,14 @@ namespace Ludots.Tests.GAS.Production
             SetMouseWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
             int baselineAimLines = CountOverlays(overlays, GroundOverlayShape.Line);
             float dummyHealthBeforeCancel = ReadHealth(engine.World, "Target Dummy A");
-            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            Tick(engine, 1, frameTimesMs);
+            PressReleaseButtonAcrossFixedStep(engine, backend, "<Keyboard>/q", frameTimesMs);
+            WaitForLineOverlay(engine, frameTimesMs, overlays, baselineAimLines, "Press-release Q should enter aiming and show a line preview.", maxFrames: 12);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || distanceToDummy={jayceDistanceToDummy:0.##}");
             RightClickWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            backend.SetButton("<Keyboard>/q", false);
             Tick(engine, 2, frameTimesMs);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
@@ -297,13 +307,14 @@ namespace Ludots.Tests.GAS.Production
             float dummyHealthAfterCancel = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(dummyHealthAfterCancel, Is.EqualTo(dummyHealthBeforeCancel).Within(0.001f));
 
-            PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
-            Tick(engine, 1, frameTimesMs);
+            PressReleaseButtonAcrossFixedStep(engine, backend, "<Keyboard>/q", frameTimesMs);
+            WaitForLineOverlay(engine, frameTimesMs, overlays, baselineAimLines, "Press-release Q should re-enter aiming and show a line preview.", maxFrames: 12);
             Assert.That(
                 CountOverlays(overlays, GroundOverlayShape.Line),
                 Is.GreaterThan(baselineAimLines),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)}");
             LeftClickWorld(engine, backend, GetEntityScreen(engine, "Target Dummy A"), frameTimesMs);
+            backend.SetButton("<Keyboard>/q", false);
             TickUntilHealthChanges(engine, frameTimesMs, "Target Dummy A", dummyHealthAfterCancel, maxFrames: 24);
             float dummyHealthAfterConfirm = ReadHealth(engine.World, "Target Dummy A");
             Assert.That(
@@ -311,6 +322,7 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthAfterCancel),
                 $"{BuildInputActionDiagnostics(engine, "SkillQ")} || {BuildAbilityDiagnostics(engine, "Jayce Cannon")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Press-release confirm hit should emit visible pulse markers.");
+            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Press-release confirm hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "press_release_confirm_hit");
             timeline.Add($"[T+011] Press-release aim cast shows confirm cursor for Jayce Cannon Q | cancel keeps HP {dummyHealthBeforeCancel:0} | confirm hits to {dummyHealthAfterConfirm:0}");
@@ -336,12 +348,13 @@ namespace Ludots.Tests.GAS.Production
                 Is.LessThan(dummyHealthBeforeBeam),
                 $"{BuildInputActionDiagnostics(engine, "SkillR")} || {BuildAbilityDiagnostics(engine, "Geomancer Alpha")} || {BuildSelectionStateDiagnostics(engine)} || {BuildOverlayDiagnostics(overlays)} || {BuildFeedbackDiagnostics(primitives, worldHud)}");
             Assert.That(CountPrimitiveMarkers(primitives), Is.GreaterThan(0), "Beam hit should emit visible pulse markers.");
+            TickUntilWorldHudText(engine, frameTimesMs, worldHud, maxFrames: 4);
             Assert.That(CountWorldHudItems(worldHud, WorldHudItemKind.Text), Is.GreaterThan(0), "Beam hit should emit visible world text feedback.");
             CaptureSnapshot(engine, overlays, primitives, worldHud, snapshots, "prismatic_beam_hit");
             timeline.Add($"[T+012] Geomancer Alpha.Cast(Prismatic Beam) -> Target Dummy C | Hit | HP {dummyHealthBeforeBeam:0} -> {dummyHealthAfterBeam:0}");
 
             Vector2 beaconSpawnWorld = new Vector2(1720f, 1640f);
-            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, beaconSpawnWorld), frameTimesMs);
+            SetMouseGroundWorld(engine, backend, beaconSpawnWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             TickUntil(
                 engine,
@@ -400,7 +413,7 @@ namespace Ludots.Tests.GAS.Production
 
             SelectNamedEntity(engine, backend, "Geomancer Alpha", frameTimesMs);
             Vector2 pillarWorld = new Vector2(1710f, 1400f);
-            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, pillarWorld), frameTimesMs);
+            SetMouseGroundWorld(engine, backend, pillarWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/e", frameTimesMs);
             TickUntil(
                 engine,
@@ -433,7 +446,7 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+016] Select(Spell Engineer Alpha) -> panel exposes beacon / well / arena / guided laser showcase");
 
             Vector2 spellBeaconWorld = new Vector2(2320f, 1600f);
-            SetMouseWorld(engine, backend, GetGroundScreenFromWorld(engine, spellBeaconWorld), frameTimesMs);
+            SetMouseGroundWorld(engine, backend, spellBeaconWorld, frameTimesMs);
             PressButton(engine, backend, "<Keyboard>/q", frameTimesMs);
             TickUntil(
                 engine,
@@ -798,13 +811,18 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, MapId, frameTimesMs);
             SelectNamedEntity(engine, backend, "Ezreal Alpha", frameTimesMs);
 
+            Vector2 ezrealBeforeStaging = ReadPosition(engine.World, "Ezreal Alpha");
             Vector2 stagingPoint = GetGroundScreenFromWorld(engine, new Vector2(1320f, 720f));
             RightClickWorld(engine, backend, stagingPoint, frameTimesMs);
-            TickUntil(
+            bool reachedStagingPoint = WaitUntil(
                 engine,
                 frameTimesMs,
-                () => ReadPosition(engine.World, "Ezreal Alpha").X >= 1280f,
-                maxFrames: 40);
+                () => ReadPosition(engine.World, "Ezreal Alpha").X >= ezrealBeforeStaging.X + 80f,
+                maxFrames: 80);
+            Assert.That(
+                reachedStagingPoint,
+                Is.True,
+                $"Ezreal Alpha should create staging distance before W/Q/E/R. start={ezrealBeforeStaging}, pos={ReadPosition(engine.World, "Ezreal Alpha")}");
 
             Vector2 dummyAimPoint = GetEntityScreen(engine, "Target Dummy A");
             SetMouseWorld(engine, backend, dummyAimPoint, frameTimesMs);
@@ -961,6 +979,9 @@ namespace Ludots.Tests.GAS.Production
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
@@ -969,7 +990,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
+                presentationFrameSetup);
 
             engine.Start();
             return engine;
@@ -1049,6 +1070,14 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, 2, frameTimesMs);
         }
 
+        private static void PressReleaseButtonAcrossFixedStep(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
+        {
+            backend.SetButton(path, true);
+            Tick(engine, 4, frameTimesMs);
+            backend.SetButton(path, false);
+            Tick(engine, 4, frameTimesMs);
+        }
+
         private static void LeftClickWorld(GameEngine engine, TestInputBackend backend, Vector2 screenPosition, List<double> frameTimesMs)
         {
             SetMouseWorld(engine, backend, screenPosition, frameTimesMs);
@@ -1071,6 +1100,13 @@ namespace Ludots.Tests.GAS.Production
         {
             backend.SetMousePosition(screenPosition);
             Tick(engine, 1, frameTimesMs);
+        }
+
+        private static void SetMouseGroundWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm, List<double> frameTimesMs)
+        {
+            backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
+            Tick(engine, 1, frameTimesMs);
+            backend.SetMousePosition(GetGroundScreenFromWorld(engine, worldCm));
         }
 
         private static void Tick(GameEngine engine, int frames, List<double> frameTimesMs)
@@ -1100,13 +1136,67 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames.");
         }
 
-        private static void TickUntilHealthChanges(GameEngine engine, List<double> frameTimesMs, string entityName, float baselineHealth, int maxFrames)
+        private static void TickUntilHealthChanges(GameEngine engine, List<double> frameTimesMs, string entityName, float baselineHealth, int maxFrames, Func<string>? diagnostics = null)
+        {
+            for (int i = 0; i < maxFrames; i++)
+            {
+                if (ReadHealth(engine.World, entityName) < baselineHealth)
+                {
+                    return;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            string message = $"Health for '{entityName}' did not decrease within {maxFrames} frames.";
+            if (diagnostics != null)
+            {
+                message += " " + diagnostics();
+            }
+
+            Assert.That(ReadHealth(engine.World, entityName), Is.LessThan(baselineHealth), message);
+        }
+
+        private static void TickUntilWorldHudText(GameEngine engine, List<double> frameTimesMs, WorldHudBatchBuffer worldHud, int maxFrames)
         {
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => ReadHealth(engine.World, entityName) < baselineHealth,
+                () => CountWorldHudItems(worldHud, WorldHudItemKind.Text) > 0,
                 maxFrames);
+        }
+
+        private static void WaitForMoveOverlay(GameEngine engine, List<double> frameTimesMs, GroundOverlayBuffer overlays, int baselineMoveLines, int maxFrames)
+        {
+            WaitForLineOverlay(
+                engine,
+                frameTimesMs,
+                overlays,
+                baselineMoveLines,
+                "Selected champion move orders should render a visible path overlay.",
+                maxFrames);
+        }
+
+        private static void WaitForLineOverlay(GameEngine engine, List<double> frameTimesMs, GroundOverlayBuffer overlays, int baselineMoveLines, string failurePrefix, int maxFrames)
+        {
+            for (int i = 0; i < maxFrames; i++)
+            {
+                if (CountOverlays(overlays, GroundOverlayShape.Line) > baselineMoveLines)
+                {
+                    return;
+                }
+
+                Tick(engine, 1, frameTimesMs);
+            }
+
+            Assert.That(
+                CountOverlays(overlays, GroundOverlayShape.Line),
+                Is.GreaterThan(baselineMoveLines),
+                failurePrefix + " " +
+                BuildMovePathOverlayDiagnostics(engine) + " | " +
+                BuildInputActionDiagnostics(engine, "MoveCommand") + " | " +
+                BuildSelectionStateDiagnostics(engine) + " | " +
+                BuildOverlayDiagnostics(overlays));
         }
 
         private static bool WaitUntil(GameEngine engine, List<double> frameTimesMs, Func<bool> predicate, int maxFrames)
@@ -1843,20 +1933,28 @@ namespace Ludots.Tests.GAS.Production
             out Vector2 matchedPoint,
             out string samples)
         {
-            var hoveredSamples = new List<string>(HoverProbeOffsets.Length);
-            for (int i = 0; i < HoverProbeOffsets.Length; i++)
+            var hoveredSamples = new List<string>(HoverProbeOffsets.Length * 12);
+            for (int pass = 0; pass < 4; pass++)
             {
-                Vector2 candidate = projectedScreenPoint + HoverProbeOffsets[i];
-                backend.SetMousePosition(candidate);
-                Tick(engine, 1, frameTimesMs);
-
-                string hovered = ReadHoveredEntityName(engine);
-                hoveredSamples.Add($"{candidate.X:0.0},{candidate.Y:0.0}->{hovered}");
-                if (string.Equals(hovered, entityName, StringComparison.Ordinal))
+                for (int i = 0; i < HoverProbeOffsets.Length; i++)
                 {
-                    matchedPoint = candidate;
-                    samples = string.Join(" | ", hoveredSamples);
-                    return true;
+                    Vector2 currentProjection = GetEntityScreen(engine, entityName);
+                    Vector2 candidate = currentProjection + HoverProbeOffsets[i];
+                    backend.SetMousePosition(candidate);
+
+                    for (int holdFrame = 0; holdFrame < 3; holdFrame++)
+                    {
+                        Tick(engine, 1, frameTimesMs);
+
+                        string hovered = ReadHoveredEntityName(engine);
+                        hoveredSamples.Add($"{candidate.X:0.0},{candidate.Y:0.0}#{pass}.{holdFrame}->{hovered}");
+                        if (string.Equals(hovered, entityName, StringComparison.Ordinal))
+                        {
+                            matchedPoint = candidate;
+                            samples = string.Join(" | ", hoveredSamples);
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -2094,12 +2192,12 @@ namespace Ludots.Tests.GAS.Production
         private static void AssertBlockerManifestationBridge(World world, string entityName)
         {
             Entity entity = FindEntityByName(world, entityName);
-            AssertManifestationBridge(world, entity, entityName, ManifestationObstacleShape2D.Circle, ColliderType2D.Circle, NavObstacleShape2D.Circle);
+            AssertManifestationBridge(world, entity, entityName, ManifestationObstacleShape2D.Circle, ColliderType2D.Circle);
         }
 
         private static void AssertBarrierSegmentManifestationBridge(World world, Entity entity, string entityLabel)
         {
-            AssertManifestationBridge(world, entity, entityLabel, ManifestationObstacleShape2D.Box, ColliderType2D.Box, NavObstacleShape2D.Box);
+            AssertManifestationBridge(world, entity, entityLabel, ManifestationObstacleShape2D.Box, ColliderType2D.Box);
         }
 
         private static void AssertManifestationBridge(
@@ -2107,8 +2205,7 @@ namespace Ludots.Tests.GAS.Production
             Entity entity,
             string entityLabel,
             ManifestationObstacleShape2D expectedIntentShape,
-            ColliderType2D expectedColliderType,
-            NavObstacleShape2D expectedNavShape)
+            ColliderType2D expectedColliderType)
         {
             Assert.That(world.TryGet(entity, out ManifestationObstacleIntent2D intent), Is.True, $"{entityLabel} should author blocker intent.");
             Assert.That(intent.Shape, Is.EqualTo(expectedIntentShape));
@@ -2116,10 +2213,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(intent.SinkNavigationObstacle, Is.EqualTo(1));
             Assert.That(world.TryGet(entity, out Collider2D collider), Is.True, $"{entityLabel} should bridge into physics collider.");
             Assert.That(collider.Type, Is.EqualTo(expectedColliderType));
-            Assert.That(world.TryGet(entity, out NavObstacle2D obstacle), Is.True, $"{entityLabel} should bridge into navigation obstacle.");
-            Assert.That(obstacle.Shape, Is.EqualTo(expectedNavShape));
+            Assert.That(world.TryGet(entity, out MassFlowObstacleProjection projection), Is.True, $"{entityLabel} should bridge into MassFlow obstacle projection.");
+            Assert.That(projection.PieceCount, Is.EqualTo(1));
+            Assert.That(projection.GetShape(0), Is.EqualTo(expectedIntentShape));
+            Assert.That(projection.GetRadiusCm(0), Is.GreaterThan(0));
             Assert.That(world.Has<ManifestationObstacleBridge2DState>(entity), Is.True, $"{entityLabel} should retain manifestation bridge state.");
-            Assert.That(world.Has<NavKinematics2D>(entity), Is.True, $"{entityLabel} should provide navigation obstacle kinematics.");
             Assert.That(world.Has<Mass2D>(entity), Is.True, $"{entityLabel} should become a static physics body.");
             Assert.That(world.Has<Position2D>(entity), Is.True, $"{entityLabel} should project into physics position space.");
         }
@@ -2424,6 +2522,27 @@ namespace Ludots.Tests.GAS.Production
             return string.Join(" | ", details);
         }
 
+        private static string BuildLastOrderDiagnostics(GameEngine engine)
+        {
+            string ground = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastGroundWorldCm", out object? groundObj) &&
+                            groundObj is string groundText
+                ? groundText
+                : "<missing>";
+            string order = engine.GlobalContext.TryGetValue("CoreInputMod.Debug.LastOrder", out object? orderObj) &&
+                           orderObj is string orderText
+                ? orderText
+                : "<missing>";
+            return $"lastGround={ground} | lastOrder={order}";
+        }
+
+        private static string BuildMovePathOverlayDiagnostics(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue("CoreInputMod.SelectedMovePath.DebugSummary", out object? summaryObj) &&
+                   summaryObj is string summary
+                ? summary
+                : "movePath=<missing>";
+        }
+
         private static string BuildOverlayDiagnostics(GroundOverlayBuffer overlays)
         {
             return $"overlays=count:{overlays.Count},circle:{CountOverlays(overlays, GroundOverlayShape.Circle)},cone:{CountOverlays(overlays, GroundOverlayShape.Cone)},line:{CountOverlays(overlays, GroundOverlayShape.Line)},ring:{CountOverlays(overlays, GroundOverlayShape.Ring)}";
@@ -2683,7 +2802,7 @@ namespace Ludots.Tests.GAS.Production
         private sealed class TestInputBackend : IInputBackend
         {
             private readonly Dictionary<string, bool> _buttons = new(StringComparer.Ordinal);
-            private Vector2 _mousePosition;
+            private Vector2 _mousePosition = new(float.NaN, float.NaN);
 
             public void SetButton(string path, bool isDown)
             {

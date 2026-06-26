@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Rendering;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -14,9 +15,9 @@ namespace RoadNetworkShowcaseMod.Gameplay
     internal sealed class RoadRoutePreviewSplineBuilder
     {
         private const float OverlayY = 0.055f;
-        private readonly RoadNavPlanStore _plans;
+        private readonly MovePlanStore _plans;
 
-        public RoadRoutePreviewSplineBuilder(RoadNavPlanStore plans)
+        public RoadRoutePreviewSplineBuilder(MovePlanStore plans)
         {
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
         }
@@ -67,7 +68,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             GroundOverlayBuffer overlays,
             ref int stableCursor)
         {
-            if (!_plans.TryGetPlan(entity, order.OrderId, out RoadNavPlanView plan))
+            if (!_plans.TryGetPlan(entity, order.OrderId, out MovePlanView plan))
             {
                 return;
             }
@@ -95,7 +96,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
                     continue;
                 }
 
-                points[writeCount++] = ToVisualMeters(new Vector3(point.X.ToFloat(), 0f, point.Y.ToFloat()));
+                points[writeCount++] = ToVisualMeters(new Vector3(point.X, 0f, point.Y));
             }
 
             if (writeCount < 2)
@@ -200,9 +201,9 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return 0;
             }
 
-            if (world.Has<RoadNavPlanRuntime>(entity))
+            if (world.Has<MovePlanRuntime>(entity))
             {
-                ref readonly var state = ref world.Get<RoadNavPlanRuntime>(entity);
+                ref readonly var state = ref world.Get<MovePlanRuntime>(entity);
                 if (state.BoundOrderId == order.OrderId)
                 {
                     return Math.Clamp(state.CurrentWaypointIndex, 0, pointCount - 1);

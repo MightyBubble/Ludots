@@ -20,8 +20,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Systems;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -120,7 +119,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndNavRuntimeComponents()
+        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndPerformerComponents()
         {
             using var engine = CreateEngine();
             LoadMap(engine, StressMapId, frames: 8);
@@ -134,7 +133,6 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<Collider2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PhysicsMaterial2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<NavKinematics2D>(warrior), Is.True);
 
             var collider = engine.World.Get<Collider2D>(warrior);
             var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
@@ -148,22 +146,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(physicsMaterial.Restitution.ToFloat(), Is.EqualTo(0f).Within(0.001f));
             Assert.That(physicsMaterial.BaseDamping.ToFloat(), Is.EqualTo(0.94f).Within(0.001f));
 
-            var navKinematics = engine.World.Get<NavKinematics2D>(warrior);
-            Assert.That(navKinematics.MaxAccelCmPerSec2.ToFloat(), Is.EqualTo(1800f).Within(0.01f));
-            Assert.That(navKinematics.RadiusCm.ToFloat(), Is.EqualTo(46f).Within(0.01f));
-            Assert.That(navKinematics.NeighborDistCm.ToFloat(), Is.EqualTo(320f).Within(0.01f));
-            Assert.That(navKinematics.TimeHorizonSec.ToFloat(), Is.EqualTo(2.4f).Within(0.01f));
-            Assert.That(navKinematics.MaxNeighbors, Is.EqualTo(20));
-
-            var bootstrap = new NavOrderAgentBootstrapSystem(engine.World);
-            bootstrap.Update(0f);
-
-            Assert.That(engine.World.Has<NavAgent2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Position2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PreviousWorldPositionCm>(warrior), Is.True);
-            Assert.That(engine.World.Has<PreviousPosition2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Velocity2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Mass2D>(warrior), Is.True);
 
             var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
                 ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");

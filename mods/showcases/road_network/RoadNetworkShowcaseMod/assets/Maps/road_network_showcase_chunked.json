@@ -6,34 +6,48 @@
     {
       "Name": "default",
       "SpatialType": "NodeGraph",
-      "WidthInTiles": 2,
-      "HeightInTiles": 2,
+      "WidthInMacroTiles": 2,
+      "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64
     }
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Camera.Profile.Tactical",
-    "TargetXCm": 0,
+    "VirtualCameraId": "RoadNetwork.Camera.Tactical",
+    "TargetXCm": -9800,
     "TargetYCm": 0
   },
   "Entities": [
-    { "Template": "road_fort_blue", "Overrides": { "Name": { "Value": "Blue Capital" }, "WorldPositionCm": { "Value": { "X": -18000, "Y": 0 } } } },
+    { "InstanceId": "road.team.blue", "Template": "road_fort_blue", "Overrides": { "Name": { "Value": "Blue Capital" }, "WorldPositionCm": { "Value": { "X": -18000, "Y": 0 } } } },
     { "Template": "road_fort_blue", "Overrides": { "Name": { "Value": "West Gate" }, "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } } } },
     { "Template": "road_fort_neutral", "Overrides": { "Name": { "Value": "Central Crossing" }, "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } } },
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "East Gate" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } } } },
-    { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "Red Capital" }, "WorldPositionCm": { "Value": { "X": 18000, "Y": 0 } } } },
+    { "InstanceId": "road.team.red", "Template": "road_fort_red", "Overrides": { "Name": { "Value": "Red Capital" }, "WorldPositionCm": { "Value": { "X": 18000, "Y": 0 } } } },
     { "Template": "road_fort_neutral", "Overrides": { "Name": { "Value": "North Pass" }, "WorldPositionCm": { "Value": { "X": 0, "Y": 9000 } } } },
     { "Template": "road_fort_neutral", "Overrides": { "Name": { "Value": "South Ford" }, "WorldPositionCm": { "Value": { "X": 0, "Y": -9000 } } } },
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "North Watch" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 9000 } } } },
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "South Watch" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } } } },
 
-    { "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue Vanguard" }, "WorldPositionCm": { "Value": { "X": -9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
+    { "InstanceId": "road.player.blue", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue Vanguard" }, "PlayerOwner": { "PlayerId": 1 }, "SelectionDragState": {}, "WorldPositionCm": { "Value": { "X": -9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
     { "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue North Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": 700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
     { "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue South Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": -700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } },
 
     { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red Vanguard" }, "WorldPositionCm": { "Value": { "X": 9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
     { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red North Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
     { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red South Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } }
-  ]
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "road.team.blue" },
+    { "TeamId": 2, "RepresentativeInstanceId": "road.team.red" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue", "IsLocal": true }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 2, "TypeId": "RoadNetwork.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [],
+    "PlayerTeams": []
+  }
 }

@@ -8,6 +8,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
+using Ludots.UI.Surface;
 using PerformerBlacksmithShowcaseMod.Runtime;
 
 namespace PerformerBlacksmithShowcaseMod.UI
@@ -19,6 +20,7 @@ namespace PerformerBlacksmithShowcaseMod.UI
         private GameEngine? _engine;
         private PerformerBlacksmithShowcasePanelState _lastState = PerformerBlacksmithShowcasePanelState.Empty;
         private bool _hasLastState;
+        private UiSurfaceLeaseHandle _lease;
 
         public PerformerBlacksmithShowcasePanelController(PerformerBlacksmithShowcaseRuntime runtime)
         {
@@ -29,6 +31,10 @@ namespace PerformerBlacksmithShowcaseMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return false;
+            }
 
             _engine = engine;
             ReactivePage<PerformerBlacksmithShowcasePanelState>? page = EnsurePage();
@@ -37,21 +43,18 @@ namespace PerformerBlacksmithShowcaseMod.UI
                 return false;
             }
 
-            bool mounted = ReferenceEquals(root.Scene, page.Scene);
             if (!_hasLastState || !StateEquals(in _lastState, in state))
             {
                 PerformerBlacksmithShowcasePanelState snapshot = state;
                 page.SetState(_ => snapshot);
                 _lastState = snapshot;
                 _hasLastState = true;
-                root.IsDirty = true;
             }
 
-            if (!mounted)
-            {
-                root.MountScene(page.Scene);
-            }
-
+            surfaceHost.PublishReactivePage(
+                ref _lease,
+                new UiSurfaceLeaseRequest("Showcase.PerformerBlacksmith.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                page);
             return true;
         }
 
@@ -59,9 +62,10 @@ namespace PerformerBlacksmithShowcaseMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.ReleaseLease(ref _lease);
             }
 
             _engine = null;
@@ -359,9 +363,10 @@ namespace PerformerBlacksmithShowcaseMod.UI
         {
             GameEngine engine = RequireEngine();
             action(_runtime);
-            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (_lease.IsValid &&
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.IsDirty = true;
+                surfaceHost.InvalidateLease(_lease);
             }
         }
 

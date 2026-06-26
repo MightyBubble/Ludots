@@ -47,7 +47,6 @@ namespace Ludots.Core.Physics2D.Ticking
                 new ISystem<float>[]
                 {
                     new ForceInputWakeSystem2D(world),
-                    new NavToPhysicsVelocitySyncSystem(world),
                     build,
                     spatial,
                     new NarrowPhaseSystem2D(world, shapeStorage),
@@ -64,7 +63,6 @@ namespace Ludots.Core.Physics2D.Ticking
                 new[]
                 {
                     "ForceInputWake",
-                    "NavToPhysicsVelocitySync",
                     "BuildPhysicsWorld",
                     "SpatialBroadphase",
                     "NarrowPhase",

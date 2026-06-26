@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -271,7 +272,7 @@ namespace ChampionSkillSandboxMod.Runtime
             for (int i = 0; i < _combatTextCount; i++)
             {
                 ref CombatTextEntry entry = ref _combatTextEntries[i];
-                if (!world.IsAlive(entry.Anchor) || !world.Has<Ludots.Core.Presentation.Components.VisualTransform>(entry.Anchor))
+                if (!TryResolveCombatTextPosition(world, entry.Anchor, out Vector3 anchorPosition))
                 {
                     continue;
                 }
@@ -280,7 +281,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 Vector4 color = entry.Color;
                 color.W *= 1f - progress;
 
-                Vector3 worldPosition = world.Get<Ludots.Core.Presentation.Components.VisualTransform>(entry.Anchor).Position
+                Vector3 worldPosition = anchorPosition
                     + new Vector3(0f, 1.42f + progress * 0.42f, 0f);
                 var packet = PresentationTextPacket.FromToken(_combatDeltaTokenId);
                 packet.SetArg(0, PresentationTextArg.FromInt32(entry.RoundedDelta));
@@ -304,6 +305,31 @@ namespace ChampionSkillSandboxMod.Runtime
                     Text = packet,
                 });
             }
+        }
+
+        private static bool TryResolveCombatTextPosition(World world, Entity anchor, out Vector3 worldPosition)
+        {
+            if (!world.IsAlive(anchor))
+            {
+                worldPosition = default;
+                return false;
+            }
+
+            if (world.Has<VisualTransform>(anchor))
+            {
+                worldPosition = world.Get<VisualTransform>(anchor).Position;
+                return true;
+            }
+
+            if (world.Has<WorldPositionCm>(anchor))
+            {
+                var logicPosition = world.Get<WorldPositionCm>(anchor).Value;
+                worldPosition = WorldPlane2D.LogicCmToVisualMeters(in logicPosition);
+                return true;
+            }
+
+            worldPosition = default;
+            return false;
         }
 
         private void EmitTransientPrimitives(World world, PrimitiveDrawBuffer? primitives)

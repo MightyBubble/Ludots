@@ -13,8 +13,8 @@ namespace Ludots.UI.Browser.Cef;
 
 public sealed class CefBrowserRuntime : IBrowserRuntime
 {
-	public const string LocalAppSchemeName = "ludots-app";
-	public const string LocalAppHostName = "app";
+	public const string LocalAppSchemeName = BrowserLocalAppUri.Scheme;
+	public const string LocalAppHostName = BrowserLocalAppUri.Host;
 
 	private static readonly object Sync = new();
 	private static readonly CefBrowserSurfaceRegistry SurfaceRegistry = new();

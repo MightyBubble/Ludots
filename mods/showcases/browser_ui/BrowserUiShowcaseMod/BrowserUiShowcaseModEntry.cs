@@ -9,6 +9,7 @@ using Ludots.UI.Browser.Skia;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using SkiaSharp;
 
 namespace BrowserUiShowcaseMod;
@@ -19,6 +20,8 @@ public sealed class BrowserUiShowcaseModEntry : IMod
 
     private IBrowserSurface? _surface;
     private BrowserCanvasContent? _browserContent;
+    private IUiSurfaceHost? _surfaceHost;
+    private UiSurfaceLeaseHandle _lease;
 
     public void OnLoad(IModContext context)
     {
@@ -30,32 +33,42 @@ public sealed class BrowserUiShowcaseModEntry : IMod
     {
         _browserContent?.Dispose();
         _browserContent = null;
+        if (_lease.IsValid && _surfaceHost != null)
+        {
+            _surfaceHost.ReleaseLease(ref _lease);
+        }
+
+        _surfaceHost = null;
         _surface?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _surface = null;
     }
 
     private async Task OnGameStartAsync(ScriptContext context)
     {
-        IUiTextMeasurer textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
-        IUiImageSizeProvider imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
+        IUiSurfaceHost surfaceHost = context.Get(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
+        _surfaceHost = surfaceHost;
+        _lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+            "BrowserUiShowcase.Landing",
+            UiSurfaceSegment.Main,
+            priority: 10,
+            exclusive: true));
         BrowserSurfaceAttachment attachment = await TryCreateBrowserSurfaceAsync(context).ConfigureAwait(false);
         _surface = attachment.Surface;
         _browserContent = attachment.Content;
-        UiScene scene = BuildLandingScene(context, textMeasurer, imageSizeProvider, attachment);
-        UIRoot root = context.Get(CoreServiceKeys.UIRoot) as UIRoot
-            ?? throw new InvalidOperationException("UIRoot service is missing from ScriptContext.");
-        root.MountScene(scene);
-        root.IsDirty = true;
+        surfaceHost.Publish(
+            _lease,
+            UiSurfaceContribution.FromBuilder(
+                () => BuildLandingRoot(context, attachment),
+                styleSheets: new[] { BuildBrowserStyleSheet() }));
     }
 
-    private static UiScene BuildLandingScene(
+    private static UiElementBuilder BuildLandingRoot(
         ScriptContext context,
-        IUiTextMeasurer textMeasurer,
-        IUiImageSizeProvider imageSizeProvider,
         BrowserSurfaceAttachment attachment)
     {
         IBrowserSurface? surface = attachment.Surface;
-        UiElementBuilder root = Ui.Column(
+        return Ui.Column(
                 Ui.Text("Browser UI Showcase").Class("skin-header").FontSize(34).Bold(),
                 Ui.Text("Raylib mounts the showcase through Skia UI today; CEF or Ultralight can later render the same packaged web app as a browser surface.").Class("page-copy"),
                 Ui.Row(
@@ -75,8 +88,6 @@ public sealed class BrowserUiShowcaseModEntry : IMod
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Gap(12f);
-
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root, null, BuildBrowserStyleSheet());
     }
 
     private static UiElementBuilder BuildHeroCard(string id, string title, string subtitle, string body)
@@ -141,12 +152,12 @@ public sealed class BrowserUiShowcaseModEntry : IMod
             string root = ResolveAssetRoot(context);
             var resolver = new BrowserAppResourceResolver(root);
             IBrowserSurface surface = await runtime.CreateSurfaceAsync(new BrowserViewport(960, 360), resolver).ConfigureAwait(false);
-            UIRoot? uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             surface.FrameReady += (_, _) =>
             {
-                if (uiRoot != null)
+                if (_lease.IsValid &&
+                    context.Get(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
                 {
-                    uiRoot.IsDirty = true;
+                    surfaceHost.InvalidateLease(_lease);
                 }
             };
             surface.Messages.MessageReceived += (_, message) =>
@@ -155,7 +166,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
                     "host",
                     $"Host ack received {DateTime.Now:HH:mm:ss}: {message.Payload}"));
             };
-            await surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
+            await surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Root)).ConfigureAwait(false);
             await surface.Messages.PostMessageAsync(new BrowserScriptMessage(
                 "host",
                 "CEF browser surface is live inside Raylib with transparent background enabled.")).ConfigureAwait(false);

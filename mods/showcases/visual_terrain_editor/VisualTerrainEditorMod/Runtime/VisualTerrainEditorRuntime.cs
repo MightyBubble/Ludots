@@ -178,10 +178,9 @@ internal sealed class VisualTerrainEditorRuntime
             return;
         }
 
-        if ((viewportChanged || chunkWindowChanged || pointerChanged) &&
-            engine.GetService(CoreServiceKeys.UIRoot) is UIRoot dynamicRoot)
+        if (viewportChanged || chunkWindowChanged || pointerChanged)
         {
-            dynamicRoot.IsDirty = true;
+            _panelController.InvalidateIfMounted(engine);
         }
     }
 
@@ -338,7 +337,6 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         _panelController.MountOrRefresh(root, engine, BuildPanelState(root.Width, root.Height));
-        root.IsDirty = true;
         _panelDirty = false;
     }
 

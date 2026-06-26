@@ -58,9 +58,8 @@ Total War 示例的文件入口：
 | --- | --- |
 | `MassNavigationTotalWarEntryModEntry.cs` | 注册 showcase runtime 和组件。 |
 | `Runtime/TotalWarShowcaseConfig.cs` | `TotalWarShowcaseConfig.json` 的强类型配置。 |
-| `Runtime/TotalWarShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、spawn 请求、士兵目标同步。 |
-| `Runtime/TotalWarSpawnReceiptRuntime.cs` | 记录 showcase 的 spawn receipt 绑定。 |
-| `Runtime/TotalWarSpawnReceiptBindingSystem.cs` | 把 spawn 出来的实体绑定回方阵、士兵和障碍 runtime。 |
+| `Runtime/TotalWarShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、向 `RuntimeEntitySpawnQueue` 填参数。 |
+| `Runtime/TotalWarScenarioBindingSystem.cs` | 在 core MassCrowd 绑定完成后，补 showcase sidecar 组件。 |
 | `Runtime/TotalWarFormationRuntimeSystem.cs` | 跑方阵业务状态。 |
 | `Runtime/TotalWarFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
 | `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
@@ -81,10 +80,11 @@ Total War 示例的文件入口：
 | `LudotsCoreMod` | 提供 entity template、spawn、selection、order、presentation、minimap 等基础链路。先复用，不要复制。 |
 | `CoreInputMod` | 提供玩家框选、右键命令等输入入口。你的 Mod 通常只配置可选实体和订单类型。 |
 | `CameraProfilesMod` | 提供相机 profile。你的 Mod 通过配置选择或扩展 profile。 |
-| `MassNavigationMod` | 提供大规模导航基建。你配置 profiles、cadence、avoidance、order 和 agent contract。 |
+| `src/Core/MassCrowd` | 提供大规模导航 runtime、组件绑定、order ingestion、formation/follower 可选能力。 |
+| `MassNavigationMod` | 提供大规模导航资产、配置包和可选调参面板。它不拥有 MassCrowd runtime。 |
 | `MassNavigationTotalWarEntryMod` | Total War-like 业务示例。重点看方阵如何生成士兵、士兵如何跟随方阵、轮廓和障碍如何表现。 |
 
-如果你要做自己的游戏，通常复制的是 `MassNavigationTotalWarEntryMod` 的结构，然后换成你的业务命名和配置；`MassNavigationMod` 是被依赖的基建，不是放游戏规则的地方。
+如果你要做自己的游戏，通常复制的是 `MassNavigationTotalWarEntryMod` 的结构，然后换成你的业务命名和配置；MassCrowd runtime 是 core 能力，`MassNavigationMod` 是资产/UI 能力，不是放游戏规则或 runtime binding 的地方。
 
 ## 玩家模型
 
@@ -100,7 +100,7 @@ Total War 示例的文件入口：
 
 - runtime selection set
 - performer scope
-- spawn receipt channel
+- core runtime binding group
 - MassFlow solver index
 - entity template id
 - order blackboard key
@@ -204,11 +204,12 @@ agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigation
 - `AttributeBuffer`
 - `GameplayTagContainer`
 - `TagCountContainer`
-- `MassNavigationAgentTag`
+- `MassCrowdAgent`
+- `MassCrowdFormationAnchor`
+- `MassCrowdFollowerLocomotion`
 - `EntityLayer`
-- `MassNavigationControllable`
 
-这表示方阵能被选中、能接订单、有血量、能进入 MassNavigation。
+这表示方阵能被选中、能接订单、有血量、能进入 core MassCrowd runtime，并且作为可选 formation anchor 工作。
 
 士兵模板当前包含：
 
@@ -216,9 +217,20 @@ agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigation
 - `VisualHeightmapSampleState`
 - `FacingDirection`
 - `EntityLayer`
-- `MassNavigationAgentTag`
+- `MassCrowdAgent`
+- `MassCrowdFormationFollower`
 
-这表示士兵也是 MassNavigation agent，但玩家不能直接选中或下令。士兵由方阵业务 runtime 生成并同步目标。
+这表示士兵也是 core MassCrowd agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `SelectionSelectableTag`，所以玩家不能直接选中或下令。
+
+组件语义要按存在与否理解：
+
+- `MassCrowdAgent`：进入 core MassCrowd runtime。
+- `OrderBuffer`：可接玩家或 AI 订单。
+- `SelectionSelectableTag`：可被选择。
+- `MassCrowdFormationAnchor`：启用 formation anchor 行为。
+- `MassCrowdFormationFollower`：启用 follower 行为。
+
+formation 不是必备 feature。不需要 formation 时，不要配置一个“disabled=false”的占位组件；直接不配置 formation 组件。
 
 ## Performer 怎么配
 
@@ -298,21 +310,49 @@ Local input
 
 在这个 showcase 里，业务 runtime 会创建：
 
-- 方阵 MassNavigation agent。
-- 归属这个方阵的士兵 MassNavigation agents。
+- 方阵 core MassCrowd agent。
+- 归属这个方阵的士兵 core MassCrowd agents。
 
-士兵目标来自方阵当前 carried position 和方阵朝向。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵的目标。
+士兵的跟随目标由 core `MassCrowdFormationFollowerSystem` 根据 `MassCrowdFormationAnchor` / `MassCrowdFormationFollower` 组件同步。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵目标。
 
-这个“方阵拥有士兵”的规则是业务逻辑，应该放在 `MassNavigationTotalWarEntryMod` 或你的游戏 Mod。它不属于 MassNavigation foundation。
+这个“方阵有哪些士兵、士兵用什么模板和 slot”的规则是业务逻辑，应该放在 `MassNavigationTotalWarEntryMod` 或你的游戏 Mod。跟随和 runtime agent 绑定属于 core MassCrowd 能力。
 
 ## 障碍物
 
-障碍在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` 的 `world.obstacles[]`。
+障碍物的 SSOT 是地图或模板上的 ECS 组件，不再写在 `MassNavigationConfig.json`。
+
+正式链路使用 `ManifestationObstacleIntent2D` / `CompoundObstacle2D`：
+
+```text
+map/template components
+  -> ManifestationObstacleIntent2D or CompoundObstacle2D
+  -> ManifestationObstacleBridge2DSystem
+  -> MassFlowObstacleProjection + WorldPositionCm
+  -> MassCrowdEnvironmentBindingSystem
+  -> MassFlow obstacle arrays
+```
+
+也就是说：
+
+- 地图或 template 负责 authoring；
+- `ManifestationObstacleBridge2DSystem` 负责把 Circle/Box/Polygon 投影给运行时；
+- `MassCrowdEnvironmentBindingSystem` 负责把 `MassFlowObstacleProjection` 绑定进 solver；
+- `MassNavigationConfig.world.obstacles[]` 是废弃旧键，出现就应该 fail-fast。
 
 示例：
 
 ```json
-{ "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
+{
+  "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+  "ManifestationObstacleIntent2D": {
+    "shape": "Circle",
+    "sinkPhysicsCollider": false,
+    "sinkNavigationObstacle": true,
+    "radiusCm": 300,
+    "navRadiusCm": 300,
+    "localOffsetCm": { "x": 0, "y": 0 }
+  }
+}
 ```
 
 玩家要看见障碍，所以 showcase 还配置了：
@@ -322,6 +362,8 @@ Local input
 - `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
 
 不要用隐藏 debug draw 假装障碍可见。玩家要看的东西必须走明确表现链路。
+
+更多细节见 [Obstacle Authoring](obstacle-authoring.md)。
 
 ## 相机和裁剪
 
@@ -369,7 +411,6 @@ Total War 地图引用：
 - selection event key
 - profile id
 - map id
-- spawn receipt channel key
 
 运行时可以把字符串编译成 int 走热路径。作者侧不要暴露不透明数字 handle。
 
@@ -385,7 +426,7 @@ Total War 地图引用：
 6. 配 selectable control unit 模板。
 7. 配 lower-level agent 模板。
 8. 配 performer definitions 和 performer rules。
-9. 只有真正属于你游戏的规则才写业务 runtime，比如“方阵生成士兵并同步 slot 目标”。
+9. 只有真正属于你游戏的规则才写业务 runtime，比如“方阵生成哪些士兵、哪些 overlay 和 sidecar 业务组件”。
 10. Selection、Order、Spawn、Performer、Minimap、ConfigPipeline 都复用现有链路。
 
 ## 不要做
@@ -395,6 +436,8 @@ Total War 地图引用：
 - 不要为 selection marker 写 MassNavigation 私有生命周期 system。
 - 如果士兵需要避障和碰撞，不要把士兵做成非 MassNavigation 对象。
 - 不要把 Total War 方阵业务塞进 MassNavigation core。
+- 不要在 Mod 里新增 MassCrowd runtime 或 post-spawn channel binding。
+- 不要配置一个 disabled optional formation 组件；需要才配组件，不需要就不配。
 - 不要在 JSON 里写 order blackboard 数字 id 或 performer param 数字 id。
 - 不要给缺失模板、performer、mesh、material、map、heightmap 加 fallback。
 - 不要做大小写宽容解析。
@@ -410,7 +453,7 @@ Total War 地图引用：
 - 所有 template id 存在。
 - 所有 performer id 存在。
 - 方阵可选中、可下令、有血量。
-- 士兵是 MassNavigation agent，但不能直接选中。
+- 士兵是 MassCrowd agent，但不能直接选中。
 - 士兵 profile 速度大于方阵 profile 速度。
 - selection marker 的创建和销毁由 performer rule 驱动。
 - 取消选中或销毁实体后 marker 不残留。

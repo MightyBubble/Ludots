@@ -69,12 +69,12 @@ namespace Ludots.Core.Navigation.AOI
                 new System.Numerics.Vector3(source.CenterXcm, 0f, source.CenterZcm));
             
             // Calculate chunk range based on radius (all in centimeters)
-            int chunkWorldSizeCm = 64 * HexCoordinates.EdgeLengthCm; 
+            int chunkWorldSizeCm = SpatialScaleDefaults.TerrainChunkCells * HexCoordinates.EdgeLengthCm;
             int radiusInChunks = (int)Math.Ceiling((float)source.RadiusCm / chunkWorldSizeCm) + 1;
 
             (int cx, int cy) = centerHex.ToOffsetCoordinates(); // Approx center chunk
-            int centerChunkX = cx >> 6;
-            int centerChunkY = cy >> 6;
+            int centerChunkX = cx >> VertexChunk.ChunkSizeShift;
+            int centerChunkY = cy >> VertexChunk.ChunkSizeShift;
 
             // Simple square loop around center chunk
             for (int x = centerChunkX - radiusInChunks; x <= centerChunkX + radiusInChunks; x++)

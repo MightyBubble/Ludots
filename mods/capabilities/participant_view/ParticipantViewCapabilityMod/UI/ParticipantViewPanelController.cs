@@ -17,6 +17,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using ParticipantViewCapabilityMod.Runtime;
 
 namespace ParticipantViewCapabilityMod.UI;
@@ -30,6 +31,7 @@ internal sealed class ParticipantViewPanelController
     private ReactivePage<ParticipantViewPanelState>? _page;
     private ParticipantViewPanelState _lastState = ParticipantViewPanelState.Empty;
     private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public ParticipantViewPanelController(ParticipantViewCapabilityRuntime runtime)
     {
@@ -40,24 +42,26 @@ internal sealed class ParticipantViewPanelController
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(engine);
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return false;
+        }
 
         _engine = engine;
         ReactivePage<ParticipantViewPanelState> page = EnsurePage();
         bool changed = false;
-        if (!ReferenceEquals(root.Scene, page.Scene))
-        {
-            root.MountScene(page.Scene);
-            root.IsDirty = true;
-            changed = true;
-        }
 
         if (ApplyStateSnapshot(engine))
         {
-            root.IsDirty = true;
             changed = true;
         }
 
-        return changed;
+        surfaceHost.Publish(
+            surfaceHost.EnsureLease(
+                ref _lease,
+                new UiSurfaceLeaseRequest("ParticipantView.Panel", UiSurfaceSegment.Overlay, priority: 40)),
+            UiSurfaceContribution.FromReactivePage(page));
+        return true;
     }
 
     public void SyncIfMounted(UIRoot root, GameEngine engine)
@@ -66,24 +70,26 @@ internal sealed class ParticipantViewPanelController
         ArgumentNullException.ThrowIfNull(engine);
 
         _engine = engine;
-        if (_page == null || !ReferenceEquals(root.Scene, _page.Scene))
+        if (_page == null ||
+            !_lease.IsValid ||
+            engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost ||
+            !surfaceHost.Revalidate(_lease))
         {
             return;
         }
 
-        if (ApplyStateSnapshot(engine))
-        {
-            root.IsDirty = true;
-        }
+        ApplyStateSnapshot(engine);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
         ArgumentNullException.ThrowIfNull(root);
 
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.Release(_lease);
+            _lease = default;
         }
 
         _engine = null;

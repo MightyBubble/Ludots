@@ -53,6 +53,8 @@ namespace Ludots.Core.Physics2D.Systems
 
         public int StaticBodyVersion { get; private set; }
         public int DirtyStaticBodyCountLastUpdate { get; private set; }
+        public int DirtyStaticBodyCountLastRebuild { get; private set; }
+        private int _observedWorldSize = -1;
 
         public BuildPhysicsWorldSystem2D(World world, ShapeDataStorage2D shapeStorage) : base(world)
         {
@@ -91,6 +93,13 @@ namespace Ludots.Core.Physics2D.Systems
             _dynamicSnapshots.Clear();
 
             bool staticCacheDirty = ConsumeStaticDirtyMarkers();
+            if (!staticCacheDirty &&
+                _staticEntities.Count > 0 &&
+                _observedWorldSize >= 0 &&
+                World.Size < _observedWorldSize)
+            {
+                staticCacheDirty = HasInvalidCachedStaticBodies();
+            }
 
             var collectSingleJob = new CollectSingleBodiesJob { Owner = this };
             World.InlineEntityQuery<CollectSingleBodiesJob, Position2D, Collider2D, Mass2D>(
@@ -107,10 +116,12 @@ namespace Ludots.Core.Physics2D.Systems
             if (staticCacheDirty)
             {
                 RebuildStaticRigidBodies();
+                DirtyStaticBodyCountLastRebuild = DirtyStaticBodyCountLastUpdate;
                 StaticBodyVersion = unchecked(StaticBodyVersion + 1);
             }
 
             BuildCombinedBodySnapshot();
+            _observedWorldSize = World.Size;
         }
 
         public Entity ResolveBodyEntity(int bodyIndex)
@@ -144,6 +155,20 @@ namespace Ludots.Core.Physics2D.Systems
                 in _staticDirtyQuery,
                 ref job);
             return job.StaticCacheDirty;
+        }
+
+        private bool HasInvalidCachedStaticBodies()
+        {
+            for (int i = 0; i < _staticEntities.Count; i++)
+            {
+                if (!CanMaterializeStaticBody(_staticEntities[i]))
+                {
+                    DirtyStaticBodyCountLastUpdate++;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool CanMaterializeStaticBody(Entity entity)

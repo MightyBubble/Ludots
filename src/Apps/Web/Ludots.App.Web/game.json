@@ -1,13 +1,12 @@
 {
-  "startupInputContexts": [
-    "Default_Gameplay"
-  ],
-  "windowWidth": 1280,
-  "windowHeight": 720,
-  "windowTitle": "Ludots Engine â€” Web",
-  "targetFps": 30,
-  "modPaths": [
-    "../../../../../../../mods/LudotsCoreMod",
-    "../../../../../../../mods/Navigation2DPlaygroundMod"
-  ]
+    "startupInputContexts":  [
+                                 "Default_Gameplay"
+                             ],
+    "windowWidth":  1280,
+    "windowHeight":  720,
+    "windowTitle":  "Ludots Engine â€?Web",
+    "targetFps":  30,
+    "modPaths":  [
+                     "../../../../../../../mods/LudotsCoreMod"
+                 ]
 }

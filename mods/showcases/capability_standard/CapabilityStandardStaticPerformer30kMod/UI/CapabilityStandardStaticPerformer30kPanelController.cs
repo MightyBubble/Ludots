@@ -8,6 +8,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
 using Ludots.UI.Runtime.Events;
+using Ludots.UI.Surface;
 using CapabilityStandardStaticPerformer30kMod.Runtime;
 
 namespace CapabilityStandardStaticPerformer30kMod.UI
@@ -19,6 +20,7 @@ namespace CapabilityStandardStaticPerformer30kMod.UI
         private GameEngine? _engine;
         private CapabilityStandardStaticPerformer30kPanelState _lastState = CapabilityStandardStaticPerformer30kPanelState.Empty;
         private bool _hasLastState;
+        private UiSurfaceLeaseHandle _lease;
 
         public CapabilityStandardStaticPerformer30kPanelController(CapabilityStandardStaticPerformer30kRuntime runtime)
         {
@@ -29,6 +31,10 @@ namespace CapabilityStandardStaticPerformer30kMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return false;
+            }
 
             _engine = engine;
             ReactivePage<CapabilityStandardStaticPerformer30kPanelState>? page = EnsurePage();
@@ -37,21 +43,18 @@ namespace CapabilityStandardStaticPerformer30kMod.UI
                 return false;
             }
 
-            bool mounted = ReferenceEquals(root.Scene, page.Scene);
             if (!_hasLastState || !StateEquals(in _lastState, in state))
             {
                 CapabilityStandardStaticPerformer30kPanelState snapshot = state;
                 page.SetState(_ => snapshot);
                 _lastState = snapshot;
                 _hasLastState = true;
-                root.IsDirty = true;
             }
 
-            if (!mounted)
-            {
-                root.MountScene(page.Scene);
-            }
-
+            surfaceHost.PublishReactivePage(
+                ref _lease,
+                new UiSurfaceLeaseRequest("Showcase.CapabilityStandardStaticPerformer30k.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                page);
             return true;
         }
 
@@ -59,9 +62,10 @@ namespace CapabilityStandardStaticPerformer30kMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.ReleaseLease(ref _lease);
             }
 
             _engine = null;
@@ -359,9 +363,10 @@ namespace CapabilityStandardStaticPerformer30kMod.UI
         {
             GameEngine engine = RequireEngine();
             action(_runtime);
-            if (engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
+            if (_lease.IsValid &&
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.IsDirty = true;
+                surfaceHost.InvalidateLease(_lease);
             }
         }
 

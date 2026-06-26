@@ -50,10 +50,9 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 }
 
                 string agentPath = $"PathingConfig.agentTypes[{i}]";
-                RequireOnlyProperties(agent, agentPath, "id", "profileId", "layer", "selection", "navMesh", "nodeGraph");
+                RequireOnlyProperties(agent, agentPath, "id", "profileId", "selection", "navMesh", "nodeGraph");
                 RequireString(agent, "id", agentPath);
                 RequireString(agent, "profileId", agentPath);
-                RequireNumber(agent, "layer", agentPath);
 
                 if (agent["selection"] is not JsonObject selection)
                 {
@@ -64,7 +63,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 string mode = RequireString(selection, "mode", $"{agentPath}.selection");
                 if (!string.Equals(mode, nameof(PathSelectionMode.AutoCheapest), StringComparison.Ordinal) &&
                     !string.Equals(mode, nameof(PathSelectionMode.PreferGraph), StringComparison.Ordinal) &&
-                    !string.Equals(mode, nameof(PathSelectionMode.PreferMesh), StringComparison.Ordinal))
+                    !string.Equals(mode, nameof(PathSelectionMode.PreferMesh), StringComparison.Ordinal) &&
+                    !string.Equals(mode, nameof(PathSelectionMode.Direct), StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException($"{agentPath}.selection.mode '{mode}' is not a canonical path selection mode.");
                 }

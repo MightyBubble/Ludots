@@ -7,6 +7,6 @@ namespace Ludots.Core.Map.Board
     /// </summary>
     public interface INavigableBoard : IBoard
     {
-        NavQueryServiceRegistry NavServices { get; }
+        NavQueryServiceRegistry NavServices { get; set; }
     }
 }

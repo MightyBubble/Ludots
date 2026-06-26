@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -17,8 +19,9 @@ namespace Ludots.Core.Navigation.NavMesh
             public readonly byte W;
             public readonly bool IsRamp;
             public readonly bool IsBlocked;
+            public readonly byte AreaId;
 
-            public Vtx(int c, int r, Vector3 pos, float waterY, byte h, byte w, bool isRamp, bool isBlocked)
+            public Vtx(int c, int r, Vector3 pos, float waterY, byte h, byte w, bool isRamp, bool isBlocked, byte areaId)
             {
                 C = c;
                 R = r;
@@ -28,6 +31,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 W = w;
                 IsRamp = isRamp;
                 IsBlocked = isBlocked;
+                AreaId = areaId;
             }
         }
 
@@ -74,29 +78,49 @@ namespace Ludots.Core.Navigation.NavMesh
             out NavTile tile,
             out NavBakeArtifact artifact)
         {
-            tile = null;
-            artifact = default;
-
             if (map == null)
             {
+                tile = null;
                 artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, 0), tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, "VertexMap is null.", 0, 0, 0, 0);
                 return false;
             }
 
-            int startC = chunkX * VertexChunk.ChunkSize;
-            int startR = chunkY * VertexChunk.ChunkSize;
-            int mapWidth = map.WidthInChunks * VertexChunk.ChunkSize;
-            int mapHeight = map.HeightInChunks * VertexChunk.ChunkSize;
+            return TryBuildTile(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, config, out tile, out artifact);
+        }
+
+        public static bool TryBuildTile(
+            LogicTerrainField terrain,
+            int chunkX,
+            int chunkY,
+            uint tileVersion,
+            in NavBuildConfig config,
+            out NavTile tile,
+            out NavBakeArtifact artifact)
+        {
+            tile = null;
+            artifact = default;
+
+            if (terrain == null)
+            {
+                artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, 0), tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, "LogicTerrainField is null.", 0, 0, 0, 0);
+                return false;
+            }
+
+            int tileWidth = terrain.TileWidthCells(chunkX);
+            int tileHeight = terrain.TileHeightCells(chunkY);
+            int startC = chunkX * terrain.ChunkSizeCells;
+            int startR = chunkY * terrain.ChunkSizeCells;
+            int mapWidth = terrain.WidthCells;
+            int mapHeight = terrain.HeightCells;
             if (startC < 0 || startR < 0 || startC >= mapWidth || startR >= mapHeight)
             {
                 artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, 0), tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, "Tile out of range.", 0, 0, 0, 0);
                 return false;
             }
 
-            float originXm = startC * HexCoordinates.HexWidth;
-            float originZm = startR * HexCoordinates.RowSpacing;
-            int originXcm = (int)MathF.Round(originXm * 100f);
-            int originZcm = (int)MathF.Round(originZm * 100f);
+            terrain.GetWorldPositionMeters(startC, startR, out float originXm, out float originZm);
+            int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
+            int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
 
             var vertexIndex = new Dictionary<VertexKey, int>(4096);
             var vx = new List<int>(4096);
@@ -105,22 +129,23 @@ namespace Ludots.Core.Navigation.NavMesh
             var triA = new List<int>(8192);
             var triB = new List<int>(8192);
             var triC = new List<int>(8192);
-            var cellWalkable = new bool[VertexChunk.ChunkSize * VertexChunk.ChunkSize];
+            var triAreaIds = new List<byte>(8192);
+            var cellWalkable = new bool[tileWidth * tileHeight];
 
             int walkableTriCount = 0;
 
-            for (int r = startR; r < startR + VertexChunk.ChunkSize; r++)
+            for (int r = startR; r < startR + tileHeight; r++)
             {
-                for (int c = startC; c < startC + VertexChunk.ChunkSize; c++)
+                for (int c = startC; c < startC + tileWidth; c++)
                 {
                     if (r >= mapHeight - 1 || c >= mapWidth - 1) continue;
 
                     int lr = r - startR;
                     int lc = c - startC;
-                    cellWalkable[lr * VertexChunk.ChunkSize + lc] = IsCellAnyTriangleWalkable(map, mapWidth, mapHeight, c, r, config);
+                    cellWalkable[lr * tileWidth + lc] = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, c, r, config);
 
-                    bool isOdd = (r & 1) == 1;
-                    var v1 = GetVertex(map, mapWidth, mapHeight, c, r, originXm, originZm, config.HeightScaleMeters);
+                    bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;
+                    var v1 = GetVertex(terrain, mapWidth, mapHeight, c, r, originXm, originZm, config.HeightScaleMeters);
 
                     Vtx t1p1, t1p2, t1p3;
                     Vtx t2p1, t2p2, t2p3;
@@ -128,26 +153,26 @@ namespace Ludots.Core.Navigation.NavMesh
                     if (!isOdd)
                     {
                         t1p1 = v1;
-                        t1p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r, originXm, originZm, config.HeightScaleMeters);
-                        t1p3 = GetVertex(map, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
+                        t1p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r, originXm, originZm, config.HeightScaleMeters);
+                        t1p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
 
                         t2p1 = t1p2;
-                        t2p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r + 1, originXm, originZm, config.HeightScaleMeters);
+                        t2p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r + 1, originXm, originZm, config.HeightScaleMeters);
                         t2p3 = t1p3;
                     }
                     else
                     {
                         t1p1 = v1;
-                        t1p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r, originXm, originZm, config.HeightScaleMeters);
-                        t1p3 = GetVertex(map, mapWidth, mapHeight, c + 1, r + 1, originXm, originZm, config.HeightScaleMeters);
+                        t1p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r, originXm, originZm, config.HeightScaleMeters);
+                        t1p3 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r + 1, originXm, originZm, config.HeightScaleMeters);
 
                         t2p1 = v1;
                         t2p2 = t1p3;
-                        t2p3 = GetVertex(map, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
+                        t2p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
                     }
 
-                    AddFace(map, mapWidth, mapHeight, originXm, originZm, config, t1p1, t1p2, t1p3, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                    AddFace(map, mapWidth, mapHeight, originXm, originZm, config, t2p1, t2p2, t2p3, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t1p1, t1p2, t1p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t2p1, t2p2, t2p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 }
             }
 
@@ -165,8 +190,8 @@ namespace Ludots.Core.Navigation.NavMesh
             Array.Fill(n2, -1);
             BuildAdjacency(triA, triB, triC, n0, n1, n2);
 
-            var clearanceCm = ComputeClearanceCmField(cellWalkable);
-            var portals = BuildPortals(map, mapWidth, mapHeight, startC, startR, originXm, originZm, clearanceCm, config);
+            var clearanceCm = ComputeClearanceCmField(cellWalkable, tileWidth, tileHeight, terrain);
+            var portals = BuildPortals(terrain, mapWidth, mapHeight, startC, startR, tileWidth, tileHeight, originXm, originZm, clearanceCm, config);
 
             ulong buildHash = config.ComputeHash();
             var tmpTile = new NavTile(
@@ -185,6 +210,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 n0,
                 n1,
                 n2,
+                triAreaIds.ToArray(),
                 portals);
 
             using (var ms = new System.IO.MemoryStream())
@@ -199,36 +225,34 @@ namespace Ludots.Core.Navigation.NavMesh
             return true;
         }
 
-        private static Vtx GetVertex(VertexMap map, int mapWidth, int mapHeight, int c, int r, float originXm, float originZm, float heightScale)
+        private static Vtx GetVertex(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, float originXm, float originZm, float heightScale)
         {
             byte h = 0;
             byte w = 0;
             bool ramp = false;
             bool blocked = false;
+            byte areaId = 0;
 
             if ((uint)c < (uint)mapWidth && (uint)r < (uint)mapHeight)
             {
-                var chunk = map.GetChunk(c, r, false);
-                if (chunk != null)
-                {
-                    int lx = c & VertexChunk.ChunkSizeMask;
-                    int lr = r & VertexChunk.ChunkSizeMask;
-                    h = chunk.GetHeight(lx, lr);
-                    w = chunk.GetWaterHeight(lx, lr);
-                    ramp = chunk.GetRamp(lx, lr);
-                    blocked = chunk.GetFlag(lx, lr);
-                }
+                LogicTerrainCell cell = terrain.GetCell(c, r);
+                h = cell.HeightLevel;
+                w = cell.WaterHeightLevel;
+                ramp = cell.IsRamp;
+                blocked = cell.IsBlocked;
+                areaId = cell.AreaId;
             }
 
-            float x = HexCoordinates.HexWidth * (c + 0.5f * (r & 1)) - originXm;
-            float z = HexCoordinates.RowSpacing * r - originZm;
+            terrain.GetWorldPositionMeters(c, r, out float worldX, out float worldZ);
+            float x = worldX - originXm;
+            float z = worldZ - originZm;
             float y = h * heightScale;
             float waterY = w * heightScale;
-            return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, ramp, blocked);
+            return new Vtx(c, r, new Vector3(x, y, z), waterY, h, w, ramp, blocked, areaId);
         }
 
         private static void AddFace(
-            VertexMap map,
+            LogicTerrainField terrain,
             int mapWidth,
             int mapHeight,
             float originXm,
@@ -244,21 +268,23 @@ namespace Ludots.Core.Navigation.NavMesh
             List<int> triA,
             List<int> triB,
             List<int> triC,
+            List<byte> triAreaIds,
             ref int walkableTriCount)
         {
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
+            byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
 
             if (minH == maxH)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
 
             bool isRamp = p1.IsRamp || p2.IsRamp || p3.IsRamp;
             if (isRamp)
             {
-                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, p1.Pos, p1.WaterY, p2.Pos, p2.WaterY, p3.Pos, p3.WaterY, areaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 return;
             }
 
@@ -277,13 +303,13 @@ namespace Ludots.Core.Navigation.NavMesh
                 Vtx h2 = b;
                 Vtx l = c;
 
-                if (TryGetSplit(map, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h1, l, out var m1) &&
-                    TryGetSplit(map, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h2, l, out var m2))
+                if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h1, l, out var m1) &&
+                    TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h2, l, out var m2))
                 {
-                    AppendWalkableTri(config, h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                    AppendWalkableTri(config, h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AppendWalkableTri(config, h1.Pos, h1.WaterY, h2.Pos, h2.WaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h1.AreaId, h2.AreaId, h1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AppendWalkableTri(config, h2.Pos, h2.WaterY, m2.HighExt, m2.HighWaterY, m1.HighExt, m1.HighWaterY, ResolveAreaId(h2.AreaId, h1.AreaId, h2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                    AppendWalkableTri(config, l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                    AppendWalkableTri(config, l.Pos, l.WaterY, m2.LowExt, m2.LowWaterY, m1.LowExt, m1.LowWaterY, l.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
                 }
 
                 return;
@@ -293,13 +319,13 @@ namespace Ludots.Core.Navigation.NavMesh
             Vtx l1 = b;
             Vtx l2 = c;
 
-            if (TryGetSplit(map, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l1, out var s1) &&
-                TryGetSplit(map, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l2, out var s2))
+            if (TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l1, out var s1) &&
+                TryGetSplit(terrain, mapWidth, mapHeight, originXm, originZm, config.HeightScaleMeters, h, l2, out var s2))
             {
-                AppendWalkableTri(config, h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, h.Pos, h.WaterY, s1.HighExt, s1.HighWaterY, s2.HighExt, s2.HighWaterY, h.AreaId, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
 
-                AppendWalkableTri(config, l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
-                AppendWalkableTri(config, l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, vertexIndex, vx, vy, vz, triA, triB, triC, ref walkableTriCount);
+                AppendWalkableTri(config, l1.Pos, l1.WaterY, l2.Pos, l2.WaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l1.AreaId, l2.AreaId, l1.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                AppendWalkableTri(config, l2.Pos, l2.WaterY, s2.LowExt, s2.LowWaterY, s1.LowExt, s1.LowWaterY, ResolveAreaId(l2.AreaId, l1.AreaId, l2.AreaId), vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
             }
         }
 
@@ -311,6 +337,7 @@ namespace Ludots.Core.Navigation.NavMesh
             float wb,
             Vector3 c,
             float wc,
+            byte areaId,
             Dictionary<VertexKey, int> vertexIndex,
             List<int> vx,
             List<int> vy,
@@ -318,6 +345,7 @@ namespace Ludots.Core.Navigation.NavMesh
             List<int> triA,
             List<int> triB,
             List<int> triC,
+            List<byte> triAreaIds,
             ref int walkableTriCount)
         {
             if (wa > a.Y || wb > b.Y || wc > c.Y) return;
@@ -328,7 +356,12 @@ namespace Ludots.Core.Navigation.NavMesh
             float len = n.Length();
             if (len <= 1e-6f) return;
             n /= len;
-            if (n.Y < 0f) n = -n;
+            if (n.Y < 0f)
+            {
+                (b, c) = (c, b);
+                (wb, wc) = (wc, wb);
+                n = -n;
+            }
             if (n.Y < config.MinWalkableUpDot) return;
 
             int ia = GetOrAddVertex(a, vertexIndex, vx, vy, vz);
@@ -339,14 +372,22 @@ namespace Ludots.Core.Navigation.NavMesh
             triA.Add(ia);
             triB.Add(ib);
             triC.Add(ic);
+            triAreaIds.Add(areaId);
             walkableTriCount++;
+        }
+
+        private static byte ResolveAreaId(byte a, byte b, byte c)
+        {
+            if (a == b || a == c) return a;
+            if (b == c) return b;
+            return a;
         }
 
         private static int GetOrAddVertex(Vector3 p, Dictionary<VertexKey, int> vertexIndex, List<int> vx, List<int> vy, List<int> vz)
         {
-            int xcm = (int)MathF.Round(p.X * 100f);
-            int ycm = (int)MathF.Round(p.Y * 100f);
-            int zcm = (int)MathF.Round(p.Z * 100f);
+            int xcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.X));
+            int ycm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.Y));
+            int zcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.Z));
             var key = new VertexKey(xcm, ycm, zcm);
             if (vertexIndex.TryGetValue(key, out int idx)) return idx;
             idx = vx.Count;
@@ -421,7 +462,7 @@ namespace Ludots.Core.Navigation.NavMesh
         }
 
         private static bool TryGetSplit(
-            VertexMap map,
+            LogicTerrainField terrain,
             int mapWidth,
             int mapHeight,
             float originXm,
@@ -441,7 +482,8 @@ namespace Ludots.Core.Navigation.NavMesh
             float highExtX = midX;
             float lowExtX = midX;
 
-            bool shouldStraighten = GetCliffStraighten(map, mapWidth, mapHeight, high.C, high.R, low.C, low.R);
+            bool shouldStraighten = terrain.Topology == LogicTerrainTopology.Hex &&
+                GetCliffStraighten(terrain, mapWidth, mapHeight, high.C, high.R, low.C, low.R);
 
             if (shouldStraighten)
             {
@@ -459,7 +501,7 @@ namespace Ludots.Core.Navigation.NavMesh
             return true;
         }
 
-        private static bool GetCliffStraighten(VertexMap map, int mapWidth, int mapHeight, int cA, int rA, int cB, int rB)
+        private static bool GetCliffStraighten(LogicTerrainField terrain, int mapWidth, int mapHeight, int cA, int rA, int cB, int rB)
         {
             int baseC;
             int baseR;
@@ -523,32 +565,42 @@ namespace Ludots.Core.Navigation.NavMesh
             }
 
             if ((uint)baseC >= (uint)mapWidth || (uint)baseR >= (uint)mapHeight) return false;
-            var chunk = map.GetChunk(baseC, baseR, false);
-            if (chunk == null) return false;
-            return chunk.GetCliffStraightenEdge(baseC & VertexChunk.ChunkSizeMask, baseR & VertexChunk.ChunkSizeMask, edgeIndex);
+            return terrain.TryGetCliffStraightenEdge(baseC, baseR, edgeIndex, out bool value) && value;
         }
 
-        private static NavBorderPortal[] BuildPortals(VertexMap map, int mapWidth, int mapHeight, int startC, int startR, float originXm, float originZm, int[] clearanceCm, in NavBuildConfig config)
+        private static NavBorderPortal[] BuildPortals(
+            LogicTerrainField terrain,
+            int mapWidth,
+            int mapHeight,
+            int startC,
+            int startR,
+            int tileWidth,
+            int tileHeight,
+            float originXm,
+            float originZm,
+            int[] clearanceCm,
+            in NavBuildConfig config)
         {
-            var portals = new List<NavBorderPortal>(64);
-            int endC = startC + VertexChunk.ChunkSize;
-            int endR = startR + VertexChunk.ChunkSize;
+            var portals = new List<NavBorderPortal>(SpatialScaleDefaults.NavPortalInitialCapacity);
+            int endC = startC + tileWidth;
+            int endR = startR + tileHeight;
 
-            AddVerticalPortals(map, mapWidth, mapHeight, startC, startR, endR, originXm, originZm, clearanceCm, config, NavPortalSide.West, insideC: startC, outsideC: startC - 1, portals);
-            AddVerticalPortals(map, mapWidth, mapHeight, endC, startR, endR, originXm, originZm, clearanceCm, config, NavPortalSide.East, insideC: endC - 1, outsideC: endC, portals);
-            AddHorizontalPortals(map, mapWidth, mapHeight, startR, startC, endC, originXm, originZm, clearanceCm, config, NavPortalSide.North, insideR: startR, outsideR: startR - 1, portals);
-            AddHorizontalPortals(map, mapWidth, mapHeight, endR, startC, endC, originXm, originZm, clearanceCm, config, NavPortalSide.South, insideR: endR - 1, outsideR: endR, portals);
+            AddVerticalPortals(terrain, mapWidth, mapHeight, startC, startR, endR, tileWidth, originXm, originZm, clearanceCm, config, NavPortalSide.West, insideC: startC, outsideC: startC - 1, portals);
+            AddVerticalPortals(terrain, mapWidth, mapHeight, endC, startR, endR, tileWidth, originXm, originZm, clearanceCm, config, NavPortalSide.East, insideC: endC - 1, outsideC: endC, portals);
+            AddHorizontalPortals(terrain, mapWidth, mapHeight, startR, startC, endC, tileWidth, tileHeight, originXm, originZm, clearanceCm, config, NavPortalSide.North, insideR: startR, outsideR: startR - 1, portals);
+            AddHorizontalPortals(terrain, mapWidth, mapHeight, endR, startC, endC, tileWidth, tileHeight, originXm, originZm, clearanceCm, config, NavPortalSide.South, insideR: endR - 1, outsideR: endR, portals);
 
             return portals.ToArray();
         }
 
         private static void AddVerticalPortals(
-            VertexMap map,
+            LogicTerrainField terrain,
             int mapWidth,
             int mapHeight,
             int boundaryCol,
             int startR,
             int endR,
+            int tileWidth,
             float originXm,
             float originZm,
             int[] clearanceCm,
@@ -561,8 +613,8 @@ namespace Ludots.Core.Navigation.NavMesh
             int segStart = -1;
             for (int r = startR; r < endR; r++)
             {
-                bool inside = IsCellAnyTriangleWalkable(map, mapWidth, mapHeight, insideC, r, config);
-                bool outside = IsCellAnyTriangleWalkable(map, mapWidth, mapHeight, outsideC, r, config);
+                bool inside = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, insideC, r, config);
+                bool outside = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, outsideC, r, config);
                 bool passable = inside && outside;
 
                 int localV = r - startR;
@@ -574,7 +626,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 {
                     if (segStart >= 0)
                     {
-                        AddVerticalPortalSegment(boundaryCol, startR, segStart, localV, originXm, originZm, clearanceCm, side, dst);
+                        AddVerticalPortalSegment(terrain, boundaryCol, startR, segStart, localV, tileWidth, originXm, originZm, clearanceCm, side, dst);
                         segStart = -1;
                     }
                 }
@@ -582,35 +634,48 @@ namespace Ludots.Core.Navigation.NavMesh
 
             if (segStart >= 0)
             {
-                AddVerticalPortalSegment(boundaryCol, startR, segStart, endR - startR, originXm, originZm, clearanceCm, side, dst);
+                AddVerticalPortalSegment(terrain, boundaryCol, startR, segStart, endR - startR, tileWidth, originXm, originZm, clearanceCm, side, dst);
             }
         }
 
-        private static void AddVerticalPortalSegment(int boundaryCol, int startR, int v0, int v1, float originXm, float originZm, int[] clearanceCm, NavPortalSide side, List<NavBorderPortal> dst)
+        private static void AddVerticalPortalSegment(
+            LogicTerrainField terrain,
+            int boundaryCol,
+            int startR,
+            int v0,
+            int v1,
+            int tileWidth,
+            float originXm,
+            float originZm,
+            int[] clearanceCm,
+            NavPortalSide side,
+            List<NavBorderPortal> dst)
         {
-            short u = side == NavPortalSide.West ? (short)0 : (short)VertexChunk.ChunkSize;
+            short u = side == NavPortalSide.West ? (short)0 : checked((short)tileWidth);
             short sv0 = (short)v0;
             short sv1 = (short)v1;
 
             int r0 = startR + v0;
             int r1 = startR + v1;
-            float x0m = HexCoordinates.HexWidth * (boundaryCol + 0.5f * (r0 & 1)) - originXm;
-            float z0m = HexCoordinates.RowSpacing * r0 - originZm;
-            float x1m = HexCoordinates.HexWidth * (boundaryCol + 0.5f * (r1 & 1)) - originXm;
-            float z1m = HexCoordinates.RowSpacing * r1 - originZm;
+            terrain.GetWorldPositionMeters(boundaryCol, r0, out float worldX0, out float worldZ0);
+            terrain.GetWorldPositionMeters(boundaryCol, r1, out float worldX1, out float worldZ1);
+            float x0m = worldX0 - originXm;
+            float z0m = worldZ0 - originZm;
+            float x1m = worldX1 - originXm;
+            float z1m = worldZ1 - originZm;
 
-            int x0cm = (int)MathF.Round(x0m * 100f);
-            int z0cm = (int)MathF.Round(z0m * 100f);
-            int x1cm = (int)MathF.Round(x1m * 100f);
-            int z1cm = (int)MathF.Round(z1m * 100f);
+            int x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+            int z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+            int x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+            int z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             int dx = x1cm - x0cm;
             int dz = z1cm - z0cm;
             int len = (int)MathF.Round(MathF.Sqrt(dx * dx + dz * dz));
             int minClearance = int.MaxValue;
-            int lc = side == NavPortalSide.West ? 0 : (VertexChunk.ChunkSize - 1);
+            int lc = side == NavPortalSide.West ? 0 : (tileWidth - 1);
             for (int rr = v0; rr < v1; rr++)
             {
-                int idx = rr * VertexChunk.ChunkSize + lc;
+                int idx = rr * tileWidth + lc;
                 int ccm = clearanceCm[idx];
                 if (ccm < minClearance) minClearance = ccm;
             }
@@ -619,12 +684,14 @@ namespace Ludots.Core.Navigation.NavMesh
         }
 
         private static void AddHorizontalPortals(
-            VertexMap map,
+            LogicTerrainField terrain,
             int mapWidth,
             int mapHeight,
             int boundaryRow,
             int startC,
             int endC,
+            int tileWidth,
+            int tileHeight,
             float originXm,
             float originZm,
             int[] clearanceCm,
@@ -637,8 +704,8 @@ namespace Ludots.Core.Navigation.NavMesh
             int segStart = -1;
             for (int c = startC; c < endC; c++)
             {
-                bool inside = IsCellAnyTriangleWalkable(map, mapWidth, mapHeight, c, insideR, config);
-                bool outside = IsCellAnyTriangleWalkable(map, mapWidth, mapHeight, c, outsideR, config);
+                bool inside = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, c, insideR, config);
+                bool outside = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, c, outsideR, config);
                 bool passable = inside && outside;
 
                 int localU = c - startC;
@@ -650,7 +717,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 {
                     if (segStart >= 0)
                     {
-                        AddHorizontalPortalSegment(boundaryRow, startC, segStart, localU, originXm, originZm, clearanceCm, side, dst);
+                        AddHorizontalPortalSegment(terrain, boundaryRow, startC, segStart, localU, tileWidth, tileHeight, originXm, originZm, clearanceCm, side, dst);
                         segStart = -1;
                     }
                 }
@@ -658,35 +725,49 @@ namespace Ludots.Core.Navigation.NavMesh
 
             if (segStart >= 0)
             {
-                AddHorizontalPortalSegment(boundaryRow, startC, segStart, endC - startC, originXm, originZm, clearanceCm, side, dst);
+                AddHorizontalPortalSegment(terrain, boundaryRow, startC, segStart, endC - startC, tileWidth, tileHeight, originXm, originZm, clearanceCm, side, dst);
             }
         }
 
-        private static void AddHorizontalPortalSegment(int boundaryRow, int startC, int u0, int u1, float originXm, float originZm, int[] clearanceCm, NavPortalSide side, List<NavBorderPortal> dst)
+        private static void AddHorizontalPortalSegment(
+            LogicTerrainField terrain,
+            int boundaryRow,
+            int startC,
+            int u0,
+            int u1,
+            int tileWidth,
+            int tileHeight,
+            float originXm,
+            float originZm,
+            int[] clearanceCm,
+            NavPortalSide side,
+            List<NavBorderPortal> dst)
         {
-            short v = side == NavPortalSide.North ? (short)0 : (short)VertexChunk.ChunkSize;
+            short v = side == NavPortalSide.North ? (short)0 : checked((short)tileHeight);
             short su0 = (short)u0;
             short su1 = (short)u1;
 
             int c0 = startC + u0;
             int c1 = startC + u1;
-            float x0m = HexCoordinates.HexWidth * (c0 + 0.5f * (boundaryRow & 1)) - originXm;
-            float z0m = HexCoordinates.RowSpacing * boundaryRow - originZm;
-            float x1m = HexCoordinates.HexWidth * (c1 + 0.5f * (boundaryRow & 1)) - originXm;
-            float z1m = z0m;
+            terrain.GetWorldPositionMeters(c0, boundaryRow, out float worldX0, out float worldZ0);
+            terrain.GetWorldPositionMeters(c1, boundaryRow, out float worldX1, out float worldZ1);
+            float x0m = worldX0 - originXm;
+            float z0m = worldZ0 - originZm;
+            float x1m = worldX1 - originXm;
+            float z1m = worldZ1 - originZm;
 
-            int x0cm = (int)MathF.Round(x0m * 100f);
-            int z0cm = (int)MathF.Round(z0m * 100f);
-            int x1cm = (int)MathF.Round(x1m * 100f);
-            int z1cm = (int)MathF.Round(z1m * 100f);
+            int x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+            int z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+            int x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+            int z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             int dx = x1cm - x0cm;
             int dz = z1cm - z0cm;
             int len = (int)MathF.Round(MathF.Sqrt(dx * dx + dz * dz));
             int minClearance = int.MaxValue;
-            int lr = side == NavPortalSide.North ? 0 : (VertexChunk.ChunkSize - 1);
+            int lr = side == NavPortalSide.North ? 0 : (tileHeight - 1);
             for (int cc = u0; cc < u1; cc++)
             {
-                int idx = lr * VertexChunk.ChunkSize + cc;
+                int idx = lr * tileWidth + cc;
                 int ccm = clearanceCm[idx];
                 if (ccm < minClearance) minClearance = ccm;
             }
@@ -694,12 +775,12 @@ namespace Ludots.Core.Navigation.NavMesh
             dst.Add(new NavBorderPortal(side, su0, v, su1, v, x0cm, z0cm, x1cm, z1cm, clearance));
         }
 
-        private static bool IsCellAnyTriangleWalkable(VertexMap map, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
+        private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
         {
             if (r < 0 || c < 0 || r >= mapHeight - 1 || c >= mapWidth - 1) return false;
-            bool isOdd = (r & 1) == 1;
+            bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;
 
-            var v1 = GetVertex(map, mapWidth, mapHeight, c, r, 0f, 0f, config.HeightScaleMeters);
+            var v1 = GetVertex(terrain, mapWidth, mapHeight, c, r, 0f, 0f, config.HeightScaleMeters);
 
             Vtx t1p1, t1p2, t1p3;
             Vtx t2p1, t2p2, t2p3;
@@ -707,22 +788,22 @@ namespace Ludots.Core.Navigation.NavMesh
             if (!isOdd)
             {
                 t1p1 = v1;
-                t1p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r, 0f, 0f, config.HeightScaleMeters);
-                t1p3 = GetVertex(map, mapWidth, mapHeight, c, r + 1, 0f, 0f, config.HeightScaleMeters);
+                t1p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r, 0f, 0f, config.HeightScaleMeters);
+                t1p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, 0f, 0f, config.HeightScaleMeters);
 
                 t2p1 = t1p2;
-                t2p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r + 1, 0f, 0f, config.HeightScaleMeters);
+                t2p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r + 1, 0f, 0f, config.HeightScaleMeters);
                 t2p3 = t1p3;
             }
             else
             {
                 t1p1 = v1;
-                t1p2 = GetVertex(map, mapWidth, mapHeight, c + 1, r, 0f, 0f, config.HeightScaleMeters);
-                t1p3 = GetVertex(map, mapWidth, mapHeight, c + 1, r + 1, 0f, 0f, config.HeightScaleMeters);
+                t1p2 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r, 0f, 0f, config.HeightScaleMeters);
+                t1p3 = GetVertex(terrain, mapWidth, mapHeight, c + 1, r + 1, 0f, 0f, config.HeightScaleMeters);
 
                 t2p1 = v1;
                 t2p2 = t1p3;
-                t2p3 = GetVertex(map, mapWidth, mapHeight, c, r + 1, 0f, 0f, config.HeightScaleMeters);
+                t2p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, 0f, 0f, config.HeightScaleMeters);
             }
 
             return IsBaseTriWalkable(t1p1, t1p2, t1p3, config) || IsBaseTriWalkable(t2p1, t2p2, t2p3, config);
@@ -738,12 +819,12 @@ namespace Ludots.Core.Navigation.NavMesh
             return (max - min) <= config.CliffHeightThreshold;
         }
 
-        private static int[] ComputeClearanceCmField(bool[] cellWalkable)
+        private static int[] ComputeClearanceCmField(bool[] cellWalkable, int tileWidth, int tileHeight, LogicTerrainField terrain)
         {
-            int n = VertexChunk.ChunkSize * VertexChunk.ChunkSize;
+            int n = tileWidth * tileHeight;
             int[] dist = new int[n];
             var q = new Queue<int>(n);
-            int stepCm = (int)MathF.Round(MathF.Min(HexCoordinates.HexWidth, HexCoordinates.RowSpacing) * 100f);
+            int stepCm = Math.Max(1, Math.Min(terrain.HorizontalStepCm, terrain.VerticalStepCm));
             if (stepCm < 1) stepCm = 1;
 
             for (int i = 0; i < n; i++)
@@ -763,15 +844,15 @@ namespace Ludots.Core.Navigation.NavMesh
             {
                 int cur = q.Dequeue();
                 int baseD = dist[cur];
-                int x = cur % VertexChunk.ChunkSize;
-                int y = cur / VertexChunk.ChunkSize;
+                int x = cur % tileWidth;
+                int y = cur / tileWidth;
 
                 int nd = baseD + stepCm;
 
                 if (x > 0) Relax(cur - 1, nd);
-                if (x + 1 < VertexChunk.ChunkSize) Relax(cur + 1, nd);
-                if (y > 0) Relax(cur - VertexChunk.ChunkSize, nd);
-                if (y + 1 < VertexChunk.ChunkSize) Relax(cur + VertexChunk.ChunkSize, nd);
+                if (x + 1 < tileWidth) Relax(cur + 1, nd);
+                if (y > 0) Relax(cur - tileWidth, nd);
+                if (y + 1 < tileHeight) Relax(cur + tileWidth, nd);
             }
 
             return dist;

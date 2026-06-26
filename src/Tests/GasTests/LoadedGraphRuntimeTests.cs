@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
@@ -73,13 +74,14 @@ namespace Ludots.Tests.GAS
             loadedChunks.SetLoaded(bKey, loaded: true);
 
             using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: 500);
+            var agentProfiles = CreateAgentProfiles("graph_only");
             var navProfiles = new NavMeshProfileRegistry(new NavMeshBakeConfig
             {
-                Profiles = new List<NavAgentProfileConfig>
+                Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    new NavAgentProfileConfig { Id = "graph_only" }
+                    new NavMeshAgentProfileConfig { Id = "graph_only", MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 }
-            });
+            }, agentProfiles);
             var navRegistry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 16);
             var pathingConfig = new PathingConfig
@@ -99,7 +101,7 @@ namespace Ludots.Tests.GAS
                 }
             };
 
-            var service = new AutoPathService(runtime, navRegistry, navProfiles, pathStore, pathingConfig);
+            var service = new AutoPathService(runtime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig);
             var request = new PathRequest(
                 requestId: 1,
                 actor: default,
@@ -122,6 +124,22 @@ namespace Ludots.Tests.GAS
             loadedChunks.SetLoaded(bKey, loaded: false);
             Assert.That(service.TrySolve(in request, out var afterUnload), Is.True);
             Assert.That(afterUnload.Status, Is.EqualTo(PathStatus.NotReady));
+        }
+
+        private static AgentProfileRegistry CreateAgentProfiles(string id)
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = id,
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
         }
 
         private static GraphChunkData BuildChunk(

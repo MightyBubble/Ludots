@@ -13,6 +13,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace AnimationAcceptanceMod.UI
 {
@@ -23,6 +24,7 @@ namespace AnimationAcceptanceMod.UI
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
+        private UiSurfaceLeaseHandle _lease;
 
         public AnimationAcceptancePanelController(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
         {
@@ -39,24 +41,29 @@ namespace AnimationAcceptanceMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
-
-            _engine = engine;
-            if (!ReferenceEquals(root.Scene, _page.Scene))
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
-                root.MountScene(_page.Scene);
+                return;
             }
 
+            _engine = engine;
             _page.SetState(_ => CaptureState(engine));
-            root.IsDirty = true;
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("AnimationAcceptance.Panel", UiSurfaceSegment.Overlay, priority: 45)),
+                UiSurfaceContribution.FromReactivePage(_page));
         }
 
         public void ClearIfOwned(UIRoot root)
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.Release(_lease);
+                _lease = default;
             }
 
             _engine = null;
@@ -725,14 +732,15 @@ namespace AnimationAcceptanceMod.UI
         private void SyncMountedRoot()
         {
             GameEngine engine = RequireEngine();
-            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root ||
-                !ReferenceEquals(root.Scene, _page.Scene))
+            if (!_lease.IsValid ||
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost ||
+                !surfaceHost.Revalidate(_lease))
             {
                 return;
             }
 
             _page.SetState(_ => CaptureState(engine));
-            root.IsDirty = true;
+            surfaceHost.Invalidate(_lease);
         }
 
         private GameEngine RequireEngine()

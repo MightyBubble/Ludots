@@ -6,8 +6,8 @@ namespace Ludots.WebUI.Browser;
 
 public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 {
-	public const string ControlChannel = "ludots.dataplane.control";
-	public const string BinaryChunkChannel = "ludots.dataplane.binaryChunk";
+	public const string ControlChannel = BrowserDataPlaneMessageChannels.Control;
+	public const string BinaryChunkChannel = BrowserDataPlaneMessageChannels.BinaryChunk;
 
 	private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 	private readonly IBrowserMessageBridge _bridge;
@@ -21,8 +21,8 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 		int chunkSize = 64 * 1024)
 	{
 		_bridge = bridge ?? throw new ArgumentNullException(nameof(bridge));
-		_capabilities = capabilities ?? WebUiTransportCapabilities.StringBridge();
 		_chunkSize = Math.Max(1, chunkSize);
+		_capabilities = capabilities ?? WebUiTransportCapabilities.MessageBridge(chunkSize: _chunkSize);
 		_bridge.MessageReceived += OnMessageReceived;
 	}
 
@@ -145,46 +145,6 @@ public sealed class BrowserMessageBridgeDataTransport : IWebUiDataTransport
 		{
 			payload = message.Payload;
 			return true;
-		}
-
-		if (message.Channel != "cefsharp")
-		{
-			return false;
-		}
-
-		JsonDocument document;
-		try
-		{
-			document = JsonDocument.Parse(message.Payload);
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
-
-		using (document)
-		{
-			JsonElement root = document.RootElement;
-			if (root.ValueKind != JsonValueKind.Object)
-			{
-				return false;
-			}
-
-			if (root.TryGetProperty("schemaVersion", out JsonElement schemaVersion))
-			{
-				payload = root.GetRawText();
-				return schemaVersion.ValueKind == JsonValueKind.Number;
-			}
-
-			if (root.TryGetProperty("channel", out JsonElement channel) &&
-				string.Equals(channel.GetString(), ControlChannel, StringComparison.Ordinal) &&
-				root.TryGetProperty("payload", out JsonElement nestedPayload))
-			{
-				payload = nestedPayload.ValueKind == JsonValueKind.String
-					? nestedPayload.GetString() ?? string.Empty
-					: nestedPayload.GetRawText();
-				return !string.IsNullOrWhiteSpace(payload);
-			}
 		}
 
 		return false;

@@ -6,6 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
   </ItemGroup>
 </Project>

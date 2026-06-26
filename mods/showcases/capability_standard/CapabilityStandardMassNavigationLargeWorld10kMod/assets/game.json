@@ -2,8 +2,8 @@
   "startupMapId": "mass_navigation",
   "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
   "targetFps": 0,
-  "worldWidthInTiles": 250,
-  "worldHeightInTiles": 250,
+  "worldWidthInMacroTiles": 250,
+  "worldHeightInMacroTiles": 250,
   "selection": {
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
@@ -43,8 +43,5 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
     }
-  },
-  "navigation2D": {
-    "enabled": false
   }
 }

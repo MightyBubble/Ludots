@@ -16,6 +16,7 @@ using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 
 namespace GenreInfoShowcaseMod.UI
 {
@@ -29,8 +30,8 @@ namespace GenreInfoShowcaseMod.UI
 
         private readonly GenreInfoShowcaseRuntime _runtime;
         private ReactivePage<GenreInfoShowcasePanelState>? _page;
-        private UiScene? _mountedScene;
         private GameEngine? _engine;
+        private UiSurfaceLeaseHandle _lease;
 
         public GenreInfoShowcasePanelController(GenreInfoShowcaseRuntime runtime)
         {
@@ -39,6 +40,11 @@ namespace GenreInfoShowcaseMod.UI
 
         public void MountOrRefresh(UIRoot root, GameEngine engine, string mapId)
         {
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return;
+            }
+
             _engine = engine;
 
             GenreInfoShowcasePanelState nextState = BuildState(engine, mapId);
@@ -53,23 +59,21 @@ namespace GenreInfoShowcaseMod.UI
                 _page.SetState(_ => nextState);
             }
 
-            if (!ReferenceEquals(root.Scene, _page.Scene))
-            {
-                root.MountScene(_page.Scene);
-            }
-
-            _mountedScene = _page.Scene;
-            root.IsDirty = true;
+            surfaceHost.PublishReactivePage(
+                ref _lease,
+                new UiSurfaceLeaseRequest("Showcase.GenreInfo.Panel", UiSurfaceSegment.Overlay, priority: 40),
+                _page);
         }
 
         public void ClearIfOwned(UIRoot root)
         {
-            if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.ReleaseLease(ref _lease);
             }
 
-            _mountedScene = null;
+            _engine = null;
         }
 
         private UiElementBuilder BuildRoot(ReactiveContext<GenreInfoShowcasePanelState> context)

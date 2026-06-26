@@ -139,7 +139,7 @@ namespace Ludots.Core.Navigation.GraphWorld
         {
             if (graph.NodeCount <= 1)
             {
-                return 100;
+                return SpatialScaleDefaults.CellCm;
             }
 
             var xs = graph.PosXcm;
@@ -162,7 +162,7 @@ namespace Ludots.Core.Navigation.GraphWorld
             long height = Math.Max(1, (long)maxY - minY);
             double avgAreaPerNode = (width * height) / (double)Math.Max(1, graph.NodeCount);
             int estimated = (int)Math.Round(Math.Sqrt(Math.Max(1d, avgAreaPerNode)));
-            return Math.Max(100, estimated);
+            return Math.Max(SpatialScaleDefaults.CellCm, estimated);
         }
 
         private void OnChunkChanged(long _)

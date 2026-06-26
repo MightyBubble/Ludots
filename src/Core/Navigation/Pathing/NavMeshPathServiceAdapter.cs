@@ -48,7 +48,14 @@ namespace Ludots.Core.Navigation.Pathing
                 }
 
                 _store.TryWrite(in handle, r.PathXcm, r.PathZcm, count);
-                result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, expanded: 0, errorCode: 0);
+                result = new PathResult(
+                    request.RequestId,
+                    request.Actor,
+                    PathStatus.Found,
+                    handle,
+                    expanded: 0,
+                    errorCode: 0,
+                    resolvedDomain: PathDomain.NavMesh);
                 return true;
             }
 

@@ -8,6 +8,7 @@ using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 
 namespace ItemSystemShowcaseMod.UI;
 
@@ -16,6 +17,7 @@ internal sealed class ItemSystemShowcasePanelController
     private readonly ItemSystemShowcaseRuntime _runtime;
     private ReactivePage<ItemSystemShowcasePanelState>? _page;
     private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public ItemSystemShowcasePanelController(ItemSystemShowcaseRuntime runtime)
     {
@@ -24,6 +26,11 @@ internal sealed class ItemSystemShowcasePanelController
 
     public void MountOrRefresh(UIRoot root, GameEngine engine)
     {
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+
         _engine = engine;
         ItemSystemShowcasePanelState nextState = _runtime.BuildState(engine);
         if (_page == null)
@@ -37,20 +44,21 @@ internal sealed class ItemSystemShowcasePanelController
             _page.SetState(_ => nextState);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
-
-        root.IsDirty = true;
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.ItemSystem.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            _page);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
         }
+
+        _engine = null;
     }
 
     private UiElementBuilder BuildRoot(ReactiveContext<ItemSystemShowcasePanelState> context)

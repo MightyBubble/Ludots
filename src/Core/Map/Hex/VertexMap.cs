@@ -19,8 +19,8 @@ namespace Ludots.Core.Map.Hex
         private ILoadedChunks _loadedChunks;
 
         // Map dimensions in chunks (optional bounds checking)
-        public int WidthInChunks { get; private set; } = 64;
-        public int HeightInChunks { get; private set; } = 64;
+        public int WidthInChunks { get; private set; } = SpatialScaleDefaults.DefaultTerrainWidthChunks;
+        public int HeightInChunks { get; private set; } = SpatialScaleDefaults.DefaultTerrainHeightChunks;
 
         /// <summary>
         /// Subscribe to an ILoadedChunks source. When chunks are unloaded,

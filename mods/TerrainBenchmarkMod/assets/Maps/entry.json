@@ -53,8 +53,8 @@
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "WidthInTiles": 64,
-      "HeightInTiles": 64,
+      "WidthInMacroTiles": 64,
+      "HeightInMacroTiles": 64,
       "GridCellSizeCm": 100,
       "HexEdgeLengthCm": 400,
       "ChunkSizeCells": 64,

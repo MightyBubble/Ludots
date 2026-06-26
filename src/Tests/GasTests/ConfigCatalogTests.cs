@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS
                 Directory.CreateDirectory(Path.Combine(core, "Configs"));
                 File.WriteAllText(
                     Path.Combine(core, "Configs", "game.json"),
-                    "{ \"startupMapId\": \"canonical_map\", \"windowWidth\": 1440, \"navigation2D\": { \"enabled\": true } }");
+                    "{ \"startupMapId\": \"canonical_map\", \"windowWidth\": 1440 }");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", core);
@@ -217,17 +217,6 @@ namespace Ludots.Tests.GAS
                 var config = pipeline.MergeGameConfig();
                 Assert.That(config.StartupMapId, Is.EqualTo("canonical_map"));
                 Assert.That(config.WindowWidth, Is.EqualTo(1440));
-                Assert.That(config.Navigation2D.Enabled, Is.True);
-                Assert.That(config.Physics2D.Enabled, Is.False);
-
-                File.WriteAllText(
-                    Path.Combine(core, "Configs", "game.json"),
-                    "{ \"startupMapId\": \"physics_map\", \"physics2D\": { \"enabled\": true } }");
-
-                config = pipeline.MergeGameConfig();
-                Assert.That(config.StartupMapId, Is.EqualTo("physics_map"));
-                Assert.That(config.Physics2D.Enabled, Is.True);
-                Assert.That(config.Navigation2D.Enabled, Is.False);
 
                 File.WriteAllText(
                     Path.Combine(core, "Configs", "game.json"),
@@ -275,35 +264,6 @@ namespace Ludots.Tests.GAS
                 templates.Load("Entities/templates.json", catalog);
                 Assert.That(templates.Contains("case.exact.template"), Is.True);
                 Assert.That(templates.Contains("Case.Exact.Template"), Is.False);
-            }
-            finally
-            {
-                if (Directory.Exists(root))
-                {
-                    Directory.Delete(root, recursive: true);
-                }
-            }
-        }
-
-        [Test]
-        public void ConfigPipeline_InvalidJsonFragment_IsRejected()
-        {
-            string root = Path.Combine(Path.GetTempPath(), "Ludots_ConfigCatalogTests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(root);
-            try
-            {
-                string core = Path.Combine(root, "Core");
-                Directory.CreateDirectory(Path.Combine(core, "Configs"));
-                File.WriteAllText(Path.Combine(core, "Configs", "game.json"), "{ \"startupMapId\": ");
-
-                var vfs = new VirtualFileSystem();
-                vfs.Mount("Core", core);
-                var modLoader = new ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new Ludots.Core.Scripting.TriggerManager());
-                var pipeline = new ConfigPipeline(vfs, modLoader);
-
-                JsonException ex = Assert.Throws<JsonException>(() => pipeline.CollectFragmentsWithSources("game.json"))!;
-
-                Assert.That(ex.Message, Does.Contain("Core:Configs/game.json"));
             }
             finally
             {

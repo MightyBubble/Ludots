@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Core.Navigation.NavMesh
@@ -9,10 +10,11 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly Dictionary<string, int> _indexById;
         private readonly List<string> _idsByIndex;
 
-        public NavMeshProfileRegistry(NavMeshBakeConfig cfg)
+        public NavMeshProfileRegistry(NavMeshBakeConfig cfg, AgentProfileRegistry agentProfiles)
         {
             if (cfg?.Profiles == null || cfg.Profiles.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.profiles is empty.");
-            _indexById = new Dictionary<string, int>(cfg.Profiles.Count, StringComparer.OrdinalIgnoreCase);
+            if (agentProfiles == null) throw new ArgumentNullException(nameof(agentProfiles));
+            _indexById = new Dictionary<string, int>(cfg.Profiles.Count, StringComparer.Ordinal);
             _idsByIndex = new List<string>(cfg.Profiles.Count);
 
             for (int i = 0; i < cfg.Profiles.Count; i++)
@@ -21,6 +23,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (p == null) throw new InvalidOperationException("NavMeshBakeConfig.profiles contains null.");
                 if (string.IsNullOrWhiteSpace(p.Id)) throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
                 if (_indexById.ContainsKey(p.Id)) throw new InvalidOperationException($"Duplicate NavMesh profile id: {p.Id}");
+                agentProfiles.Require(p.Id, "NavMeshBakeConfig.profiles");
                 _indexById[p.Id] = i;
                 _idsByIndex.Add(p.Id);
             }

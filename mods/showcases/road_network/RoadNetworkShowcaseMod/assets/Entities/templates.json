@@ -4,9 +4,26 @@
     "components": {
       "Name": { "Value": "Blue Column" },
       "Team": { "Id": 1 },
-      "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
       "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "roadNetwork.column"
+        ],
+        "mask": [
+          "roadNetwork.column"
+        ]
+      },
+      "MassCrowdAgent": {
+        "profileId": "Small"
+      },
       "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1200 } },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
@@ -27,7 +44,25 @@
       "Name": { "Value": "Red Column" },
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
       "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "roadNetwork.column"
+        ],
+        "mask": [
+          "roadNetwork.column"
+        ]
+      },
+      "MassCrowdAgent": {
+        "profileId": "Small"
+      },
       "AttributeBuffer": { "base": { "Health": 100, "MoveSpeed": 1180 } },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
