@@ -24,6 +24,7 @@
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
   - [空间尺度与分辨率 SSOT](architecture/spatial-scale-and-resolution-ssot.md)
   - [地形数据预算 SSOT](architecture/terrain-data-budget-ssot.md)
+  - [Board Field And Knowledge Domains](architecture/board-field-and-knowledge-domains.md)
   - [Prefab Grounding �?Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Performer-as-Actor 架构总览](architecture/performer-as-actor-architecture.md)
   - [Performer 参数黑板�?Animator 统一](architecture/performer-param-blackboard.md)
