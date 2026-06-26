@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE, TerrainStore } from '../../Core/Map/TerrainStore';
+import { TerrainStore } from '../../Core/Map/TerrainStore';
 import {
     DEFAULT_BOARD_METRICS,
     type BoardMetrics,
@@ -170,7 +170,7 @@ export interface EditorState {
     
     // Map Actions
     initMap: (w: number, h: number, metrics?: Partial<BoardMetrics>) => void;
-    loadMap: (data: Uint8Array, w: number, h: number, metrics?: Partial<BoardMetrics>, format?: number) => void;
+    loadLogicTerrain: (terrain: TerrainStore, metrics?: Partial<BoardMetrics>, label?: string) => void;
     refreshMods: () => Promise<void>;
     selectMod: (modId: string) => Promise<void>;
     selectMap: (mapId: string) => void;
@@ -404,17 +404,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         navSimulationVersion: Date.now(),
         loadingState: { isLoading: true, message: 'Initializing Map...', progress: 0 }
     }),
-    loadMap: (data, w, h, metrics, format = REACT_TERRAIN_STRIDE) => {
-        const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
-        newTerrain.loadFromBytes(w, h, data, format);
+    loadLogicTerrain: (terrain, metrics, label = 'Local LogicTerrain') => {
         const boardMetrics = normalizeBoardMetrics(metrics ?? get().boardMetrics);
-        const allChunks = new Set<string>(newTerrain.chunks.keys());
-        
-        set({ 
-            terrain: newTerrain, 
+        const allChunks = new Set<string>(terrain.chunks.keys());
+        set({
+            terrain,
             boardMetrics,
             canvasSessionKind: 'local',
-            canvasSessionLabel: `Local ${w}x${h} terrain`,
+            canvasSessionLabel: `${label} ${terrain.widthChunks}x${terrain.heightChunks}`,
             loadedModId: null,
             loadedMapId: null,
             loadedMapInfo: null,
@@ -427,7 +424,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             bakedNavTilesVersion: Date.now(),
             navSimulation: null,
             navSimulationVersion: Date.now(),
-            loadingState: { isLoading: true, message: 'Loading Map...', progress: 0 }
+            loadingState: { isLoading: true, message: 'Loading LogicTerrain...', progress: 0 }
         });
     },
 
@@ -761,14 +758,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`);
         if (!terrRes.ok) throw new Error(`Bridge error ${terrRes.status}`);
         const buf = await terrRes.arrayBuffer();
-        const view = new DataView(buf);
-        const w = view.getInt32(0, true);
-        const h = view.getInt32(4, true);
-        const stride = view.getUint8(8);
-        if (stride !== REACT_TERRAIN_STRIDE && stride !== REACT_TERRAIN_SPARSE_VERSION) throw new Error(`Invalid terrain format ${stride}`);
-        const data = new Uint8Array(buf.slice(9));
-        const newTerrain = new TerrainStore(w, h, { initializeChunks: false });
-        newTerrain.loadFromBytes(w, h, data, stride);
+        const newTerrain = new TerrainStore(1, 1, { initializeChunks: false });
+        newTerrain.loadFromLogicTerrainBinary(new Uint8Array(buf));
         const allChunks = new Set<string>(newTerrain.chunks.keys());
         set({
             terrain: newTerrain,
@@ -848,8 +839,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         if (!mapRes.ok) throw new Error(`Bridge error ${mapRes.status}`);
 
         setLoading(true, 'Saving Terrain...', 60);
-        const terrainBinary = terrain.toReactTerrainBinary();
-        const blob = new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
+        const blob = new Blob([terrain.toLogicTerrainBinary(boardMetrics.cellSizeCm)], { type: 'application/octet-stream' });
 
         const terrRes = await fetch(`${bridgeBaseUrl}/api/mods/${encodeURIComponent(selectedModId)}/maps/${encodeURIComponent(selectedMapId)}/terrain-react?boardName=${encodeURIComponent(selectedBoardName)}`, {
             method: 'PUT',

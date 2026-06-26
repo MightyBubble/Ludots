@@ -36,7 +36,7 @@ import { useEditorStore, ToolCategory, ToolMode, type BoardCreateRequest, type B
 import { Minimap } from './Minimap';
 import type { NavTile } from '../../Core/NavMesh/NavTileBinary';
 import { cellToWorldCm, worldPointToCell, type BoardTopology } from '../../Core/Map/TopologyMetrics';
-import { CHUNK_BYTE_SIZE, REACT_TERRAIN_SPARSE_VERSION, REACT_TERRAIN_STRIDE } from '../../Core/Map/TerrainStore';
+import { CHUNK_BYTE_SIZE, TerrainStore } from '../../Core/Map/TerrainStore';
 import { CellCm, DefaultEditorEagerFullTerrainFileMacroTilesPerAxis, DefaultHexEdgeLengthCm, DefaultNavQueryMaxPortals, DefaultVisualHeightmapMaxSamplesPerAxis, DefaultWorldHeightMacroTiles, DefaultWorldWidthMacroTiles, LogicDenseEquivalentBytesPerCell, MacroTileCells, TerrainChunkCells, VisualHeightmapR16BytesPerSample } from '../../Core/SpatialScaleDefaults';
 
 const FLAT_GRID_BASELINE_SOURCE = 'flat-grid-baseline-v2';
@@ -368,7 +368,7 @@ export const Toolbar: React.FC = () => {
         brushSize, setBrushSize,
         brushValue, setBrushValue,
         activeLayer, setActiveLayer,
-        terrain, loadMap, initMap,
+        terrain, loadLogicTerrain, initMap,
         bridgeBaseUrl,
         mods, selectedModId, maps, mapInfos, selectedMapId, selectedMapInfo, selectedBoardName, selectedBoardInfo, loadedModId, loadedMapId, loadedBoardName, loadedBoardInfo, canvasSessionKind, canvasSessionLabel, boardMetrics,
         refreshMods, selectMod, selectMap, selectBoard, loadSelectedMap, saveSelectedMap,
@@ -765,13 +765,12 @@ export const Toolbar: React.FC = () => {
     ];
 
     const buildMapBlob = () => {
-        const terrainBinary = terrain.toReactTerrainBinary();
-        return new Blob([terrainBinary.header, terrainBinary.body], { type: 'application/octet-stream' });
+        return new Blob([terrain.toLogicTerrainBinary(boardMetrics.cellSizeCm)], { type: 'application/octet-stream' });
     };
 
     const handleDownload = () => {
         if (!canvasHasAnySession) return;
-        downloadBlob('map_data.bin', buildMapBlob());
+        downloadBlob('terrain.ltrn', buildMapBlob());
     };
 
     const handleBakeNavTiles = async () => {
@@ -780,7 +779,7 @@ export const Toolbar: React.FC = () => {
             return;
         }
         const ts = formatTimestamp();
-        const mapFile = `map_data_${ts}.bin`;
+        const mapFile = `terrain_${ts}.ltrn`;
         const dirtyFile = `dirty_chunks_${ts}.json`;
 
         downloadBlob(mapFile, buildMapBlob());
@@ -1057,7 +1056,7 @@ export const Toolbar: React.FC = () => {
 
     const appendNavBakeFormFields = (form: FormData, dirtySet: Set<string>, dirtyCount: number) => {
         if (!bakeMapId) throw new Error('Open a map board before baking.');
-        form.append('map', buildMapBlob(), 'map_data.bin');
+        form.append('map', buildMapBlob(), 'terrain.ltrn');
         form.append('mapId', bakeMapId);
         if (selectedModId) form.append('modId', selectedModId);
         if (bakeBoardName) form.append('boardName', bakeBoardName);
@@ -1395,18 +1394,14 @@ export const Toolbar: React.FC = () => {
             const buffer = ev.target?.result as ArrayBuffer;
             if (!buffer) return;
 
-            const view = new DataView(buffer);
-            const w = view.getInt32(0, true);
-            const h = view.getInt32(4, true);
-            const stride = view.getUint8(8);
-
-            if (stride !== REACT_TERRAIN_STRIDE && stride !== REACT_TERRAIN_SPARSE_VERSION) {
-                alert(`Invalid map terrain format. Expected ${REACT_TERRAIN_STRIDE} or ${REACT_TERRAIN_SPARSE_VERSION}, got ${stride}. Please recreate map.`);
+            try {
+                const importedTerrain = new TerrainStore(1, 1, { initializeChunks: false });
+                importedTerrain.loadFromLogicTerrainBinary(new Uint8Array(buffer));
+                loadLogicTerrain(importedTerrain, boardMetrics, 'Local LTRN');
+            } catch (err: unknown) {
+                alert(`Invalid .ltrn terrain: ${errorMessage(err)}`);
                 return;
             }
-
-            const data = new Uint8Array(buffer.slice(9));
-            loadMap(data, w, h, boardMetrics, stride);
         };
         reader.readAsArrayBuffer(file);
     };
@@ -2174,19 +2169,19 @@ export const Toolbar: React.FC = () => {
                                 <span className="text-[10px] text-slate-500">not repo save</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
-                                <label className={darkButtonClass} title="Import local map_data.bin as a local editor draft. Open a repo board and use top bar Save to write it.">
+                                <label className={darkButtonClass} title="Import local .ltrn as a local editor draft. Open a repo board and use top bar Save to write it.">
                                     <Upload size={13} className="text-sky-300" />
-                                    Import Bin
+                                    Import LTRN
                                     <input type="file" className="hidden" onChange={handleUpload} />
                                 </label>
                                 <button
                                     onClick={handleDownload}
                                     className={darkButtonClass}
-                                    title="Export current canvas terrain as map_data.bin. This downloads a file and does not save the repo."
+                                    title="Export current canvas LogicTerrain as .ltrn. This downloads a file and does not save the repo."
                                     disabled={!canvasHasAnySession}
                                 >
                                     <Download size={13} className="text-emerald-300" />
-                                    Export Bin
+                                    Export LTRN
                                 </button>
                             </div>
                         </div>
@@ -2470,7 +2465,7 @@ export const Toolbar: React.FC = () => {
                                 <button
                                     onClick={handleBakeNavTiles}
                                     className={darkButtonClass}
-                                    title={canvasMapLoaded ? 'Export map_data.bin + dirty list, then copy a CLI bake command. This does not save the repo.' : navDisabledReason}
+                                    title={canvasMapLoaded ? 'Export .ltrn + dirty list, then copy a CLI bake command. This does not save the repo.' : navDisabledReason}
                                     disabled={!canvasMapLoaded}
                                 >
                                     <Footprints size={13} className="text-orange-300" />

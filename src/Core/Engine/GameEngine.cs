@@ -2116,17 +2116,12 @@ namespace Ludots.Core.Engine
                     string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
-                        var vtxMap = LoadVertexMapFromFile(dataFile);
-                        if (vtxMap != null)
-                        {
-                            terrainBoard.VertexMap = vtxMap;
-                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
-                            VertexMap = vtxMap;
-                            LogicTerrain = terrainBoard.LogicTerrain;
-                            SetService(CoreServiceKeys.VertexMap, vtxMap);
-                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
-                            Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
-                        }
+                        LogicTerrainField terrain = LoadLogicTerrainFromFile(dataFile);
+                        terrainBoard.VertexMap = null;
+                        terrainBoard.LogicTerrain = terrain;
+                        LogicTerrain = terrainBoard.LogicTerrain;
+                        SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                        Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded LogicTerrain {terrain.WidthChunks}x{terrain.HeightChunks} chunks for board '{board.Name}' from '{dataFile}'");
 
                         continue;
                     }
@@ -2167,13 +2162,19 @@ namespace Ludots.Core.Engine
             return null;
         }
 
-        private VertexMap LoadVertexMapFromFile(string dataFile)
+        private LogicTerrainField LoadLogicTerrainFromFile(string dataFile)
         {
-            if (string.IsNullOrWhiteSpace(dataFile)) return null;
+            if (string.IsNullOrWhiteSpace(dataFile)) throw new InvalidOperationException("LogicTerrain DataFile is required.");
 
             if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
 
             string rel = dataFile.Replace('\\', '/');
+            if (!rel.EndsWith(".ltrn", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"LogicTerrain DataFile must be .ltrn. Legacy .vtxm/.bin terrain requires explicit one-way import: {dataFile}");
+            }
+
             var candidates = new List<string>(6) { rel };
             if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
             {
@@ -2208,16 +2209,18 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            if (stream == null) return null;
+            if (stream == null)
+            {
+                throw new FileNotFoundException($"LogicTerrain DataFile not found: {dataFile}");
+            }
 
             try
             {
-                return VertexMapBinary.Read(stream);
+                return LogicTerrainBinary.Read(stream);
             }
             catch (Exception ex)
             {
-                Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to load VertexMapBinary '{dataFile}': {ex.Message}");
-                return null;
+                throw new InvalidOperationException($"Failed to load LogicTerrainBinary '{dataFile}': {ex.Message}", ex);
             }
             finally
             {

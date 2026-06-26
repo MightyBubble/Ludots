@@ -29,7 +29,7 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
         public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
-        /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
+        /// <summary>Path to board data file (.ltrn for terrain, .graph for NodeGraph) - optional.</summary>
         public string DataFile { get; set; }
 
         public string VisualHeightmapAsset { get; set; }

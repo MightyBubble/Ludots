@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Ludots.Core.Map.Fields;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
@@ -48,15 +49,43 @@ namespace Ludots.Tool
 
         public static ReactMapConversionSummary ConvertToVertexMapBinary(string inputPath, string outputPath)
         {
+            throw new InvalidOperationException(
+                "React/Grid .bin to .vtxm conversion is retired. Use ConvertToLogicTerrainBinary for explicit one-way import to .ltrn.");
+        }
+
+        public static ReactMapConversionSummary ConvertToLogicTerrainBinary(
+            string inputPath,
+            string outputPath,
+            int cellSizeCm = SpatialScaleDefaults.CellCm)
+        {
             using var input = File.OpenRead(inputPath);
             using var output = File.Create(outputPath);
-            return ConvertToVertexMapBinary(inputPath, outputPath, input, output);
+            return ConvertToLogicTerrainBinary(inputPath, outputPath, input, output, cellSizeCm);
+        }
+
+        public static ReactMapConversionSummary ConvertToLogicTerrainBinary(
+            string inputPath,
+            Stream output,
+            int cellSizeCm = SpatialScaleDefaults.CellCm)
+        {
+            using var input = File.OpenRead(inputPath);
+            return ConvertToLogicTerrainBinary(inputPath, outputPath: string.Empty, input, output, cellSizeCm);
+        }
+
+        public static ReactMapConversionSummary ConvertVertexMapToLogicTerrainBinary(
+            string inputPath,
+            string outputPath,
+            int cellSizeCm = SpatialScaleDefaults.CellCm)
+        {
+            using var input = File.OpenRead(inputPath);
+            using var output = File.Create(outputPath);
+            return ConvertVertexMapToLogicTerrainBinary(inputPath, outputPath, input, output, cellSizeCm);
         }
 
         public static ReactMapConversionSummary ConvertToVertexMapBinary(string inputPath, Stream output)
         {
-            using var input = File.OpenRead(inputPath);
-            return ConvertToVertexMapBinary(inputPath, outputPath: string.Empty, input, output);
+            throw new InvalidOperationException(
+                "React/Grid .bin to .vtxm conversion is retired. Use ConvertToLogicTerrainBinary for explicit one-way import to .ltrn.");
         }
 
         public static LogicTerrainField ReadGridLogicTerrainField(
@@ -132,6 +161,87 @@ namespace Ludots.Tool
                     }
 
                     LoadReactChunkIntoSparseGrid(terrain, cx, cy, reactChunk);
+                }
+            }
+
+            return terrain;
+        }
+
+        private static ReactMapConversionSummary ConvertToLogicTerrainBinary(
+            string inputPath,
+            string outputPath,
+            Stream input,
+            Stream output,
+            int cellSizeCm)
+        {
+            long inputBytes = input.CanSeek ? input.Length : 0;
+            LogicTerrainField terrain = ReadGridLogicTerrainField(inputPath, input, cellSizeCm);
+            if (terrain is not SparseGridLogicTerrainField sparseTerrain)
+            {
+                sparseTerrain = CopyToSparseGrid(terrain, cellSizeCm);
+            }
+
+            LogicTerrainBinary.Write(output, sparseTerrain);
+            return new ReactMapConversionSummary
+            {
+                InputPath = inputPath,
+                OutputPath = outputPath,
+                WidthChunks = sparseTerrain.WidthChunks,
+                HeightChunks = sparseTerrain.HeightChunks,
+                ChunkSize = sparseTerrain.ChunkSizeCells,
+                CellsPerChunk = sparseTerrain.ChunkSizeCells * sparseTerrain.ChunkSizeCells,
+                InputBytes = inputBytes,
+                OutputBytes = output.CanSeek ? output.Length : 0,
+                StrideOrVersion = ReactSparseFormatVersion
+            };
+        }
+
+        private static ReactMapConversionSummary ConvertVertexMapToLogicTerrainBinary(
+            string inputPath,
+            string outputPath,
+            Stream input,
+            Stream output,
+            int cellSizeCm)
+        {
+            long inputBytes = input.CanSeek ? input.Length : 0;
+            VertexMap vertexMap = VertexMapBinary.Read(input);
+            var source = new VertexMapLogicTerrainField(vertexMap);
+            SparseGridLogicTerrainField sparseTerrain = CopyToSparseGrid(source, cellSizeCm);
+            LogicTerrainBinary.Write(output, sparseTerrain);
+            return new ReactMapConversionSummary
+            {
+                InputPath = inputPath,
+                OutputPath = outputPath,
+                WidthChunks = sparseTerrain.WidthChunks,
+                HeightChunks = sparseTerrain.HeightChunks,
+                ChunkSize = sparseTerrain.ChunkSizeCells,
+                CellsPerChunk = sparseTerrain.ChunkSizeCells * sparseTerrain.ChunkSizeCells,
+                InputBytes = inputBytes,
+                OutputBytes = output.CanSeek ? output.Length : 0,
+                StrideOrVersion = 0
+            };
+        }
+
+        private static SparseGridLogicTerrainField CopyToSparseGrid(LogicTerrainField source, int cellSizeCm)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+
+            var terrain = new SparseGridLogicTerrainField(
+                source.WidthCells,
+                source.HeightCells,
+                cellSizeCm,
+                source.ChunkSizeCells);
+
+            for (int row = 0; row < source.HeightCells; row++)
+            {
+                for (int col = 0; col < source.WidthCells; col++)
+                {
+                    LogicTerrainCell cell = source.GetCell(col, row);
+                    if (!cell.Equals(LogicTerrainCell.Default))
+                    {
+                        terrain.SetCell(col, row, cell);
+                    }
                 }
             }
 

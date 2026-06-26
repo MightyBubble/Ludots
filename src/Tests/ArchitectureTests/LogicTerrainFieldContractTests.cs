@@ -3,11 +3,13 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Map.Fields;
+using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.Tool;
 using NUnit.Framework;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace Ludots.Tests.Architecture
@@ -73,7 +75,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void ReactStride4Converter_PreservesBiomeAreaAndBlockedAsSeparateLogicChannels()
+        public void ReactStride4Importer_ConvertsLegacyBinToLogicTerrainBinary()
         {
             string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-terrain-" + Guid.NewGuid().ToString("N") + ".bin");
             try
@@ -88,16 +90,16 @@ namespace Ludots.Tests.Architecture
                     areaId: 9);
 
                 using var converted = new MemoryStream();
-                ReactMapDataBinConverter.ConvertToVertexMapBinary(reactPath, converted);
+                ReactMapDataBinConverter.ConvertToLogicTerrainBinary(reactPath, converted);
                 converted.Position = 0;
-                VertexMap map = VertexMapBinary.Read(converted);
-                var terrain = new VertexMapLogicTerrainField(map);
+                SparseGridLogicTerrainField terrain = LogicTerrainBinary.Read(converted);
                 LogicTerrainCell cell = terrain.GetCell(0, 0);
 
-                Assert.That(map.GetBiome(0, 0), Is.EqualTo(4), "Visual biome must remain separate from terrain area.");
-                Assert.That(map.GetChunk(0, 0, false)!.GetExtraByte(0, 0, 0), Is.EqualTo(9));
-                Assert.That(map.IsBlocked(0, 0), Is.True);
+                Assert.That(terrain.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+                Assert.That(terrain.WidthChunks, Is.EqualTo(1));
+                Assert.That(terrain.HeightChunks, Is.EqualTo(1));
                 Assert.That(cell.AreaId, Is.EqualTo(9));
+                Assert.That(cell.AreaId, Is.Not.EqualTo(4), "Visual biome must not become logic area.");
                 Assert.That(cell.IsBlocked, Is.True);
                 Assert.That(cell.HeightLevel, Is.EqualTo(3));
             }
@@ -108,6 +110,98 @@ namespace Ludots.Tests.Architecture
                     File.Delete(reactPath);
                 }
             }
+        }
+
+        [Test]
+        public void ReactStride4ToVertexMapConverter_FailsFastAfterLegacyFormatRetirement()
+        {
+            string reactPath = Path.Combine(Path.GetTempPath(), "ludots-react-terrain-" + Guid.NewGuid().ToString("N") + ".bin");
+            try
+            {
+                WriteReactStride4Map(
+                    reactPath,
+                    height: 1,
+                    water: 0,
+                    biome: 0,
+                    vegetation: 0,
+                    blocked: false,
+                    areaId: 0);
+
+                using var converted = new MemoryStream();
+                Assert.That(
+                    () => ReactMapDataBinConverter.ConvertToVertexMapBinary(reactPath, converted),
+                    Throws.TypeOf<InvalidOperationException>().With.Message.Contains(".vtxm conversion is retired"));
+            }
+            finally
+            {
+                if (File.Exists(reactPath))
+                {
+                    File.Delete(reactPath);
+                }
+            }
+        }
+
+        [Test]
+        public void VertexMapImporter_ConvertsLegacyVtxmToLogicTerrainBinary()
+        {
+            string vtxmPath = Path.Combine(Path.GetTempPath(), "ludots-legacy-terrain-" + Guid.NewGuid().ToString("N") + ".vtxm");
+            string ltrnPath = Path.Combine(Path.GetTempPath(), "ludots-logic-terrain-" + Guid.NewGuid().ToString("N") + ".ltrn");
+            try
+            {
+                VertexMap map = CreateFlatVertexMap();
+                map.SetHeight(4, 5, 6);
+                map.SetWaterHeight(4, 5, 9);
+                map.SetRamp(4, 5, true);
+                map.SetBlocked(4, 5, true);
+                map.GetChunk(4, 5, false)!.SetExtraByte(4, 5, 0, 12);
+
+                using (var stream = File.Create(vtxmPath))
+                {
+                    VertexMapBinary.Write(stream, map);
+                }
+
+                ReactMapDataBinConverter.ConvertVertexMapToLogicTerrainBinary(vtxmPath, ltrnPath);
+
+                using var input = File.OpenRead(ltrnPath);
+                SparseGridLogicTerrainField terrain = LogicTerrainBinary.Read(input);
+                LogicTerrainCell cell = terrain.GetCell(4, 5);
+
+                Assert.That(terrain.Topology, Is.EqualTo(LogicTerrainTopology.Grid));
+                Assert.That(cell.HeightLevel, Is.EqualTo(6));
+                Assert.That(cell.WaterHeightLevel, Is.EqualTo(9));
+                Assert.That(cell.IsRamp, Is.True);
+                Assert.That(cell.IsBlocked, Is.True);
+                Assert.That(cell.HasWater, Is.True);
+                Assert.That(cell.AreaId, Is.EqualTo(12));
+            }
+            finally
+            {
+                if (File.Exists(vtxmPath))
+                {
+                    File.Delete(vtxmPath);
+                }
+                if (File.Exists(ltrnPath))
+                {
+                    File.Delete(ltrnPath);
+                }
+            }
+        }
+
+        [Test]
+        public void NavBakeTerrainLoader_ReadsOnlyLogicTerrainBinary()
+        {
+            var source = new SparseGridLogicTerrainField(64, 64);
+            source.SetCell(3, 4, new LogicTerrainCell(5, 0, LogicTerrainSurfaceFlags.Blocked, areaId: 6));
+            using var stream = new MemoryStream();
+            LogicTerrainBinary.Write(stream, source);
+            var vfs = new InMemoryVirtualFileSystem("Core:Maps/test.ltrn", stream.ToArray());
+
+            LogicTerrainField loaded = NavBakeTerrainLoader.LoadLogicTerrain(vfs, "Core:Maps/test.ltrn");
+
+            Assert.That(loaded.GetCell(3, 4), Is.EqualTo(source.GetCell(3, 4)));
+            Assert.That(
+                () => NavBakeTerrainLoader.LoadLogicTerrain(vfs, "Core:Maps/test.vtxm"),
+                Throws.TypeOf<InvalidOperationException>().With.Message.Contains(".ltrn LogicTerrain"));
         }
 
         [Test]
@@ -290,6 +384,42 @@ namespace Ludots.Tests.Architecture
             chunk[2] = blocked ? (byte)0b0000_1000 : (byte)0;
             chunk[3] = areaId;
             writer.Write(chunk);
+        }
+
+        private sealed class InMemoryVirtualFileSystem : IVirtualFileSystem
+        {
+            private readonly Dictionary<string, byte[]> _files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+
+            public InMemoryVirtualFileSystem(string uri, byte[] bytes)
+            {
+                _files[uri] = bytes;
+            }
+
+            public void Mount(string modId, string physicalPath)
+            {
+                throw new NotSupportedException();
+            }
+
+            public bool Unmount(string modId)
+            {
+                return false;
+            }
+
+            public Stream GetStream(string uri)
+            {
+                if (!_files.TryGetValue(uri, out byte[] bytes))
+                {
+                    throw new FileNotFoundException(uri);
+                }
+
+                return new MemoryStream(bytes, writable: false);
+            }
+
+            public bool TryResolveFullPath(string uri, out string fullPath)
+            {
+                fullPath = string.Empty;
+                return _files.ContainsKey(uri);
+            }
         }
     }
 }

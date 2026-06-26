@@ -12,7 +12,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
 using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
-using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
@@ -80,8 +79,8 @@ namespace Ludots.Tool
             rootCommand.AddCommand(graphCommand);
 
             var mapCommand = new Command("map", "Map utilities");
-            var importReactCommand = new Command("import-react", "Convert React web editor map_data.bin to VertexMap binary");
-            var inputBinOption = new Option<string>("--in", "Input React map_data.bin path") { IsRequired = true };
+            var importReactCommand = new Command("import-react", "Explicit legacy import: convert React/Grid .bin terrain to .ltrn");
+            var inputBinOption = new Option<string>("--in", "Input legacy React/Grid .bin path") { IsRequired = true };
             var outDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Maps)");
             var nameOption = new Option<string?>("--name", () => null, "Output base name (default: input filename)");
             var forceOption = new Option<bool>("--force", () => false, "Overwrite output files if exist");
@@ -99,71 +98,28 @@ namespace Ludots.Tool
             });
             mapCommand.AddCommand(importReactCommand);
 
-            var genVtxmCommand = new Command("gen-vtxm", "Generate a VertexMap v2 .vtxm test map");
-            var genOutOption = new Option<string>("--out", "Output .vtxm file path") { IsRequired = true };
-            var genWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");
-            var genHeightOption = new Option<int>("--heightChunks", () => 16, "Map height in chunks");
-            var genChunkSizeOption = new Option<int>("--chunkSize", () => SpatialScaleDefaults.TerrainChunkCells, "Chunk size (power-of-two)");
-            var genPresetOption = new Option<string>("--preset", () => "bench", "Preset: bench|flat|stripes|cliffs|lake");
-            var genOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
-            genVtxmCommand.AddOption(genOutOption);
-            genVtxmCommand.AddOption(genWidthOption);
-            genVtxmCommand.AddOption(genHeightOption);
-            genVtxmCommand.AddOption(genChunkSizeOption);
-            genVtxmCommand.AddOption(genPresetOption);
-            genVtxmCommand.AddOption(genOverwriteOption);
-            genVtxmCommand.SetHandler((InvocationContext ctx) =>
+            var importVtxmCommand = new Command("import-vtxm", "Explicit legacy import: convert VertexMap .vtxm terrain to .ltrn");
+            var inputVtxmOption = new Option<string>("--in", "Input legacy VertexMap .vtxm path") { IsRequired = true };
+            var vtxmOutDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Maps)");
+            var vtxmNameOption = new Option<string?>("--name", () => null, "Output base name (default: input filename)");
+            var vtxmForceOption = new Option<bool>("--force", () => false, "Overwrite output files if exist");
+            importVtxmCommand.AddOption(inputVtxmOption);
+            importVtxmCommand.AddOption(vtxmOutDirOption);
+            importVtxmCommand.AddOption(vtxmNameOption);
+            importVtxmCommand.AddOption(vtxmForceOption);
+            importVtxmCommand.SetHandler((InvocationContext ctx) =>
             {
-                var outFile = ctx.ParseResult.GetValueForOption(genOutOption);
-                var w = ctx.ParseResult.GetValueForOption(genWidthOption);
-                var h = ctx.ParseResult.GetValueForOption(genHeightOption);
-                var chunkSize = ctx.ParseResult.GetValueForOption(genChunkSizeOption);
-                var presetRaw = ctx.ParseResult.GetValueForOption(genPresetOption);
-                var overwrite = ctx.ParseResult.GetValueForOption(genOverwriteOption);
-
-                if (!Enum.TryParse<MapVtxmGenerator.Preset>(presetRaw, ignoreCase: true, out var preset))
-                {
-                    Console.WriteLine($"Unknown preset: {presetRaw}");
-                    ctx.ExitCode = 2;
-                    return;
-                }
-
-                MapVtxmGenerator.GenerateV2(outFile, w, h, chunkSize, preset, overwrite);
-                var info = new FileInfo(Path.GetFullPath(outFile));
-                Console.WriteLine($"Wrote: {info.FullName} ({info.Length} bytes)");
-                ctx.ExitCode = 0;
+                var inputPath = ctx.ParseResult.GetValueForOption(inputVtxmOption);
+                var outDir = ctx.ParseResult.GetValueForOption(vtxmOutDirOption);
+                var name = ctx.ParseResult.GetValueForOption(vtxmNameOption);
+                var force = ctx.ParseResult.GetValueForOption(vtxmForceOption);
+                ctx.ExitCode = ImportVertexMap(inputPath, outDir, name, force);
             });
-            mapCommand.AddCommand(genVtxmCommand);
+            mapCommand.AddCommand(importVtxmCommand);
 
-            var genReactBinCommand = new Command("gen-reactbin", "Generate a React editor map_data.bin test file");
-            var reactOutOption = new Option<string>("--out", "Output .bin file path") { IsRequired = true };
-            var reactWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");
-            var reactHeightOption = new Option<int>("--heightChunks", () => 16, "Map height in chunks");
-            var reactPresetOption = new Option<string>("--preset", () => "flat", "Preset: flat|stripes|cliffs|lake");
-            var reactOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
-            genReactBinCommand.AddOption(reactOutOption);
-            genReactBinCommand.AddOption(reactWidthOption);
-            genReactBinCommand.AddOption(reactHeightOption);
-            genReactBinCommand.AddOption(reactPresetOption);
-            genReactBinCommand.AddOption(reactOverwriteOption);
-            genReactBinCommand.SetHandler((InvocationContext ctx) =>
-            {
-                var outFile = ctx.ParseResult.GetValueForOption(reactOutOption);
-                var w = ctx.ParseResult.GetValueForOption(reactWidthOption);
-                var h = ctx.ParseResult.GetValueForOption(reactHeightOption);
-                var preset = ctx.ParseResult.GetValueForOption(reactPresetOption);
-                var overwrite = ctx.ParseResult.GetValueForOption(reactOverwriteOption);
-                GenerateReactMapDataBin(outFile, w, h, preset, overwrite);
-                var info = new FileInfo(Path.GetFullPath(outFile));
-                Console.WriteLine($"Wrote: {info.FullName} ({info.Length} bytes)");
-                ctx.ExitCode = 0;
-            });
-            mapCommand.AddCommand(genReactBinCommand);
             rootCommand.AddCommand(mapCommand);
 
             var navCommand = new Command("nav", "Navigation utilities");
-            var bakeNavCommand = new Command("bake", "Bake NavTiles from VertexMap .vtxm");
-            var navInOption = new Option<string>("--in", "Input .vtxm path") { IsRequired = true };
             var navOutDirOption = new Option<string?>("--outDir", () => null, "Output directory (default: assets/Data/Nav)");
             var navHeightScaleOption = new Option<float>("--heightScale", () => 2.0f, "Height scale in meters per height unit");
             var navMinUpDotOption = new Option<float>("--minUpDot", () => 0.6f, "Triangle walkability threshold by normal.Y");
@@ -173,61 +129,11 @@ namespace Ludots.Tool
             var navMaxDegreeOption = new Option<int>("--maxDegree", () => Math.Max(1, Environment.ProcessorCount), "Max degree of parallelism");
             var navLargeBakeOption = new Option<bool>("--large-bake", () => false, "Allow a large nav bake after reviewing the matching estimate");
             var navEstimateHashOption = new Option<string?>("--estimateHash", () => null, "Estimate hash returned by nav estimate-recast-react");
-            bakeNavCommand.AddOption(navInOption);
-            bakeNavCommand.AddOption(navOutDirOption);
-            bakeNavCommand.AddOption(navHeightScaleOption);
-            bakeNavCommand.AddOption(navMinUpDotOption);
-            bakeNavCommand.AddOption(navCliffThresholdOption);
-            bakeNavCommand.AddOption(navArtifactOption);
-            bakeNavCommand.AddOption(navParallelOption);
-            bakeNavCommand.AddOption(navMaxDegreeOption);
-            bakeNavCommand.SetHandler((InvocationContext ctx) =>
-            {
-                var inputPath = ctx.ParseResult.GetValueForOption(navInOption);
-                var outDir = ctx.ParseResult.GetValueForOption(navOutDirOption);
-                var heightScale = ctx.ParseResult.GetValueForOption(navHeightScaleOption);
-                var minUpDot = ctx.ParseResult.GetValueForOption(navMinUpDotOption);
-                var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
-                var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
-                var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
-                var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = (int)NavTileBinary.FormatVersion;
-                ctx.ExitCode = BakeNav(inputPath, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion);
-            });
-            navCommand.AddCommand(bakeNavCommand);
-
-            var bakeReactNavCommand = new Command("bake-react", "Bake NavTiles from React editor map_data.bin");
-            var reactInOption = new Option<string>("--in", "Input React map_data.bin path") { IsRequired = true };
+            var reactInOption = new Option<string>("--in", "Input .ltrn LogicTerrain path") { IsRequired = true };
             var reactDirtyOption = new Option<string?>("--dirty", () => null, "Optional dirty chunk list json (array of \"cx,cy\")");
             var reactIncludeNeighborsOption = new Option<bool>("--includeNeighbors", () => true, "Include 4-neighbor tiles for dirty list");
-            bakeReactNavCommand.AddOption(reactInOption);
-            bakeReactNavCommand.AddOption(reactDirtyOption);
-            bakeReactNavCommand.AddOption(navOutDirOption);
-            bakeReactNavCommand.AddOption(navHeightScaleOption);
-            bakeReactNavCommand.AddOption(navMinUpDotOption);
-            bakeReactNavCommand.AddOption(navCliffThresholdOption);
-            bakeReactNavCommand.AddOption(navArtifactOption);
-            bakeReactNavCommand.AddOption(navParallelOption);
-            bakeReactNavCommand.AddOption(navMaxDegreeOption);
-            bakeReactNavCommand.AddOption(reactIncludeNeighborsOption);
-            bakeReactNavCommand.SetHandler((InvocationContext ctx) =>
-            {
-                var inputPath = ctx.ParseResult.GetValueForOption(reactInOption);
-                var dirtyPath = ctx.ParseResult.GetValueForOption(reactDirtyOption);
-                var includeNeighbors = ctx.ParseResult.GetValueForOption(reactIncludeNeighborsOption);
-                var outDir = ctx.ParseResult.GetValueForOption(navOutDirOption);
-                var heightScale = ctx.ParseResult.GetValueForOption(navHeightScaleOption);
-                var minUpDot = ctx.ParseResult.GetValueForOption(navMinUpDotOption);
-                var cliffThreshold = ctx.ParseResult.GetValueForOption(navCliffThresholdOption);
-                var writeArtifact = ctx.ParseResult.GetValueForOption(navArtifactOption);
-                var parallel = ctx.ParseResult.GetValueForOption(navParallelOption);
-                var maxDegree = ctx.ParseResult.GetValueForOption(navMaxDegreeOption);
-                var tileVersion = (int)NavTileBinary.FormatVersion;
-                ctx.ExitCode = BakeNavFromReact(inputPath, dirtyPath, includeNeighbors, outDir, heightScale, minUpDot, cliffThreshold, writeArtifact, parallel, maxDegree, tileVersion);
-            });
-            navCommand.AddCommand(bakeReactNavCommand);
 
-            var bakeRecastReactNavCommand = new Command("bake-recast-react", "Bake NavTiles from React editor map_data.bin using Recast");
+            var bakeRecastReactNavCommand = new Command("bake-recast-react", "Bake NavTiles from .ltrn LogicTerrain using Recast");
             var mapIdOption = new Option<string>("--mapId", "Target mapId (used for output paths)") { IsRequired = true };
             var navModIdOption = new Option<string?>("--modId", () => null, "Optional mod id when mapId is authored by a mod");
             bakeRecastReactNavCommand.AddOption(mapIdOption);
@@ -265,7 +171,7 @@ namespace Ludots.Tool
             });
             navCommand.AddCommand(bakeRecastReactNavCommand);
 
-            var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from React editor map_data.bin");
+            var estimateRecastReactNavCommand = new Command("estimate-recast-react", "Estimate Recast NavTile bake cost from .ltrn LogicTerrain");
             estimateRecastReactNavCommand.AddOption(mapIdOption);
             estimateRecastReactNavCommand.AddOption(navModIdOption);
             estimateRecastReactNavCommand.AddOption(reactInOption);
@@ -575,6 +481,12 @@ namespace {modId}
                 return 1;
             }
 
+            if (!string.Equals(Path.GetExtension(inputPath), ".bin", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Error: import-react only accepts explicit legacy .bin input: {inputPath}");
+                return 1;
+            }
+
             string assetsRoot = FindAssetsRoot();
             outDir ??= Path.Combine(assetsRoot, "assets", "Data", "Maps");
             Directory.CreateDirectory(outDir);
@@ -582,19 +494,56 @@ namespace {modId}
             name ??= Path.GetFileNameWithoutExtension(inputPath);
             if (string.IsNullOrWhiteSpace(name)) name = "map";
 
-            string outBin = Path.Combine(outDir, $"{name}.vertexmap.bin");
-            string outJson = Path.Combine(outDir, $"{name}.vertexmap.summary.json");
-            if (!force && (File.Exists(outBin) || File.Exists(outJson)))
+            string outTerrain = Path.Combine(outDir, $"{name}.ltrn");
+            string outJson = Path.Combine(outDir, $"{name}.ltrn.summary.json");
+            if (!force && (File.Exists(outTerrain) || File.Exists(outJson)))
             {
-                Console.WriteLine($"Error: Output exists. Use --force to overwrite.\n  {outBin}\n  {outJson}");
+                Console.WriteLine($"Error: Output exists. Use --force to overwrite.\n  {outTerrain}\n  {outJson}");
                 return 1;
             }
 
-            var summary = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputPath, outBin);
+            var summary = ReactMapDataBinConverter.ConvertToLogicTerrainBinary(inputPath, outTerrain);
             var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
             File.WriteAllText(outJson, JsonSerializer.Serialize(summary, jsonOptions));
 
-            Console.WriteLine($"Converted React map to VertexMap binary:\n  In : {inputPath}\n  Out: {outBin}\n  Info: {outJson}");
+            Console.WriteLine($"Imported legacy React/Grid terrain to LogicTerrain binary:\n  In : {inputPath}\n  Out: {outTerrain}\n  Info: {outJson}");
+            return 0;
+        }
+
+        static int ImportVertexMap(string inputPath, string? outDir, string? name, bool force)
+        {
+            if (string.IsNullOrWhiteSpace(inputPath) || !File.Exists(inputPath))
+            {
+                Console.WriteLine($"Error: Input file not found: {inputPath}");
+                return 1;
+            }
+
+            if (!string.Equals(Path.GetExtension(inputPath), ".vtxm", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine($"Error: import-vtxm only accepts explicit legacy .vtxm input: {inputPath}");
+                return 1;
+            }
+
+            string assetsRoot = FindAssetsRoot();
+            outDir ??= Path.Combine(assetsRoot, "assets", "Data", "Maps");
+            Directory.CreateDirectory(outDir);
+
+            name ??= Path.GetFileNameWithoutExtension(inputPath);
+            if (string.IsNullOrWhiteSpace(name)) name = "map";
+
+            string outTerrain = Path.Combine(outDir, $"{name}.ltrn");
+            string outJson = Path.Combine(outDir, $"{name}.ltrn.summary.json");
+            if (!force && (File.Exists(outTerrain) || File.Exists(outJson)))
+            {
+                Console.WriteLine($"Error: Output exists. Use --force to overwrite.\n  {outTerrain}\n  {outJson}");
+                return 1;
+            }
+
+            var summary = ReactMapDataBinConverter.ConvertVertexMapToLogicTerrainBinary(inputPath, outTerrain);
+            var jsonOptions = new JsonSerializerOptions { WriteIndented = true };
+            File.WriteAllText(outJson, JsonSerializer.Serialize(summary, jsonOptions));
+
+            Console.WriteLine($"Imported legacy VertexMap terrain to LogicTerrain binary:\n  In : {inputPath}\n  Out: {outTerrain}\n  Info: {outJson}");
             return 0;
         }
 
@@ -620,103 +569,6 @@ namespace {modId}
                 current = Directory.GetParent(current)?.FullName;
             }
             return Directory.GetCurrentDirectory();
-        }
-
-        static int BakeNav(string inputVtxmPath, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)
-        {
-            if (!File.Exists(inputVtxmPath))
-            {
-                Console.WriteLine($"Input not found: {inputVtxmPath}");
-                return 2;
-            }
-
-            string root = outDir ?? Path.Combine("assets", "Data", "Nav");
-            string tilesDir = Path.Combine(root, "navtiles");
-            string artifactsDir = Path.Combine(root, "artifacts");
-            Directory.CreateDirectory(tilesDir);
-            if (writeArtifact) Directory.CreateDirectory(artifactsDir);
-
-            VertexMap map;
-            using (var fs = File.OpenRead(inputVtxmPath))
-            {
-                map = VertexMapBinary.Read(fs);
-            }
-
-            var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-            ulong cfgHash = cfg.ComputeHash();
-            Console.WriteLine($"BakeNav: map {map.WidthInChunks}x{map.HeightInChunks} chunks, configHash={cfgHash}");
-
-            var targets = new List<(int cx, int cy)>(map.WidthInChunks * map.HeightInChunks);
-            for (int cy = 0; cy < map.HeightInChunks; cy++)
-                for (int cx = 0; cx < map.WidthInChunks; cx++)
-                    targets.Add((cx, cy));
-
-            return BakeTiles(map, targets, cfg, tilesDir, artifactsDir, writeArtifact, parallel, maxDegree, tileVersion, logPrefix: "BakeNav", outDirRoot: root);
-        }
-
-        static int BakeNavFromReact(string inputReactBinPath, string? dirtyChunksPath, bool includeNeighbors, string? outDir, float heightScale, float minUpDot, int cliffThreshold, bool writeArtifact, bool parallel, int maxDegree, int tileVersion)
-        {
-            if (!File.Exists(inputReactBinPath))
-            {
-                Console.WriteLine($"Input not found: {inputReactBinPath}");
-                return 2;
-            }
-
-            string root = outDir ?? Path.Combine("assets", "Data", "Nav");
-            string tilesDir = Path.Combine(root, "navtiles");
-            string artifactsDir = Path.Combine(root, "artifacts");
-            Directory.CreateDirectory(tilesDir);
-            if (writeArtifact) Directory.CreateDirectory(artifactsDir);
-
-            VertexMap map;
-            using (var ms = new MemoryStream())
-            {
-                _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
-                ms.Position = 0;
-                map = VertexMapBinary.Read(ms);
-            }
-
-            var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-            ulong cfgHash = cfg.ComputeHash();
-            Console.WriteLine($"BakeNavReact: map {map.WidthInChunks}x{map.HeightInChunks} chunks, configHash={cfgHash}");
-
-            var targets = new List<(int cx, int cy)>();
-
-            if (!string.IsNullOrWhiteSpace(dirtyChunksPath) && File.Exists(dirtyChunksPath))
-            {
-                var json = File.ReadAllText(dirtyChunksPath);
-                var keys = JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
-                var set = new HashSet<(int cx, int cy)>();
-                for (int i = 0; i < keys.Length; i++)
-                {
-                    var parts = keys[i].Split(',');
-                    if (parts.Length != 2) continue;
-                    if (!int.TryParse(parts[0], out int cx)) continue;
-                    if (!int.TryParse(parts[1], out int cy)) continue;
-                    set.Add((cx, cy));
-                    if (includeNeighbors)
-                    {
-                        set.Add((cx - 1, cy));
-                        set.Add((cx + 1, cy));
-                        set.Add((cx, cy - 1));
-                        set.Add((cx, cy + 1));
-                    }
-                }
-
-                foreach (var t in set)
-                {
-                    if (t.cx < 0 || t.cy < 0 || t.cx >= map.WidthInChunks || t.cy >= map.HeightInChunks) continue;
-                    targets.Add(t);
-                }
-            }
-            else
-            {
-                for (int cy = 0; cy < map.HeightInChunks; cy++)
-                    for (int cx = 0; cx < map.WidthInChunks; cx++)
-                        targets.Add((cx, cy));
-            }
-
-            return BakeTiles(map, targets, cfg, tilesDir, artifactsDir, writeArtifact, parallel, maxDegree, tileVersion, logPrefix: "BakeNavReact", outDirRoot: root);
         }
 
         static int BakeNavFromReactRecast(
@@ -913,40 +765,27 @@ namespace {modId}
         static LogicTerrainField CreateReactEditorLogicTerrain(string inputReactBinPath, BoardConfig boardConfig)
         {
             if (boardConfig == null) throw new ArgumentNullException(nameof(boardConfig));
+            if (!Path.GetExtension(inputReactBinPath).Equals(".ltrn", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"LogicTerrain bake input must be .ltrn. Use 'map import-react' for explicit one-way legacy .bin import: {inputReactBinPath}");
+            }
+
             string spatialType = (boardConfig.SpatialType ?? "Grid").Trim();
-
-            if (spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase))
-            {
-                return ReactMapDataBinConverter.ReadGridLogicTerrainField(
-                    inputReactBinPath,
-                    boardConfig.GridCellSizeCm > 0 ? boardConfig.GridCellSizeCm : SpatialScaleDefaults.CellCm);
-            }
-
-            if (spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase) ||
-                spatialType.Equals("Hex", StringComparison.OrdinalIgnoreCase) ||
-                spatialType.Equals("Hybrid", StringComparison.OrdinalIgnoreCase))
-            {
-                using var ms = new MemoryStream();
-                _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(inputReactBinPath, ms);
-                ms.Position = 0;
-                VertexMap map = VertexMapBinary.Read(ms);
-                return new VertexMapLogicTerrainField(map);
-            }
-
             if (spatialType.Equals("NodeGraph", StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"Map board '{boardConfig.Name}' is NodeGraph; NodeGraph boards use graph data and do not bake navmesh.");
             }
+            if (!spatialType.Equals("Grid", StringComparison.OrdinalIgnoreCase) &&
+                !spatialType.Equals("HexGrid", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Map board '{boardConfig.Name}' has unsupported SpatialType '{boardConfig.SpatialType}'. Expected Grid, HexGrid, or NodeGraph.");
+            }
 
-            throw new InvalidOperationException(
-                $"Map board '{boardConfig.Name}' has unsupported SpatialType '{boardConfig.SpatialType}'. Expected Grid, HexGrid, or NodeGraph.");
-        }
-
-        static int BakeTiles(VertexMap map, List<(int cx, int cy)> targets, NavBuildConfig cfg, string tilesDir, string artifactsDir, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, string logPrefix, string outDirRoot)
-        {
-            throw new InvalidOperationException(
-                "BakeTiles requires an authored NavMeshBakeConfig from the unified config pipeline; generated layer/profile defaults are forbidden.");
+            using var input = File.OpenRead(inputReactBinPath);
+            return LogicTerrainBinary.Read(input);
         }
 
         static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)
@@ -999,35 +838,6 @@ namespace {modId}
             }
         }
 
-        static void WriteLegacyNavBakeResult(NavBakeResult result, string tilesDir, string artifactsDir, bool writeArtifact, string logPrefix)
-        {
-            for (int i = 0; i < result.Entries.Count; i++)
-            {
-                NavBakeResultEntry entry = result.Entries[i];
-                string tileName = $"navtile_{entry.Target.ChunkX}_{entry.Target.ChunkY}.ntil";
-                string artifactName = $"artifact_{entry.Target.ChunkX}_{entry.Target.ChunkY}.json";
-                if (entry.Success)
-                {
-                    string outFile = Path.Combine(tilesDir, tileName);
-                    using (var fs = File.Create(outFile))
-                    {
-                        NavTileBinary.Write(fs, entry.Tile);
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"{logPrefix} failed: tile {entry.Target.ChunkX},{entry.Target.ChunkY} stage={entry.Artifact.Stage} code={entry.Artifact.ErrorCode} msg={entry.Artifact.Message}");
-                }
-
-                if (writeArtifact)
-                {
-                    string artFile = Path.Combine(artifactsDir, artifactName);
-                    var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
-                    File.WriteAllText(artFile, json);
-                }
-            }
-        }
-
         static string ToCoreSourceUri(string repoRoot, string inputPath)
         {
             string assetsRoot = Path.GetFullPath(Path.Combine(repoRoot, "assets"));
@@ -1045,69 +855,5 @@ namespace {modId}
             return "Core:" + relative;
         }
 
-        static void GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)
-        {
-            if (File.Exists(outFile) && !overwrite) throw new IOException($"File exists: {outFile}");
-            if (widthChunks <= 0 || heightChunks <= 0) throw new ArgumentOutOfRangeException();
-
-            const int chunkSize = SpatialScaleDefaults.TerrainChunkCells;
-            int mapW = widthChunks * chunkSize;
-            int mapH = heightChunks * chunkSize;
-
-            using var fs = File.Create(outFile);
-            using var bw = new BinaryWriter(fs);
-            bw.Write(widthChunks);
-            bw.Write(heightChunks);
-            bw.Write((byte)4);
-
-            for (int cy = 0; cy < heightChunks; cy++)
-            {
-                for (int cx = 0; cx < widthChunks; cx++)
-                {
-                    var chunk = new byte[chunkSize * chunkSize * 4];
-                    for (int ly = 0; ly < chunkSize; ly++)
-                    {
-                        for (int lx = 0; lx < chunkSize; lx++)
-                        {
-                            int gc = cx * chunkSize + lx;
-                            int gr = cy * chunkSize + ly;
-
-                            byte height = 0;
-                            byte water = 0;
-                            byte biome = 0;
-                            byte veg = 0;
-                            byte flags = 0;
-                            byte territory = 0;
-
-                            if (string.Equals(preset, "stripes", StringComparison.OrdinalIgnoreCase))
-                            {
-                                height = (byte)(((gc / 4) & 1) == 0 ? 2 : 10);
-                            }
-                            else if (string.Equals(preset, "cliffs", StringComparison.OrdinalIgnoreCase))
-                            {
-                                height = (byte)(gc < mapW / 2 ? 2 : 12);
-                            }
-                            else if (string.Equals(preset, "lake", StringComparison.OrdinalIgnoreCase))
-                            {
-                                height = 2;
-                                int cxm = mapW / 2;
-                                int cym = mapH / 2;
-                                int dx = gc - cxm;
-                                int dy = gr - cym;
-                                int d2 = dx * dx + dy * dy;
-                                if (d2 < (mapW / 6) * (mapW / 6)) water = 10;
-                            }
-
-                            int cell = (ly * chunkSize + lx) * 4;
-                            chunk[cell + 0] = (byte)(((height & 0x0F) << 4) | (water & 0x0F));
-                            chunk[cell + 1] = (byte)(((biome & 0x0F) << 4) | (veg & 0x0F));
-                            chunk[cell + 2] = flags;
-                            chunk[cell + 3] = territory;
-                        }
-                    }
-                    bw.Write(chunk);
-                }
-            }
-        }
     }
 }
