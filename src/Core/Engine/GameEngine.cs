@@ -140,7 +140,6 @@ namespace Ludots.Core.Engine
 
         private bool _isRunning;
         private EffectTemplateLoader _effectTemplateLoader;
-        private GraphProgramLoader _graphProgramLoader;
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 

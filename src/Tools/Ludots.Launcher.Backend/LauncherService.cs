@@ -1307,15 +1307,6 @@ public sealed class LauncherService
         var referenceExportPath = ExportReferenceAssembly(entry.Info, projectDirectory);
         output.AppendLine($"Exported ref: {referenceExportPath}");
 
-        var graphCompile = await RunLudotsToolAsync(
-            $"graph compile --modPath \"{entry.Info.RootPath}\" --assetsRoot \"{_repoRoot}\"",
-            timeoutMs: 300_000);
-        output.AppendLine(graphCompile.Output);
-        if (graphCompile.ExitCode != 0)
-        {
-            return new LauncherBuildResult(entry.Info.Id, false, graphCompile.ExitCode, output.ToString());
-        }
-
         var mainAssemblyPath = ResolveMainAssemblyPath(entry.Info.RootPath, entry.Manifest.Main);
         if (!string.IsNullOrWhiteSpace(entry.Manifest.Main) && !File.Exists(mainAssemblyPath))
         {

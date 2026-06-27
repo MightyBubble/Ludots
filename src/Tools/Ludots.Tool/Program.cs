@@ -9,9 +9,6 @@ using System.Threading.Tasks;
 using Ludots.Core.Config;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
-using Ludots.Core.NodeLibraries.GASGraph;
-using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
-using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
@@ -60,24 +57,6 @@ namespace Ludots.Tool
             modCommand.AddCommand(buildCommand);
             
             rootCommand.AddCommand(modCommand);
-
-            var graphCommand = new Command("graph", "Compile graph assets");
-            var compileGraphsCommand = new Command("compile", "Compile GAS graphs to binary blob");
-            var graphModOption = new Option<string?>("--mod", () => null, "The mod ID to compile graphs for");
-            var graphModPathOption = new Option<string?>("--modPath", () => null, "The full mod root path to compile graphs for");
-            var assetsRootOption = new Option<string?>("--assetsRoot", () => null, "Assets root (repo root containing 'assets/')");
-            compileGraphsCommand.AddOption(graphModOption);
-            compileGraphsCommand.AddOption(graphModPathOption);
-            compileGraphsCommand.AddOption(assetsRootOption);
-            compileGraphsCommand.SetHandler((InvocationContext ctx) =>
-            {
-                var mod = ctx.ParseResult.GetValueForOption(graphModOption);
-                var modPath = ctx.ParseResult.GetValueForOption(graphModPathOption);
-                var assetsRoot = ctx.ParseResult.GetValueForOption(assetsRootOption);
-                ctx.ExitCode = CompileGraphs(mod, modPath, assetsRoot);
-            });
-            graphCommand.AddCommand(compileGraphsCommand);
-            rootCommand.AddCommand(graphCommand);
 
             var mapCommand = new Command("map", "Map utilities");
             var importReactCommand = new Command("import-react", "Convert React web editor map_data.bin to VertexMap binary");
@@ -479,97 +458,6 @@ namespace {modId}
             {
                 Console.WriteLine("Build failed.");
             }
-        }
-
-        static int CompileGraphs(string? modId, string? modPath, string? assetsRoot)
-        {
-            assetsRoot ??= FindAssetsRoot();
-            if (assetsRoot == null)
-            {
-                Console.WriteLine("Error: Could not determine assets root.");
-                return 1;
-            }
-
-            string modDir;
-            if (!string.IsNullOrWhiteSpace(modPath))
-            {
-                modDir = Path.GetFullPath(modPath);
-            }
-            else if (!string.IsNullOrWhiteSpace(modId))
-            {
-                modDir = Path.Combine(assetsRoot, "mods", modId);
-            }
-            else
-            {
-                Console.WriteLine("Error: graph compile requires --modPath or --mod.");
-                return 1;
-            }
-
-            if (!Directory.Exists(modDir))
-            {
-                Console.WriteLine($"Error: Mod directory not found at {modDir}");
-                return 1;
-            }
-
-            var graphsJsonPath = Path.Combine(modDir, "assets", "Configs", "GAS", "graphs.json");
-            if (!File.Exists(graphsJsonPath))
-            {
-                Console.WriteLine($"No graphs.json found for mod '{modDir}'.");
-                return 0;
-            }
-
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
-            List<GraphConfig>? configs;
-            using (var fs = File.OpenRead(graphsJsonPath))
-            {
-                configs = JsonSerializer.Deserialize<List<GraphConfig>>(fs, options);
-            }
-
-            if (configs == null || configs.Count == 0)
-            {
-                Console.WriteLine($"No graph entries found in {graphsJsonPath}");
-                return 1;
-            }
-
-            configs.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
-
-            var packages = new List<GraphProgramPackage>(configs.Count);
-            bool hasErrors = false;
-
-            for (int idx = 0; idx < configs.Count; idx++)
-            {
-                var cfg = configs[idx];
-                var (pkg, diags) = GraphCompiler.Compile(cfg);
-                for (int d = 0; d < diags.Count; d++)
-                {
-                    var diag = diags[d];
-                    Console.WriteLine($"{diag.Severity} {diag.Code} graph='{diag.GraphId}' node='{diag.NodeId}': {diag.Message}");
-                    if (diag.Severity == GraphDiagnosticSeverity.Error) hasErrors = true;
-                }
-
-                if (pkg.HasValue)
-                {
-                    packages.Add(pkg.Value);
-                }
-            }
-
-            if (hasErrors)
-            {
-                Console.WriteLine("Graph compilation failed.");
-                return 1;
-            }
-
-            var outDir = Path.Combine(modDir, "assets", "Compiled", "GAS");
-            Directory.CreateDirectory(outDir);
-            var outPath = Path.Combine(outDir, "graphs.bin");
-
-            using (var fs = File.Create(outPath))
-            {
-                GraphProgramBlob.Write(fs, packages);
-            }
-
-            Console.WriteLine($"Compiled {packages.Count} graphs to {outPath}");
-            return 0;
         }
 
         static int ImportReactMap(string inputPath, string? outDir, string? name, bool force)
