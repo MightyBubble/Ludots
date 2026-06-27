@@ -38,6 +38,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
@@ -312,6 +313,7 @@ namespace Ludots.Core.Scripting
 
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
+        public static readonly ServiceKey<GraphEdgeCostOverlay> GraphEdgeCostOverlay = new("GraphEdgeCostOverlay");
         public static readonly ServiceKey<LogicTerrainField> LogicTerrain = new("LogicTerrain");
         public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");

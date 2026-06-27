@@ -106,10 +106,12 @@ namespace Ludots.Core.Navigation.GraphWorld
                 var xs = g.PosXcmArray;
                 var ys = g.PosYcmArray;
                 var tags = g.NodeTagSetIdArray;
+                var tagSets = g.TagSetsArray;
                 int n = g.NodeCount;
                 for (int i = 0; i < n; i++)
                 {
-                    int nodeId = builder.AddNode(xs[i], ys[i], tags[i]);
+                    ushort tagSetId = builder.AddTagSet(in tagSets[tags[i]]);
+                    int nodeId = builder.AddNode(xs[i], ys[i], tagSetId);
                     var key = new GraphNodeKey(kv.Key, (ushort)i);
                     nodeKeys[nodeId] = key;
                     nodeIdByKey[key] = nodeId;
@@ -127,6 +129,9 @@ namespace Ludots.Core.Navigation.GraphWorld
                 var edgeTo = g.EdgeToArray;
                 var edgeCost = g.EdgeBaseCostArray;
                 var edgeTags = g.EdgeTagSetIdArray;
+                var edgeDepth = g.EdgeDepthCmArray;
+                var edgeWidth = g.EdgeWidthCmArray;
+                var tagSets = g.TagSetsArray;
 
                 int nodeCount = g.NodeCount;
                 for (int n = 0; n < nodeCount; n++)
@@ -135,7 +140,8 @@ namespace Ludots.Core.Navigation.GraphWorld
                     for (int e = edgeStart[n]; e < edgeStart[n + 1]; e++)
                     {
                         int toGlobal = chunkOffset + edgeTo[e];
-                        builder.AddEdge(fromGlobal, toGlobal, edgeCost[e], edgeTags[e]);
+                        ushort tagSetId = builder.AddTagSet(in tagSets[edgeTags[e]]);
+                        builder.AddEdge(fromGlobal, toGlobal, edgeCost[e], tagSetId, edgeDepth[e], edgeWidth[e]);
                     }
                 }
 
@@ -146,7 +152,9 @@ namespace Ludots.Core.Navigation.GraphWorld
                     int fromGlobal = chunkOffset + ce.FromLocalNodeId;
                     var toKey = new GraphNodeKey(ce.ToChunkKey, ce.ToLocalNodeId);
                     if (!nodeIdByKey.TryGetValue(toKey, out int toGlobal)) continue;
-                    builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, ce.TagSetId);
+                    TagBits256 crossTags = ResolveCrossEdgeTags(g, in ce);
+                    ushort tagSetId = builder.AddTagSet(in crossTags);
+                    builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, tagSetId, ce.DepthCm, ce.WidthCm);
                 }
             }
 
@@ -194,10 +202,12 @@ namespace Ludots.Core.Navigation.GraphWorld
                 var xs = g.PosXcmArray;
                 var ys = g.PosYcmArray;
                 var tags = g.NodeTagSetIdArray;
+                var tagSets = g.TagSetsArray;
                 int n = g.NodeCount;
                 for (int i = 0; i < n; i++)
                 {
-                    int nodeId = builder.AddNode(xs[i], ys[i], tags[i]);
+                    ushort tagSetId = builder.AddTagSet(in tagSets[tags[i]]);
+                    int nodeId = builder.AddNode(xs[i], ys[i], tagSetId);
                     var nk = new GraphNodeKey(key, (ushort)i);
                     nodeKeys[nodeId] = nk;
                     nodeIdByKey[nk] = nodeId;
@@ -216,6 +226,9 @@ namespace Ludots.Core.Navigation.GraphWorld
                 var edgeTo = g.EdgeToArray;
                 var edgeCost = g.EdgeBaseCostArray;
                 var edgeTags = g.EdgeTagSetIdArray;
+                var edgeDepth = g.EdgeDepthCmArray;
+                var edgeWidth = g.EdgeWidthCmArray;
+                var tagSets = g.TagSetsArray;
 
                 int nodeCount = g.NodeCount;
                 for (int n = 0; n < nodeCount; n++)
@@ -224,7 +237,8 @@ namespace Ludots.Core.Navigation.GraphWorld
                     for (int e = edgeStart[n]; e < edgeStart[n + 1]; e++)
                     {
                         int toGlobal = chunkOffset + edgeTo[e];
-                        builder.AddEdge(fromGlobal, toGlobal, edgeCost[e], edgeTags[e]);
+                        ushort tagSetId = builder.AddTagSet(in tagSets[edgeTags[e]]);
+                        builder.AddEdge(fromGlobal, toGlobal, edgeCost[e], tagSetId, edgeDepth[e], edgeWidth[e]);
                     }
                 }
 
@@ -236,12 +250,26 @@ namespace Ludots.Core.Navigation.GraphWorld
                     int fromGlobal = chunkOffset + ce.FromLocalNodeId;
                     var toKey = new GraphNodeKey(ce.ToChunkKey, ce.ToLocalNodeId);
                     if (!nodeIdByKey.TryGetValue(toKey, out int toGlobal)) continue;
-                    builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, ce.TagSetId);
+                    TagBits256 crossTags = ResolveCrossEdgeTags(g, in ce);
+                    ushort tagSetId = builder.AddTagSet(in crossTags);
+                    builder.AddEdge(fromGlobal, toGlobal, ce.BaseCost, tagSetId, ce.DepthCm, ce.WidthCm);
                 }
             }
 
             var graph = builder.Build();
             return new LoadedGraphView(graph, nodeKeys, nodeIdByKey);
+        }
+
+        private static TagBits256 ResolveCrossEdgeTags(NodeGraph sourceGraph, in GraphCrossEdge edge)
+        {
+            if (!edge.TagBits.Equals(default(TagBits256)))
+            {
+                return edge.TagBits;
+            }
+
+            return edge.TagSetId < sourceGraph.TagSetsArray.Length
+                ? sourceGraph.TagSetsArray[edge.TagSetId]
+                : default;
         }
     }
 }

@@ -79,6 +79,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -1034,8 +1035,10 @@ namespace Ludots.Core.Engine
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
+            var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks);
+            GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
@@ -1165,6 +1168,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.GraphEdgeCostOverlay, graphEdgeCostOverlay);
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
@@ -2447,6 +2451,7 @@ namespace Ludots.Core.Engine
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
+            var graphEdgeCostOverlay = GetService(CoreServiceKeys.GraphEdgeCostOverlay);
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
@@ -2477,7 +2482,7 @@ namespace Ludots.Core.Engine
                 IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
@@ -2487,7 +2492,7 @@ namespace Ludots.Core.Engine
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
             }
             else
             {

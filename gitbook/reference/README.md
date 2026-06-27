@@ -13,6 +13,8 @@ This section collects current runbooks and reference pages.
 - [NavBakeContext and Unified Bake Service](nav-bake-context.md)
 - [Nav Bake Budget and Estimation](nav-bake-budget-and-estimation.md)
 - [Navmesh Authoring Bake Toolchain](navmesh-authoring-bake-toolchain.md)
+- [Transport Network Asset](transport-network-asset.md)
+- [Graph Query Services](graph-query-services.md)
 - [Runtime Incremental Navmesh Rebuild](runtime-incremental-navmesh-rebuild.md)
 - [Nav Domain Unification Epic Report](nav-domain-unification-epic-report.md)
 - [Nav Domain Configuration Migration Guide](nav-domain-configuration-migration-guide.md)

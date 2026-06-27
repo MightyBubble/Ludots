@@ -87,8 +87,12 @@ namespace Ludots.Core.Navigation.Pathing.Config
                     throw new InvalidOperationException($"{agentPath}.nodeGraph must be an explicit object.");
                 }
 
-                RequireOnlyProperties(nodeGraph, $"{agentPath}.nodeGraph", "projectionMaxRadiusCm", "requiredTagsAll", "forbiddenTagsAny", "tagCostRules");
+                RequireOnlyProperties(nodeGraph, $"{agentPath}.nodeGraph", "projectionMaxRadiusCm", "useDynamicOverlay", "requiredTagsAll", "forbiddenTagsAny", "tagCostRules");
                 RequireNumber(nodeGraph, "projectionMaxRadiusCm", $"{agentPath}.nodeGraph");
+                if (nodeGraph["useDynamicOverlay"] is not JsonValue overlayValue || !overlayValue.TryGetValue<bool>(out _))
+                {
+                    throw new InvalidOperationException($"{agentPath}.nodeGraph.useDynamicOverlay must be a boolean.");
+                }
                 RequireStringArray(nodeGraph, "requiredTagsAll", $"{agentPath}.nodeGraph");
                 RequireStringArray(nodeGraph, "forbiddenTagsAny", $"{agentPath}.nodeGraph");
                 RequireTagCostRules(nodeGraph, $"{agentPath}.nodeGraph");

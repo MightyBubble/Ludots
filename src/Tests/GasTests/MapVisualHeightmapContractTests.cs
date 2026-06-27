@@ -45,6 +45,8 @@ namespace Ludots.Tests.Gas
                 "radiusCm": 30,
                 "heightCm": 180,
                 "clearanceCm": 40,
+                "draftCm": 0,
+                "beamCm": 0,
                 "mass": 1,
                 "layer": 0
               }
@@ -71,6 +73,7 @@ namespace Ludots.Tests.Gas
                   },
                   "nodeGraph": {
                     "projectionMaxRadiusCm": 200000,
+                    "useDynamicOverlay": false,
                     "forbiddenTagsAny": [],
                     "requiredTagsAll": [],
                     "tagCostRules": []

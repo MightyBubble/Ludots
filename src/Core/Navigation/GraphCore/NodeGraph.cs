@@ -12,6 +12,8 @@ namespace Ludots.Core.Navigation.GraphCore
         private readonly int[] _edgeTo;
         private readonly float[] _edgeBaseCost;
         private readonly ushort[] _edgeTagSetId;
+        private readonly int[] _edgeDepthCm;
+        private readonly int[] _edgeWidthCm;
 
         public int NodeCount { get; }
         public int EdgeCount { get; }
@@ -25,6 +27,8 @@ namespace Ludots.Core.Navigation.GraphCore
         public ReadOnlySpan<int> EdgeTo => _edgeTo;
         public ReadOnlySpan<float> EdgeBaseCost => _edgeBaseCost;
         public ReadOnlySpan<ushort> EdgeTagSetId => _edgeTagSetId;
+        public ReadOnlySpan<int> EdgeDepthCm => _edgeDepthCm;
+        public ReadOnlySpan<int> EdgeWidthCm => _edgeWidthCm;
 
         internal int[] PosXcmArray => _posXcm;
         internal int[] PosYcmArray => _posYcm;
@@ -34,6 +38,8 @@ namespace Ludots.Core.Navigation.GraphCore
         internal int[] EdgeToArray => _edgeTo;
         internal float[] EdgeBaseCostArray => _edgeBaseCost;
         internal ushort[] EdgeTagSetIdArray => _edgeTagSetId;
+        internal int[] EdgeDepthCmArray => _edgeDepthCm;
+        internal int[] EdgeWidthCmArray => _edgeWidthCm;
 
         internal NodeGraph(
             int nodeCount,
@@ -45,7 +51,9 @@ namespace Ludots.Core.Navigation.GraphCore
             int[] edgeStart,
             int[] edgeTo,
             float[] edgeBaseCost,
-            ushort[] edgeTagSetId)
+            ushort[] edgeTagSetId,
+            int[] edgeDepthCm,
+            int[] edgeWidthCm)
         {
             NodeCount = nodeCount;
             EdgeCount = edgeCount;
@@ -57,6 +65,8 @@ namespace Ludots.Core.Navigation.GraphCore
             _edgeTo = edgeTo ?? throw new ArgumentNullException(nameof(edgeTo));
             _edgeBaseCost = edgeBaseCost ?? throw new ArgumentNullException(nameof(edgeBaseCost));
             _edgeTagSetId = edgeTagSetId ?? throw new ArgumentNullException(nameof(edgeTagSetId));
+            _edgeDepthCm = edgeDepthCm ?? throw new ArgumentNullException(nameof(edgeDepthCm));
+            _edgeWidthCm = edgeWidthCm ?? throw new ArgumentNullException(nameof(edgeWidthCm));
         }
 
         /// <summary>

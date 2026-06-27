@@ -89,6 +89,8 @@ Agent profile 迁移目标：
   "radiusCm": 48,
   "heightCm": 180,
   "clearanceCm": 12,
+  "draftCm": 0,
+  "beamCm": 0,
   "mass": 1,
   "layer": 0
 }

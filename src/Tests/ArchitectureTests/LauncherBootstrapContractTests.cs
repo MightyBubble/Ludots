@@ -502,6 +502,15 @@ namespace Ludots.Tests.Architecture
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
                     });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_transport_network" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardTransportNetworkMod",
+                    expectedStartupMapId: "capability_standard_transport_network",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTransportNetworkMod" });
             }
             finally
             {
