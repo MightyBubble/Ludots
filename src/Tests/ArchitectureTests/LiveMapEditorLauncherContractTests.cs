@@ -70,11 +70,58 @@ public sealed class LiveMapEditorLauncherContractTests
 
         Assert.That(map["Metadata"]?["liveMapEditor"]?["saveTarget"]?.GetValue<bool>(), Is.True);
         Assert.That(map["ParentId"]?.GetValue<string>(), Is.EqualTo("nav_editor_grid"));
+        Assert.That(map["DefaultCamera"]?["VirtualCameraId"]?.GetValue<string>(), Is.EqualTo("LiveMapEditor.Camera.AuthoringGrid"));
+        Assert.That((map["Tags"] as JsonArray)?.Select(node => node?.GetValue<string>()).ToArray(), Does.Not.Contain("Raylib.Background:Deep"));
         Assert.That(map["Boards"] as JsonArray, Is.Not.Null.And.Count.GreaterThan(0));
         foreach (JsonObject board in (map["Boards"] as JsonArray)!.OfType<JsonObject>())
         {
             Assert.That(board["DataFile"], Is.Null);
         }
+    }
+
+    [Test]
+    public void PresentationSystem_DrawsBoardAuthoringGuidesAtStartup()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Systems",
+            "LiveMapEditorPresentationSystem.cs"));
+
+        Assert.That(source, Does.Contain("DrawBoardAuthoringGuides"));
+        Assert.That(source, Does.Contain("DrawBoardAuthoringStatus"));
+        Assert.That(source, Does.Contain("MaxBoardGuideLinesPerAxis"));
+        Assert.That(source, Does.Contain("ResolveBoardGuideStepCm"));
+        Assert.That(source, Does.Contain("GroundOverlayShape.Line"));
+    }
+
+    [Test]
+    public void UatCameraProfile_DisablesEdgePanForStableRaylibStartup()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonArray cameras = ReadArray(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorNavGridUatMod",
+            "assets",
+            "Configs",
+            "Camera",
+            "virtual_cameras.json"));
+        JsonObject camera = cameras
+            .OfType<JsonObject>()
+            .Single(obj => string.Equals(obj["id"]?.GetValue<string>(), "LiveMapEditor.Camera.AuthoringGrid", StringComparison.Ordinal));
+
+        Assert.That(camera["panMode"]?.GetValue<string>(), Is.EqualTo("Keyboard"));
+        Assert.That(camera["panMode"]?.GetValue<string>(), Is.Not.EqualTo("KeyboardAndEdge"));
+        Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("VisualHeightmap"));
+        Assert.That(camera["confineTargetToWorldBounds"]?.GetValue<bool>(), Is.True);
+        Assert.That(camera["allowUserInput"]?.GetValue<bool>(), Is.True);
     }
 
     [Test]
@@ -164,6 +211,8 @@ public sealed class LiveMapEditorLauncherContractTests
 
         Assert.That(appJs, Does.Not.Contain("fallback"));
         Assert.That(appJs, Does.Contain("checkValidity"));
+        Assert.That(appJs, Does.Contain("waitForDataPlaneTransport"));
+        Assert.That(appJs, Does.Not.Contain("throw new Error('window.ludotsDataplane missing')"));
     }
 
     [Test]
@@ -246,6 +295,10 @@ public sealed class LiveMapEditorLauncherContractTests
     private static JsonObject ReadObject(string path)
         => JsonNode.Parse(File.ReadAllText(path)) as JsonObject
            ?? throw new InvalidDataException($"{path} must contain a JSON object.");
+
+    private static JsonArray ReadArray(string path)
+        => JsonNode.Parse(File.ReadAllText(path)) as JsonArray
+           ?? throw new InvalidDataException($"{path} must contain a JSON array.");
 
     private static string FindRepoRoot()
     {

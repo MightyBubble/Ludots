@@ -7,8 +7,10 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.UI;
 using LiveMapEditorMod.Runtime;
 using LiveMapEditorMod.UI;
@@ -18,6 +20,15 @@ namespace LiveMapEditorMod.Systems;
 internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
 {
     private const float OverlayY = 0.18f;
+    private const float BoardGuideY = 0.24f;
+    private const int MaxBoardGuideLinesPerAxis = 65;
+    private static readonly Vector4 BoardGuideFillColor = new(0.18f, 0.75f, 1f, 0.22f);
+    private static readonly Vector4 BoardGuideBorderColor = new(0.38f, 0.92f, 1f, 0.96f);
+    private static readonly Vector4 BoardGuideMajorColor = new(1f, 0.86f, 0.24f, 0.9f);
+    private static readonly Vector4 BoardGuideMinorColor = new(0.38f, 0.92f, 1f, 0.44f);
+    private static readonly Vector4 BoardGuideStatusFillColor = new(0.02f, 0.06f, 0.10f, 0.72f);
+    private static readonly Vector4 BoardGuideStatusBorderColor = new(0.20f, 0.82f, 1f, 0.52f);
+    private static readonly Vector4 BoardGuideStatusTextColor = new(0.88f, 0.97f, 1f, 0.96f);
     private readonly GameEngine _engine;
     private readonly LiveMapEditorRuntime _runtime;
     private readonly LiveMapEditorPanelController _panelController;
@@ -192,14 +203,199 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
     {
         if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is GroundOverlayBuffer ground)
         {
+            DrawBoardAuthoringGuides(ground);
             DrawPickAndBrush(ground);
             DrawPath(ground);
+        }
+
+        if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer screen)
+        {
+            DrawBoardAuthoringStatus(screen);
         }
 
         if (_engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) is DebugDrawCommandBuffer debug)
         {
             DrawNavTiles(debug);
         }
+    }
+
+    private void DrawBoardAuthoringGuides(GroundOverlayBuffer ground)
+    {
+        if (!TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds) ||
+            bounds.Width <= 0 ||
+            bounds.Height <= 0)
+        {
+            return;
+        }
+
+        int guideStepCm = ResolveBoardGuideStepCm(board, bounds);
+        DrawBoardBounds(ground, bounds);
+        DrawBoardChunkGrid(ground, bounds, guideStepCm);
+        DrawBoardReferenceMarkers(ground, bounds);
+    }
+
+    private void DrawBoardAuthoringStatus(ScreenOverlayBuffer screen)
+    {
+        if (_runtime.PanelOpen)
+        {
+            return;
+        }
+
+        if (!TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds) ||
+            bounds.Width <= 0 ||
+            bounds.Height <= 0)
+        {
+            return;
+        }
+
+        int guideStepCm = ResolveBoardGuideStepCm(board, bounds);
+        int widthM = (int)MathF.Round(WorldUnits.CmToM(bounds.Width));
+        int heightM = (int)MathF.Round(WorldUnits.CmToM(bounds.Height));
+        int guideStepM = Math.Max(1, (int)MathF.Round(WorldUnits.CmToM(guideStepCm)));
+        string boardName = board?.Name ?? "world";
+        string line = $"Live Map Editor | board={boardName} | {widthM}m x {heightM}m | guide={guideStepM}m";
+
+        screen.AddRect(16, 16, 560, 42, BoardGuideStatusFillColor, BoardGuideStatusBorderColor);
+        screen.AddText(28, 28, line, 16, BoardGuideStatusTextColor);
+    }
+
+    private bool TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds)
+    {
+        board = _engine.CurrentMapSession?.PrimaryBoard;
+        if (board != null)
+        {
+            bounds = board.WorldSize.Bounds;
+            return true;
+        }
+
+        bounds = _engine.WorldSizeSpec.Bounds;
+        return bounds.Width > 0 && bounds.Height > 0;
+    }
+
+    private int ResolveBoardGuideStepCm(IBoard? board, in WorldAabbCm bounds)
+    {
+        int chunkSizeCells = ResolveBoardChunkSizeCells(board);
+        int cellCm = Math.Max(1, board?.WorldSize.GridCellSizeCm ?? _engine.WorldSizeSpec.GridCellSizeCm);
+        int stepCm = Math.Max(cellCm, chunkSizeCells * cellCm);
+        int maxLineCount = Math.Max(
+            (int)MathF.Ceiling(bounds.Width / (float)stepCm),
+            (int)MathF.Ceiling(bounds.Height / (float)stepCm));
+        if (maxLineCount <= MaxBoardGuideLinesPerAxis)
+        {
+            return stepCm;
+        }
+
+        int multiplier = (int)MathF.Ceiling(maxLineCount / (float)MaxBoardGuideLinesPerAxis);
+        return checked(stepCm * Math.Max(1, multiplier));
+    }
+
+    private int ResolveBoardChunkSizeCells(IBoard? board)
+    {
+        if (board is GridBoard gridBoard)
+        {
+            return Math.Max(1, gridBoard.ChunkSizeCells);
+        }
+
+        string? boardName = board?.Name;
+        if (!string.IsNullOrWhiteSpace(boardName) &&
+            _engine.CurrentMapSession?.MapConfig?.Boards != null)
+        {
+            foreach (BoardConfig config in _engine.CurrentMapSession.MapConfig.Boards)
+            {
+                if (string.Equals(config.Name, boardName, StringComparison.Ordinal))
+                {
+                    return Math.Max(1, config.ChunkSizeCells);
+                }
+            }
+        }
+
+        return SpatialScaleDefaults.TerrainChunkCells;
+    }
+
+    private static void DrawBoardBounds(GroundOverlayBuffer ground, in WorldAabbCm bounds)
+    {
+        float widthM = WorldUnits.CmToM(bounds.Width);
+        float heightM = WorldUnits.CmToM(bounds.Height);
+        AddGuideLine(ground, bounds.Left, bounds.Top, widthM, 0f, 0.42f, BoardGuideFillColor, BoardGuideBorderColor);
+        AddGuideLine(ground, bounds.Left, bounds.Bottom, widthM, 0f, 0.42f, BoardGuideFillColor, BoardGuideBorderColor);
+        AddGuideLine(ground, bounds.Left, bounds.Top, heightM, MathF.PI / 2f, 0.42f, BoardGuideFillColor, BoardGuideBorderColor);
+        AddGuideLine(ground, bounds.Right, bounds.Top, heightM, MathF.PI / 2f, 0.42f, BoardGuideFillColor, BoardGuideBorderColor);
+    }
+
+    private static void DrawBoardChunkGrid(GroundOverlayBuffer ground, in WorldAabbCm bounds, int stepCm)
+    {
+        if (stepCm <= 0)
+        {
+            return;
+        }
+
+        int majorStepCm = Math.Max(stepCm, 4 * stepCm);
+        float widthM = WorldUnits.CmToM(bounds.Width);
+        float heightM = WorldUnits.CmToM(bounds.Height);
+
+        for (int x = bounds.Left + stepCm; x < bounds.Right; x += stepCm)
+        {
+            bool major = ((x - bounds.Left) % majorStepCm) == 0;
+            Vector4 color = major ? BoardGuideMajorColor : BoardGuideMinorColor;
+            AddGuideLine(ground, x, bounds.Top, heightM, MathF.PI / 2f, major ? 0.24f : 0.12f, color, color);
+        }
+
+        for (int y = bounds.Top + stepCm; y < bounds.Bottom; y += stepCm)
+        {
+            bool major = ((y - bounds.Top) % majorStepCm) == 0;
+            Vector4 color = major ? BoardGuideMajorColor : BoardGuideMinorColor;
+            AddGuideLine(ground, bounds.Left, y, widthM, 0f, major ? 0.24f : 0.12f, color, color);
+        }
+    }
+
+    private static void DrawBoardReferenceMarkers(GroundOverlayBuffer ground, in WorldAabbCm bounds)
+    {
+        ground.TryAdd(new GroundOverlayItem
+        {
+            Shape = GroundOverlayShape.Circle,
+            Center = WorldUnits.WorldCmToVisualMeters(bounds.Left, bounds.Top, BoardGuideY + 0.02f),
+            Radius = 1.2f,
+            FillColor = new Vector4(0.22f, 1f, 0.44f, 0.24f),
+            BorderColor = new Vector4(0.22f, 1f, 0.44f, 1f),
+            BorderWidth = 0.06f
+        });
+
+        ground.TryAdd(new GroundOverlayItem
+        {
+            Shape = GroundOverlayShape.Ring,
+            Center = WorldUnits.WorldCmToVisualMeters(
+                bounds.Left + (bounds.Width * 0.5f),
+                bounds.Top + (bounds.Height * 0.5f),
+                BoardGuideY + 0.02f),
+            Radius = 1.9f,
+            InnerRadius = 1.35f,
+            FillColor = new Vector4(1f, 0.86f, 0.24f, 0.18f),
+            BorderColor = new Vector4(1f, 0.86f, 0.24f, 0.95f),
+            BorderWidth = 0.06f
+        });
+    }
+
+    private static void AddGuideLine(
+        GroundOverlayBuffer ground,
+        int startXCm,
+        int startYCm,
+        float lengthM,
+        float rotation,
+        float widthM,
+        Vector4 fill,
+        Vector4 border)
+    {
+        ground.TryAdd(new GroundOverlayItem
+        {
+            Shape = GroundOverlayShape.Line,
+            Center = WorldUnits.WorldCmToVisualMeters(startXCm, startYCm, BoardGuideY),
+            Length = lengthM,
+            Width = widthM,
+            Rotation = rotation,
+            FillColor = fill,
+            BorderColor = border,
+            BorderWidth = 0.04f
+        });
     }
 
     private void DrawPickAndBrush(GroundOverlayBuffer ground)

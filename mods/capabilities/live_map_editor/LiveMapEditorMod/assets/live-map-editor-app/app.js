@@ -42,15 +42,31 @@ boot().catch((error) => {
 });
 
 async function boot() {
-  if (!window.ludotsDataplane || typeof window.ludotsDataplane.postMessage !== 'function') {
-    throw new Error('window.ludotsDataplane missing');
-  }
+  await waitForDataPlaneTransport();
 
   window.addEventListener('message', handleHostMessage);
   wireUi();
   await control('handshake', 'system', { capabilities: ['message', 'latest-wins', 'reliable-ordered'] });
   el.transport.textContent = 'connected';
   await control('subscribe', STATE_TOPIC, { snapshot: true });
+}
+
+async function waitForDataPlaneTransport(timeoutMs = 5000) {
+  const startedAt = performance.now();
+  while (performance.now() - startedAt <= timeoutMs) {
+    if (window.ludotsDataplane && typeof window.ludotsDataplane.postMessage === 'function') {
+      return window.ludotsDataplane;
+    }
+
+    el.transport.textContent = 'waiting for DataPlane';
+    await delay(50);
+  }
+
+  throw new Error('window.ludotsDataplane did not initialize within 5000ms');
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function wireUi() {

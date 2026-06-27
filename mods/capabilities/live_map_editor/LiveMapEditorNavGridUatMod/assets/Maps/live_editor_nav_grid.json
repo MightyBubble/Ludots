@@ -7,6 +7,15 @@
       "saveTarget": true
     }
   },
+  "DefaultCamera": {
+    "VirtualCameraId": "LiveMapEditor.Camera.AuthoringGrid",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 18000,
+    "FovYDeg": 55
+  },
   "Boards": [
     {
       "Name": "default",
