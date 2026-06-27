@@ -87,3 +87,19 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter MapAuthoringAssetWriterT
 `MapAuthoringAssetWriter` refuses implicit save targets. It writes to a loaded map fragment with `metadata.liveMapEditor.saveTarget=true`; without that explicit flag it writes only when exactly one loaded mod map fragment for the focused map declares authoring boards. Tag-only overlays are ignored as save targets. Multiple board-declaring fragments without a single explicit target fail fast so the user does not accidentally split the map SSOT.
 
 This editor path does not write an independent `.vhtm` asset. If a map has no explicit visual heightmap, Core derives the Raylib terrain surface from the grid LogicTerrain adapter; that derived visual surface is rebuilt live and is not a second authoring source.
+
+## Transport Network Follow-Up Boundary
+
+This #451 UAT proves the shared in-session editor shell: CEF DataPlane controls, Raylib authoritative viewport picking/drawing, Core command handling, runtime CDT nav rebake, path overlay, and in-process save for grid terrain/entities/nav tiles.
+
+Transport network editing is a separate follow-up Epic: [#462](https://github.com/MightyBubble/Ludots/issues/462). It should reuse the same shell, but its authoring source is `TransportNetworkAsset`, not `LogicTerrainField` or a private road model. A transport UAT must prove:
+
+| Step | Required production path |
+|---|---|
+| Node/segment edits | Mutate `TransportNetworkAsset` and validate through Core |
+| Graph/ribbon refresh | Run `TransportNetworkBaker.Bake(asset, chunkSizeCm)` and publish graph chunks plus `TransportNetworkRibbonSource` ribbon chunks |
+| Rendering | Draw authoritative ribbon through `RoadSplineBuffer` in Raylib |
+| Route simulation | Use `GraphEdgeProjectionQuery` / `PolylineGoalSnapQuery` and `AutoPathService` / `PathServiceRouter` |
+| Save | Write `TransportNetwork/transport_network.json` and catalog registration, then reload through `TransportNetworkAssetLoader` |
+
+The live map editor must not count a JS spline preview, a hand-authored `.graph`, a fake road mesh, or a custom route solver as transport-network evidence.

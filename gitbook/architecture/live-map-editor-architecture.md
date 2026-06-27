@@ -26,6 +26,24 @@ Epic: [#451](https://github.com/MightyBubble/Ludots/issues/451). Scope: EDR-0 th
 | Save | Core authoring | `MapAuthoringAssetWriter` | `saveMap` writes an explicit or unambiguous authoring map fragment, `.ltrn`, entities, and loaded nav tiles |
 | Panel | WebUI DataPlane | `WebUiDataPlaneRuntime`, `WebUiCommandRouter` | Inspector and controls only |
 
+## Transport Network Editing Boundary
+
+Road, waterway, railway, and other NodeGraph authoring is tracked by [#462](https://github.com/MightyBubble/Ludots/issues/462). That Epic reuses this editor host, DataPlane command lane, Raylib picking, and save surface, but it is not part of the grid terrain/entity/nav UAT delivered by #451.
+
+The transport leg has its own SSOT from [#415](https://github.com/MightyBubble/Ludots/issues/415):
+
+| Concern | Required owner | Editor boundary |
+|---|---|---|
+| Authoring source | `TransportNetworkAsset` loaded from `TransportNetwork/transport_network.json` | Transport tools mutate the live asset reference only; no private road graph, waterway graph, or spline JSON is introduced |
+| Bake | `TransportNetworkBaker.Bake(asset, chunkSizeCm)` | `.graph` chunks and ribbon chunks are derived together through the existing Core baker; the editor never authors `.graph` or ribbon output directly |
+| Graph runtime | `ChunkedNodeGraphStore` / `LoadedGraphRuntime` | Rebuilt graph chunks replace store data through the existing graph runtime path so `PathServiceRouter` / `AutoPathService` read the same data |
+| Ribbon rendering | `TransportNetworkRibbonSource` -> `RoadSplineBuffer` -> Raylib | Raylib draws the authoritative ribbon; the Web UI panel must not reconstruct ribbon geometry or use a JS world renderer |
+| Route validation | `GraphEdgeProjectionQuery`, `PolylineGoalSnapQuery`, `GraphHybridRouteBuilder`, `AutoPathService` | Start/goal picking and multimodal route checks reuse Core query services; no new routing algorithm is added by the editor |
+| Cost ownership | `pathing.json` tag rules, `AgentProfile` capacity fields, optional `GraphEdgeCostOverlay` | Transport authoring edits area/tag/capacity/flow only; edge cost is not baked into the asset |
+| Save | #451 save surface plus transport serializer/catalog registration from #462 TNE-5 | Saving writes back `transport_network.json` and required catalog registration, then round-trips through `TransportNetworkAssetLoader` |
+
+#451 therefore provides the shared shell. #462 adds transport-specific tools: node CRUD, segment point CRUD, area/tag/direction/flow/capacity editing, baker-triggered graph+ribbon refresh, route overlay, and transport asset persistence. Those tools must keep neutral `transport` terminology; road, water, and rail are configurations of the same transport network, not separate editor-owned systems.
+
 ## Entity Placement And Spatial Geometry
 
 Entity placement follows the spatial geometry SSOT called out by #455 / #457. The editor may place and remove map-scoped entities, but it must not invent a parallel geometry model.

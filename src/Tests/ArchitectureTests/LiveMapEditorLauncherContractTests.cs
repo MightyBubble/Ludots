@@ -138,6 +138,29 @@ public sealed class LiveMapEditorLauncherContractTests
         Assert.That(doc, Does.Contain("no `SelectionFootprint2D`"));
     }
 
+    [Test]
+    public void ArchitectureDoc_CapturesTransportNetworkEditorBoundary()
+    {
+        string repoRoot = FindRepoRoot();
+        string doc = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "gitbook",
+            "architecture",
+            "live-map-editor-architecture.md"));
+
+        Assert.That(doc, Does.Contain("Transport Network Editing Boundary"));
+        Assert.That(doc, Does.Contain("#462"));
+        Assert.That(doc, Does.Contain("#415"));
+        Assert.That(doc, Does.Contain("TransportNetworkAsset"));
+        Assert.That(doc, Does.Contain("TransportNetworkBaker.Bake(asset, chunkSizeCm)"));
+        Assert.That(doc, Does.Contain("ChunkedNodeGraphStore"));
+        Assert.That(doc, Does.Contain("TransportNetworkRibbonSource"));
+        Assert.That(doc, Does.Contain("RoadSplineBuffer"));
+        Assert.That(doc, Does.Contain("GraphEdgeProjectionQuery"));
+        Assert.That(doc, Does.Contain("AutoPathService"));
+        Assert.That(doc, Does.Contain("no private road graph"));
+    }
+
     private static void AssertModPath(
         JsonArray mods,
         string name,
