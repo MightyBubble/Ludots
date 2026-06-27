@@ -49,12 +49,7 @@ internal sealed class ParticipantViewPanelController
 
         _engine = engine;
         ReactivePage<ParticipantViewPanelState> page = EnsurePage();
-        bool changed = false;
-
-        if (ApplyStateSnapshot(engine))
-        {
-            changed = true;
-        }
+        ApplyStateSnapshot(engine);
 
         surfaceHost.Publish(
             surfaceHost.EnsureLease(

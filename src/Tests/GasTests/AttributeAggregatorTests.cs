@@ -118,7 +118,6 @@ namespace Ludots.Tests.GAS
         [Test]
         public unsafe void EffectModifiers_Capacity_IsEight()
         {
-            var mods = new EffectModifiers();
             That(EffectModifiers.CAPACITY, Is.EqualTo(8),
                 "EffectModifiers should support 8 entries per effect");
         }

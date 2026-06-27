@@ -358,10 +358,9 @@ namespace GasTests
         public void TriggerDecoratorRegistry_RegisterAnchor_InjectsCommand()
         {
             var registry = new TriggerDecoratorRegistry();
-            int injectedValue = 0;
 
             registry.RegisterAnchor("map_ready",
-                new DelegateCommand(_ => { injectedValue = 42; return Task.CompletedTask; }));
+                new DelegateCommand(_ => Task.CompletedTask));
 
             var trigger = new Trigger { EventKey = GameEvents.MapLoaded };
             trigger.AddAction(new AnchorCommand("map_ready"));

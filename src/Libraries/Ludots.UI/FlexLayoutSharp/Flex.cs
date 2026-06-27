@@ -2527,19 +2527,15 @@ public class Flex
 		{
 			nodeLayout.measuredDimensions[0] = cachedMeasurement.computedWidth;
 			nodeLayout.measuredDimensions[1] = cachedMeasurement.computedHeight;
-			bool flag2 = false;
 		}
 		else
 		{
-			bool flag3 = false;
 			nodelayoutImpl(node, availableWidth, availableHeight, parentDirection, widthMeasureMode, heightMeasureMode, parentWidth, parentHeight, performLayout, config);
-			bool flag4 = false;
 			nodeLayout.lastParentDirection = parentDirection;
 			if (cachedMeasurement == null)
 			{
 				if (nodeLayout.nextCachedMeasurementsIndex == 16)
 				{
-					bool flag5 = false;
 					nodeLayout.nextCachedMeasurementsIndex = 0;
 				}
 				CachedMeasurement cachedMeasurement2 = null;
@@ -2769,7 +2765,6 @@ public class Flex
 		{
 			nodeSetPosition(node, node.nodeLayout.Direction, parentWidth, parentHeight, parentWidth);
 			roundToPixelGrid(node, node.config.PointScaleFactor, 0f, 0f);
-			bool flag = false;
 		}
 	}
 }
