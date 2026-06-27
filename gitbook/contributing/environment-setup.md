@@ -22,7 +22,7 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 规则：

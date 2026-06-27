@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Navigation.GraphQuery;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Scripting;
@@ -22,10 +23,8 @@ namespace RoadNetworkShowcaseMod.Gameplay
         private readonly int[] _scratchXcm;
         private readonly int[] _scratchYcm;
         private readonly RoadRouteAnchorService _anchorService;
-        private readonly RoadRouteGoalSnapService _goalSnapService;
         private readonly RoadGraphEdgeProjectionService _edgeProjectionService;
         private readonly RoadRouteProfileCatalog _profiles;
-        private int _nextRequestId = 1;
 
         public RoadRouteQueryService(World world, Dictionary<string, object> globals, string agentTypeId, int maxPathPoints)
         {
@@ -37,7 +36,6 @@ namespace RoadNetworkShowcaseMod.Gameplay
             _scratchXcm = new int[maxPathPoints];
             _scratchYcm = new int[maxPathPoints];
             _anchorService = new RoadRouteAnchorService(globals);
-            _goalSnapService = new RoadRouteGoalSnapService();
             _edgeProjectionService = new RoadGraphEdgeProjectionService(globals);
             _profiles = new RoadRouteProfileCatalog(world);
         }
@@ -176,7 +174,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
         private Vector3 ProjectNearestRoadPointOrSelf(string agentTypeId, in Vector3 worldCm)
         {
-            if (_edgeProjectionService.TryProjectNearestRoadPoint(agentTypeId, worldCm, out RoadGraphEdgeProjection projection))
+            if (_edgeProjectionService.TryProjectNearestRoadPoint(agentTypeId, worldCm, out GraphEdgeProjection projection))
             {
                 return new Vector3(projection.ProjectedXcm, 0f, projection.ProjectedYcm);
             }
@@ -213,19 +211,19 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return;
             }
 
-            int minXcm = (int)MathF.Round(Math.Min(originWorldCm.X, goalWorldCm.X), MidpointRounding.AwayFromZero);
-            int maxXcm = (int)MathF.Round(Math.Max(originWorldCm.X, goalWorldCm.X), MidpointRounding.AwayFromZero);
-            int minYcm = (int)MathF.Round(Math.Min(originWorldCm.Z, goalWorldCm.Z), MidpointRounding.AwayFromZero);
-            int maxYcm = (int)MathF.Round(Math.Max(originWorldCm.Z, goalWorldCm.Z), MidpointRounding.AwayFromZero);
+            Span<Vector2> points = stackalloc Vector2[6];
+            int pointCount = 0;
+            points[pointCount++] = new Vector2(originWorldCm.X, originWorldCm.Z);
+            points[pointCount++] = new Vector2(goalWorldCm.X, goalWorldCm.Z);
 
             if (scenario != null &&
                 planner.AllowNorthVariant &&
                 TryResolveNorthVariant(scenario, out byte northViaCount, out Vector3 northVia0, out Vector3 northVia1))
             {
-                ExpandBounds(ref minXcm, ref maxXcm, ref minYcm, ref maxYcm, northVia0);
+                points[pointCount++] = new Vector2(northVia0.X, northVia0.Z);
                 if (northViaCount > 1)
                 {
-                    ExpandBounds(ref minXcm, ref maxXcm, ref minYcm, ref maxYcm, northVia1);
+                    points[pointCount++] = new Vector2(northVia1.X, northVia1.Z);
                 }
             }
 
@@ -233,20 +231,14 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 planner.AllowSouthVariant &&
                 TryResolveSouthVariant(scenario, out byte southViaCount, out Vector3 southVia0, out Vector3 southVia1))
             {
-                ExpandBounds(ref minXcm, ref maxXcm, ref minYcm, ref maxYcm, southVia0);
+                points[pointCount++] = new Vector2(southVia0.X, southVia0.Z);
                 if (southViaCount > 1)
                 {
-                    ExpandBounds(ref minXcm, ref maxXcm, ref minYcm, ref maxYcm, southVia1);
+                    points[pointCount++] = new Vector2(southVia1.X, southVia1.Z);
                 }
             }
 
-            int paddingCm = loadedChunks.ChunkSizeCm * 2;
-            int centerXcm = (int)(((long)minXcm + maxXcm) / 2L);
-            int centerYcm = (int)(((long)minYcm + maxYcm) / 2L);
-            int radiusCm = Math.Max(maxXcm - minXcm, maxYcm - minYcm) / 2;
-            radiusCm += paddingCm;
-
-            loadedChunks.Update(centerXcm, centerYcm, radiusCm);
+            LoadedChunkSolvePrimer.PrimeForBounds(loadedChunks, points.Slice(0, pointCount), paddingChunks: 2);
         }
 
         private void TryConsiderVariant(
@@ -323,36 +315,34 @@ namespace RoadNetworkShowcaseMod.Gameplay
             count = 0;
             failure = string.Empty;
 
-            PathEndpoint legStart = start;
-            int writeCount = 0;
+            Span<PathEndpoint> waypoints = stackalloc PathEndpoint[4];
+            int waypointCount = 0;
+            waypoints[waypointCount++] = start;
             if (viaCount > 0)
             {
-                PathEndpoint viaEndpoint = ToWorldEndpoint(via0);
-                if (!TryAppendLeg(pathService, pathStore, in order, agentTypeId, legStart, viaEndpoint, ref writeCount, out failure))
-                {
-                    return false;
-                }
-
-                legStart = viaEndpoint;
+                waypoints[waypointCount++] = ToWorldEndpoint(via0);
             }
 
             if (viaCount > 1)
             {
-                PathEndpoint viaEndpoint = ToWorldEndpoint(via1);
-                if (!TryAppendLeg(pathService, pathStore, in order, agentTypeId, legStart, viaEndpoint, ref writeCount, out failure))
-                {
-                    return false;
-                }
-
-                legStart = viaEndpoint;
+                waypoints[waypointCount++] = ToWorldEndpoint(via1);
             }
 
-            if (!TryAppendLeg(pathService, pathStore, in order, agentTypeId, legStart, goal, ref writeCount, out failure))
+            waypoints[waypointCount++] = goal;
+            var builder = new GraphHybridRouteBuilder(pathService, pathStore);
+            if (!builder.TryStitch(
+                    order.Actor,
+                    agentTypeId,
+                    waypoints.Slice(0, waypointCount),
+                    _scratchXcm,
+                    _scratchYcm,
+                    out int writeCount,
+                    out failure))
             {
                 return false;
             }
 
-            int snappedCount = _goalSnapService.SnapToGoalOnPath(projectedGoalWorldCm, _scratchXcm, _scratchYcm, writeCount);
+            int snappedCount = PolylineGoalSnapQuery.SnapGoalOntoPolyline(projectedGoalWorldCm.X, projectedGoalWorldCm.Z, _scratchXcm, _scratchYcm, writeCount);
             if (snappedCount <= 0)
             {
                 failure = "road-goal snap failed.";
@@ -362,70 +352,6 @@ namespace RoadNetworkShowcaseMod.Gameplay
             count = snappedCount;
             score = EstimatePathLengthCm(_scratchXcm, _scratchYcm, snappedCount) + scoreBiasCm;
             return true;
-        }
-
-        private bool TryAppendLeg(
-            IPathService pathService,
-            PathStore pathStore,
-            in Order order,
-            string agentTypeId,
-            in PathEndpoint start,
-            in PathEndpoint goal,
-            ref int writeCount,
-            out string failure)
-        {
-            failure = string.Empty;
-            var request = new PathRequest(
-                _nextRequestId++,
-                order.Actor,
-                PathDomain.Auto,
-                agentTypeId,
-                start,
-                goal,
-                new PathBudget(maxExpanded: 0, maxPoints: _scratchXcm.Length));
-
-            if (!pathService.TrySolve(in request, out PathResult pathResult) ||
-                pathResult.Status != PathStatus.Found ||
-                !pathResult.Handle.IsValid)
-            {
-                failure = DescribeFailure(pathResult.Status, pathResult.ErrorCode);
-                return false;
-            }
-
-            try
-            {
-                Span<int> legXcm = stackalloc int[OrderSpatial.MaxPoints];
-                Span<int> legYcm = stackalloc int[OrderSpatial.MaxPoints];
-                if (!pathService.TryCopyPath(in pathResult.Handle, legXcm, legYcm, out int legCount) ||
-                    legCount <= 0)
-                {
-                    failure = "path copy failed.";
-                    return false;
-                }
-
-                int startIndex = writeCount == 0 ? 0 : 1;
-                if (writeCount + (legCount - startIndex) > _scratchXcm.Length)
-                {
-                    failure = "road route exceeded showcase path capacity.";
-                    return false;
-                }
-
-                for (int i = startIndex; i < legCount; i++)
-                {
-                    _scratchXcm[writeCount] = legXcm[i];
-                    _scratchYcm[writeCount] = legYcm[i];
-                    writeCount++;
-                }
-
-                return true;
-            }
-            finally
-            {
-                if (pathStore.IsAlive(pathResult.Handle))
-                {
-                    pathStore.Release(pathResult.Handle);
-                }
-            }
         }
 
         private static PathEndpoint ToWorldEndpoint(in Vector3 worldCm)
@@ -465,16 +391,6 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return true;
         }
 
-        private static void ExpandBounds(ref int minXcm, ref int maxXcm, ref int minYcm, ref int maxYcm, in Vector3 pointWorldCm)
-        {
-            int xcm = (int)MathF.Round(pointWorldCm.X, MidpointRounding.AwayFromZero);
-            int ycm = (int)MathF.Round(pointWorldCm.Z, MidpointRounding.AwayFromZero);
-            minXcm = Math.Min(minXcm, xcm);
-            maxXcm = Math.Max(maxXcm, xcm);
-            minYcm = Math.Min(minYcm, ycm);
-            maxYcm = Math.Max(maxYcm, ycm);
-        }
-
         private static float EstimatePathLengthCm(ReadOnlySpan<int> pathXcm, ReadOnlySpan<int> pathYcm, int count)
         {
             float total = 0f;
@@ -488,18 +404,6 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return total;
         }
 
-        private static string DescribeFailure(PathStatus status, int errorCode)
-        {
-            return status switch
-            {
-                PathStatus.NoPath => "no road path was found near the clicked destination. Try clicking closer to a road or fort.",
-                PathStatus.NotReady => "road chunks are still streaming. Try again after the camera settles.",
-                PathStatus.BudgetExceeded => "road solve hit its path budget.",
-                PathStatus.InvalidRequest => $"the path service rejected the road request (error {errorCode}).",
-                PathStatus.Error => $"the path service returned an error (error {errorCode}).",
-                _ => $"the road route could not be resolved (error {errorCode})."
-            };
-        }
     }
 
     internal readonly ref struct RoadRouteQueryResult

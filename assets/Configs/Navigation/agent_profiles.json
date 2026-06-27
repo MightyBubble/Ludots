@@ -4,6 +4,8 @@
     "radiusCm": 30.0,
     "heightCm": 180.0,
     "clearanceCm": 40.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 1.0,
     "layer": 0
   },
@@ -12,6 +14,8 @@
     "radiusCm": 50.0,
     "heightCm": 200.0,
     "clearanceCm": 45.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 2.0,
     "layer": 0
   },
@@ -20,6 +24,8 @@
     "radiusCm": 80.0,
     "heightCm": 240.0,
     "clearanceCm": 50.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 4.0,
     "layer": 0
   },
@@ -28,6 +34,8 @@
     "radiusCm": 20.0,
     "heightCm": 180.0,
     "clearanceCm": 40.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 1.0,
     "layer": 0
   },
@@ -36,6 +44,8 @@
     "radiusCm": 28.0,
     "heightCm": 220.0,
     "clearanceCm": 50.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 4.0,
     "layer": 0
   },
@@ -44,6 +54,8 @@
     "radiusCm": 36.0,
     "heightCm": 220.0,
     "clearanceCm": 50.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
     "mass": 8.0,
     "layer": 0
   }

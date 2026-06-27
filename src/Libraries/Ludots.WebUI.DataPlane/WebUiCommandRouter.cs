@@ -32,7 +32,14 @@ public interface IWebUiCommandHandler
 	ValueTask<WebUiCommandResult> HandleAsync(WebUiCommandRequest request, CancellationToken cancellationToken = default);
 }
 
-public sealed class WebUiCommandRouter
+public interface IWebUiCommandDispatcher
+{
+	ValueTask<WebUiOutboundPacket> HandleAsync(
+		WebUiInboundPacket packet,
+		CancellationToken cancellationToken = default);
+}
+
+public sealed class WebUiCommandRouter : IWebUiCommandDispatcher
 {
 	private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 	private readonly Dictionary<string, IWebUiCommandHandler> _handlers = new(StringComparer.Ordinal);

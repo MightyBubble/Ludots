@@ -787,15 +787,15 @@ namespace Ludots.Tests.Architecture
                 WriteNavigationAgentProfiles(depRoot,
                     """
                     [
-                      { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "mass": 1, "layer": 0 },
-                      { "id": "DepScout", "radiusCm": 22, "heightCm": 140, "clearanceCm": 25, "mass": 0.7, "layer": 0 }
+                      { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0 },
+                      { "id": "DepScout", "radiusCm": 22, "heightCm": 140, "clearanceCm": 25, "draftCm": 0, "beamCm": 0, "mass": 0.7, "layer": 0 }
                     ]
                     """);
                 WriteNavigationAgentProfiles(targetRoot,
                     """
                     [
-                      { "id": "Small", "radiusCm": 42, "heightCm": 190, "clearanceCm": 45, "mass": 1.25, "layer": 1 },
-                      { "id": "ModHeavy", "radiusCm": 80, "heightCm": 240, "clearanceCm": 70, "mass": 3.5, "layer": 1 }
+                      { "id": "Small", "radiusCm": 42, "heightCm": 190, "clearanceCm": 45, "draftCm": 0, "beamCm": 0, "mass": 1.25, "layer": 1 },
+                      { "id": "ModHeavy", "radiusCm": 80, "heightCm": 240, "clearanceCm": 70, "draftCm": 0, "beamCm": 0, "mass": 3.5, "layer": 1 }
                     ]
                     """);
                 WriteNavigationNavmesh(targetRoot,
@@ -1296,7 +1296,7 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(navigationDir, "agent_profiles.json"),
                 """
                 [
-                  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "mass": 1, "layer": 0 }
+                  { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0 }
                 ]
                 """);
             File.WriteAllText(Path.Combine(navigationDir, "navmesh.json"),

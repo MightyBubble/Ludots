@@ -114,6 +114,8 @@ namespace Ludots.Tests.Architecture
                     "radiusCm": 30,
                     "heightCm": 180,
                     "clearanceCm": 40,
+                    "draftCm": 0,
+                    "beamCm": 0,
                     "mass": 1,
                     "layer": 0,
                     "speedCmPerSecond": 800
@@ -242,7 +244,7 @@ namespace Ludots.Tests.Architecture
                       "layer": 0,
                       "selection": { "mode": "PreferMesh", "graphBias": 0, "meshBias": 0, "graphCostWeight": 1, "meshCostWeight": 1 },
                       "navMesh": { "areaCosts": [] },
-                      "nodeGraph": { "projectionMaxRadiusCm": 1, "forbiddenTagsAny": [], "requiredTagsAll": [], "tagCostRules": [] }
+                      "nodeGraph": { "projectionMaxRadiusCm": 1, "useDynamicOverlay": false, "forbiddenTagsAny": [], "requiredTagsAll": [], "tagCostRules": [] }
                     }
                   ]
                 }
@@ -304,17 +306,13 @@ namespace Ludots.Tests.Architecture
                     SpatialScaleDefaults.TerrainChunkCells,
                     chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
 
-            var loadNav = typeof(GameEngine).GetMethod("LoadNavForMap", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingMethodException(nameof(GameEngine), "LoadNavForMap");
-            loadNav.Invoke(engine, new object[]
-            {
+            engine.LoadNavForMapForTests(
                 mapId,
                 new MapConfig
                 {
                     Id = mapId,
                     Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
-                }
-            });
+                });
 
             return engine;
         }

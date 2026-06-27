@@ -28,6 +28,7 @@ namespace Ludots.Core.Input.Runtime
         {
             _backend = backend;
             if (config == null) throw new ArgumentNullException(nameof(config));
+            InputConfigPipelineLoader.Validate(config, "PlayerInputHandler config");
 
             _actionStates = new InputActionInstance[config.Actions.Count];
             _tempValues = new Vector3[config.Actions.Count];
@@ -349,8 +350,8 @@ namespace Ludots.Core.Input.Runtime
                 compiled[i] = def.Type switch
                 {
                     "Normalize" => new CompiledProcessor(ProcessorKind.Normalize, 0f),
-                    "Deadzone" => new CompiledProcessor(ProcessorKind.Deadzone, GetParameter(def.Parameters, "Min", 0.1f)),
-                    "Scale" => new CompiledProcessor(ProcessorKind.Scale, GetParameter(def.Parameters, "Factor", 1f)),
+                    "Deadzone" => new CompiledProcessor(ProcessorKind.Deadzone, RequireParameter(def.Parameters, "Min", def.Type)),
+                    "Scale" => new CompiledProcessor(ProcessorKind.Scale, RequireParameter(def.Parameters, "Factor", def.Type)),
                     "Invert" => new CompiledProcessor(ProcessorKind.Invert, 0f, GetAxisMask(def.Parameters)),
                     _ => new CompiledProcessor(ProcessorKind.Unknown, 0f)
                 };
@@ -359,23 +360,22 @@ namespace Ludots.Core.Input.Runtime
             return compiled;
         }
 
-        private static float GetParameter(IReadOnlyList<InputParameterDef> parameters, string name, float fallback)
+        private static float RequireParameter(IReadOnlyList<InputParameterDef> parameters, string name, string processorType)
         {
-            if (parameters == null)
+            if (parameters != null)
             {
-                return fallback;
-            }
-
-            for (int i = 0; i < parameters.Count; i++)
-            {
-                var parameter = parameters[i];
-                if (string.Equals(parameter.Name, name, StringComparison.Ordinal))
+                for (int i = 0; i < parameters.Count; i++)
                 {
-                    return parameter.Value;
+                    var parameter = parameters[i];
+                    if (parameter != null && string.Equals(parameter.Name, name, StringComparison.Ordinal))
+                    {
+                        return parameter.Value;
+                    }
                 }
             }
 
-            return fallback;
+            throw new InvalidOperationException(
+                $"LUDOTS_INPUT_PROCESSOR_PARAMETER_REQUIRED: input processor '{processorType}' must explicitly define parameter '{name}'.");
         }
 
         private static byte GetAxisMask(IReadOnlyList<InputParameterDef> parameters)

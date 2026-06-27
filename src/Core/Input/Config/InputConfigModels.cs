@@ -17,7 +17,7 @@ namespace Ludots.Core.Input.Config
     /// </summary>
     public class InputActionDef
     {
-        public string Id { get; set; } = Guid.NewGuid().ToString();
+        public string Id { get; set; } = string.Empty;
         public string Name { get; set; }
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public InputActionType Type { get; set; } = InputActionType.Button;

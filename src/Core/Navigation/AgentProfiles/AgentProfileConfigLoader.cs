@@ -56,6 +56,8 @@ namespace Ludots.Core.Navigation.AgentProfiles
                 "radiusCm",
                 "heightCm",
                 "clearanceCm",
+                "draftCm",
+                "beamCm",
                 "mass",
                 "layer");
         }

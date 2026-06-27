@@ -5,7 +5,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Map.Fields;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -267,7 +267,7 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
         Vector2 start = endpoints.Start;
         WorldPositionCm startPosition = WorldPositionCm.FromCmFloat(start.X, start.Y);
         Entity agent = world.Create(
-            new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register(ProfileId) },
+            new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register(ProfileId) },
             startPosition,
             new PreviousWorldPositionCm { Value = startPosition.Value },
             VisualTransform.Default,
@@ -387,7 +387,7 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
 
     private static MassNavigationConfig CreateMassNavigationConfig()
     {
-        var solver = new MassFlowSolverConfig
+        var solver = new MassNavigationFlowSolverConfig
         {
             FieldWidthCm = 6400,
             FieldHeightCm = 6400,
@@ -466,6 +466,19 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
                     MetadataTeamCapacity = 1,
                 },
             },
+            Cadence = new MassNavigationCadenceConfig
+            {
+                SimulationHz = 20,
+                TargetUpdateHz = 20,
+                FlowStepHz = 20,
+                FlowCrowdStampHz = 20,
+                FlowObstacleStampHz = 20,
+                HardResolveHz = 20,
+                EntitySyncHz = 20,
+                MaxStepsPerFixedTick = 1,
+                HardResolveCandidateThresholdAgents = 1,
+                OrderIdleScanIntervalFrames = 1,
+            },
             Presentation = new MassNavigationPresentationConfig
             {
                 RequiredMeshAssetIds = new[] { "mass_navigation_test_agent" },
@@ -487,7 +500,7 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
                     },
                 },
             },
-            Flow = new MassFlowTuning
+            Flow = new MassNavigationFlowTuning
             {
                 Enabled = true,
                 IterationsPerStep = 128,
@@ -499,18 +512,12 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
                 ForceRefreshCrowd = true,
                 ForceRefreshObstacles = true,
             },
-            Arrival = new MassFlowArrivalTuning
-            {
-                Enabled = false,
-            },
+            Arrival = CreateArrivalTuning(enabled: false),
+            Avoidance = CreateAvoidanceTuning(),
+            Semantics = CreateCrowdSemantics(),
         };
 
         config.Solver.Validate();
-        config.Semantics.Obstacle.SoftPushPaddingCm = 60f;
-        config.Semantics.Obstacle.SoftPushForceScale = 3f;
-        config.Semantics.Steering.FlowObstacleAvoidanceScale = 0.45f;
-        config.Semantics.Solver.FlowObstacleNeighborRadiusCells = 2;
-        config.Semantics.Solver.FlowObstacleNeighborWeight = 1.5f;
         config.World.Validate(config.Solver);
         config.Streaming.Validate();
         config.ScenarioRuntime.Validate();
@@ -519,7 +526,6 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
         config.Cadence.Validate();
         config.Flow.Validate();
         config.Arrival.Validate();
-        config.Avoidance.Mode = "Sonar";
         config.Avoidance.Validate();
         config.Semantics.Validate();
         config.AgentProfiles.Validate();
@@ -537,6 +543,137 @@ public sealed class TerrainNavClosedLoopShowcaseAcceptanceTests
         }));
         return config;
     }
+
+    private static MassNavigationFlowArrivalTuning CreateArrivalTuning(bool enabled)
+        => new()
+        {
+            Enabled = enabled,
+            TimeoutMs = 1500,
+            TimeoutMinMs = 250,
+            TimeoutMaxMs = 10000,
+            ProgressDistanceCm = 60,
+            ProgressDistanceMinCm = 10,
+            ProgressDistanceMaxCm = 500,
+            WakePushDistanceCm = 80,
+            WakePushDistanceMinCm = 10,
+            WakePushDistanceMaxCm = 500,
+            MaxRetryCountMin = 0,
+            MaxRetryCountMax = 16,
+            MaxRetryCount = 2,
+        };
+
+    private static MassNavigationFlowAvoidanceTuning CreateAvoidanceTuning()
+        => new()
+        {
+            Mode = "Sonar",
+            Orca = new MassNavigationFlowOrcaAvoidanceConfig
+            {
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            },
+            Sonar = new MassNavigationFlowSonarAvoidanceConfig
+            {
+                MaxSteerAngleDeg = 280,
+                BackwardPenaltyAngleDeg = 230,
+                PredictionTimeScale = 0.9f,
+                IgnoreBehindMovingAgents = true,
+                BlockedStop = false,
+                UsePreferredVelocityWhenBlocked = true,
+                TimeHorizonSeconds = 0.85f,
+                MaxNeighbors = 16,
+            },
+            DominantMassRatio = 2.25f,
+            FriendlyResponseScale = 1.1f,
+            FriendlyResponseMin = 0.35f,
+            FriendlyResponseMax = 2.75f,
+            NonFriendlyResponseScale = 1.25f,
+            NonFriendlyResponseMin = 0.25f,
+            NonFriendlyResponseMax = 3.25f,
+            DominantPushResponseScale = 1.6f,
+            DominantPushResponseMin = 0.15f,
+            DominantPushResponseMax = 4.5f,
+            FriendlyCorrectionShareMin = 0.18f,
+            FriendlyCorrectionShareMax = 0.82f,
+            DominantCorrectionOtherMassWeight = 1.8f,
+            DominantCorrectionShareMin = 0.05f,
+            DominantCorrectionShareMax = 0.95f,
+            NonFriendlyCorrectionOtherMassWeight = 1.2f,
+            NonFriendlyCorrectionShareMin = 0.08f,
+            NonFriendlyCorrectionShareMax = 0.92f,
+        };
+
+    private static MassNavigationCrowdSemantics CreateCrowdSemantics()
+        => new()
+        {
+            Obstacle = new MassNavigationObstacleSemantics
+            {
+                HardResolveCandidateDistanceCm = 100f,
+                SoftPushPaddingCm = 60f,
+                SoftPushForceScale = 3f,
+            },
+            TargetProjection = new MassNavigationTargetProjectionSemantics
+            {
+                TeamTargetClearanceCm = 60f,
+                GroupCenterClearanceCm = 60f,
+                TeamSlotClearanceCm = 45f,
+                GroupSlotClearanceCm = 50f,
+                LooseTargetClearanceCm = 50f,
+            },
+            Group = new MassNavigationGroupSemantics
+            {
+                SpawnSpacingCm = 46f,
+                SpawnJitterCm = 12f,
+                TeamSlotSpacingCm = 90f,
+                FormationLineSpacingCm = 180f,
+                FormationSquareSpacingCm = 80f,
+                FormationCircleSpacingCm = 180f,
+                FormationCircleMinRadiusCm = 200f,
+                FormationWedgeSpacingCm = 180f,
+                FormationRotationEpsilonRadians = 0.00001f,
+                FormationRotationSpeedRadiansPerSecond = 2.5f,
+                PullDeadZoneCm = 50f,
+                PullClampCm = 2000f,
+                ArrivedRadiusCm = 150f,
+                FormationArriveThresholdCm = 200f,
+                LooseArriveThresholdCm = 300f,
+                UnitTargetStopThresholdCm = 50f,
+                FormationFlowSlowRadiusCm = 400f,
+                NearSlotBlend = 0.82f,
+                FarSlotBlend = 0.38f,
+                NearSlotBlendDistanceSq = 4_000_000f,
+            },
+            Steering = new MassNavigationSteeringSemantics
+            {
+                SeparationRadiusCm = 200f,
+                GoalArrivalRadiusCm = 1200f,
+                FlowObstacleAvoidanceScale = 0.45f,
+                FormationSeparationScale = 2f,
+                LooseSeparationScale = 4f,
+                VelocityBlendPerSecond = 5f,
+            },
+            Solver = new MassNavigationSolverSemantics
+            {
+                MinNavMass = 0.001f,
+                MinVisualScale = 0.01f,
+                MaxStepDtSeconds = TickSeconds,
+                ParallelStepMinAgents = 2048,
+                DirectionEpsilonSq = 0.0001f,
+                NormalizationEpsilonSq = 0.000001f,
+                InverseSqrtMinValue = 1e-8f,
+                EntitySyncPositionEpsilonSq = 0.25f,
+                EntitySyncVelocityEpsilonSq = 0.01f,
+                FacingVelocityEpsilonSq = 0.01f,
+                FlowBlockedCellCost = 99999f,
+                FlowBlockedCellThreshold = 9999f,
+                FlowTargetStopDistanceSq = 1f,
+                FlowObstacleNeighborRadiusCells = 2,
+                FlowObstacleNeighborWeight = 1.5f,
+                FlowObstacleAvoidanceWeight = 1.5f,
+                CoincidentPairHashBucketCount = 1024,
+                CoincidentPairHashPrimeA = 73856093,
+                CoincidentPairHashPrimeB = 19349663,
+            },
+        };
 
     private static List<MassNavigationObstacleSnapshot> CreateRuntimeObstacles(WorldAabbCm blockedAabb)
     {

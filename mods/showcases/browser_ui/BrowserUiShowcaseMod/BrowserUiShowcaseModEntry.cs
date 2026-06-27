@@ -8,9 +8,7 @@ using Ludots.UI.Browser;
 using Ludots.UI.Browser.Skia;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
 using Ludots.UI.Surface;
-using SkiaSharp;
 
 namespace BrowserUiShowcaseMod;
 
@@ -119,7 +117,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return Ui.Card(
                 Ui.Text("Diagnostic preview").Class("page-card-title"),
                 Ui.Text("No browser runtime is registered yet, so Raylib renders this native probe instead of pretending to be a browser.").Class("page-copy"),
-                Ui.Canvas(new UiCanvasContent(DrawDiagnosticPreview)).Class("browser-canvas").WidthPercent(100f).Height(320f))
+                BuildDiagnosticPreview())
             .Class("skin-card")
             .FlexGrow(2f)
             .FlexShrink(1f)
@@ -212,23 +210,16 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return AppContext.BaseDirectory;
     }
 
-    private static void DrawDiagnosticPreview(SKCanvas canvas, SKRect rect)
+    private static UiElementBuilder BuildDiagnosticPreview()
     {
-        canvas.Clear(SKColor.Parse("#0b1120"));
-        using var titlePaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
-        using var bodyPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#cbd5e1") };
-        using var titleFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 28f);
-        using var bodyFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI"), 16f);
-        using var accentPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#38bdf8"), Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
-        using var fillPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#1e293b"), Style = SKPaintStyle.Fill };
-
-        var panelRect = new SKRect(rect.Left + 20f, rect.Top + 20f, rect.Right - 20f, rect.Bottom - 20f);
-        var panel = new SKRoundRect(panelRect, 18f, 18f);
-        canvas.DrawRoundRect(panel, fillPaint);
-        canvas.DrawRoundRect(panel, accentPaint);
-        canvas.DrawText("Browser runtime not injected", rect.Left + 40, rect.Top + 72, SKTextAlign.Left, titleFont, titlePaint);
-        canvas.DrawText("This diagnostic confirms Raylib mounted the Skia UI path. A provider is required for real web rendering.", rect.Left + 40, rect.Top + 110, SKTextAlign.Left, bodyFont, bodyPaint);
-        canvas.DrawLine(rect.Left + 40, rect.Top + 140, rect.Right - 40, rect.Top + 140, accentPaint);
+        return Ui.Column(
+                Ui.Text("Browser runtime not injected").Class("page-card-title"),
+                Ui.Text("Native Compose UI remains mounted until an engine-injected browser provider is registered.").Class("page-copy"),
+                Ui.Text("Surface contract: packaged web bundle plus provider-created browser surface.").Class("muted"))
+            .Class("browser-canvas")
+            .WidthPercent(100f)
+            .Height(320f)
+            .Gap(8f);
     }
 
     private static UiStyleSheet BuildBrowserStyleSheet()

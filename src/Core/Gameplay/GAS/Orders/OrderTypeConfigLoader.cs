@@ -325,6 +325,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 string key = RequireConfiguredBlackboardKey(kvp.Key, path);
                 RequireConfiguredBlackboardKeyDeclaration(kvp.Value, key, path);
+                if (OrderBlackboardKeyRegistry.IsBuiltinKey(key))
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_GAS_ORDER_BLACKBOARD_BUILTIN_REDECLARED: order blackboard key '{key}' in '{path}' is built in and must only be referenced, not redeclared in orderBlackboardKeys.");
+                }
+
                 keys.Add(key);
             }
 

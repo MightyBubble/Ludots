@@ -8,6 +8,8 @@ namespace Ludots.Core.Navigation.AgentProfiles
         public float RadiusCm { get; set; }
         public float HeightCm { get; set; }
         public float ClearanceCm { get; set; }
+        public float DraftCm { get; set; }
+        public float BeamCm { get; set; }
         public float Mass { get; set; }
         public int Layer { get; set; }
 
@@ -29,6 +31,14 @@ namespace Ludots.Core.Navigation.AgentProfiles
             if (ClearanceCm < 0f || float.IsNaN(ClearanceCm))
             {
                 throw new InvalidOperationException($"AgentProfile '{Id}' requires ClearanceCm >= 0.");
+            }
+            if (DraftCm < 0f || float.IsNaN(DraftCm))
+            {
+                throw new InvalidOperationException($"AgentProfile '{Id}' requires DraftCm >= 0.");
+            }
+            if (BeamCm < 0f || float.IsNaN(BeamCm))
+            {
+                throw new InvalidOperationException($"AgentProfile '{Id}' requires BeamCm >= 0.");
             }
 
             RequirePositive(Mass, nameof(Mass), Id);

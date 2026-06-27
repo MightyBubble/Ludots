@@ -36,8 +36,30 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class InputOrderAbilityAuditTests
     {
+        [Test]
+        public void AbilitySystem_MissingEffectRequestQueue_ThrowsStableErrorCode()
+        {
+            using var world = World.Create();
+
+            var ex = Throws<InvalidOperationException>(
+                () => new AbilitySystem(world, null!));
+
+            That(ex!.Message, Does.Contain("LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED"));
+        }
+
+        [Test]
+        public void EffectProposalProcessing_MissingResponseChainOrderTypes_ThrowsStableErrorCode()
+        {
+            using var world = World.Create();
+
+            var ex = Throws<InvalidOperationException>(
+                () => new EffectProposalProcessingSystem(world, new EffectRequestQueue(), templates: new EffectTemplateRegistry()));
+
+            That(ex!.Message, Does.Contain("LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_REQUIRED"));
+        }
+
         // ════════════════════════════════════════════════════════════════════
-        // Region: OrderBuffer �?PendingBuffer
+        // Region: OrderBuffer / PendingBuffer
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -74,12 +96,12 @@ namespace Ludots.Tests.GAS
             var order = new Order { OrderTypeId = 7 };
             buffer.SetPending(in order, 5, expireStep: 50, insertStep: 10);
 
-            // Before expiration �?should not expire
+            // Before expiration; should not expire
             bool expired = buffer.ExpirePending(currentStep: 49);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
 
-            // At expiration step �?should expire
+            // At expiration step; should expire
             expired = buffer.ExpirePending(currentStep: 50);
             That(expired, Is.True);
             That(buffer.HasPending, Is.False);
@@ -632,6 +654,89 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityExecSystem_BlockedAny_PublishesBlockedByTag()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9004;
+            const int blockedTagId = 42;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer(),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order
+            {
+                OrderId = 11,
+                Actor = actor,
+                OrderTypeId = castAbilityOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+
+            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
+            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+            var tagOps = new TagOps();
+            ref var tags = ref world.Get<GameplayTagContainer>(actor);
+            ref var counts = ref world.Get<TagCountContainer>(actor);
+            ref var dirty = ref world.Get<DirtyFlags>(actor);
+            tagOps.AddTag(ref tags, ref counts, blockedTagId, ref dirty);
+
+            var blockTags = new AbilityActivationBlockTags();
+            blockTags.BlockedAny.AddTag(blockedTagId);
+
+            var defs = new AbilityDefinitionRegistry();
+            var def = new AbilityDefinition
+            {
+                HasActivationBlockTags = true,
+                ActivationBlockTags = blockTags
+            };
+            defs.Register(abilityId, in def);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                ClearQueueOnActivate = true,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
+            });
+
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new SelectionRequestQueue(),
+                new SelectionResponseBuffer(),
+                new EffectRequestQueue(),
+                defs,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                presentationEvents: presentationEvents,
+                tagOps: tagOps,
+                orderTypeRegistry: orderTypes);
+
+            bool completed = system.UpdateSlice(0f, int.MaxValue);
+
+            That(completed, Is.True);
+            That(world.Has<AbilityExecInstance>(actor), Is.False);
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            That(presentationEvents.Count, Is.EqualTo(1));
+            That(presentationEvents.Events[0].Kind, Is.EqualTo(GasPresentationEventKind.CastFailed));
+            That(presentationEvents.Events[0].FailReason, Is.EqualTo(AbilityCastFailReason.BlockedByTag));
+        }
+
+        [Test]
         public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyCooldown_AndClearsTagCount()
         {
             using var world = World.Create();
@@ -895,7 +1000,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program �?B[0] starts at 1 (pass), no instructions change it
+            // Empty program; B[0] starts at 1 (pass), no instructions change it
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
@@ -962,7 +1067,7 @@ namespace Ludots.Tests.GAS
             }
 
             bool overflow = buffer.Enqueue(new Order { OrderTypeId = 999 }, 0, -1, 100);
-            That(overflow, Is.False, "Queue full �?should reject");
+            That(overflow, Is.False, "Queue full; should reject");
             That(buffer.QueuedCount, Is.EqualTo(OrderBuffer.MAX_QUEUED_ORDERS));
         }
 
@@ -1289,6 +1394,3 @@ namespace Ludots.Tests.GAS
 
     }
 }
-
-
-

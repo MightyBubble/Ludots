@@ -63,9 +63,9 @@
 
 代表案例：
 
-*   Total War: Three Kingdoms `Guanxi`
+*   Formation Capability: Three Kingdoms `Guanxi`
     *   参考：<https://en.wikipedia.org/wiki/Total_War:_Three_Kingdoms>
-    *   参考：<https://www.pcgamesn.com/total-war-three-kingdoms/total-war-three-kingdoms-guanxi>
+    *   参考：<https://www.pcgamesn.com/formation-capability-three-kingdoms/formation-capability-three-kingdoms-guanxi>
 *   Romance of the Three Kingdoms 8 Remake relationship / trust
     *   参考：<https://www.koeitecmoamerica.com/manual/rtk8-remake/en/3500.html>
 

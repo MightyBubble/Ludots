@@ -109,10 +109,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TagContribution_GraphProgram_ReturnsZero()
+        public void TagContribution_GraphProgram_ThrowsUntilEvaluatorIsWired()
         {
             var tc = new TagContribution { Formula = TagContributionFormula.GraphProgram, Amount = 99 };
-            That(tc.Compute(5), Is.EqualTo(0)); // Graph handled externally
+            var ex = Throws<System.InvalidOperationException>(() => tc.Compute(5));
+            That(ex!.Message, Does.Contain("GraphProgram"));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -1299,8 +1300,8 @@ namespace Ludots.Tests.GAS
                     ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
                     ""participatesInResponse"": true,
                     ""grantedTags"": [
-                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6, ""base"": 0 },
-                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1, ""base"": 0 }
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
                     ]
                 }");
 

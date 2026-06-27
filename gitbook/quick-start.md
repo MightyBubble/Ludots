@@ -24,7 +24,7 @@
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 
 # 在 web 上启动多个 root mod
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 规则：

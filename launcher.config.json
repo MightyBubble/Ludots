@@ -106,7 +106,7 @@
       }
     },
     {
-      "name": "capability_standard_mass_nav_large_world_10k",
+      "name": "capability_standard_mass_navigation_large_world_10k",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
@@ -114,11 +114,11 @@
       }
     },
     {
-      "name": "capability_standard_total_war_like",
+      "name": "formation_capability_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod",
-        "projectPath": "CapabilityStandardTotalWarLikeMod.csproj"
+        "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
+        "projectPath": "FormationCapabilityShowcaseMod.csproj"
       }
     },
     {
@@ -199,6 +199,14 @@
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
         "projectPath": "CapabilityStandardPhysics2DShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_transport_network",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
+        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
       }
     }
   ],

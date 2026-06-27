@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 
 namespace Ludots.Core.Input.Orders
@@ -146,11 +147,21 @@ namespace Ludots.Core.Input.Orders
             public InputOrderMapping Mapping { get; }
         }
 
+        private readonly record struct MappingEntry(
+            string ActionId,
+            InputOrderMapping Mapping,
+            int Priority,
+            int ActionIdOrdinal);
+
         private readonly IInputActionReader _input;
         private readonly InputOrderMappingConfig _config;
         private readonly Dictionary<string, InputOrderMapping> _mappingsByActionId;
         private readonly Dictionary<string, InputOrderMapping> _userOverrides;
+        private readonly MappingEntry[] _orderedMappings;
         private readonly Dictionary<string, float> _lastPressedAtSecondsByActionId = new();
+        private string _confirmActionId = string.Empty;
+        private string _cancelActionId = string.Empty;
+        private string _commandActionId = string.Empty;
         
         // Callbacks
         private OrderTypeKeyResolver? _orderTypeKeyResolver;
@@ -230,14 +241,26 @@ namespace Ludots.Core.Input.Orders
         /// <summary>The locked origin for vector aiming. Valid only during direction phase.</summary>
         public Vector3 VectorAimOrigin => _vectorAimOrigin;
 
-        /// <summary>The confirm action ID used to fire the aimed ability. Default: "Select" (left-click).</summary>
-        public string ConfirmActionId { get; set; } = "Select";
+        /// <summary>The confirm action ID used to fire the aimed ability.</summary>
+        public string ConfirmActionId
+        {
+            get => _confirmActionId;
+            set => _confirmActionId = RequireConfiguredActionId(value, nameof(ConfirmActionId));
+        }
 
-        /// <summary>The cancel action ID. Default: "Cancel" (ESC).</summary>
-        public string CancelActionId { get; set; } = "Cancel";
+        /// <summary>The cancel action ID.</summary>
+        public string CancelActionId
+        {
+            get => _cancelActionId;
+            set => _cancelActionId = RequireConfiguredActionId(value, nameof(CancelActionId));
+        }
 
-        /// <summary>The secondary cancel / command action ID. Default: "Command" (right-click).</summary>
-        public string CommandActionId { get; set; } = "Command";
+        /// <summary>The secondary cancel / command action ID.</summary>
+        public string CommandActionId
+        {
+            get => _commandActionId;
+            set => _commandActionId = RequireConfiguredActionId(value, nameof(CommandActionId));
+        }
         
         public InputOrderMappingSystem(IInputActionReader input, InputOrderMappingConfig config)
         {
@@ -247,12 +270,37 @@ namespace Ludots.Core.Input.Orders
             
             _mappingsByActionId = new Dictionary<string, InputOrderMapping>();
             _userOverrides = new Dictionary<string, InputOrderMapping>();
-            
-            // Index mappings by action ID
+
             foreach (var mapping in config.Mappings)
             {
                 _mappingsByActionId.Add(mapping.ActionId, mapping);
             }
+
+            var actionIds = new string[config.Mappings.Count];
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                actionIds[i] = config.Mappings[i].ActionId;
+            }
+
+            Array.Sort(actionIds, StringComparer.Ordinal);
+            var actionIdOrdinals = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < actionIds.Length; i++)
+            {
+                actionIdOrdinals.Add(actionIds[i], i);
+            }
+
+            _orderedMappings = new MappingEntry[config.Mappings.Count];
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                var mapping = config.Mappings[i];
+                _orderedMappings[i] = new MappingEntry(
+                    mapping.ActionId,
+                    mapping,
+                    ResolveMappingPriority(mapping),
+                    actionIdOrdinals[mapping.ActionId]);
+            }
+
+            Array.Sort(_orderedMappings, CompareMappingEntries);
         }
         
         // Callback setters (unchanged API + new ones)
@@ -277,6 +325,19 @@ namespace Ludots.Core.Input.Orders
         public void SetCursorTargetProvider(CursorTargetProvider provider) => _cursorTargetProvider = provider;
         public void SetContextScoredProvider(ContextScoredResolutionProvider provider) => _contextScoredProvider = provider;
         public void SetSkillMappingOverrideProvider(SkillMappingOverrideProvider provider) => _skillMappingOverrideProvider = provider;
+
+        public void SetInteractionActionBindings(InteractionActionBindings bindings)
+        {
+            if (bindings == null)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ORDER_ACTION_BINDING_REQUIRED: {nameof(InputOrderMappingSystem)} requires {nameof(InteractionActionBindings)}.");
+            }
+
+            ConfirmActionId = bindings.ConfirmActionId;
+            CancelActionId = bindings.CancelActionId;
+            CommandActionId = bindings.CommandActionId;
+        }
         
         public void SetLocalPlayer(Entity entity, int playerId)
         {
@@ -321,8 +382,10 @@ namespace Ludots.Core.Input.Orders
             ProcessPressReleaseAimPending();
             
             // 2. Process all mappings
-            foreach (var (actionId, mapping) in _mappingsByActionId)
+            foreach (var entry in _orderedMappings)
             {
+                string actionId = entry.ActionId;
+                InputOrderMapping mapping = entry.Mapping;
                 var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out var resolvedActor);
 
                 // Held+StartEnd is handled separately via press/release detection
@@ -383,12 +446,16 @@ namespace Ludots.Core.Input.Orders
             
             // Collect releases to avoid modifying set during iteration
             List<string>? toRemove = null;
-            foreach (var kvp in _activeHeldStartEndActions)
+            foreach (var entry in _orderedMappings)
             {
-                string actionId = kvp.Key;
+                string actionId = entry.ActionId;
+                if (!_activeHeldStartEndActions.TryGetValue(actionId, out var state))
+                {
+                    continue;
+                }
+
                 if (_input.ReleasedThisFrame(actionId))
                 {
-                    HeldStartEndState state = kvp.Value;
                     if (TryBuildOrderWithOrderTypeSuffix(state.Mapping, state.Actor, ".End", out var endOrder))
                     {
                         SubmitOrder(state.Mapping, in endOrder);
@@ -550,7 +617,10 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
+            string cancelActionId = RequireCancelActionId();
+            string commandActionId = RequireCommandActionId();
+
+            if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ClearPressReleaseAimPending();
                 return;
@@ -581,10 +651,14 @@ namespace Ludots.Core.Input.Orders
         {
             if (_aimingMapping == null) { ExitAimingState(); return; }
 
+            string confirmActionId = RequireConfirmActionId();
+            string cancelActionId = RequireCancelActionId();
+            string commandActionId = RequireCommandActionId();
+
             // Vector aiming (two-point targeting)
             if (_isVectorAiming)
             {
-                HandleVectorAimingState();
+                HandleVectorAimingState(confirmActionId, cancelActionId, commandActionId);
                 return;
             }
 
@@ -602,7 +676,7 @@ namespace Ludots.Core.Input.Orders
                 }
                 
                 // Cancel: right-click or ESC
-                if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
+                if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
                 {
                     ExitAimingState();
                     return;
@@ -614,7 +688,7 @@ namespace Ludots.Core.Input.Orders
             }
 
             // AimCast: Confirm by left-click
-            if (_input.PressedThisFrame(ConfirmActionId))
+            if (_input.PressedThisFrame(confirmActionId))
             {
                 // Build order using current cursor/selection
                 if (TryBuildOrderSmartCast(_aimingMapping, out var order))
@@ -626,15 +700,17 @@ namespace Ludots.Core.Input.Orders
             }
 
             // Cancel: right-click or ESC
-            if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
+            if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
                 return;
             }
 
             // Pressing a different skill key while aiming switches to that skill
-            foreach (var (actionId, mapping) in _mappingsByActionId)
+            foreach (var entry in _orderedMappings)
             {
+                string actionId = entry.ActionId;
+                InputOrderMapping mapping = entry.Mapping;
                 if (actionId == _aimingActionId) continue;
                 var effectiveMapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
                     ? overrideMapping
@@ -656,10 +732,10 @@ namespace Ludots.Core.Input.Orders
         /// Phase Origin: click to lock origin point.
         /// Phase Direction: click to lock endpoint, then build and submit order.
         /// </summary>
-        private void HandleVectorAimingState()
+        private void HandleVectorAimingState(string confirmActionId, string cancelActionId, string commandActionId)
         {
             // Cancel: right-click or ESC at any phase
-            if (_input.PressedThisFrame(CancelActionId) || _input.PressedThisFrame(CommandActionId))
+            if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
                 return;
@@ -679,7 +755,7 @@ namespace Ludots.Core.Input.Orders
                     }
                     
                     // Confirm origin with left-click
-                    if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
+                    if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         _vectorAimOrigin = cursorPos;
                         _vectorAimPhase = VectorAimPhase.Direction;
@@ -694,7 +770,7 @@ namespace Ludots.Core.Input.Orders
                     }
                     
                     // Confirm direction with left-click -> build and submit vector order
-                    if (_input.PressedThisFrame(ConfirmActionId) && hasCursor)
+                    if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))
                         {
@@ -1281,7 +1357,13 @@ namespace Ludots.Core.Input.Orders
             return null;
         }
 
-        public IEnumerable<string> GetMappedActionIds() => _mappingsByActionId.Keys;
+        public IEnumerable<string> GetMappedActionIds()
+        {
+            for (int i = 0; i < _orderedMappings.Length; i++)
+            {
+                yield return _orderedMappings[i].ActionId;
+            }
+        }
 
         public int CopyPrimarySkillActionIds(Span<string> destination)
         {
@@ -1298,12 +1380,12 @@ namespace Ludots.Core.Input.Orders
             }
 
             int resolved = 0;
-            foreach (var pair in _mappingsByActionId)
+            foreach (var entry in _orderedMappings)
             {
-                string actionId = pair.Key;
+                string actionId = entry.ActionId;
                 InputOrderMapping mapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
                     ? overrideMapping
-                    : pair.Value;
+                    : entry.Mapping;
                 if (!mapping.IsSkillMapping ||
                     !mapping.ArgsTemplate.I0.HasValue)
                 {
@@ -1316,7 +1398,7 @@ namespace Ludots.Core.Input.Orders
                     continue;
                 }
 
-                int priority = ResolveSkillActionPriority(actionId);
+                int priority = ResolveSkillActionPriority(actionId, mapping);
                 string current = destination[slotIndex];
                 if (priority < priorities[slotIndex] ||
                     (priority == priorities[slotIndex] && string.CompareOrdinal(actionId, current) < 0))
@@ -1392,16 +1474,15 @@ namespace Ludots.Core.Input.Orders
             return true;
         }
 
-        private static int ResolveSkillActionPriority(string actionId)
+        private static int ResolveSkillActionPriority(string actionId, InputOrderMapping mapping)
         {
-            return actionId switch
+            if (mapping.ArgsTemplate.I0 is not int priority || priority < 0)
             {
-                "SkillQ" => 0,
-                "SkillW" => 1,
-                "SkillE" => 2,
-                "SkillR" => 3,
-                _ => 100
-            };
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ORDER_SKILL_PRIORITY_REQUIRED: skill mapping '{actionId}' must define argsTemplate.i0 as its data-driven priority.");
+            }
+
+            return priority;
         }
 
         public void SaveUserPreferences(string? path = null)
@@ -1415,7 +1496,7 @@ namespace Ludots.Core.Input.Orders
             }
             var overrideConfig = new InputOrderMappingConfig
             {
-                Mappings = new List<InputOrderMapping>(_userOverrides.Values)
+                Mappings = CopyOrderedUserOverrides()
             };
             InputOrderMappingLoader.SaveToFile(effectivePath, overrideConfig);
         }
@@ -1449,9 +1530,9 @@ namespace Ludots.Core.Input.Orders
 
         private void ValidateAllOrderTypeKeys()
         {
-            foreach (var mapping in _mappingsByActionId.Values)
+            foreach (var entry in _orderedMappings)
             {
-                ValidateOrderTypeKeys(mapping);
+                ValidateOrderTypeKeys(entry.Mapping);
             }
 
             foreach (var mapping in _userOverrides.Values)
@@ -1483,7 +1564,55 @@ namespace Ludots.Core.Input.Orders
             ExitAimingState();
         }
 
+        private List<InputOrderMapping> CopyOrderedUserOverrides()
+        {
+            var mappings = new List<InputOrderMapping>(_userOverrides.Count);
+            for (int i = 0; i < _orderedMappings.Length; i++)
+            {
+                if (_userOverrides.TryGetValue(_orderedMappings[i].ActionId, out var mapping))
+                {
+                    mappings.Add(mapping);
+                }
+            }
+
+            return mappings;
+        }
+
+        private static int ResolveMappingPriority(InputOrderMapping mapping)
+        {
+            return mapping.IsSkillMapping
+                ? ResolveSkillActionPriority(mapping.ActionId, mapping)
+                : int.MaxValue;
+        }
+
+        private static int CompareMappingEntries(MappingEntry left, MappingEntry right)
+        {
+            int priority = left.Priority.CompareTo(right.Priority);
+            if (priority != 0)
+            {
+                return priority;
+            }
+
+            return left.ActionIdOrdinal.CompareTo(right.ActionIdOrdinal);
+        }
+
+        private static string RequireConfiguredActionId(string actionId, string propertyName)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !string.Equals(actionId, actionId.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ORDER_ACTION_BINDING_REQUIRED: {nameof(InputOrderMappingSystem)} requires {propertyName} from {nameof(InteractionActionBindings)}.");
+            }
+
+            return actionId;
+        }
+
+        private string RequireConfirmActionId() => RequireConfiguredActionId(_confirmActionId, nameof(ConfirmActionId));
+
+        private string RequireCancelActionId() => RequireConfiguredActionId(_cancelActionId, nameof(CancelActionId));
+
+        private string RequireCommandActionId() => RequireConfiguredActionId(_commandActionId, nameof(CommandActionId));
+
     }
 }
-
-

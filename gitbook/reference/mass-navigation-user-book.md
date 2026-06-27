@@ -14,18 +14,18 @@
 
 当前参考战场是：
 
-`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/`
+`mods/showcases/formation_capability/FormationCapabilityShowcaseMod/`
 
 从仓库根目录启动：
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch MassNavigationTotalWarEntryMod --adapter raylib --build auto
+.\scripts\run-mod-launcher.cmd cli launch FormationCapabilityShowcaseMod --adapter raylib --build auto
 ```
 
 Raylib launch graph 在：
 
-- `src/Apps/Raylib/Ludots.App.Raylib/launcher.mass-navigation-total-war.runtime.json`
-- `src/Apps/Raylib/Ludots.App.Raylib/raylib.mass-navigation-total-war.launch.graph.json`
+- `src/Apps/Raylib/Ludots.App.Raylib/launcher.formation-capability-showcase.runtime.json`
+- `src/Apps/Raylib/Ludots.App.Raylib/raylib.formation-capability-showcase.launch.graph.json`
 
 玩家视角应该看到：
 
@@ -40,30 +40,30 @@ Raylib launch graph 在：
 
 ## 你真正要改哪些文件
 
-Total War 示例的文件入口：
+Formation Capability 示例的文件入口：
 
 | 文件 | 你在这里做什么 |
 | --- | --- |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json` | 配地图 id、visual heightmap、board/world 数据。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json` | 配地图 id、visual heightmap、board/world 数据。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
 
 业务 runtime 入口：
 
 | 文件 | 职责 |
 | --- | --- |
-| `MassNavigationTotalWarEntryModEntry.cs` | 注册 showcase runtime 和组件。 |
-| `Runtime/TotalWarShowcaseConfig.cs` | `TotalWarShowcaseConfig.json` 的强类型配置。 |
-| `Runtime/TotalWarShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、向 `RuntimeEntitySpawnQueue` 填参数。 |
-| `Runtime/TotalWarScenarioBindingSystem.cs` | 在 core MassCrowd 绑定完成后，补 showcase sidecar 组件。 |
-| `Runtime/TotalWarFormationRuntimeSystem.cs` | 跑方阵业务状态。 |
-| `Runtime/TotalWarFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
-| `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
-| `Runtime/TotalWarFormationComponents.cs` | showcase 专属组件，以及严格大小写的 layout/outline 名称。 |
+| `FormationCapabilityShowcaseModEntry.cs` | 注册 showcase runtime 和组件。 |
+| `Runtime/FormationCapabilityShowcaseConfig.cs` | `FormationCapabilityShowcaseConfig.json` 的强类型配置。 |
+| `Runtime/FormationCapabilityShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、向 `RuntimeEntitySpawnQueue` 填参数。 |
+| `Runtime/FormationCapabilityScenarioBindingSystem.cs` | 在 core MassNavigation 绑定完成后，补 showcase sidecar 组件。 |
+| `Runtime/FormationCapabilityFormationRuntimeSystem.cs` | 跑方阵业务状态。 |
+| `Runtime/FormationCapabilityFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
+| `Runtime/FormationCapabilityObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
+| `Runtime/FormationCapabilityFormationComponents.cs` | showcase 专属组件，以及严格大小写的 layout/outline 名称。 |
 
 通用基建入口：
 
@@ -80,11 +80,11 @@ Total War 示例的文件入口：
 | `LudotsCoreMod` | 提供 entity template、spawn、selection、order、presentation、minimap 等基础链路。先复用，不要复制。 |
 | `CoreInputMod` | 提供玩家框选、右键命令等输入入口。你的 Mod 通常只配置可选实体和订单类型。 |
 | `CameraProfilesMod` | 提供相机 profile。你的 Mod 通过配置选择或扩展 profile。 |
-| `src/Core/MassCrowd` | 提供大规模导航 runtime、组件绑定、order ingestion、formation/follower 可选能力。 |
-| `MassNavigationMod` | 提供大规模导航资产、配置包和可选调参面板。它不拥有 MassCrowd runtime。 |
-| `MassNavigationTotalWarEntryMod` | Total War-like 业务示例。重点看方阵如何生成士兵、士兵如何跟随方阵、轮廓和障碍如何表现。 |
+| `src/Core/MassNavigation` | 提供大规模导航 runtime、组件绑定、order ingestion、formation/follower 可选能力。 |
+| `MassNavigationMod` | 提供大规模导航资产、配置包和可选调参面板。它不拥有 MassNavigation runtime。 |
+| `FormationCapabilityShowcaseMod` | formation capability 业务示例。重点看方阵如何生成士兵、士兵如何跟随方阵、轮廓和障碍如何表现。 |
 
-如果你要做自己的游戏，通常复制的是 `MassNavigationTotalWarEntryMod` 的结构，然后换成你的业务命名和配置；MassCrowd runtime 是 core 能力，`MassNavigationMod` 是资产/UI 能力，不是放游戏规则或 runtime binding 的地方。
+如果你要做自己的游戏，通常复制的是 `FormationCapabilityShowcaseMod` 的结构，然后换成你的业务命名和配置；MassNavigation runtime 是 core 能力，`MassNavigationMod` 是资产/UI 能力，不是放游戏规则或 runtime binding 的地方。
 
 ## 玩家模型
 
@@ -101,7 +101,7 @@ Total War 示例的文件入口：
 - runtime selection set
 - performer scope
 - core runtime binding group
-- MassFlow solver index
+- MassNavigationFlow solver index
 - entity template id
 - order blackboard key
 
@@ -129,7 +129,7 @@ Mod 作者不新建这些基础设施：
 
 ## 方阵怎么配置
 
-方阵在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` 的 `formations[]` 里。
+方阵在 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` 的 `formations[]` 里。
 
 示例：
 
@@ -139,7 +139,7 @@ Mod 作者不新建这些基础设施：
   "label": "Shu Left Vanguard",
   "teamId": 1,
   "soldierAgent": {
-    "templateId": "mass_navigation_total_war_soldier_azure_light",
+    "templateId": "formation_capability_showcase_soldier_azure_light",
     "profileId": "light"
   },
   "centerXCm": -2600,
@@ -171,7 +171,7 @@ Mod 作者不新建这些基础设施：
 
 ## Agent Profile 怎么配
 
-agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` 的 `agentProfiles.profiles[]`。
+agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` 的 `agentProfiles.profiles[]`。
 
 当前示例有三类：
 
@@ -191,7 +191,7 @@ agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigation
 
 ## Entity Template 怎么配
 
-模板在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json`。
+模板在 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json`。
 
 方阵模板当前包含：
 
@@ -204,12 +204,12 @@ agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigation
 - `AttributeBuffer`
 - `GameplayTagContainer`
 - `TagCountContainer`
-- `MassCrowdAgent`
-- `MassCrowdFormationAnchor`
-- `MassCrowdFollowerLocomotion`
+- `MassNavigationAgent`
+- `MassNavigationFormationAnchor`
+- `MassNavigationFollowerLocomotion`
 - `EntityLayer`
 
-这表示方阵能被选中、能接订单、有血量、能进入 core MassCrowd runtime，并且作为可选 formation anchor 工作。
+这表示方阵能被选中、能接订单、有血量、能进入 core MassNavigation runtime，并且作为可选 formation anchor 工作。
 
 士兵模板当前包含：
 
@@ -217,24 +217,24 @@ agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigation
 - `VisualHeightmapSampleState`
 - `FacingDirection`
 - `EntityLayer`
-- `MassCrowdAgent`
-- `MassCrowdFormationFollower`
+- `MassNavigationAgent`
+- `MassNavigationFormationFollower`
 
-这表示士兵也是 core MassCrowd agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `SelectionSelectableTag`，所以玩家不能直接选中或下令。
+这表示士兵也是 core MassNavigation agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `SelectionSelectableTag`，所以玩家不能直接选中或下令。
 
 组件语义要按存在与否理解：
 
-- `MassCrowdAgent`：进入 core MassCrowd runtime。
+- `MassNavigationAgent`：进入 core MassNavigation runtime。
 - `OrderBuffer`：可接玩家或 AI 订单。
 - `SelectionSelectableTag`：可被选择。
-- `MassCrowdFormationAnchor`：启用 formation anchor 行为。
-- `MassCrowdFormationFollower`：启用 follower 行为。
+- `MassNavigationFormationAnchor`：启用 formation anchor 行为。
+- `MassNavigationFormationFollower`：启用 follower 行为。
 
 formation 不是必备 feature。不需要 formation 时，不要配置一个“disabled=false”的占位组件；直接不配置 formation 组件。
 
 ## Performer 怎么配
 
-表现写在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json`。
+表现写在 `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json`。
 
 当前 showcase 的生命周期规则是：
 
@@ -250,7 +250,7 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
   "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
   "command": {
     "kind": "CreatePerformer",
-    "definitionId": "mass_navigation_total_war_formation_selection_marker",
+    "definitionId": "formation_capability_showcase_formation_selection_marker",
     "scopeSource": "SourceStableId"
   }
 }
@@ -267,7 +267,7 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
   "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
   "command": {
     "kind": "DestroyScopedPerformer",
-    "definitionId": "mass_navigation_total_war_formation_selection_marker",
+    "definitionId": "formation_capability_showcase_formation_selection_marker",
     "scopeSource": "SourceStableId"
   }
 }
@@ -297,7 +297,7 @@ Local input
   -> OrderBuffer(massNavigationMove)
   -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime
-  -> MassFlowSimulationState
+  -> MassNavigationFlowSolverState
   -> WorldPositionCm / FacingDirection
   -> performer transform sync
 ```
@@ -310,12 +310,12 @@ Local input
 
 在这个 showcase 里，业务 runtime 会创建：
 
-- 方阵 core MassCrowd agent。
-- 归属这个方阵的士兵 core MassCrowd agents。
+- 方阵 core MassNavigation agent。
+- 归属这个方阵的士兵 core MassNavigation agents。
 
-士兵的跟随目标由 core `MassCrowdFormationFollowerSystem` 根据 `MassCrowdFormationAnchor` / `MassCrowdFormationFollower` 组件同步。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵目标。
+士兵的跟随目标由 core `MassNavigationFormationFollowerSystem` 根据 `MassNavigationFormationAnchor` / `MassNavigationFormationFollower` 组件同步。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵目标。
 
-这个“方阵有哪些士兵、士兵用什么模板和 slot”的规则是业务逻辑，应该放在 `MassNavigationTotalWarEntryMod` 或你的游戏 Mod。跟随和 runtime agent 绑定属于 core MassCrowd 能力。
+这个“方阵有哪些士兵、士兵用什么模板和 slot”的规则是业务逻辑，应该放在 `FormationCapabilityShowcaseMod` 或你的游戏 Mod。跟随和 runtime agent 绑定属于 core MassNavigation 能力。
 
 ## 障碍物
 
@@ -327,16 +327,16 @@ Local input
 map/template components
   -> ManifestationObstacleIntent2D or CompoundObstacle2D
   -> ManifestationObstacleBridge2DSystem
-  -> MassFlowObstacleProjection + WorldPositionCm
-  -> MassCrowdEnvironmentBindingSystem
-  -> MassFlow obstacle arrays
+  -> MassNavigationFlowObstacleProjection + WorldPositionCm
+  -> MassNavigationEnvironmentBindingSystem
+  -> MassNavigationFlow obstacle arrays
 ```
 
 也就是说：
 
 - 地图或 template 负责 authoring；
 - `ManifestationObstacleBridge2DSystem` 负责把 Circle/Box/Polygon 投影给运行时；
-- `MassCrowdEnvironmentBindingSystem` 负责把 `MassFlowObstacleProjection` 绑定进 solver；
+- `MassNavigationEnvironmentBindingSystem` 负责把 `MassNavigationFlowObstacleProjection` 绑定进 solver；
 - `MassNavigationConfig.world.obstacles[]` 是废弃旧键，出现就应该 fail-fast。
 
 示例：
@@ -357,9 +357,9 @@ map/template components
 
 玩家要看见障碍，所以 showcase 还配置了：
 
-- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` 里的 obstacle overlay template。
-- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` 里的 `obstacleOverlay` 外观参数。
-- `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` 里的 obstacle overlay template。
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` 里的 `obstacleOverlay` 外观参数。
+- `Runtime/FormationCapabilityObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
 
 不要用隐藏 debug draw 假装障碍可见。玩家要看的东西必须走明确表现链路。
 
@@ -369,8 +369,8 @@ map/template components
 
 相机相关配置分两处：
 
-- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json`：presentation culling distance 和 capacity。
-- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json`：presentation culling distance 和 capacity。
+- `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
 
 当前 `viewResidency.mode` 是 `Probe`，并且有 `retainSeconds` 和 `cameraProbes`。这对应产品需求：镜头离开一个地区后，表演单位可以保留一段时间；超过配置时间，再按表现预算处理。
 
@@ -378,13 +378,13 @@ map/template components
 
 ## Visual Heightmap
 
-Total War 地图引用：
+Formation Capability 地图引用：
 
-`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/terrain/mass_navigation_total_war_relief.vhtm`
+`mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/terrain/formation_capability_showcase_relief.vhtm`
 
 地图文件：
 
-`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json`
+`mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json`
 
 士兵、方阵轮廓、marker、障碍 overlay 都应该贴这个 visual heightmap。缺 heightmap service 应该 fail-fast，不应该静默退回平面。
 
@@ -435,8 +435,8 @@ Total War 地图引用：
 - 不要新建第二套 selection runtime。
 - 不要为 selection marker 写 MassNavigation 私有生命周期 system。
 - 如果士兵需要避障和碰撞，不要把士兵做成非 MassNavigation 对象。
-- 不要把 Total War 方阵业务塞进 MassNavigation core。
-- 不要在 Mod 里新增 MassCrowd runtime 或 post-spawn channel binding。
+- 不要把 Formation Capability 方阵业务塞进 MassNavigation core。
+- 不要在 Mod 里新增 MassNavigation runtime 或 post-spawn channel binding。
 - 不要配置一个 disabled optional formation 组件；需要才配组件，不需要就不配。
 - 不要在 JSON 里写 order blackboard 数字 id 或 performer param 数字 id。
 - 不要给缺失模板、performer、mesh、material、map、heightmap 加 fallback。
@@ -447,13 +447,13 @@ Total War 地图引用：
 
 上线前至少检查：
 
-- launch graph 包含 Total War entry mod 和 MassNavigation foundation。
+- launch graph 包含 Formation Capability entry mod 和 MassNavigation foundation。
 - `game.json` 启动目标 map。
 - map 引用目标 visual heightmap。
 - 所有 template id 存在。
 - 所有 performer id 存在。
 - 方阵可选中、可下令、有血量。
-- 士兵是 MassCrowd agent，但不能直接选中。
+- 士兵是 MassNavigation agent，但不能直接选中。
 - 士兵 profile 速度大于方阵 profile 速度。
 - selection marker 的创建和销毁由 performer rule 驱动。
 - 取消选中或销毁实体后 marker 不残留。

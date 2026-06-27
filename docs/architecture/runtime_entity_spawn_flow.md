@@ -18,7 +18,7 @@ ability/order handler
 - Handlers do not directly bypass spawn contracts to create special-case entities.
 - Manifestation obstacle authoring remains the source for obstacle geometry.
 - Physics projection owns collider and rigid body state.
-- MassFlow consumes obstacle snapshots through the current navigation-domain execution contracts.
+- MassNavigationFlow consumes obstacle snapshots through the current navigation-domain execution contracts.
 
 ## Current References
 

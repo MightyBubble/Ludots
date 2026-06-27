@@ -929,7 +929,7 @@
         <div>
           <h2>配置到行为联动</h2>
           <p>
-            这里用当前 taxonomy 做演算：左边是 board/world/chunk 链路，右边是 MassFlow 滑窗链路。
+            这里用当前 taxonomy 做演算：左边是 board/world/chunk 链路，右边是 MassNavigationFlow 滑窗链路。
             数值演算只解释单位关系，真实配置仍由对应 owner 和 loader fail-fast 负责。
             生产编辑器可让作者输入目标米数，并反推这里展示的 `WidthInMacroTiles` / `HeightInMacroTiles`；Terrain/NavTile 数量始终是派生结果。
           </p>
@@ -994,7 +994,7 @@
         </section>
 
         <section class="calc-card">
-          <h3>MassFlow / Avoidance 演算</h3>
+          <h3>MassNavigationFlow / Avoidance 演算</h3>
           <div class="field-grid">
             <div class="field">
               <label for="fieldWidthCm">fieldWidthCm</label>
@@ -1427,7 +1427,7 @@
       flowWindow: {
         title: "FlowWindow",
         group: "flow",
-        scope: "MassFlow",
+        scope: "MassNavigationFlow",
         x: 88,
         y: 78,
         w: "184px",
@@ -1435,17 +1435,17 @@
         badges: ["required", "configurable"],
         unit: "cm",
         defaultValue: "preset explicit",
-        owner: "MassFlowSolverConfig.fieldWidthCm / fieldHeightCm",
+        owner: "MassNavigationFlowSolverConfig.fieldWidthCm / fieldHeightCm",
         configurable: "是，宽高必须 > 0",
         constraint: "必须被 FlowCell 和 AvoidanceHashCell 整除。",
-        summary: "MassFlow 执行层滑窗/工作区。它不以 MacroTile 或 TerrainChunk 为单位，而是直接用 cm。",
+        summary: "MassNavigationFlow 执行层滑窗/工作区。它不以 MacroTile 或 TerrainChunk 为单位，而是直接用 cm。",
         dependsOn: ["cellCm", "flowCell", "avoidanceHashCell"],
         usedBy: []
       },
       flowCell: {
         title: "FlowCell",
         group: "flow",
-        scope: "MassFlow",
+        scope: "MassNavigationFlow",
         x: 38,
         y: 84,
         w: "176px",
@@ -1453,17 +1453,17 @@
         badges: ["required", "configurable"],
         unit: "cm",
         defaultValue: "100",
-        owner: "MassFlowSolverConfig.flowCellSizeCm / SpatialScaleDefaults.FlowCellCm",
+        owner: "MassNavigationFlowSolverConfig.flowCellSizeCm / SpatialScaleDefaults.FlowCellCm",
         configurable: "是，必须 > 0",
         constraint: "默认可等于 CellCm，但 owner 独立；FlowWindow 宽高必须整除它。",
-        summary: "MassFlow 流场网格分辨率。不要和 board CellCm 混成同一个配置 owner。",
+        summary: "MassNavigationFlow 流场网格分辨率。不要和 board CellCm 混成同一个配置 owner。",
         dependsOn: ["cellCm"],
         usedBy: ["flowWindow"]
       },
       avoidanceHashCell: {
         title: "AvoidanceHashCell",
         group: "flow",
-        scope: "MassFlow",
+        scope: "MassNavigationFlow",
         x: 62,
         y: 84,
         w: "190px",
@@ -1471,7 +1471,7 @@
         badges: ["required", "configurable"],
         unit: "cm",
         defaultValue: "100 / 50",
-        owner: "MassFlowSolverConfig separation/hardResolve hash",
+        owner: "MassNavigationFlowSolverConfig separation/hardResolve hash",
         configurable: "是，必须 > 0",
         constraint: "属于 avoidance，不属于 navmesh bake；FlowWindow 宽高必须整除它。",
         summary: "分离邻居哈希和硬解析候选哈希的 cell 尺度。它可以小于 CellCm，但必须显式给出。",
@@ -1606,7 +1606,7 @@
         title: "FlowCell",
         nodeId: "flowCell",
         color: "#6f45c8",
-        summary: "FlowCell 是 MassFlow 流场网格分辨率，单位是 cm。默认可等于 CellCm，但配置 owner 独立。",
+        summary: "FlowCell 是 MassNavigationFlow 流场网格分辨率，单位是 cm。默认可等于 CellCm，但配置 owner 独立。",
         stats: () => {
           const flow = value("flowCellSizeCm");
           return [
@@ -1620,7 +1620,7 @@
         title: "AvoidanceHashCell",
         nodeId: "avoidanceHashCell",
         color: "#8e5be1",
-        summary: "AvoidanceHashCell 是 MassFlow 分离/硬解析哈希颗粒度，属于 avoidance，不属于 navmesh bake。",
+        summary: "AvoidanceHashCell 是 MassNavigationFlow 分离/硬解析哈希颗粒度，属于 avoidance，不属于 navmesh bake。",
         stats: () => {
           const sep = value("separationHashCellSizeCm");
           const hard = value("hardResolveHashCellSizeCm");
@@ -1983,7 +1983,7 @@
         flowValid,
         flowValid
           ? "OK：FlowWindow 可被 FlowCell 与两个 AvoidanceHashCell 整除。"
-          : "Fail-fast：MassFlow fieldWidth/fieldHeight 必须被 flow/hash cell 整除，不能靠 fallback 修正。"
+          : "Fail-fast：MassNavigationFlow fieldWidth/fieldHeight 必须被 flow/hash cell 整除，不能靠 fallback 修正。"
       );
 
       const visualSamplesX = Math.max(1, value("visualSamplesX"));

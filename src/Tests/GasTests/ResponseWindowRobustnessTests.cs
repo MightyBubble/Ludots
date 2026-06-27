@@ -52,7 +52,14 @@ namespace Ludots.Tests.GAS
                     TemplateId = tplInstant
                 });
 
-                var sys = new EffectProposalProcessingSystem(world, queue, budget, templates, inputRequests: null, chainOrders: null)
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    budget,
+                    templates,
+                    inputRequests: null,
+                    chainOrders: null,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = 2
                 };
@@ -141,7 +148,14 @@ namespace Ludots.Tests.GAS
                     TemplateId = tplRoot
                 });
 
-                var sys = new EffectProposalProcessingSystem(world, queue, budget, templates, inputRequests: null, chainOrders: null)
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    budget,
+                    templates,
+                    inputRequests: null,
+                    chainOrders: null,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

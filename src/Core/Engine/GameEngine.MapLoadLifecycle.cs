@@ -113,6 +113,11 @@ namespace Ludots.Core.Engine
             PublishFocusedMapLoadState();
         }
 
+        internal void SetCurrentMapSessionForTests(MapSession session)
+        {
+            SetCurrentMapSession(session);
+        }
+
         private MapLoadStatus GetMapLoadStatus(MapId mapId)
         {
             return _mapLoadStatuses.TryGetValue(mapId, out MapLoadStatus status)

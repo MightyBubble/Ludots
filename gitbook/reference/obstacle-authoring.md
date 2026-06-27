@@ -13,9 +13,9 @@ Map / template components
   -> ManifestationObstacleIntent2D or CompoundObstacle2D
   -> ShapeDataStorage2D + CompoundObstacle2DState
   -> ManifestationObstacleBridge2DSystem
-  -> MassFlowObstacleProjection + WorldPositionCm
-  -> MassCrowdEnvironmentBindingSystem
-  -> MassFlow runtime obstacle snapshots
+  -> MassNavigationFlowObstacleProjection + WorldPositionCm
+  -> MassNavigationEnvironmentBindingSystem
+  -> MassNavigationFlow runtime obstacle snapshots
 ```
 
 The same authored obstacle data also feeds bake tooling through the Physics2D navigation adapter:
@@ -31,19 +31,19 @@ Do not create `ObstacleGeometryProfile2D`. It is not a mainline type. The mainli
 
 ## Supported Geometry
 
-| Geometry | Authoring component | Bake precision | MassFlow runtime precision |
+| Geometry | Authoring component | Bake precision | MassNavigationFlow runtime precision |
 | --- | --- | --- | --- |
 | Circle | `ManifestationObstacleIntent2D` or `CompoundObstacle2D` piece | exact circle carve | exact radius |
 | Box | `ManifestationObstacleIntent2D` or `CompoundObstacle2D` piece | exact box carve, including rotation | enclosing runtime radius |
 | Polygon | `ManifestationObstacleIntent2D` + `ManifestationObstaclePolygon2D`, or `CompoundObstacle2D` piece | exact polygon carve, including rotation | enclosing runtime radius |
 
-Runtime exact polygon stamping is a follow-up. NAV-3 keeps MassFlow runtime safe by using each piece's `navRadiusCm` while preserving exact geometry for bake.
+Runtime exact polygon stamping is a follow-up. NAV-3 keeps MassNavigationFlow runtime safe by using each piece's `navRadiusCm` while preserving exact geometry for bake.
 
 ## Static And Dynamic Semantics
 
 - Static structural obstacles are authored in map/template data and participate in navmesh bake.
-- Runtime dynamic obstacles are ECS entities with obstacle authoring components and `WorldPositionCm`; the bridge projects them into `MassFlowObstacleProjection`.
-- Temporary unit-to-unit avoidance remains MassFlow agent avoidance, not navmesh rebuild input.
+- Runtime dynamic obstacles are ECS entities with obstacle authoring components and `WorldPositionCm`; the bridge projects them into `MassNavigationFlowObstacleProjection`.
+- Temporary unit-to-unit avoidance remains MassNavigationFlow agent avoidance, not navmesh rebuild input.
 
 ## Limits
 
@@ -59,7 +59,7 @@ These are not valid authoring sources:
 - `MassNavigationConfig.world.obstacles[]`
 - `assets/Data/Maps/{mapId}.obstacles.json`
 - private C# obstacle loaders
-- hardcoded MassFlow blocker circles in scenario bootstrap
+- hardcoded MassNavigationFlow blocker circles in scenario bootstrap
 
 `MassNavigationConfig.world.obstacles[]` is an obsolete key. Strict config loading must reject it instead of ignoring or aliasing it.
 
@@ -112,17 +112,17 @@ Compound obstacle:
 
 | Change | Expected behavior |
 | --- | --- |
-| Add a map-authored obstacle entity | Recast bake carves it; MassFlow runtime binds it after bridge + environment binding. |
-| Move `WorldPositionCm` | MassFlow obstacle snapshot changes and flow fields rebuild. |
-| Rotate `FacingDirection` on box/polygon | Bake geometry and MassFlow projection offsets use the rotated pose. |
-| Remove the obstacle entity or disable navigation sink | Runtime projection is removed and MassFlow rebuilds without it. |
+| Add a map-authored obstacle entity | Recast bake carves it; MassNavigationFlow runtime binds it after bridge + environment binding. |
+| Move `WorldPositionCm` | MassNavigationFlow obstacle snapshot changes and flow fields rebuild. |
+| Rotate `FacingDirection` on box/polygon | Bake geometry and MassNavigationFlow projection offsets use the rotated pose. |
+| Remove the obstacle entity or disable navigation sink | Runtime projection is removed and MassNavigationFlow rebuilds without it. |
 
 ## UAT
 
 Run the NAV-3 preset:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch nav_obstacle --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
 ```
 
 Expected showcase flow:
@@ -132,7 +132,7 @@ Expected showcase flow:
 | Start the preset | HUD shows obstacle piece count. |
 | Draw a Box obstacle and bake | Navmesh overlay has a carved hole; piece count increases. |
 | Move a precision squad through the region | Route avoids the carved hole. |
-| Add a runtime Circle obstacle in front of the army | MassFlow units split around it. |
+| Add a runtime Circle obstacle in front of the army | MassNavigationFlow units split around it. |
 | Delete the obstacle | Runtime obstacle count drops; after bake, the navmesh hole disappears. |
 
 ## Merge Notes

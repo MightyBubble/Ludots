@@ -48,6 +48,7 @@ namespace Ludots.Core.Navigation.Pathing.Config
     public sealed class PathingNodeGraphConfig
     {
         public int ProjectionMaxRadiusCm { get; set; } = 200000;
+        public bool UseDynamicOverlay { get; set; } = false;
         public List<string> RequiredTagsAll { get; set; } = new();
         public List<string> ForbiddenTagsAny { get; set; } = new();
         public List<PathingTagCostRuleConfig> TagCostRules { get; set; } = new();

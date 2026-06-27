@@ -200,6 +200,82 @@ namespace Ludots.Tests.GAS
             Assert.That(resolution.Target, Is.EqualTo(target));
         }
 
+        [Test]
+        public void ContextScoredResolver_TiesBreakByEntityIdThenSlot()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1200;
+            const int highSlotAbilityId = 1201;
+            const int lowSlotAbilityId = 1202;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(lowSlotAbilityId);
+            abilities.AddAbility(highSlotAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+
+            var lowerEntityIdTarget = world.Create();
+            world.Add(lowerEntityIdTarget, WorldPositionCm.FromCm(100, 0));
+            world.Add(lowerEntityIdTarget, new GameplayTagContainer());
+
+            var higherEntityIdTarget = world.Create();
+            world.Add(higherEntityIdTarget, WorldPositionCm.FromCm(100, 0));
+            world.Add(higherEntityIdTarget, new GameplayTagContainer());
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: highSlotAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true),
+                        new ContextGroupCandidate(
+                            abilityId: lowSlotAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true),
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
+                new StubGraphApi(world));
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                default,
+                out var resolution);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(resolution.Target, Is.EqualTo(lowerEntityIdTarget));
+            Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+        }
+
         private static InputConfigRoot CreateInputConfig()
         {
             return new InputConfigRoot

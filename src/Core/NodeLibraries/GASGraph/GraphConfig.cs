@@ -28,8 +28,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
+        public string? BlackboardKey { get; set; }
+        public string? ConfigKey { get; set; }
+        public string? ValidOutput { get; set; }
 
         public float Radius { get; set; }
+        public float RangeCm { get; set; }
+        public int DirectionDeg { get; set; }
+        public int HalfAngleDeg { get; set; }
+        public int LengthCm { get; set; }
+        public int HalfWidthCm { get; set; }
+        public int HalfHeightCm { get; set; }
+        public int RotationDeg { get; set; }
+        public int HexRadius { get; set; }
+        public uint LayerMask { get; set; }
+        public string? RelationshipMode { get; set; }
         public int Limit { get; set; }
         public int TeamId { get; set; }
         public string? Sort { get; set; }
@@ -54,4 +67,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string Summary { get; set; } = string.Empty;
     }
 }
-

@@ -29,12 +29,12 @@
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "South Watch" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } } } },
 
     { "InstanceId": "road.player.blue", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue Vanguard" }, "PlayerOwner": { "PlayerId": 1 }, "SelectionDragState": {}, "WorldPositionCm": { "Value": { "X": -9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
-    { "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue North Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": 700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
-    { "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue South Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": -700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } },
+    { "InstanceId": "road.player.blue.north", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue North Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": 700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
+    { "InstanceId": "road.player.blue.south", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue South Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": -700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } },
 
-    { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red Vanguard" }, "WorldPositionCm": { "Value": { "X": 9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
-    { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red North Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
-    { "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red South Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } }
+    { "InstanceId": "road.enemy.red.vanguard", "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red Vanguard" }, "WorldPositionCm": { "Value": { "X": 9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
+    { "InstanceId": "road.enemy.red.north", "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red North Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
+    { "InstanceId": "road.enemy.red.south", "Template": "road_column_enemy", "Overrides": { "Name": { "Value": "Red South Column" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } }
   ],
   "Teams": [
     { "TeamId": 1, "RepresentativeInstanceId": "road.team.blue" },

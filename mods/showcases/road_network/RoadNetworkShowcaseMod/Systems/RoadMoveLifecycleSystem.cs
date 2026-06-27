@@ -7,7 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
@@ -46,7 +46,7 @@ namespace RoadNetworkShowcaseMod.Systems
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
-            _executionSink = new MassMovePlanExecutionSink(_simulation);
+            _executionSink = new MassNavigationMovePlanExecutionSink(_simulation);
             _refresh = new RoadRouteRefreshService(world, globals, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             _profiles = new RoadRouteProfileCatalog(world);
         }

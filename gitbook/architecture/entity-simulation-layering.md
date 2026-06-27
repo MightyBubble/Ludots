@@ -71,7 +71,7 @@
   - `Physics2DAndCrowd`
 - `AvoidanceLane`
   - `FormationPhysics`
-  - `MassCrowd`
+  - `MassNavigation`
 
 解释如下：
 
@@ -161,7 +161,7 @@
 - 少量权威单位走 ORCA / Hybrid
 - 允许更高成本的近距离精确避障
 
-### 4.2 MassCrowd 车道
+### 4.2 MassNavigation 车道
 
 适用对象：
 
@@ -172,7 +172,7 @@
 
 正式口径：
 
-- `AvoidanceLane = MassCrowd`
+- `AvoidanceLane = MassNavigation`
 - `NavPhysicsMode = NavCrowdResolve`
 - `NavSolverMode = CrowdFlow`
 - 不把全量 crowd 强塞进 `FullPhysics2D`
@@ -191,9 +191,9 @@
 - `WorldPositionCm` 是对外逻辑位置真相
 - `VisualTransform` 只从 `WorldPositionCm` 插值，不反写
 - `Position2D` 只服务 `FullPhysics2D` 热路径
-- crowd SoA 位置只服务 `MassCrowd` 热路径
-- 同一个 entity 不能同时被 `FullPhysics2D` 与 `MassCrowd` 双写
-- `ForceInput2D` 和 MassFlow desired movement state 是派生输出，不是位置真相
+- crowd SoA 位置只服务 `MassNavigation` 热路径
+- 同一个 entity 不能同时被 `FullPhysics2D` 与 `MassNavigation` 双写
+- `ForceInput2D` 和 MassNavigationFlow desired movement state 是派生输出，不是位置真相
 
 允许存在的重复数据只有两类：
 

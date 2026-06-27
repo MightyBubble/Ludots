@@ -343,7 +343,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             uint randomSeed)
         {
             if (graphProgramId <= 0) return;
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return;
+            if (!_programs.TryGetProgram(graphProgramId, out var program))
+            {
+                throw new InvalidOperationException(
+                    $"EffectPhaseExecutor references missing graphId={graphProgramId} for phase {phase} and effectTemplateId={effectTemplateId}.");
+            }
             if (program.Length == 0) return;
 
             var scratchUsage = GetScratchUsage(graphProgramId, program);
@@ -471,4 +475,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly record struct ScratchUsage(int RegisterCount);
     }
 }
-

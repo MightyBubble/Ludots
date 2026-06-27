@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>EffectPhaseId for each step.</summary>
         public fixed byte StepPhases[MAX_STEPS];
 
-        /// <summary>PhaseSlot (Pre/Post) for each step. Main is never stored here — it comes from PresetBehaviorRegistry.</summary>
+        /// <summary>PhaseSlot (Pre/Post) for each step. Main is never stored here; it comes from PresetTypeRegistry.DefaultPhaseHandlers.</summary>
         public fixed byte StepSlots[MAX_STEPS];
 
         /// <summary>GraphProgramId for each step (resolved at load time).</summary>

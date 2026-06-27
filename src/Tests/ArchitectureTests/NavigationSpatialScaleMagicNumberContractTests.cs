@@ -15,7 +15,7 @@ namespace Ludots.Tests.Architecture
             RegexOptions.Compiled);
 
         [Test]
-        public void BoardBakeAndMassFlowCode_DoNotInlineSpatialScaleMagicNumbers()
+        public void BoardBakeAndMassNavigationFlowCode_DoNotInlineSpatialScaleMagicNumbers()
         {
             string repoRoot = FindRepoRoot();
             string[] files = Directory
@@ -44,7 +44,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 violations,
                 Is.Empty,
-                "Board, nav bake, and MassFlow spatial scale code must use SpatialScaleDefaults/owned constants instead of inline 256/64/100 literals.\n" +
+                "Board, nav bake, and MassNavigationFlow spatial scale code must use SpatialScaleDefaults/owned constants instead of inline 256/64/100 literals.\n" +
                 string.Join(Environment.NewLine, violations));
         }
 
@@ -80,7 +80,7 @@ namespace Ludots.Tests.Architecture
                     fileName.Contains("MapVtxmGenerator", StringComparison.OrdinalIgnoreCase) ||
                     fileName.Contains("Program", StringComparison.OrdinalIgnoreCase)) ||
                 fileName.Contains("NavTileBuilder", StringComparison.OrdinalIgnoreCase) ||
-                fileName.Contains("MassFlow", StringComparison.OrdinalIgnoreCase) ||
+                fileName.Contains("MassNavigationFlow", StringComparison.OrdinalIgnoreCase) ||
                 fileName.Contains("FlowField", StringComparison.OrdinalIgnoreCase);
         }
 

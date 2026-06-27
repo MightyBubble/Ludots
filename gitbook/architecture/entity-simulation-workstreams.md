@@ -98,7 +98,7 @@
 - 可以在一个独立 demo 中看到“后端方阵真相碰撞”
 - 这是第一个对外可见的大结果，不是纯基建
 
-## 5 Workstream 2：MassCrowd 车道
+## 5 Workstream 2：MassNavigation 车道
 
 ### 5.1 目标
 
@@ -112,7 +112,7 @@
 
 ### 5.3 交付物
 
-- `AvoidanceLane = MassCrowd` 运行时调度
+- `AvoidanceLane = MassNavigation` 运行时调度
 - crowd SoA 热路径与 ECS 同步链
 - 跟随成员的 slot 跟随与局部碰撞
 - crowd entity 的 `BudgetedResident` 运行态

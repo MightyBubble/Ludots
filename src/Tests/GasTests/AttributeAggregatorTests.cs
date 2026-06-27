@@ -282,7 +282,11 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             var application = new EffectApplicationSystem(world, requests, templates: templates);
             var aggregator = new AttributeAggregatorSystem(world);
 
@@ -336,6 +340,7 @@ namespace Ludots.Tests.GAS
                 world,
                 requests,
                 templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents);
 
             requests.Publish(new EffectRequest
@@ -387,7 +392,11 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             var application = new EffectApplicationSystem(world, requests, templates: templates);
             var aggregator = new AttributeAggregatorSystem(world);
 

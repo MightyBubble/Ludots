@@ -17,6 +17,7 @@
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 6000,
+        "useDynamicOverlay": false,
         "forbiddenTagsAny": [],
         "requiredTagsAll": [],
         "tagCostRules": []
@@ -39,6 +40,7 @@
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": false,
         "forbiddenTagsAny": [],
         "requiredTagsAll": [],
         "tagCostRules": []

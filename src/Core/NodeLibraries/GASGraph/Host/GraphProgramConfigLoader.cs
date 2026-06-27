@@ -5,7 +5,6 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
 
@@ -106,7 +105,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < packages.Count; i++)
             {
                 var (name, symbols, program) = packages[i];
-                PatchSymbols(symbols, program);
+                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
                 _registry.Register(id, program);
@@ -156,170 +155,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return new GraphOutputSchema(resolved);
-        }
-
-        private void PatchSymbols(string[] symbols, GraphInstruction[] program)
-        {
-            if (symbols == null || symbols.Length == 0) return;
-            if (program == null || program.Length == 0) return;
-
-            for (int i = 0; i < program.Length; i++)
-            {
-                ref var ins = ref program[i];
-                var op = (GraphNodeOp)ins.Op;
-                switch (op)
-                {
-                    case GraphNodeOp.QueryFilterTagAny:
-                    case GraphNodeOp.QueryFilterTagNone:
-                    case GraphNodeOp.SendEvent:
-                    case GraphNodeOp.HasTag:
-                        ins.Imm = _symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.LoadAttribute:
-                    case GraphNodeOp.ModifyAttributeAdd:
-                    case GraphNodeOp.QueryFilterAttributeRange:
-                    case GraphNodeOp.QuerySortByAttribute:
-                    case GraphNodeOp.AggSumAttribute:
-                    case GraphNodeOp.AggAverageAttribute:
-                    case GraphNodeOp.AggMaxAttribute:
-                    case GraphNodeOp.AggMinAttribute:
-                    case GraphNodeOp.AggMaxEntityByAttribute:
-                    case GraphNodeOp.AggMinEntityByAttribute:
-                        ins.Imm = _symbolResolver.ResolveAttribute(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.QueryFilterTemplate:
-                        ins.Imm = _symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.QueryFromCollection:
-                        ins.Imm = ResolveEntityCollectionKey(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.ApplyEffectTemplate:
-                    case GraphNodeOp.FanOutApplyEffect:
-                    case GraphNodeOp.RemoveEffectTemplate:
-                        ins.Imm = _symbolResolver.ResolveEffectTemplate(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.FanOutDispatchEffect:
-                        ins.Imm = _symbolResolver.ResolveEffectTemplate(ResolveSymbol(symbols, ins.Imm));
-                        ins.Dst = checked((byte)_symbolResolver.ResolveTargetDispatchPreset(ResolveSymbol(symbols, ins.Dst)));
-                        break;
-                    case GraphNodeOp.FanOutDispatchEffectDynamic:
-                        ins.Dst = checked((byte)_symbolResolver.ResolveTargetDispatchPreset(ResolveSymbol(symbols, ins.Dst)));
-                        break;
-                case GraphNodeOp.ReadBlackboardFloat:
-                case GraphNodeOp.ReadBlackboardInt:
-                case GraphNodeOp.ReadBlackboardEntity:
-                case GraphNodeOp.WriteBlackboardFloat:
-                    case GraphNodeOp.WriteBlackboardInt:
-                    case GraphNodeOp.WriteBlackboardEntity:
-                    case GraphNodeOp.LoadConfigFloat:
-                    case GraphNodeOp.LoadConfigInt:
-                    case GraphNodeOp.LoadConfigEffectId:
-                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
-                        break;
-                    case GraphNodeOp.RelationshipSetMetric:
-                    case GraphNodeOp.RelationshipAddMetric:
-                    case GraphNodeOp.RelationshipGetMetric:
-                    case GraphNodeOp.RelationshipAggSumMetric:
-                    case GraphNodeOp.RelationshipAggMaxMetric:
-                    case GraphNodeOp.RelationshipAggAverageMetric:
-                    case GraphNodeOp.RelationshipAggMinMetric:
-                    case GraphNodeOp.RelationshipAggMaxEntityByMetric:
-                    case GraphNodeOp.RelationshipAggMinEntityByMetric:
-                        if (ins.Imm >= 0)
-                        {
-                            ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
-                        }
-
-                        if ((op == GraphNodeOp.RelationshipSetMetric || op == GraphNodeOp.RelationshipAddMetric) &&
-                            ins.Dst != byte.MaxValue)
-                        {
-                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
-                        }
-
-                        if ((op == GraphNodeOp.RelationshipSetMetric ||
-                             op == GraphNodeOp.RelationshipAddMetric ||
-                             op == GraphNodeOp.RelationshipGetMetric ||
-                             op == GraphNodeOp.RelationshipAggSumMetric ||
-                             op == GraphNodeOp.RelationshipAggMaxMetric ||
-                             op == GraphNodeOp.RelationshipAggAverageMetric ||
-                             op == GraphNodeOp.RelationshipAggMinMetric ||
-                             op == GraphNodeOp.RelationshipAggMaxEntityByMetric ||
-                             op == GraphNodeOp.RelationshipAggMinEntityByMetric) &&
-                            ins.Flags != byte.MaxValue)
-                        {
-                            ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
-                        }
-                        break;
-                    case GraphNodeOp.RelationshipFilterMetricRange:
-                    case GraphNodeOp.RelationshipSortByMetric:
-                        if (ins.Imm >= 0)
-                        {
-                            ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
-                        }
-
-                        if (ins.Dst != byte.MaxValue)
-                        {
-                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
-                        }
-                        break;
-                    case GraphNodeOp.RelationshipHasFlag:
-                    case GraphNodeOp.RelationshipSetFlag:
-                    case GraphNodeOp.RelationshipFilterFlag:
-                        if (ins.Imm >= 0)
-                        {
-                            ins.Imm = _symbolResolver.ResolveRelationshipFlag(ResolveSymbol(symbols, ins.Imm));
-                        }
-
-                        if (op == GraphNodeOp.RelationshipSetFlag && ins.Dst != byte.MaxValue)
-                        {
-                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipReason(ResolveSymbol(symbols, ins.Dst)));
-                        }
-
-                        if (op == GraphNodeOp.RelationshipSetFlag || op == GraphNodeOp.RelationshipHasFlag)
-                        {
-                            if (ins.Flags != byte.MaxValue)
-                            {
-                                ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
-                            }
-                        }
-                        else if (ins.Dst != byte.MaxValue)
-                        {
-                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
-                        }
-                        break;
-                    case GraphNodeOp.RelationshipEnsureLink:
-                    case GraphNodeOp.RelationshipRemoveLink:
-                    case GraphNodeOp.RelationshipQueryOutgoing:
-                    case GraphNodeOp.RelationshipQueryIncoming:
-                    case GraphNodeOp.RelationshipQueryMutual:
-                    case GraphNodeOp.RelationshipQueryBetweenPair:
-                        if (ins.Dst != byte.MaxValue)
-                        {
-                            ins.Dst = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
-                        }
-                        break;
-                }
-            }
-        }
-
-        private static string ResolveSymbol(string[] symbols, int symbolIndex)
-        {
-            if ((uint)symbolIndex >= (uint)symbols.Length)
-            {
-                throw new InvalidOperationException($"Graph symbol index out of range: {symbolIndex} (len={symbols.Length}).");
-            }
-            return symbols[symbolIndex] ?? string.Empty;
-        }
-
-        private int ResolveEntityCollectionKey(string key)
-        {
-            if (_entityCollections == null)
-            {
-                throw new InvalidOperationException(
-                    $"Graph collection query key '{key}' requires an EntityCollectionStore.");
-            }
-
-            return _entityCollections.KeyRegistry.Register(key);
         }
     }
 }

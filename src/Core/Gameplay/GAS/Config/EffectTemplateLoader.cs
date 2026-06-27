@@ -1523,6 +1523,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     _ => throw new InvalidOperationException($"Effect template '{effectId}' in {path}: grantedTags[{i}] unknown formula '{formulaValue}'."),
                 };
 
+                if (formula == Components.TagContributionFormula.GraphProgram)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: grantedTags[{i}] formula=GraphProgram is not supported until a tag contribution graph evaluator is wired.");
+                }
+
                 int amount = formula == Components.TagContributionFormula.GraphProgram
                     ? cfg.Amount ?? 0
                     : RequireInt(cfg.Amount, effectId, path, $"grantedTags[{i}].amount");

@@ -21,9 +21,10 @@ using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
-using Ludots.Core.MassCrowd;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
@@ -60,6 +61,7 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
+            Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);
@@ -98,16 +100,16 @@ namespace Ludots.Core.Config
             Register<UtilityAiCombatMemory>("UtilityAiCombatMemory", SetUtilityAiCombatMemory);
             Register<ActuatorReadiness>("ActuatorReadiness", SetActuatorReadiness);
             Register<AimGate>("AimGate", SetAimGate);
-            Register("MassCrowdAgent", SetMassCrowdAgent, null, Component<MassCrowdAgent>.ComponentType);
-            Register("MassCrowdBlocker", SetMassCrowdBlocker, null, Component<MassCrowdBlocker>.ComponentType);
-            Register<MassCrowdHotspotMarker>("MassCrowdHotspotMarker");
+            Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
+            Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
+            Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
             Register<SimulationAuthority>("SimulationAuthority");
             Register("SimulationResidencyPolicy", SetSimulationResidencyPolicy, null, Component<SimulationResidencyPolicy>.ComponentType);
             Register("CollisionParticipation", SetCollisionParticipation, null, Component<CollisionParticipation>.ComponentType);
             Register("AvoidanceLane", SetAvoidanceLane, null, Component<AvoidanceLane>.ComponentType);
-            Register("MassCrowdFormationAnchor", SetMassCrowdFormationAnchor, null, Component<MassCrowdFormationAnchor>.ComponentType);
-            Register("MassCrowdFormationFollower", SetMassCrowdFormationFollower, null, Component<MassCrowdFormationFollower>.ComponentType);
-            Register("MassCrowdFollowerLocomotion", SetMassCrowdFollowerLocomotion, null, Component<MassCrowdFollowerLocomotion>.ComponentType);
+            Register("MassNavigationFormationAnchor", SetMassNavigationFormationAnchor, null, Component<MassNavigationFormationAnchor>.ComponentType);
+            Register("MassNavigationFormationFollower", SetMassNavigationFormationFollower, null, Component<MassNavigationFormationFollower>.ComponentType);
+            Register("MassNavigationFollowerLocomotion", SetMassNavigationFollowerLocomotion, null, Component<MassNavigationFollowerLocomotion>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -959,6 +961,60 @@ namespace Ludots.Core.Config
             entity.Add(snapshot);
         }
 
+        private static unsafe void SetAttributeDerivedGraphBinding(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AttributeDerivedGraphBinding requires an object payload.");
+            }
+
+            if (obj.ContainsKey("graphProgramIds") || obj.ContainsKey("GraphProgramIds") ||
+                obj.ContainsKey("graphProgramId") || obj.ContainsKey("GraphProgramId"))
+            {
+                throw new InvalidOperationException(
+                    "AttributeDerivedGraphBinding numeric graph ids are internal only; author graphs by name via 'graphs'.");
+            }
+
+            ValidateProperties(obj, "AttributeDerivedGraphBinding", "graphs");
+            JsonNode graphsNode = RequireProperty(obj, "graphs", "AttributeDerivedGraphBinding");
+            if (graphsNode is not JsonArray graphs)
+            {
+                throw new InvalidOperationException("AttributeDerivedGraphBinding.graphs requires an array.");
+            }
+
+            var binding = new AttributeDerivedGraphBinding();
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                JsonNode graphNode = graphs[i];
+                if (graphNode == null || graphNode.GetValueKind() == JsonValueKind.Null)
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a non-null string value.");
+                }
+
+                if (graphNode.GetValueKind() != JsonValueKind.String)
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a string graph name.");
+                }
+
+                string graphName = graphNode.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(graphName))
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a non-empty graph name.");
+                }
+
+                int graphId = GraphIdRegistry.GetId(graphName);
+                if (graphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"AttributeDerivedGraphBinding.graphs[{i}] references unknown graph '{graphName}'.");
+                }
+
+                binding.Add(graphId);
+            }
+
+            entity.Add(binding);
+        }
+
         private static void SetManifestationObstacleIntent2D(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -1255,39 +1311,39 @@ namespace Ludots.Core.Config
             entity.Add(new DestroyWhenParentExecutionEnds());
         }
 
-        private static void SetMassCrowdAgent(Entity entity, JsonNode data)
+        private static void SetMassNavigationAgent(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("MassCrowdAgent requires an object payload.");
+                throw new InvalidOperationException("MassNavigationAgent requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassCrowdAgent", "profileId");
-            string profileId = RequireStringProperty(obj, "profileId", "MassCrowdAgent");
-            int profileKey = MassCrowdProfileRegistry.Register(profileId);
-            entity.Add(new MassCrowdAgent { ProfileId = profileKey });
+            ValidateProperties(obj, "MassNavigationAgent", "profileId");
+            string profileId = RequireStringProperty(obj, "profileId", "MassNavigationAgent");
+            int profileKey = MassNavigationProfileRegistry.Register(profileId);
+            entity.Add(new MassNavigationAgent { ProfileId = profileKey });
         }
 
-        private static void SetMassCrowdBlocker(Entity entity, JsonNode data)
+        private static void SetMassNavigationBlocker(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("MassCrowdBlocker requires an object payload.");
+                throw new InvalidOperationException("MassNavigationBlocker requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassCrowdBlocker", "radiusCm");
-            JsonNode radiusNode = RequireProperty(obj, "radiusCm", "MassCrowdBlocker");
+            ValidateProperties(obj, "MassNavigationBlocker", "radiusCm");
+            JsonNode radiusNode = RequireProperty(obj, "radiusCm", "MassNavigationBlocker");
             if (radiusNode is not JsonValue radiusValue || !radiusValue.TryGetValue(out float radiusCm))
             {
-                throw new InvalidOperationException("MassCrowdBlocker.radiusCm requires a numeric value.");
+                throw new InvalidOperationException("MassNavigationBlocker.radiusCm requires a numeric value.");
             }
 
             if (!(radiusCm > 0f))
             {
-                throw new InvalidOperationException("MassCrowdBlocker.radiusCm must be > 0.");
+                throw new InvalidOperationException("MassNavigationBlocker.radiusCm must be > 0.");
             }
 
-            entity.Add(new MassCrowdBlocker { RadiusCm = radiusCm });
+            entity.Add(new MassNavigationBlocker { RadiusCm = radiusCm });
         }
 
         private static void SetSimulationResidencyPolicy(Entity entity, JsonNode data)
@@ -1332,74 +1388,74 @@ namespace Ludots.Core.Config
             });
         }
 
-        private static void SetMassCrowdFormationAnchor(Entity entity, JsonNode data)
+        private static void SetMassNavigationFormationAnchor(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("MassCrowdFormationAnchor requires an object payload.");
+                throw new InvalidOperationException("MassNavigationFormationAnchor requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassCrowdFormationAnchor", "formationId", "slotCount");
-            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationAnchor");
-            int slotCount = ReadIntProperty(obj, "slotCount", "MassCrowdFormationAnchor");
+            ValidateProperties(obj, "MassNavigationFormationAnchor", "formationId", "slotCount");
+            string formationId = RequireStringProperty(obj, "formationId", "MassNavigationFormationAnchor");
+            int slotCount = ReadIntProperty(obj, "slotCount", "MassNavigationFormationAnchor");
             if (slotCount <= 0)
             {
-                throw new InvalidOperationException("MassCrowdFormationAnchor.slotCount must be > 0.");
+                throw new InvalidOperationException("MassNavigationFormationAnchor.slotCount must be > 0.");
             }
 
-            entity.Add(new MassCrowdFormationAnchor
+            entity.Add(new MassNavigationFormationAnchor
             {
-                FormationId = MassCrowdFormationRegistry.Register(formationId),
+                FormationId = MassNavigationFormationRegistry.Register(formationId),
                 SlotCount = slotCount,
             });
         }
 
-        private static void SetMassCrowdFormationFollower(Entity entity, JsonNode data)
+        private static void SetMassNavigationFormationFollower(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("MassCrowdFormationFollower requires an object payload.");
+                throw new InvalidOperationException("MassNavigationFormationFollower requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassCrowdFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
-            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationFollower");
-            int slotIndex = ReadIntProperty(obj, "slotIndex", "MassCrowdFormationFollower");
+            ValidateProperties(obj, "MassNavigationFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
+            string formationId = RequireStringProperty(obj, "formationId", "MassNavigationFormationFollower");
+            int slotIndex = ReadIntProperty(obj, "slotIndex", "MassNavigationFormationFollower");
             if (slotIndex < 0)
             {
-                throw new InvalidOperationException("MassCrowdFormationFollower.slotIndex must be >= 0.");
+                throw new InvalidOperationException("MassNavigationFormationFollower.slotIndex must be >= 0.");
             }
 
-            entity.Add(new MassCrowdFormationFollower
+            entity.Add(new MassNavigationFormationFollower
             {
-                FormationId = MassCrowdFormationRegistry.Register(formationId),
+                FormationId = MassNavigationFormationRegistry.Register(formationId),
                 Anchor = Entity.Null,
                 SlotIndex = slotIndex,
-                LocalOffsetXCm = ReadFloatProperty(obj, "localOffsetXCm", "MassCrowdFormationFollower"),
-                LocalOffsetYCm = ReadFloatProperty(obj, "localOffsetYCm", "MassCrowdFormationFollower"),
+                LocalOffsetXCm = ReadFloatProperty(obj, "localOffsetXCm", "MassNavigationFormationFollower"),
+                LocalOffsetYCm = ReadFloatProperty(obj, "localOffsetYCm", "MassNavigationFormationFollower"),
             });
         }
 
-        private static void SetMassCrowdFollowerLocomotion(Entity entity, JsonNode data)
+        private static void SetMassNavigationFollowerLocomotion(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("MassCrowdFollowerLocomotion requires an object payload.");
+                throw new InvalidOperationException("MassNavigationFollowerLocomotion requires an object payload.");
             }
 
-            ValidateProperties(obj, "MassCrowdFollowerLocomotion", "targetChangeEpsilonCm", "facingChangeEpsilonRadians");
-            float targetChangeEpsilonCm = ReadFloatProperty(obj, "targetChangeEpsilonCm", "MassCrowdFollowerLocomotion");
-            float facingChangeEpsilonRadians = ReadFloatProperty(obj, "facingChangeEpsilonRadians", "MassCrowdFollowerLocomotion");
+            ValidateProperties(obj, "MassNavigationFollowerLocomotion", "targetChangeEpsilonCm", "facingChangeEpsilonRadians");
+            float targetChangeEpsilonCm = ReadFloatProperty(obj, "targetChangeEpsilonCm", "MassNavigationFollowerLocomotion");
+            float facingChangeEpsilonRadians = ReadFloatProperty(obj, "facingChangeEpsilonRadians", "MassNavigationFollowerLocomotion");
             if (!(targetChangeEpsilonCm > 0f))
             {
-                throw new InvalidOperationException("MassCrowdFollowerLocomotion.targetChangeEpsilonCm must be > 0.");
+                throw new InvalidOperationException("MassNavigationFollowerLocomotion.targetChangeEpsilonCm must be > 0.");
             }
 
             if (!(facingChangeEpsilonRadians > 0f))
             {
-                throw new InvalidOperationException("MassCrowdFollowerLocomotion.facingChangeEpsilonRadians must be > 0.");
+                throw new InvalidOperationException("MassNavigationFollowerLocomotion.facingChangeEpsilonRadians must be > 0.");
             }
 
-            entity.Add(new MassCrowdFollowerLocomotion
+            entity.Add(new MassNavigationFollowerLocomotion
             {
                 TargetChangeEpsilonCm = targetChangeEpsilonCm,
                 FacingChangeEpsilonRadians = facingChangeEpsilonRadians,
@@ -1485,7 +1541,7 @@ namespace Ludots.Core.Config
             return raw switch
             {
                 "FormationPhysics" => AvoidanceLaneKind.FormationPhysics,
-                "MassCrowd" => AvoidanceLaneKind.MassCrowd,
+                "MassNavigation" => AvoidanceLaneKind.MassNavigation,
                 _ => throw new InvalidOperationException($"Unsupported AvoidanceLane kind '{raw}'.")
             };
         }
