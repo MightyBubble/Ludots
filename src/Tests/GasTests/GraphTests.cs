@@ -9,8 +9,6 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
-using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
-using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Physics;
 using Ludots.Core.Spatial;
@@ -51,39 +49,6 @@ namespace Ludots.Tests.GAS
             That(p.Program.Length, Is.GreaterThan(0));
         }
 
-        [Test]
-        public void Blob_RoundTrip_PreservesGraphNameSymbolsAndProgram()
-        {
-            var program = new[]
-            {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1.0f },
-                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAny, Imm = 0 }
-            };
-
-            var pkg = new GraphProgramPackage("G1", new[] { "Tag.A" }, program);
-
-            using var ms = new MemoryStream();
-            GraphProgramBlob.Write(ms, new List<GraphProgramPackage> { pkg });
-            ms.Position = 0;
-
-            string readName = string.Empty;
-            string[] readSymbols = null;
-            GraphInstruction[] readProgram = null;
-            GraphProgramBlob.Read(ms, (name, symbols, prog) =>
-            {
-                readName = name;
-                readSymbols = symbols;
-                readProgram = prog;
-            });
-
-            That(readName, Is.EqualTo("G1"));
-            That(readSymbols, Is.Not.Null);
-            That(readSymbols, Does.Contain("Tag.A"));
-            That(readProgram, Is.Not.Null);
-            That(readProgram.Length, Is.EqualTo(2));
-            That(readProgram[0].Op, Is.EqualTo((ushort)GraphNodeOp.ConstFloat));
-            That(readProgram[1].Op, Is.EqualTo((ushort)GraphNodeOp.QueryFilterTagAny));
-        }
     }
 
     [TestFixture]

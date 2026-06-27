@@ -624,6 +624,46 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_GrantedTagsGraphProgramFormula_IsRejectedUntilEvaluatorIsWired()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_GraphTag",
+                        "tags": ["Event.GraphTag"],
+                        "presetType": "None",
+                        "lifetime": "Infinite",
+                        "participatesInResponse": true,
+                        "grantedTags": [
+                          {
+                            "tag": "Status.GraphDriven",
+                            "formula": "GraphProgram",
+                            "graphProgram": "Graph.TagContribution"
+                          }
+                        ]
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                var ex = Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("formula=GraphProgram"));
+                That(ex.Message, Does.Contain("tag contribution graph evaluator"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_PresetType_ApplyForce2D_CompilesPresetFields()
         {
             string root = CreateTempRoot();

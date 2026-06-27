@@ -31,7 +31,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         /// <summary>
         /// Compute the tag count contribution for a given stack count.
-        /// For GraphProgram, returns 0 (caller must evaluate the graph separately).
         /// </summary>
         public int Compute(int stackCount)
         {
@@ -40,7 +39,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 TagContributionFormula.Fixed => Amount,
                 TagContributionFormula.Linear => stackCount * Amount,
                 TagContributionFormula.LinearPlusBase => Base + stackCount * Amount,
-                _ => 0, // GraphProgram: handled externally
+                TagContributionFormula.GraphProgram => throw new System.InvalidOperationException(
+                    "TagContributionFormula.GraphProgram is not supported until a tag contribution graph evaluator is wired."),
+                _ => throw new System.InvalidOperationException($"Unsupported tag contribution formula '{Formula}'."),
             };
         }
     }

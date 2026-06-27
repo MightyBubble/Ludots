@@ -109,10 +109,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TagContribution_GraphProgram_ReturnsZero()
+        public void TagContribution_GraphProgram_ThrowsUntilEvaluatorIsWired()
         {
             var tc = new TagContribution { Formula = TagContributionFormula.GraphProgram, Amount = 99 };
-            That(tc.Compute(5), Is.EqualTo(0)); // Graph handled externally
+            var ex = Throws<System.InvalidOperationException>(() => tc.Compute(5));
+            That(ex!.Message, Does.Contain("GraphProgram"));
         }
 
         // ════════════════════════════════════════════════════════════════════

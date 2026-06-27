@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -66,17 +67,36 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             World world, Entity entity,
             GraphProgramRegistry graphPrograms, IGraphRuntimeApi graphApi)
         {
-            if (graphPrograms == null || graphApi == null) return;
             if (!world.Has<AttributeDerivedGraphBinding>(entity)) return;
 
             ref var binding = ref world.Get<AttributeDerivedGraphBinding>(entity);
             if (binding.Count <= 0) return;
+            if (binding.Count > AttributeDerivedGraphBinding.MAX_BINDINGS)
+            {
+                throw new InvalidOperationException(
+                    $"AttributeDerivedGraphBinding count {binding.Count} exceeds capacity {AttributeDerivedGraphBinding.MAX_BINDINGS}.");
+            }
+
+            if (graphPrograms == null || graphApi == null)
+            {
+                throw new InvalidOperationException(
+                    "AttributeDerivedGraphBinding requires configured graph program registry and graph runtime API.");
+            }
 
             for (int g = 0; g < binding.Count; g++)
             {
                 int programId = binding.GraphProgramIds[g];
-                if (programId <= 0) continue;
-                if (!graphPrograms.TryGetProgram(programId, out var program)) continue;
+                if (programId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"AttributeDerivedGraphBinding contains invalid graph program id {programId}.");
+                }
+
+                if (!graphPrograms.TryGetProgram(programId, out var program))
+                {
+                    throw new InvalidOperationException(
+                        $"AttributeDerivedGraphBinding references missing graph program {programId}.");
+                }
 
                 NodeLibraries.GASGraph.GraphExecutor.Execute(
                     world,

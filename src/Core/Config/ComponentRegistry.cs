@@ -24,6 +24,7 @@ using Ludots.Core.Layers;
 using Ludots.Core.MassCrowd;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
@@ -60,6 +61,7 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
+            Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);
@@ -957,6 +959,60 @@ namespace Ludots.Core.Config
 
             entity.Add(buffer);
             entity.Add(snapshot);
+        }
+
+        private static unsafe void SetAttributeDerivedGraphBinding(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AttributeDerivedGraphBinding requires an object payload.");
+            }
+
+            if (obj.ContainsKey("graphProgramIds") || obj.ContainsKey("GraphProgramIds") ||
+                obj.ContainsKey("graphProgramId") || obj.ContainsKey("GraphProgramId"))
+            {
+                throw new InvalidOperationException(
+                    "AttributeDerivedGraphBinding numeric graph ids are internal only; author graphs by name via 'graphs'.");
+            }
+
+            ValidateProperties(obj, "AttributeDerivedGraphBinding", "graphs");
+            JsonNode graphsNode = RequireProperty(obj, "graphs", "AttributeDerivedGraphBinding");
+            if (graphsNode is not JsonArray graphs)
+            {
+                throw new InvalidOperationException("AttributeDerivedGraphBinding.graphs requires an array.");
+            }
+
+            var binding = new AttributeDerivedGraphBinding();
+            for (int i = 0; i < graphs.Count; i++)
+            {
+                JsonNode graphNode = graphs[i];
+                if (graphNode == null || graphNode.GetValueKind() == JsonValueKind.Null)
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a non-null string value.");
+                }
+
+                if (graphNode.GetValueKind() != JsonValueKind.String)
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a string graph name.");
+                }
+
+                string graphName = graphNode.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(graphName))
+                {
+                    throw new InvalidOperationException($"AttributeDerivedGraphBinding.graphs[{i}] requires a non-empty graph name.");
+                }
+
+                int graphId = GraphIdRegistry.GetId(graphName);
+                if (graphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"AttributeDerivedGraphBinding.graphs[{i}] references unknown graph '{graphName}'.");
+                }
+
+                binding.Add(graphId);
+            }
+
+            entity.Add(binding);
         }
 
         private static void SetManifestationObstacleIntent2D(Entity entity, JsonNode data)

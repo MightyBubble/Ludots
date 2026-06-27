@@ -8,7 +8,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
     /// <summary>
     /// Resolves graph symbol names to runtime ids by delegating to GAS registries.
-    /// Keeps <see cref="GraphProgramLoader"/> decoupled from concrete registry types.
+    /// Keeps <see cref="GraphProgramConfigLoader"/> decoupled from concrete registry types.
     /// </summary>
     public sealed class GasGraphSymbolResolver : IGraphSymbolResolver
     {

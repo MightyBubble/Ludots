@@ -280,7 +280,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
     /// <summary>
     /// Resolves symbolic names (tags, attributes, effect templates) to runtime integer ids.
-    /// Injected into <see cref="Host.GraphProgramLoader"/> to decouple it from concrete registries.
+    /// Injected into <see cref="Host.GraphProgramConfigLoader"/> to decouple it from concrete registries.
     /// </summary>
     public interface IGraphSymbolResolver
     {

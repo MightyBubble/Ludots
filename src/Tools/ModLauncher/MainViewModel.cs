@@ -432,19 +432,6 @@ namespace Ludots.ModLauncher
                 ExportReferenceAssembly(mod, fullModPath, projectDir);
             }
 
-            var graphExitCode = RunCompileGraphs(mod.Name);
-            if (graphExitCode != 0)
-            {
-                Application.Current.Dispatcher.Invoke(() =>
-                {
-                    StatusMessage = $"Mod '{mod.Name}' Graph Compile Failed.";
-                    BuildLog += $"\nMod '{mod.Name}' Graph Compile Failed!\n";
-                    mod.BuildState = ModBuildState.Failed;
-                    mod.LastBuildMessage = "graph compile failed";
-                });
-                return false;
-            }
-
             Application.Current.Dispatcher.Invoke(() =>
             {
                 StatusMessage = $"Mod '{mod.Name}' Build Successful!";
@@ -462,60 +449,6 @@ namespace Ludots.ModLauncher
             var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), $"build \"{csprojPath}\" {additionalArgs}".Trim())
             {
                 WorkingDirectory = workingDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                StandardOutputEncoding = System.Text.Encoding.UTF8,
-                StandardErrorEncoding = System.Text.Encoding.UTF8
-            };
-
-            using (var process = Process.Start(startInfo))
-            {
-                process.OutputDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                    {
-                        Debug.WriteLine(e.Data);
-                        Application.Current.Dispatcher.Invoke(() => BuildLog += e.Data + "\n");
-                    }
-                };
-                process.ErrorDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                    {
-                        Debug.WriteLine(e.Data);
-                        Application.Current.Dispatcher.Invoke(() => BuildLog += "ERROR: " + e.Data + "\n");
-                    }
-                };
-
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-                process.WaitForExit();
-                return process.ExitCode;
-            }
-        }
-
-        private int RunCompileGraphs(string modId)
-        {
-            var toolProject = Path.Combine(_rootDir, "src", "Tools", "Ludots.Tool", "Ludots.Tool.csproj");
-            var buildExitCode = RunDotnetBuild(toolProject, _rootDir, "-c Release -nologo -clp:ErrorsOnly");
-            if (buildExitCode != 0)
-            {
-                return buildExitCode;
-            }
-
-            var toolDll = Path.Combine(_rootDir, "src", "Tools", "Ludots.Tool", "bin", "Release", "net8.0", "Ludots.Tool.dll");
-            if (!File.Exists(toolDll))
-            {
-                Application.Current.Dispatcher.Invoke(() => BuildLog += $"ERROR: Ludots.Tool output missing: {toolDll}\n");
-                return 1;
-            }
-
-            var args = $"exec --roll-forward Major \"{toolDll}\" graph compile --mod \"{modId}\" --assetsRoot \"{_rootDir}\"";
-            var startInfo = new ProcessStartInfo(ResolveDotnetCommand(), args)
-            {
-                WorkingDirectory = _rootDir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
