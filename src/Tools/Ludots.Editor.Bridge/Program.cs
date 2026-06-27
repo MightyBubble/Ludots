@@ -1963,34 +1963,6 @@ static string NormalizeBindingName(string raw)
     return raw.Trim().TrimStart('$');
 }
 
-static async Task<(int exitCode, string output)> RunProcessAsync(string fileName, string arguments, string workingDirectory, int timeoutMs = 60000)
-{
-    var psi = new System.Diagnostics.ProcessStartInfo(fileName, arguments)
-    {
-        WorkingDirectory = workingDirectory,
-        RedirectStandardOutput = true,
-        RedirectStandardError = true,
-        UseShellExecute = false,
-        CreateNoWindow = true,
-    };
-    
-    using var proc = System.Diagnostics.Process.Start(psi);
-    if (proc == null) return (-1, "Failed to start process");
-    
-    var stdout = proc.StandardOutput.ReadToEndAsync();
-    var stderr = proc.StandardError.ReadToEndAsync();
-    
-    bool exited = proc.WaitForExit(timeoutMs);
-    if (!exited)
-    {
-        try { proc.Kill(entireProcessTree: true); } catch { }
-        return (-1, "Process timed out");
-    }
-    
-    string output = (await stdout) + "\n" + (await stderr);
-    return (proc.ExitCode, output.Trim());
-}
-
 static string FindAssetsRoot()
 {
     var current = Directory.GetCurrentDirectory();

@@ -93,7 +93,6 @@ namespace Ludots.Tests.Architecture
         public void RecastBake_OpenGridCrossTileQuery_ReturnsStraightCorePath()
         {
             const int chunkSizeCells = 4;
-            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_open_grid_query_contract",
