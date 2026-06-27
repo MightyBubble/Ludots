@@ -178,6 +178,22 @@
       }
     },
     {
+      "name": "live_map_editor",
+      "target": {
+        "type": "path",
+        "value": "mods/capabilities/live_map_editor/LiveMapEditorMod",
+        "projectPath": "LiveMapEditorMod.csproj"
+      }
+    },
+    {
+      "name": "live_map_editor_nav_grid_uat",
+      "target": {
+        "type": "path",
+        "value": "mods/capabilities/live_map_editor/LiveMapEditorNavGridUatMod",
+        "projectPath": null
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",

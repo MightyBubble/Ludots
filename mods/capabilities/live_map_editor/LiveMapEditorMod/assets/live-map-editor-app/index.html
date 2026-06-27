@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ludots Live Map Editor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <strong>Live Map Editor</strong>
+          <span id="map-id">No map</span>
+        </div>
+        <div class="status-row">
+          <span id="transport-status">connecting</span>
+          <span id="save-status">save idle</span>
+          <button id="save-map" type="button">Save</button>
+        </div>
+      </header>
+
+      <aside class="panel left">
+        <section>
+          <h2>Tool</h2>
+          <div class="segmented" id="tool-tabs">
+            <button data-tool="inspect" type="button">Inspect</button>
+            <button data-tool="paint" type="button">Paint</button>
+            <button data-tool="entity" type="button">Entity</button>
+            <button data-tool="sim" type="button">Sim</button>
+          </div>
+        </section>
+        <section>
+          <h2>Brush</h2>
+          <label>Radius cells <input id="brush-radius" type="number" min="0" max="64" value="2" /></label>
+          <label>Height level <input id="brush-height" type="number" min="0" max="255" value="0" /></label>
+          <label>Area id <input id="brush-area" type="number" min="0" max="255" value="0" /></label>
+          <label>Cost <input id="brush-cost" type="number" min="0.01" step="0.1" value="1" /></label>
+          <div class="checks">
+            <label><input id="brush-blocked" type="checkbox" /> Blocked</label>
+            <label><input id="brush-water" type="checkbox" /> Water</label>
+            <label><input id="brush-ramp" type="checkbox" /> Ramp</label>
+          </div>
+          <button id="paint-picked" type="button">Paint Picked</button>
+        </section>
+        <section>
+          <h2>Entity</h2>
+          <label>Template <input id="entity-template" type="text" value="unit.scout" /></label>
+          <button id="place-picked" type="button">Place At Pick</button>
+          <button id="select-picked" type="button">Select Near Pick</button>
+          <button id="remove-selected" type="button">Remove Selected</button>
+        </section>
+      </aside>
+
+      <aside class="panel right">
+        <section>
+          <h2>Map</h2>
+          <dl id="map-summary"></dl>
+        </section>
+        <section>
+          <h2>Navigation</h2>
+          <dl id="nav-summary"></dl>
+          <button id="rebake" type="button">Rebake Dirty</button>
+          <button id="query-path" type="button">Query Path</button>
+        </section>
+        <section>
+          <h2>Simulation</h2>
+          <p id="sim-summary">Pick start with left click, goal with right click in Sim.</p>
+        </section>
+      </aside>
+
+      <footer class="bottombar">
+        <span id="pick-status">No pick</span>
+        <span id="entity-status">No selection</span>
+        <span id="nav-status">Nav idle</span>
+      </footer>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

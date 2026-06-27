@@ -1,0 +1,41 @@
+{
+  "mode": "runtime-incremental",
+  "algorithm": "cdt",
+  "profiles": [
+    {
+      "id": "Small",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Medium",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Large",
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 4,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1
+  }
+}

@@ -61,6 +61,59 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenChildOverridesBoard_RemovesParentDataFile()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "spatialType": "Grid",
+                      "widthInMacroTiles": 1,
+                      "heightInMacroTiles": 1,
+                      "gridCellSizeCm": 100,
+                      "chunkSizeCells": 64,
+                      "dataFile": "parent.bin"
+                    }
+                  ]
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "spatialType": "Grid",
+                      "widthInMacroTiles": 1,
+                      "heightInMacroTiles": 1,
+                      "gridCellSizeCm": 100,
+                      "chunkSizeCells": 64
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Boards, Has.Count.EqualTo(1));
+                Assert.That(cfg.Boards[0].DataFile, Is.Null.Or.Empty);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void LoadMap_WhenParentCycleExists_Throws()
         {
             var tempRoot = CreateTempDir();

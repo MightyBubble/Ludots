@@ -2119,16 +2119,35 @@ namespace Ludots.Core.Engine
                     string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
-                        var vtxMap = LoadVertexMapFromFile(dataFile);
-                        if (vtxMap != null)
+                        if (string.Equals(Path.GetExtension(dataFile), ".ltrn", StringComparison.OrdinalIgnoreCase))
                         {
-                            terrainBoard.VertexMap = vtxMap;
-                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
-                            VertexMap = vtxMap;
+                            LogicTerrainField logicTerrain = LoadLogicTerrainFromFile(dataFile);
+                            if (logicTerrain.Topology != LogicTerrainTopology.Grid)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Board '{board.Name}' DataFile '{dataFile}' loaded unsupported LogicTerrain topology '{logicTerrain.Topology}'.");
+                            }
+
+                            terrainBoard.LogicTerrain = logicTerrain;
                             LogicTerrain = terrainBoard.LogicTerrain;
-                            SetService(CoreServiceKeys.VertexMap, vtxMap);
                             SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
-                            Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
+                            Diagnostics.Log.Info(
+                                in LogChannels.Engine,
+                                $"Loaded LogicTerrain {logicTerrain.WidthCells}x{logicTerrain.HeightCells} cells for board '{board.Name}'");
+                        }
+                        else
+                        {
+                            var vtxMap = LoadVertexMapFromFile(dataFile);
+                            if (vtxMap != null)
+                            {
+                                terrainBoard.VertexMap = vtxMap;
+                                terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
+                                VertexMap = vtxMap;
+                                LogicTerrain = terrainBoard.LogicTerrain;
+                                SetService(CoreServiceKeys.VertexMap, vtxMap);
+                                SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                                Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
+                            }
                         }
 
                         continue;
@@ -2155,6 +2174,68 @@ namespace Ludots.Core.Engine
                     }
                 }
             }
+
+            if (CurrentMapSession?.VisualHeightmap == null)
+            {
+                RefreshFocusedLogicTerrainVisualHeightmap(revision: 0);
+            }
+        }
+
+        public void ReplaceFocusedLogicTerrain(LogicTerrainField terrain, bool reloadNavServices = true)
+        {
+            if (terrain == null)
+            {
+                throw new ArgumentNullException(nameof(terrain));
+            }
+
+            MapSession session = CurrentMapSession
+                ?? throw new InvalidOperationException("Replacing LogicTerrain requires a focused map session.");
+            if (session.PrimaryBoard is not ITerrainBoard terrainBoard)
+            {
+                throw new InvalidOperationException(
+                    $"Focused map '{session.MapId.Value}' primary board is not terrain-backed.");
+            }
+
+            terrainBoard.LogicTerrain = terrain;
+            if (terrain.Topology == LogicTerrainTopology.Grid)
+            {
+                VertexMap = null;
+                RemoveService(CoreServiceKeys.VertexMap);
+            }
+
+            LogicTerrain = terrain;
+            SetService(CoreServiceKeys.LogicTerrain, terrain);
+
+            if (reloadNavServices)
+            {
+                LoadNavForMap(session.MapId.Value, session.MapConfig);
+                LoadPathingForSession(session);
+            }
+
+            RefreshFocusedLogicTerrainVisualHeightmap(revision: 0);
+        }
+
+        public void RefreshFocusedLogicTerrainVisualHeightmap(int revision)
+        {
+            if (LogicTerrain == null || LogicTerrain.Topology != LogicTerrainTopology.Grid)
+            {
+                return;
+            }
+
+            MapSession session = CurrentMapSession;
+            if (session?.VisualHeightmap != null &&
+                session.VisualHeightmap is not LogicTerrainVisualHeightmapAdapter)
+            {
+                return;
+            }
+
+            var visualHeightmap = new LogicTerrainVisualHeightmapAdapter(LogicTerrain, revision);
+            if (session != null)
+            {
+                session.VisualHeightmap = visualHeightmap;
+            }
+
+            SetService(CoreServiceKeys.VisualHeightmap, (IVisualHeightmap)visualHeightmap);
         }
 
         private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
@@ -2226,6 +2307,57 @@ namespace Ludots.Core.Engine
             {
                 stream.Dispose();
             }
+        }
+
+        private LogicTerrainField LoadLogicTerrainFromFile(string dataFile)
+        {
+            if (string.IsNullOrWhiteSpace(dataFile))
+            {
+                throw new ArgumentException("LogicTerrain DataFile is required.", nameof(dataFile));
+            }
+
+            using Stream stream = OpenTerrainDataFile(dataFile);
+            try
+            {
+                return LogicTerrainBinary.Read(stream);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or EndOfStreamException)
+            {
+                throw new InvalidDataException($"Failed to load LogicTerrainBinary '{dataFile}': {ex.Message}", ex);
+            }
+        }
+
+        private Stream OpenTerrainDataFile(string dataFile)
+        {
+            if (dataFile.StartsWith("/") || dataFile.StartsWith("\\")) dataFile = dataFile.Substring(1);
+
+            string rel = dataFile.Replace('\\', '/');
+            var candidates = new List<string>(6) { rel };
+            if (!rel.StartsWith("assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/{rel}");
+            }
+            if (!rel.Contains("Data/Maps", StringComparison.OrdinalIgnoreCase))
+            {
+                candidates.Add($"assets/Data/Maps/{rel}");
+            }
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                try { return VFS.GetStream($"Core:{candidates[i]}"); }
+                catch { }
+            }
+
+            foreach (var modId in ModLoader.LoadedModIds)
+            {
+                for (int i = 0; i < candidates.Count; i++)
+                {
+                    try { return VFS.GetStream($"{modId}:{candidates[i]}"); }
+                    catch { }
+                }
+            }
+
+            throw new FileNotFoundException($"Terrain DataFile was not found: {dataFile}");
         }
 
         private List<Trigger> InstantiateMapTriggers(MapDefinition definition, MapConfig mapConfig)
@@ -2341,6 +2473,18 @@ namespace Ludots.Core.Engine
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
+            int tileWidthCm = checked(LogicTerrain.ChunkSizeCells * LogicTerrain.HorizontalStepCm);
+            int tileHeightCm = checked(LogicTerrain.ChunkSizeCells * LogicTerrain.VerticalStepCm);
+            bool runtimeIncremental = bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental;
+            NavObstacleSet runtimeObstacles = null;
+            NavBakeService runtimeBakeService = null;
+            if (runtimeIncremental)
+            {
+                runtimeObstacles = new NavObstacleSet();
+                SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
+                runtimeBakeService = new NavBakeService(new CdtNavBakeAlgorithm());
+            }
+
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
             int widthChunks = LogicTerrain.WidthChunks;
             int heightChunks = LogicTerrain.HeightChunks;
@@ -2351,38 +2495,49 @@ namespace Ludots.Core.Engine
                 for (int pi = 0; pi < profileRegistry.Count; pi++)
                 {
                     int profileIndex = pi;
+                    string profileId = profileRegistry.GetId(profileIndex);
                     var uriCache = new Dictionary<NavTileId, string>(256);
 
                     string ResolveTileUri(NavTileId id)
                     {
                         if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
                         if (uriCache.TryGetValue(id, out var cached)) return cached;
-                        string profileId = profileRegistry.GetId(profileIndex);
                         string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
                         string uri = ResolveSingleExistingUri(rel);
                         uriCache[id] = uri;
                         return uri;
                     }
 
-                    for (int cy = 0; cy < heightChunks; cy++)
+                    if (!runtimeIncremental)
                     {
-                        for (int cx = 0; cx < widthChunks; cx++)
+                        for (int cy = 0; cy < heightChunks; cy++)
                         {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            for (int cx = 0; cx < widthChunks; cx++)
+                            {
+                                _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            }
                         }
                     }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                    var store = new NavTileStore(id =>
+                        runtimeIncremental
+                            ? OpenRuntimeIncrementalNavTileStream(
+                                mapId,
+                                id,
+                                profileId,
+                                bakeConfig,
+                                agentProfiles,
+                                runtimeObstacles,
+                                runtimeBakeService)
+                            : VFS.GetStream(ResolveTileUri(id)));
                     stores[new NavQueryServiceKey(layer, profileIndex)] = store;
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores);
+            var navRegistry = new NavQueryServiceRegistry(stores, tileWidthCm, tileHeightCm);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
-            if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
+            if (runtimeIncremental)
             {
-                var runtimeObstacles = new NavObstacleSet();
-                SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
                 var runtimeContext = new NavBakeContext
                 {
                     MapId = mapId,
@@ -2403,7 +2558,7 @@ namespace Ludots.Core.Engine
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 };
                 var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
-                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    runtimeBakeService,
                     runtimeContext,
                     navRegistry,
                     profileRegistry);
@@ -2418,6 +2573,69 @@ namespace Ludots.Core.Engine
         internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
         {
             LoadNavForMap(mapId, mapConfig);
+        }
+
+        private Stream OpenRuntimeIncrementalNavTileStream(
+            string mapId,
+            NavTileId id,
+            string profileId,
+            NavMeshBakeConfig bakeConfig,
+            AgentProfileRegistry agentProfiles,
+            NavObstacleSet runtimeObstacles,
+            NavBakeService bakeService)
+        {
+            string rel = NavAssetPaths.GetNavTileRelativePath(mapId, id.Layer, profileId, id.ChunkX, id.ChunkY);
+            if (TryResolveSingleExistingUri(rel, out string uri))
+            {
+                return VFS.GetStream(uri);
+            }
+
+            var context = new NavBakeContext
+            {
+                MapId = mapId,
+                ModId = string.Empty,
+                SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
+                Terrain = LogicTerrain ?? throw new InvalidOperationException("Runtime nav tile bake requires LogicTerrain."),
+                Obstacles = runtimeObstacles ?? throw new InvalidOperationException("Runtime nav tile bake requires RuntimeNavMeshObstacles."),
+                Config = bakeConfig ?? throw new ArgumentNullException(nameof(bakeConfig)),
+                AgentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles)),
+                Targets = new[] { new NavBakeTileCoord(id.ChunkX, id.ChunkY) },
+                BuildConfig = new NavBuildConfig(
+                    bakeConfig.RuntimeIncremental.HeightScaleMeters,
+                    bakeConfig.RuntimeIncremental.MinWalkableUpDot,
+                    bakeConfig.RuntimeIncremental.CliffHeightThreshold),
+                TileVersion = 1,
+                Mode = NavBakeMode.RuntimeIncremental,
+                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            NavBakeResult result = bakeService.Bake(context);
+            for (int i = 0; i < result.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = result.Entries[i];
+                if (entry.Layer != id.Layer || !string.Equals(entry.ProfileId, profileId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!entry.Success || entry.Tile == null)
+                {
+                    string message = string.IsNullOrWhiteSpace(entry.Artifact.Message)
+                        ? "runtime tile bake failed"
+                        : entry.Artifact.Message;
+                    throw new InvalidOperationException(
+                        $"Runtime nav tile bake failed for map '{mapId}', tile {id.ChunkX},{id.ChunkY}, layer {id.Layer}, profile '{profileId}': {message}");
+                }
+
+                var stream = new MemoryStream();
+                NavTileBinary.Write(stream, entry.Tile);
+                stream.Position = 0;
+                return stream;
+            }
+
+            throw new InvalidOperationException(
+                $"Runtime nav tile bake produced no tile for map '{mapId}', tile {id.ChunkX},{id.ChunkY}, layer {id.Layer}, profile '{profileId}'.");
         }
 
         private void ClearNavServices()

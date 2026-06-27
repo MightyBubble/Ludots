@@ -1,0 +1,13 @@
+{
+  "name": "LiveMapEditorNavGridUatMod",
+  "version": "1.0.0",
+  "description": "Resource-only UAT entry that opens the existing nav_editor_grid map with nav enabled and an explicit live-editor authoring overlay.",
+  "main": "",
+  "priority": 100,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["uat", "map-editor", "navigation"]
+}

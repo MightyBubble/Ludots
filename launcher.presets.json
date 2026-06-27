@@ -184,6 +184,17 @@
       "buildMode": "auto"
     },
     {
+      "id": "live_map_editor_nav_grid_cef_raylib",
+      "name": "Live Map Editor Nav Grid CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$live_map_editor_nav_grid_uat",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

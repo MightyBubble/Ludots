@@ -22,10 +22,24 @@ namespace Ludots.Core.Navigation.NavMesh
     public sealed class NavQueryServiceRegistry
     {
         private readonly Dictionary<NavQueryServiceKey, NavTileStore> _stores;
+        private readonly int _tileWidthCm;
+        private readonly int _tileHeightCm;
 
         public NavQueryServiceRegistry(Dictionary<NavQueryServiceKey, NavTileStore> stores)
+            : this(stores, tileWidthCm: 0, tileHeightCm: 0)
+        {
+        }
+
+        public NavQueryServiceRegistry(Dictionary<NavQueryServiceKey, NavTileStore> stores, int tileWidthCm, int tileHeightCm)
         {
             _stores = stores ?? throw new ArgumentNullException(nameof(stores));
+            if ((tileWidthCm <= 0) != (tileHeightCm <= 0))
+            {
+                throw new ArgumentOutOfRangeException(nameof(tileWidthCm), "Tile width and height must both be positive or both be omitted.");
+            }
+
+            _tileWidthCm = tileWidthCm;
+            _tileHeightCm = tileHeightCm;
         }
 
         public bool TryGetStore(int layer, int profile, out NavTileStore store)
@@ -33,11 +47,25 @@ namespace Ludots.Core.Navigation.NavMesh
             return _stores.TryGetValue(new NavQueryServiceKey(layer, profile), out store);
         }
 
+        public IReadOnlyList<KeyValuePair<NavQueryServiceKey, NavTileStore>> SnapshotStores()
+        {
+            var snapshot = new KeyValuePair<NavQueryServiceKey, NavTileStore>[_stores.Count];
+            int index = 0;
+            foreach (var kvp in _stores)
+            {
+                snapshot[index++] = kvp;
+            }
+
+            return snapshot;
+        }
+
         public bool TryCreateQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
         {
             if (TryGetStore(layer, profile, out var store))
             {
-                service = new NavQueryService(store, layer, areaCosts);
+                service = _tileWidthCm > 0
+                    ? new NavQueryService(store, layer, areaCosts, _tileWidthCm, _tileHeightCm)
+                    : new NavQueryService(store, layer, areaCosts);
                 return true;
             }
             service = null;
