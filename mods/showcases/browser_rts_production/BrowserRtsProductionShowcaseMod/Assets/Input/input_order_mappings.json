@@ -1,0 +1,69 @@
+{
+  "interactionMode": "AimCast",
+  "mappings": [
+    {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillW",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 1 },
+      "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillE",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 2 },
+      "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillR",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 3 },
+      "requireSelection": false,
+      "selectionType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Command",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "moveTo",
+      "argsTemplate": {},
+      "requireSelection": true,
+      "selectionType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "Stop",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "stop",
+      "argsTemplate": {},
+      "requireSelection": false,
+      "selectionType": "None",
+      "isSkillMapping": false,
+      "modifierBehavior": "IgnoreModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": true,
+    "persistPath": "user://BrowserRtsProductionShowcaseMod/input_preferences.json"
+  }
+}

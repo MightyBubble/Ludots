@@ -1,0 +1,28 @@
+[
+  {
+    "id": "rts_ra_conyard_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": ["State.Rts.RedAlert.Ready.PowerPlant"],
+        "slotOverrides": [
+          { "slotIndex": 0, "abilityId": "Ability.Rts.RedAlert.PlacePowerPlant" }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": ["State.Rts.RedAlert.Ready.Refinery"],
+        "slotOverrides": [
+          { "slotIndex": 1, "abilityId": "Ability.Rts.RedAlert.PlaceRefinery" }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": ["State.Rts.RedAlert.Ready.WarFactory"],
+        "slotOverrides": [
+          { "slotIndex": 2, "abilityId": "Ability.Rts.RedAlert.PlaceWarFactory" }
+        ]
+      }
+    ]
+  }
+]
