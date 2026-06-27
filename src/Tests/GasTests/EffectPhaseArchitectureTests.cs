@@ -14,7 +14,7 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// Unit tests for the Phase Graph architecture components:
-    ///   EffectPhaseGraphBindings, EffectConfigParams, PresetBehaviorRegistry,
+    ///   EffectPhaseGraphBindings, EffectConfigParams,
     ///   EffectPhaseExecutor, new Math/BB/Config Graph Ops.
     /// </summary>
     [TestFixture]
@@ -143,32 +143,6 @@ namespace Ludots.Tests.GAS
             }
             That(cp.TryAddFloat(999, 0f), Is.False);
             That(cp.Count, Is.EqualTo(EffectConfigParams.MAX_PARAMS));
-        }
-
-        // ════════════════════════════════════════════════════════════════════
-        //  PresetBehaviorRegistry
-        // ════════════════════════════════════════════════════════════════════
-
-        [Test]
-        public unsafe void PresetRegistry_RegisterAndGet_ReturnsCorrectMainGraphId()
-        {
-            var reg = new PresetBehaviorRegistry();
-            var desc = new PresetBehaviorDescriptor();
-            desc.SetMainGraphId(EffectPhaseId.OnApply, 501);
-            desc.SetMainGraphId(EffectPhaseId.OnPeriod, 502);
-            reg.Register(EffectPresetType.ApplyForce2D, desc);
-
-            That(reg.GetMainGraphId(EffectPresetType.ApplyForce2D, EffectPhaseId.OnApply), Is.EqualTo(501));
-            That(reg.GetMainGraphId(EffectPresetType.ApplyForce2D, EffectPhaseId.OnPeriod), Is.EqualTo(502));
-            That(reg.GetMainGraphId(EffectPresetType.ApplyForce2D, EffectPhaseId.OnExpire), Is.EqualTo(0));
-        }
-
-        [Test]
-        public void PresetRegistry_UnregisteredPreset_ReturnsZero()
-        {
-            var reg = new PresetBehaviorRegistry();
-            That(reg.GetMainGraphId(EffectPresetType.None, EffectPhaseId.OnApply), Is.EqualTo(0));
-            That(reg.GetMainGraphId(EffectPresetType.ApplyForce2D, EffectPhaseId.OnApply), Is.EqualTo(0));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -389,6 +363,55 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        [Test]
+        public void PhaseExecutor_ConfiguredMissingGraph_ThrowsWithGraphId()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 404);
+
+            var ex = Throws<InvalidOperationException>(() => executor.ExecutePhase(
+                world,
+                api,
+                world.Create(),
+                world.Create(),
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None));
+
+            That(ex!.Message, Does.Contain("graphId=404"));
+        }
+
+        [Test]
+        public void AbilityActivationPrecondition_MissingGraph_ThrowsWithGraphId()
+        {
+            using var world = World.Create();
+            var precondition = new AbilityActivationPrecondition { ValidationGraphId = 405 };
+            var programs = new GraphProgramRegistry();
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+
+            var ex = Throws<InvalidOperationException>(() => AbilityActivationPreconditionEvaluator.Evaluate(
+                world,
+                world.Create(),
+                world.Create(),
+                default,
+                abilityId: 9001,
+                in precondition,
+                programs,
+                api));
+
+            That(ex!.Message, Does.Contain("graphId=405"));
         }
 
         // ════════════════════════════════════════════════════════════════════

@@ -1299,8 +1299,8 @@ namespace Ludots.Tests.GAS
                     ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
                     ""participatesInResponse"": true,
                     ""grantedTags"": [
-                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6, ""base"": 0 },
-                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1, ""base"": 0 }
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
                     ]
                 }");
 

@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasPresentationEventBuffer _presentationEvents;
         private readonly TagOps _tagOps;
 
-        // 鈹€鈹€ Phase Graph execution (optional) 鈹€鈹€
+        // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
@@ -373,7 +373,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         });
                     }
 
-                    // 鈹€鈹€ Execute OnPropose Phase Graphs (before ResponseChain) 鈹€鈹€
+                    // Execute OnPropose Phase Graphs (before ResponseChain)
                     ExecuteOnProposePhase(in root, in rootTpl);
 
                     if (rootTpl.ParticipatesInResponse)
@@ -797,7 +797,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
-                        // 鈹€鈹€ Execute OnCalculate Phase Graphs (after ResponseChain resolves) 鈹€鈹€
+                        // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
                         if (IsPureInstantTemplate(in tpl))
@@ -828,7 +828,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                             // Dispatch OnApply Phase Listeners even for pure-instant effects.
                             // Modifiers are applied inline above (equivalent to Main handler),
-                            // but Listeners must still fire for observability 鈥?e.g. "whenever
+                            // but Listeners must still fire for observability, e.g. "whenever
                             // damage is dealt, draw a card" or "thorns: reflect damage on hit".
                             if (_phaseExecutor != null && _graphApi != null)
                             {
@@ -920,7 +920,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int consumed = _rootCursor;
             if (_phase == WindowPhase.Collect || _phase == WindowPhase.WaitInput)
             {
-                // Current root hasn't been resolved yet 鈥?safe to re-process it.
+                // Current root hasn't been resolved yet; safe to re-process it.
                 consumed = _rootCursor > 0 ? _rootCursor - 1 : 0;
             }
             if (consumed > 0 && _queue != null)
@@ -1041,7 +1041,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
         {
-            // 鈹€鈹€ Stack merge: if template has stack policy and an existing effect exists on target, merge 鈹€鈹€
+            // Stack merge: if template has stack policy and an existing effect exists on target, merge.
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
             {
@@ -1273,4 +1273,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
     }
 }
-

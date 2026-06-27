@@ -310,7 +310,7 @@ namespace Ludots.Tests.GAS
 
         // ════════════════════════════════════════════════════════════════════
         //  Section 4: EffectPhaseExecutor — PresetType integration
-        //  (Previously: all tests used legacy PresetBehaviorRegistry constructor)
+        //  (Previously: all tests used the retired preset behavior registry constructor)
         // ════════════════════════════════════════════════════════════════════
 
         [Test]

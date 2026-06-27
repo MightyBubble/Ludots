@@ -101,11 +101,11 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed �?unified into Performer entity-scoped definitions
+        // WorldHudConfig removed; unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
         public const string RoadSplineBuffer = "RoadSplineBuffer";
-        // IndicatorRequestBuffer removed �?unified into Performer direct API
+        // IndicatorRequestBuffer removed; unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerEntityRuntime = "PerformerEntityRuntime";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";

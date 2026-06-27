@@ -1,19 +1,8 @@
-using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.Input.Runtime
 {
-    public abstract class InputProcessor
-    {
-        public abstract Vector3 Process(Vector3 value, IReadOnlyList<InputParameterDef> parameters);
-    }
-
-    public abstract class InputComposite
-    {
-        public abstract Vector3 Evaluate(Func<int, Vector3> getPartValue);
-    }
-
     public class InputActionInstance
     {
         public InputActionDef Definition { get; }

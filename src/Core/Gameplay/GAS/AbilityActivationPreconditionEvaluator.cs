@@ -28,13 +28,13 @@ namespace Ludots.Core.Gameplay.GAS
             if (graphPrograms == null || graphApi == null)
             {
                 throw new InvalidOperationException(
-                    $"Ability {abilityId} requires activation validation graph {precondition.ValidationGraphId}, but graph validation services are not configured.");
+                    $"Ability {abilityId} requires activation validation graphId={precondition.ValidationGraphId}, but graph validation services are not configured.");
             }
 
             if (!graphPrograms.TryGetProgram(precondition.ValidationGraphId, out var validationProgram))
             {
                 throw new InvalidOperationException(
-                    $"Ability {abilityId} references missing activation validation graph {precondition.ValidationGraphId}.");
+                    $"Ability {abilityId} references missing activation validation graphId={precondition.ValidationGraphId}.");
             }
 
             return GasGraphExecutor.ExecuteValidation(

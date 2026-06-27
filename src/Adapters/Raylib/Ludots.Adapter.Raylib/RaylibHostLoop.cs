@@ -537,7 +537,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame 鈥?no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();

@@ -115,7 +115,7 @@ namespace Ludots.Core.Gameplay.GAS
 
     public struct AbilityDefinition
     {
-        // 鈹€鈹€ Generic execution model 鈹€鈹€
+        // Generic execution model
         public AbilityExecSpec ExecSpec;
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
@@ -129,11 +129,11 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityActivationPrecondition ActivationPrecondition;
         public bool HasActivationPrecondition;
 
-        // 鈹€鈹€ Toggle mode 鈹€鈹€
+        // Toggle mode
         public bool HasToggleSpec;
         public AbilityToggleSpec ToggleSpec;
 
-        // 鈹€鈹€ Presentation metadata 鈹€鈹€
+        // Presentation metadata
         public bool HasIndicator;
         public AbilityIndicatorConfig Indicator;
         public bool HasPresentation;
@@ -265,4 +265,3 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
-
