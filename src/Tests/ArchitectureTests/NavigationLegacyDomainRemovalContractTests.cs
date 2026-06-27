@@ -57,15 +57,54 @@ namespace Ludots.Tests.Architecture
                 string.Join(Environment.NewLine, hits));
         }
 
+        [Test]
+        public void Repository_MassNavigationDomainSources_DoNotReintroduceRemovedPrefixIdentifiers()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] tokens =
+            {
+                Join("Mass", "Crowd"),
+                Join("Mass", "Flow"),
+                Join("Mass", "Move"),
+            };
+
+            var hits = Scan(
+                repoRoot,
+                new[] { "src", "mods" },
+                tokens,
+                ignoreExternalReferenceLines: true);
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "Removed mass-navigation prefix identifiers must not appear in source or mod assets:" +
+                Environment.NewLine +
+                string.Join(Environment.NewLine, hits));
+        }
+
         private static List<string> Scan(string repoRoot, IReadOnlyList<string> tokens)
         {
+            return Scan(repoRoot, repositoryRoots: null, tokens, ignoreExternalReferenceLines: false);
+        }
+
+        private static List<string> Scan(
+            string repoRoot,
+            IReadOnlyList<string>? repositoryRoots,
+            IReadOnlyList<string> tokens,
+            bool ignoreExternalReferenceLines)
+        {
             var hits = new List<string>();
-            foreach (string file in EnumerateRepositoryFiles(repoRoot))
+            foreach (string file in EnumerateRepositoryFiles(repoRoot, repositoryRoots))
             {
                 int lineNumber = 0;
                 foreach (string line in File.ReadLines(file))
                 {
                     lineNumber++;
+                    if (ignoreExternalReferenceLines && IsExternalReferenceLine(line))
+                    {
+                        continue;
+                    }
+
                     for (int i = 0; i < tokens.Count; i++)
                     {
                         string token = tokens[i];
@@ -80,7 +119,7 @@ namespace Ludots.Tests.Architecture
             return hits;
         }
 
-        private static IEnumerable<string> EnumerateRepositoryFiles(string repoRoot)
+        private static IEnumerable<string> EnumerateRepositoryFiles(string repoRoot, IReadOnlyList<string>? repositoryRoots)
         {
             var excludedDirectories = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -95,6 +134,12 @@ namespace Ludots.Tests.Architecture
                 .Where(file =>
                 {
                     string relative = ToRepoRelativePath(repoRoot, file);
+                    if (repositoryRoots != null &&
+                        !repositoryRoots.Any(root => IsUnderRepositoryRoot(relative, root)))
+                    {
+                        return false;
+                    }
+
                     if (relative.Equals("src/Tests/ArchitectureTests/NavigationLegacyDomainRemovalContractTests.cs", StringComparison.OrdinalIgnoreCase))
                     {
                         return false;
@@ -103,6 +148,18 @@ namespace Ludots.Tests.Architecture
                     string[] segments = relative.Split('/');
                     return !segments.Any(segment => excludedDirectories.Contains(segment));
                 });
+        }
+
+        private static bool IsUnderRepositoryRoot(string relative, string root)
+        {
+            return relative.Equals(root, StringComparison.OrdinalIgnoreCase) ||
+                   relative.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsExternalReferenceLine(string line)
+        {
+            return line.Contains("://", StringComparison.Ordinal) &&
+                   line.Contains("wiki", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string Join(params string[] parts)

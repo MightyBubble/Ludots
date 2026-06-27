@@ -3,7 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
@@ -144,7 +144,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (wantsNavigationSink)
             {
-                Upsert(entity, BuildSingleMassFlowProjection(
+                Upsert(entity, BuildSingleMassNavigationFlowProjection(
                     entity,
                     in intent,
                     shapeDataIndex,
@@ -159,7 +159,7 @@ namespace Ludots.Core.Physics2D.Systems
                     RemoveNavigationDerivedState(entity);
                 }
 
-                RemoveIfPresent<MassFlowObstacleProjection>(entity);
+                RemoveIfPresent<MassNavigationFlowObstacleProjection>(entity);
             }
 
             Upsert(entity, new ManifestationObstacleBridge2DState
@@ -241,7 +241,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (obstacle.SinkNavigationObstacle != 0)
             {
-                Upsert(entity, BuildCompoundMassFlowProjection(entity, in state));
+                Upsert(entity, BuildCompoundMassNavigationFlowProjection(entity, in state));
             }
             else
             {
@@ -250,7 +250,7 @@ namespace Ludots.Core.Physics2D.Systems
                     RemoveNavigationDerivedState(entity);
                 }
 
-                RemoveIfPresent<MassFlowObstacleProjection>(entity);
+                RemoveIfPresent<MassNavigationFlowObstacleProjection>(entity);
             }
 
             if (removeDirty)
@@ -551,7 +551,7 @@ namespace Ludots.Core.Physics2D.Systems
                 : Fix64.Zero;
         }
 
-        private MassFlowObstacleProjection BuildSingleMassFlowProjection(
+        private MassNavigationFlowObstacleProjection BuildSingleMassNavigationFlowProjection(
             Entity entity,
             in ManifestationObstacleIntent2D intent,
             int shapeDataIndex,
@@ -562,13 +562,13 @@ namespace Ludots.Core.Physics2D.Systems
             int navRadiusCm = ResolveNavRadiusCm(entity, in intent, shapeDataIndex).RoundToInt();
             if (navRadiusCm <= 0)
             {
-                throw new InvalidOperationException($"ManifestationObstacleIntent2D entity {entity.Id} requires navRadiusCm > 0 for MassFlow projection.");
+                throw new InvalidOperationException($"ManifestationObstacleIntent2D entity {entity.Id} requires navRadiusCm > 0 for MassNavigationFlow projection.");
             }
 
             Fix64Vec2 offset = ShapeWorldTransform2D.RotateLocal(
                 Fix64Vec2.FromInt(intent.LocalOffsetXCm, intent.LocalOffsetYCm),
                 rotation);
-            var projection = new MassFlowObstacleProjection
+            var projection = new MassNavigationFlowObstacleProjection
             {
                 ShapeSignature = shapeSignature,
                 PoseSignature = poseSignature,
@@ -582,10 +582,10 @@ namespace Ludots.Core.Physics2D.Systems
             return projection;
         }
 
-        private MassFlowObstacleProjection BuildCompoundMassFlowProjection(Entity entity, in CompoundObstacle2DState state)
+        private MassNavigationFlowObstacleProjection BuildCompoundMassNavigationFlowProjection(Entity entity, in CompoundObstacle2DState state)
         {
             Fix64 rotation = ResolveRotation(entity);
-            var projection = new MassFlowObstacleProjection
+            var projection = new MassNavigationFlowObstacleProjection
             {
                 ShapeSignature = state.ShapeSignature,
                 PoseSignature = state.PoseSignature,
@@ -596,7 +596,7 @@ namespace Ludots.Core.Physics2D.Systems
                 int radiusCm = state.GetNavRadiusCm(i);
                 if (radiusCm <= 0)
                 {
-                    throw new InvalidOperationException($"CompoundObstacle2D piece {i} requires navRadiusCm > 0 for MassFlow projection.");
+                    throw new InvalidOperationException($"CompoundObstacle2D piece {i} requires navRadiusCm > 0 for MassNavigationFlow projection.");
                 }
 
                 Fix64Vec2 offset = ShapeWorldTransform2D.RotateLocal(ResolveCompoundPieceOffsetCm(in state, i), rotation);
@@ -686,7 +686,7 @@ namespace Ludots.Core.Physics2D.Systems
 
         private void RemoveNavigationDerivedState(Entity entity)
         {
-            RemoveIfPresent<MassFlowObstacleProjection>(entity);
+            RemoveIfPresent<MassNavigationFlowObstacleProjection>(entity);
         }
 
         private void MarkStaticBodyActive(Entity entity)

@@ -306,17 +306,13 @@ namespace Ludots.Tests.Architecture
                     SpatialScaleDefaults.TerrainChunkCells,
                     chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
 
-            var loadNav = typeof(GameEngine).GetMethod("LoadNavForMap", BindingFlags.Instance | BindingFlags.NonPublic)
-                ?? throw new MissingMethodException(nameof(GameEngine), "LoadNavForMap");
-            loadNav.Invoke(engine, new object[]
-            {
+            engine.LoadNavForMapForTests(
                 mapId,
                 new MapConfig
                 {
                     Id = mapId,
                     Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
-                }
-            });
+                });
 
             return engine;
         }

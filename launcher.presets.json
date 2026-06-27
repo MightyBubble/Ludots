@@ -29,24 +29,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "nav_playground_raylib",
-      "name": "Navigation Playground Raylib",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "nav_playground_web",
-      "name": "Navigation Playground Web",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "web",
-      "buildMode": "auto"
-    },
-    {
       "id": "champion_skill_stress_raylib",
       "name": "Champion Skill Stress Raylib",
       "selectors": [
@@ -119,19 +101,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_mass_nav_large_world_10k_raylib",
+      "id": "capability_standard_mass_navigation_large_world_10k_raylib",
       "name": "Capability Standard Mass Navigation Large World 10K Raylib",
       "selectors": [
-        "$capability_standard_mass_nav_large_world_10k"
+        "$capability_standard_mass_navigation_large_world_10k"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_total_war_like_raylib",
-      "name": "Capability Standard Total War Like Raylib",
+      "id": "formation_capability_showcase_raylib",
+      "name": "Formation Capability Showcase Raylib",
       "selectors": [
-        "$capability_standard_total_war_like"
+        "$formation_capability_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

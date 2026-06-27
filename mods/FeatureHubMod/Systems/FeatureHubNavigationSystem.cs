@@ -24,7 +24,7 @@ namespace FeatureHubMod.Systems
             ("<Keyboard>/5", "tcg_modify",         "[5] TCG Demo        - Response Chain, Modify/Hook"),
             ("<Keyboard>/6", "fourx_entry",        "[6] 4X Demo         - Build, Colonize, Tag Gating"),
             ("<Keyboard>/7", "audit_outer",        "[7] Map Lifecycle   - Push/Pop/Reload (I/O/P keys)"),
-            ("<Keyboard>/8", "mass_navigation",   "[8] Mass Navigation - MassFlow, ORCA Avoidance"),
+            ("<Keyboard>/8", "mass_navigation",   "[8] Mass Navigation - MassNavigationFlow, ORCA Avoidance"),
             ("<Keyboard>/9", "visual_benchmark",   "[9] Performance     - 100K Entities, Health Bars"),
             ("<Keyboard>/0", "feature_hub",        "[0] << Back to Hub"),
         };

@@ -472,7 +472,7 @@ namespace Ludots.Tests.Architecture
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_mass_nav_large_world_10k" },
+                        new[] { "$capability_standard_mass_navigation_large_world_10k" },
                         LauncherPlatformIds.Raylib,
                     LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
@@ -481,12 +481,12 @@ namespace Ludots.Tests.Architecture
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_total_war_like" },
+                        new[] { "$formation_capability_showcase" },
                         LauncherPlatformIds.Raylib,
                     LauncherBuildMode.Never).Plan,
-                    expectedRootModId: "CapabilityStandardTotalWarLikeMod",
-                    expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTotalWarLikeMod" });
+                    expectedRootModId: "FormationCapabilityShowcaseMod",
+                    expectedStartupMapId: "formation_capability_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "FormationCapabilityShowcaseMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1038,7 +1038,6 @@ namespace Ludots.Tests.Architecture
             Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("MassNavigationTotalWarEntryMod"));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));

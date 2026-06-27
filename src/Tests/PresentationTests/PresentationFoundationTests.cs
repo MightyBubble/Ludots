@@ -677,7 +677,7 @@ namespace Ludots.Tests.Presentation
             const int selectionVisibleParam = 701;
 
             int definitionId = definitions.Register(
-                "performer.massflow.agent",
+                "performer.mass_navigation_flow.agent",
                 new PerformerDefinition
                 {
                     Behaviors =

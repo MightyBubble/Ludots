@@ -6,7 +6,7 @@ Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). Subissue
 
 Before NAV-10, navmesh was an offline artifact. If a persistent structural obstacle appeared at runtime, such as a wall, door, bridge, or building footprint, the existing navmesh still described the old walkable topology. Precise mesh paths could therefore cross the new wall until a full offline bake regenerated the tiles.
 
-Temporary dynamic avoidance is not part of this page. Unit-to-unit avoidance, short lived blockers, and crowd pressure remain MassFlow runtime behavior.
+Temporary dynamic avoidance is not part of this page. Unit-to-unit avoidance, short lived blockers, and crowd pressure remain MassNavigationFlow runtime behavior.
 
 ## Target
 
@@ -21,7 +21,7 @@ Runtime incremental rebuild adds a production path for sparse structural changes
 - Successful rebuilt tiles are atomically published through `NavTileStore.Replace`.
 - `NavQueryService.TryFindPath` runs under a store revision guard and returns `NotReady` instead of a mixed-revision path if a rebuild changes tiles mid-query.
 
-The implementation intentionally does not create `ObstacleGeometryProfile2D`, a MassFlow obstacle sidecar, a private map loader, or a fallback full-bake path.
+The implementation intentionally does not create `ObstacleGeometryProfile2D`, a MassNavigationFlow obstacle sidecar, a private map loader, or a fallback full-bake path.
 
 ## User Story
 
@@ -97,7 +97,7 @@ Structural rebuild eligibility is authored as an ECS marker on the same entity t
 }
 ```
 
-Entities without `RuntimeNavMeshStructuralObstacle` can still contribute to Physics2D and MassFlow obstacle projections, but they do not dirty navmesh tiles.
+Entities without `RuntimeNavMeshStructuralObstacle` can still contribute to Physics2D and MassNavigationFlow obstacle projections, but they do not dirty navmesh tiles.
 
 ## Config To Behavior Tests
 
@@ -108,7 +108,7 @@ Entities without `RuntimeNavMeshStructuralObstacle` can still contribute to Phys
 | Runtime rebuild bake fails | Previous tile remains readable; store revision does not advance | `RuntimeIncrementalNavMeshRebuildQueue_FailedBakeKeepsReadablePreviousTile` |
 | Obstacle layer id has wrong casing | Bake fails fast as unknown nav layer | `CdtBake_ConsumesObstacleSetWithStrictLayerId` |
 | Obstacle bridge changes or moves a structural obstacle marker entity | Runtime dirty system rebuilds from bridge state and `ShapeDataStorage2D` | `RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource` |
-| Obstacle bridge changes an unmarked navigation obstacle | Runtime dirty system ignores it; MassFlow avoidance remains responsible | `RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource` |
+| Obstacle bridge changes an unmarked navigation obstacle | Runtime dirty system ignores it; MassNavigationFlow avoidance remains responsible | `RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource` |
 | Runtime mode is disabled between map loads | Dirty system clears local tracked obstacle state and does not dirty stale tiles | `RuntimeNavMeshObstacleDirtySystem_ClearsTrackedStateWhenRuntimeModeStops` |
 | Default `offline` / `recast` config is loaded | Runtime obstacle set and rebuild queue are not registered | `GameEngine_NavBootstrap_OfflineRecastDoesNotRegisterRuntimeIncrementalQueue` |
 | Store revision changes during query | Query retries and can return `NotReady` instead of mixed data | `NavTileStore_StableReadRejectsMixedRevision` |
@@ -131,7 +131,7 @@ NAV-10 does not merge another branch. It builds on the NAV-3/NAV-5 code already 
 
 - Data-driven: runtime rebuild budget and build tuning come from `Navigation/navmesh.json`.
 - No fallback: runtime incremental only accepts CDT, bad config fails fast, failed tiles do not trigger full-map bake.
-- No duplicate source: structural obstacle geometry comes from the Physics2D bridge SSOT, not MassFlow approximation or a private loader.
+- No duplicate source: structural obstacle geometry comes from the Physics2D bridge SSOT, not MassNavigationFlow approximation or a private loader.
 - Strict casing: layer ids are matched with `StringComparison.Ordinal`.
 - Contract tests cover dirty AABB mapping, budget FIFO, failed bake preservation, bootstrap registration gating, obstacle layer strictness, SSOT dirty capture, and revision guarded reads.
 - Remaining showcase gap: #304's headed UAT still needs a real preset that creates/destroys a structural obstacle and demonstrates select/move/path update feedback. Current NAV-10 verification is contract-level only.

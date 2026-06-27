@@ -146,9 +146,9 @@ Physics2D 的时钟域与事件出口由 `Physics2DController` 管理，并通�
 
 RTS 风格移动同样遵循 sink 分层纪律。
 
-- gameplay / order system 可以决定 authored target，并写入 MassFlow per-agent target sink
-- MassFlow target 是 gameplay 到 execution 的点目标 sink 契约
-- route / move-plan 层负责路径采样，MassFlow 负责实际推进与避让
+- gameplay / order system 可以决定 authored target，并写入 MassNavigationFlow per-agent target sink
+- MassNavigationFlow target 是 gameplay 到 execution 的点目标 sink 契约
+- route / move-plan 层负责路径采样，MassNavigationFlow 负责实际推进与避让
 - Physics2D 消费 navigation 输出，并负责 nav-driven body 的唤醒 / 休眠正确性
 
 这意味着 gameplay 与 showcase mod 不得：
@@ -156,7 +156,7 @@ RTS 风格移动同样遵循 sink 分层纪律。
 - 把派生移动状态当作直接移动输入写入
 - 在普通 nav-follow 移动里直接写 `ForceInput2D`
 - 每帧篡改 `Position2D` / `WorldPositionCm` 强推位移
-- 在存在有效 MassFlow target 时，在 feature 代码里重复实现睡眠唤醒逻辑
+- 在存在有效 MassNavigationFlow target 时，在 feature 代码里重复实现睡眠唤醒逻辑
 
 关于 authoritative order queue / nav plan / execution 的正式拆分，见 `docs/architecture/order_navigation_movement.md`。
 

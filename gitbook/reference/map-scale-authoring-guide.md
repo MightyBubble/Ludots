@@ -33,17 +33,17 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 | `assets/Maps/<map>.json` | `Boards[].GridCellSizeCm` | `CellCm` 输入，决定每个 sim cell 的厘米边长 |
 | `assets/Maps/<map>.json` | `Boards[].HexEdgeLengthCm` | HexGrid 专属 hex 边长；Grid / NodeGraph 不受它影响 |
 | `assets/Maps/<map>.json` | `Boards[].ChunkSizeCells` | `PartitionChunkCells`，只控制 spatial query/AOI 分区 |
-| asset game.json | `startupMapId` | 启动地图 id |
-| asset game.json | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
-| asset game.json | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
-| asset game.json | `presentation.minimap.*` | 小地图缩放、full-map/follow-camera 等表现策略 |
-| MassNavigationConfig asset | `world.solverWindowWidthCm` / `solverWindowHeightCm` | MassFlow 工作窗口，必须和 solver field 宽高一致 |
-| MassNavigationConfig asset | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
-| MassNavigationConfig asset | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
-| MassNavigationConfig asset | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
+| `assets/game.json` | `startupMapId` | 启动地图 id |
+| `assets/game.json` | `presentation.*Capacity` | 表现层容量，跟实体/marker/overlay 数量相关 |
+| `assets/game.json` | `presentation.cameraCulling.*DistanceCm` | 近中远 LOD 裁剪距离 |
+| `assets/game.json` | `presentation.minimap.*` | 小地图缩放、full-map/follow-camera 等表现策略 |
+| `assets/MassNavigationConfig.json` | `world.solverWindowWidthCm` / `solverWindowHeightCm` | MassNavigationFlow 工作窗口，必须和 solver field 宽高一致 |
+| `assets/MassNavigationConfig.json` | `solver.fieldWidthCm` / `fieldHeightCm` | FlowWindow 尺寸，单位 cm |
+| `assets/MassNavigationConfig.json` | `solver.flowCellSizeCm` | FlowCell 分辨率，单位 cm |
+| `assets/MassNavigationConfig.json` | `solver.separationHashCellSizeCm` / `hardResolveHashCellSizeCm` | 避障 hash 分辨率，单位 cm |
 | `assets/Configs/Navigation/agent_profiles.json` | `radiusCm` / `heightCm` / `clearanceCm` / `draftCm` / `beamCm` / `mass` / `layer` | agent 几何、避障身份与 NodeGraph 运输容量 SSOT |
 | `assets/Configs/Navigation/navmesh.json` | `mode` / `algorithm` / `profiles[].maxClimbCm` / `maxSlopeDeg` | bake/runtime incremental 的导航网格参数 |
-| `assets/Configs/Navigation/pathing.json` | `agentTypes[].profileId` / `selection.mode` | 哪些 profile 走精确 route，哪些继续 MassFlow |
+| `assets/Configs/Navigation/pathing.json` | `agentTypes[].profileId` / `selection.mode` | 哪些 profile 走精确 route，哪些继续 MassNavigationFlow |
 
 生产 Mod 建议在 map `Boards[]` 里显式写 board 尺度。极小 demo 可以沿用默认，但一旦涉及导航、streaming、minimap 或性能验收，就不要靠隐式默认。
 
@@ -56,7 +56,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 5. 定分区粒度：`ChunkSizeCells` 影响 spatial query/AOI，不改变世界大小。当前默认 64 cells，必须为 2 的幂。
 6. 定导航粒度：agent 半径、clearance、`maxClimbCm`、`maxSlopeDeg` 决定哪些地方可走。
 6. 估 bake 预算：用 [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md) 或 HTML 入门页算 full/dirty/window target tiles、layer/profile 乘数、Recast voxel 粒度和耗时区间。
-7. 定执行窗口：MassFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
+7. 定执行窗口：MassNavigationFlow 不是全世界每格都算，通常用 `FlowWindow` 覆盖当前战区、相机焦点或热区。
 8. 定运行精度：`flowCellSizeCm` 控流场网格，hash cell 控拥挤/硬解析邻居搜索。
 9. 定表现容量：大地图不等于所有 performer 都常驻；用 camera culling、view residency、minimap 策略控制看见什么。
 
@@ -72,7 +72,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 - `MassNavigationConfig.world.solverWindowWidthCm` / `HeightCm` 和 `solver.fieldWidthCm` / `fieldHeightCm` 先取 `10000cm` 到 `48000cm` 这类战区窗口，而不是全图。
 - `flowCellSizeCm = 100` 常作为 1m 流场；密集微操可降到 50cm，但 grid 数量会翻倍。
 - `hardResolveHashCellSizeCm = 50` 用于硬解析细邻居，允许小于 `CellCm`，但必须显式配置并整除 FlowWindow。
-- 需要小队/道路/门洞等精确移动时，用 `Navigation/pathing.json` 只让特定 profile 走 `PreferGraph` / `PreferMesh`；大军继续 MassFlow。
+- 需要小队/道路/门洞等精确移动时，用 `Navigation/pathing.json` 只让特定 profile 走 `PreferGraph` / `PreferMesh`；大军继续 MassNavigationFlow。
 
 配置片段：
 
@@ -91,7 +91,7 @@ worldHeightCm = HeightInMacroTiles * MacroTileCells(256) * GridCellSizeCm
 }
 ```
 
-MassFlow 起点：
+MassNavigationFlow 起点：
 
 ```json
 {
@@ -124,7 +124,7 @@ MassFlow 起点：
 - 地块、城市、道路节点可以是业务数据或 NodeGraph，不要为了 4X 地块把 `CellCm` 改成 10km。
 - `WidthInMacroTiles` 可以按大陆范围定；如果只做菜单/棋盘 demo，可以不急着开巨大 board。
 - 重点调 `Navigation/pathing.json`：商队、军队、船只可按 profile 选择 `PreferGraph` 或 `AutoCheapest`。
-- MassFlow 通常只用于局部战斗或拥挤区域，不要把整个大陆做成单个 FlowWindow。
+- MassNavigationFlow 通常只用于局部战斗或拥挤区域，不要把整个大陆做成单个 FlowWindow。
 - 小地图一般用 full-map preset，表现容量按城市/军队/marker 数量估算。
 
 配置片段：
@@ -174,7 +174,7 @@ Routing 起点：
 - `MassNavigationConfig.world.streamingChunkSizeCm` 可从 `ChunkSizeCells * GridCellSizeCm` 起步，例如 64 cells * 100cm = `6400cm`。
 - `streamingRadiusCm` 覆盖相机/玩家周围几圈 streaming chunk。
 - 动态门、桥、建筑等持久结构变化走 `Navigation/navmesh.json` 的 `runtime-incremental` + `cdt`，并给实体加 `RuntimeNavMeshStructuralObstacle`。
-- 临时人群拥堵、短寿命 blocker 仍归 MassFlow runtime avoidance，不应触发 navmesh rebuild。
+- 临时人群拥堵、短寿命 blocker 仍归 MassNavigationFlow runtime avoidance，不应触发 navmesh rebuild。
 
 Board 起点：
 
@@ -229,7 +229,7 @@ Runtime incremental 起点：
 - `PartitionChunk` 只用于 spatial query/AOI；不要拿它解释 terrain/navmesh tile。
 - `TerrainChunk` 当前等于 NavTile footprint；`NavTile footprint` 不是独立尺度 owner。
 - `FlowCell` / `AvoidanceHashCell` / `PhysicsBroadphaseCell` 默认可等于 `CellCm`，但 owner 独立。
-- MassFlow `world.solverWindowWidthCm/HeightCm` 必须匹配 `solver.fieldWidthCm/fieldHeightCm`。
+- MassNavigationFlow `world.solverWindowWidthCm/HeightCm` 必须匹配 `solver.fieldWidthCm/fieldHeightCm`。
 - `FlowWindow` 必须能被 `flowCellSizeCm`、`separationHashCellSizeCm`、`hardResolveHashCellSizeCm` 整除。
 - 所有 profile id、routing mode、navmesh mode/algorithm 的大小写都严格；不要写别名兼容。
 - 缺字段、坏 casing、未知 profile/layer 应 fail-fast，不要在 Mod 私有逻辑里补 fallback。
@@ -243,4 +243,4 @@ Runtime incremental 起点：
 5. [`nav-bake-budget-and-estimation.md`](nav-bake-budget-and-estimation.md)：估 full/dirty/window bake 的参数、操作数、耗时和大图风险。
 6. [`navmesh-authoring-bake-toolchain.md`](navmesh-authoring-bake-toolchain.md)：设计地形高度、areaId、障碍物、agent cost、CLI/Web/Raylib debug 的生产工具链。
 7. [`nav-bake-context.md`](nav-bake-context.md)：配置 navmesh bake / runtime incremental。
-8. [`routing-to-mass-execution.md`](routing-to-mass-execution.md)：让小队走精确路径，大军走 MassFlow。
+8. [`routing-to-mass-execution.md`](routing-to-mass-execution.md)：让小队走精确路径，大军走 MassNavigationFlow。

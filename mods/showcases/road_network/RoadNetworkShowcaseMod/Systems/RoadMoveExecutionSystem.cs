@@ -1,7 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -16,7 +16,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public RoadMoveExecutionSystem(World world, MassNavigationSimulationRuntime simulation) : base(world)
         {
-            _sink = new MassMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            _sink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
         }
 
         public override void Update(in float dt)

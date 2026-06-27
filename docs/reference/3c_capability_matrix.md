@@ -34,7 +34,7 @@
 - [x] `WorldPositionCm` 作为唯一位置真相源
 - [x] `PreviousWorldPositionCm` → `VisualTransform` 插值链
 - [x] Physics2D → WorldPositionCm 直赋同步
-- [x] MassFlow 路径执行
+- [x] MassNavigationFlow 路径执行
 - [x] GAS `ForceInput2D` Sink 桥接物理
 - [x] `CullState` 驱动表现层可见性
 - [x] Team / PlayerOwner 身份标识

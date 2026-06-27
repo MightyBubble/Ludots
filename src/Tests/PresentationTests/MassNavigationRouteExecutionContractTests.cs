@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Mathematics;
@@ -17,7 +17,7 @@ namespace Ludots.Tests.Presentation
         [SetUp]
         public void ResetProfiles()
         {
-            MassCrowdProfileRegistry.Reset();
+            MassNavigationProfileRegistry.Reset();
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Presentation
             sink.EndSync();
 
             MassNavigationRouteSinkResult first = sink.TryApplyTrackedRouteTargets(runtime, world);
-            runtime.MassFlowForTests().ApplyExternalDisplacement(new[] { 0 }, deltaXCm: 300, deltaYCm: 0);
+            runtime.GetFlowSolverForTests().ApplyExternalDisplacement(new[] { 0 }, deltaXCm: 300, deltaYCm: 0);
             MassNavigationRouteSinkResult second = sink.TryApplyTrackedRouteTargets(runtime, world);
 
             Assert.That(first.WaypointWorldCm, Is.EqualTo(new Vector2(5_300, 5_000)));
@@ -123,10 +123,10 @@ namespace Ludots.Tests.Presentation
             out Entity routed,
             out Entity direct)
         {
-            int routedProfile = MassCrowdProfileRegistry.Register("routed");
-            int directProfile = MassCrowdProfileRegistry.Register("direct");
-            routed = world.Create(new MassCrowdAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
-            direct = world.Create(new MassCrowdAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
+            int routedProfile = MassNavigationProfileRegistry.Register("routed");
+            int directProfile = MassNavigationProfileRegistry.Register("direct");
+            routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
+            direct = world.Create(new MassNavigationAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
 
             MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);

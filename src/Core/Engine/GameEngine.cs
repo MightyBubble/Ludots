@@ -77,7 +77,7 @@ using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
@@ -417,7 +417,8 @@ namespace Ludots.Core.Engine
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
             LoadAgentProfiles();
-            RebuildAiRuntime();
+            AiRuntime = default;
+            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
 
             // Apply log config from merged game.json
             LogConfigApplier.Apply(MergedConfig.Logging);
@@ -429,7 +430,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GameConfig, MergedConfig);
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
             SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
-            SetService(CoreServiceKeys.AiRuntime, AiRuntime);
 
             // 4. Setup ECS & Session using merged config values
             InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
@@ -2413,6 +2413,11 @@ namespace Ludots.Core.Engine
             {
                 navigableBoard.NavServices = navRegistry;
             }
+        }
+
+        internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
+        {
+            LoadNavForMap(mapId, mapConfig);
         }
 
         private void ClearNavServices()

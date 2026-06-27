@@ -44,12 +44,12 @@ Given a visual heightmap change, when no projection adapter is invoked, then log
 
 ## UAT Showcase
 
-Preset: `nav_topology`
+Preset: `mass_navigation`
 
 Command:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch nav_topology --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib
 ```
 
 | Operation | Visible feedback |

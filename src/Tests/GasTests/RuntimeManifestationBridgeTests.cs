@@ -6,7 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ManifestationObstacleBridge2D_BoxIntent_CreatesPhysicsAndMassFlowProjection()
+        public void ManifestationObstacleBridge2D_BoxIntent_CreatesPhysicsAndMassNavigationFlowProjection()
         {
             using var world = World.Create();
             var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
@@ -77,8 +77,8 @@ namespace Ludots.Tests.GAS
                 Fix64.FromInt(240 * 240) +
                 Fix64.FromInt(30 * 30));
 
-            That(world.Has<MassFlowObstacleProjection>(entity), Is.True);
-            var projection = world.Get<MassFlowObstacleProjection>(entity);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
             That(projection.PieceCount, Is.EqualTo(1));
             That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
             That(projection.GetRadiusCm(0), Is.EqualTo(expectedRadius.RoundToInt()));
@@ -105,7 +105,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Collider2D>(entity), Is.True);
             That(world.Has<Mass2D>(entity), Is.True);
             That(world.Has<Velocity2D>(entity), Is.True);
-            That(world.Has<MassFlowObstacleProjection>(entity), Is.True);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
 
             var intent = world.Get<ManifestationObstacleIntent2D>(entity);
             intent.SinkPhysicsCollider = 0;
@@ -118,7 +118,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Collider2D>(entity), Is.False);
             That(world.Has<Mass2D>(entity), Is.False);
             That(world.Has<Velocity2D>(entity), Is.False);
-            That(world.Has<MassFlowObstacleProjection>(entity), Is.False);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.False);
         }
 
         [Test]
@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
             int authoredShapeIndex = _shapeStorage.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
             var authoredVelocity = Velocity2D.FromCmPerSec(7f, 8f, 0.5f);
             var authoredMass = Mass2D.FromFloat(1f, 2f);
-            var authoredProjection = new MassFlowObstacleProjection();
+            var authoredProjection = new MassNavigationFlowObstacleProjection();
             authoredProjection.SetPiece(0, ManifestationObstacleShape2D.Box, 12, 34, 56);
 
             var entity = world.Create(
@@ -154,7 +154,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<Mass2D>(entity).InverseInertia, Is.EqualTo(authoredMass.InverseInertia));
             That(world.Get<Velocity2D>(entity).Linear, Is.EqualTo(authoredVelocity.Linear));
             That(world.Get<Velocity2D>(entity).Angular, Is.EqualTo(authoredVelocity.Angular));
-            That(world.Has<MassFlowObstacleProjection>(entity), Is.False);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.False);
         }
 
         [Test]
@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS
             That(_shapeStorage.TryGetPolygon(collider.ShapeDataIndex, out var polygon), Is.True);
             That(polygon.VertexCount, Is.EqualTo(3));
 
-            var projection = world.Get<MassFlowObstacleProjection>(entity);
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
             That(projection.PieceCount, Is.EqualTo(1));
             That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
             That(projection.GetRadiusCm(0), Is.EqualTo(160));
@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Collider2D>(entity), Is.False, "Compound obstacles should not collapse into the single-collider component.");
             That(world.Has<Mass2D>(entity), Is.True);
             That(world.Has<Velocity2D>(entity), Is.True);
-            That(world.Has<MassFlowObstacleProjection>(entity), Is.True);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
 
             var state = world.Get<CompoundObstacle2DState>(entity);
             That(state.PieceCount, Is.EqualTo(2));
@@ -263,7 +263,7 @@ namespace Ludots.Tests.GAS
             That(polygon.VertexCount, Is.EqualTo(3));
             That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
-            var projection = world.Get<MassFlowObstacleProjection>(entity);
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
             That(projection.PieceCount, Is.EqualTo(2));
             That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
             That(projection.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));

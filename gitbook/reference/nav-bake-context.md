@@ -34,8 +34,8 @@ In scope:
 
 Out of scope:
 
-- Movement execution and route selection. Those are owned by MassFlow execution and routing docs.
-- Temporary dynamic avoidance. It remains MassFlow runtime avoidance, not navmesh rebuild input.
+- Movement execution and route selection. Those are owned by MassNavigationFlow execution and routing docs.
+- Temporary dynamic avoidance. It remains MassNavigationFlow runtime avoidance, not navmesh rebuild input.
 
 ## User Story
 

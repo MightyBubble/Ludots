@@ -4,7 +4,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Runtime;
 
@@ -25,7 +25,7 @@ namespace RoadNetworkShowcaseMod.Systems
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-            _executionSink = new MassMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
+            _executionSink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
         }
 
         public override void Update(in float dt)

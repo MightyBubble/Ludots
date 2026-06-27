@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
@@ -146,12 +147,16 @@ namespace Ludots.Tests.Architecture
             coreEngine.InitializeWithConfigPipeline(
                 new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
                 Path.Combine(repoRoot, "assets"));
+            GameConfig coreConfig = coreEngine.MergedConfig
+                ?? throw new InvalidOperationException("Core engine config was not merged.");
+            SelectionRuntimeConfig coreSelection = coreConfig.Selection
+                ?? throw new InvalidOperationException("Core selection config was not merged.");
 
             Assert.That(
-                coreEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
+                coreSelection.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "moveTo" }),
                 "LudotsCoreMod should author the generic move path preview contract.");
-            Assert.That(coreEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+            Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
 
             using var massNavigationEngine = new GameEngine();
             massNavigationEngine.InitializeWithConfigPipeline(
@@ -160,18 +165,21 @@ namespace Ludots.Tests.Architecture
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                     Path.Combine(repoRoot, "mods", "CoreInputMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
-                    Path.Combine(repoRoot, "mods", "showcases", "performer_blacksmith", "PerformerBlacksmithShowcaseMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 },
                 Path.Combine(repoRoot, "assets"));
+            GameConfig massNavigationConfig = massNavigationEngine.MergedConfig
+                ?? throw new InvalidOperationException("MassNavigation engine config was not merged.");
+            SelectionRuntimeConfig massNavigationSelection = massNavigationConfig.Selection
+                ?? throw new InvalidOperationException("MassNavigation selection config was not merged.");
 
             Assert.That(
-                massNavigationEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
+                massNavigationSelection.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "massNavigationMove" }),
                 "MassNavigationMod should author only its formal order key for selected move path preview.");
-            Assert.That(massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+            Assert.That(massNavigationConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
-                massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
+                massNavigationConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
                 Is.False,
                 "MassNavigation move must not be double-authored in game.json constants; GAS/order_types.json owns order type definitions.");
             OrderTypeRegistry orderTypes = massNavigationEngine.GetService(CoreServiceKeys.OrderTypeRegistry)
@@ -1008,6 +1016,9 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 16384,
     "skinnedVisualBatchCapacity": 2048,
     "presentationRequestCapacity": 16384,
+    "globalFieldVisualRecordCapacity": 128,
+    "globalFieldVisualCellCapacity": 65536,
+    "globalFieldVisualDirtyRectCapacity": 1024,
     "groundOverlayCapacity": 1024,
     "roadSplineCapacity": 2048,
     "worldHudCapacity": 4096,
@@ -1049,6 +1060,9 @@ namespace Ludots.Tests.Architecture
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 32768,
     "presentationRequestCapacity": 131072,
+    "globalFieldVisualRecordCapacity": 512,
+    "globalFieldVisualCellCapacity": 262144,
+    "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 16384,
     "roadSplineCapacity": 32768,
     "worldHudCapacity": 65536,
@@ -1079,6 +1093,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.SkinnedVisualBatchCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PresentationRequestCapacity, Is.EqualTo(131072));
+            Assert.That(config.Presentation.GlobalFieldVisualRecordCapacity, Is.EqualTo(512));
+            Assert.That(config.Presentation.GlobalFieldVisualCellCapacity, Is.EqualTo(262144));
+            Assert.That(config.Presentation.GlobalFieldVisualDirtyRectCapacity, Is.EqualTo(4096));
             Assert.That(config.Presentation.GroundOverlayCapacity, Is.EqualTo(16384));
             Assert.That(config.Presentation.RoadSplineCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));

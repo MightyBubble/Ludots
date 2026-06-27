@@ -6,7 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;

@@ -27,7 +27,7 @@ InputRuntimeSystem
   -> CoreServiceKeys.AuthoritativeInput
   -> CameraRuntimeSystem
   -> InputOrderMappingSystem / Select / GAS Response
-  -> GAS / Physics2D / MassFlow
+  -> GAS / Physics2D / MassNavigationFlow
   -> WorldPositionCm
 ```
 

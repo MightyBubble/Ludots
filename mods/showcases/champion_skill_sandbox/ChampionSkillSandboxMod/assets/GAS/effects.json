@@ -11,7 +11,6 @@
       "directionMode": "ToTarget",
       "totalDistanceCm": 440,
       "totalDurationTicks": 4,
-      "fixedDirectionDeg": 0,
       "overrideNavigation": true
     }
   },
@@ -99,8 +98,7 @@
       {
         "tag": "State.Champion.Ezreal.WMark",
         "formula": "Fixed",
-        "amount": 1,
-        "base": 0
+        "amount": 1
       }
     ],
     "phaseListeners": [
@@ -232,11 +230,6 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
-    "duration": {
-      "durationTicks": 0,
-      "periodTicks": 0,
-      "clockId": "FixedFrame"
-    },
     "modifiers": [
       {
         "attribute": "Shield",
@@ -287,14 +280,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 260,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 260
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -333,14 +319,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 150,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 150
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -383,10 +362,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -405,10 +381,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -427,14 +400,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 220,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 220
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -477,10 +443,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -496,13 +459,7 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 920,
-      "halfWidth": 80,
-      "radius": 0,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "graphProgramId": 0
+      "halfWidth": 80
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -607,13 +564,7 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 880,
-      "halfWidth": 90,
-      "radius": 0,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "graphProgramId": 0
+      "halfWidth": 90
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -653,13 +604,7 @@
       "kind": "BuiltinSpatial",
       "shape": "Ring",
       "radius": 280,
-      "innerRadius": 90,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "innerRadius": 90
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -699,13 +644,7 @@
       "kind": "BuiltinSpatial",
       "shape": "Cone",
       "radius": 300,
-      "halfAngle": 40,
-      "innerRadius": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "halfAngle": 40
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -744,14 +683,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 170,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 170
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -790,14 +722,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 180,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 180
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -859,14 +784,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 180,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 180
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -928,14 +846,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 110,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 110
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -994,10 +905,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -1016,10 +924,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -1038,14 +943,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 240,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 240
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -1090,8 +988,7 @@
       "placementRadiusCm": 280,
       "placementStartAngleDeg": 18,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
-      "offsetRadius": 0
+      "linkSourceAsParent": true
     }
   },
   {
@@ -1110,10 +1007,7 @@
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true,
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0
+      "offsetRadius": 0
     }
   },
   {
@@ -1133,13 +1027,7 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 900,
-      "halfWidth": 70,
-      "radius": 0,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "graphProgramId": 0
+      "halfWidth": 70
     },
     "targetFilter": {
       "relationFilter": "Hostile",

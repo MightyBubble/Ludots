@@ -16,7 +16,7 @@ NodeGraph boards use the short graph path and do not bake navmesh. Grid and HexG
 
 Current status note: CLI `nav estimate-recast-react` / `nav bake-recast-react` and Editor Bridge resolve the primary navigation board and choose grid or hex `LogicTerrainField` by topology. NAV-15 #373 still owns the final single-source asset closure from official `VisualHeightmap`/classification assets into `LogicTerrain`; until then, React `map_data.bin` is the production editing upload format for the current toolchain.
 
-The old branch `origin/codex/mass-nav-bake-data-showcase` is useful as a reference for chunked logic-terrain materialization and tile-window reads. It must not be merged as-is: it carried a private `.lhtm` lane, huge baked fixtures, fallback-like heightmap sampling, hardcoded area classification, and baked/runtime scale mapping drift. Reuse the ideas, not the data source.
+The old branch `origin/codex/mass-navigation-bake-data-showcase` is useful as a reference for chunked logic-terrain materialization and tile-window reads. It must not be merged as-is: it carried a private `.lhtm` lane, huge baked fixtures, fallback-like heightmap sampling, hardcoded area classification, and baked/runtime scale mapping drift. Reuse the ideas, not the data source.
 
 ## Inputs
 
@@ -275,7 +275,7 @@ Bridge/editor behavior should mirror CLI behavior:
 RTS / battlefield:
 
 - Use full Recast bake for small tactical boards or authored mesh corridors.
-- For a huge world board, prefer NodeGraph/road for long-range route selection and MassFlow for local execution.
+- For a huge world board, prefer NodeGraph/road for long-range route selection and MassNavigationFlow for local execution.
 - Do not make a 64 km board `NavigationEnabled` and full-bake every 64 m tile casually.
 
 Grand strategy / 4X:
@@ -287,7 +287,7 @@ Open world / streaming:
 
 - Use chunk-window terrain projection and offline regional bake.
 - Use runtime-incremental CDT only for persistent structural changes such as doors, bridges, walls, and buildings.
-- Temporary crowd blockage remains MassFlow avoidance and should not trigger navmesh rebuild.
+- Temporary crowd blockage remains MassNavigationFlow avoidance and should not trigger navmesh rebuild.
 
 ## Runtime Incremental Budget
 

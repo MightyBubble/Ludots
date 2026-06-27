@@ -430,7 +430,7 @@
       <div>
         <h1>Mod 地图尺度入门</h1>
         <p class="lead">
-          给 Mod 作者用的起点计算器：选 RTS、大战略或开放大世界，调 board、MassFlow 和 nav bake 参数，马上看到世界尺寸、分区数量、运行窗口精度、烘焙预算和配置片段。
+          给 Mod 作者用的起点计算器：选 RTS、大战略或开放大世界，调 board、MassNavigationFlow 和 nav bake 参数，马上看到世界尺寸、分区数量、运行窗口精度、烘焙预算和配置片段。
         </p>
       </div>
       <nav class="doc-links" aria-label="文档入口">
@@ -714,7 +714,7 @@
   <script>
     const presets = {
       rts: {
-        summary: "RTS / 战场：世界可以很大，但每次只在局部战区做高频 MassFlow 和避障。",
+        summary: "RTS / 战场：世界可以很大，但每次只在局部战区做高频 MassNavigationFlow 和避障。",
         spatialType: "Grid",
         desiredWidthMeters: 64000,
         desiredHeightMeters: 64000,
@@ -742,7 +742,7 @@
         msHigh: 200,
         effectiveWorkers: 8,
         tileBudgetPerTick: 1,
-        routing: "大军 MassFlow；小队可按 profile PreferMesh/PreferGraph",
+        routing: "大军 MassNavigationFlow；小队可按 profile PreferMesh/PreferGraph",
         advice: {
           world: ["目标 64km x 64km；配置会派生 250 x 250 MacroTiles。", "不要让 FlowWindow 覆盖全图。", "用 hot zone / view residency 管局部活动。"],
           nav: ["FlowCell 100cm 适合 1m 级单位。", "hard resolve 50cm 可处理更细拥挤。", "门洞/道路小队用 pathing profile 精确路由。"],
@@ -778,10 +778,10 @@
         msHigh: 80,
         effectiveWorkers: 8,
         tileBudgetPerTick: 1,
-        routing: "商队/军队 PreferGraph 或 AutoCheapest；局部战斗再进 MassFlow",
+        routing: "商队/军队 PreferGraph 或 AutoCheapest；局部战斗再进 MassNavigationFlow",
         advice: {
           world: ["目标 16.4km x 16.4km；配置会派生 64 x 64 MacroTiles。", "玩法格/省份不必等于 engine Cell。", "NodeGraph 适合道路、航线和区域连接。"],
-          nav: ["大地图优先 route domain，而不是全图 FlowCell。", "agent radius 表达通行能力，不表达军团规模。", "区域战斗可切局部 MassFlow 窗口。"],
+          nav: ["大地图优先 route domain，而不是全图 FlowCell。", "agent radius 表达通行能力，不表达军团规模。", "区域战斗可切局部 MassNavigationFlow 窗口。"],
           perf: ["小地图 full-map 更重要。", "城市/军团 marker 数决定 minimap 容量。", "表现对象数量通常低于 RTS。"]
         }
       },
@@ -817,7 +817,7 @@
         routing: "玩家附近用 Mesh/Auto；远区用 streaming 与驻留策略",
         advice: {
           world: ["大世界可以沿用 64km 级 board。", "StreamingChunk 可从 64 cells * CellCm 起步。", "相机/玩家活动半径决定 loaded window。"],
-          nav: ["动态门/桥/建筑用 runtime-incremental + cdt。", "临时拥堵仍归 MassFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
+          nav: ["动态门/桥/建筑用 runtime-incremental + cdt。", "临时拥堵仍归 MassNavigationFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
           perf: ["不要让远区 performer 常驻。", "view residency 控制保留时间和半径。", "minimap 与相机跳转要验证 marker 不丢。"]
         }
       }

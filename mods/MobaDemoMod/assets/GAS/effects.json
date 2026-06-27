@@ -255,8 +255,8 @@
     "phaseListeners": [
       {
         "listenTag": "Effect.Moba.Damage",
-        "phase": "onHit",
-        "scope": "target",
+        "phase": "OnHit",
+        "scope": "Target",
         "action": "Graph",
         "graphProgram": "Graph.Shield.Absorb",
         "priority": 100

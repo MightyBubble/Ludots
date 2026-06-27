@@ -562,8 +562,8 @@ Selectors
 
 Examples
   .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
-  .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance nav_playground --adapter web
-  .\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter web
+  .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
+  .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
   .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib --record artifacts/acceptance/launcher-camera-acceptance-raylib
   .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod
   .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
