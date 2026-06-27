@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.Input.Config;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture;
@@ -102,6 +103,52 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
+    public void InputConfig_UsesKnownInputActionTypes()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonObject input = ReadObject(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "Input",
+            "default_input.json"));
+
+        JsonArray actions = input["actions"] as JsonArray
+            ?? throw new InvalidDataException("LiveMapEditor input config must contain an actions array.");
+        foreach (JsonObject action in actions.OfType<JsonObject>())
+        {
+            string id = action["id"]?.GetValue<string>() ?? "<missing>";
+            string type = action["type"]?.GetValue<string>()
+                ?? throw new InvalidDataException($"LiveMapEditor action '{id}' must declare type.");
+            Assert.That(
+                Enum.TryParse(type, ignoreCase: false, out InputActionType _),
+                Is.True,
+                $"LiveMapEditor input action '{id}' uses unknown InputActionType '{type}'.");
+        }
+    }
+
+    [Test]
+    public void LiveMapEditorModProject_CopiesWebUiRuntimeDependencies()
+    {
+        string repoRoot = FindRepoRoot();
+        string project = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "LiveMapEditorMod.csproj"));
+
+        Assert.That(project, Does.Contain("<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>"));
+        AssertProjectReferenceCopiesLocal(project, "Ludots.UI.Browser");
+        AssertProjectReferenceCopiesLocal(project, "Ludots.WebUI.Browser");
+        AssertProjectReferenceCopiesLocal(project, "Ludots.WebUI.DataPlane");
+    }
+
+    [Test]
     public void WebPanel_DoesNotFallbackBrushNumbers()
     {
         string repoRoot = FindRepoRoot();
@@ -183,6 +230,17 @@ public sealed class LiveMapEditorLauncherContractTests
         {
             Assert.That(target["projectPath"]?.GetValue<string>(), Is.EqualTo(expectedProjectPath));
         }
+    }
+
+    private static void AssertProjectReferenceCopiesLocal(string project, string projectName)
+    {
+        string include = $"src\\Libraries\\{projectName}\\{projectName}.csproj";
+        int start = project.IndexOf(include, StringComparison.Ordinal);
+        Assert.That(start, Is.GreaterThanOrEqualTo(0), $"Missing project reference to {projectName}.");
+        int end = project.IndexOf("</ProjectReference>", start, StringComparison.Ordinal);
+        Assert.That(end, Is.GreaterThan(start), $"Project reference to {projectName} must use an explicit closing tag.");
+        string block = project[start..end];
+        Assert.That(block, Does.Contain("<Private>true</Private>"), $"{projectName} must be copied beside the mod assembly.");
     }
 
     private static JsonObject ReadObject(string path)
