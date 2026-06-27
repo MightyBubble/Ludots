@@ -54,7 +54,7 @@ namespace Ludots.NavBake.Recast
             int chunkX,
             int chunkY,
             uint tileVersion,
-            in NavBuildConfig legacyConfig,
+            in NavBuildConfig buildConfig,
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             int layer,
@@ -72,7 +72,7 @@ namespace Ludots.NavBake.Recast
                 return false;
             }
 
-            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, layerId, obstacles, out tile, out detourTileBytes, out artifact);
+            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, buildConfig, agentProfile, navProfile, layer, layerId, obstacles, out tile, out detourTileBytes, out artifact);
         }
 
         public static bool TryBake(
@@ -80,7 +80,7 @@ namespace Ludots.NavBake.Recast
             int chunkX,
             int chunkY,
             uint tileVersion,
-            in NavBuildConfig legacyConfig,
+            in NavBuildConfig buildConfig,
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             int layer,
@@ -94,7 +94,7 @@ namespace Ludots.NavBake.Recast
             detourTileBytes = Array.Empty<byte>();
             artifact = default;
 
-            if (!NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact))
+            if (!NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, buildConfig, out var baseTile, out var baseArtifact))
             {
                 artifact = baseArtifact;
                 return false;
@@ -104,7 +104,7 @@ namespace Ludots.NavBake.Recast
             {
                 ComputeTileFootprintBounds(terrain, chunkX, chunkY, out float tileMinX, out float tileMinZ, out float tileMaxX, out float tileMaxZ);
                 var rcCfg = BuildRcConfig(agentProfile, navProfile, tileMinX, tileMinZ, tileMaxX, tileMaxZ);
-                BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, legacyConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
+                BuildExpandedRecastTriangleMesh(terrain, chunkX, chunkY, tileVersion, buildConfig, rcCfg, obstacles, layerId, out var verts, out var tris);
                 if (tris.Count == 0)
                 {
                     artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No triangles after obstacle filtering.", 0, 0, 0, 0);
@@ -135,7 +135,7 @@ namespace Ludots.NavBake.Recast
                     baseTile,
                     layer,
                     tileVersion,
-                    legacyConfig.ComputeHash(),
+                    buildConfig.ComputeHash(),
                     rcResult.MeshDetail,
                     out tile);
 
@@ -402,7 +402,7 @@ namespace Ludots.NavBake.Recast
             int chunkX,
             int chunkY,
             uint tileVersion,
-            in NavBuildConfig legacyConfig,
+            in NavBuildConfig buildConfig,
             RcConfig rcCfg,
             NavObstacleSet obstacles,
             string layerId,
@@ -423,7 +423,7 @@ namespace Ludots.NavBake.Recast
             {
                 for (int x = minChunkX; x <= maxChunkX; x++)
                 {
-                    if (!NavTileBuilder.TryBuildTile(terrain, x, y, tileVersion, legacyConfig, out var tile, out var artifact))
+                    if (!NavTileBuilder.TryBuildTile(terrain, x, y, tileVersion, buildConfig, out var tile, out var artifact))
                     {
                         if (x == chunkX && y == chunkY)
                         {
