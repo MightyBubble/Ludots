@@ -24,15 +24,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void AvoidanceKernelSources_DoNotExposeFallbackWording()
+        public void AvoidanceKernelConfig_ExposesExplicitBlockedPreferredVelocityMode()
         {
-            string root = FindRepoRoot();
-            string sonarPath = Path.Combine(root, "src", "Core", "Navigation", "Avoidance", "SonarSolver2D.cs");
-            string sonarSource = File.ReadAllText(sonarPath);
+            Type solveConfig = typeof(SonarSolver2D).GetNestedType("SolveConfig")
+                ?? throw new InvalidOperationException("SonarSolver2D.SolveConfig must remain public.");
 
-            Assert.That(sonarSource, Does.Not.Contain("FallbackToPreferredVelocity"));
-            Assert.That(sonarSource, Does.Not.Contain("fallbackToPreferredVelocity"));
-            Assert.That(sonarSource, Does.Contain("UsePreferredVelocityWhenBlocked"));
+            Assert.That(solveConfig.GetField("UsePreferredVelocityWhenBlocked"), Is.Not.Null);
+            Assert.That(solveConfig.GetField("FallbackToPreferredVelocity"), Is.Null);
         }
 
         [Test]

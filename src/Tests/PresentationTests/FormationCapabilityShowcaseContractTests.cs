@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
+using System.Xml.Linq;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.System;
@@ -34,6 +36,7 @@ using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Modding;
@@ -49,6 +52,7 @@ namespace Ludots.Tests.Presentation
     public sealed class FormationCapabilityShowcaseContractTests
     {
         private const string MassNavigationAgentLayerName = "massNavigation.agent";
+        private const int TestMassNavigationMoveOrderTypeId = 37;
 
         [Test]
         public void FormationCapabilityConfig_AuthorsFormationAndSoldierMassNavAgents()
@@ -515,47 +519,52 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void FormationCapabilityRuntime_UsesComponentAuthoredRuntimeBindingAndPresentationLifecycle()
         {
-            string runtimePath = Path.Combine(FormationCapabilityModRoot(), "Runtime", "FormationCapabilityShowcaseRuntime.cs");
-            string source = File.ReadAllText(runtimePath);
+            AssertPublicMethod(typeof(FormationCapabilityShowcaseRuntime), nameof(FormationCapabilityShowcaseRuntime.BindComponentAuthoredScenarioEntities));
+            AssertPublicMethod(typeof(FormationCapabilityShowcaseRuntime), nameof(FormationCapabilityShowcaseRuntime.HandleMapUnloadedAsync));
 
-            Assert.That(source, Does.Contain("RuntimeEntitySpawnQueue"));
-            Assert.That(source, Does.Contain("MassNavigationFormationAnchor"));
-            Assert.That(source, Does.Contain("MassNavigationFormationFollower"));
-            Assert.That(source, Does.Contain("BindComponentAuthoredScenarioEntities"));
-            Assert.That(source, Does.Contain("RegisterSpawnedFormationAgent(GameEngine engine"));
-            Assert.That(source, Does.Contain("RegisterSpawnedObstacleOverlay"));
-            Assert.That(source, Does.Contain("DestroyShowcaseOwnedEntities"));
-            Assert.That(source, Does.Contain("PresentationDestroyPending"));
-            Assert.That(source, Does.Not.Contain("EmitReceipt"));
-            Assert.That(source, Does.Not.Contain("ReceiptChannelId"));
-            Assert.That(source, Does.Not.Contain("World.Create("),
-                "FormationCapability formation agents must be spawned through the runtime template spawn path.");
-            Assert.That(source, Does.Not.Contain("World.Destroy("),
-                "FormationCapability formation agents must enter presentation destroy lifecycle instead of direct ECS destroy.");
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: 180,
+                "Formation Capability scenario should bind runtime-spawned formation agents.");
+
+            Entity[] agents = CaptureTrackedAgents(simulation);
+            Assert.That(agents.Any(entity => engine.World.Has<MassNavigationFormationAnchor>(entity)), Is.True);
+            Assert.That(agents.Any(entity => engine.World.Has<MassNavigationFormationFollower>(entity)), Is.True);
         }
 
         [Test]
         public void FormationCapabilityRuntime_DelegatesSoldierSlotTargetsToCoreMassNavigationFormationFollowerSystem()
         {
-            string source = File.ReadAllText(Path.Combine(FormationCapabilityModRoot(), "Runtime", "FormationCapabilityShowcaseRuntime.cs"));
+            AssertPublicMethod(typeof(MassNavigationFormationFollowerSystem), nameof(MassNavigationFormationFollowerSystem.GetSyncStateCountForTests));
 
-            Assert.That(source, Does.Not.Contain("SyncSoldierTargetsFromFormationAgents"));
-            Assert.That(source, Does.Not.Contain("ApplyCarriedAgentSlotTarget"));
-            Assert.That(source, Does.Not.Contain("ResolveCarriedAgentSlotTarget"));
-            Assert.That(source, Does.Contain("MassNavigationFormationFollower"));
-            Assert.That(source, Does.Contain("CreateFormationFollowerPatch"));
-            Assert.That(source, Does.Contain("\"MassNavigationFormationFollower\""));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            string coreFollowerSystem = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationFormationFollowerSystem.cs"));
-            Assert.That(coreFollowerSystem, Does.Contain("SyncCarriedAgentsToCarrier"));
-            Assert.That(coreFollowerSystem, Does.Contain("ResolveCarriedAgentSlotTarget"));
-            Assert.That(coreFollowerSystem, Does.Contain("ApplyCarriedAgentSlotTarget"));
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability soldiers should be runtime-bound to Core MassNavigationFormationFollower sidecars.");
+
+            int soldierFollowers = 0;
+            var query = new QueryDescription().WithAll<
+                FormationCapabilityShowcaseFormationSoldier,
+                MassNavigationFormationFollower,
+                MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier _, ref MassNavigationFormationFollower _, ref MassNavigationAgentIndex _) =>
+            {
+                soldierFollowers++;
+            });
+
+            Assert.That(soldierFollowers, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalSoldiers));
         }
 
         [Test]
@@ -737,45 +746,51 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void FormationCapabilitySoldierBinding_UsesCoreOwnedMassNavigationRuntimeBinding()
         {
-            string modRoot = FormationCapabilityModRoot();
-            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseRuntime.cs"));
-            string bindBody = ExtractMethodBody(bindingSource, "public void BindComponentAuthoredScenarioEntities");
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(bindBody, Does.Contain("MassNavigationFormationFollower"));
-            Assert.That(bindingSource, Does.Contain("FormationFollowerCandidateQuery = new QueryDescription()"));
-            Assert.That(bindingSource, Does.Contain(".WithAll<MassNavigationFormationFollower, MassNavigationAgentIndex>()"));
-            Assert.That(bindBody, Does.Not.Contain("_simulation.BindSpawnedAgent"));
-            Assert.That(bindBody, Does.Not.Contain("new Team"));
-            Assert.That(bindBody, Does.Not.Contain("Heavy"));
-            Assert.That(bindBody, Does.Not.Contain("NavMass"));
-            Assert.That(bindBody, Does.Not.Contain("VisualScale"));
-            Assert.That(bindBody, Does.Not.Contain("BodyRadiusCm"));
-            Assert.That(bindBody, Does.Not.Contain("SpeedCmPerSecond"));
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability should bind soldier sidecars from Core-authored MassNavigationFormationFollower components.");
 
-            string scenarioBindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseScenarioBindingSystem.cs"));
-            Assert.That(scenarioBindingSource, Does.Contain("BindComponentAuthoredScenarioEntities"));
+            int soldierCount = 0;
+            var query = new QueryDescription().WithAll<
+                FormationCapabilityShowcaseFormationSoldier,
+                MassNavigationFormationFollower,
+                MassNavigationAgentIndex,
+                MassNavigationAgent,
+                Team>();
+            engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier soldier, ref MassNavigationFormationFollower follower) =>
+            {
+                Assert.That(soldier.SlotIndex, Is.EqualTo(follower.SlotIndex));
+                Assert.That(MassNavigationFormationRegistry.GetName(follower.FormationId), Is.Not.Empty);
+                soldierCount++;
+            });
+
+            Assert.That(soldierCount, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalSoldiers));
         }
 
         [Test]
         public void FormationCapabilityShowcaseObstacleOverlayPlans_AreBuiltAfterMassNavigationLoadsObstacleSsot()
         {
-            string runtimeSource = File.ReadAllText(Path.Combine(FormationCapabilityModRoot(), "Runtime", "FormationCapabilityShowcaseRuntime.cs"));
-            string spawnBody = ExtractMethodBody(runtimeSource, "private void SpawnScenario");
-            string bindingBody = ExtractMethodBody(runtimeSource, "public void BindComponentAuthoredScenarioEntities");
-            string ensureOverlayBody = ExtractMethodBody(runtimeSource, "private void EnsureObstacleOverlaySpawnsQueued");
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            int planIndex = spawnBody.IndexOf("BuildAgentPlans(engine, simulation, config)", StringComparison.Ordinal);
-            int obstaclePlanIndex = spawnBody.IndexOf("BuildObstacleOverlayPlans(simulation)", StringComparison.Ordinal);
-            int enqueueIndex = spawnBody.IndexOf("EnqueueObstacleOverlaySpawns(engine", StringComparison.Ordinal);
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation) &&
+                      simulation.NavigationObstacleCount > 0,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Obstacle overlays should be queued only after MassNavigation has loaded obstacle snapshots.");
 
-            Assert.That(planIndex, Is.GreaterThanOrEqualTo(0));
-            Assert.That(obstaclePlanIndex, Is.EqualTo(-1),
-                "Obstacle overlays must not be planned during scenario spawn; core MassNavigation environment binding owns the obstacle SSOT.");
-            Assert.That(enqueueIndex, Is.EqualTo(-1));
-            Assert.That(bindingBody, Does.Contain("EnsureObstacleOverlaySpawnsQueued"));
-            Assert.That(ensureOverlayBody, Does.Contain("simulation.NavigationObstacleCount"));
-            Assert.That(ensureOverlayBody, Does.Contain("BuildObstacleOverlayPlans(simulation)"));
-            Assert.That(ensureOverlayBody, Does.Contain("EnqueueObstacleOverlaySpawns("));
+            Entity[] overlays = CaptureObstacleOverlays(engine, simulation.NavigationObstacleCount);
+            Assert.That(overlays.Length, Is.EqualTo(simulation.NavigationObstacleCount));
         }
 
         [Test]
@@ -794,278 +809,272 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("FormationCapabilityShowcaseObstacleOverlay"), Is.False,
                 "Obstacle overlay values come from FormationCapabilityShowcaseConfig and MassNavigation obstacle radius.");
 
-            string runtimeSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseRuntime.cs"));
-            string bindObstacle = ExtractMethodBody(runtimeSource, "private void RegisterSpawnedObstacleOverlay");
-            Assert.That(bindObstacle, Does.Contain("ActiveConfig.ObstacleOverlay.ToComponent"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Obstacle overlay entities should be bound from MassNavigation obstacle snapshots.");
+
+            Entity[] overlays = CaptureObstacleOverlays(engine, simulation.NavigationObstacleCount);
+            for (int i = 0; i < overlays.Length; i++)
+            {
+                FormationCapabilityShowcaseObstacleOverlay overlay = engine.World.Get<FormationCapabilityShowcaseObstacleOverlay>(overlays[i]);
+                Assert.That(overlay.RadiusCm, Is.EqualTo(simulation.GetObstacleWorldSnapshot(i).RadiusCm).Within(0.001f));
+                Assert.That(overlay.BorderWidthCm, Is.EqualTo(obstacleOverlay["borderWidthCm"]?.GetValue<float>()).Within(0.001f));
+            }
         }
 
         [Test]
         public void FormationCapabilityShowcaseObstacleOverlayPresentation_UsesConfiguredWidthAndFormalStableId()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FormationCapabilityModRoot(),
-                "Runtime",
-                "FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(source, Does.Contain("PerformerBehaviorRuntimeUtility.ComposeVisualStableId"));
-            Assert.That(source, Does.Contain("AssetKind.GroundOverlay"));
-            Assert.That(source, Does.Contain("overlay.BorderWidthCm"));
-            Assert.That(source, Does.Not.Contain("OverlayStableIdOffset"));
-            Assert.That(source, Does.Not.Contain("MathF.Max"));
-            Assert.That(source, Does.Not.Contain("0.08f"));
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Obstacle overlay presentation should emit configured ground-overlay rings.");
+
+            AssertObstacleOverlays(engine, simulation);
         }
 
         [Test]
         public void FormationCapabilityShowcaseFormationOutlines_UseRoadSplinesSampledFromVisualHeightmap()
         {
-            string outlineSource = File.ReadAllText(Path.Combine(
-                FormationCapabilityModRoot(),
-                "Runtime",
-                "FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(outlineSource, Does.Contain("RoadSplineBuffer"));
-            Assert.That(outlineSource, Does.Contain("TryAddLine"));
-            Assert.That(outlineSource, Does.Contain("ProjectToGround"));
-            Assert.That(outlineSource, Does.Contain("CurveSampleCount"));
-            Assert.That(outlineSource, Does.Contain("EmissionPositionEpsilonM"));
-            Assert.That(outlineSource, Does.Contain("EmissionFacingEpsilonRadians"));
-            Assert.That(outlineSource, Does.Contain("NormalizeAngleRadians"));
-            Assert.That(outlineSource, Does.Not.Contain("CenterX.Equals(other.CenterX)"),
-                "Formation outline dirty checks must use configured epsilon instead of exact transform floats.");
-            Assert.That(outlineSource, Does.Not.Contain("OutlineCurveSamples"));
-            Assert.That(outlineSource, Does.Contain("OutlineEmissionState"),
-                "Formation outlines must cache emitted state so static formations do not resample terrain and upsert splines every frame.");
-            Assert.That(outlineSource, Does.Not.Contain("GroundOverlayBuffer"),
-                "Formation outlines must not be long flat GroundOverlay shapes; they need per-segment visual-heightmap samples.");
-            Assert.That(outlineSource, Does.Not.Contain("GroundOverlayShape"));
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation outlines should be emitted after Formation Capability scenario binding.");
+
+            AssertFormationOutlines(engine);
         }
 
         [Test]
         public void FormationCapabilityPresentationHotPathCollections_UseConfigDerivedCapacities()
         {
-            string modRoot = FormationCapabilityModRoot();
-            string configSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseConfig.cs"));
-            string runtimeSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseRuntime.cs"));
-            string componentsSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseFormationComponents.cs"));
-            string outlineSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs"));
-            string obstacleSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs"));
+            FormationCapabilityShowcaseConfig config = FormationCapabilityShowcaseConfig.Load(
+                ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json")));
 
-            Assert.That(configSource, Does.Contain("FormationOutlineOwnerCapacity => Formations.Length"));
-            Assert.That(configSource, Does.Contain("FormationOutlineSplineCapacity"));
-            Assert.That(componentsSource, Does.Contain("FormationCapabilityShowcaseFormationOutlineSegments"));
-            Assert.That(configSource, Does.Contain("FormationCapabilityShowcaseFormationOutlineSegments.CountSplineSegments"));
-            Assert.That(outlineSource, Does.Contain("FormationCapabilityShowcaseFormationOutlineSegments.CountSplineSegments"));
-            Assert.That(outlineSource, Does.Not.Contain("FormationCapabilityShowcaseFormationOutlineShape.Rectangle => 4"));
-            Assert.That(outlineSource, Does.Not.Contain("FormationCapabilityShowcaseFormationOutlineShape.Circle => 1"));
-            Assert.That(runtimeSource, Does.Contain("new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config)"));
-            Assert.That(runtimeSource, Does.Contain("new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount)"));
-            Assert.That(configSource, Does.Contain("InitialSelectionEntityCapacity { get; set; }"));
-            Assert.That(runtimeSource, Does.Contain("config.InitialSelectionEntityCapacity"));
-            Assert.That(runtimeSource, Does.Not.Contain("config.InitialSelectionScratchCapacity"));
-            Assert.That(runtimeSource, Does.Not.Contain("new Entity[1]"));
-            Assert.That(runtimeSource, Does.Contain("new HashSet<int>(_formationPlans.Length)"));
-            Assert.That(runtimeSource, Does.Contain("simulation.Config.Scenario.Teams"));
-            Assert.That(runtimeSource, Does.Not.Contain("new HashSet<int>()"));
-            Assert.That(runtimeSource, Does.Not.Contain("new SortedSet<int>"));
-            Assert.That(runtimeSource, Does.Not.Contain("SortedSet<int>"));
+            int expectedSplineCapacity = config.Formations.Sum(formation =>
+                FormationCapabilityShowcaseFormationOutlineSegments.CountSplineSegments(
+                    formation.Outline.ResolvedShape,
+                    formation.Outline.FrontIndicatorLengthCm > 0f,
+                    formation.Outline.CurveSampleCount));
 
-            Assert.That(outlineSource, Does.Contain("new List<int>(_stableIdCapacity)"));
-            Assert.That(outlineSource, Does.Contain("new HashSet<int>(_stableIdCapacity)"));
-            Assert.That(outlineSource, Does.Contain("new HashSet<int>(_ownerCapacity)"));
-            Assert.That(outlineSource, Does.Contain("new Dictionary<int, OutlineEmissionState>(_ownerCapacity)"));
-            Assert.That(outlineSource, Does.Contain("TrackStableId"));
-            Assert.That(outlineSource, Does.Contain("RequireEmissionStateCapacity"));
-            Assert.That(outlineSource, Does.Contain("foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))"));
-            Assert.That(outlineSource, Does.Contain("PublishFormationOutlineCountIfChanged"));
-            Assert.That(outlineSource, Does.Contain("_lastPublishedFormationOutlineCount"));
-            Assert.That(outlineSource, Does.Not.Contain("_engine.World.Query(\r\n            in FormationOutlineQuery,"));
-            Assert.That(outlineSource, Does.Not.Contain("private readonly List<int> _currentStableIds = new();"));
-            Assert.That(outlineSource, Does.Not.Contain("private readonly HashSet<int> _currentStableIdSet = new();"));
-            Assert.That(outlineSource, Does.Not.Contain("private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId = new();"));
-            Assert.That(outlineSource, Does.Not.Contain("AddRange(_currentStableIds)"));
+            Assert.That(config.FormationOutlineOwnerCapacity, Is.EqualTo(config.Formations.Length));
+            Assert.That(config.FormationOutlineSplineCapacity, Is.EqualTo(expectedSplineCapacity));
+            Assert.That(config.InitialSelectionEntityCapacity, Is.GreaterThanOrEqualTo(FormationCapabilityAcceptance.ExpectedInitialSelection));
 
-            Assert.That(obstacleSource, Does.Contain("new List<int>(_overlayCapacity)"));
-            Assert.That(obstacleSource, Does.Contain("new HashSet<int>(_overlayCapacity)"));
-            Assert.That(obstacleSource, Does.Contain("new Dictionary<int, ObstacleOverlayEmissionState>(_overlayCapacity)"));
-            Assert.That(obstacleSource, Does.Contain("TrackStableId"));
-            Assert.That(obstacleSource, Does.Contain("RequireEmissionStateCapacity"));
-            Assert.That(obstacleSource, Does.Contain("foreach (ref var chunk in _engine.World.Query(in ObstacleOverlayQuery))"));
-            Assert.That(obstacleSource, Does.Not.Contain("_engine.World.Query(\r\n            in ObstacleOverlayQuery,"));
-            Assert.That(obstacleSource, Does.Not.Contain("private readonly List<int> _currentStableIds = new();"));
-            Assert.That(obstacleSource, Does.Not.Contain("private readonly HashSet<int> _currentStableIdSet = new();"));
-            Assert.That(obstacleSource, Does.Not.Contain("private readonly Dictionary<int, ObstacleOverlayEmissionState> _emittedStateByStableId = new();"));
-            Assert.That(obstacleSource, Does.Not.Contain("AddRange(_currentStableIds)"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            InstallFlatVisualHeightmap(engine);
+            var runtime = new FormationCapabilityShowcaseRuntime();
+            Assert.DoesNotThrow(() => new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, runtime, config));
+            Assert.DoesNotThrow(() => new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, runtime, LoadBaseMassNavigationConfig().Solver.MaxObstacleCount));
         }
 
         [Test]
         public void MassNavigationFlowCrowdCost_UsesAgentLayerWorldsInsteadOfTeamWideLayerUnion()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationFlowSolverState.cs"));
+            var isolatedFlow = CreateTestFlowState();
+            var alphaOnly = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var betaOnly = new MassNavigationAgentLayer(categoryMask: 2u, interactionMask: 2u);
+            ResetFlowWithTwoOverlappingAgents(isolatedFlow, alphaOnly, betaOnly);
+            StepHardResolve(isolatedFlow);
+            Assert.That(isolatedFlow.GetPositionX(0), Is.EqualTo(5000f).Within(0.001f));
+            Assert.That(isolatedFlow.GetPositionX(1), Is.EqualTo(5000f).Within(0.001f));
 
-            Assert.That(source, Does.Contain("FlowRuntimeState"));
-            Assert.That(source, Does.Contain("_flowRuntimeIndices"));
-            Assert.That(source, Does.Contain("ResolveFlowStateIndex"));
-            Assert.That(source, Does.Contain("CanFlowStateObserveAgent"));
-            Assert.That(source, Does.Contain("flowState.Flow"));
-            Assert.That(source, Does.Not.Contain("LayerInteractionMask"),
-                "Flow crowd cost must be keyed by each agent world's layer pair, not a team-wide layer union.");
+            var interactingFlow = CreateTestFlowState();
+            var alphaSeesBeta = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 2u);
+            var betaSeesAlpha = new MassNavigationAgentLayer(categoryMask: 2u, interactionMask: 1u);
+            ResetFlowWithTwoOverlappingAgents(interactingFlow, alphaSeesBeta, betaSeesAlpha);
+            StepHardResolve(interactingFlow);
+            float dx = interactingFlow.GetPositionX(0) - interactingFlow.GetPositionX(1);
+            float dy = interactingFlow.GetPositionY(0) - interactingFlow.GetPositionY(1);
+            Assert.That((dx * dx) + (dy * dy), Is.GreaterThan(1f));
         }
 
         [Test]
         public void FormationCapabilityOutlinePresentation_IgnoresDestroyPendingFormationAgents()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FormationCapabilityModRoot(),
-                "Runtime",
-                "FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(source, Does.Contain("WithNone<PresentationDestroyPending>"),
-                "Formation outlines must not render entities that are already in presentation destroy lifecycle.");
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation outlines should exist before destroy-pending filtering is verified.");
+
+            Entity[] formations = CaptureFormationAgents(engine, FormationCapabilityAcceptance.ExpectedTotalFormations);
+            RoadSplineBuffer splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
+                ?? throw new InvalidOperationException("RoadSplineBuffer is missing.");
+            Assert.That(splines.Count, Is.EqualTo(FormationCapabilityAcceptance.ExpectedOutlineSplineSegments));
+
+            engine.World.Add(formations[0], new PresentationDestroyPending());
+            Tick(engine);
+
+            Assert.That(splines.Count, Is.LessThan(FormationCapabilityAcceptance.ExpectedOutlineSplineSegments));
         }
 
         [Test]
         public void GroundOverlayAssetIds_DoNotAcceptCaseAliases()
         {
-            string source = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "Core", "Engine", "GameEngine.cs"));
-            string body = ExtractMethodBody(source, "private static int ResolveGroundOverlayShapeId");
-
-            Assert.That(body, Does.Contain("ignoreCase: false"));
-            Assert.That(body, Does.Not.Contain("ignoreCase: true"));
+            Assert.That(Enum.TryParse("Ring", ignoreCase: false, out GroundOverlayShape exact), Is.True);
+            Assert.That(exact, Is.EqualTo(GroundOverlayShape.Ring));
+            Assert.That(Enum.TryParse("ring", ignoreCase: false, out GroundOverlayShape _), Is.False);
         }
 
         [Test]
         public void MassNavigationOrderIngestion_ConsumesOnlyControllableAgents()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationOrderIngestionSystem.cs"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(source, Does.Contain("OrderBuffer"),
-                "OrderIngestion must make controllability a component-composition contract, not a showcase template accident.");
-            Assert.That(source, Does.Contain("MassNavigationAgentIndex"),
-                "OrderIngestion must consume Core-owned MassNavigation runtime bindings.");
-            Assert.That(source, Does.Contain("ResolveControllableAgent"),
-                "Order completion must fail fast when a move order references an unbound controllable agent slot.");
-            Assert.That(source, Does.Contain("TryGetControllableEntity"),
-                "Order completion must resolve sparse controllable slots through AgentState instead of reading the list directly.");
-            Assert.That(source, Does.Not.Contain("ControllableAgentSlots["),
-                "OrderIngestion must not treat the exposed sparse slot list as an indexing API.");
-            Assert.That(source, Does.Not.Contain("FormationCapability"),
-                "OrderIngestion must stay generic and not know the FormationCapability showcase.");
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability agents should be bound before OrderIngestion composition is verified.");
+
+            int controllableOrderBuffers = 0;
+            var formationQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationAgent, MassNavigationAgentIndex, OrderBuffer>();
+            engine.World.Query(in formationQuery, (ref FormationCapabilityShowcaseFormationAgent _, ref MassNavigationAgentIndex index) =>
+            {
+                Assert.That(simulation.AgentState.TryGetControllableEntity(index.Value, out Entity controllable), Is.True);
+                Assert.That(controllable, Is.Not.EqualTo(Entity.Null));
+                controllableOrderBuffers++;
+            });
+
+            int soldierOrderBuffers = 0;
+            var soldierQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
+            engine.World.Query(in soldierQuery, (Entity entity, ref FormationCapabilityShowcaseFormationSoldier _, ref MassNavigationAgentIndex _) =>
+            {
+                if (engine.World.Has<OrderBuffer>(entity))
+                {
+                    soldierOrderBuffers++;
+                }
+            });
+
+            Assert.That(controllableOrderBuffers, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalFormations));
+            Assert.That(soldierOrderBuffers, Is.EqualTo(0));
         }
 
         [Test]
         public void MassNavigationOrderIngestion_PreallocatesCommandBucketsFromConfiguredRuntimeCapacity()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationOrderIngestionSystem.cs"));
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionTokenCapacity = 1;
+                simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 1;
+                RegisterMoveOrderType(engine);
 
-            Assert.That(source, Does.Contain("capacity.OrderIngestionTokenCapacity"),
-                "OrderIngestion token storage must use the explicit runtimeCapacity token capacity.");
-            Assert.That(source, Does.Contain("capacity.OrderIngestionMemberCapacity"),
-                "OrderIngestion member storage must use the explicit runtimeCapacity member capacity.");
-            Assert.That(source, Does.Contain("new Dictionary<int, int>(_orderTokenCapacity)"));
-            Assert.That(source, Does.Contain("new HashSet<int>(_orderTokenCapacity)"));
-            Assert.That(source, Does.Contain("new List<int>(_orderTokenCapacity)"));
-            Assert.That(source, Does.Contain("new List<OrderBucket>(_orderTokenCapacity)"));
-            Assert.That(source, Does.Contain("_buckets.Add(new OrderBucket(_bucketMemberCapacity))"));
-            Assert.That(source, Does.Contain("new List<int>(memberCapacity)"));
-            Assert.That(source, Does.Contain("foreach (ref var chunk in _engine.World.Query(in Query))"));
-            Assert.That(source, Does.Contain("scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity"));
-            Assert.That(source, Does.Contain("scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity"));
-            Assert.That(source, Does.Not.Contain("InitialSelectedEntityCapacity"),
-                "OrderIngestion must not use selection capacity as a hidden alias for order token/member capacity.");
-            Assert.That(source, Does.Not.Contain("_engine.World.Query(in Query,"),
-                "OrderIngestion hot path must use chunk/span iteration instead of query lambdas.");
-            Assert.That(source, Does.Not.Contain("private readonly Dictionary<int, int> _bucketIndexByToken = new();"),
-                "OrderIngestion must not rely on Dictionary first-use resizing during large selection move frames.");
-            Assert.That(source, Does.Not.Contain("public List<int> Members { get; } = new();"),
-                "Order bucket member storage must be preallocated from explicit configuration.");
+                Entity selectionContainer = engine.World.Create();
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0, selectionContainer);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1, selectionContainer);
+
+                var system = new MassNavigationOrderIngestionSystem(engine, simulation);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
+                Assert.That(ex.Message, Does.Contain("orderIngestionTokenCapacity"));
+            }
         }
 
         [Test]
         public void MassNavigationMetadataSync_UsesScenarioTeamOrderAsSsot()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationAgentMetadataSyncSystem.cs"));
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                int initialSelectedTeam = simulation.SelectedTeamId;
+                int[] configuredOrder = { 7, initialSelectedTeam, 11 };
+                simulation.ConfigureScenarioTeams(configuredOrder);
 
-            Assert.That(source, Does.Contain("simulation.Config.Scenario.Teams"));
-            Assert.That(source, Does.Contain("_configuredTeamIds"));
-            Assert.That(source, Does.Contain("ConfigureScenarioTeams(_configuredTeamIds)"));
-            Assert.That(source, Does.Contain("MissingEntityLayerQuery"));
-            Assert.That(source, Does.Contain("foreach (ref var chunk in _engine.World.Query(in Query))"));
-            Assert.That(source, Does.Not.Contain("Array.Sort"));
-            Assert.That(source, Does.Not.Contain("_teamScratch"));
-            Assert.That(source, Does.Not.Contain("_engine.World.Query(in Query,"));
+                Assert.That(simulation.TeamIds.ToArray(), Is.EqualTo(configuredOrder));
+                simulation.SetSelectedTeam(11);
+                simulation.ConfigureScenarioTeams(configuredOrder);
+                Assert.That(simulation.SelectedTeamId, Is.EqualTo(11));
+            }
         }
 
         [Test]
         public void FormationCapabilityMapUnload_DestroysAllTrackedMassNavigationAgents()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FormationCapabilityModRoot(),
-                "Runtime",
-                "FormationCapabilityShowcaseRuntime.cs"));
-            string unloadBody = ExtractMethodBody(source, "public Task HandleMapUnloadedAsync");
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
-            Assert.That(unloadBody, Does.Contain("simulation.ResetRuntimeState(engine.World)"));
-            Assert.That(unloadBody, Does.Not.Contain("DestroyFormationAgents"),
-                "Map unload must destroy the complete tracked MassNavigation agent set, including soldiers.");
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation),
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability scenario should be ready before map unload verification.");
+
+            Entity[] previousAgents = CaptureTrackedAgents(simulation);
+            engine.UnloadMap("formation_capability_showcase");
+            TickUntil(
+                engine,
+                () => CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Map unload should strip MassNavigation runtime bindings from every tracked formation and soldier agent.");
         }
 
         [Test]
         public void MassNavigationVisualScale_IsNavigationProfileMetadataNotPerformerSizeSsot()
         {
-            string flowSource = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationFlowSolverState.cs"));
-            string performerSource = File.ReadAllText(Path.Combine(
-                FormationCapabilityModRoot(),
-                "assets",
-                "Presentation",
-                "performers.json"));
+            var flow = CreateTestFlowState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            flow.ResetAuthoredAgents(new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 100f,
+                    localPositionYCm: 100f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1.75f,
+                    bodyRadiusCm: 120f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            });
 
-            Assert.That(flowSource, Does.Contain("_visualScales"));
-            Assert.That(flowSource, Does.Not.Contain("AgentBodyRadiusCm * _visualScales"));
-            Assert.That(performerSource, Does.Contain("\"localScale\""),
-                "Performer size is currently authored by performer definitions; MassNavigation visualScale remains solver/profile metadata.");
+            Assert.That(flow.GetVisualScale(0), Is.EqualTo(1.75f));
+            Assert.That(flow.GetBodyRadiusCm(0), Is.EqualTo(120f));
+
+            JsonArray performers = ReadArray(Path.Combine(FormationCapabilityModRoot(), "assets", "Presentation", "performers.json"));
+            JsonObject soldierPerformer = FindObjectById(performers, "formation_capability_showcase_soldier_azure_light");
+            Assert.That(ContainsJsonProperty(soldierPerformer, "localScale"), Is.True);
         }
 
         [Test]
         public void FormationCapabilitySystems_AreGatedByShowcaseMapNotMassNavigationConfig()
         {
-            string modRoot = FormationCapabilityModRoot();
-            string scenarioBindingSystem = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseScenarioBindingSystem.cs"));
-            string formationSystem = File.ReadAllText(Path.Combine(modRoot, "Runtime", "FormationCapabilityShowcaseFormationRuntimeSystem.cs"));
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            var runtime = new FormationCapabilityShowcaseRuntime();
 
-            Assert.That(scenarioBindingSystem, Does.Contain("_runtime.IsCurrentShowcaseMap(_engine)"));
-            Assert.That(formationSystem, Does.Contain("_runtime.IsCurrentShowcaseMap(_engine)"));
-            Assert.That(scenarioBindingSystem, Does.Not.Contain("MassNavigationIds.IsCurrentNavigationMap"));
-            Assert.That(formationSystem, Does.Not.Contain("MassNavigationIds.IsCurrentNavigationMap"));
+            FocusCurrentMapSession(engine, "mass_navigation");
+            Assert.That(runtime.IsCurrentShowcaseMap(engine), Is.False);
+
+            FocusCurrentMapSession(engine, "formation_capability_showcase");
+            Assert.That(runtime.IsCurrentShowcaseMap(engine), Is.True);
         }
 
         [Test]
@@ -1693,19 +1702,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void RuntimeTemplateSpawnCaches_UseExactTemplateKeys()
         {
-            string[] files =
-            {
-                Path.Combine(FindRepoRoot(), "src", "Core", "Gameplay", "Spawning", "RuntimeEntitySpawnSystem.cs"),
-                Path.Combine(FindRepoRoot(), "src", "Core", "Config", "TemplateEntityBatchSpawner.cs"),
-            };
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int exact = templateKeys.Register("mass_navigation_exact_template");
 
-            foreach (string file in files)
-            {
-                string source = File.ReadAllText(file);
-                Assert.That(source, Does.Contain("StringComparer.Ordinal"));
-                Assert.That(source, Does.Not.Contain("StringComparer.OrdinalIgnoreCase"),
-                    $"{Path.GetFileName(file)} must not permit case aliases for template ids.");
-            }
+            Assert.That(templateKeys.TryGetId("mass_navigation_exact_template", out int resolved), Is.True);
+            Assert.That(resolved, Is.EqualTo(exact));
+            Assert.That(templateKeys.TryGetId("Mass_Navigation_Exact_Template", out _), Is.False);
         }
 
         [Test]
@@ -1831,8 +1833,9 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void CoreComponentRegistry_RegistersMassNavigationAgentLayer()
         {
-            string source = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "Core", "Config", "ComponentRegistry.cs"));
-            Assert.That(source, Does.Contain("LayerRegistry.Register(MassNavigationLayerNames.Agent);"));
+            Assert.That(Ludots.Core.Config.ComponentRegistry.TryGetComponentType("MassNavigationAgent", out _), Is.True);
+            Assert.That(LayerRegistry.GetName(LayerRegistry.GetIndex(MassNavigationLayerNames.Agent)), Is.EqualTo(MassNavigationLayerNames.Agent));
+            Assert.That(LayerRegistry.GetBit(MassNavigationLayerNames.Agent), Is.Not.EqualTo(0u));
         }
 
         [Test]
@@ -2405,86 +2408,115 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void CoreMassNavigationSources_DoNotReferenceCameraMinimapHudOrCulling()
+        public void CoreMassNavigationRuntime_WhenCullingProbeExists_DoesNotOwnCameraCullingProbe()
         {
-            string coreMassNavigationRoot = Path.Combine(FindRepoRoot(), "src", "Core", "MassNavigation");
-            string[] forbidden =
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
             {
-                "Camera",
-                "camera",
-                "Minimap",
-                "minimap",
-                "ViewController",
-                "CameraCullingFocus",
-                "Hud",
-                "HUD",
-                "viewResidency",
-                "ViewResidency",
-            };
+                var focus = new CameraCullingFocusOverride();
+                engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, focus);
+                Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True);
 
-            foreach (string file in Directory.EnumerateFiles(coreMassNavigationRoot, "*.cs", SearchOption.AllDirectories))
-            {
-                string source = File.ReadAllText(file);
-                foreach (string token in forbidden)
+                simulation.MassNavigationFlow.ResetAuthoredAgents(new[]
                 {
-                    Assert.That(source, Does.Not.Contain(token),
-                        $"Core MassNavigation must stay independent from presentation camera/minimap/HUD concerns. File: {file}");
-                }
+                    CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                });
+                simulation.MassNavigationFlow.Step(
+                    dt: 0f,
+                    world: engine.World,
+                    navGroupRuntime: simulation.NavGroupRuntime,
+                    runHardResolve: false,
+                    hardResolveCandidateThresholdAgents: 1);
+
+                AssertMassNavigationDoesNotOwnCullingProbe(engine);
             }
         }
 
         [Test]
-        public void GameEngineOwnsMassNavigationRuntimeLifecycle()
+        public void GameEngine_WhenMassNavigationRuntimeLifecycleChanges_ReflectsRuntimeReadinessThroughServices()
         {
-            string repoRoot = FindRepoRoot();
-            string engineSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
-            string lifecycleSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.MapLoadLifecycle.cs"));
-            string runtimeSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "MassNavigation", "Runtime", "MassNavigationRuntime.cs"));
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.SameAs(simulation));
+                Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.True);
 
-            Assert.That(engineSource, Does.Contain("private readonly MassNavigationRuntime _massNavigationRuntime = new();"));
-            Assert.That(lifecycleSource, Does.Contain("_massNavigationRuntime.HandleMapFocused(this, session.MapId);"));
-            Assert.That(engineSource, Does.Contain("_massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);"));
-            Assert.That(engineSource, Does.Contain("_massNavigationRuntime.HandleMapUnloaded(this, mid);"));
-            Assert.That(runtimeSource, Does.Contain("public bool HandleMapFocused(GameEngine engine, MapId mapId)"));
-            Assert.That(runtimeSource, Does.Contain("public bool HandleMapSuspended(GameEngine engine, MapId mapId)"));
-            Assert.That(runtimeSource, Does.Contain("public bool HandleMapUnloaded(GameEngine engine, MapId mapId)"));
-            Assert.That(runtimeSource, Does.Not.Contain("IModContext"));
+                simulation.SetWorldOperationsReady(false);
+                Assert.That(MassNavigationIds.IsCurrentNavigationRuntimeReady(engine), Is.False);
+
+                Assert.That(engine.RemoveService(MassNavigationKeys.SimulationRuntime), Is.True);
+                Assert.That(engine.GetService(MassNavigationKeys.SimulationRuntime), Is.Null);
+            }
+        }
+
+        [Test]
+        public void GameEngine_WhenMassNavigationPostMovementSystemsRegister_InsertsExplicitRequiredAnchors()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
+                engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+                    new MassNavigationFormationFollowerSystem(engine, simulation),
+                    SystemGroup.PostMovement);
+                engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+                    new MassNavigationOrderIngestionSystem(engine, simulation),
+                    SystemGroup.PostMovement);
+                engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+                    new MassNavigationPreSimulationStepSystem(),
+                    SystemGroup.PostMovement);
+
+                List<ISystem<float>> systems = GetSystems(engine, SystemGroup.PostMovement);
+                int formationIndex = systems.FindIndex(system => system is MassNavigationFormationSystem);
+                Assert.That(formationIndex, Is.GreaterThanOrEqualTo(0));
+                Assert.That(systems.FindIndex(system => system is MassNavigationFormationFollowerSystem), Is.LessThan(formationIndex));
+                Assert.That(systems.FindIndex(system => system is MassNavigationOrderIngestionSystem), Is.LessThan(formationIndex));
+                Assert.That(systems.FindIndex(system => system is MassNavigationPreSimulationStepSystem), Is.LessThan(formationIndex));
+            }
         }
 
         [Test]
         public void MassNavigationControlSystem_ResetRemovesOwnPendingSpawnRequests()
         {
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationControlSystem.cs"));
+            var queue = new RuntimeEntitySpawnQueue();
+            var massNavigationMap = new MapId("mass_navigation");
+            var otherMap = new MapId("other_map");
+            Assert.That(queue.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "mass_navigation_light",
+                MapId = massNavigationMap,
+            }), Is.True);
+            Assert.That(queue.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "unrelated_template",
+                MapId = otherMap,
+                EmitReceipt = 1,
+                ReceiptChannelId = 77,
+            }), Is.True);
 
-            string resetBody = ExtractMethodBody(source, "private void RemovePendingScenarioSpawns");
-            Assert.That(resetBody, Does.Contain("RemoveForMap"));
-            Assert.That(resetBody, Does.Not.Contain("RemoveForReceiptChannel"));
-            Assert.That(source, Does.Not.Contain("RuntimeSpawnReceiptChannelKey"));
+            Assert.That(queue.RemoveForMap(massNavigationMap), Is.EqualTo(1));
+            Assert.That(queue.Count, Is.EqualTo(1));
+            Assert.That(queue.TryDequeue(out RuntimeEntitySpawnRequest remaining), Is.True);
+            Assert.That(remaining.TemplateId, Is.EqualTo("unrelated_template"));
+            Assert.That(remaining.ReceiptChannelId, Is.EqualTo(77));
         }
 
         [Test]
         public void MassNavigationModEntry_IsDataOnlyAndDoesNotOwnRuntimeOrPanelLifecycle()
         {
             string modRoot = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "MassNavigationMod");
-            string entrySource = File.ReadAllText(Path.Combine(modRoot, "MassNavigationModEntry.cs"));
-            string manifestSource = File.ReadAllText(Path.Combine(modRoot, "mod.json"));
-            string projectSource = File.ReadAllText(Path.Combine(modRoot, "MassNavigationMod.csproj"));
+            JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+            JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationMod mod.json must author dependencies.");
+            string[] projectReferences = ReadProjectReferenceIncludes(Path.Combine(modRoot, "MassNavigationMod.csproj"));
 
-            Assert.That(entrySource, Does.Contain("Loaded data-only MassNavigation assets"));
-            Assert.That(entrySource, Does.Not.Contain("MassNavigationRuntime"));
-            Assert.That(entrySource, Does.Not.Contain("RegisterSystem"));
-            Assert.That(entrySource, Does.Not.Contain("RegisterMapEvent"));
-            Assert.That(entrySource, Does.Not.Contain("MassNavigationPanel"));
-            Assert.That(entrySource, Does.Not.Contain("Camera"));
-            Assert.That(manifestSource, Does.Not.Contain("CameraProfilesMod"));
-            Assert.That(projectSource, Does.Not.Contain("<Compile Include=\"Systems"));
-            Assert.That(projectSource, Does.Not.Contain("<Compile Include=\"UI"));
+            Assert.That(RequireString(manifest, "description"), Does.Contain("Data-only"));
+            Assert.That(dependencies.ContainsKey("LudotsCoreMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("CameraProfilesMod"), Is.False);
+            Assert.That(projectReferences, Has.Exactly(1).Contain("Ludots.Core.csproj"));
+            Assert.That(projectReferences.Any(reference => reference.Contains("CoreInputMod", StringComparison.Ordinal)), Is.False);
             Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
             Assert.That(Directory.Exists(Path.Combine(modRoot, "Systems")), Is.False);
         }
@@ -2503,12 +2535,14 @@ namespace Ludots.Tests.Presentation
 
             foreach (string modRoot in applyingMods)
             {
-                string manifestSource = File.ReadAllText(Path.Combine(modRoot, "mod.json"));
-                Assert.That(manifestSource, Does.Not.Contain("\"MassNavigationMod\""),
+                JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+                JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                    ?? throw new InvalidOperationException($"{modRoot} mod.json must author dependencies.");
+                Assert.That(dependencies.ContainsKey("MassNavigationMod"), Is.False,
                     $"MassNavigation-using showcase mods must not depend on the MassNavigation data mod. Mod: {modRoot}");
 
-                string projectSource = File.ReadAllText(Directory.EnumerateFiles(modRoot, "*.csproj").Single());
-                Assert.That(projectSource, Does.Not.Contain("MassNavigationMod"),
+                string[] projectReferences = ReadProjectReferenceIncludes(Directory.EnumerateFiles(modRoot, "*.csproj").Single());
+                Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
                     $"MassNavigation-using showcase projects must not reference the MassNavigation data mod. Mod: {modRoot}");
             }
         }
@@ -2516,36 +2550,16 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationAndFormationCapabilitySources_DoNotReintroduceFallbackAliasOrPrototypeNames()
         {
-            string repoRoot = FindRepoRoot();
-            string[] roots =
-            {
-                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
-                Path.Combine(repoRoot, "mods", "showcases", "formation_capability"),
-            };
+            JsonObject massNavigationConfig = LoadMergedFormationCapabilityMassNavigationConfigObject();
+            JsonObject scenarioRuntime = massNavigationConfig["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("Merged MassNavigationConfig must author scenarioRuntime.");
+            JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("Merged MassNavigationConfig must author scenarioRuntime.runtimeCapacity.");
+            JsonObject formationConfig = ReadObject(Path.Combine(FormationCapabilityModRoot(), "assets", "FormationCapabilityShowcaseConfig.json"));
 
-            string[] forbidden =
-            {
-                "fallback",
-                "alias",
-                "WebParity",
-                "webParity",
-                "MassNavigationWeb",
-                "OrdinalIgnoreCase",
-                "StringComparer.OrdinalIgnoreCase",
-                "PropertyNameCaseInsensitive = true",
-                "?? default",
-            };
-
-            foreach (string path in roots.SelectMany(root => Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
-                         .Where(path => !PathHasSegment(path, "bin") && !PathHasSegment(path, "obj"))
-                         .Where(path => path.EndsWith(".cs", StringComparison.Ordinal) || path.EndsWith(".json", StringComparison.Ordinal)))
-            {
-                string source = File.ReadAllText(path);
-                foreach (string token in forbidden)
-                {
-                    Assert.That(source, Does.Not.Contain(token), $"{path} must not contain forbidden token '{token}'.");
-                }
-            }
+            Assert.That(runtimeCapacity.ContainsKey("fallback"), Is.False);
+            Assert.That(formationConfig.ContainsKey("webParity"), Is.False);
+            Assert.That(formationConfig.ContainsKey("alias"), Is.False);
         }
 
         [Test]
@@ -2573,148 +2587,97 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationPostMovementSystems_UseExplicitRequiredAnchors()
-        {
-            string repoRoot = FindRepoRoot();
-            string engineSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
-            string runtimeSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationRuntime.cs"));
-
-            Assert.That(engineSource, Does.Contain("InsertSystemBeforeRequired"));
-            Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationFormationSystem>"));
-            Assert.That(runtimeSource, Does.Contain("new MassNavigationOrderIngestionSystem(engine, simulation)"));
-            Assert.That(runtimeSource, Does.Not.Contain("CommandApply"));
-            Assert.That(runtimeSource.IndexOf("new MassNavigationFormationSystem", StringComparison.Ordinal),
-                Is.LessThan(runtimeSource.IndexOf("InsertSystemBeforeRequired<MassNavigationFormationSystem>", StringComparison.Ordinal)));
-        }
-
-        [Test]
         public void MassNavigationRuntimeBoundaries_UseExplicitAgentTermsAndCoreOwnedBinding()
         {
-            string repoRoot = FindRepoRoot();
-            string agentStateSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationAgentState.cs"));
-            string authoredBindingSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationAuthoredAgentBindingSystem.cs"));
-            string bootstrapSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationScenarioBootstrap.cs"));
-            string orderIngestionSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Systems",
-                "MassNavigationOrderIngestionSystem.cs"));
-            string moveOrderArgsSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationMoveOrderArgs.cs"));
+            var agentState = new MassNavigationAgentState();
+            var world = World.Create();
+            try
+            {
+                Entity agent = world.Create();
+                agentState.RegisterAgentAtIndex(agent, agentIndex: 3, controllable: true);
 
-            Assert.That(agentStateSource, Does.Contain("ControllableAgentCount"));
-            Assert.That(agentStateSource, Does.Contain("ControllableAgentSlotCount"));
-            Assert.That(agentStateSource, Does.Not.Contain("ControllableCount"));
-            Assert.That(authoredBindingSource, Does.Contain("MassNavigationAgent"));
-            Assert.That(authoredBindingSource, Does.Contain("MassNavigationAgentIndex"));
-            Assert.That(authoredBindingSource, Does.Contain("OrderBuffer"));
-            Assert.That(authoredBindingSource, Does.Not.Contain("Receipt"));
-            Assert.That(bootstrapSource, Does.Contain("SpawnConfiguredScenario"));
-            Assert.That(bootstrapSource, Does.Not.Contain("SpawnDefaultScenario"));
-            Assert.That(orderIngestionSource, Does.Contain("MassNavigationMoveOrderArgs.Decode"));
-            Assert.That(orderIngestionSource, Does.Not.Contain(".Args.I0"));
-            Assert.That(orderIngestionSource, Does.Not.Contain(".Args.F0"));
-            Assert.That(moveOrderArgsSource, Does.Contain("DecodeFormationMode"));
-            Assert.That(orderIngestionSource, Does.Not.Contain(": MassNavigationFormationMode.None"));
+                Assert.That(agentState.ControllableAgentCount, Is.EqualTo(1));
+                Assert.That(agentState.ControllableAgentSlotCount, Is.EqualTo(1));
+                Assert.That(agentState.TryGetControllableEntity(3, out Entity resolved), Is.True);
+                Assert.That(resolved, Is.EqualTo(agent));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+
+            var orderWorld = World.Create();
+            try
+            {
+                Entity selectionContainer = orderWorld.Create();
+                var args = MassNavigationMoveOrderArgs.Encode(
+                    new Vector2(1500f, 2500f),
+                    MassNavigationFormationMode.Line,
+                    rotationRadians: 0.5f,
+                    selectionContainer: selectionContainer);
+                var order = new Order
+                {
+                    OrderId = 55,
+                    OrderTypeId = 37,
+                    Args = args,
+                };
+                MassNavigationMoveOrderArgs decoded = MassNavigationMoveOrderArgs.Decode(in order);
+                Assert.That(decoded.DestinationCm, Is.EqualTo(new Vector2(1500f, 2500f)));
+                Assert.That(decoded.FormationMode, Is.EqualTo(MassNavigationFormationMode.Line));
+                Assert.That(decoded.RotationRadians, Is.EqualTo(0.5f));
+            }
+            finally
+            {
+                World.Destroy(orderWorld);
+            }
         }
 
         [Test]
         public void MassNavigationGroupRuntime_ExposesOrderSlotTargetsAndDoesNotCollapseNoneFormationOrders()
         {
-            string repoRoot = FindRepoRoot();
-            string groupRuntimeSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationGroupRuntime.cs"));
-            string orderUpsertBody = ExtractMethodBody(groupRuntimeSource, "public int UpsertOrderMoveCommand");
+            AssertPublicMethod(typeof(MassNavigationGroupRuntime), nameof(MassNavigationGroupRuntime.TryGetGroupMemberOrderTarget));
+            AssertPublicMethod(typeof(MassNavigationGroupRuntime), nameof(MassNavigationGroupRuntime.TryUpdateGroupMemberOrderPathAnchor));
 
-            Assert.That(groupRuntimeSource, Does.Contain("TryGetGroupMemberOrderTarget"));
-            Assert.That(groupRuntimeSource, Does.Contain("TryUpdateGroupMemberOrderPathAnchor"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("TryGetGroupMemberTarget"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("TryGetGroupDestination"));
-            Assert.That(orderUpsertBody, Does.Contain("bool singleMemberOrder = memberIndices.Length == 1"));
-            Assert.That(orderUpsertBody, Does.Not.Contain("formationMode == MassNavigationFormationMode.None || memberIndices.Length == 1"));
-            Assert.That(groupRuntimeSource, Does.Contain("BuildCurrentRelativeOffsets"));
-            Assert.That(groupRuntimeSource, Does.Contain("_groupIdsByAgentIndex"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("_groupIdsByControllableIndex"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("EnsureMembershipCapacity(agentState.ControllableAgentSlotCount)"));
-            Assert.That(groupRuntimeSource, Does.Contain("EnsureMembershipCapacityForMembers(memberIndices[..assignedCount])"));
-            Assert.That(groupRuntimeSource, Does.Contain("EnsureMembershipCapacityForMembers(memberIndices[..memberCount])"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("ResolveLayoutMode"));
-            Assert.That(groupRuntimeSource, Does.Not.Contain("? MassNavigationFormationMode.Square"));
-            Assert.That(groupRuntimeSource, Does.Contain("ResolveBodyRadiusSpacingScale"));
+            using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(
+                new Vector2(1000f, 1000f),
+                new Vector2(1200f, 1000f));
+
+            int assigned = fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 501,
+                memberIndices: new[] { 0, 1 },
+                teamId: 1,
+                destinationWorldCm: new Vector2(4000f, 4000f),
+                formationMode: MassNavigationFormationMode.None,
+                rotationRadians: 0f);
+
+            Assert.That(assigned, Is.EqualTo(2));
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float firstX, out float firstY), Is.True);
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(1, out float secondX, out float secondY), Is.True);
+            Assert.That((firstX - secondX) * (firstX - secondX) + (firstY - secondY) * (firstY - secondY), Is.GreaterThan(1f));
         }
 
         [Test]
         public void MassNavigationFlowNeighborSearch_UsesLayerScopedBodyRadiusNotGlobalLargestAgent()
         {
-            string repoRoot = FindRepoRoot();
-            string flowSource = File.ReadAllText(Path.Combine(
-                repoRoot,
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationFlowSolverState.cs"));
-            string separationBody = ExtractMethodBody(flowSource, "private int ResolveSeparationHashSearchRadiusCells");
-            string hardResolveBody = ExtractMethodBody(flowSource, "private int ResolveHardResolveHashSearchRadiusCells");
+            var flow = CreateTestFlowState();
+            var smallLayer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var largeIsolatedLayer = new MassNavigationAgentLayer(categoryMask: 2u, interactionMask: 2u);
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAgentSeed(1, 5000f, 5000f, 20f, smallLayer),
+                CreateAgentSeed(1, 5030f, 5000f, 20f, smallLayer),
+                CreateAgentSeed(1, 5000f, 6500f, 900f, largeIsolatedLayer),
+            });
 
-            Assert.That(flowSource, Does.Contain("_maxInteractingBodyRadiiCm"));
-            Assert.That(flowSource, Does.Contain("_separationHashSearchRadiusCellsByAgent"));
-            Assert.That(flowSource, Does.Contain("_hardResolveHashSearchRadiusCellsByAgent"));
-            Assert.That(flowSource, Does.Contain("RecomputeMaxInteractingBodyRadiiCm"));
-            Assert.That(flowSource, Does.Contain("TrailingZeroCount"));
-            Assert.That(flowSource, Does.Contain("flowObstacleNeighborRadiusCells"));
-            Assert.That(flowSource, Does.Not.Contain("oy = -2"));
-            Assert.That(flowSource, Does.Not.Contain("ox = -2"));
-            Assert.That(flowSource, Does.Not.Contain("_hardResolveCandidates[j] = 1"),
-                "Parallel steering workers must only write candidate flags owned by their own unit index.");
-            Assert.That(separationBody, Does.Contain("ResolveMaxInteractingBodyRadiusCm(selfUnitIndex)"));
-            Assert.That(hardResolveBody, Does.Contain("ResolveMaxInteractingBodyRadiusCm(selfUnitIndex)"));
-            Assert.That(flowSource, Does.Contain("int separationHashSearchRadius = _separationHashSearchRadiusCellsByAgent[i]"));
-            Assert.That(flowSource, Does.Contain("int hardResolveSearchRadius = _hardResolveHashSearchRadiusCellsByAgent[i]"));
-            Assert.That(separationBody, Does.Not.Contain("_maxBodyRadiusCm * 2f"));
-            Assert.That(hardResolveBody, Does.Not.Contain("+ _maxBodyRadiusCm +"));
-        }
+            StepHardResolve(flow);
 
-        private static bool PathHasSegment(string path, string segment)
-        {
-            return path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                .Any(part => string.Equals(part, segment, StringComparison.Ordinal));
+            float smallDx = flow.GetPositionX(0) - flow.GetPositionX(1);
+            float smallDy = flow.GetPositionY(0) - flow.GetPositionY(1);
+            Assert.That((smallDx * smallDx) + (smallDy * smallDy), Is.GreaterThan(30f * 30f));
+            Assert.That(flow.GetPositionY(2), Is.EqualTo(6500f).Within(0.001f),
+                "A large non-interacting layer must not become a global body-radius source for unrelated agents.");
         }
 
         private static List<string> MassNavigationDependencyPaths()
@@ -2847,6 +2810,28 @@ namespace Ludots.Tests.Presentation
             engine.SetCurrentMapSessionForTests(session);
         }
 
+        private static void InstallFlatVisualHeightmap(GameEngine engine)
+        {
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(0, 0, 25_000, 25_000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    heightSamplesCm: new short[4]));
+            engine.SetService(CoreServiceKeys.VisualHeightmap, heightmap);
+        }
+
+        private static List<ISystem<float>> GetSystems(GameEngine engine, SystemGroup group)
+        {
+            var field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(field, Is.Not.Null);
+
+            var systemGroups = field!.GetValue(engine) as Dictionary<SystemGroup, List<ISystem<float>>>;
+            Assert.That(systemGroups, Is.Not.Null);
+            Assert.That(systemGroups!.TryGetValue(group, out List<ISystem<float>>? systems), Is.True);
+            return systems!;
+        }
+
         private static void UpdateSystem(ISystem<float> system)
         {
             float dt = 0f;
@@ -2904,6 +2889,92 @@ namespace Ludots.Tests.Presentation
                 bodyRadiusCm: 20f,
                 speedCmPerSecond: 800f,
                 new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u));
+        }
+
+        private static MassNavigationAgentSeed CreateAgentSeed(
+            int teamId,
+            float localXCm,
+            float localYCm,
+            float bodyRadiusCm,
+            MassNavigationAgentLayer layer)
+        {
+            return new MassNavigationAgentSeed(
+                teamId: teamId,
+                localPositionXCm: localXCm,
+                localPositionYCm: localYCm,
+                heavy: bodyRadiusCm >= 200f,
+                navMass: bodyRadiusCm >= 200f ? 12f : 1f,
+                visualScale: 1f,
+                bodyRadiusCm: bodyRadiusCm,
+                speedCmPerSecond: 800f,
+                layer);
+        }
+
+        private static void ResetFlowWithTwoOverlappingAgents(
+            MassNavigationFlowSolverState flow,
+            MassNavigationAgentLayer firstLayer,
+            MassNavigationAgentLayer secondLayer)
+        {
+            flow.ResetAuthoredAgents(new[]
+            {
+                CreateAgentSeed(1, 5000f, 5000f, 80f, firstLayer),
+                CreateAgentSeed(1, 5000f, 5000f, 80f, secondLayer),
+            });
+        }
+
+        private static void StepHardResolve(MassNavigationFlowSolverState flow)
+        {
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Hostile",
+                Relationships = new List<RelationshipEntry>(),
+            });
+
+            using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(new Vector2(1000f, 1000f));
+            flow.Step(
+                dt: 0f,
+                world: fixture.World,
+                navGroupRuntime: fixture.Runtime,
+                runHardResolve: true,
+                hardResolveCandidateThresholdAgents: 1);
+        }
+
+        private static void RegisterMoveOrderType(GameEngine engine)
+        {
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = MassNavigationOrderKeys.Move,
+                OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                Priority = 100,
+            });
+            engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
+        }
+
+        private static Entity CreateActiveMassNavigationMoveOrderEntity(
+            GameEngine engine,
+            int token,
+            int agentIndex,
+            Entity selectionContainer)
+        {
+            var order = new Order
+            {
+                OrderId = token,
+                OrderTypeId = TestMassNavigationMoveOrderTypeId,
+                Args = MassNavigationMoveOrderArgs.Encode(
+                    new Vector2(2000f + (agentIndex * 100f), 2500f),
+                    MassNavigationFormationMode.Line,
+                    rotationRadians: 0f,
+                    selectionContainer: selectionContainer),
+            };
+            OrderBuffer orders = OrderBuffer.CreateEmpty();
+            orders.SetActiveDirect(in order, priority: 100);
+
+            return engine.World.Create(
+                new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("test.massNavigation.orderIngestion") },
+                new MassNavigationAgentIndex { Value = agentIndex },
+                new Team { Id = 1 },
+                orders);
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames, string failureMessage)
@@ -3830,39 +3901,52 @@ namespace Ludots.Tests.Presentation
             return RequireString(nested, propertyName);
         }
 
-        private static string ExtractMethodBody(string source, string methodName)
+        private static void AssertPublicMethod(Type type, string methodName)
         {
-            int methodIndex = source.IndexOf(methodName, StringComparison.Ordinal);
-            if (methodIndex < 0)
-            {
-                throw new InvalidOperationException($"Method '{methodName}' not found.");
-            }
+            Assert.That(
+                type.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public),
+                Is.Not.Null,
+                $"{type.FullName} must expose public method {methodName}.");
+        }
 
-            int bodyStart = source.IndexOf('{', methodIndex);
-            if (bodyStart < 0)
+        private static bool ContainsJsonProperty(JsonNode? node, string propertyName)
+        {
+            if (node is JsonObject obj)
             {
-                throw new InvalidOperationException($"Method '{methodName}' body not found.");
-            }
-
-            int depth = 0;
-            for (int i = bodyStart; i < source.Length; i++)
-            {
-                char c = source[i];
-                if (c == '{')
+                if (obj.ContainsKey(propertyName))
                 {
-                    depth++;
+                    return true;
                 }
-                else if (c == '}')
+
+                foreach (KeyValuePair<string, JsonNode?> child in obj)
                 {
-                    depth--;
-                    if (depth == 0)
+                    if (ContainsJsonProperty(child.Value, propertyName))
                     {
-                        return source.Substring(bodyStart, i - bodyStart + 1);
+                        return true;
+                    }
+                }
+            }
+            else if (node is JsonArray array)
+            {
+                foreach (JsonNode? child in array)
+                {
+                    if (ContainsJsonProperty(child, propertyName))
+                    {
+                        return true;
                     }
                 }
             }
 
-            throw new InvalidOperationException($"Method '{methodName}' body was not closed.");
+            return false;
+        }
+
+        private static string[] ReadProjectReferenceIncludes(string projectPath)
+        {
+            return XDocument.Load(projectPath)
+                .Descendants("ProjectReference")
+                .Select(element => element.Attribute("Include")?.Value ?? string.Empty)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .ToArray();
         }
 
         private static JsonArray ReadArray(string path)

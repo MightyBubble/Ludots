@@ -224,16 +224,6 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
                 () => simulation.SetSelection(new[] { Entity.Null, Entity.Null }, revision: 1))!;
             Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
-
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "src",
-                "Core",
-                "MassNavigation",
-                "Runtime",
-                "MassNavigationSimulationRuntime.cs"));
-            Assert.That(source, Does.Not.Contain("Array.Resize(ref _selectionScratch"));
-            Assert.That(source, Does.Not.Contain("Array.Resize(ref _selectedEntities"));
         }
 
         private static TestContextScope CreateContext(

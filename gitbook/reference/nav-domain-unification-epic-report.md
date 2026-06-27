@@ -97,3 +97,7 @@ Web editor smoke：
 - HexGrid 运行时里仍存在无 board context 的 `HexCoordinates` 静态默认工具调用。新代码应优先使用带 `HexEdgeLengthCm` 的 board metrics / `HexMetrics`；老调用需要持续审计。
 - 大地图编辑器性能仍要靠 LOD / dirty tile / incremental bake 控制，禁止回到全量重烤后清空旧 tile 的行为。
 - NodeGraph 编辑、road/waterway authoring 与 Raylib 精准 debug view 需要继续按 `NavBakeContext` / route policy / MassNavigationFlow sink 的新边界实现。
+
+## Epic #416 构建告警口径
+
+Epic #416 收口记录中的 `0 warnings / 0 errors` 只适用于 Core + Browser UI / React Flow showcase 的应用构建配置。ArchitectureTests 与 PresentationTests 仍带有既有 nullable/analyzer warning backlog；这些测试工程告警不纳入该口径。Epic #416 的测试验收口径是相关测试命令无失败、无新增 skip。
