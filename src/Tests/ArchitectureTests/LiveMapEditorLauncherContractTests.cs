@@ -35,6 +35,30 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
+    public void LauncherPreset_StacksCefRuntimeTransportNetworkAndLiveEditorCapability()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonObject presets = ReadObject(Path.Combine(repoRoot, "launcher.presets.json"));
+        JsonArray presetArray = presets["presets"] as JsonArray
+            ?? throw new InvalidDataException("launcher.presets.json must contain a presets array.");
+        JsonObject preset = presetArray
+            .OfType<JsonObject>()
+            .Single(obj => string.Equals(obj["id"]?.GetValue<string>(), "live_map_editor_transport_network_cef_raylib", StringComparison.Ordinal));
+        string[] selectors = (preset["selectors"] as JsonArray
+                ?? throw new InvalidDataException("live map editor transport preset must declare selectors."))
+            .Select(node => node?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+
+        Assert.That(selectors, Is.EqualTo(new[]
+        {
+            "$browser_cef_runtime",
+            "$capability_standard_transport_network",
+            "$live_map_editor"
+        }));
+        Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+    }
+
+    [Test]
     public void LauncherConfig_RegistersLiveMapEditorModsByStrictPath()
     {
         string repoRoot = FindRepoRoot();
@@ -251,10 +275,213 @@ public sealed class LiveMapEditorLauncherContractTests
         Assert.That(doc, Does.Contain("TransportNetworkBaker.Bake(asset, chunkSizeCm)"));
         Assert.That(doc, Does.Contain("ChunkedNodeGraphStore"));
         Assert.That(doc, Does.Contain("TransportNetworkRibbonSource"));
+        Assert.That(doc, Does.Contain("SurfaceSourcePayloadRegistry"));
         Assert.That(doc, Does.Contain("RoadSplineBuffer"));
         Assert.That(doc, Does.Contain("GraphEdgeProjectionQuery"));
         Assert.That(doc, Does.Contain("AutoPathService"));
+        Assert.That(doc, Does.Contain("transportRebake"));
+        Assert.That(doc, Does.Contain("transportSave"));
         Assert.That(doc, Does.Contain("no private road graph"));
+    }
+
+    [Test]
+    public void TransportNetworkEditorDocs_AreIndexedAndCaptureCoreBoundary()
+    {
+        string repoRoot = FindRepoRoot();
+        string adr = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "docs",
+            "adr",
+            "ADR-0004-transport-network-editor-boundary.md"));
+        string gitbook = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "gitbook",
+            "architecture",
+            "transport-network-editor.md"));
+        string summary = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "SUMMARY.md"));
+
+        Assert.That(adr, Does.Contain("Status: Accepted"));
+        Assert.That(adr, Does.Contain("TransportNetworkBaker.Bake(asset, chunkSizeCm)"));
+        Assert.That(adr, Does.Contain("SurfaceSourcePayloadRegistry"));
+        Assert.That(adr, Does.Contain("AutoPathService"));
+        Assert.That(gitbook, Does.Contain("Tool Modes"));
+        Assert.That(gitbook, Does.Contain("`node`"));
+        Assert.That(gitbook, Does.Contain("`segment`"));
+        Assert.That(gitbook, Does.Contain("`route`"));
+        Assert.That(gitbook, Does.Contain("No JavaScript world renderer"));
+        Assert.That(summary, Does.Contain("architecture/transport-network-editor.md"));
+    }
+
+    [Test]
+    public void WebPanel_ExposesTransportNetworkControls()
+    {
+        string repoRoot = FindRepoRoot();
+        string html = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "index.html"));
+        string appJs = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "app.js"));
+
+        Assert.That(html, Does.Contain("data-tool=\"transport\""));
+        Assert.That(html, Does.Contain("data-transport-mode=\"node\""));
+        Assert.That(html, Does.Contain("data-transport-mode=\"segment\""));
+        Assert.That(html, Does.Contain("data-transport-mode=\"route\""));
+        Assert.That(appJs, Does.Contain("transportUpdateNode"));
+        Assert.That(appJs, Does.Contain("transportCommitSegment"));
+        Assert.That(appJs, Does.Contain("transportInsertSegmentPoint"));
+        Assert.That(appJs, Does.Contain("transportSetRouteAgent"));
+        Assert.That(appJs, Does.Contain("transportQueryRoute"));
+        Assert.That(appJs, Does.Contain("transportSave"));
+    }
+
+    [Test]
+    public void PanelController_RegistersTransportNetworkCommands()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "UI",
+            "LiveMapEditorPanelController.cs"));
+
+        string[] commands =
+        {
+            "transportSetMode",
+            "transportSetRoot",
+            "transportAddNode",
+            "transportSelectNode",
+            "transportMoveNode",
+            "transportUpdateNode",
+            "transportDeleteNode",
+            "transportBeginSegment",
+            "transportAppendSegmentPoint",
+            "transportUndoSegmentPoint",
+            "transportCommitSegment",
+            "transportSelectSegment",
+            "transportUpdateSegment",
+            "transportInsertSegmentPoint",
+            "transportMoveSegmentPoint",
+            "transportDeleteSegmentPoint",
+            "transportDeleteSegment",
+            "transportRebake",
+            "transportSetRouteAgent",
+            "transportQueryRoute",
+            "transportSave"
+        };
+
+        foreach (string command in commands)
+        {
+            Assert.That(source, Does.Contain($"router.Register(\"{command}\", handler);"));
+        }
+    }
+
+    [Test]
+    public void TransportShowcase_ProvidesDataDrivenRouteProfilesForCapacityValidation()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonArray profiles = ReadArray(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "capability_standard",
+            "CapabilityStandardTransportNetworkMod",
+            "assets",
+            "Configs",
+            "Navigation",
+            "agent_profiles.json"));
+        JsonObject pathing = ReadObject(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "capability_standard",
+            "CapabilityStandardTransportNetworkMod",
+            "assets",
+            "Configs",
+            "Navigation",
+            "pathing.json"));
+
+        string[] profileIds = profiles
+            .OfType<JsonObject>()
+            .Select(obj => obj["id"]?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+        Assert.That(profileIds, Does.Contain("Transport.FootScout"));
+        Assert.That(profileIds, Does.Contain("Transport.ShallowBoat"));
+        Assert.That(profileIds, Does.Contain("Transport.DeepDraftShip"));
+        Assert.That(profiles.OfType<JsonObject>()
+            .Single(obj => string.Equals(obj["id"]?.GetValue<string>(), "Transport.DeepDraftShip", StringComparison.Ordinal))["draftCm"]?.GetValue<double>(), Is.EqualTo(500.0));
+
+        JsonArray agentTypes = pathing["agentTypes"] as JsonArray
+            ?? throw new InvalidDataException("Transport pathing config must declare agentTypes.");
+        string[] agentTypeIds = agentTypes
+            .OfType<JsonObject>()
+            .Select(obj => obj["id"]?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+        Assert.That(agentTypeIds, Does.Contain("Transport.FootScout"));
+        Assert.That(agentTypeIds, Does.Contain("Transport.ShallowBoat"));
+        Assert.That(agentTypeIds, Does.Contain("Transport.DeepDraftShip"));
+        Assert.That(pathing.ToJsonString(), Does.Contain("Transport.Area.Water"));
+        Assert.That(pathing.ToJsonString(), Does.Contain("Transport.Flow.Upstream"));
+    }
+
+    [Test]
+    public void TransportRuntime_UsesCoreBakerAndNeutralNaming()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Runtime",
+            "LiveMapEditorTransportAuthoring.cs"));
+        string ribbonSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Core",
+            "TransportNetwork",
+            "TransportNetworkRibbonSource.cs"));
+        string showcaseRuntime = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "capability_standard",
+            "CapabilityStandardTransportNetworkMod",
+            "Runtime",
+            "CapabilityStandardTransportNetworkRuntime.cs"));
+
+        Assert.That(source, Does.Contain("TransportNetworkAssetLoader"));
+        Assert.That(source, Does.Contain("TransportNetworkBaker().Bake"));
+        Assert.That(source, Does.Contain("graphBoard.GraphStore.Clear"));
+        Assert.That(source, Does.Contain("TransportNetworkRibbonSource"));
+        Assert.That(source, Does.Contain("TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId"));
+        Assert.That(source, Does.Contain("GraphEdgeProjectionQuery"));
+        Assert.That(source, Does.Contain("LoadedChunkSolvePrimer"));
+        Assert.That(source, Does.Contain("PolylineGoalSnapQuery"));
+        Assert.That(source, Does.Contain("PathService"));
+        Assert.That(ribbonSource, Does.Contain("ComposeDefaultSurfaceScopeId"));
+        Assert.That(showcaseRuntime, Does.Contain("TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId"));
+        Assert.That(showcaseRuntime, Does.Not.Contain("ComposeSurfaceScopeId"));
+        Assert.That(source, Does.Not.Contain("ComposeSurfaceScopeId"));
+        Assert.That(source, Does.Not.Contain("corridor"));
+        Assert.That(source, Does.Not.Contain("fort"));
+        Assert.That(source, Does.Not.Contain("private road graph"));
     }
 
     private static void AssertModPath(

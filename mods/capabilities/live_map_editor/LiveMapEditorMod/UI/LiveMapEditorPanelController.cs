@@ -148,6 +148,27 @@ internal sealed class LiveMapEditorPanelController : IAsyncDisposable, IDisposab
         router.Register("rebakeDirty", handler);
         router.Register("queryPath", handler);
         router.Register("saveMap", handler);
+        router.Register("transportSetMode", handler);
+        router.Register("transportSetRoot", handler);
+        router.Register("transportAddNode", handler);
+        router.Register("transportSelectNode", handler);
+        router.Register("transportMoveNode", handler);
+        router.Register("transportUpdateNode", handler);
+        router.Register("transportDeleteNode", handler);
+        router.Register("transportBeginSegment", handler);
+        router.Register("transportAppendSegmentPoint", handler);
+        router.Register("transportUndoSegmentPoint", handler);
+        router.Register("transportCommitSegment", handler);
+        router.Register("transportSelectSegment", handler);
+        router.Register("transportUpdateSegment", handler);
+        router.Register("transportInsertSegmentPoint", handler);
+        router.Register("transportMoveSegmentPoint", handler);
+        router.Register("transportDeleteSegmentPoint", handler);
+        router.Register("transportDeleteSegment", handler);
+        router.Register("transportRebake", handler);
+        router.Register("transportSetRouteAgent", handler);
+        router.Register("transportQueryRoute", handler);
+        router.Register("transportSave", handler);
 
         var queued = new WebUiQueuedCommandDispatcher(router);
         var dataPlane = new WebUiDataPlaneRuntime(queued);

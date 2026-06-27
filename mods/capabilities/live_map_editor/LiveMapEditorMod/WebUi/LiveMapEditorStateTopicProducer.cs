@@ -135,6 +135,7 @@ internal sealed class LiveMapEditorStateTopicProducer : IWebUiTopicProducer
                 elapsedUs = _runtime.Nav.LastQueryElapsedMicroseconds,
                 path = CapturePath()
             },
+            transport = _runtime.Transport.CaptureSnapshot(_engine),
             save = new
             {
                 _runtime.Save.Status,

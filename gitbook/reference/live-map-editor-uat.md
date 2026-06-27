@@ -22,6 +22,12 @@ Headed run:
 dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -- launch preset:live_map_editor_nav_grid_cef_raylib --adapter raylib --build auto
 ```
 
+Transport network editor run:
+
+```powershell
+dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj -- launch preset:live_map_editor_transport_network_cef_raylib --adapter raylib --build auto
+```
+
 ## Manual UAT
 
 | Step | Operation | Expected feedback |
@@ -96,10 +102,20 @@ Transport network editing is a separate follow-up Epic: [#462](https://github.co
 
 | Step | Required production path |
 |---|---|
-| Node/segment edits | Mutate `TransportNetworkAsset` and validate through Core |
+| Launch | Use `preset:live_map_editor_transport_network_cef_raylib` so `BrowserCefRuntimeMod`, `CapabilityStandardTransportNetworkMod`, and `LiveMapEditorMod` are stacked together |
+| Node edits | Add/select/update/move/delete nodes against `TransportNetworkAsset`; node rename rewrites segment node references before Core validation |
+| Segment edits | Draft/commit segment geometry, update area/tag/direction/flow/capacity fields, and insert/move/delete points against `TransportNetworkAsset` |
 | Graph/ribbon refresh | Run `TransportNetworkBaker.Bake(asset, chunkSizeCm)` and publish graph chunks plus `TransportNetworkRibbonSource` ribbon chunks |
-| Rendering | Draw authoritative ribbon through `RoadSplineBuffer` in Raylib |
-| Route simulation | Use `GraphEdgeProjectionQuery` / `PolylineGoalSnapQuery` and `AutoPathService` / `PathServiceRouter` |
+| Rendering | Draw authoritative ribbon through `TransportNetworkRibbonSource` -> `SurfaceSourcePayloadRegistry` -> Core/Raylib presentation; `RoadSplineBuffer` remains renderer-facing where configured |
+| Route simulation | Select an agent profile in the panel, then use Transport Route mode: left click start, right click goal; Core uses `GraphEdgeProjectionQuery` / `PolylineGoalSnapQuery` and `AutoPathService` / `PathServiceRouter` |
 | Save | Write `TransportNetwork/transport_network.json` and catalog registration, then reload through `TransportNetworkAssetLoader` |
+
+The `CapabilityStandardTransportNetworkMod` stack contributes three transport route agent types for this UAT:
+
+| Agent type | Profile | Expected route behavior |
+|---|---|---|
+| `Transport.FootScout` | `draftCm=0`, `beamCm=0`, forbids `Transport.Area.Water` | Uses the `Transport.Area.Crossing` leg and rejects river/deep-water edges |
+| `Transport.ShallowBoat` | `draftCm=100`, `beamCm=300`, requires `Transport.Area.Water` | Can use the shallow river and deep channel; upstream flow is more expensive |
+| `Transport.DeepDraftShip` | `draftCm=500`, `beamCm=1200`, requires `Transport.Area.Water` | Cannot use the shallow river because capacity is below draft/beam, so it routes through deep water |
 
 The live map editor must not count a JS spline preview, a hand-authored `.graph`, a fake road mesh, or a custom route solver as transport-network evidence.

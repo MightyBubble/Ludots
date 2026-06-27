@@ -51,7 +51,10 @@ internal sealed class CapabilityStandardTransportNetworkRuntime : IDisposable
         _payloads = engine.GetService(CoreServiceKeys.SurfaceSourcePayloadRegistry)
             ?? throw new InvalidOperationException("CapabilityStandardTransportNetworkMod requires SurfaceSourcePayloadRegistry.");
         _ribbonSource = new TransportNetworkRibbonSource(baked);
-        _ribbonSource.SyncPayloads(loadedChunks.ActiveChunkKeys, _payloads, ComposeSurfaceScopeId);
+        _ribbonSource.SyncPayloads(
+            loadedChunks.ActiveChunkKeys,
+            _payloads,
+            TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId);
 
         return Task.CompletedTask;
     }
@@ -66,7 +69,10 @@ internal sealed class CapabilityStandardTransportNetworkRuntime : IDisposable
     {
         if (_ribbonSource != null && _payloads != null)
         {
-            _ribbonSource.SyncPayloads(Array.Empty<long>(), _payloads, ComposeSurfaceScopeId);
+            _ribbonSource.SyncPayloads(
+                Array.Empty<long>(),
+                _payloads,
+                TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId);
         }
 
         _graphSource?.Dispose();
@@ -75,12 +81,4 @@ internal sealed class CapabilityStandardTransportNetworkRuntime : IDisposable
         _payloads = null;
     }
 
-    private static int ComposeSurfaceScopeId(long chunkKey)
-    {
-        unchecked
-        {
-            int mixed = (int)(chunkKey ^ (chunkKey >> 32));
-            return 700000000 + Math.Abs(mixed % 100000000);
-        }
-    }
 }

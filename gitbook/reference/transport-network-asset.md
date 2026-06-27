@@ -84,6 +84,20 @@ The transport asset owns topology, geometry, area/tags, and capacity. It does no
 - `AgentProfileConfig.draftCm` / `beamCm` capacity checks;
 - optional `GraphEdgeCostOverlay` when `nodeGraph.useDynamicOverlay` is `true`.
 
+## In-session Editor
+
+The Live Map Editor transport panel edits this same asset in memory. It does not create a second graph, second ribbon source, or JavaScript geometry source.
+
+| Editor surface | Asset fields |
+|---|---|
+| Node mode | `nodes[].id`, `xcm`, `ycm`, `kind`, `tags` |
+| Segment mode | `segments[].points`, `areaId`, `tags`, `direction`, `flowDirection`, `depthCm`, `widthCm`, `laneCount`, `visualWidthMeters`, `sampleStepCm` |
+| Root settings | `sampleStepCm`, `defaultVisualWidthMeters` |
+| Route validation | Reads baked graph and agent/pathing config only; does not mutate the asset |
+| Save | Writes `TransportNetwork/transport_network.json`, ensures catalog registration, reloads through `TransportNetworkAssetLoader`, and re-bakes |
+
+Every edit runs `TransportNetworkAsset.Validate()` before the editor refreshes graph/ribbon derived outputs through `TransportNetworkBaker.Bake(asset, chunkSizeCm)`.
+
 ## Example
 
 See:
@@ -93,6 +107,8 @@ mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod/assets/
 ```
 
 That example contains a shallow river, a deep water channel, ports, a bridge node, a ford node, flow tags, and capacity fields.
+
+Its companion `Navigation/pathing.json` and `Navigation/agent_profiles.json` define route agent types that exercise the asset without moving cost into the asset itself: foot traffic rejects `Transport.Area.Water`, shallow boats can pass the shallow river, and deep-draft ships are blocked by shallow `depthCm` / `widthCm` capacity.
 
 ## Known Limitations
 

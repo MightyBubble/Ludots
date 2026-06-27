@@ -37,6 +37,7 @@ internal sealed class LiveMapEditorRuntime : IDisposable
     public LiveMapEditorBrushState Brush { get; } = new();
     public LiveMapEditorNavState Nav { get; } = new();
     public LiveMapEditorSaveState Save { get; } = new();
+    public LiveMapEditorTransportAuthoring Transport { get; } = new();
     public bool HasPickedWorld { get; private set; }
     public WorldCmInt2 PickedWorld { get; private set; }
     public bool HasPickedCell { get; private set; }
@@ -54,6 +55,7 @@ internal sealed class LiveMapEditorRuntime : IDisposable
 
     public void Dispose()
     {
+        Transport.Dispose();
         DataPlaneTickPump = null;
         QueuedCommandDispatcher?.Dispose();
         QueuedCommandDispatcher = null;
@@ -75,6 +77,7 @@ internal sealed class LiveMapEditorRuntime : IDisposable
             "entity" => "entity",
             "sim" => "sim",
             "nav" => "nav",
+            "transport" => "transport",
             _ => throw new InvalidOperationException($"Unknown live editor tool '{tool}'.")
         };
     }
@@ -467,8 +470,23 @@ internal sealed class LiveMapEditorRuntime : IDisposable
                 Entities = BuildEntitySaveList(session),
                 WriteNavTiles = true,
             });
+            string transportMessage = "transport unchanged";
+            if (Transport.Available)
+            {
+                WebUiCommandResult transportSave = Transport.Save(engine);
+                if (!transportSave.Success)
+                {
+                    Save.Status = "failed";
+                    Save.Message = transportSave.Message;
+                    LastError = transportSave.Message;
+                    return transportSave;
+                }
+
+                transportMessage = Transport.LastSaveMessage;
+            }
+
             Save.Status = "saved";
-            Save.Message = $"saved {result.EntityCount} entities, {result.NavTileCount} nav tiles";
+            Save.Message = $"saved {result.EntityCount} entities, {result.NavTileCount} nav tiles; {transportMessage}";
             Save.MapConfigPath = result.MapConfigPath;
             Save.EntityCount = result.EntityCount;
             Save.NavTileCount = result.NavTileCount;

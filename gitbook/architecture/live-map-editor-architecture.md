@@ -37,7 +37,7 @@ The transport leg has its own SSOT from [#415](https://github.com/MightyBubble/L
 | Authoring source | `TransportNetworkAsset` loaded from `TransportNetwork/transport_network.json` | Transport tools mutate the live asset reference only; no private road graph, waterway graph, or spline JSON is introduced |
 | Bake | `TransportNetworkBaker.Bake(asset, chunkSizeCm)` | `.graph` chunks and ribbon chunks are derived together through the existing Core baker; the editor never authors `.graph` or ribbon output directly |
 | Graph runtime | `ChunkedNodeGraphStore` / `LoadedGraphRuntime` | Rebuilt graph chunks replace store data through the existing graph runtime path so `PathServiceRouter` / `AutoPathService` read the same data |
-| Ribbon rendering | `TransportNetworkRibbonSource` -> `RoadSplineBuffer` -> Raylib | Raylib draws the authoritative ribbon; the Web UI panel must not reconstruct ribbon geometry or use a JS world renderer |
+| Ribbon rendering | `TransportNetworkRibbonSource` -> `SurfaceSourcePayloadRegistry` -> Core/Raylib presentation, with `RoadSplineBuffer` as a renderer-facing buffer where configured | Raylib draws the authoritative ribbon; the Web UI panel must not reconstruct ribbon geometry or use a JS world renderer |
 | Route validation | `GraphEdgeProjectionQuery`, `PolylineGoalSnapQuery`, `GraphHybridRouteBuilder`, `AutoPathService` | Start/goal picking and multimodal route checks reuse Core query services; no new routing algorithm is added by the editor |
 | Cost ownership | `pathing.json` tag rules, `AgentProfile` capacity fields, optional `GraphEdgeCostOverlay` | Transport authoring edits area/tag/capacity/flow only; edge cost is not baked into the asset |
 | Save | #451 save surface plus transport serializer/catalog registration from #462 TNE-5 | Saving writes back `transport_network.json` and required catalog registration, then round-trips through `TransportNetworkAssetLoader` |
@@ -108,6 +108,12 @@ flowchart LR
 | `removeEntity` | ECS + session entity index/authored list | Uses presentation destroy lifecycle when stable visual ids exist |
 | `rebakeDirty` | nav tile stores | Processes runtime-incremental CDT dirty queue |
 | `queryPath` | nav debug state | Uses `NavQueryService.TryFindPath`, reports elapsed microseconds |
+| `transportSetMode` | editor runtime only | Selects transport node/segment/route viewport behavior |
+| `transportAddNode` / `transportMoveNode` / `transportDeleteNode` | `TransportNetworkAsset.nodes` | Mutates the live asset and validates through Core |
+| `transportBeginSegment` / `transportAppendSegmentPoint` / `transportCommitSegment` | `TransportNetworkAsset.segments` | Drafts and commits segment points and area/tag/flow/capacity fields |
+| `transportRebake` | Core graph/ribbon derived outputs | Runs `TransportNetworkBaker.Bake(asset, chunkSizeCm)` and refreshes `ChunkedNodeGraphStore` plus `TransportNetworkRibbonSource` |
+| `transportQueryRoute` | transport route debug state | Uses Core pathing (`GraphEdgeProjectionQuery`, `LoadedChunkSolvePrimer`, `PathServiceRouter` / `AutoPathService`) |
+| `transportSave` | mod transport asset | Writes `TransportNetwork/transport_network.json`, ensures catalog registration, then round-trips through `TransportNetworkAssetLoader` |
 | `saveMap` | mod assets | Writes an explicit `metadata.liveMapEditor.saveTarget=true` map fragment, or exactly one unambiguous fragment with boards |
 
 ## Save Scope
@@ -119,6 +125,7 @@ flowchart LR
 | Grid `LogicTerrainField` | Written as `.ltrn` through `LogicTerrainBinary` |
 | `MapConfig.Entities` | Written into the selected map JSON |
 | Loaded nav tiles | Written as `.ntil` through `NavTileBinary` after the runtime queue is clean |
+| Transport network asset | When loaded, written as `TransportNetwork/transport_network.json` through the #462 transport save path |
 | Visual heightmap `.vhtm` | Not independently authored by this editor path; when the map has no explicit `.vhtm`, Core derives the displayed visual heightfield from the grid LogicTerrain adapter |
 
 ## EDR Delivery Matrix

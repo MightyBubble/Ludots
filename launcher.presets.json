@@ -195,6 +195,17 @@
       "buildMode": "auto"
     },
     {
+      "id": "live_map_editor_transport_network_cef_raylib",
+      "name": "Live Map Editor Transport Network CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$capability_standard_transport_network",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

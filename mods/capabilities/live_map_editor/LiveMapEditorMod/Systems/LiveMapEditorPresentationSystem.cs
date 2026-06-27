@@ -11,7 +11,9 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.TransportNetwork;
 using Ludots.UI;
+using Ludots.WebUI.DataPlane;
 using LiveMapEditorMod.Runtime;
 using LiveMapEditorMod.UI;
 
@@ -154,6 +156,96 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
                 }
             }
         }
+
+        if (string.Equals(_runtime.Tool, "transport", StringComparison.Ordinal))
+        {
+            HandleTransportViewportCommands();
+        }
+    }
+
+    private void HandleTransportViewportCommands()
+    {
+        if (string.Equals(_runtime.Transport.Mode, "node", StringComparison.Ordinal))
+        {
+            if (_input!.PressedThisFrame(LiveMapEditorIds.PrimaryAction))
+            {
+                WebUiCommandResult selected = _runtime.Transport.SelectNearestNode(
+                    _engine,
+                    null,
+                    null,
+                    _runtime.HasPickedWorld,
+                    _runtime.PickedWorld);
+                if (!selected.Success)
+                {
+                    _runtime.Transport.AddNode(
+                        _engine,
+                        id: null,
+                        kind: null,
+                        tags: null,
+                        xCm: null,
+                        yCm: null,
+                        hasPickedWorld: _runtime.HasPickedWorld,
+                        pickedWorld: _runtime.PickedWorld);
+                }
+            }
+
+            if (_input.PressedThisFrame(LiveMapEditorIds.SecondaryAction))
+            {
+                _runtime.Transport.MoveSelectedNode(
+                    _engine,
+                    null,
+                    null,
+                    _runtime.HasPickedWorld,
+                    _runtime.PickedWorld);
+            }
+
+            return;
+        }
+
+        if (string.Equals(_runtime.Transport.Mode, "segment", StringComparison.Ordinal))
+        {
+            if (_input!.PressedThisFrame(LiveMapEditorIds.PrimaryAction))
+            {
+                _runtime.Transport.AppendSegmentPoint(
+                    _engine,
+                    snapToNode: false,
+                    xCm: null,
+                    yCm: null,
+                    hasPickedWorld: _runtime.HasPickedWorld,
+                    pickedWorld: _runtime.PickedWorld);
+            }
+
+            if (_input.PressedThisFrame(LiveMapEditorIds.SecondaryAction))
+            {
+                _runtime.Transport.CommitSegment(
+                    _engine,
+                    id: null,
+                    areaId: string.Empty,
+                    tags: string.Empty,
+                    direction: "Bidirectional",
+                    flowDirection: "None",
+                    depthCm: 0,
+                    widthCm: 0,
+                    laneCount: 0,
+                    visualWidthMeters: 0f,
+                    sampleStepCm: 0);
+            }
+
+            return;
+        }
+
+        if (string.Equals(_runtime.Transport.Mode, "route", StringComparison.Ordinal))
+        {
+            if (_input!.PressedThisFrame(LiveMapEditorIds.PrimaryAction))
+            {
+                _runtime.Transport.SetRouteStart(_engine, _runtime.PickedWorld);
+            }
+
+            if (_input.PressedThisFrame(LiveMapEditorIds.SecondaryAction))
+            {
+                _runtime.Transport.SetRouteGoalAndQuery(_engine, _runtime.PickedWorld);
+            }
+        }
     }
 
     private bool IsPointerInPanelChrome()
@@ -206,6 +298,7 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
             DrawBoardAuthoringGuides(ground);
             DrawPickAndBrush(ground);
             DrawPath(ground);
+            DrawTransportAuthoring(ground);
         }
 
         if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer screen)
@@ -499,6 +592,152 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
                 FillColor = new Vector4(0.18f, 0.58f, 1f, 0.72f),
                 BorderColor = new Vector4(0.85f, 0.95f, 1f, 0.95f),
                 BorderWidth = 0.04f
+            });
+        }
+    }
+
+    private void DrawTransportAuthoring(GroundOverlayBuffer ground)
+    {
+        TransportNetworkAsset? asset = _runtime.Transport.Asset;
+        if (asset == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < asset.Segments.Count; i++)
+        {
+            TransportNetworkSegment segment = asset.Segments[i];
+            Vector4 color = string.Equals(segment.Id, _runtime.Transport.SelectedSegmentId, StringComparison.Ordinal)
+                ? new Vector4(1f, 0.72f, 0.18f, 0.95f)
+                : new Vector4(0.42f, 0.62f, 1f, 0.62f);
+            DrawTransportPolyline(ground, asset, segment.Points, color, widthM: 0.16f, OverlayY + 0.11f);
+        }
+
+        if (_runtime.Transport.DraftPoints.Count > 0)
+        {
+            DrawTransportPolyline(
+                ground,
+                asset,
+                _runtime.Transport.DraftPoints,
+                new Vector4(1f, 0.28f, 0.88f, 0.86f),
+                widthM: 0.2f,
+                OverlayY + 0.14f);
+        }
+
+        for (int i = 0; i < asset.Nodes.Count; i++)
+        {
+            TransportNetworkNode node = asset.Nodes[i];
+            bool selected = string.Equals(node.Id, _runtime.Transport.SelectedNodeId, StringComparison.Ordinal);
+            ground.TryAdd(new GroundOverlayItem
+            {
+                Shape = selected ? GroundOverlayShape.Ring : GroundOverlayShape.Circle,
+                Center = WorldUnits.WorldCmToVisualMeters(node.Xcm, node.Ycm, OverlayY + 0.16f),
+                Radius = selected ? 0.86f : 0.54f,
+                InnerRadius = selected ? 0.58f : 0f,
+                FillColor = selected
+                    ? new Vector4(1f, 0.86f, 0.18f, 0.22f)
+                    : new Vector4(0.16f, 0.9f, 0.92f, 0.26f),
+                BorderColor = selected
+                    ? new Vector4(1f, 0.86f, 0.18f, 1f)
+                    : new Vector4(0.16f, 0.9f, 0.92f, 0.92f),
+                BorderWidth = 0.05f
+            });
+        }
+
+        DrawTransportRoute(ground);
+    }
+
+    private static void DrawTransportPolyline(
+        GroundOverlayBuffer ground,
+        TransportNetworkAsset asset,
+        IReadOnlyList<TransportNetworkPoint> points,
+        Vector4 color,
+        float widthM,
+        float y)
+    {
+        for (int i = 0; i < points.Count - 1; i++)
+        {
+            WorldCmInt2 aWorld = LiveMapEditorTransportAuthoring.ResolvePoint(asset, points[i]);
+            WorldCmInt2 bWorld = LiveMapEditorTransportAuthoring.ResolvePoint(asset, points[i + 1]);
+            Vector3 a = WorldUnits.WorldCmToVisualMeters(aWorld.X, aWorld.Y, y);
+            Vector3 b = WorldUnits.WorldCmToVisualMeters(bWorld.X, bWorld.Y, y);
+            Vector2 delta = new(b.X - a.X, b.Z - a.Z);
+            float length = delta.Length();
+            if (length <= 0.001f)
+            {
+                continue;
+            }
+
+            ground.TryAdd(new GroundOverlayItem
+            {
+                Shape = GroundOverlayShape.Line,
+                Center = a,
+                Length = length,
+                Width = widthM,
+                Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
+                FillColor = color,
+                BorderColor = color,
+                BorderWidth = 0.03f
+            });
+        }
+    }
+
+    private void DrawTransportRoute(GroundOverlayBuffer ground)
+    {
+        if (_runtime.Transport.HasRouteStart)
+        {
+            ground.TryAdd(new GroundOverlayItem
+            {
+                Shape = GroundOverlayShape.Circle,
+                Center = WorldUnits.WorldCmToVisualMeters(_runtime.Transport.RouteStart, OverlayY + 0.2f),
+                Radius = 0.72f,
+                FillColor = new Vector4(0.2f, 1f, 0.45f, 0.28f),
+                BorderColor = new Vector4(0.2f, 1f, 0.45f, 1f),
+                BorderWidth = 0.05f
+            });
+        }
+
+        if (_runtime.Transport.HasRouteGoal)
+        {
+            ground.TryAdd(new GroundOverlayItem
+            {
+                Shape = GroundOverlayShape.Circle,
+                Center = WorldUnits.WorldCmToVisualMeters(_runtime.Transport.RouteGoal, OverlayY + 0.2f),
+                Radius = 0.72f,
+                FillColor = new Vector4(1f, 0.28f, 0.2f, 0.28f),
+                BorderColor = new Vector4(1f, 0.28f, 0.2f, 1f),
+                BorderWidth = 0.05f
+            });
+        }
+
+        int count = Math.Min(_runtime.Transport.RoutePathXcm.Length, _runtime.Transport.RoutePathYcm.Length);
+        for (int i = 0; i < count - 1; i++)
+        {
+            Vector3 a = WorldUnits.WorldCmToVisualMeters(
+                _runtime.Transport.RoutePathXcm[i],
+                _runtime.Transport.RoutePathYcm[i],
+                OverlayY + 0.22f);
+            Vector3 b = WorldUnits.WorldCmToVisualMeters(
+                _runtime.Transport.RoutePathXcm[i + 1],
+                _runtime.Transport.RoutePathYcm[i + 1],
+                OverlayY + 0.22f);
+            Vector2 delta = new(b.X - a.X, b.Z - a.Z);
+            float length = delta.Length();
+            if (length <= 0.001f)
+            {
+                continue;
+            }
+
+            ground.TryAdd(new GroundOverlayItem
+            {
+                Shape = GroundOverlayShape.Line,
+                Center = a,
+                Length = length,
+                Width = 0.38f,
+                Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
+                FillColor = new Vector4(0.95f, 0.98f, 1f, 0.92f),
+                BorderColor = new Vector4(0.1f, 0.38f, 1f, 0.92f),
+                BorderWidth = 0.07f
             });
         }
     }
