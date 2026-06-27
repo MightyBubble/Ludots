@@ -42,8 +42,6 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
 
             int performerVisuals = 0;
-            int skinnedCount = 0;
-            int staticCount = 0;
             var performerQuery = new QueryDescription().WithAll<PerformerState>();
             engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state) =>
             {
