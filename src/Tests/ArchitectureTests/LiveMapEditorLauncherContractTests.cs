@@ -119,6 +119,25 @@ public sealed class LiveMapEditorLauncherContractTests
         Assert.That(appJs, Does.Contain("checkValidity"));
     }
 
+    [Test]
+    public void ArchitectureDoc_CapturesEntityPlacementSpatialGeometrySsot()
+    {
+        string repoRoot = FindRepoRoot();
+        string doc = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "gitbook",
+            "architecture",
+            "live-map-editor-architecture.md"));
+
+        Assert.That(doc, Does.Contain("Entity Placement And Spatial Geometry"));
+        Assert.That(doc, Does.Contain("RuntimeEntitySpawnQueue"));
+        Assert.That(doc, Does.Contain("MapEntity { MapId }"));
+        Assert.That(doc, Does.Contain("SpatialFootprint2D"));
+        Assert.That(doc, Does.Contain("ManifestationObstacleIntent2D"));
+        Assert.That(doc, Does.Contain("CompoundObstacle2DState"));
+        Assert.That(doc, Does.Contain("no `SelectionFootprint2D`"));
+    }
+
     private static void AssertModPath(
         JsonArray mods,
         string name,

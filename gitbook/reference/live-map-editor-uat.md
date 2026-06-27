@@ -36,6 +36,19 @@ dotnet run --project src/Tools/Ludots.Launcher.Cli/Ludots.Launcher.Cli.csproj --
 | 8 | Press Save | `MapAuthoringAssetWriter` writes the authoring map fragment, `.ltrn`, entities, and loaded nav tiles without Bridge HTTP |
 | 9 | Relaunch the same preset | Saved terrain/entity/nav authoring changes remain present |
 
+## Entity Placement Rules
+
+`placeEntity` is intentionally narrow: it uses an existing template id and the focused map session. The editor does not create private entity templates, private geometry, or placeholder render data.
+
+| Rule | Expected behavior |
+|---|---|
+| Template source | The template must already be provided by the loaded mod stack; unknown templates fail through the normal spawn path |
+| Map ownership | The spawned entity receives the focused map id and is tracked through `MapEntity` / `MapLoadEntityIndex` |
+| Selection/remove safety | Removal uses the selected `PresentationStableId` plus ECS generation validation before mutating state |
+| Selection geometry | Selection remains a consumer of `SpatialBounds` / `SpatialFootprint2D` / `SpatialBox3D`; the editor does not author `SelectionFootprint2D` or any selection-only footprint |
+| Obstacle geometry | Obstacle truth remains `ManifestationObstacleIntent2D` / `CompoundObstacle2D`; derived `Collider2D`, `NavObstacle2D`, and `CompoundObstacle2DState` are not hand-written by the editor |
+| Rendering truth | Raylib shows the real spawned presentation asset; the Web UI only reports inspector state |
+
 ## Configuration
 
 The preset stacks three selectors:

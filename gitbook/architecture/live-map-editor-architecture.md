@@ -26,6 +26,22 @@ Epic: [#451](https://github.com/MightyBubble/Ludots/issues/451). Scope: EDR-0 th
 | Save | Core authoring | `MapAuthoringAssetWriter` | `saveMap` writes an explicit or unambiguous authoring map fragment, `.ltrn`, entities, and loaded nav tiles |
 | Panel | WebUI DataPlane | `WebUiDataPlaneRuntime`, `WebUiCommandRouter` | Inspector and controls only |
 
+## Entity Placement And Spatial Geometry
+
+Entity placement follows the spatial geometry SSOT called out by #455 / #457. The editor may place and remove map-scoped entities, but it must not invent a parallel geometry model.
+
+| Concern | SSOT | Editor behavior |
+|---|---|---|
+| Spawn request | `RuntimeEntitySpawnQueue` / `RuntimeEntitySpawnSystem` | `placeEntity` enqueues an existing template at the picked world point and waits for the spawn receipt |
+| Map ownership | `MapEntity { MapId }` and `MapLoadEntityIndex` | Spawned entities are registered against the focused `MapSession`; save writes authored `MapConfig.Entities` |
+| Entity generation | `PresentationStableId` plus ECS generation resolver | `removeEntity` requires the selected stable id/generation to still be current |
+| Selection geometry | `SpatialBounds` / `SpatialFootprint2D` / `SpatialBox3D` | Selection remains a consumer of generic spatial geometry; no `SelectionFootprint2D`, `SelectionRange`, or editor-owned selection shape is introduced |
+| Obstacle intent | `ManifestationObstacleIntent2D` / `CompoundObstacle2D` | Placed templates may carry authored obstacle intent; the editor does not synthesize private obstacle data |
+| Derived physics/nav | `Collider2D`, `NavObstacle2D`, `CompoundObstacle2DState` | Existing bridge systems derive physics/nav state from authored geometry; editor commands do not write those derived sinks directly |
+| Rendering | Core presentation / Raylib performer state | Placed entities render through their real presentation assets; no placeholder mesh, fake icon, or JS-side representation is authoritative |
+
+Obstacle editing remains bounded by the same rule: authored truth lives on the entity/template geometry components, then existing bridge systems derive physics/nav. If a future brush authors obstacle regions directly, that brush must write the established authored obstacle components and let `ManifestationObstacleBridge2DSystem` rematerialize sinks by `ShapeSignature` / `PoseSignature` / `SinkSignature`.
+
 ## EDR-2 Spike Result
 
 The spike result is go for EDR-3 through EDR-7 with these constraints:
