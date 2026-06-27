@@ -63,7 +63,9 @@ namespace Ludots.Tests.Architecture
             var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
             int before = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
 
-            var visual = CreateRaisedVisualHeightmap(SpatialScaleDefaults.TerrainChunkCells, SpatialScaleDefaults.TerrainChunkCells);
+            var visual = CreateRaisedLogicTerrainHeightSource(
+                SpatialScaleDefaults.TerrainChunkCells,
+                SpatialScaleDefaults.TerrainChunkCells);
             int afterVisualOnly = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
             var projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
                 visual,
@@ -79,7 +81,7 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void VisualHeightmapProjection_CarriesAreaIdFromPolygonAreaAuthoring()
         {
-            var visual = CreateRaisedVisualHeightmap(
+            var visual = CreateRaisedLogicTerrainHeightSource(
                 SpatialScaleDefaults.TerrainChunkCells,
                 SpatialScaleDefaults.TerrainChunkCells);
             var source = new NavObstacleAreaProjectionSource(
@@ -101,7 +103,7 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void VisualProjectedAreaIds_FlowIntoNavTileAsCostTableKeys()
         {
-            var visual = CreateRaisedVisualHeightmap(
+            var visual = CreateRaisedLogicTerrainHeightSource(
                 SpatialScaleDefaults.TerrainChunkCells,
                 SpatialScaleDefaults.TerrainChunkCells);
             var source = new NavObstacleAreaProjectionSource(
@@ -384,6 +386,22 @@ namespace Ludots.Tests.Architecture
                 samples,
                 interpolationMode: VisualHeightmapInterpolationMode.BilinearHeightfield);
             return new VisualHeightmapRuntime(asset);
+        }
+
+        private static ILogicTerrainHeightSource CreateRaisedLogicTerrainHeightSource(int widthCells, int heightCells)
+            => new VisualHeightmapHeightSource(CreateRaisedVisualHeightmap(widthCells, heightCells));
+
+        private sealed class VisualHeightmapHeightSource : ILogicTerrainHeightSource
+        {
+            private readonly IVisualHeightmap _heightmap;
+
+            public VisualHeightmapHeightSource(IVisualHeightmap heightmap)
+            {
+                _heightmap = heightmap;
+            }
+
+            public bool TrySampleHeightCm(int worldXCm, int worldYCm, out float heightCm, int layerIndex = -1)
+                => _heightmap.TrySampleHeightCm(worldXCm, worldYCm, out heightCm, layerIndex);
         }
 
         private static NavObstacleSet CreateAreaAuthoring(byte areaId)

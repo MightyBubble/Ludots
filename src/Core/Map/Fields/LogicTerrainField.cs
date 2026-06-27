@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using Ludots.Core.Map.Hex;
-using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Fields
@@ -503,17 +502,22 @@ namespace Ludots.Core.Map.Fields
         bool TryGetAreaId(int col, int row, int worldXCm, int worldYCm, out byte areaId);
     }
 
+    public interface ILogicTerrainHeightSource
+    {
+        bool TrySampleHeightCm(int worldXCm, int worldYCm, out float heightCm, int layerIndex = -1);
+    }
+
     public static class VisualHeightmapLogicTerrainProjection
     {
         public static MutableGridLogicTerrainField ProjectToGrid(
-            IVisualHeightmap visualHeightmap,
+            ILogicTerrainHeightSource heightSource,
             int widthCells,
             int heightCells,
             int cellSizeCm,
             LogicTerrainProjectionOptions options,
             ILogicTerrainAreaSource? areaSource = null)
         {
-            if (visualHeightmap == null) throw new ArgumentNullException(nameof(visualHeightmap));
+            if (heightSource == null) throw new ArgumentNullException(nameof(heightSource));
 
             var field = new MutableGridLogicTerrainField(widthCells, heightCells, cellSizeCm);
             for (int row = 0; row < heightCells; row++)
@@ -522,7 +526,7 @@ namespace Ludots.Core.Map.Fields
                 {
                     int xCm = col * cellSizeCm;
                     int yCm = row * cellSizeCm;
-                    if (!visualHeightmap.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
+                    if (!heightSource.TrySampleHeightCm(xCm, yCm, out float heightCm, options.LayerIndex))
                     {
                         throw new InvalidOperationException(
                             $"Visual heightmap projection failed at grid cell ({col},{row}).");
