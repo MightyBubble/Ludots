@@ -266,7 +266,12 @@ namespace Ludots.Tests.GAS
                 TemplateId = templateId
             });
 
-            var proposal = new EffectProposalProcessingSystem(world, requests, budget: null, templates: templates);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                budget: null,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             proposal.Update(0f);
 
             int effectCount = 0;

@@ -160,7 +160,14 @@ namespace Ludots.Tests.GAS
                     TemplateId = tplInstant,
                 });
 
-                var sys = new EffectProposalProcessingSystem(world, queue, budget, templates, inputRequests: null, chainOrders: null)
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    budget,
+                    templates,
+                    inputRequests: null,
+                    chainOrders: null,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = 1 // Force partial processing
                 };
@@ -404,7 +411,7 @@ namespace Ludots.Tests.GAS
             EffectTemplateIdRegistry.Clear();
 
             // Pre-register graph programs referenced by MobaDemoMod effect templates.
-            // In production, GraphProgramLoader runs before EffectTemplateLoader.
+            // In production, GraphProgramConfigLoader registers graph names before EffectTemplateLoader.
             Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.Clear();
             Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.Register("Graph.Shield.Absorb");
 

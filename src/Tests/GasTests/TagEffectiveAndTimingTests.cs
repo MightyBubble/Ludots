@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
                 tags.AddTag(tagA);
                 tags.AddTag(tagBlock);
 
-                var sys = new AbilitySystem(world, effectRequests: null, abilityDefinitions: defs, tagOps: _tagOps);
+                var sys = new AbilitySystem(world, new EffectRequestQueue(), abilityDefinitions: defs, tagOps: _tagOps);
                 That(sys.TryActivateAbility(caster, slotIndex: 0), Is.False);
             }
             finally

@@ -442,6 +442,75 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void OrderBlackboardKeys_BuiltinKeysCannotBeRedeclaredInConfig()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderBlackboardKeys", Guid.NewGuid().ToString("N"));
+            string gasDir = Path.Combine(root, "assets", "GAS");
+            Directory.CreateDirectory(gasDir);
+            File.WriteAllText(
+                Path.Combine(gasDir, "order_types.json"),
+                """
+                {
+                  "orderBlackboardKeys": {
+                    "Cast.SlotIndex": true
+                  },
+                  "orderTypes": {
+                    "testOrder": {
+                      "orderTypeId": "testOrder",
+                      "label": "Test",
+                      "maxQueueSize": 1,
+                      "sameTypePolicy": "Replace",
+                      "queueFullPolicy": "RejectNew",
+                      "priority": 1,
+                      "bufferWindowMs": 0,
+                      "pendingBufferWindowMs": 0,
+                      "canInterruptSelf": false,
+                      "queuedModeMaxSize": 1,
+                      "allowQueuedMode": false,
+                      "clearQueueOnActivate": false,
+                      "spatialBlackboardKey": "none",
+                      "entityBlackboardKey": "none",
+                      "intArg0BlackboardKey": "Cast.SlotIndex",
+                      "validationGraph": "none"
+                    }
+                  },
+                  "orderRules": {}
+                }
+                """);
+
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+                vfs.Mount("TestMod", root);
+                var modLoader = new Ludots.Core.Modding.ModLoader(
+                    vfs,
+                    new Ludots.Core.Scripting.FunctionRegistry(),
+                    new Ludots.Core.Scripting.TriggerManager());
+                modLoader.LoadedModIds.Add("TestMod");
+                var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
+                var catalog = new Ludots.Core.Config.ConfigCatalog();
+                catalog.Add(new Ludots.Core.Config.ConfigCatalogEntry("GAS/order_types.json", Ludots.Core.Config.ConfigMergePolicy.DeepObject));
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => new OrderTypeConfigLoader(pipeline).Load(new OrderTypeRegistry(), new OrderRuleRegistry(), catalog));
+
+                Assert.That(ex!.Message, Does.Contain("LUDOTS_GAS_ORDER_BLACKBOARD_BUILTIN_REDECLARED"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                try
+                {
+                    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        [Test]
         public void ConfigLoader_UsesConfigPipelineReplaceMerge()
         {
             string modRoot = MassNavigationModRoot();

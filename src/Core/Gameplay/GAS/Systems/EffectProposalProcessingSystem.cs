@@ -22,6 +22,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int ChainPass;
         public int ChainNegate;
         public int ChainActivateEffect;
+
+        public static ResponseChainOrderTypes RequireConfigured(ResponseChainOrderTypes? value, string consumerName)
+        {
+            if (value == null)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_REQUIRED: {consumerName} requires response-chain order type ids injected from GameConfig.Constants.ResponseChainOrderTypeIds.");
+            }
+
+            var configured = value.Value;
+            if (configured.ChainPass <= 0 ||
+                configured.ChainNegate <= 0 ||
+                configured.ChainActivateEffect <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_INVALID: {consumerName} requires positive response-chain order type ids for chainPass, chainNegate, and chainActivateEffect.");
+            }
+
+            return configured;
+        }
     }
 
     public sealed class EffectProposalProcessingSystem : BaseSystem<World, float>, ITimeSlicedSystem
@@ -238,13 +258,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _chainOrders = chainOrders;
             _telemetry = telemetry;
             _orderRequests = orderRequests;
-            if ((chainOrders != null || orderRequests != null) && responseChainOrderTypes == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(EffectProposalProcessingSystem)} requires configured response-chain order type ids when response-chain queues are enabled.");
-            }
-
-            _responseChainOrderTypes = responseChainOrderTypes ?? default;
+            _responseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
+                responseChainOrderTypes,
+                nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
             _tagOps = tagOps ?? new TagOps();
             _phaseExecutor = phaseExecutor;

@@ -57,7 +57,12 @@ namespace Ludots.Tests.GAS
                 attr.SetCurrent(0, 1000f);
 
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
-                var proposalSystem = new EffectProposalProcessingSystem(world, requests, budget: null, templates: templates);
+                var proposalSystem = new EffectProposalProcessingSystem(
+                    world,
+                    requests,
+                    budget: null,
+                    templates: templates,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
 
                 var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
 
@@ -178,4 +183,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-
