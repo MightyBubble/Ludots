@@ -1,0 +1,12 @@
+{
+  "name": "TerrainNavClosedLoopShowcaseMod",
+  "version": "1.0.0",
+  "description": "Terrain data SSOT closed-loop showcase for visual heightmap, sparse LogicTerrain, Recast bake, path query, mass navigation, and grounding.",
+  "main": "bin/net8.0/TerrainNavClosedLoopShowcaseMod.dll",
+  "priority": 210,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "terrain", "navmesh", "closed-loop"]
+}

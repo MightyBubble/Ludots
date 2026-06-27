@@ -1,0 +1,10 @@
+[
+  {
+    "id": "Small",
+    "radiusCm": 30,
+    "heightCm": 180,
+    "clearanceCm": 40,
+    "mass": 1,
+    "layer": 0
+  }
+]

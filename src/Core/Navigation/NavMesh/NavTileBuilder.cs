@@ -121,6 +121,7 @@ namespace Ludots.Core.Navigation.NavMesh
             terrain.GetWorldPositionMeters(startC, startR, out float originXm, out float originZm);
             int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
             int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
+            bool isGridTopology = terrain.Topology == LogicTerrainTopology.Grid;
 
             var vertexIndex = new Dictionary<VertexKey, int>(4096);
             var vx = new List<int>(4096);
@@ -142,6 +143,13 @@ namespace Ludots.Core.Navigation.NavMesh
 
                     int lr = r - startR;
                     int lc = c - startC;
+                    LogicTerrainCell sourceCell = isGridTopology ? terrain.GetCell(c, r) : default;
+                    if (isGridTopology && sourceCell.IsBlocked)
+                    {
+                        cellWalkable[lr * tileWidth + lc] = false;
+                        continue;
+                    }
+
                     cellWalkable[lr * tileWidth + lc] = IsCellAnyTriangleWalkable(terrain, mapWidth, mapHeight, c, r, config);
 
                     bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;
@@ -171,8 +179,48 @@ namespace Ludots.Core.Navigation.NavMesh
                         t2p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, originXm, originZm, config.HeightScaleMeters);
                     }
 
-                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t1p1, t1p2, t1p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
-                    AddFace(terrain, mapWidth, mapHeight, originXm, originZm, config, t2p1, t2p2, t2p3, vertexIndex, vx, vy, vz, triA, triB, triC, triAreaIds, ref walkableTriCount);
+                    AddFace(
+                        terrain,
+                        mapWidth,
+                        mapHeight,
+                        originXm,
+                        originZm,
+                        config,
+                        t1p1,
+                        t1p2,
+                        t1p3,
+                        vertexIndex,
+                        vx,
+                        vy,
+                        vz,
+                        triA,
+                        triB,
+                        triC,
+                        triAreaIds,
+                        isGridTopology,
+                        sourceCell.AreaId,
+                        ref walkableTriCount);
+                    AddFace(
+                        terrain,
+                        mapWidth,
+                        mapHeight,
+                        originXm,
+                        originZm,
+                        config,
+                        t2p1,
+                        t2p2,
+                        t2p3,
+                        vertexIndex,
+                        vx,
+                        vy,
+                        vz,
+                        triA,
+                        triB,
+                        triC,
+                        triAreaIds,
+                        isGridTopology,
+                        sourceCell.AreaId,
+                        ref walkableTriCount);
                 }
             }
 
@@ -269,11 +317,18 @@ namespace Ludots.Core.Navigation.NavMesh
             List<int> triB,
             List<int> triC,
             List<byte> triAreaIds,
+            bool useCellAreaId,
+            byte cellAreaId,
             ref int walkableTriCount)
         {
+            if (!useCellAreaId && (p1.IsBlocked || p2.IsBlocked || p3.IsBlocked))
+            {
+                return;
+            }
+
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
-            byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
+            byte areaId = useCellAreaId ? cellAreaId : ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
 
             if (minH == maxH)
             {
@@ -778,6 +833,9 @@ namespace Ludots.Core.Navigation.NavMesh
         private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)
         {
             if (r < 0 || c < 0 || r >= mapHeight - 1 || c >= mapWidth - 1) return false;
+            bool useVertexBlocked = terrain.Topology != LogicTerrainTopology.Grid;
+            if (!useVertexBlocked && terrain.GetCell(c, r).IsBlocked) return false;
+
             bool isOdd = terrain.Topology == LogicTerrainTopology.Hex && (r & 1) == 1;
 
             var v1 = GetVertex(terrain, mapWidth, mapHeight, c, r, 0f, 0f, config.HeightScaleMeters);
@@ -806,12 +864,13 @@ namespace Ludots.Core.Navigation.NavMesh
                 t2p3 = GetVertex(terrain, mapWidth, mapHeight, c, r + 1, 0f, 0f, config.HeightScaleMeters);
             }
 
-            return IsBaseTriWalkable(t1p1, t1p2, t1p3, config) || IsBaseTriWalkable(t2p1, t2p2, t2p3, config);
+            return IsBaseTriWalkable(t1p1, t1p2, t1p3, config, useVertexBlocked) ||
+                   IsBaseTriWalkable(t2p1, t2p2, t2p3, config, useVertexBlocked);
         }
 
-        private static bool IsBaseTriWalkable(in Vtx a, in Vtx b, in Vtx c, in NavBuildConfig config)
+        private static bool IsBaseTriWalkable(in Vtx a, in Vtx b, in Vtx c, in NavBuildConfig config, bool useVertexBlocked)
         {
-            if (a.IsBlocked || b.IsBlocked || c.IsBlocked) return false;
+            if (useVertexBlocked && (a.IsBlocked || b.IsBlocked || c.IsBlocked)) return false;
             if (a.WaterY > a.Pos.Y || b.WaterY > b.Pos.Y || c.WaterY > c.Pos.Y) return false;
             if (a.IsRamp || b.IsRamp || c.IsRamp) return true;
             byte min = Math.Min(a.H, Math.Min(b.H, c.H));

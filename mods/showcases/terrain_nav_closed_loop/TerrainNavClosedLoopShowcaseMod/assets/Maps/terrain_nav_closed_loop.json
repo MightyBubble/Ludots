@@ -1,0 +1,28 @@
+{
+  "Id": "terrain_nav_closed_loop",
+  "Tags": ["showcase", "terrain_nav_closed_loop", "Feature.NavMesh:On"],
+  "VisualHeightmapAsset": "assets/terrain/terrain_nav_closed_loop.vhtm",
+  "DefaultCamera": {
+    "VirtualCameraId": "Default",
+    "TargetXCm": 3200,
+    "TargetYCm": 3200,
+    "DistanceCm": 9200,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 45
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "DataFile": "assets/terrain/terrain_nav_closed_loop.ltrn",
+      "VisualHeightmapAsset": "assets/terrain/terrain_nav_closed_loop.vhtm",
+      "NavigationEnabled": true
+    }
+  ],
+  "Entities": []
+}
