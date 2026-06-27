@@ -9,6 +9,7 @@ export const PartitionChunkCells = 64;
 export const TerrainChunkCells = 64;
 export const DefaultEditorEagerFullTerrainFileMacroTilesPerAxis = 16;
 export const DefaultNavQueryMaxPortals = 256;
+// Mirrors C# SpatialScaleDefaults. Changes must be kept in sync.
 export const VisualHeightmapR16BytesPerSample = 2;
 export const DefaultVisualHeightmapMaxSamplesPerAxis = 8192;
 export const LogicDenseEquivalentBytesPerCell = 4;

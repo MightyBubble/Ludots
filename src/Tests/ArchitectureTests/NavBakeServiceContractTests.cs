@@ -542,8 +542,8 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.VisualHeightmapBytes, Is.EqualTo(8L * 4L * NavBakeEstimator.VisualHeightmapR16BytesPerSample));
-            Assert.That(estimate.LogicDenseEquivalentBytes, Is.EqualTo(8L * 4L * NavBakeEstimator.LogicDenseEquivalentBytesPerCell));
+            Assert.That(estimate.VisualHeightmapBytes, Is.EqualTo(8L * 4L * SpatialScaleDefaults.VisualHeightmapR16BytesPerSample));
+            Assert.That(estimate.LogicDenseEquivalentBytes, Is.EqualTo(8L * 4L * SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell));
             Assert.That(estimate.LogicSparseResidentBytes, Is.EqualTo(0));
             Assert.That(estimate.LogicSparseResidentStatus, Is.EqualTo(NavBakeEstimator.LogicSparseResidentNotMeasuredStatus));
             Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));

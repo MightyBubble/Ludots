@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Fields
 {
@@ -60,8 +61,6 @@ namespace Ludots.Core.Map.Fields
     {
         private const uint Magic = 0x4E52544C;
         public const ushort FormatVersion = 2;
-        public const int DenseEquivalentBytesPerCell = 4;
-
         private const int ChecksumOffset = 4 + 2 + 2;
         private const int ChecksumLength = 8;
         private const byte LayerLayoutHeightWaterAreaFlagsV1 = 1;
@@ -91,7 +90,7 @@ namespace Ludots.Core.Map.Fields
                 writer.Write(LayerLayoutHeightWaterAreaFlagsV1);
                 writer.Write(FileCompressionNone);
                 writer.Write((ushort)0);
-                writer.Write(DenseEquivalentBytesPerCell);
+                writer.Write(SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell);
                 writer.Write(payloadBytes);
                 writer.Write(chunkCount);
 
@@ -198,7 +197,7 @@ namespace Ludots.Core.Map.Fields
         }
 
         public static long GetDenseEquivalentBytes(int widthCells, int heightCells)
-            => checked((long)widthCells * heightCells * DenseEquivalentBytesPerCell);
+            => checked((long)widthCells * heightCells * SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell);
 
         private static LogicTerrainBinaryMetadata ReadHeader(BinaryReader reader)
         {
@@ -226,7 +225,7 @@ namespace Ludots.Core.Map.Fields
 
             _ = reader.ReadUInt16();
             int denseEquivalentBytesPerCell = reader.ReadInt32();
-            if (denseEquivalentBytesPerCell != DenseEquivalentBytesPerCell)
+            if (denseEquivalentBytesPerCell != SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell)
             {
                 throw new InvalidDataException(
                     $"LogicTerrainBinary dense-equivalent bytes/cell mismatch: {denseEquivalentBytesPerCell}.");

@@ -22,6 +22,8 @@ namespace Ludots.Core.Spatial
         public const int PhysicsBroadphaseCellCm = CellCm;
         public const int LogicTerrainHeightLevels = 16;
         public const int LogicTerrainMaxHeightLevel = LogicTerrainHeightLevels - 1;
+        public const int LogicDenseEquivalentBytesPerCell = 4;
+        public const int VisualHeightmapR16BytesPerSample = 2;
         public const int BitsPerFlagWord = sizeof(ulong) * 8;
         public const int NavPortalInitialCapacity = TerrainChunkCells;
         public const int ContourRingInitialCapacity = TerrainChunkCells;

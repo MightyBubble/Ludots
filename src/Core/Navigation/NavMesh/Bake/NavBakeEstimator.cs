@@ -144,9 +144,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public const long CdtReferenceWorkUnitsPerOperation =
             (long)SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.TerrainChunkCells;
         public const long RecastReferenceWorkUnitsPerOperation = 160_000L;
-        public const int VisualHeightmapR16BytesPerSample = 2;
         public const int DefaultVisualHeightmapMaxSamplesPerAxis = 8192;
-        public const int LogicDenseEquivalentBytesPerCell = 4;
         public const string LogicSparseResidentNotMeasuredStatus = "not-measured-lower-bound";
 
         public static NavBakeEstimateReport Estimate(NavBakeContext context)
@@ -385,7 +383,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             int sampleColumns = Math.Min(widthCells, DefaultVisualHeightmapMaxSamplesPerAxis);
             int sampleRows = Math.Min(heightCells, DefaultVisualHeightmapMaxSamplesPerAxis);
-            return checked((long)sampleColumns * sampleRows * VisualHeightmapR16BytesPerSample);
+            return checked((long)sampleColumns * sampleRows * SpatialScaleDefaults.VisualHeightmapR16BytesPerSample);
         }
 
         public static long EstimateLogicDenseEquivalentBytes(int widthCells, int heightCells)
@@ -393,7 +391,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (widthCells <= 0) throw new ArgumentOutOfRangeException(nameof(widthCells));
             if (heightCells <= 0) throw new ArgumentOutOfRangeException(nameof(heightCells));
 
-            return checked((long)widthCells * heightCells * LogicDenseEquivalentBytesPerCell);
+            return checked((long)widthCells * heightCells * SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell);
         }
 
         private static string ComputeTargetTerrainHash(NavBakeContext context)

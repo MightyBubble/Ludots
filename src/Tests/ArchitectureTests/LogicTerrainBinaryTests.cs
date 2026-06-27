@@ -134,8 +134,8 @@ namespace Ludots.Tests.Architecture
             byte[] bytes = WriteToBytes(terrain);
             LogicTerrainBinaryMetadata metadata = LogicTerrainBinary.ReadMetadata(new MemoryStream(bytes));
 
-            Assert.That(metadata.DenseEquivalentBytesPerCell, Is.EqualTo(LogicTerrainBinary.DenseEquivalentBytesPerCell));
-            Assert.That(metadata.DenseEquivalentBytes, Is.EqualTo(128L * 96 * 4));
+            Assert.That(metadata.DenseEquivalentBytesPerCell, Is.EqualTo(SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell));
+            Assert.That(metadata.DenseEquivalentBytes, Is.EqualTo(128L * 96 * SpatialScaleDefaults.LogicDenseEquivalentBytesPerCell));
             Assert.That(LogicTerrainBinary.GetDenseEquivalentBytes(128, 96), Is.EqualTo(metadata.DenseEquivalentBytes));
 
             string ascii = Encoding.ASCII.GetString(bytes);
