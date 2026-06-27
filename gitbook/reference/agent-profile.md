@@ -33,6 +33,8 @@ Every profile id is case-sensitive. Missing fields, unknown fields, duplicate id
 | `radiusCm` | cm | AgentProfile registry | navmesh clearance, MassFlow body radius | `> 0` |
 | `heightCm` | cm | AgentProfile registry | navmesh agent height | `> 0` |
 | `clearanceCm` | cm | AgentProfile registry | bake/pathing clearance decisions | `>= 0` |
+| `draftCm` | cm | AgentProfile registry | NodeGraph edge `depthCm` passability | `>= 0` |
+| `beamCm` | cm | AgentProfile registry | NodeGraph edge `widthCm` passability | `>= 0` |
 | `mass` | scalar | AgentProfile registry | MassFlow resolve share and dominance | `> 0` |
 | `layer` | integer | AgentProfile registry | navmesh query layer | `>= 0` |
 
@@ -43,6 +45,7 @@ Speed is not part of this registry. `speedCmPerSecond` stays in execution moveme
 - `Navigation/navmesh.json` keeps bake-only fields such as `maxClimbCm` and `maxSlopeDeg`. Its profile entries reference AgentProfile ids and must not define `radiusCm` or `heightCm`.
 - `Navigation/pathing.json` keeps route strategy fields. Its `agentTypes[]` entries reference AgentProfile ids and must not define `layer`; the layer comes from the AgentProfile.
 - `MassNavigationConfig.json` keeps execution strategy fields: `heavy`, `visualScale`, `speedCmPerSecond`, `everyNth`, `nthOffset`. It must not define `navMass` or `bodyRadiusCm`; MassFlow resolves `mass` and `radiusCm` through AgentProfile.
+- NodeGraph transport capacity checks compare `draftCm` to edge `depthCm` and `beamCm` to edge `widthCm`. A zero profile value means the agent does not require that capacity dimension; a zero edge value means the edge has no limit for that dimension.
 
 ## UAT Showcase
 
@@ -65,6 +68,7 @@ Command:
 - Changing `radiusCm` changes navmesh passability and MassFlow body radius.
 - Changing `mass` changes MassFlow resolve share.
 - Changing `layer` changes which navmesh layer pathing queries use.
+- Changing `draftCm` or `beamCm` changes whether a NodeGraph transport edge with finite depth/width is traversable.
 - Changing `speedCmPerSecond` in MassNavigation changes movement speed without changing bake geometry.
 
 ## Merge And Reuse

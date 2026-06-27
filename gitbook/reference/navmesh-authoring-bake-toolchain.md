@@ -82,6 +82,8 @@ Ludots world-space authoring uses centimeters. This matches the Unreal-style con
 | `radiusCm` | cm | clearance radius for Recast erosion and route passability | MassFlow body radius / spacing |
 | `heightCm` | cm | minimum vertical clearance for Recast walkable spans | visual/body metadata, not speed |
 | `clearanceCm` | cm | extra authored clearance budget; must be explicit when applied to bake/profile policy | route/passability metadata |
+| `draftCm` | cm | not a navmesh bake knob | NodeGraph transport depth requirement |
+| `beamCm` | cm | not a navmesh bake knob | NodeGraph transport width requirement |
 | `mass` | scalar | not a bake knob | MassFlow resolve share / dominance |
 | `layer` | integer | selects nav query layer for this profile | runtime pathing layer identity |
 
@@ -158,6 +160,7 @@ Example pathing snippet:
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": false,
         "requiredTagsAll": [],
         "forbiddenTagsAny": [],
         "tagCostRules": []
@@ -166,6 +169,8 @@ Example pathing snippet:
   ]
 }
 ```
+
+`nodeGraph.useDynamicOverlay` is required. When it is `true`, `AutoPathService` requires a registered `GraphEdgeCostOverlay`; missing overlay is a solve error, not a downgrade to static graph cost. Static tag rules apply first, then overlay cost applies as `staticCost * (1 + costMul) + costAdd`.
 
 ## CLI Cookbook
 
@@ -446,7 +451,7 @@ Target preset: `nav_authoring_toolchain`.
 
 - Web editor writes official map, terrain, obstacle, agent, navmesh, and pathing configs.
 - CLI and Bridge use one `NavBakeContext` and one `NavBakeService`.
-- `maxSlopeDeg`, `maxClimbCm`, `radiusCm`, `heightCm`, and `clearanceCm` have one authoring owner each.
+- `maxSlopeDeg`, `maxClimbCm`, `radiusCm`, `heightCm`, `clearanceCm`, `draftCm`, and `beamCm` have one authoring owner each.
 - `areaId` / tags are terrain classification SSOT; cost is per-agent/pathing data.
 - Runtime incremental rebuild remains `runtime-incremental` + `cdt` only.
 - Raylib debug view renders from `NavTile` geometry with cached meshes and deduped edges.

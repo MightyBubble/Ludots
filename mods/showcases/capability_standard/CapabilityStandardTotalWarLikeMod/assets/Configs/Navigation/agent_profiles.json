@@ -4,6 +4,8 @@
     "radiusCm": 720,
     "heightCm": 320,
     "clearanceCm": 720,
+    "draftCm": 0,
+    "beamCm": 0,
     "mass": 12,
     "layer": 0
   }
