@@ -16,10 +16,10 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 	private readonly object _sync = new();
 	private readonly Dictionary<string, IWebUiTopicProducer> _topics = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, WebUiDataPlaneSession> _sessions = new(StringComparer.Ordinal);
-	private readonly WebUiCommandRouter? _commandRouter;
+	private readonly IWebUiCommandDispatcher? _commandRouter;
 	private bool _disposed;
 
-	public WebUiDataPlaneRuntime(WebUiCommandRouter? commandRouter = null)
+	public WebUiDataPlaneRuntime(IWebUiCommandDispatcher? commandRouter = null)
 	{
 		_commandRouter = commandRouter;
 	}
@@ -119,6 +119,54 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 			session.Enqueue(packet with { SessionId = session.SessionId });
 			await session.FlushAsync(cancellationToken).ConfigureAwait(false);
 		}
+	}
+
+	public async ValueTask<int> PublishTopicAsync(
+		string topic,
+		JsonElement parameters = default,
+		long requestId = 0,
+		CancellationToken cancellationToken = default)
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			throw new ArgumentException("Topic is required.", nameof(topic));
+		}
+
+		topic = topic.Trim();
+		IWebUiTopicProducer? producer;
+		WebUiDataPlaneSession[] sessions;
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			if (!_topics.TryGetValue(topic, out producer))
+			{
+				throw new InvalidOperationException($"Unknown WebUI topic '{topic}'.");
+			}
+
+			sessions = _sessions.Values.ToArray();
+		}
+
+		int published = 0;
+		foreach (WebUiDataPlaneSession session in sessions)
+		{
+			if (!session.IsSubscribed(topic))
+			{
+				continue;
+			}
+
+			var context = new WebUiTopicContext(session.SessionId, topic, requestId, parameters);
+			if (!producer.TryCreateSnapshot(in context, out WebUiOutboundPacket packet))
+			{
+				continue;
+			}
+
+			session.Enqueue(packet with { SessionId = session.SessionId, RequestId = requestId });
+			await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+			published++;
+		}
+
+		return published;
 	}
 
 	private async ValueTask HandlePacketAsync(
@@ -445,7 +493,21 @@ public sealed class WebUiDataPlaneSession : IDisposable, IAsyncDisposable
 			return;
 		}
 
-		_ = _packetHandler(this, packet with { SessionId = SessionId }, CancellationToken.None);
+		_ = HandlePacketReceivedAsync(packet with { SessionId = SessionId });
+	}
+
+	private async Task HandlePacketReceivedAsync(WebUiInboundPacket packet)
+	{
+		try
+		{
+			await _packetHandler(this, packet, CancellationToken.None).ConfigureAwait(false);
+		}
+		catch (ObjectDisposedException)
+		{
+		}
+		catch (OperationCanceledException)
+		{
+		}
 	}
 
 	public void Dispose()

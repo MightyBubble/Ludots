@@ -1,0 +1,275 @@
+[
+  {
+    "id": "Ability.Rts.RedAlert.Hold",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "TargetFirst"
+    },
+    "presentation": {
+      "displayName": "Hold",
+      "iconGlyph": "H",
+      "accentColor": "#6B7280",
+      "hintText": "Formal empty command slot."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.BuildPowerPlant",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Status.Rts.RedAlert.Building.PowerPlant" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 15, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 30, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 45, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 75, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 90, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.RedAlert.CostPowerPlantStep" },
+        { "kind": "TagSignal", "tick": 120, "tag": "State.Rts.RedAlert.Ready.PowerPlant" },
+        { "kind": "End", "tick": 120 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "TargetFirst"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "State.Rts.RedAlert.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Build Power Plant",
+      "iconGlyph": "PP",
+      "accentColor": "#F97316",
+      "hintText": "Queue construction; place after the build item is ready."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.PlacePowerPlant",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.RedAlert.Ready.PowerPlant", "payloadA": 1 },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.PlacePowerPlant" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["State.Rts.RedAlert.Ready.PowerPlant"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "radius": 280,
+      "showRangeCircle": false,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 0.82,
+        "offsetY": 0.02
+      }
+    },
+    "presentation": {
+      "displayName": "Place Power Plant",
+      "iconGlyph": "PP",
+      "accentColor": "#F97316",
+      "hintText": "Place the completed structure at the confirmed ground point."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.BuildRefinery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 150, "tag": "Status.Rts.RedAlert.Building.Refinery" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 15, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 30, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 45, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 75, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 90, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 120, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "EffectSignal", "tick": 135, "template": "Effect.Rts.RedAlert.CostRefineryStep" },
+        { "kind": "TagSignal", "tick": 150, "tag": "State.Rts.RedAlert.Ready.Refinery" },
+        { "kind": "End", "tick": 150 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "TargetFirst"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "State.Rts.RedAlert.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Build Ore Refinery",
+      "iconGlyph": "RF",
+      "accentColor": "#DC2626",
+      "hintText": "Queue refinery construction; place after it is ready."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.PlaceRefinery",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.RedAlert.Ready.Refinery", "payloadA": 1 },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.PlaceRefinery" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["State.Rts.RedAlert.Ready.Refinery"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "radius": 300,
+      "showRangeCircle": false,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.25,
+        "offsetY": 0.06
+      }
+    },
+    "presentation": {
+      "displayName": "Place Ore Refinery",
+      "iconGlyph": "RF",
+      "accentColor": "#DC2626",
+      "hintText": "Place the completed refinery at the confirmed ground point."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.BuildWarFactory",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 180, "tag": "Status.Rts.RedAlert.Building.WarFactory" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 15, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 30, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 45, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 75, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 90, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 120, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 135, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 150, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "EffectSignal", "tick": 165, "template": "Effect.Rts.RedAlert.CostWarFactoryStep" },
+        { "kind": "TagSignal", "tick": 180, "tag": "State.Rts.RedAlert.Ready.WarFactory" },
+        { "kind": "End", "tick": 180 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "TargetFirst"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "State.Rts.RedAlert.Constructing"
+      ]
+    },
+    "presentation": {
+      "displayName": "Build War Factory",
+      "iconGlyph": "WF",
+      "accentColor": "#A78BFA",
+      "hintText": "Queue factory construction; place after it is ready."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.PlaceWarFactory",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.RedAlert.Ready.WarFactory", "payloadA": 1 },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.PlaceWarFactory" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "blockTags": {
+      "requiredAll": ["State.Rts.RedAlert.Ready.WarFactory"]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "radius": 340,
+      "showRangeCircle": false,
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.4,
+        "offsetY": 0.08
+      }
+    },
+    "presentation": {
+      "displayName": "Place War Factory",
+      "iconGlyph": "WF",
+      "accentColor": "#A78BFA",
+      "hintText": "Place the completed factory at the confirmed ground point."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.TrainRhino",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "TagClip", "tick": 0, "duration": 105, "tag": "Status.Rts.RedAlert.Training" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 12, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 24, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 36, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 48, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 72, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 84, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 96, "template": "Effect.Rts.RedAlert.CostTrainRhinoStep" },
+        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.RedAlert.TrainRhino", "dispatchTarget": "Source" },
+        { "kind": "End", "tick": 105 }
+      ]
+    },
+    "input": {
+      "castModeOverride": "TargetFirst"
+    },
+    "blockTags": {
+      "blockedAny": ["State.Rts.RedAlert.Constructing"]
+    },
+    "presentation": {
+      "displayName": "Train Rhino",
+      "iconGlyph": "TNK",
+      "accentColor": "#7C3AED",
+      "hintText": "War factory trains a primitive tank after a formal GAS queue interval."
+    }
+  },
+  {
+    "id": "Ability.Rts.RedAlert.DeployMcv",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.RedAlert.DeployMcv" },
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "indicator": {
+      "shape": "Circle",
+      "range": 600,
+      "radius": 300,
+      "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
+      "preview": {
+        "performerId": "core_input_preview_build_site",
+        "scaleY": 1.4,
+        "offsetY": 0.08
+      }
+    },
+    "presentation": {
+      "displayName": "Deploy MCV",
+      "iconGlyph": "MCV",
+      "accentColor": "#38BDF8",
+      "hintText": "Formal GAS CreateUnit deploy demonstration."
+    }
+  }
+]

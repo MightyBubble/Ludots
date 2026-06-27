@@ -1,0 +1,207 @@
+{
+  "Id": "rts_red_alert_like",
+  "Tags": ["rts", "rts_showcase", "rts_production", "red_alert_like", "cnc"],
+  "DefaultCamera": {
+    "TargetXCm": 12000,
+    "TargetYCm": 12000,
+    "Yaw": 180,
+    "Pitch": 54,
+    "DistanceCm": 11800,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 64,
+      "HeightInTiles": 64,
+      "GridCellSizeCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "rts_ra_team_anchor",
+      "InstanceId": "allied_team_anchor",
+      "Overrides": {
+        "Team": { "Id": 1 },
+        "WorldPositionCm": { "Value": { "X": 9000, "Y": 13600 } },
+        "AttributeBuffer": { "base": { "Credits": 0, "Power": 0, "Ore": 0 }, "current": { "Credits": 0, "Power": 0, "Ore": 0 } }
+      }
+    },
+    {
+      "Template": "rts_ra_team_anchor",
+      "InstanceId": "soviet_team_anchor",
+      "Overrides": {
+        "Team": { "Id": 2 },
+        "WorldPositionCm": { "Value": { "X": 17400, "Y": 8600 } },
+        "AttributeBuffer": { "base": { "Credits": 0, "Power": 0, "Ore": 0 }, "current": { "Credits": 0, "Power": 0, "Ore": 0 } }
+      }
+    },
+    {
+      "Template": "rts_ra_player_anchor",
+      "InstanceId": "allied_player_anchor",
+      "Overrides": {
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "WorldPositionCm": { "Value": { "X": 9200, "Y": 13800 } },
+        "AttributeBuffer": { "base": { "Credits": 0, "Power": 0, "Ore": 0 }, "current": { "Credits": 0, "Power": 0, "Ore": 0 } }
+      }
+    },
+    {
+      "Template": "rts_ra_player_anchor",
+      "InstanceId": "soviet_player_anchor",
+      "Overrides": {
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "WorldPositionCm": { "Value": { "X": 17600, "Y": 8800 } },
+        "AttributeBuffer": { "base": { "Credits": 0, "Power": 0, "Ore": 0 }, "current": { "Credits": 0, "Power": 0, "Ore": 0 } }
+      }
+    },
+    {
+      "Template": "rts_ra_conyard",
+      "InstanceId": "allied_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 9200, "Y": 13200 } },
+        "Name": { "Value": "Allied Construction Yard" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.15 }
+      }
+    },
+    {
+      "Template": "rts_ra_power_plant",
+      "InstanceId": "allied_power_plant",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7800, "Y": 12200 } },
+        "Name": { "Value": "Allied Power Plant" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra_refinery",
+      "InstanceId": "allied_refinery",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 7600, "Y": 14800 } },
+        "Name": { "Value": "Allied Ore Refinery" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra_war_factory",
+      "InstanceId": "allied_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 10800, "Y": 12400 } },
+        "Name": { "Value": "Allied War Factory" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    },
+    {
+      "Template": "rts_ra_mcv",
+      "InstanceId": "allied_mcv",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 11200, "Y": 14200 } },
+        "Name": { "Value": "Allied MCV" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.35 }
+      }
+    },
+    {
+      "Template": "rts_ra_harvester",
+      "InstanceId": "allied_harvester",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 6400, "Y": 15600 } },
+        "Name": { "Value": "Allied Ore Harvester" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": -0.35 }
+      }
+    },
+    {
+      "Template": "rts_ra_rhino",
+      "InstanceId": "allied_rhino",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 11800, "Y": 13200 } },
+        "Name": { "Value": "Allied Rhino Tank" },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 },
+        "FacingDirection": { "AngleRad": 0.25 }
+      }
+    },
+    {
+      "Template": "rts_ra_conyard",
+      "InstanceId": "soviet_conyard",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 17400, "Y": 9200 } },
+        "Name": { "Value": "Soviet Construction Yard" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "FacingDirection": { "AngleRad": 3.1 },
+        "AttributeBuffer": {
+          "base": { "Health": 1600, "Credits": 4600, "Power": 120, "Ore": 0 },
+          "current": { "Health": 1600, "Credits": 4600, "Power": 120, "Ore": 0 }
+        }
+      }
+    },
+    {
+      "Template": "rts_ra_power_plant",
+      "InstanceId": "soviet_power_plant",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 18800, "Y": 10200 } },
+        "Name": { "Value": "Soviet Tesla Reactor" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "FacingDirection": { "AngleRad": 3.1 }
+      }
+    },
+    {
+      "Template": "rts_ra_war_factory",
+      "InstanceId": "soviet_war_factory",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 16000, "Y": 10400 } },
+        "Name": { "Value": "Soviet War Factory" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "FacingDirection": { "AngleRad": 3.1 }
+      }
+    },
+    {
+      "Template": "rts_ra_harvester",
+      "InstanceId": "soviet_harvester",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 19600, "Y": 7600 } },
+        "Name": { "Value": "Soviet Ore Harvester" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "FacingDirection": { "AngleRad": 2.8 }
+      }
+    },
+    {
+      "Template": "rts_ra_rhino",
+      "InstanceId": "soviet_rhino_a",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 15400, "Y": 8600 } },
+        "Name": { "Value": "Soviet Rhino Tank" },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 2 },
+        "FacingDirection": { "AngleRad": 3.0 }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "allied_team_anchor" },
+    { "TeamId": 2, "RepresentativeInstanceId": "soviet_team_anchor" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "allied_player_anchor", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "soviet_player_anchor", "IsLocal": false }
+  ]
+}
