@@ -19,7 +19,6 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 	private static readonly object Sync = new();
 	private static readonly CefBrowserSurfaceRegistry SurfaceRegistry = new();
 
-	private static bool _initializedByRuntime;
 	private static int _runtimeOwnerCount;
 	private static string? _defaultAssemblyRootPath;
 	private static bool _defaultAssemblyResolverRegistered;
@@ -108,7 +107,6 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 					throw new InvalidOperationException("CEF initialization returned false.");
 				}
 
-				_initializedByRuntime = true;
 			}
 
 			_runtimeOwnerCount++;
@@ -246,11 +244,6 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 				_runtimeOwnerCount--;
 			}
 
-			if (_runtimeOwnerCount == 0 && _initializedByRuntime && global::CefSharp.Cef.IsInitialized == true)
-			{
-				global::CefSharp.Cef.Shutdown();
-				_initializedByRuntime = false;
-			}
 		}
 	}
 

@@ -58,6 +58,25 @@ namespace GasTests
         }
 
         [Test]
+        public void CefRuntime_DisposeDoesNotShutdownProcessCef()
+        {
+            string repoRoot = FindRepoRoot();
+            string sourcePath = Path.Combine(
+                repoRoot,
+                "src",
+                "Libraries",
+                "Ludots.UI.Browser.Cef",
+                "CefBrowserRuntime.cs");
+
+            string source = File.ReadAllText(sourcePath);
+
+            Assert.That(
+                source,
+                Does.Not.Contain("Cef.Shutdown"),
+                "CefSharp shutdown is process-scoped; runtime disposal must only release surfaces so repeated UE PIE can create a new runtime in the same process.");
+        }
+
+        [Test]
         public void CoreModLoadContext_DoesNotHardcodeBrowserProviderAssemblyNames()
         {
             string repoRoot = FindRepoRoot();
