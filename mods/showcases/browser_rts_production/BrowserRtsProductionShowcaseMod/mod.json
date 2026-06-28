@@ -1,15 +1,14 @@
 {
   "name": "BrowserRtsProductionShowcaseMod",
   "version": "1.0.0",
-  "description": "Shared in-game CEF Web UI and DataPlane projection for the multi-faction RTS production showcase suite.",
+  "description": "Shared in-game browser Web UI and DataPlane projection for the multi-faction RTS production showcase suite.",
   "main": "bin/net8.0/BrowserRtsProductionShowcaseMod.dll",
   "priority": 190,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "BrowserCefRuntimeMod": "^1.0.0",
     "CoreInputMod": "^1.0.0",
     "EntityCommandPanelMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "rts", "production", "browser-ui", "cef"]
+  "tags": ["showcase", "rts", "production", "browser-ui"]
 }

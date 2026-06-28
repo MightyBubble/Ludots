@@ -6,8 +6,6 @@ namespace Ludots.UI.Browser.Cef;
 
 internal static class CefBrowserMessageNormalizer
 {
-	private const string ProviderPrivateChannel = "cefsharp";
-
 	public static BrowserScriptMessage Normalize(object? message)
 	{
 		string payload = NormalizePayload(message);
@@ -16,12 +14,12 @@ internal static class CefBrowserMessageNormalizer
 			return dataPlaneMessage;
 		}
 
-		return new BrowserScriptMessage(ProviderPrivateChannel, payload);
+		return new BrowserScriptMessage(BrowserMessageChannels.Application, payload);
 	}
 
 	private static bool TryCreateDataPlaneMessage(string payload, out BrowserScriptMessage message)
 	{
-		message = new BrowserScriptMessage(ProviderPrivateChannel, payload);
+		message = new BrowserScriptMessage(BrowserMessageChannels.Application, payload);
 		if (string.IsNullOrWhiteSpace(payload))
 		{
 			return false;

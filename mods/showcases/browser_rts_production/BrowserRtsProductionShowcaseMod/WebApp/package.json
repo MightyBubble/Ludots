@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "test": "node --test src/dataplane/client.test.mjs",
     "dev": "vite --host 127.0.0.1"
   },
   "dependencies": {

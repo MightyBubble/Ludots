@@ -53,6 +53,8 @@ namespace Ludots.Core.Config
 
         public LogConfig Logging { get; set; } = new LogConfig();
 
+        public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
+
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
@@ -63,6 +65,23 @@ namespace Ludots.Core.Config
     public sealed class Physics2DConfig
     {
         public bool Enabled { get; set; }
+    }
+
+    public sealed class BrowserRuntimeConfig
+    {
+        public bool Enabled { get; set; }
+
+        public bool Required { get; set; }
+
+        public string Provider { get; set; } = string.Empty;
+
+        public string ProviderAssemblyPath { get; set; } = string.Empty;
+
+        public string ProviderProjectPath { get; set; } = string.Empty;
+
+        public string RuntimeRootPath { get; set; } = string.Empty;
+
+        public string CacheRootPath { get; set; } = string.Empty;
     }
 
     /// <summary>

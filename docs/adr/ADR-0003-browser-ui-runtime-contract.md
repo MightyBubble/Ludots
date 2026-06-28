@@ -53,11 +53,11 @@ Add a WebUI DataPlane boundary above Browser UI:
 
 The WebUI DataPlane also defines a Browser Native Bridge shape:
 
-- Web applications depend only on `window.ludotsDataplane`.
+- Web applications depend only on Ludots-owned browser facades: generic host messages use `window.ludotsBrowser`, and DataPlane messages use `window.ludotsDataplane`.
 - `IWebUiDataTransport` is the C# semantic boundary for control messages, delivery semantics, capability negotiation, shared-buffer descriptors, and diagnostics.
 - The control lane carries handshake, subscribe, command, ack/error, diagnostics, and buffer descriptor messages.
 - The shared-memory data lane is optional and must be explicitly negotiated; missing capability fails fast instead of falling back silently to message/base64.
-- CEF renderer/V8 injection is provider implementation detail. It may install `window.ludotsDataplane` over `CefSharp.PostMessage`, but Core, Browser contracts, WebUI contracts, and Web apps do not depend on V8 or CEF-specific globals.
+- CEF renderer/V8 injection is provider implementation detail. It may install `window.ludotsBrowser` and `window.ludotsDataplane` over provider-native messaging, but Core, Browser contracts, WebUI contracts, and Web apps do not depend on V8 or CEF-specific globals.
 - UE5 BLUI may install the same facade over BLUI-native messages and shared-buffer descriptors. It remains a host adapter and must not own Ludots topic or command semantics.
 
 ## Consequences
@@ -75,16 +75,19 @@ Constraints:
 - Native Markup still does not execute JavaScript.
 - Browser UI is not a replacement for native Compose / Reactive / Markup.
 - Engine adapters must own native browser process lifecycle and platform input conversion.
+- CEF provider bootstrap is Ludots host/runtime infrastructure. Application Mods may request or require browser runtime capability and consume `IBrowserRuntime`, but they must not package, locate, initialize, register, or unload CEF.
 - Engine adapters that add a direct texture path must keep input and alpha hit-test routed through `BrowserSurfaceCanvasContent` / `UIRoot`; direct rendering must not become a second interaction system.
 - CEF is the compatibility baseline for arbitrary web apps; Ultralight is a lightweight provider, not a Chromium-equivalent compatibility promise.
 - CEF process lifetime is not a per-runtime-owner lifecycle. `IBrowserRuntime.DisposeAsync`, mod unload, and editor play-session teardown release Ludots-owned surfaces but must not call `Cef.Shutdown()`. Any explicit CEF shutdown hook must be host-owned and terminal.
 - CEF custom scheme handler state must be process-stable across host ALC reloads. A scheme handler registered during the first editor session must be able to resolve surfaces created by later sessions in the same process.
+- UE5 bridge hosts must call the Ludots-owned CEF bootstrap before game/session start when browser runtime is required. UE PIE teardown must not unload or reinitialize CEF through a Mod.
 - Higher-level Ludots API exposure must be layered above `IBrowserMessageBridge`.
 - `Ludots.WebUI` must remain above Browser UI as an event/API facade; `Ludots.UI.Browser` must not depend on it.
 - WebUI collection topics must reuse `EntityCollectionStore`; unknown owner/key/query ids fail explicitly.
 - High-frequency WebUI topics must follow the minimap buffer pattern for capacity, buckets, stable ids, and drop diagnostics instead of allocating per row on the hot path.
 - UE5 BLUI support is transport adapter work only. Core accepts the transport-neutral C# contracts and DataPlane vocabulary, not UE widgets, UE textures, or BLUI native lifecycle.
 - Browser Native Bridge support does not make V8 a Ludots dependency. V8 is a browser-engine implementation detail behind CEF/BLUI.
+- Web app source and shipped Mod assets must not call provider private globals such as CEF/CefSharp or BLUI-specific objects directly; they fail fast when the Ludots facade is absent.
 - Shared-memory support requires benchmark evidence under `artifacts/benchmarks/webui-dataplane` and host conformance evidence for input, focus, alpha hit-test, and passthrough semantics.
 
 ## Evidence
