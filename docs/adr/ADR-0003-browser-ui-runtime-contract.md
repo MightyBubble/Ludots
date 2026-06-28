@@ -77,6 +77,7 @@ Constraints:
 - Engine adapters must own native browser process lifecycle and platform input conversion.
 - Engine adapters that add a direct texture path must keep input and alpha hit-test routed through `BrowserSurfaceCanvasContent` / `UIRoot`; direct rendering must not become a second interaction system.
 - CEF is the compatibility baseline for arbitrary web apps; Ultralight is a lightweight provider, not a Chromium-equivalent compatibility promise.
+- CEF process lifetime is not a per-runtime-owner lifecycle. `IBrowserRuntime.DisposeAsync`, mod unload, and editor play-session teardown release Ludots-owned surfaces but must not call `Cef.Shutdown()`. Any explicit CEF shutdown hook must be host-owned and terminal.
 - Higher-level Ludots API exposure must be layered above `IBrowserMessageBridge`.
 - `Ludots.WebUI` must remain above Browser UI as an event/API facade; `Ludots.UI.Browser` must not depend on it.
 - WebUI collection topics must reuse `EntityCollectionStore`; unknown owner/key/query ids fail explicitly.

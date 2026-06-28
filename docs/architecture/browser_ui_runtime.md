@@ -159,6 +159,16 @@ Formal built-in providers:
 
 CEF remains the compatibility baseline. Ultralight is a first-class optional provider, but it must not be documented as Chrome-equivalent. Provider-specific native handles, callbacks, and package layout stay inside provider assemblies.
 
+### 7.1 CEF Process Lifetime
+
+CEF is a process-scoped native runtime. Once `Cef.Shutdown()` has run, CefSharp does not support creating a fresh CEF runtime later in the same process. Ludots therefore treats CEF initialization, assembly resolution, custom-scheme registration, and the browser surface registry as a process-scoped adapter implementation detail.
+
+`CefBrowserRuntime` is only the `IBrowserRuntime` facade exposed to a game engine or mod session. Disposing a `CefBrowserRuntime` releases the browser surfaces owned by that facade, but it must not call `Cef.Shutdown()` or unregister process-wide CEF state. Repeated editor sessions such as UE PIE must be able to create a new facade in the same host process.
+
+The CEF process runtime is a deep internal module behind that facade. It owns the single CEF initialization path, the process-stable `ludots-app://` scheme handler, and the process-stable surface registry used by that scheme handler. This prevents a reloadable mod/session owner from splitting native CEF state across lifetimes.
+
+If a future host needs an explicit CEF shutdown hook, that hook must be host-owned and terminal: it may only run when the host process will not attempt to create another CEF runtime. It must not be reachable from `IBrowserRuntime.DisposeAsync`, mod unload, surface disposal, or ordinary editor play-session teardown.
+
 ## 8 Relation To Native UI
 
 Native Ludots UI remains the default framework for engine UI:
