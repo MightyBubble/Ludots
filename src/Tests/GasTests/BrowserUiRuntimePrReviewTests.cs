@@ -130,6 +130,33 @@ namespace GasTests
         }
 
         [Test]
+        public void RaylibBrowserRuntimeInstaller_ResolvesProviderDependenciesThroughProviderPackage()
+        {
+            string repoRoot = FindRepoRoot();
+            string installerSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Adapters",
+                "Raylib",
+                "Ludots.Adapter.Raylib",
+                "RaylibBrowserRuntimeInstaller.cs"));
+            string resolverSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Adapters",
+                "Raylib",
+                "Ludots.Adapter.Raylib",
+                "RaylibBrowserRuntimeProviderAssemblyResolver.cs"));
+
+            Assert.That(installerSource, Does.Contain("EnsureProviderAssemblyResolver(fullAssemblyPath)"));
+            Assert.That(installerSource, Does.Contain("AssemblyLoadContext.Default.LoadFromAssemblyPath(fullAssemblyPath)"));
+            Assert.That(resolverSource, Does.Contain("AssemblyDependencyResolver"));
+            Assert.That(resolverSource, Does.Not.Contain("BrowserCefRuntimeMod"));
+            Assert.That(resolverSource, Does.Not.Contain("ResolvedModLoadPlan"));
+            Assert.That(resolverSource, Does.Not.Contain("CefSharp"));
+        }
+
+        [Test]
         public void BrowserShowcaseMods_ConsumeBrowserPortOnly()
         {
             string repoRoot = FindRepoRoot();

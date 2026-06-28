@@ -15,6 +15,8 @@ namespace Ludots.Adapter.Raylib
         private const string CefProviderId = "cef";
         private const string CefProviderHostTypeName = "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost";
         private const string CefProviderAssemblyFileName = "Ludots.UI.Browser.Cef.dll";
+        private static readonly object ProviderResolverSync = new();
+        private static readonly Dictionary<string, RaylibBrowserRuntimeProviderAssemblyResolver> ProviderResolvers = new(StringComparer.OrdinalIgnoreCase);
 
         public static IBrowserRuntime? InstallIfConfigured(GameEngine engine, GameConfig config, string baseDirectory)
         {
@@ -122,10 +124,29 @@ namespace Ludots.Adapter.Raylib
 
         private static Assembly LoadProviderAssembly(string assemblyPath)
         {
-            AssemblyName requested = AssemblyName.GetAssemblyName(assemblyPath);
+            string fullAssemblyPath = Path.GetFullPath(assemblyPath);
+            EnsureProviderAssemblyResolver(fullAssemblyPath);
+
+            AssemblyName requested = AssemblyName.GetAssemblyName(fullAssemblyPath);
             Assembly? loaded = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
                 AssemblyName.ReferenceMatchesDefinition(requested, candidate.GetName()));
-            return loaded ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+            return loaded ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(fullAssemblyPath);
+        }
+
+        private static void EnsureProviderAssemblyResolver(string providerAssemblyPath)
+        {
+            lock (ProviderResolverSync)
+            {
+                if (ProviderResolvers.ContainsKey(providerAssemblyPath))
+                {
+                    return;
+                }
+
+                var resolver = new RaylibBrowserRuntimeProviderAssemblyResolver(providerAssemblyPath);
+                AssemblyLoadContext.Default.Resolving += resolver.ResolveManagedAssembly;
+                AssemblyLoadContext.Default.ResolvingUnmanagedDll += resolver.ResolveUnmanagedDll;
+                ProviderResolvers.Add(providerAssemblyPath, resolver);
+            }
         }
     }
 }
