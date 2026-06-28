@@ -21,6 +21,7 @@ public sealed class CefBrowserRuntimeHostTests
 
 		Assert.That(installed, Is.SameAs(existing));
 		Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.SameAs(existing));
+		Assert.That(services[BrowserRuntimeServiceNames.HostLifecycle], Is.InstanceOf<IBrowserRuntimeHostLifecycle>());
 	}
 
 	[Test]
@@ -33,6 +34,7 @@ public sealed class CefBrowserRuntimeHostTests
 		IBrowserRuntime installed = CefBrowserRuntimeHost.InstallFromAssemblyLocation(services);
 
 		Assert.That(installed, Is.SameAs(existing));
+		Assert.That(services[BrowserRuntimeServiceNames.HostLifecycle], Is.InstanceOf<IBrowserRuntimeHostLifecycle>());
 	}
 
 	[Test]
@@ -57,6 +59,20 @@ public sealed class CefBrowserRuntimeHostTests
 		Assert.That(
 			() => CefBrowserRuntimeHost.Install(services, Path.GetTempPath()),
 			Throws.InvalidOperationException.With.Message.Contains("existing browser runtime"));
+	}
+
+	[Test]
+	public void Install_RejectsNonLifecycleService()
+	{
+		var services = new Dictionary<string, object>
+		{
+			[BrowserRuntimeServiceNames.BrowserRuntime] = new FakeBrowserRuntime(BrowserEngineKind.Cef),
+			[BrowserRuntimeServiceNames.HostLifecycle] = new object()
+		};
+
+		Assert.That(
+			() => CefBrowserRuntimeHost.Install(services, Path.GetTempPath()),
+			Throws.InvalidOperationException.With.Message.Contains("HostLifecycle"));
 	}
 
 	private sealed class FakeBrowserRuntime : IBrowserRuntime

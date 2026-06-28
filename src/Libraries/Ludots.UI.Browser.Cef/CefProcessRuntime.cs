@@ -16,6 +16,7 @@ internal static class CefProcessRuntime
 	private static int _runtimeOwnerCount;
 	private static string? _defaultAssemblyRootPath;
 	private static bool _defaultAssemblyResolverRegistered;
+	private static bool _hostExitShutdownRequested;
 
 	public static CefBrowserSurfaceRegistry SurfaceRegistry => Registry;
 
@@ -41,6 +42,11 @@ internal static class CefProcessRuntime
 		lock (Sync)
 		{
 			EnsureDefaultAssemblyResolution(options.RuntimeRootPath);
+
+			if (_hostExitShutdownRequested)
+			{
+				throw new InvalidOperationException("CEF host exit shutdown has already been requested and cannot be re-initialized in this process.");
+			}
 
 			if (global::CefSharp.Cef.IsShutdown)
 			{
@@ -68,6 +74,24 @@ internal static class CefProcessRuntime
 			if (_runtimeOwnerCount > 0)
 			{
 				_runtimeOwnerCount--;
+			}
+		}
+	}
+
+	public static void ShutdownForHostExit()
+	{
+		lock (Sync)
+		{
+			if (_hostExitShutdownRequested)
+			{
+				return;
+			}
+
+			_hostExitShutdownRequested = true;
+			_runtimeOwnerCount = 0;
+			if (global::CefSharp.Cef.IsInitialized == true && !global::CefSharp.Cef.IsShutdown)
+			{
+				global::CefSharp.Cef.Shutdown();
 			}
 		}
 	}

@@ -77,6 +77,27 @@ namespace GasTests
         }
 
         [Test]
+        public void RaylibHost_OwnsTerminalBrowserRuntimeShutdown()
+        {
+            string repoRoot = FindRepoRoot();
+            string hostSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Adapters",
+                "Raylib",
+                "Ludots.Adapter.Raylib",
+                "RaylibGameHost.cs"));
+
+            Assert.That(hostSource, Does.Contain("ShutdownBrowserRuntimeForHostExit"));
+            Assert.That(hostSource, Does.Contain("ShutdownBrowserRuntimeProcessForHostExit"));
+            Assert.That(hostSource, Does.Contain("BrowserRuntimeServiceNames.HostLifecycle"));
+            Assert.That(hostSource, Does.Contain("ShutdownProcessForHostExit"));
+            Assert.That(hostSource, Does.Contain("finally"));
+            Assert.That(hostSource, Does.Not.Contain("Cef.Shutdown"));
+            Assert.That(hostSource, Does.Not.Contain("BrowserCefRuntimeMod"));
+        }
+
+        [Test]
         public void CoreModLoadContext_DoesNotHardcodeBrowserProviderAssemblyNames()
         {
             string repoRoot = FindRepoRoot();

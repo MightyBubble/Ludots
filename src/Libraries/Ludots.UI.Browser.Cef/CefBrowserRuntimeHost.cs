@@ -41,12 +41,38 @@ public static class CefBrowserRuntimeHost
 					$"CEF browser runtime install requested, but existing browser runtime is '{existingRuntime.Info.EngineKind}'.");
 			}
 
+			EnsureHostLifecycleRegistered(services);
 			return existingRuntime;
 		}
 
 		var runtime = new CefBrowserRuntime(new CefBrowserRuntimeOptions(runtimeRootPath, cacheRootPath));
 		services[BrowserRuntimeServiceNames.BrowserRuntime] = runtime;
+		EnsureHostLifecycleRegistered(services);
 		return runtime;
+	}
+
+	private static void EnsureHostLifecycleRegistered(IDictionary<string, object> services)
+	{
+		if (services.TryGetValue(BrowserRuntimeServiceNames.HostLifecycle, out object? existing))
+		{
+			if (existing is not IBrowserRuntimeHostLifecycle)
+			{
+				throw new InvalidOperationException(
+					$"Browser runtime service '{BrowserRuntimeServiceNames.HostLifecycle}' is already registered with incompatible type '{existing.GetType().FullName}'.");
+			}
+
+			return;
+		}
+
+		services[BrowserRuntimeServiceNames.HostLifecycle] = new CefHostLifecycle();
+	}
+
+	private sealed class CefHostLifecycle : IBrowserRuntimeHostLifecycle
+	{
+		public void ShutdownProcessForHostExit()
+		{
+			CefProcessRuntime.ShutdownForHostExit();
+		}
 	}
 
 	private static string ResolveAssemblyDirectory()

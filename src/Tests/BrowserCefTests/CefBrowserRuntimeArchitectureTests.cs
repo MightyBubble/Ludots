@@ -29,9 +29,11 @@ public sealed class CefBrowserRuntimeArchitectureTests
 		Assert.That(runtimeSource, Does.Not.Contain("Cef.Shutdown"));
 
 		Assert.That(processRuntimeSource, Does.Contain("Cef.Initialize"));
+		Assert.That(processRuntimeSource, Does.Contain("ShutdownForHostExit"));
+		Assert.That(processRuntimeSource, Does.Contain("CEF host exit shutdown has already been requested"));
+		Assert.That(processRuntimeSource, Does.Contain("Cef.Shutdown"));
 		Assert.That(processRuntimeSource, Does.Contain("CefBrowserSurfaceRegistry"));
 		Assert.That(processRuntimeSource, Does.Contain("CefBrowserSchemeHandlerFactory"));
-		Assert.That(processRuntimeSource, Does.Not.Contain("Cef.Shutdown"));
 	}
 
 	[Test]
