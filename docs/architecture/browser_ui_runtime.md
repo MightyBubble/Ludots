@@ -165,7 +165,7 @@ CEF is a process-scoped native runtime. Once `Cef.Shutdown()` has run, CefSharp 
 
 `CefBrowserRuntime` is only the `IBrowserRuntime` facade exposed to a game engine or mod session. Disposing a `CefBrowserRuntime` releases the browser surfaces owned by that facade, but it must not call `Cef.Shutdown()` or unregister process-wide CEF state. Repeated editor sessions such as UE PIE must be able to create a new facade in the same host process.
 
-The CEF process runtime is a deep internal module behind that facade. It owns the single CEF initialization path, the process-stable `ludots-app://` scheme handler, and the process-stable surface registry used by that scheme handler. This prevents a reloadable mod/session owner from splitting native CEF state across lifetimes.
+The CEF process runtime is a deep internal module behind that facade. It owns the single CEF initialization path and the process-stable `ludots-app://` scheme handler. The surface resource registry used by that scheme handler must also be process-scoped rather than assembly-instance-scoped: repeated editor sessions may load `Ludots.UI.Browser.Cef` through a fresh host ALC while CEF still holds the first scheme handler instance. Newly created browser surfaces must therefore register their resource resolver in process storage that the original scheme handler can still read.
 
 If a future host needs an explicit CEF shutdown hook, that hook must be host-owned and terminal: it may only run when the host process will not attempt to create another CEF runtime. It must not be reachable from `IBrowserRuntime.DisposeAsync`, mod unload, surface disposal, or ordinary editor play-session teardown.
 

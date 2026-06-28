@@ -34,6 +34,22 @@ public sealed class CefBrowserRuntimeArchitectureTests
 		Assert.That(processRuntimeSource, Does.Not.Contain("Cef.Shutdown"));
 	}
 
+	[Test]
+	public void BrowserSurfaceRegistry_UsesProcessScopedStorageForSchemeHandlers()
+	{
+		string repoRoot = FindRepoRoot();
+		string registrySource = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"src",
+			"Libraries",
+			"Ludots.UI.Browser.Cef",
+			"CefBrowserSurfaceRegistry.cs"));
+
+		Assert.That(registrySource, Does.Contain("AppDomain.CurrentDomain.GetData"));
+		Assert.That(registrySource, Does.Contain("AppDomain.CurrentDomain.SetData"));
+		Assert.That(registrySource, Does.Not.Contain("ConcurrentDictionary<int, CefBrowserSurface>"));
+	}
+
 	private static string FindRepoRoot()
 	{
 		var current = new DirectoryInfo(AppContext.BaseDirectory);
