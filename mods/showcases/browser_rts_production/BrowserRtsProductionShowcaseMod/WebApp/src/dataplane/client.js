@@ -21,25 +21,7 @@ export function ensureLudotsDataPlaneTransport(options = {}) {
     return { transport: root.ludotsDataplane, hostBacked: true };
   }
 
-  if (root.CefSharp?.PostMessage) {
-    const cefTransport = {
-      name: 'cefsharp.ludots-dataplane',
-      windowBacked: true,
-      postMessage(message) {
-        root.CefSharp.PostMessage(message);
-      },
-      addEventListener(type, listener, listenerOptions) {
-        root.addEventListener(type, listener, listenerOptions);
-      },
-      removeEventListener(type, listener, listenerOptions) {
-        root.removeEventListener(type, listener, listenerOptions);
-      }
-    };
-    root.ludotsDataplane = cefTransport;
-    return { transport: cefTransport, hostBacked: true };
-  }
-
-  throw new Error('Ludots DataPlane transport is missing. Launch this app through the Raylib CEF showcase preset.');
+  throw new Error('window.ludotsDataplane is required for the Ludots DataPlane transport.');
 }
 
 export function createLudotsDataPlaneClient(options = {}) {

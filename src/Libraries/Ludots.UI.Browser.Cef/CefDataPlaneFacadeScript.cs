@@ -6,6 +6,27 @@ internal static class CefDataPlaneFacadeScript
 	{
 		return """
 			(function installLudotsDataplaneFacade() {
+			  function postBrowserMessage(message) {
+			    if (!window.CefSharp || typeof window.CefSharp.PostMessage !== 'function') {
+			      throw new Error('Ludots browser host bridge is not available.');
+			    }
+
+			    window.CefSharp.PostMessage(message);
+			  }
+
+			  if (!window.ludotsBrowser) {
+			    window.ludotsBrowser = {
+			      name: 'ludots.browser',
+			      postMessage: postBrowserMessage,
+			      addEventListener(type, listener, options) {
+			        window.addEventListener(type, listener, options);
+			      },
+			      removeEventListener(type, listener, options) {
+			        window.removeEventListener(type, listener, options);
+			      }
+			    };
+			  }
+
 			  if (window.ludotsDataplane) {
 			    return;
 			  }
@@ -66,10 +87,10 @@ internal static class CefDataPlaneFacadeScript
 			  }
 
 			  window.ludotsDataplane = {
-			    name: 'cef.ludots-dataplane',
+			    name: 'ludots.dataplane',
 			    mode: 'browser-native-bridge',
 			    postMessage(message) {
-			      window.CefSharp.PostMessage(message);
+			      window.ludotsBrowser.postMessage(message);
 			    },
 			    readSharedBuffer(descriptor) {
 			      const normalized = normalizeDescriptor(descriptor);

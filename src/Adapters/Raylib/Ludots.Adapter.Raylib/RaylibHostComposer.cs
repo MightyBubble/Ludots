@@ -12,6 +12,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
+using Ludots.UI.Browser;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
@@ -19,7 +20,12 @@ using Ludots.UI.Surface;
 
 namespace Ludots.Adapter.Raylib
 {
-    internal sealed record RaylibHostSetup(GameEngine Engine, GameConfig Config, UIRoot UiRoot, SkiaUiRenderer Renderer);
+    internal sealed record RaylibHostSetup(
+        GameEngine Engine,
+        GameConfig Config,
+        UIRoot UiRoot,
+        SkiaUiRenderer Renderer,
+        IBrowserRuntime? BrowserRuntime);
 
     internal static class RaylibHostComposer
     {
@@ -35,6 +41,7 @@ namespace Ludots.Adapter.Raylib
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
             var engine = result.Engine;
             var config = result.Config;
+            IBrowserRuntime? browserRuntime = RaylibBrowserRuntimeInstaller.InstallIfConfigured(engine, config, baseDir);
             if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshAssets))
             {
                 throw new InvalidOperationException("Raylib host requires PresentationMeshAssetRegistry before host asset binding.");
@@ -88,7 +95,7 @@ namespace Ludots.Adapter.Raylib
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)

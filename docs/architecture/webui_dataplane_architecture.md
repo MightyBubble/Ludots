@@ -142,6 +142,7 @@ An adapter that hosts a browser outside Ludots, including UE5 BLUI, must pass th
 
 - Install `window.ludotsDataplane` before the app sends handshake.
 - Implement `postMessage`, `addEventListener`, and `removeEventListener` with the same facade shape as Ludots-started CEF.
+- If the adapter invokes Ludots-owned CEF through a `browserRuntime.providerAssemblyPath`, register dependency resolution from that provider assembly's `.deps.json` before loading the provider. Do not hardcode CefSharp dependency names and do not resolve the provider through any Mod load plan.
 - Return capability negotiation fields for message, binary, shared-memory, chunking, expected copy count, and delivery semantics.
 - Fail fast on missing required capabilities; do not downgrade to message/base64 without an explicit mock or preview mode.
 - Forward handshake, subscribe, snapshot, delta, command ack/error, diagnostics, and session detach.
@@ -157,6 +158,7 @@ An adapter that hosts a browser outside Ludots, including UE5 BLUI, must pass th
 - `Ludots.WebUI` must not duplicate high-frequency marker buffers when existing SoA/bucket/drop-diagnostic infrastructure applies.
 - Browser providers must not introduce new gameplay truth. They only carry messages, frames, input, resources, and lifecycle.
 - UE5, BLUI, CEF native handles, platform windows, and texture objects stay inside adapter/provider assemblies.
+- Ludots-owned CEF provider package loading belongs to the host adapter bootstrap. Mods may request or require browser runtime capability, but they must not locate, package, load, initialize, unload, or provide CEF.
 - CEF renderer/V8 injection is provider implementation detail and must not enter Core, WebUI contracts, or DataPlane contracts.
 - Browser-side caches are derived views. Their invalidation is driven by DataPlane revision, sequence, and diagnostics fields from Ludots.
 

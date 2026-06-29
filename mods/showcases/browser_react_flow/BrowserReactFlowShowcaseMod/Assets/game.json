@@ -3,5 +3,10 @@
   "windowWidth": 1440,
   "windowHeight": 900,
   "windowResizable": true,
-  "targetFps": 60
+  "targetFps": 60,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
 }
