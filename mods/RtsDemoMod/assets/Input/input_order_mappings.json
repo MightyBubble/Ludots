@@ -57,7 +57,8 @@
             "selectionType": "HoveredEntityOrPosition",
             "match": {
               "abilitySlotIndex": 2,
-              "abilityIdKeySuffix": ".Train"
+              "abilityIdKeySuffix": ".Train",
+              "blockedAnyTags": ["Progression.Rts.WarpGate"]
             }
           },
           {

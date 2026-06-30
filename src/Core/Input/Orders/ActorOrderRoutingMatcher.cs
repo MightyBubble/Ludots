@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -123,12 +124,16 @@ namespace Ludots.Core.Input.Orders
                 ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(actor);
                 bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
                 AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
+                bool hasItemGranted = world.Has<ItemGrantedSlotBuffer>(actor);
+                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? world.Get<ItemGrantedSlotBuffer>(actor) : default;
                 bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
                 GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
                 AbilitySlotState slot = AbilitySlotResolver.Resolve(
                     in abilities,
                     in formSlots,
                     hasForm,
+                    in itemGrantedSlots,
+                    hasItemGranted,
                     in grantedSlots,
                     hasGranted,
                     slotIndex);

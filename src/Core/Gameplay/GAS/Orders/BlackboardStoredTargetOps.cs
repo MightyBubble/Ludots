@@ -57,19 +57,46 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             Vector3 worldPositionCm = default;
-            if (world.TryGet(host, out BlackboardSpatialBuffer spatial) &&
-                spatial.TryGetPoint(keys.TargetPositionKey, out worldPositionCm))
-            {
-            }
+            bool hasWorldPosition = world.TryGet(host, out BlackboardSpatialBuffer spatial) &&
+                                    spatial.TryGetPoint(keys.TargetPositionKey, out worldPositionCm);
 
             Entity targetEntity = Entity.Null;
-            if (world.TryGet(host, out BlackboardEntityBuffer entities) &&
-                entities.TryGet(keys.TargetEntityKey, out targetEntity))
-            {
-            }
+            bool hasTargetEntity = world.TryGet(host, out BlackboardEntityBuffer entities) &&
+                                   entities.TryGet(keys.TargetEntityKey, out targetEntity) &&
+                                   targetEntity != Entity.Null &&
+                                   world.IsAlive(targetEntity);
 
-            ints.TryGet(keys.HexQKey, out int hexQ);
-            ints.TryGet(keys.HexRKey, out int hexR);
+            int hexQ = 0;
+            int hexR = 0;
+            bool hasHexCell = ints.TryGet(keys.HexQKey, out hexQ) && ints.TryGet(keys.HexRKey, out hexR);
+
+            switch (kind)
+            {
+                case BlackboardStoredTargetKind.Entity:
+                    if (!hasTargetEntity)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackboardStoredTargetKind.Point:
+                    if (!hasWorldPosition)
+                    {
+                        return false;
+                    }
+                    break;
+                case BlackboardStoredTargetKind.HexCell:
+                    if (!hasHexCell)
+                    {
+                        return false;
+                    }
+                    if (!hasWorldPosition)
+                    {
+                        worldPositionCm = new HexCoordinates(hexQ, hexR).ToWorldPositionCm();
+                    }
+                    break;
+                default:
+                    return false;
+            }
 
             snapshot = new BlackboardStoredTargetSnapshot(kind, worldPositionCm, targetEntity, hexQ, hexR);
             return true;

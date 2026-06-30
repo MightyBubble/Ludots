@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -103,7 +104,7 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty());
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new Team { Id = 1 });
             BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(900f, 0f, 1200f), in keys);
 
             var registry = new BuiltinHandlerRegistry();
@@ -195,7 +196,7 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty());
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new Team { Id = 1 });
             Entity garrison = world.Create();
             BlackboardStoredTargetOps.SetEntity(world, source, garrison, in keys);
 
@@ -244,6 +245,68 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(100));
             Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(garrison));
             Assert.That(buffer.ActiveOrder.Order.Args.I0, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BlackboardStoredTargetOps_TryRead_PointWithoutSpatial_ReturnsFalse()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            Entity host = world.Create(new BlackboardIntBuffer());
+
+            ref BlackboardIntBuffer ints = ref world.Get<BlackboardIntBuffer>(host);
+            ints.Set(keys.TargetKindKey, (int)BlackboardStoredTargetKind.Point);
+
+            Assert.That(BlackboardStoredTargetOps.TryRead(world, host, in keys, out _), Is.False);
+        }
+
+        [Test]
+        public void SubmitOrderFromBlackboardHandler_ThrowsWhenOrderActorHasNoPlayerIdentity()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
+
+            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty());
+            BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(100f, 0f, 200f), in keys);
+
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                OrderTypeRegistry = orderTypes,
+                CurrentStep = 1,
+                StepRateHz = 30,
+            };
+
+            var template = new EffectTemplateData
+            {
+                SubmitOrderFromBlackboard = new SubmitOrderFromBlackboardDescriptor
+                {
+                    SourceSlot = RelationEntitySlot.Source,
+                    TargetSlot = RelationEntitySlot.Target,
+                    StoredTargetKeys = keys,
+                    PointMoveOrderTypeKey = "moveTo",
+                    EntityOrderTypeKey = "castAbility",
+                    EntityOrderIntArg0 = 1,
+                    SubmitMode = OrderSubmitMode.Immediate,
+                },
+            };
+
+            var context = new EffectContext { Source = source, Target = spawned };
+            var mergedParams = new EffectConfigParams();
+
+            Assert.Throws<InvalidOperationException>(() => registry.Invoke(
+                BuiltinHandlerId.SubmitOrderFromBlackboard,
+                world,
+                Entity.Null,
+                ref context,
+                in mergedParams,
+                in template,
+                runtime));
         }
     }
 
@@ -321,6 +384,50 @@ namespace Ludots.Tests.GAS
             };
 
             Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, producer, match), Is.True);
+        }
+
+        [Test]
+        public void TryResolveCandidate_WarpGateTag_SkipsTrainSpawnTargetCandidate()
+        {
+            using World world = World.Create();
+            var tagOps = new TagOps();
+            int warpGateTagId = TagRegistry.Register("Progression.Rts.WarpGate");
+
+            Entity gateway = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer());
+            ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(gateway);
+            int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Sc2.TrainZealot");
+            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot0"));
+            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot1"));
+            abilities.AddAbility(trainAbilityId);
+
+            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(gateway);
+            tags.AddTag(warpGateTagId);
+
+            var candidates = new List<ActorOrderRoutingCandidate>
+            {
+                new()
+                {
+                    OrderTypeKey = "setSpawnTarget",
+                    Priority = 10,
+                    Match = new ActorOrderRoutingMatch
+                    {
+                        AbilitySlotIndex = 2,
+                        AbilityIdKeySuffix = ".Train",
+                        BlockedAnyTags = new List<string> { "Progression.Rts.WarpGate" },
+                    },
+                },
+                new()
+                {
+                    OrderTypeKey = "moveTo",
+                    Priority = 0,
+                    Match = new ActorOrderRoutingMatch(),
+                },
+            };
+
+            Assert.That(
+                ActorOrderRoutingMatcher.TryResolveCandidate(world, tagOps, gateway, candidates, out ActorOrderRoutingCandidate matched),
+                Is.True);
+            Assert.That(matched.OrderTypeKey, Is.EqualTo("moveTo"));
         }
     }
 }

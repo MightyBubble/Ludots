@@ -601,7 +601,8 @@ namespace Ludots.Core.Gameplay.GAS
                 return team.Id;
             }
 
-            return 1;
+            throw new InvalidOperationException(
+                $"SubmitOrderFromBlackboard requires PlayerOwner or Team on order actor entity {entity.Id}.");
         }
 
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)

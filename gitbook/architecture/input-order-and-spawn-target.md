@@ -42,7 +42,8 @@
 
 - `requiredAllTags` / `blockedAnyTags`：空列表表示无约束
 - `abilitySlotIndex`：通过 `AbilitySlotResolver` 解析 form/grant 层后的有效 slot
-- `abilityIdKey` / `abilityIdKeySuffix`：与有效 ability id 精确或后缀匹配
+- `abilityIdKey` / `abilityIdKeySuffix`：与有效 ability id 精确或子串匹配
+- `blockedAnyTags`：actor 带任一 tag 时不匹配（如 Gateway 研究 WarpGate 后跳过 Train 路由）
 - 多 candidate 命中时取最高 `priority`
 
 ### Per-candidate selection

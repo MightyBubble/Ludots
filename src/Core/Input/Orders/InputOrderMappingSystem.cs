@@ -197,6 +197,20 @@ namespace Ludots.Core.Input.Orders
         private float _elapsedSeconds;
         private readonly List<Entity> _selectedActorsScratch = new(16);
 
+        private readonly struct RoutedOrderSubmission
+        {
+            public RoutedOrderSubmission(in Order order, string orderTypeKey)
+            {
+                Order = order;
+                OrderTypeKey = orderTypeKey;
+            }
+
+            public Order Order { get; }
+            public string OrderTypeKey { get; }
+        }
+
+        private readonly List<RoutedOrderSubmission> _routedOrdersScratch = new(16);
+
         // Aiming state (AimCast mode)
         private bool _isAiming;
         private string _aimingActionId = string.Empty;
@@ -1243,6 +1257,7 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
+            _routedOrdersScratch.Clear();
             for (int i = 0; i < _selectedActorsScratch.Count; i++)
             {
                 Entity actor = _selectedActorsScratch[i];
@@ -1266,12 +1281,36 @@ namespace Ludots.Core.Input.Orders
                     continue;
                 }
 
-                if (_selectedActorsScratch.Count > 1 &&
+                _routedOrdersScratch.Add(new RoutedOrderSubmission(in order, matchedCandidate.OrderTypeKey));
+            }
+
+            if (_routedOrdersScratch.Count == 0)
+            {
+                return;
+            }
+
+            int moveToCount = 0;
+            for (int i = 0; i < _routedOrdersScratch.Count; i++)
+            {
+                if (string.Equals(_routedOrdersScratch[i].OrderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase))
+                {
+                    moveToCount++;
+                }
+            }
+
+            int moveToIndex = 0;
+            for (int i = 0; i < _routedOrdersScratch.Count; i++)
+            {
+                Order order = _routedOrdersScratch[i].Order;
+                string orderTypeKey = _routedOrdersScratch[i].OrderTypeKey;
+                if (moveToCount > 1 &&
                     !mapping.IsSkillMapping &&
                     mapping.SelectionType == OrderSelectionType.Position &&
-                    _config.GroupMoveFormation.Mode != GroupMoveFormationMode.None)
+                    _config.GroupMoveFormation.Mode != GroupMoveFormationMode.None &&
+                    string.Equals(orderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase))
                 {
-                    ApplyGroupMoveFormation(mapping, _selectedActorsScratch.Count, i, ref order);
+                    ApplyGroupMoveFormation(mapping, orderTypeKey, moveToCount, moveToIndex, ref order);
+                    moveToIndex++;
                 }
 
                 _orderSubmitHandler!(in order);
@@ -1346,17 +1385,17 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
-                ApplyGroupMoveFormation(mapping, _selectedActorsScratch.Count, i, ref cloned);
+                ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _selectedActorsScratch.Count, i, ref cloned);
                 _orderSubmitHandler!(in cloned);
             }
         }
 
-        private void ApplyGroupMoveFormation(InputOrderMapping mapping, int totalCount, int index, ref Order order)
+        private void ApplyGroupMoveFormation(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
         {
             if (totalCount <= 1 ||
                 mapping.IsSkillMapping ||
                 mapping.SelectionType != OrderSelectionType.Position ||
-                !string.Equals(mapping.OrderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase) ||
+                !string.Equals(orderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase) ||
                 _config.GroupMoveFormation.Mode != GroupMoveFormationMode.Grid ||
                 order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
                 order.Args.Spatial.Mode != OrderCollectionMode.Single)
