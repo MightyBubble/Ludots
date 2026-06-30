@@ -3,6 +3,7 @@
     "id": "rts_war3_peasant",
     "components": {
       "Name": { "Value": "Peasant" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -99,6 +100,7 @@
     "id": "rts_war3_footman",
     "components": {
       "Name": { "Value": "Footman" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -238,6 +240,7 @@
     "id": "rts_ra2_rhino",
     "components": {
       "Name": { "Value": "Rhino Tank" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -261,6 +264,7 @@
     "id": "rts_ra2_rocket_trooper",
     "components": {
       "Name": { "Value": "Rocket Trooper" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -313,6 +317,7 @@
     "id": "rts_sc2_probe",
     "components": {
       "Name": { "Value": "Probe" },
+      "MoveToCapable": {},
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -336,6 +341,7 @@
     "id": "rts_sc2_zealot",
     "components": {
       "Name": { "Value": "Zealot" },
+      "MoveToCapable": {},
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -359,6 +365,7 @@
     "id": "rts_zerg_drone",
     "components": {
       "Name": { "Value": "Drone" },
+      "MoveToCapable": {},
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },

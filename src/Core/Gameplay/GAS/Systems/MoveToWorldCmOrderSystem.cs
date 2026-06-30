@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -75,7 +76,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    float speedCmPerSec = ResolveMoveSpeed(entity);
+                    float speedCmPerSec = ResolveMoveSpeed(entity, out bool hasExplicitMoveSpeed);
                     if (speedCmPerSec <= 0f)
                     {
                         continue;
@@ -90,6 +91,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             _completedOrders.Add(entity);
                         }
 
+                        continue;
+                    }
+
+                    // Direct WorldPositionCm movement is gated on explicit movement capability.
+                    // OrderBuffer alone is a general command/ability queue and does not imply movability;
+                    // a dynamic (non-static) physics body already qualified above. Structures and other
+                    // orderable-but-immovable entities ignore moveTo instead of teleporting their position
+                    // off the implicit default speed.
+                    if (!IsLinearMoveCapable(entity, hasExplicitMoveSpeed))
+                    {
                         continue;
                     }
 
@@ -113,14 +124,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private float ResolveMoveSpeed(Entity entity)
+        // An orderable entity may be driven along a direct WorldPositionCm route only when it declares an
+        // explicit movement capability: a positive authored MoveSpeed attribute, a core MoveToCapable marker,
+        // or a mass-navigation agent. (Dynamic physics bodies are handled by TryDrivePhysicsBody above.)
+        private bool IsLinearMoveCapable(Entity entity, bool hasExplicitMoveSpeed)
+            => hasExplicitMoveSpeed
+               || World.Has<MoveToCapable>(entity)
+               || World.Has<MassNavigationAgent>(entity);
+
+        private float ResolveMoveSpeed(Entity entity, out bool hasExplicitMoveSpeed)
         {
+            hasExplicitMoveSpeed = false;
             if (_moveSpeedAttributeId != AttributeRegistry.InvalidId &&
                 World.TryGet(entity, out AttributeBuffer attributes))
             {
                 float configured = attributes.GetCurrent(_moveSpeedAttributeId);
                 if (configured > 0f)
                 {
+                    hasExplicitMoveSpeed = true;
                     return configured;
                 }
             }

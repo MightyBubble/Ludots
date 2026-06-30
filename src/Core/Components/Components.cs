@@ -64,6 +64,19 @@ namespace Ludots.Core.Components
     /// Presentation-only stress actors can opt out explicitly instead of being inferred by the spatial system.
     /// </summary>
     public struct SpatialPartitionExcluded {}
+
+    /// <summary>
+    /// Explicit movement-capability marker for direct <c>WorldPositionCm</c> driven movement.
+    ///
+    /// <para>
+    /// <c>OrderBuffer</c> is a general command/ability queue and does NOT imply that an entity is movable.
+    /// <see cref="MoveToWorldCmOrderSystem"/> only mutates <c>WorldPositionCm</c> for an entity whose movement
+    /// capability is explicit: a dynamic (non-static) physics body, a mass-navigation agent, or this marker.
+    /// Structures and other orderable-but-immovable entities (e.g. buildings that queue production abilities)
+    /// omit this marker and therefore ignore <c>moveTo</c> orders instead of teleporting.
+    /// </para>
+    /// </summary>
+    public struct MoveToCapable {}
     
     /// <summary>
     /// 逻辑层面朝方向（弧度，0 = +X 方向，逆时针正方向）。

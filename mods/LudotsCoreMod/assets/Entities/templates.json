@@ -65,6 +65,7 @@
       },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
+      "MoveToCapable": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardIntBuffer": {}

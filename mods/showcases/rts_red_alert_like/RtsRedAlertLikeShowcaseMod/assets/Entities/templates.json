@@ -140,6 +140,7 @@
     "id": "rts_ra_mcv",
     "components": {
       "Name": { "Value": "Mobile Construction Vehicle" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
@@ -171,6 +172,7 @@
     "id": "rts_ra_harvester",
     "components": {
       "Name": { "Value": "Ore Harvester" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
@@ -201,6 +203,7 @@
     "id": "rts_ra_rhino",
     "components": {
       "Name": { "Value": "Rhino Tank" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},

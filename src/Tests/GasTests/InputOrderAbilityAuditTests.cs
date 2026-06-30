@@ -1379,6 +1379,84 @@ namespace Ludots.Tests.GAS
             That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
         }
 
+        [Test]
+        public void MoveToWorldCmOrderSystem_NonMovableOrderBufferEntity_IgnoresMoveTo()
+        {
+            using var world = World.Create();
+
+            // Structure-like entity: keeps OrderBuffer for production/ability queues but declares no
+            // movement capability (no MoveSpeed attribute, no MoveToCapable marker, no physics body).
+            var structure = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 101,
+                AllowQueuedMode = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition
+            });
+
+            var args = new OrderArgs();
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(structure);
+            var order = new Order { Actor = structure, OrderTypeId = 101, Args = args };
+            buffer.SetActiveDirect(in order, priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            system.Update(0.10f);
+            system.Update(0.10f);
+
+            var pos = world.Get<WorldPositionCm>(structure).ToWorldCmInt2();
+            That(pos.X, Is.EqualTo(0), "OrderBuffer alone must not let core move a non-movable entity.");
+            That(pos.Y, Is.EqualTo(0));
+            That(world.Get<OrderBuffer>(structure).HasActive, Is.True,
+                "moveTo is ignored (not consumed) for entities without movement capability.");
+        }
+
+        [Test]
+        public void MoveToWorldCmOrderSystem_MoveToCapableMarker_MovesUsingDefaultSpeed()
+        {
+            using var world = World.Create();
+
+            // No MoveSpeed attribute: movement capability comes solely from the explicit marker,
+            // and the per-system default speed is used.
+            var actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty(),
+                new MoveToCapable());
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 101,
+                AllowQueuedMode = true,
+                ClearQueueOnActivate = true,
+                SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition
+            });
+
+            var args = new OrderArgs();
+            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            args.Spatial.Mode = OrderCollectionMode.Single;
+            args.Spatial.WorldCm = new Vector3(90f, 0f, 0f);
+
+            ref var buffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
+            buffer.SetActiveDirect(in order, priority: 60);
+
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            system.Update(0.10f);
+
+            var pos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            That(pos.X, Is.EqualTo(30).Within(1), "MoveToCapable marker must enable default-speed movement.");
+            That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
+        }
+
         private static GraphInstruction[] RejectValidationProgram()
         {
             return new[]
