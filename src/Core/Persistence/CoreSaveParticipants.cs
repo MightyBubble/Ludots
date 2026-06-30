@@ -835,19 +835,9 @@ namespace Ludots.Core.Persistence
             }
 
             var root = new JsonObject();
-            if (!string.IsNullOrEmpty(launchContext.ScenarioId))
-            {
-                root["scenarioId"] = launchContext.ScenarioId;
-            }
-
             if (launchContext.HasSelectedPlayer)
             {
                 root["selectedPlayerId"] = launchContext.SelectedPlayerId;
-            }
-
-            if (launchContext.HasSelectedFaction)
-            {
-                root["selectedFactionId"] = launchContext.SelectedFactionId;
             }
 
             if (launchContext.Metadata != null && launchContext.Metadata.Count > 0)
@@ -874,9 +864,7 @@ namespace Ludots.Core.Persistence
             JsonObject root = node as JsonObject ??
                 throw new SaveContextException("Map session launchContext must be an object.");
 
-            string? scenarioId = root["scenarioId"]?.GetValue<string>();
             int selectedPlayerId = root["selectedPlayerId"]?.GetValue<int>() ?? 0;
-            int selectedFactionId = root["selectedFactionId"]?.GetValue<int>() ?? 0;
             IReadOnlyDictionary<string, object>? metadata = null;
             if (root["metadata"] is JsonObject metadataObject)
             {
@@ -889,7 +877,7 @@ namespace Ludots.Core.Persistence
                 metadata = values;
             }
 
-            return MapLaunchContext.FromSelection(scenarioId, selectedPlayerId, selectedFactionId, metadata);
+            return MapLaunchContext.Create(selectedPlayerId, metadata);
         }
     }
 }

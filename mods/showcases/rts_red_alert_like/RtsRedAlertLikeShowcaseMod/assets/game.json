@@ -1,5 +1,6 @@
 {
   "startupMapId": "rts_red_alert_like",
+  "startupSelectedPlayerId": 1,
   "windowTitle": "Ludots Engine - RTS Red Alert Like Production Showcase",
   "windowWidth": 1440,
   "windowHeight": 900,

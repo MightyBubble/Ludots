@@ -344,7 +344,7 @@ public sealed class SaveParticipantRegistryTests
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
             Path.Combine(repoRoot, "assets"));
-        engine.LoadMap(engine.MergedConfig.StartupMapId);
+        engine.LoadStartupMap();
         return engine;
     }
 

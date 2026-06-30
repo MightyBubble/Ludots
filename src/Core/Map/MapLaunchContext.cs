@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace Ludots.Core.Map
@@ -9,31 +8,22 @@ namespace Ludots.Core.Map
     /// </summary>
     public sealed class MapLaunchContext
     {
-        public string? ScenarioId { get; init; }
         public int SelectedPlayerId { get; init; }
-        public int SelectedFactionId { get; init; }
         public IReadOnlyDictionary<string, object>? Metadata { get; init; }
 
         public bool HasSelectedPlayer => SelectedPlayerId > 0;
-        public bool HasSelectedFaction => SelectedFactionId > 0;
 
         public bool IsEmpty =>
-            string.IsNullOrEmpty(ScenarioId) &&
             !HasSelectedPlayer &&
-            !HasSelectedFaction &&
             (Metadata == null || Metadata.Count == 0);
 
-        public static MapLaunchContext? FromSelection(
-            string? scenarioId = null,
+        public static MapLaunchContext? Create(
             int selectedPlayerId = 0,
-            int selectedFactionId = 0,
             IReadOnlyDictionary<string, object>? metadata = null)
         {
             var context = new MapLaunchContext
             {
-                ScenarioId = scenarioId,
                 SelectedPlayerId = selectedPlayerId,
-                SelectedFactionId = selectedFactionId,
                 Metadata = metadata,
             };
             return context.IsEmpty ? null : context;

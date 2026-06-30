@@ -2726,7 +2726,35 @@ namespace Ludots.Core.Engine
             return new NavAreaCostTable(arr);
         }
 
-        public void LoadEntryMap(string mapId) => LoadMap(mapId);
+        public void LoadEntryMap(string mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new ArgumentException("Map id is required.", nameof(mapId));
+            }
+
+            if (!string.Equals(MergedConfig?.StartupMapId, mapId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"LoadEntryMap requires startup map '{MergedConfig?.StartupMapId}', got '{mapId}'.");
+            }
+
+            LoadStartupMap();
+        }
+
+        public void LoadStartupMap()
+        {
+            string mapId = MergedConfig?.StartupMapId;
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new InvalidOperationException("StartupMapId is required.");
+            }
+
+            MapLaunchContext? launchContext = MergedConfig!.StartupSelectedPlayerId > 0
+                ? MapLaunchContext.Create(MergedConfig.StartupSelectedPlayerId)
+                : null;
+            LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
+        }
 
         public void LoadMap(MapId mapId) => LoadMap(MapLoadRequest.FromMapId(mapId.Value));
 

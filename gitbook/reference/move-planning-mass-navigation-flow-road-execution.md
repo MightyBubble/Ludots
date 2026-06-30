@@ -90,7 +90,7 @@ Road map authoring must bind the local participant through the formal map schema
     { "TeamId": 2, "RepresentativeInstanceId": "road.team.red" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue", "IsLocal": true }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue" }
   ]
 }
 ```
@@ -101,7 +101,7 @@ Road-specific MassNavigationFlow tuning remains in `RoadNetworkShowcaseMod/asset
 
 | Configuration or code fact | Behavior | Contract test |
 |---|---|---|
-| `Players[].IsLocal = true` for `road.player.blue` | `LocalPlayerEntityResolverSystem` keeps a valid selection owner before the confirm press frame | `RoadNetworkShowcase_PlayableInitialDragSelectRightClick_StartsRoadMoveWithoutReset` |
+| `game.json.startupSelectedPlayerId = 1` for `road.player.blue` | `LoadStartupMap()` injects launch context so `LocalPlayerEntityResolverSystem` keeps a valid selection owner before the confirm press frame | `RoadNetworkShowcase_PlayableInitialDragSelectRightClick_StartsRoadMoveWithoutReset` |
 | Road execution source contains no retired execution component references | Road movement is not coupled to the deprecated sink | `RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceLegacyExecutionComponents` |
 | Core `MovePlanning` source contains no road/corridor/fort names | Core seam remains reusable outside the road showcase | `CoreMovePlanningSeam_DoesNotReferenceRoadShowcasePolicy` |
 | Road execution source contains no `.A0` cursor usage | Runtime waypoint cursor lives in `MovePlanRuntime.CurrentWaypointIndex` | `RoadMovePlanRuntimeCursor_DoesNotUseOrderSpatialA0` |

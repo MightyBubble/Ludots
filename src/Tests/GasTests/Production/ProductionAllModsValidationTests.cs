@@ -262,7 +262,7 @@ namespace Ludots.Tests.GAS.Production
                 InstallDummyInput(engine);
 
                 engine.Start();
-                engine.LoadMap(engine.MergedConfig.StartupMapId);
+                engine.LoadStartupMap();
 
                 for (int i = 0; i < 10; i++)
                 {

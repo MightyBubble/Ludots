@@ -1,5 +1,6 @@
 {
   "startupMapId": "road_network_showcase_chunked",
+  "startupSelectedPlayerId": 1,
   "startupInputContexts": ["Default_Gameplay", "RoadNetwork_Showcase"],
   "constants": {
     "orderTypeIds": {

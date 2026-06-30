@@ -89,8 +89,6 @@ namespace Ludots.Core.Gameplay.Teams
 
             int localPlayerId = 0;
             Entity localPlayerEntity = Entity.Null;
-            MapLaunchContext? launchContext = session.LaunchContext;
-            bool useLaunchContextPlayer = launchContext?.HasSelectedPlayer == true;
             for (int i = 0; i < mapConfig.Players.Count; i++)
             {
                 PlayerBindingData binding = mapConfig.Players[i] ?? throw new InvalidOperationException($"Map '{mapId}' Players[{i}] requires an object payload.");
@@ -130,22 +128,12 @@ namespace Ludots.Core.Gameplay.Teams
                 Upsert(world, entity, new PlayerOwner { PlayerId = binding.PlayerId });
                 Upsert(world, entity, new Team { Id = binding.TeamId });
                 playerLookup.Register(binding.PlayerId, entity);
-
-                if (!useLaunchContextPlayer && binding.IsLocal)
-                {
-                    if (localPlayerId != 0)
-                    {
-                        throw new InvalidOperationException($"Map '{mapId}' declares multiple local player bindings.");
-                    }
-
-                    localPlayerId = binding.PlayerId;
-                    localPlayerEntity = entity;
-                }
             }
 
-            if (useLaunchContextPlayer)
+            MapLaunchContext? launchContext = session.LaunchContext;
+            if (launchContext?.HasSelectedPlayer == true)
             {
-                int selectedPlayerId = launchContext!.SelectedPlayerId;
+                int selectedPlayerId = launchContext.SelectedPlayerId;
                 if (!playerLookup.TryGet(selectedPlayerId, out Entity selectedEntity))
                 {
                     throw new InvalidOperationException(
