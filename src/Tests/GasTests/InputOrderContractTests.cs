@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -330,6 +332,79 @@ namespace Ludots.Tests.GAS
             Assert.That(orders[0].Target, Is.EqualTo(enemy));
             Assert.That(orders[0].Args.Spatial.Mode, Is.EqualTo(Ludots.Core.Gameplay.GAS.Orders.OrderCollectionMode.Single));
             Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1960f, 0f, 413f)));
+        }
+
+        [Test]
+        public void ActorOrderRouting_HoveredEntityOrPosition_PrefersHoveredEntity()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "setSpawnTarget",
+                                    Priority = 10,
+                                    SelectionType = OrderSelectionType.HoveredEntityOrPosition,
+                                    Match = new ActorOrderRoutingMatch(),
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity producer = world.Create();
+            Entity hovered = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.ConfirmActionId = "Confirm";
+            system.CancelActionId = "Cancel";
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(producer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
+            system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
+                ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(), actor, routing.Candidates, out matchedCandidate));
+            system.SetSelectedEntityListProvider((_, list) =>
+            {
+                list.Add(producer);
+                return true;
+            });
+            system.SetHoveredEntityProvider((out Entity entity) =>
+            {
+                entity = hovered;
+                return true;
+            });
+            bool groundCalled = false;
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundCalled = true;
+                groundPos = new Vector3(1f, 0f, 2f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(106));
+            Assert.That(orders[0].Target, Is.EqualTo(hovered));
+            Assert.That(groundCalled, Is.False);
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()

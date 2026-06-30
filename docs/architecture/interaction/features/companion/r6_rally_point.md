@@ -1,42 +1,51 @@
-# R6: Rally Point
+# R6: Rally Point / Spawn Target
 
 ## 机制描述
-设置集结点，新生产的单位自动向集结点移动。
 
-## 交互层设计
-- **Input**: Down
-- **Selection**: Point (世界坐标)
-- **Resolution**: Explicit
+设置 spawn target（集结点），新生产的单位在 spawn 时自动收到 Mod 配置的 order（如 `moveTo` 或 garrison `castAbility`）。
 
-## 实现要点
+## 架构（当前实现）
+
+业务语义在 **Mod 配置**；Core 提供通用基建（见 `gitbook/architecture/input-order-and-spawn-target.md`）。
+
 ```
-InputOrderMapping:
-  actionId: "SetRallyPoint"
-  selectionType: Point
-  interactionMode: Explicit
+input_order_mappings.json (Command)
+  └─ actorOrderRouting
+       ├─ match: producer slot 2 + ".Train" → orderTypeKey: setSpawnTarget
+       │    selectionType: HoveredEntityOrPosition
+       └─ default candidate → orderTypeKey: moveTo
 
-OrderSubmitter:
-  Order.Actor = building_entity  // 建筑或同伴基地
-  Order.Args.Spatial = clicked_world_position
+order_types.json (Mod)
+  └─ setSpawnTarget: instantComplete + persistentStoredTarget (Rts.SpawnTarget.*)
 
-Phase Graph:
-  1. SetBlackboard(building, "rally_point", Order.Args.Spatial)
-  2. UI: ShowRallyPointMarker(position)
+InstantCompleteOrderSystem
+  └─ CommitFromOrder → building blackboard
 
-// 单位生产完成时:
-SpawnPipeline:
-  OnUnitCreated:
-    if building.Blackboard.HasKey("rally_point"):
-      IssueOrder(new_unit, Move, rally_point)
+CreateUnit onSpawnEffect
+  └─ SubmitOrderFromBlackboard → spawned unit moveTo / castAbility
 ```
 
-## 新增需求
-| 需求 | 优先级 | 说明 |
-|------|--------|------|
-| Input focus / actor routing | P2 | 复用 K7 |
-| Blackboard 集结点读写 | P1 | 建筑/基地 entity 上的 Blackboard 键值 |
+## 交互层
+
+| 步骤 | 输入 | 结果 |
+|------|------|------|
+| 设点 rally | Command + 选中 producer + 点地 | `setSpawnTarget` → point stored target |
+| 设 entity rally | Command + 选中 producer + 点单位 | `setSpawnTarget` → entity stored target |
+| 普通移动 | Command + 选中战斗单位 + 点地 | `moveTo` |
+| Spawn | 训练完成 | on-spawn effect 读 building blackboard 并下发 order |
+
+## Mod 配置 SSOT（RtsDemoMod）
+
+- `assets/GAS/order_types.json` — `setSpawnTarget`, `Rts.SpawnTarget.*`
+- `assets/Input/input_order_mappings.json` — `actorOrderRouting`
+- `assets/GAS/effects.json` — `Effect.Rts.Shared.ApplySpawnTargetOrder`
 
 ## 参考案例
+
 - **StarCraft**: 右键设置集结点
 - **Age of Empires**: 兵营集结点旗帜
-- **Formation Capability**: 部队集结位置
+
+## 跟踪
+
+- GitHub: #492, #493
+- Kanban: SY56 🟢, SY14 部分（本地选中 actor 路由）

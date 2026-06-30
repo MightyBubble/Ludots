@@ -9,14 +9,14 @@ namespace Ludots.Core.Input.Orders
 {
     public static class ActorOrderRoutingMatcher
     {
-        public static bool TryResolveOrderTypeKey(
+        public static bool TryResolveCandidate(
             World world,
             TagOps tagOps,
             Entity actor,
             IReadOnlyList<ActorOrderRoutingCandidate> candidates,
-            out string orderTypeKey)
+            out ActorOrderRoutingCandidate matchedCandidate)
         {
-            orderTypeKey = string.Empty;
+            matchedCandidate = null!;
             if (!world.IsAlive(actor) || candidates == null || candidates.Count == 0)
             {
                 return false;
@@ -42,7 +42,24 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            orderTypeKey = best.OrderTypeKey;
+            matchedCandidate = best;
+            return true;
+        }
+
+        public static bool TryResolveOrderTypeKey(
+            World world,
+            TagOps tagOps,
+            Entity actor,
+            IReadOnlyList<ActorOrderRoutingCandidate> candidates,
+            out string orderTypeKey)
+        {
+            orderTypeKey = string.Empty;
+            if (!TryResolveCandidate(world, tagOps, actor, candidates, out ActorOrderRoutingCandidate matchedCandidate))
+            {
+                return false;
+            }
+
+            orderTypeKey = matchedCandidate.OrderTypeKey;
             return true;
         }
 
@@ -104,12 +121,17 @@ namespace Ludots.Core.Input.Orders
                 }
 
                 ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(actor);
-                if ((uint)slotIndex >= (uint)abilities.Count)
-                {
-                    return false;
-                }
-
-                AbilitySlotState slot = abilities.Get(slotIndex);
+                bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
+                AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
+                bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
+                GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
+                AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                    in abilities,
+                    in formSlots,
+                    hasForm,
+                    in grantedSlots,
+                    hasGranted,
+                    slotIndex);
                 if (slot.AbilityId <= 0)
                 {
                     return false;

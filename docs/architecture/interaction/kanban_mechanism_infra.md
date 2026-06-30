@@ -96,7 +96,7 @@
 | SY11 | ContextGroup Scoring Mechanism | P1 | 🔴 | S3, G3 | ContextGroup 注册 → Scorer 调用 → 候选排序 → 最高分 Ability 路由 |
 | SY12 | DoubleTap Detection (SelectionSystem) | P2 | 🔴 | S2 | InputTriggerType.DoubleTap 已废弃；需 SelectionSystem 层追踪按压间隔判断 |
 | SY13 | ModifierBehavior.forceTargetSelf | P2 | 🔴 | S4 | Alt 键状态检测 → Order.Target 强制设为 caster |
-| SY14 | Input Focus / Actor Routing | P2 | 🔴 | K7, R1, R2, R4, R6 | 将 Order 路由到指定 Actor（非本地玩家）；含 Camera Focus Switch |
+| SY14 | Input Focus / Actor Routing | P2 | 🟡 | K7, R1, R2, R4, R6 | `actorOrderRouting` 已实现本地选中 actor 路由；Camera Focus / 非本地玩家路由仍待补 |
 | SY15 | Input Profile Remapping | P2 | 🔴 | K7 | 不同实体不同控制映射（投射物操控时） |
 
 ### 3C — 移动 / 物理系统
@@ -144,7 +144,7 @@
 | SY53 | IncomingAttackWithinTicks Query | P1 | 🔴 | H5, H8 | 检测即将命中的攻击（完美闪避/方向反击判定） |
 | SY54 | Dead Unit Retention | P1 | 🔴 | C4 | 死亡单位保留 Entity + "dead" Tag（不立即销毁，供复活） |
 | SY55 | Tether Distance Monitor | P1 | 🔴 | C9 | 持续监测两实体距离；超限断裂 |
-| SY56 | Blackboard Rally Point | P1 | 🔴 | R6 | 建筑 Blackboard 存储集结点坐标 |
+| SY56 | Blackboard Rally Point | P1 | 🟢 | R6 | Mod 配置 `persistentStoredTarget` + `BlackboardStoredTargetOps` + `SubmitOrderFromBlackboard`；见 `gitbook/architecture/input-order-and-spawn-target.md` |
 | SY57 | TransportCapacity Component | P2 | 🔴 | R4 | 运输载具容量 + 货物列表管理 |
 
 ---

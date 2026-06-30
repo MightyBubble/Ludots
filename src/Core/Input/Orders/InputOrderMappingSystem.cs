@@ -49,12 +49,12 @@ namespace Ludots.Core.Input.Orders
     public delegate void OrderSubmitHandler(in Order order);
 
     /// <summary>
-    /// Delegate for resolving a per-actor order type key from actorOrderRouting candidates.
+    /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
     /// </summary>
     public delegate bool ActorOrderRoutingResolver(
         Entity actor,
         ActorOrderRoutingSettings routing,
-        out string orderTypeKey);
+        out ActorOrderRoutingCandidate matchedCandidate);
     
     
     /// <summary>
@@ -1129,13 +1129,14 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrder(InputOrderMapping mapping, out Order order)
         {
             Entity actor = ResolvePrimaryActor(mapping);
-            return TryBuildOrderForActor(mapping, actor, mapping.OrderTypeKey, out order);
+            return TryBuildOrderForActor(mapping, actor, mapping.OrderTypeKey, selectionTypeOverride: null, out order);
         }
 
         private bool TryBuildOrderForActor(
             InputOrderMapping mapping,
             Entity actor,
             string orderTypeKey,
+            OrderSelectionType? selectionTypeOverride,
             out Order order)
         {
             order = default;
@@ -1148,11 +1149,29 @@ namespace Ludots.Core.Input.Orders
             
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            OrderSelectionType selectionType = selectionTypeOverride ?? mapping.SelectionType;
             
             if (mapping.RequireSelection)
             {
-                switch (mapping.SelectionType)
+                switch (selectionType)
                 {
+                    case OrderSelectionType.HoveredEntityOrPosition:
+                        if (TryResolveHoveredEntity(out var hoveredTarget))
+                        {
+                            order.Target = hoveredTarget;
+                        }
+                        else if (_groundPositionProvider != null && _groundPositionProvider(out var hoveredOrGroundPos))
+                        {
+                            args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                            args.Spatial.Mode = OrderCollectionMode.Single;
+                            args.Spatial.WorldCm = hoveredOrGroundPos;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        break;
+
                     case OrderSelectionType.Position:
                     case OrderSelectionType.Direction:
                         if (_groundPositionProvider == null || !_groundPositionProvider(out var groundPos))
@@ -1162,7 +1181,7 @@ namespace Ludots.Core.Input.Orders
                         args.Spatial.Kind = OrderSpatialKind.WorldCm;
                         args.Spatial.Mode = OrderCollectionMode.Single;
                         args.Spatial.WorldCm = groundPos;
-                        if (mapping.SelectionType == OrderSelectionType.Direction &&
+                        if (selectionType == OrderSelectionType.Direction &&
                             TryResolveDirectionalTarget(actor, mapping, groundPos, out var directionTarget))
                         {
                             order.Target = directionTarget;
@@ -1185,14 +1204,14 @@ namespace Ludots.Core.Input.Orders
                         break;
                 }
             }
-            else if (mapping.SelectionType == OrderSelectionType.Entity)
+            else if (selectionType == OrderSelectionType.Entity)
             {
                 if (_selectedEntityProvider != null && _selectedEntityProvider(mapping.SelectionSetKey, out var target))
                 {
                     order.Target = target;
                 }
             }
-            else if (mapping.SelectionType == OrderSelectionType.Entities)
+            else if (selectionType == OrderSelectionType.Entities)
             {
                 TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
             }
@@ -1232,12 +1251,17 @@ namespace Ludots.Core.Input.Orders
                     continue;
                 }
 
-                if (!_actorOrderRoutingResolver(actor, mapping.ActorOrderRouting!, out string orderTypeKey))
+                if (!_actorOrderRoutingResolver(actor, mapping.ActorOrderRouting!, out ActorOrderRoutingCandidate matchedCandidate))
                 {
                     continue;
                 }
 
-                if (!TryBuildOrderForActor(mapping, actor, orderTypeKey, out var order))
+                if (!TryBuildOrderForActor(
+                        mapping,
+                        actor,
+                        matchedCandidate.OrderTypeKey,
+                        matchedCandidate.SelectionType,
+                        out var order))
                 {
                     continue;
                 }
@@ -1628,8 +1652,22 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            RequireOrderTypeId(mapping);
-            if (mapping.Trigger == InputTriggerType.Held && mapping.HeldPolicy == HeldPolicy.StartEnd)
+            if (mapping.ActorOrderRouting is { Candidates.Count: > 0 })
+            {
+                for (int i = 0; i < mapping.ActorOrderRouting.Candidates.Count; i++)
+                {
+                    ActorOrderRoutingCandidate candidate = mapping.ActorOrderRouting.Candidates[i];
+                    RequireOrderTypeId(mapping.ActionId, candidate.OrderTypeKey);
+                }
+            }
+            else
+            {
+                RequireOrderTypeId(mapping);
+            }
+
+            if (!string.IsNullOrWhiteSpace(mapping.OrderTypeKey) &&
+                mapping.Trigger == InputTriggerType.Held &&
+                mapping.HeldPolicy == HeldPolicy.StartEnd)
             {
                 RequireOrderTypeId(mapping, ".Start");
                 RequireOrderTypeId(mapping, ".End");

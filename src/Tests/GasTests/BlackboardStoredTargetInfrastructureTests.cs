@@ -151,6 +151,100 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(101));
             Assert.That(buffer.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(900f).Within(0.01f));
         }
+
+        [Test]
+        public void InstantCompleteOrderSystem_CommitsEntityTargetAndCompletes()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(OrderBuffer.CreateEmpty(), new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity garrisonTarget = world.Create();
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Actor = host,
+                Target = garrisonTarget,
+            }, priority: 40);
+
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+            system.Update(default);
+
+            Assert.That(buffer.HasActive, Is.False);
+            Assert.That(BlackboardStoredTargetOps.TryRead(world, host, in keys, out BlackboardStoredTargetSnapshot target), Is.True);
+            Assert.That(target.Kind, Is.EqualTo(BlackboardStoredTargetKind.Entity));
+            Assert.That(target.TargetEntity, Is.EqualTo(garrisonTarget));
+        }
+
+        [Test]
+        public void SubmitOrderFromBlackboardHandler_SubmitsCastOrderForEntityTarget()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+
+            Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty());
+            Entity garrison = world.Create();
+            BlackboardStoredTargetOps.SetEntity(world, source, garrison, in keys);
+
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                OrderTypeRegistry = orderTypes,
+                CurrentStep = 1,
+                StepRateHz = 30,
+            };
+
+            var template = new EffectTemplateData
+            {
+                SubmitOrderFromBlackboard = new SubmitOrderFromBlackboardDescriptor
+                {
+                    SourceSlot = RelationEntitySlot.Source,
+                    TargetSlot = RelationEntitySlot.Target,
+                    StoredTargetKeys = keys,
+                    PointMoveOrderTypeKey = "moveTo",
+                    EntityOrderTypeKey = "castAbility",
+                    EntityOrderIntArg0 = 1,
+                    SubmitMode = OrderSubmitMode.Immediate,
+                },
+            };
+
+            var context = new EffectContext
+            {
+                Source = source,
+                Target = spawned,
+            };
+
+            var mergedParams = new EffectConfigParams();
+            registry.Invoke(
+                BuiltinHandlerId.SubmitOrderFromBlackboard,
+                world,
+                Entity.Null,
+                ref context,
+                in mergedParams,
+                in template,
+                runtime);
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(100));
+            Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(garrison));
+            Assert.That(buffer.ActiveOrder.Order.Args.I0, Is.EqualTo(1));
+        }
     }
 
     [TestFixture]
@@ -202,6 +296,31 @@ namespace Ludots.Tests.GAS
                 ActorOrderRoutingMatcher.TryResolveOrderTypeKey(world, tagOps, producer, candidates, out string orderTypeKey),
                 Is.True);
             Assert.That(orderTypeKey, Is.EqualTo("setSpawnTarget"));
+        }
+
+        [Test]
+        public void TryMatch_UsesAbilityFormSlotOverride()
+        {
+            using World world = World.Create();
+            var tagOps = new TagOps();
+            Entity producer = world.Create(new AbilityStateBuffer(), new AbilityFormSlotBuffer());
+            ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
+            int holdAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Shared.Hold");
+            int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.War3.TrainFootman");
+            abilities.AddAbility(holdAbilityId);
+            abilities.AddAbility(holdAbilityId);
+            abilities.AddAbility(holdAbilityId);
+
+            ref AbilityFormSlotBuffer formSlots = ref world.Get<AbilityFormSlotBuffer>(producer);
+            formSlots.SetOverride(2, trainAbilityId);
+
+            var match = new ActorOrderRoutingMatch
+            {
+                AbilitySlotIndex = 2,
+                AbilityIdKeySuffix = ".Train",
+            };
+
+            Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, producer, match), Is.True);
         }
     }
 }

@@ -164,8 +164,8 @@ namespace CoreInputMod.Systems
             if (_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) &&
                 tagOpsObj is TagOps tagOps)
             {
-                mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out string orderTypeKey) =>
-                    ActorOrderRoutingMatcher.TryResolveOrderTypeKey(_world, tagOps, actor, routing.Candidates, out orderTypeKey));
+                mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
+                    ActorOrderRoutingMatcher.TryResolveCandidate(_world, tagOps, actor, routing.Candidates, out matchedCandidate));
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;

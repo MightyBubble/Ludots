@@ -105,6 +105,11 @@ namespace Ludots.Core.Input.Orders
         /// Both points are stored in OrderSpatial.
         /// </summary>
         Vector = 5,
+
+        /// <summary>
+        /// Prefer hovered command target entity; fall back to ground position when none.
+        /// </summary>
+        HoveredEntityOrPosition = 6,
         
         /// <summary>
         /// Obsolete alias for Position. Use Position instead.
@@ -227,6 +232,12 @@ namespace Ludots.Core.Input.Orders
         public string OrderTypeKey { get; set; } = string.Empty;
         public int Priority { get; set; }
         public ActorOrderRoutingMatch Match { get; set; } = new();
+
+        /// <summary>
+        /// Optional per-candidate selection resolution. When null, inherits mapping.SelectionType.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public OrderSelectionType? SelectionType { get; set; }
     }
 
     public sealed class ActorOrderRoutingSettings

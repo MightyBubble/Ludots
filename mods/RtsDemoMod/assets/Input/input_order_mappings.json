@@ -54,6 +54,7 @@
           {
             "orderTypeKey": "setSpawnTarget",
             "priority": 10,
+            "selectionType": "HoveredEntityOrPosition",
             "match": {
               "abilitySlotIndex": 2,
               "abilityIdKeySuffix": ".Train"
