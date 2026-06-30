@@ -12,6 +12,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
+    [NonParallelizable]
     [TestFixture]
     public sealed class BlackboardStoredTargetInfrastructureTests
     {

@@ -68,6 +68,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
+        public void RegisterBlackboardKeys(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/order_types.json")
+        {
+            OrderTypesRootJson root = LoadOrderTypesRoot(catalog, report, relativePath);
+            RegisterConfiguredBlackboardKeys(root.OrderBlackboardKeys, relativePath);
+        }
+
         public void Load(
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
@@ -81,34 +90,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             orderTypeRegistry.Clear();
             orderRuleRegistry.Clear();
 
-            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
-            {
-                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
-            }
-
-            var root = mergedObject.Deserialize<OrderTypesRootJson>(JsonOptions);
-            if (root == null)
-            {
-                throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
-            }
-
-            if (root.OrderBlackboardKeys == null)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderBlackboardKeys, even when empty.");
-            }
-
-            if (root.OrderTypes == null || root.OrderTypes.Count == 0)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
-            }
-
-            if (root.OrderRules == null)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderRules, even when empty.");
-            }
-
+            var root = LoadOrderTypesRoot(catalog, report, relativePath);
             RegisterConfiguredBlackboardKeys(root.OrderBlackboardKeys, relativePath);
 
             var assignedIds = new HashSet<int>();
@@ -369,6 +351,42 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException(
                     $"Order type '{key}' in '{path}' orderTypeId semantic key must exactly match the order type key.");
             }
+        }
+
+        private OrderTypesRootJson LoadOrderTypesRoot(
+            ConfigCatalog catalog,
+            ConfigConflictReport report,
+            string relativePath)
+        {
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            if (mergedObject == null)
+            {
+                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
+            }
+
+            var root = mergedObject.Deserialize<OrderTypesRootJson>(JsonOptions);
+            if (root == null)
+            {
+                throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
+            }
+
+            if (root.OrderBlackboardKeys == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderBlackboardKeys, even when empty.");
+            }
+
+            if (root.OrderTypes == null || root.OrderTypes.Count == 0)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
+            }
+
+            if (root.OrderRules == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderRules, even when empty.");
+            }
+
+            return root;
         }
 
         private static void RegisterConfiguredBlackboardKeys(

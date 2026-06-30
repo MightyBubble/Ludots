@@ -717,6 +717,7 @@ namespace Ludots.Core.Engine
                 progressionScopeKeys,
                 entityCollectionStore,
                 relationshipTypeRegistry).Load(ConfigCatalog, ConfigConflictReport);
+            new OrderTypeConfigLoader(ConfigPipeline).RegisterBlackboardKeys(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
                 ConfigPipeline,
                 effectTemplateRegistry,
@@ -2803,6 +2804,32 @@ namespace Ludots.Core.Engine
                 World.Destroy(World);
                 World = null;
             }
+
+            _engineServices?.LegacyStore.Clear();
+            _systemGroups?.Clear();
+            _presentationSystems?.Clear();
+            _inputRuntimeSystem = null;
+            _primitiveDrawBuffer = null;
+            _visualSnapshotBuffer = null;
+            _visualProxyBuffer = null;
+            _skinnedVisualBatchBuffer = null;
+            _presentationRequestBuffer = null;
+            _globalFieldVisualBuffer = null;
+            _soundRequestBuffer = null;
+            _instancedBatchRequestBuffer = null;
+            _instancedBatchOperationBuffer = null;
+            _gasPresentationEvents = null;
+            _groundOverlayBuffer = null;
+            _roadSplineBuffer = null;
+            _worldHudBuffer = null;
+            _physics2DController = null;
+            _gasController = null;
+            _timeFlow = null;
+            _worldToGridSyncSystem = null;
+            _spatialPartitionUpdateSystem = null;
+            MergedConfig = null;
+            ConfigPipeline = null;
+            ConfigCatalog = null;
         }
 
         public void Tick(float platformDeltaTime)

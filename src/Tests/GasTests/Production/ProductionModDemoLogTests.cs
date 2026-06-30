@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
@@ -28,9 +29,19 @@ namespace Ludots.Tests.GAS.Production
     /// Each test loads mods via GameEngine pipeline, entities come from Map JSON / Triggers,
     /// runs gameplay scenarios, and writes a human-readable .log file.
     /// </summary>
+    [NonParallelizable]
     [TestFixture]
     public sealed class ProductionModDemoLogTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+        }
+
         // ─────────────────────────────────────────────────
         //  MOBA
         // ─────────────────────────────────────────────────
