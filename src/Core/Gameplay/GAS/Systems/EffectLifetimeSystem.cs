@@ -81,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<PhaseGraphEntry> _expirePhaseGraphs = new(64);
         private readonly List<PhaseGraphEntry> _removePhaseGraphs = new(64);
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityMorphQueue morphRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityMorphQueue morphRequests = null, MorphProfileRegistry morphProfiles = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -99,6 +99,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
             _builtinRuntime.MorphRequests = morphRequests;
+            _builtinRuntime.MorphProfiles = morphProfiles;
             _builtinRuntime.Exchange = exchangeRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
 

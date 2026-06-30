@@ -23,11 +23,13 @@ namespace Ludots.Core.Gameplay.Morph.Config
     public sealed class MorphProfileAttributeInheritConfig
     {
         public string? Mode { get; set; }
+        public string? Source { get; set; }
         public List<string>? Names { get; set; }
     }
 
     public sealed class MorphProfileTagInheritConfig
     {
+        public string? Mode { get; set; }
         public List<string>? Carry { get; set; }
         public List<string>? Strip { get; set; }
     }

@@ -55,81 +55,145 @@ namespace Ludots.Core.Gameplay.Morph.Config
         public static MorphProfileDescriptor Compile(MorphProfileConfig cfg, string relativePath)
         {
             string ownerId = cfg.Id;
-            var inherit = cfg.Inherit ?? new MorphProfileInheritConfig();
+            var inherit = cfg.Inherit ?? throw new InvalidOperationException(
+                $"'{ownerId}' in {relativePath}: inherit block is required.");
 
-            bool copyPlayerOwner = false;
-            bool copyTeam = false;
-            if (inherit.Identity != null)
+            var identityFlags = MorphIdentityInheritanceRegistry.Compile(inherit.Identity, ownerId, relativePath);
+            CompileAttributes(inherit.Attributes, ownerId, relativePath, out MorphAttributeInheritMode attributeMode, out MorphAttributeValueSource attributeSource, out int[] attributeIds);
+            CompileTags(inherit.Tags, ownerId, relativePath, out MorphTagInheritMode tagMode, out int[] carryTagIds, out int[] stripTagIds);
+            MorphEffectInheritMode effectMode = CompileEffects(inherit.Effects, ownerId, relativePath);
+
+            if (inherit.Selection == null || !inherit.Selection.ReplaceSourceInAllSets.HasValue)
             {
-                for (int i = 0; i < inherit.Identity.Count; i++)
-                {
-                    string identity = RequireString(inherit.Identity[i], ownerId, relativePath, "inherit.identity");
-                    switch (identity)
-                    {
-                        case "PlayerOwner":
-                            copyPlayerOwner = true;
-                            break;
-                        case "TeamIdentity":
-                        case "Team":
-                            copyTeam = true;
-                            break;
-                        default:
-                            throw new InvalidOperationException(
-                                $"'{ownerId}' in {relativePath}: unsupported inherit.identity '{identity}'. Supported: PlayerOwner, Team.");
-                    }
-                }
+                throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: inherit.selection.replaceSourceInAllSets is required.");
             }
 
-            MorphAttributeInheritMode attributeMode = MorphAttributeInheritMode.None;
-            int[] attributeIds = [];
-            if (inherit.Attributes != null)
+            if (!cfg.DestroySource.HasValue)
             {
-                string mode = RequireString(inherit.Attributes.Mode, ownerId, relativePath, "inherit.attributes.mode");
-                attributeMode = mode switch
-                {
-                    "None" => MorphAttributeInheritMode.None,
-                    "IntersectByName" => MorphAttributeInheritMode.IntersectByName,
-                    "AllDefined" => MorphAttributeInheritMode.AllDefined,
-                    _ => throw new InvalidOperationException(
-                        $"'{ownerId}' in {relativePath}: unsupported inherit.attributes.mode '{mode}'. Supported: None, IntersectByName, AllDefined."),
-                };
-
-                if (attributeMode == MorphAttributeInheritMode.IntersectByName)
-                {
-                    attributeIds = CompileAttributeNames(inherit.Attributes.Names, ownerId, relativePath);
-                }
+                throw new InvalidOperationException($"'{ownerId}' in {relativePath}: destroySource is required.");
             }
-
-            int[] carryTagIds = CompileTagPatterns(inherit.Tags?.Carry, ownerId, relativePath, "inherit.tags.carry");
-            int[] stripTagIds = CompileTagPatterns(inherit.Tags?.Strip, ownerId, relativePath, "inherit.tags.strip");
-
-            MorphEffectInheritMode effectMode = MorphEffectInheritMode.StripAll;
-            if (inherit.Effects != null)
-            {
-                string mode = RequireString(inherit.Effects.Mode, ownerId, relativePath, "inherit.effects.mode");
-                effectMode = mode switch
-                {
-                    "StripAll" => MorphEffectInheritMode.StripAll,
-                    _ => throw new InvalidOperationException(
-                        $"'{ownerId}' in {relativePath}: unsupported inherit.effects.mode '{mode}'. Supported: StripAll."),
-                };
-            }
-
-            bool replaceSelection = inherit.Selection?.ReplaceSourceInAllSets ?? false;
 
             return new MorphProfileDescriptor
             {
                 Placement = ParsePlacement(cfg.Placement, ownerId, relativePath),
                 StableIdPolicy = ParseStableIdPolicy(cfg.StableIdPolicy, ownerId, relativePath),
-                DestroySource = cfg.DestroySource ?? true,
-                CopyPlayerOwner = copyPlayerOwner,
-                CopyTeam = copyTeam,
+                DestroySource = cfg.DestroySource.Value,
+                CopyPlayerOwner = identityFlags.CopyPlayerOwner,
+                CopyTeam = identityFlags.CopyTeam,
                 AttributeInheritMode = attributeMode,
+                AttributeValueSource = attributeSource,
                 InheritAttributeIds = attributeIds,
+                TagInheritMode = tagMode,
                 CarryTagIds = carryTagIds,
                 StripTagIds = stripTagIds,
                 EffectInheritMode = effectMode,
-                ReplaceSelection = replaceSelection,
+                ReplaceSelection = inherit.Selection.ReplaceSourceInAllSets.Value,
+            };
+        }
+
+        private static void CompileAttributes(
+            MorphProfileAttributeInheritConfig? attributes,
+            string ownerId,
+            string relativePath,
+            out MorphAttributeInheritMode attributeMode,
+            out MorphAttributeValueSource attributeSource,
+            out int[] attributeIds)
+        {
+            if (attributes == null)
+            {
+                throw new InvalidOperationException($"'{ownerId}' in {relativePath}: inherit.attributes block is required.");
+            }
+
+            string mode = RequireString(attributes.Mode, ownerId, relativePath, "inherit.attributes.mode");
+            attributeMode = mode switch
+            {
+                "None" => MorphAttributeInheritMode.None,
+                "IntersectByName" => MorphAttributeInheritMode.IntersectByName,
+                "AllDefined" => MorphAttributeInheritMode.AllDefined,
+                _ => throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: unsupported inherit.attributes.mode '{mode}'. Supported: None, IntersectByName, AllDefined."),
+            };
+
+            attributeSource = MorphAttributeValueSource.Current;
+            attributeIds = [];
+            if (attributeMode == MorphAttributeInheritMode.None)
+            {
+                return;
+            }
+
+            string source = RequireString(attributes.Source, ownerId, relativePath, "inherit.attributes.source");
+            attributeSource = source switch
+            {
+                "Base" => MorphAttributeValueSource.Base,
+                "Current" => MorphAttributeValueSource.Current,
+                _ => throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: unsupported inherit.attributes.source '{source}'. Supported: Base, Current."),
+            };
+
+            if (attributeMode == MorphAttributeInheritMode.IntersectByName)
+            {
+                attributeIds = CompileAttributeNames(attributes.Names, ownerId, relativePath);
+            }
+        }
+
+        private static void CompileTags(
+            MorphProfileTagInheritConfig? tags,
+            string ownerId,
+            string relativePath,
+            out MorphTagInheritMode tagMode,
+            out int[] carryTagIds,
+            out int[] stripTagIds)
+        {
+            carryTagIds = [];
+            stripTagIds = [];
+            if (tags == null)
+            {
+                tagMode = MorphTagInheritMode.None;
+                return;
+            }
+
+            string mode = RequireString(tags.Mode, ownerId, relativePath, "inherit.tags.mode");
+            tagMode = mode switch
+            {
+                "None" => MorphTagInheritMode.None,
+                "StripListed" => MorphTagInheritMode.StripListed,
+                "CarryListed" => MorphTagInheritMode.CarryListed,
+                "StripListedAndCarryListed" => MorphTagInheritMode.StripListedAndCarryListed,
+                _ => throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: unsupported inherit.tags.mode '{mode}'. Supported: None, StripListed, CarryListed, StripListedAndCarryListed."),
+            };
+
+            carryTagIds = CompileTagPatterns(tags.Carry, ownerId, relativePath, "inherit.tags.carry");
+            stripTagIds = CompileTagPatterns(tags.Strip, ownerId, relativePath, "inherit.tags.strip");
+
+            switch (tagMode)
+            {
+                case MorphTagInheritMode.StripListed when stripTagIds.Length == 0:
+                    throw new InvalidOperationException(
+                        $"'{ownerId}' in {relativePath}: inherit.tags.strip is required when mode=StripListed.");
+                case MorphTagInheritMode.CarryListed when carryTagIds.Length == 0:
+                    throw new InvalidOperationException(
+                        $"'{ownerId}' in {relativePath}: inherit.tags.carry is required when mode=CarryListed.");
+                case MorphTagInheritMode.StripListedAndCarryListed when stripTagIds.Length == 0 || carryTagIds.Length == 0:
+                    throw new InvalidOperationException(
+                        $"'{ownerId}' in {relativePath}: inherit.tags.strip and inherit.tags.carry are required when mode=StripListedAndCarryListed.");
+            }
+        }
+
+        private static MorphEffectInheritMode CompileEffects(MorphProfileEffectInheritConfig? effects, string ownerId, string relativePath)
+        {
+            if (effects == null)
+            {
+                throw new InvalidOperationException($"'{ownerId}' in {relativePath}: inherit.effects block is required.");
+            }
+
+            string mode = RequireString(effects.Mode, ownerId, relativePath, "inherit.effects.mode");
+            return mode switch
+            {
+                "StripAll" => MorphEffectInheritMode.StripAll,
+                _ => throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: unsupported inherit.effects.mode '{mode}'. Supported: StripAll."),
             };
         }
 

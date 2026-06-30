@@ -8,10 +8,11 @@
       "identity": ["PlayerOwner", "Team"],
       "attributes": {
         "mode": "IntersectByName",
+        "source": "Current",
         "names": ["Health"]
       },
       "tags": {
-        "strip": ["Unit.Mobile"]
+        "mode": "None"
       },
       "effects": {
         "mode": "StripAll"

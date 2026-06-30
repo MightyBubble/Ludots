@@ -2,6 +2,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.Morph
@@ -24,7 +25,7 @@ namespace Ludots.Core.Gameplay.Morph
             bool hasPlayerOwner = profile.CopyPlayerOwner && world.Has<PlayerOwner>(source);
             bool hasTeam = profile.CopyTeam && world.Has<Team>(source);
             bool hasAttributes = profile.AttributeInheritMode != MorphAttributeInheritMode.None && world.Has<AttributeBuffer>(source);
-            bool hasTags = (profile.CarryTagIds.Length > 0 || profile.StripTagIds.Length > 0) && world.Has<GameplayTagContainer>(source);
+            bool hasTags = profile.TagInheritMode != MorphTagInheritMode.None && world.Has<GameplayTagContainer>(source);
             bool hasStableId = world.Has<PresentationStableId>(source);
 
             return new MorphSnapshot(
@@ -115,51 +116,100 @@ namespace Ludots.Core.Gameplay.Morph
             switch (profile.AttributeInheritMode)
             {
                 case MorphAttributeInheritMode.AllDefined:
-                    CopyAllDefinedAttributes(world, target, in source);
+                    CopyAllDefinedAttributes(world, target, in source, profile.AttributeValueSource);
                     break;
                 case MorphAttributeInheritMode.IntersectByName:
-                    CopyNamedAttributes(world, target, in source, profile.InheritAttributeIds);
+                    CopyNamedAttributes(world, target, in source, profile.InheritAttributeIds, profile.AttributeValueSource);
                     break;
             }
         }
 
-        private static void CopyAllDefinedAttributes(World world, Entity target, in AttributeBuffer source)
+        private static void CopyAllDefinedAttributes(World world, Entity target, in AttributeBuffer source, MorphAttributeValueSource valueSource)
         {
             for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
             {
-                if (!source.HasAttribute(attributeId) || !world.Get<AttributeBuffer>(target).HasAttribute(attributeId))
+                if (!source.HasAttribute(attributeId))
                 {
                     continue;
                 }
 
-                AttributeMutationOps.SetBase(world, target, attributeId, source.GetCurrent(attributeId));
+                if (!world.Get<AttributeBuffer>(target).HasAttribute(attributeId))
+                {
+                    continue;
+                }
+
+                AttributeMutationOps.SetBase(world, target, attributeId, ReadAttributeValue(in source, attributeId, valueSource));
             }
         }
 
-        private static void CopyNamedAttributes(World world, Entity target, in AttributeBuffer source, int[] attributeIds)
+        private static void CopyNamedAttributes(
+            World world,
+            Entity target,
+            in AttributeBuffer source,
+            int[] attributeIds,
+            MorphAttributeValueSource valueSource)
         {
+            ref AttributeBuffer targetAttributes = ref world.Get<AttributeBuffer>(target);
             for (int i = 0; i < attributeIds.Length; i++)
             {
                 int attributeId = attributeIds[i];
-                if (!source.HasAttribute(attributeId) || !world.Get<AttributeBuffer>(target).HasAttribute(attributeId))
+                if (!source.HasAttribute(attributeId))
                 {
-                    continue;
+                    throw new MorphExecutionException(
+                        $"Entity morph failed because source is missing inherited attribute id '{attributeId}'.");
                 }
 
-                AttributeMutationOps.SetBase(world, target, attributeId, source.GetCurrent(attributeId));
+                if (!targetAttributes.HasAttribute(attributeId))
+                {
+                    string attributeName = AttributeRegistry.GetName(attributeId) ?? attributeId.ToString();
+                    throw new MorphExecutionException(
+                        $"Entity morph failed because target template is missing inherited attribute '{attributeName}'.");
+                }
+
+                AttributeMutationOps.SetBase(world, target, attributeId, ReadAttributeValue(in source, attributeId, valueSource));
             }
+        }
+
+        private static float ReadAttributeValue(in AttributeBuffer source, int attributeId, MorphAttributeValueSource valueSource)
+        {
+            return valueSource switch
+            {
+                MorphAttributeValueSource.Base => source.GetBase(attributeId),
+                MorphAttributeValueSource.Current => source.GetCurrent(attributeId),
+                _ => throw new InvalidOperationException($"Unsupported morph attribute value source '{valueSource}'."),
+            };
         }
 
         private static void ApplyTags(ref GameplayTagContainer target, in GameplayTagContainer source, in MorphProfileDescriptor profile)
         {
-            for (int i = 0; i < profile.StripTagIds.Length; i++)
+            switch (profile.TagInheritMode)
             {
-                target.RemoveTag(profile.StripTagIds[i]);
+                case MorphTagInheritMode.StripListed:
+                    StripTags(ref target, profile.StripTagIds);
+                    break;
+                case MorphTagInheritMode.CarryListed:
+                    CarryTags(ref target, in source, profile.CarryTagIds);
+                    break;
+                case MorphTagInheritMode.StripListedAndCarryListed:
+                    StripTags(ref target, profile.StripTagIds);
+                    CarryTags(ref target, in source, profile.CarryTagIds);
+                    break;
             }
+        }
 
-            for (int i = 0; i < profile.CarryTagIds.Length; i++)
+        private static void StripTags(ref GameplayTagContainer target, int[] stripTagIds)
+        {
+            for (int i = 0; i < stripTagIds.Length; i++)
             {
-                int tagId = profile.CarryTagIds[i];
+                target.RemoveTag(stripTagIds[i]);
+            }
+        }
+
+        private static void CarryTags(ref GameplayTagContainer target, in GameplayTagContainer source, int[] carryTagIds)
+        {
+            for (int i = 0; i < carryTagIds.Length; i++)
+            {
+                int tagId = carryTagIds[i];
                 if (source.HasTag(tagId))
                 {
                     target.AddTag(tagId);

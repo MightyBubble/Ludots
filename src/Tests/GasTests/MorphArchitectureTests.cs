@@ -33,6 +33,28 @@ namespace Ludots.Tests.GasTests
             TagRegistry.Register("Unit.Mobile");
         }
 
+        private static MorphProfileDescriptor CreateTestProfile(
+            MorphPlacementMode placement,
+            MorphStableIdPolicy stableIdPolicy = MorphStableIdPolicy.AllocateNew,
+            bool destroySource = false,
+            bool transferAttributes = false,
+            bool stripMobileTag = false)
+        {
+            return new MorphProfileDescriptor
+            {
+                Placement = placement,
+                StableIdPolicy = stableIdPolicy,
+                DestroySource = destroySource,
+                AttributeInheritMode = transferAttributes ? MorphAttributeInheritMode.IntersectByName : MorphAttributeInheritMode.None,
+                AttributeValueSource = MorphAttributeValueSource.Current,
+                InheritAttributeIds = transferAttributes ? [AttributeRegistry.GetId("Health")] : [],
+                TagInheritMode = stripMobileTag ? MorphTagInheritMode.StripListed : MorphTagInheritMode.None,
+                StripTagIds = stripMobileTag ? [TagRegistry.GetId("Unit.Mobile")] : [],
+                EffectInheritMode = MorphEffectInheritMode.StripAll,
+                ReplaceSelection = false,
+            };
+        }
+
         [Test]
         public void BuiltinHandlers_MorphEntity_EnqueuesRuntimeMorphRequests()
         {
@@ -42,9 +64,12 @@ namespace Ludots.Tests.GasTests
                 new PresentationStableId { Value = 42 });
             var effect = world.Create();
             var queue = new RuntimeEntityMorphQueue(capacity: 4);
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.handler", CreateTestProfile(MorphPlacementMode.AtSource));
             var runtime = new BuiltinHandlerExecutionContext
             {
                 MorphRequests = queue,
+                MorphProfiles = profiles,
             };
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -56,7 +81,7 @@ namespace Ludots.Tests.GasTests
                 {
                     Subject = RelationEntitySlot.Source,
                     TargetTemplateId = "morph_target",
-                    MorphProfileId = 3,
+                    MorphProfileId = profiles.GetId("morph.handler"),
                     OnMorphEffectTemplateId = 55,
                 },
             };
@@ -67,7 +92,7 @@ namespace Ludots.Tests.GasTests
             That(queue.TryDequeue(out RuntimeEntityMorphRequest request), Is.True);
             That(request.Source, Is.EqualTo(source));
             That(request.TargetTemplateId, Is.EqualTo("morph_target"));
-            That(request.MorphProfileId, Is.EqualTo(3));
+            That(request.MorphProfileId, Is.EqualTo(profiles.GetId("morph.handler")));
             That(request.OnMorphEffectTemplateId, Is.EqualTo(55));
             That(queue.TryDequeue(out _), Is.False);
         }
@@ -103,15 +128,12 @@ namespace Ludots.Tests.GasTests
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             var profiles = new MorphProfileRegistry();
-            profiles.Register("morph.test", new MorphProfileDescriptor
-            {
-                Placement = MorphPlacementMode.AtSource,
-                StableIdPolicy = MorphStableIdPolicy.Transfer,
-                DestroySource = true,
-                AttributeInheritMode = MorphAttributeInheritMode.IntersectByName,
-                InheritAttributeIds = [AttributeRegistry.GetId("Health")],
-                StripTagIds = [TagRegistry.GetId("Unit.Mobile")],
-            });
+            profiles.Register("morph.test", CreateTestProfile(
+                MorphPlacementMode.AtSource,
+                MorphStableIdPolicy.Transfer,
+                destroySource: true,
+                transferAttributes: true,
+                stripMobileTag: true));
 
             using var world = World.Create();
             var source = world.Create(
@@ -188,12 +210,7 @@ namespace Ludots.Tests.GasTests
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             var profiles = new MorphProfileRegistry();
-            profiles.Register("morph.at_target", new MorphProfileDescriptor
-            {
-                Placement = MorphPlacementMode.AtTargetPoint,
-                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
-                DestroySource = true,
-            });
+            profiles.Register("morph.at_target", CreateTestProfile(MorphPlacementMode.AtTargetPoint, destroySource: true));
 
             using var world = World.Create();
             var source = world.Create(
@@ -255,12 +272,7 @@ namespace Ludots.Tests.GasTests
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             var profiles = new MorphProfileRegistry();
-            profiles.Register("morph.at_target", new MorphProfileDescriptor
-            {
-                Placement = MorphPlacementMode.AtTargetPoint,
-                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
-                DestroySource = false,
-            });
+            profiles.Register("morph.at_target", CreateTestProfile(MorphPlacementMode.AtTargetPoint, destroySource: false));
 
             using var world = World.Create();
             var source = world.Create(
@@ -326,12 +338,7 @@ namespace Ludots.Tests.GasTests
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             var profiles = new MorphProfileRegistry();
-            profiles.Register("morph.at_target", new MorphProfileDescriptor
-            {
-                Placement = MorphPlacementMode.AtTargetPoint,
-                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
-                DestroySource = false,
-            });
+            profiles.Register("morph.at_target", CreateTestProfile(MorphPlacementMode.AtTargetPoint, destroySource: false));
 
             using var world = World.Create();
             var source = world.Create(
@@ -398,12 +405,7 @@ namespace Ludots.Tests.GasTests
             templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             var profiles = new MorphProfileRegistry();
-            profiles.Register("morph.at_source", new MorphProfileDescriptor
-            {
-                Placement = MorphPlacementMode.AtSource,
-                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
-                DestroySource = true,
-            });
+            profiles.Register("morph.at_source", CreateTestProfile(MorphPlacementMode.AtSource, destroySource: true));
 
             using var world = World.Create();
             var source = world.Create(
@@ -449,9 +451,11 @@ namespace Ludots.Tests.GasTests
             var source = world.Create();
             var effect = world.Create();
             var queue = new RuntimeEntityMorphQueue(capacity: 4);
+            var profiles = new MorphProfileRegistry();
             var runtime = new BuiltinHandlerExecutionContext
             {
                 MorphRequests = queue,
+                MorphProfiles = profiles,
             };
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -496,8 +500,8 @@ namespace Ludots.Tests.GasTests
                 ""destroySource"": true,
                 ""inherit"": {
                   ""identity"": [""PlayerOwner"", ""Team""],
-                  ""attributes"": { ""mode"": ""IntersectByName"", ""names"": [""Health""] },
-                  ""tags"": { ""strip"": [""Unit.Mobile""] },
+                  ""attributes"": { ""mode"": ""IntersectByName"", ""source"": ""Current"", ""names"": [""Health""] },
+                  ""tags"": { ""mode"": ""None"" },
                   ""effects"": { ""mode"": ""StripAll"" },
                   ""selection"": { ""replaceSourceInAllSets"": true }
                 }
@@ -514,7 +518,60 @@ namespace Ludots.Tests.GasTests
             That(profile.CopyPlayerOwner, Is.True);
             That(profile.CopyTeam, Is.True);
             That(profile.ReplaceSelection, Is.True);
+            That(profile.TagInheritMode, Is.EqualTo(MorphTagInheritMode.None));
+            That(profile.AttributeValueSource, Is.EqualTo(MorphAttributeValueSource.Current));
             That(profile.InheritAttributeIds, Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void RuntimeEntityMorphSystem_IntersectAttribute_FailsWhenTargetTemplateMissingSlot()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""morph_target_missing_health"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.intersect", CreateTestProfile(
+                MorphPlacementMode.AtSource,
+                transferAttributes: true));
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new AttributeBuffer());
+            world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 50f);
+
+            var requests = new RuntimeEntityMorphQueue(capacity: 1);
+            var system = new RuntimeEntityMorphSystem(
+                world,
+                requests,
+                profiles,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntityMorphRequest
+            {
+                Source = source,
+                TargetTemplateId = "morph_target_missing_health",
+                MorphProfileId = profiles.GetId("morph.intersect"),
+            }), Is.True);
+
+            var ex = Throws<MorphExecutionException>(() => system.Update(0f));
+            That(ex!.Message, Does.Contain("missing inherited attribute"));
         }
 
         private static void LoadMorphProfilesFromJson(MorphProfileRegistry registry, string json)

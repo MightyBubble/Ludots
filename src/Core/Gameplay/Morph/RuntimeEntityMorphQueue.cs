@@ -1,5 +1,5 @@
 using Arch.Core;
-using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.Morph
@@ -10,6 +10,7 @@ namespace Ludots.Core.Gameplay.Morph
         public Entity EffectContextSource;
         public Entity EffectContextTarget;
         public Entity EffectContextTargetContext;
+        public EffectConfigParams EffectConfigParams;
         public string TargetTemplateId;
         public int MorphProfileId;
         public int OnMorphEffectTemplateId;

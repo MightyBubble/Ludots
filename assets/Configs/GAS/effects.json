@@ -11,5 +11,16 @@
       "_ep.forceXAttribute": { "type": "Int", "value": 0 },
       "_ep.forceYAttribute": { "type": "Int", "value": 0 }
     }
+  },
+  {
+    "id": "Effect.Morph.Reference.DeployConsumeSource",
+    "presetType": "Morph",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "morph": {
+      "subject": "Source",
+      "targetTemplateId": "Entity.Template.MorphTarget",
+      "morphProfileId": "morph.rts.deploy_consume_source"
+    }
   }
 ]

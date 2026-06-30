@@ -28,6 +28,8 @@ namespace Ludots.Core.Presentation
         private int? _minimapMarkerCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
+        private int? _runtimeEntityMorphQueueCapacity;
+        private int? _runtimeEntityMorphReceiptQueueCapacity;
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
 
@@ -51,6 +53,8 @@ namespace Ludots.Core.Presentation
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
+        public int RuntimeEntityMorphQueueCapacity { get => _runtimeEntityMorphQueueCapacity ?? 0; set => _runtimeEntityMorphQueueCapacity = value; }
+        public int RuntimeEntityMorphReceiptQueueCapacity { get => _runtimeEntityMorphReceiptQueueCapacity ?? 0; set => _runtimeEntityMorphReceiptQueueCapacity = value; }
 
         public CameraCullingRuntimeConfig CameraCulling
         {
@@ -86,6 +90,8 @@ namespace Ludots.Core.Presentation
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
+            RequirePositive(_runtimeEntityMorphQueueCapacity, "presentation.runtimeEntityMorphQueueCapacity");
+            RequirePositive(_runtimeEntityMorphReceiptQueueCapacity, "presentation.runtimeEntityMorphReceiptQueueCapacity");
 
             if (_cameraCulling == null)
             {

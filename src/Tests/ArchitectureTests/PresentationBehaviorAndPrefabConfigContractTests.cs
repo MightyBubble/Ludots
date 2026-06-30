@@ -1026,6 +1026,8 @@ namespace Ludots.Tests.Architecture
     "minimapMarkerCapacity": 4096,
     "runtimeEntitySpawnQueueCapacity": 8192,
     "runtimeEntitySpawnReceiptQueueCapacity": 8192,
+    "runtimeEntityMorphQueueCapacity": 8192,
+    "runtimeEntityMorphReceiptQueueCapacity": 8192,
     "cameraCulling": {
       "highLodDistanceCm": 4000.0,
       "mediumLodDistanceCm": 10000.0,
@@ -1069,7 +1071,9 @@ namespace Ludots.Tests.Architecture
     "screenHudCapacity": 65536,
     "minimapMarkerCapacity": 65536,
     "runtimeEntitySpawnQueueCapacity": 65536,
-    "runtimeEntitySpawnReceiptQueueCapacity": 32768
+    "runtimeEntitySpawnReceiptQueueCapacity": 32768,
+    "runtimeEntityMorphQueueCapacity": 65536,
+    "runtimeEntityMorphReceiptQueueCapacity": 32768
   }
 }
 """);

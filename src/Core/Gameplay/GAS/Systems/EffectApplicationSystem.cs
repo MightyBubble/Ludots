@@ -115,7 +115,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityMorphQueue morphRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityMorphQueue morphRequests = null, MorphProfileRegistry morphProfiles = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -132,6 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
             _builtinRuntime.MorphRequests = morphRequests;
+            _builtinRuntime.MorphProfiles = morphProfiles;
             _builtinRuntime.Exchange = exchangeRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
         }

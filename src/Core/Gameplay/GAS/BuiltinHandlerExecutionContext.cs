@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
         public RuntimeEntityMorphQueue? MorphRequests { get; set; }
+        public MorphProfileRegistry? MorphProfiles { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
 

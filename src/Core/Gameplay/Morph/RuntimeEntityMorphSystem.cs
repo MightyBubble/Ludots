@@ -12,6 +12,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Gameplay.Morph
 {
@@ -25,6 +26,7 @@ namespace Ludots.Core.Gameplay.Morph
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly EffectRequestQueue? _effectRequests;
         private readonly SelectionRuntime? _selection;
+        private readonly PerformerEntitySpawnBootstrap _performerBootstrap;
         private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.Ordinal);
         private readonly EntityBuilder _builder;
         private readonly ComponentAuthoringContext _authoringContext;
@@ -39,6 +41,8 @@ namespace Ludots.Core.Gameplay.Morph
             EffectRequestQueue? effectRequests = null,
             RuntimeEntityMorphReceiptQueue? receipts = null,
             SelectionRuntime? selection = null,
+            PerformerEntityRuntime? performerRuntime = null,
+            PerformerDefinitionRegistry? performerDefinitions = null,
             ComponentAuthoringContext? authoringContext = null)
             : base(world)
         {
@@ -52,6 +56,13 @@ namespace Ludots.Core.Gameplay.Morph
             _selection = selection;
             _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
             _builder = new EntityBuilder(world, _cachedTemplates, _authoringContext);
+            _performerBootstrap = new PerformerEntitySpawnBootstrap(
+                world,
+                templateKeys,
+                stableIds,
+                performerRuntime,
+                performerDefinitions,
+                performerDefinitions?.BootstrapRegistry);
         }
 
         public override void Update(in float dt)
@@ -98,7 +109,7 @@ namespace Ludots.Core.Gameplay.Morph
             Entity target = Entity.Null;
             try
             {
-                target = MaterializeTarget(request.TargetTemplateId);
+                target = MaterializeTarget(request.TargetTemplateId, source);
                 ApplyWorldPosition(World, target, positionCm);
                 if (hasFacing)
                 {
@@ -153,7 +164,7 @@ namespace Ludots.Core.Gameplay.Morph
             World.Destroy(target);
         }
 
-        private Entity MaterializeTarget(string templateId)
+        private Entity MaterializeTarget(string templateId, Entity source)
         {
             EnsureTemplateLoaded(templateId);
             var entity = _builder
@@ -163,6 +174,8 @@ namespace Ludots.Core.Gameplay.Morph
 
             ApplyTemplateKey(entity, templateId);
             EnsurePresentationStableId(entity);
+            RuntimeEntityMapOwnershipSupport.TryCopyMapEntityFromSource(World, source, entity);
+            _performerBootstrap.TryBootstrap(entity, templateId);
             return entity;
         }
 
@@ -182,9 +195,10 @@ namespace Ludots.Core.Gameplay.Morph
 
                     break;
                 case MorphStableIdPolicy.AllocateNew:
-                default:
                     EnsurePresentationStableId(target);
                     break;
+                default:
+                    throw new InvalidOperationException($"Unsupported morph stableIdPolicy '{policy}'.");
             }
         }
 

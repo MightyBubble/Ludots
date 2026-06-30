@@ -1,5 +1,3 @@
-using Ludots.Core.Gameplay.Morph;
-
 namespace Ludots.Core.Gameplay.Morph
 {
     public sealed class MorphProfileDescriptor
@@ -10,10 +8,12 @@ namespace Ludots.Core.Gameplay.Morph
         public bool CopyPlayerOwner { get; init; }
         public bool CopyTeam { get; init; }
         public MorphAttributeInheritMode AttributeInheritMode { get; init; }
+        public MorphAttributeValueSource AttributeValueSource { get; init; }
         public int[] InheritAttributeIds { get; init; } = [];
+        public MorphTagInheritMode TagInheritMode { get; init; }
         public int[] CarryTagIds { get; init; } = [];
         public int[] StripTagIds { get; init; } = [];
-        public MorphEffectInheritMode EffectInheritMode { get; init; } = MorphEffectInheritMode.StripAll;
+        public MorphEffectInheritMode EffectInheritMode { get; init; }
         public bool ReplaceSelection { get; init; }
     }
 }
