@@ -12,18 +12,15 @@ public sealed class TimeFlowServiceTests
         var service = new TimeFlowService();
         int simulationId = service.EnsureDomain(TimeFlowDomainIds.Simulation);
         int gasId = service.EnsureDomain(TimeFlowDomainIds.Gas, TimeFlowDomainIds.Simulation);
-        int physicsId = service.EnsureDomain(TimeFlowDomainIds.Physics2D, TimeFlowDomainIds.Simulation);
         int simulationIdAgain = service.EnsureDomain(TimeFlowDomainIds.Simulation, baseScalePermille: 500);
 
         Assert.Multiple(() =>
         {
             Assert.That(simulationId, Is.GreaterThan(0));
             Assert.That(gasId, Is.GreaterThan(0));
-            Assert.That(physicsId, Is.GreaterThan(0));
             Assert.That(simulationIdAgain, Is.EqualTo(simulationId));
             Assert.That(service.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation), Is.EqualTo(TimeFlowService.DefaultScalePermille));
             Assert.That(service.GetEffectiveScalePermille(TimeFlowDomainIds.Gas), Is.EqualTo(TimeFlowService.DefaultScalePermille));
-            Assert.That(service.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D), Is.EqualTo(TimeFlowService.DefaultScalePermille));
         });
     }
 

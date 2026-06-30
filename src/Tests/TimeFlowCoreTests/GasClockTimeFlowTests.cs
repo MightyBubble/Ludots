@@ -1,6 +1,7 @@
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.TimeFlowCore;
@@ -68,5 +69,36 @@ public sealed class GasClockTimeFlowTests
         system.Update(0.016f);
 
         Assert.That(clocks.StepNow, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ManualMode_FiresTurnAdvancedWhenRequestedStepIsConsumed()
+    {
+        var clock = new DiscreteClock();
+        var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1, mode: GasStepMode.Manual);
+        int eventCount = 0;
+        int lastStep = 0;
+        var system = new GasClockSystem(
+            clock,
+            policy,
+            () => new ScriptContext(),
+            (key, context) =>
+            {
+                if (key != GameEvents.TurnAdvanced) return;
+                eventCount++;
+                lastStep = context.Get<int>("Step");
+            });
+
+        system.Update(0.016f);
+        Assert.That(eventCount, Is.EqualTo(0));
+
+        policy.RequestStep();
+        system.Update(0.016f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(eventCount, Is.EqualTo(1));
+            Assert.That(lastStep, Is.EqualTo(1));
+        });
     }
 }

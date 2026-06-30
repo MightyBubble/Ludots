@@ -14,7 +14,6 @@ namespace Ludots.Core.Gameplay.GAS
 
         public int FixedFrameNow => _clock.Now(ClockDomainId.FixedFrame);
         public int StepNow => _clock.Now(ClockDomainId.Step);
-        public int TurnNow => _clock.Now(ClockDomainId.Turn);
 
         public int Now(GasClockId clockId)
         {
@@ -29,16 +28,6 @@ namespace Ludots.Core.Gameplay.GAS
         public void AdvanceStep()
         {
             _clock.Advance(ClockDomainId.Step);
-        }
-
-        public void AdvanceTurn()
-        {
-            _clock.Advance(ClockDomainId.Turn);
-        }
-
-        public void Reset()
-        {
-            throw new InvalidOperationException("GasClocks no longer owns time state. Reset must be handled by the clock authority.");
         }
     }
 }

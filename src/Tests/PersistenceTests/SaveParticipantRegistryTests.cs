@@ -106,7 +106,6 @@ public sealed class SaveParticipantRegistryTests
         var source = new DiscreteClock();
         source.Advance(ClockDomainId.FixedFrame, 7);
         source.Advance(ClockDomainId.Step, 3);
-        source.Advance(ClockDomainId.Turn, 2);
 
         var target = new DiscreteClock();
         target.Advance(ClockDomainId.FixedFrame, 99);
@@ -118,7 +117,6 @@ public sealed class SaveParticipantRegistryTests
 
         Assert.That(target.Now(ClockDomainId.FixedFrame), Is.EqualTo(7));
         Assert.That(target.Now(ClockDomainId.Step), Is.EqualTo(3));
-        Assert.That(target.Now(ClockDomainId.Turn), Is.EqualTo(2));
     }
 
     [Test]

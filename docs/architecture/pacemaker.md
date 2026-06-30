@@ -53,10 +53,25 @@ RealtimePacemaker 使用累加器 `_accumulator` 累积 `dt`。当累加器达�
 *   把 `dt` 写入组件并当作决定性状态：`dt` 是平台输入，且为 `float`，不应成为决定性状态的一部分。
 *   用 `timeBudgetMs` 试图“控制模拟频率”：预算只影响切片推进是否能在本帧完成，不改变 `Time.FixedDeltaTime` 的目标频率。
 *   依赖 BudgetFuse 自动恢复：BudgetFuse 触发后，Pacemaker 会停止推进，需要上层按产品策略处理（提示、降载、重置等）。
+*   把 Physics2D Hz 当作时间倍率：Hz 是物理子步分辨率 / cadence，不是 TimeFlow scale。
 
-## 6 相关文档
+## 6 回合与突发控制器
+
+回合不是独立全局时钟域。当前正式语义是：
+
+*   回合时长 = `ClockDomainId.Step`，由 `GasClockStepPolicy` 的 `Manual` 模式和 `RequestStep()` 驱动。
+*   回合边界 = `GameEvents.TurnAdvanced`，由 `GasClockSystem` 在 manual Step 被消费后触发。
+
+突发控制器仍使用唯一 FixedStep 链路：
+
+*   `GasController.RunUntilEffectWindowsClosed` 拥有 `SimulationLoopController`，会切到 `TurnBasedPacemaker` 并在 `AfterFixedTick` 中继续排下一步，直到 idle / blocked / canceled / max tick。
+*   `Physics2DController.RunForFixedTicks` 和 `RunUntilSleeping` 不驱动 Pacemaker；它们只启用 physics Hz 与预算，完成依赖宿主继续调用 `GameEngine.Tick()`，再由引擎回调 `AfterPhysicsFixedTick`。
+
+这个差异是当前契约。GAS 是自驱 burst，Physics2D 是 host-driven burst；二者都不是第二套调度器。
+
+## 7 相关文档
 
 *   表现管线与 Performer 体系：见 [表现管线与 Performer 体系](presentation_performer.md)
 *   ConfigPipeline 合并管线：见 [ConfigPipeline 合并管线](config_pipeline.md)
-
+*   时间体系：见 [Time Flow](time_flow.md)
 

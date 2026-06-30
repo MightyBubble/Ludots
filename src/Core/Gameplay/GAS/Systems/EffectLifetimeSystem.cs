@@ -186,7 +186,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public void Update(Entity entity, ref GameplayEffect effect, ref EffectContext context)
             {
                 if (effect.State < EffectState.Committed) return;
-                int now = Clock.Now(effect.ClockId.ToDomainId());
+                int now = GasClockRuntime.Now(World, Clock, effect.ClockId, context.Target, "Effect period");
 
                 if ((effect.LifetimeKind == EffectLifetimeKind.After || effect.LifetimeKind == EffectLifetimeKind.Infinite) && effect.PeriodTicks > 0)
                 {
@@ -254,7 +254,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (effect.State < EffectState.Committed) return;
                 bool shouldExpire = false;
                 bool cancelled = effect.CancelRequested || World.Has<EffectCancelled>(entity);
-                int now = Clock.Now(effect.ClockId.ToDomainId());
+                int now = GasClockRuntime.Now(World, Clock, effect.ClockId, context.Target, "Effect expiration");
 
                 if (!cancelled && effect.LifetimeKind == EffectLifetimeKind.After)
                 {
