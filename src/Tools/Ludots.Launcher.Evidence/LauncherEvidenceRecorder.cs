@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.MassNavigation;
@@ -874,7 +875,14 @@ public static class LauncherEvidenceRecorder
         using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
         if (!string.Equals(runtime.Config.StartupMapId, "road_network_showcase_chunked", StringComparison.OrdinalIgnoreCase))
         {
-            runtime.Engine.LoadMap("road_network_showcase_chunked");
+            if (runtime.Config.StartupSelectedPlayerId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Road network evidence requires StartupSelectedPlayerId in merged game config.");
+            }
+
+            MapLaunchContext? launchContext = MapLaunchContext.Create(runtime.Config.StartupSelectedPlayerId);
+            runtime.Engine.LoadMap(MapLoadRequest.FromMapId("road_network_showcase_chunked", launchContext));
         }
 
         Tick(runtime, 10, frameTimesMs);

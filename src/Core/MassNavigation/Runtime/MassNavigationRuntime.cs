@@ -15,8 +15,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationRuntime
 {
-    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
-
     private MassNavigationConfig? _config;
     private bool _configResolved;
     private bool _systemsInstalled;
@@ -264,13 +262,8 @@ public sealed class MassNavigationRuntime
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new InvalidOperationException("MassNavigation runtime requires SelectionRuntime.");
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
-            localObj is not Entity owner ||
-            !engine.World.IsAlive(owner))
-        {
-            owner = ResolveSingleAuthoredPlayerOwner(engine);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
-        }
+        Entity owner = ResolveRequiredLocalPlayerEntity(engine);
+        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
 
         if (!engine.World.Has<PlayerOwner>(owner))
         {
@@ -280,22 +273,23 @@ public sealed class MassNavigationRuntime
         EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
     }
 
-    private static Entity ResolveSingleAuthoredPlayerOwner(GameEngine engine)
+    private static Entity ResolveRequiredLocalPlayerEntity(GameEngine engine)
     {
-        Entity resolved = Entity.Null;
-        int count = 0;
-        engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
+        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+            localObj is Entity entity &&
+            engine.World.IsAlive(entity))
         {
-            resolved = entity;
-            count++;
-        });
+            return entity;
+        }
 
-        return count switch
+        MapSession? session = engine.CurrentMapSession;
+        if (session?.LocalPlayerEntity != Entity.Null && engine.World.IsAlive(session.LocalPlayerEntity))
         {
-            1 => resolved,
-            0 => throw new InvalidOperationException("MassNavigation runtime requires the map to author exactly one PlayerOwner local player entity."),
-            _ => throw new InvalidOperationException("MassNavigation runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
-        };
+            return session.LocalPlayerEntity;
+        }
+
+        throw new InvalidOperationException(
+            "MassNavigation runtime requires map launch context to publish LocalPlayerEntity before binding selection owner.");
     }
 
     private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, Dictionary<string, object> globals)

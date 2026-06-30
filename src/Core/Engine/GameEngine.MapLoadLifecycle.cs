@@ -430,6 +430,44 @@ namespace Ludots.Core.Engine
                     session.TeamRelationships));
         }
 
+        internal void RestoreMapSessionParticipantsAfterSave()
+        {
+            if (MapSessions == null)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<MapId, MapSession> pair in MapSessions.All)
+            {
+                MapSession session = pair.Value;
+                MapLaunchContext? launchContext = session.LaunchContext;
+                if (launchContext?.HasSelectedPlayer != true)
+                {
+                    continue;
+                }
+
+                int selectedPlayerId = launchContext.SelectedPlayerId;
+                if (!session.PlayerEntityLookup.TryGet(selectedPlayerId, out Entity entity))
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot restore map session '{session.MapId.Value}' launch context SelectedPlayerId {selectedPlayerId} because the player is not bound.");
+                }
+
+                session.LocalPlayerId = selectedPlayerId;
+                session.LocalPlayerEntity = entity;
+            }
+
+            MapSession? focused = CurrentMapSession ?? MapSessions.FocusedSession;
+            if (focused != null)
+            {
+                PublishSessionParticipants(focused);
+                if (focused.LocalPlayerId > 0)
+                {
+                    GameSession.SelectLocalPlayer(focused.LocalPlayerId);
+                }
+            }
+        }
+
         private void CaptureFocusedParticipantOverrides(MapSession session)
         {
             if (session == null || CurrentMapSession != session)

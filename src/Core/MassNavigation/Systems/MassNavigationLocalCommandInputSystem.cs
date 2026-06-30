@@ -16,8 +16,6 @@ namespace Ludots.Core.MassNavigation.Systems;
 
 internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
 {
-    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
-
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
 
@@ -97,37 +95,22 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
 
     private int ResolveLocalPlayerId()
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity local ||
-            !_engine.World.IsAlive(local))
+        if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? playerIdObj) &&
+            playerIdObj is int playerId &&
+            playerId > 0)
         {
-            local = ResolveSingleAuthoredPlayerOwner();
-            _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = local;
+            return playerId;
         }
 
-        if (!_engine.World.TryGet(local, out PlayerOwner owner))
+        if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+            localObj is Entity local &&
+            _engine.World.IsAlive(local) &&
+            _engine.World.TryGet(local, out PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigation runtime LocalPlayerEntity must author PlayerOwner.");
+            return owner.PlayerId;
         }
 
-        return owner.PlayerId;
-    }
-
-    private Entity ResolveSingleAuthoredPlayerOwner()
-    {
-        Entity resolved = Entity.Null;
-        int count = 0;
-        _engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
-        {
-            resolved = entity;
-            count++;
-        });
-
-        return count switch
-        {
-            1 => resolved,
-            0 => throw new InvalidOperationException("MassNavigation runtime requires LocalPlayerEntity or exactly one authored PlayerOwner before submitting move orders."),
-            _ => throw new InvalidOperationException("MassNavigation runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
-        };
+        throw new InvalidOperationException(
+            "MassNavigation runtime requires map launch context to publish LocalPlayerId before submitting move orders.");
     }
 }

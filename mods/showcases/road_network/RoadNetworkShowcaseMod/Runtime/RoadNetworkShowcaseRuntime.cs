@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Scripting;
@@ -166,7 +167,9 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             string mapId = _activeMapId;
-            engine.LoadMap(mapId);
+            MapLaunchContext? launchContext = engine.CurrentMapSession?.LaunchContext
+                ?? MapLaunchContext.Create(engine.MergedConfig.StartupSelectedPlayerId);
+            engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
             LastSubmitStatus = "Scenario reloaded.";
             RefreshPanel(engine);
             return true;

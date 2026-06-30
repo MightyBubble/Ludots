@@ -22,6 +22,7 @@ namespace Ludots.Core.Engine
             LudotsWorldStateImporter.ImportOwnedSnapshotInto(restoredWorld, World);
             SetService(CoreServiceKeys.World, World);
             registry.RestoreDomains(domains);
+            RestoreMapSessionParticipantsAfterSave();
             _cooperativeSimulation?.Reset();
         }
     }
