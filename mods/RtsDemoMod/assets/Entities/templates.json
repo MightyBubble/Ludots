@@ -2,7 +2,8 @@
   {
     "id": "rts_war3_peasant",
     "components": {
-      "Name": { "Value": "Peasant" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Peasant" },
+      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -97,7 +98,8 @@
   {
     "id": "rts_war3_footman",
     "components": {
-      "Name": { "Value": "Footman" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Footman" },
+      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -235,7 +237,8 @@
   {
     "id": "rts_ra2_rhino",
     "components": {
-      "Name": { "Value": "Rhino Tank" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Rhino Tank" },
+      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -257,7 +260,8 @@
   {
     "id": "rts_ra2_rocket_trooper",
     "components": {
-      "Name": { "Value": "Rocket Trooper" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Rocket Trooper" },
+      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -308,7 +312,8 @@
   {
     "id": "rts_sc2_probe",
     "components": {
-      "Name": { "Value": "Probe" },      "Team": { "Id": 3 },
+      "Name": { "Value": "Probe" },
+      "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -330,7 +335,8 @@
   {
     "id": "rts_sc2_zealot",
     "components": {
-      "Name": { "Value": "Zealot" },      "Team": { "Id": 3 },
+      "Name": { "Value": "Zealot" },
+      "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -352,7 +358,8 @@
   {
     "id": "rts_zerg_drone",
     "components": {
-      "Name": { "Value": "Drone" },      "Team": { "Id": 2 },
+      "Name": { "Value": "Drone" },
+      "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },

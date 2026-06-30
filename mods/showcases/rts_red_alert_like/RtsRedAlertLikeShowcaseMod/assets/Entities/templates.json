@@ -139,7 +139,8 @@
   {
     "id": "rts_ra_mcv",
     "components": {
-      "Name": { "Value": "Mobile Construction Vehicle" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Mobile Construction Vehicle" },
+      "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -169,7 +170,8 @@
   {
     "id": "rts_ra_harvester",
     "components": {
-      "Name": { "Value": "Ore Harvester" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Ore Harvester" },
+      "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
@@ -198,7 +200,8 @@
   {
     "id": "rts_ra_rhino",
     "components": {
-      "Name": { "Value": "Rhino Tank" },      "Team": { "Id": 1 },
+      "Name": { "Value": "Rhino Tank" },
+      "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
