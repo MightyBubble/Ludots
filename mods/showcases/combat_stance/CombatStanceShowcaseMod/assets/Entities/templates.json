@@ -35,6 +35,7 @@
     "id": "combat_stance_vanguard",
     "components": {
       "Name": { "Value": "Combat Stance Vanguard" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "PlayerOwner": { "PlayerId": 1 },
       "WorldPositionCm": { "Value": { "X": 1000, "Y": 1000 } },
@@ -59,6 +60,7 @@
     "id": "combat_stance_guardian",
     "components": {
       "Name": { "Value": "Combat Stance Guardian" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 1000, "Y": 2000 } },
       "OrderBuffer": {},
@@ -89,6 +91,7 @@
     "id": "combat_stance_switch_unit",
     "components": {
       "Name": { "Value": "Combat Stance Switch Unit" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 1000, "Y": 3000 } },
       "OrderBuffer": {},
@@ -111,6 +114,7 @@
     "id": "combat_stance_priority_unit",
     "components": {
       "Name": { "Value": "Combat Stance Priority Unit" },
+      "MoveToCapable": {},
       "Team": { "Id": 1 },
       "WorldPositionCm": { "Value": { "X": 1000, "Y": 4000 } },
       "OrderBuffer": {},
