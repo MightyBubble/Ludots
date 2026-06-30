@@ -12,7 +12,7 @@
 
 1. [编码标准](coding-standards.md)
 2. [Feature 开发工作流](feature-development-workflow.md)
-3. [AI 辅助开发规范](ai-assisted-development.md)
+3. [AI 辅助开发规范](ai-assisted-development.md) — 含 GAS 组合自审（§4.5 / skill `ludots-gas-composition-gate`）
 4. [环境与构建](environment-setup.md)
 5. [文档治理](documentation-governance.md)
 

@@ -8,6 +8,7 @@
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
+- [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md)
 - [Exchange Operations](exchange-operations.md)
 - [通用存档系统](save-system.md)
 - [AI Utility Autocast 契约](ai-utility-autocast-contract.md)
