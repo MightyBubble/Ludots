@@ -7,10 +7,15 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
@@ -30,6 +35,8 @@ namespace Ludots.Tests.GasTests
             AttributeRegistry.Clear();
             TagRegistry.Clear();
             AttributeRegistry.Register("Health");
+            EffectParamKeys.Initialize();
+            GraphIdRegistry.Clear();
         }
 
         [Test]
@@ -100,38 +107,119 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
-        public void BuiltinHandlers_DeployConsumeSource_EnqueuesLifecycleRequests()
+        public void DeployConsumeSource_GraphPreset_TransfersTemplateAndConsumesSource()
         {
+            string templatesJson = @"[
+              {
+                ""id"": ""lifecycle_target"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": { ""Health"": 10 } },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            templateKeys.Register("lifecycle_target");
+
             using var world = World.Create();
             var source = world.Create(
-                WorldPositionCm.FromCm(1200, 3400),
+                WorldPositionCm.FromCm(9000, 8000),
                 new PresentationStableId { Value = 42 },
-                new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(5000, 6000) });
-            var effect = world.Create();
-            var queue = new RuntimeEntityLifecycleQueue(capacity: 4);
-            var runtime = new BuiltinHandlerExecutionContext { LifecycleRequests = queue };
-            var registry = new BuiltinHandlerRegistry();
-            BuiltinHandlers.RegisterAll(registry);
+                new AttributeBuffer(),
+                new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
+            world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 55f);
 
-            var ctx = new EffectContext { Source = source, Target = source };
+            var programs = new GraphProgramRegistry();
+            int graphId = RegisterDeployConsumeSourceGraph(programs);
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.DeployConsumeSource };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(graphId);
+            presetTypes.Register(preset);
+
+            var templateRegistry = new EffectTemplateRegistry();
             var tpl = new EffectTemplateData
             {
-                LifecycleDeploy = new LifecycleDeployDescriptor
-                {
-                    Subject = RelationEntitySlot.Source,
-                    TargetTemplateId = "lifecycle_target",
-                    OnCompleteEffectTemplateId = 55,
-                },
+                PresetType = EffectPresetType.DeployConsumeSource,
             };
+            tpl.ConfigParams.TryAddEntityTemplateKeyId(EffectParamKeys.TargetEntityTemplateKeyId, templateKeys.GetId("lifecycle_target"));
+            EffectTemplateIdRegistry.Register("Effect.Test.DeployConsumeSource");
+            int effectTemplateId = EffectTemplateIdRegistry.GetId("Effect.Test.DeployConsumeSource");
+            templateRegistry.Register(effectTemplateId, tpl);
 
-            var mergedParams = new EffectConfigParams();
-            registry.Invoke(BuiltinHandlerId.DeployConsumeSource, world, effect, ref ctx, in mergedParams, in tpl, runtime);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templateRegistry);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var lifecycleServices = new EntityLifecycleRuntimeServices(
+                world,
+                templates,
+                templateKeys,
+                new PresentationStableIdAllocator());
+            var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
 
-            That(queue.TryDequeue(out RuntimeEntityLifecycleRequest request), Is.True);
-            That(request.Source, Is.EqualTo(source));
-            That(request.TargetTemplateId, Is.EqualTo("lifecycle_target"));
-            That(request.OnCompleteEffectTemplateId, Is.EqualTo(55));
-            That(queue.TryDequeue(out _), Is.False);
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                source,
+                source,
+                source,
+                default,
+                EffectPhaseId.OnApply,
+                default,
+                EffectPresetType.DeployConsumeSource,
+                0,
+                effectTemplateId,
+                in tpl.ConfigParams,
+                runtime);
+
+            That(world.Has<PresentationDestroyPending>(source), Is.True);
+
+            Entity target = default;
+            world.Query(new QueryDescription().WithAll<Name>(), (Entity entity, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    target = entity;
+                }
+            });
+
+            That(world.IsAlive(target), Is.True);
+            That(world.Get<PresentationStableId>(target).Value, Is.EqualTo(42));
+            That(world.Get<AttributeBuffer>(target).GetBase(AttributeRegistry.GetId("Health")), Is.EqualTo(55f).Within(0.001f));
+        }
+
+        [Test]
+        public void DeployConsumeSource_GraphPreset_RequiresTargetEntityTemplateConfig()
+        {
+            string effectsJson = @"[
+              {
+                ""id"": ""Effect.Test.DeployMissingTemplate"",
+                ""presetType"": ""DeployConsumeSource"",
+                ""lifetime"": ""Instant"",
+                ""participatesInResponse"": true
+              }
+            ]";
+
+            var pipeline = CreateEffectsPipeline(effectsJson);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                new EffectTemplateRegistry(),
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
+
+            var ex = Throws<InvalidOperationException>(() => loader.Load(ConfigCatalogLoader.Load(pipeline)));
+            That(ex!.Message, Does.Contain("_ep.targetEntityTemplate"));
         }
 
         [Test]
@@ -355,31 +443,6 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
-        public void BuiltinHandlers_DeployConsumeSource_ThrowsOnInvalidConfig()
-        {
-            using var world = World.Create();
-            var source = world.Create();
-            var effect = world.Create();
-            var queue = new RuntimeEntityLifecycleQueue(capacity: 4);
-            var runtime = new BuiltinHandlerExecutionContext { LifecycleRequests = queue };
-            var registry = new BuiltinHandlerRegistry();
-            BuiltinHandlers.RegisterAll(registry);
-            var ctx = new EffectContext { Source = source, Target = source };
-            var emptyParams = new EffectConfigParams();
-
-            var tplMissingTemplate = new EffectTemplateData
-            {
-                LifecycleDeploy = new LifecycleDeployDescriptor
-                {
-                    Subject = RelationEntitySlot.Source,
-                    TargetTemplateId = "",
-                },
-            };
-            Throws<InvalidOperationException>(() =>
-                registry.Invoke(BuiltinHandlerId.DeployConsumeSource, world, effect, ref ctx, in emptyParams, in tplMissingTemplate, runtime));
-        }
-
-        [Test]
         public void RuntimeEntityLifecycleSystem_FailsWhenTargetTemplateMissingHealth()
         {
             string templatesJson = @"[
@@ -424,6 +487,63 @@ namespace Ludots.Tests.GasTests
 
             var ex = Throws<LifecycleExecutionException>(() => system.Update(0f));
             That(ex!.Message, Does.Contain("AttributeBuffer"));
+        }
+
+        private static int RegisterDeployConsumeSourceGraph(GraphProgramRegistry programs)
+        {
+            var cfg = new GraphConfig
+            {
+                Id = "Graph.Lifecycle.DeployConsumeSource",
+                Entry = "begin",
+                Nodes =
+                [
+                    new GraphNodeConfig { Id = "begin", Op = "BeginLifecycleTransaction", Next = "materialize" },
+                    new GraphNodeConfig { Id = "materialize", Op = "InvokeBuiltin", BuiltinHandler = "MaterializeTemplate", Next = "copyIdentity" },
+                    new GraphNodeConfig { Id = "copyIdentity", Op = "InvokeBuiltin", BuiltinHandler = "CopyIdentityComponents", Next = "copyAttrs" },
+                    new GraphNodeConfig { Id = "copyAttrs", Op = "InvokeBuiltin", BuiltinHandler = "CopyAttributeSlice", Next = "clearFx" },
+                    new GraphNodeConfig { Id = "clearFx", Op = "InvokeBuiltin", BuiltinHandler = "ClearActiveEffects", Next = "transferId" },
+                    new GraphNodeConfig { Id = "transferId", Op = "InvokeBuiltin", BuiltinHandler = "TransferStableId", Next = "rewire" },
+                    new GraphNodeConfig { Id = "rewire", Op = "InvokeBuiltin", BuiltinHandler = "RewireSelection", Next = "consume" },
+                    new GraphNodeConfig { Id = "consume", Op = "InvokeBuiltin", BuiltinHandler = "ConsumeEntity" },
+                ],
+            };
+
+            var (package, _, diagnostics) = GraphCompiler.CompileWithOutputs(cfg);
+            if (package == null)
+            {
+                throw new InvalidOperationException(diagnostics[0].Message);
+            }
+
+            GraphIdRegistry.Register(cfg.Id);
+            int graphId = GraphIdRegistry.GetId(cfg.Id);
+            var symbolResolver = new GasGraphSymbolResolver(
+                new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
+                new TargetDispatchPresetRegistry(),
+                new EntityTemplateKeyRegistry());
+            GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver);
+            programs.Register(graphId, package.Value.Program);
+            return graphId;
+        }
+
+        private static ConfigPipeline CreateEffectsPipeline(string effectsJson)
+        {
+            var root = Path.Combine(Path.GetTempPath(), $"LifecycleEffects_{Guid.NewGuid():N}");
+            var gasDir = Path.Combine(root, "Configs", "GAS");
+            Directory.CreateDirectory(gasDir);
+            File.WriteAllText(Path.Combine(gasDir, "effects.json"), effectsJson);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "config_catalog.json"),
+                @"[
+  { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", root);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            return new ConfigPipeline(vfs, modLoader);
         }
 
         private static ConfigPipeline CreateTemplatesPipeline(string templatesJson)

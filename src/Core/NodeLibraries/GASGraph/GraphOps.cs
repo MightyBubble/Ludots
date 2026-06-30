@@ -130,6 +130,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMinMetric = 394,
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
+
+        // ── Entity lifecycle composition (400-401) ──
+        BeginLifecycleTransaction = 400,
+        InvokeBuiltin = 401,
     }
 
     public static class GraphNodeOpParser

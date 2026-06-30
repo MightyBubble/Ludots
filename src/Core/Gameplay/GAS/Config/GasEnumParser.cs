@@ -184,7 +184,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
-            { "DeployConsumeSource", BuiltinHandlerId.DeployConsumeSource },
             { "MaterializeTemplate", BuiltinHandlerId.MaterializeTemplate },
             { "CopyIdentityComponents", BuiltinHandlerId.CopyIdentityComponents },
             { "CopyAttributeSlice", BuiltinHandlerId.CopyAttributeSlice },

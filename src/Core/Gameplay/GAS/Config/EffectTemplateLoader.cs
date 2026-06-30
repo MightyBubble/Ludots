@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -26,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
+        private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -41,7 +43,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
-            ScopeKeyRegistry? progressionScopeKeys = null)
+            ScopeKeyRegistry? progressionScopeKeys = null,
+            EntityTemplateKeyRegistry? entityTemplateKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -49,6 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _targetDispatchPresets = targetDispatchPresets;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
+            _entityTemplateKeys = entityTemplateKeys;
         }
 
         public void Load(
@@ -121,6 +125,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException($"Effect template '{id}' in {relativePath} uses scalar 'duration' field. Use 'duration: {{ durationTicks: N }}' object block instead.");
                 }
+            }
+
+            if (obj.ContainsKey("lifecycleDeploy"))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{id}' in {relativePath} uses deprecated 'lifecycleDeploy' block. Use configParams '_ep.targetEntityTemplate' with preset graph composition.");
             }
         }
 
@@ -284,7 +294,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
-            var lifecycleDeploy = CompileLifecycleDeploy(cfg.LifecycleDeploy, cfg.Id, relativePath);
             var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
             int progressionId = 0;
@@ -411,11 +420,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.LifecycleDeploy != null && presetType != EffectPresetType.DeployConsumeSource)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'lifecycleDeploy' block is only valid when presetType=DeployConsumeSource.");
-            }
             if (presetType == EffectPresetType.DeployConsumeSource)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant)
@@ -423,10 +427,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires lifetime=Instant.");
                 }
-                if (cfg.LifecycleDeploy == null)
+
+                if (!configParams.TryGetInt(EffectParamKeys.TargetEntityTemplateKeyId, out int templateKeyId) || templateKeyId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires a 'lifecycleDeploy' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires configParams \"_ep.targetEntityTemplate\" with type \"EntityTemplate\".");
                 }
             }
 
@@ -450,7 +455,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
-                LifecycleDeploy = lifecycleDeploy,
                 ProgressionScope = progressionScope,
                 ProgressionChange = progressionChange,
                 ProgressionId = progressionId,
@@ -558,45 +562,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Subject = subject,
                 Parent = parent,
                 SnapSubjectToParentPosition = snapSubjectToParentPosition
-            };
-        }
-
-        private static LifecycleDeployDescriptor CompileLifecycleDeploy(LifecycleDeployConfig? cfg, string ownerId, string relativePath)
-        {
-            if (cfg == null)
-            {
-                return default;
-            }
-
-            RelationEntitySlot subject = ParseRelationEntitySlot(
-                cfg.Subject ?? "Source",
-                ownerId,
-                "lifecycleDeploy.subject",
-                relativePath);
-            if (subject == RelationEntitySlot.None)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: lifecycleDeploy.subject cannot be None.");
-            }
-
-            string targetTemplateId = RequireString(cfg.TargetTemplateId, ownerId, relativePath, "lifecycleDeploy.targetTemplateId");
-
-            int onCompleteEffectTemplateId = 0;
-            if (!string.IsNullOrWhiteSpace(cfg.OnCompleteEffect))
-            {
-                onCompleteEffectTemplateId = EffectTemplateIdRegistry.GetId(cfg.OnCompleteEffect);
-                if (onCompleteEffectTemplateId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Effect template '{ownerId}' in {relativePath}: lifecycleDeploy.onCompleteEffect references unknown effect template '{cfg.OnCompleteEffect}'.");
-                }
-            }
-
-            return new LifecycleDeployDescriptor
-            {
-                Subject = subject,
-                TargetTemplateId = targetTemplateId,
-                OnCompleteEffectTemplateId = onCompleteEffectTemplateId,
             };
         }
 
@@ -1069,9 +1034,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
                     }
                 }
+                else if (type == "EntityTemplate")
+                {
+                    string templateName = paramCfg.Value.ToString()
+                        ?? throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key}.value must convert to a string.");
+                    if (string.IsNullOrWhiteSpace(templateName))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} entity template type requires a non-empty template id.");
+                    }
+
+                    if (_entityTemplateKeys == null)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: EntityTemplate config param requires EntityTemplateKeyRegistry.");
+                    }
+
+                    int templateKeyId = _entityTemplateKeys.Register(templateName);
+                    if (!result.TryAddEntityTemplateKeyId(keyId, templateKeyId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
+                    }
+                }
                 else
                 {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation.");
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation, EntityTemplate.");
                 }
             }
         }

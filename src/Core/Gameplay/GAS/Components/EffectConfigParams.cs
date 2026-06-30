@@ -12,6 +12,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         EffectTemplateId = 2,
         /// <summary>Attribute name resolved to AttributeId at load time. Stored as int.</summary>
         AttributeId = 3,
+        /// <summary>Entity template name resolved to template key id at load time. Stored as int.</summary>
+        EntityTemplateKeyId = 4,
     }
 
     /// <summary>
@@ -120,6 +122,17 @@ namespace Ludots.Core.Gameplay.GAS.Components
             Keys[Count] = keyId;
             Types[Count] = (byte)ConfigParamType.EffectTemplateId;
             Values[Count] = templateId;
+            Count++;
+            return true;
+        }
+
+        /// <summary>Add an entity template key id parameter. Returns false if capacity exceeded.</summary>
+        public bool TryAddEntityTemplateKeyId(int keyId, int templateKeyId)
+        {
+            if (Count >= MAX_PARAMS) return false;
+            Keys[Count] = keyId;
+            Types[Count] = (byte)ConfigParamType.EntityTemplateKeyId;
+            Values[Count] = templateKeyId;
             Count++;
             return true;
         }

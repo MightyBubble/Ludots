@@ -454,6 +454,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
+                    case GraphNodeOp.BeginLifecycleTransaction:
+                        break;
+                    case GraphNodeOp.InvokeBuiltin:
+                        ins.Imm = RequireSymbol(node.BuiltinHandler, "builtinHandler", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
                 }
 
                 instructions.Add(ins);

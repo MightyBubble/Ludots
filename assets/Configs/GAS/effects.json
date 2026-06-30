@@ -17,9 +17,8 @@
     "presetType": "DeployConsumeSource",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "lifecycleDeploy": {
-      "subject": "Source",
-      "targetTemplateId": "Entity.Template.LifecycleTarget"
+    "configParams": {
+      "_ep.targetEntityTemplate": { "type": "EntityTemplate", "value": "Entity.Template.LifecycleTarget" }
     }
   }
 ]

@@ -34,7 +34,6 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
-            registry.Register(BuiltinHandlerId.DeployConsumeSource, HandleDeployConsumeSource);
             EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
@@ -466,65 +465,6 @@ namespace Ludots.Core.Gameplay.GAS
             if (!runtime.ProgressionEvaluator.TryApply(scopeHost, templateData.ProgressionId, templateData.ProgressionChange))
             {
                 throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
-            }
-        }
-
-        public static void HandleDeployConsumeSource(
-            World world,
-            Entity effectEntity,
-            ref EffectContext context,
-            in EffectConfigParams mergedParams,
-            in EffectTemplateData templateData)
-        {
-            var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.LifecycleRequests == null)
-            {
-                throw new InvalidOperationException("DeployConsumeSource requires RuntimeEntityLifecycleQueue in BuiltinHandlerExecutionContext.");
-            }
-
-            ref readonly var deploy = ref templateData.LifecycleDeploy;
-            if (string.IsNullOrWhiteSpace(deploy.TargetTemplateId))
-            {
-                throw new InvalidOperationException("DeployConsumeSource requires a non-empty lifecycleDeploy.targetTemplateId.");
-            }
-
-            Entity subject = ResolveRelationEntity(in context, deploy.Subject);
-            if (!world.IsAlive(subject))
-            {
-                return;
-            }
-
-            if (world.Has<PresentationDestroyPending>(subject))
-            {
-                throw new LifecycleExecutionException("DeployConsumeSource failed because the source entity is already pending destroy.");
-            }
-
-            var request = new RuntimeEntityLifecycleRequest
-            {
-                Source = subject,
-                EffectContextSource = context.Source,
-                EffectContextTarget = context.Target,
-                EffectContextTargetContext = context.TargetContext,
-                EffectConfigParams = mergedParams,
-                TargetTemplateId = deploy.TargetTemplateId,
-                OnCompleteEffectTemplateId = deploy.OnCompleteEffectTemplateId,
-            };
-
-            if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTargetPoint))
-            {
-                request.HasPlacementOverride = 1;
-                request.PlacementOverrideCm = preservedTargetPoint;
-            }
-
-            if (!LifecyclePlacementResolver.TryResolveAtTargetPoint(world, in request, out _))
-            {
-                throw new LifecycleExecutionException(
-                    "DeployConsumeSource failed because target point could not be resolved.");
-            }
-
-            if (!runtime.LifecycleRequests.TryEnqueue(request))
-            {
-                throw new InvalidOperationException("RuntimeEntityLifecycleQueue capacity exceeded while handling DeployConsumeSource.");
             }
         }
 

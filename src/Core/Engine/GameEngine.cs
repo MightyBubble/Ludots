@@ -632,7 +632,8 @@ namespace Ludots.Core.Engine
                 effectTemplateRegistry,
                 gasConditions,
                 targetDispatchPresetRegistry,
-                progressionScopeKeys: progressionScopeKeys);
+                progressionScopeKeys: progressionScopeKeys,
+                entityTemplateKeys: MapLoader.EntityTemplateKeys);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -724,7 +725,8 @@ namespace Ludots.Core.Engine
                 gasConditions,
                 targetDispatchPresetRegistry,
                 exchangeOperations,
-                progressionScopeKeys);
+                progressionScopeKeys,
+                MapLoader.EntityTemplateKeys);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);

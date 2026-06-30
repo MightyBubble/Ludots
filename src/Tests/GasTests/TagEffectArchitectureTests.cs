@@ -302,7 +302,6 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.ReResolveAndDispatch), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateProjectile), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
-            That(registry.IsRegistered(BuiltinHandlerId.DeployConsumeSource), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.MaterializeTemplate), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CopyIdentityComponents), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CopyAttributeSlice), Is.True);

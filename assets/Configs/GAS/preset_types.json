@@ -134,7 +134,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "DeployConsumeSource" }
+      "OnApply": { "type": "graph", "id": "Graph.Lifecycle.DeployConsumeSource" }
     }
   }
 ]

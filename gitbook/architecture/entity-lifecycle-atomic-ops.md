@@ -80,7 +80,7 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 |------|------|------|
 | M0 | 冻结 morph schema；设计 + skill 落地 | 完成 |
 | M1 | Layer 0 ops + transaction executor | 完成 |
-| M2 | `DeployConsumeSource` preset | 完成 |
+| M2 | Graph 组合 atomic ops → `DeployConsumeSource` preset | 完成 |
 | M3 | 删除 Morph DSL / preset / 平行管线 | 完成 |
 
 ## 8 非目标
@@ -91,7 +91,8 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 ## 9 参考实现
 
 - `src/Core/Gameplay/Lifecycle/EntityLifecycleAtomicOps.cs` — Layer 0 atomic ops
-- `src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs` — Layer 1 transaction
-- `src/Core/Gameplay/Lifecycle/EntityLifecycleBuiltinHandlers.cs` — GAS BuiltinHandler 注册
-- `src/Core/Gameplay/Lifecycle/LifecycleTransactionPrograms.cs` — `DeployConsumeSource` op 程序
-- `presetType: DeployConsumeSource` + `lifecycleDeploy` block in `effects.json`
+- `src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs` — Layer 1 transaction rollback
+- `src/Core/Gameplay/Lifecycle/EntityLifecycleBuiltinHandlers.cs` — GAS BuiltinHandler 注册（Layer 0）
+- `assets/Configs/GAS/graphs.json` — `Graph.Lifecycle.DeployConsumeSource`（Layer 2 组合）
+- `assets/Configs/GAS/preset_types.json` — `DeployConsumeSource` → graph（Layer 3）
+- `presetType: DeployConsumeSource` + `configParams._ep.targetEntityTemplate` in `effects.json`

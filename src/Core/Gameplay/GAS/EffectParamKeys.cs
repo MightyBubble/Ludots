@@ -57,6 +57,9 @@ namespace Ludots.Core.Gameplay.GAS
         public static int ExchangeOperationId;
         public static int ExchangeScopeKey;
 
+        // ── Entity lifecycle deploy ──
+        public static int TargetEntityTemplateKeyId;
+
         /// <summary>
         /// Register all _ep.* keys with the ConfigKeyRegistry.
         /// Must be called once during GasController initialization,
@@ -106,6 +109,9 @@ namespace Ludots.Core.Gameplay.GAS
             // ExchangeParams
             ExchangeOperationId = ConfigKeyRegistry.Register("_ep.exchangeOperationId");
             ExchangeScopeKey = ConfigKeyRegistry.Register("_ep.exchangeScopeKey");
+
+            // Entity lifecycle deploy
+            TargetEntityTemplateKeyId = ConfigKeyRegistry.Register("_ep.targetEntityTemplate");
         }
     }
 }

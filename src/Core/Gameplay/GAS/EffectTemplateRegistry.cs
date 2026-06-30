@@ -295,13 +295,6 @@ namespace Ludots.Core.Gameplay.GAS
         public bool SnapSubjectToParentPosition;
     }
 
-    public struct LifecycleDeployDescriptor
-    {
-        public RelationEntitySlot Subject;
-        public string TargetTemplateId;
-        public int OnCompleteEffectTemplateId;
-    }
-
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -329,7 +322,6 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
-        public LifecycleDeployDescriptor LifecycleDeploy;
         public ScopeKey ProgressionScope;
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
         public int ProgressionId;
