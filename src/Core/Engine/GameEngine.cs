@@ -1626,10 +1626,13 @@ namespace Ludots.Core.Engine
             return orderTypeId;
         }
 
-        public void LoadMap(string mapId)
+        public void LoadMap(string mapId) => LoadMap(MapLoadRequest.FromMapId(mapId));
+
+        public void LoadMap(MapLoadRequest request)
         {
+            string mapId = request.MapIdValue;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Loading Map: {mapId}");
-            var mid = new MapId(mapId);
+            var mid = request.MapId;
 
             EnsureMapSessionInfrastructure();
 
@@ -1647,6 +1650,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                session.LaunchContext = request.LaunchContext;
                 session.VisualHeightmap = visualHeightmap;
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
@@ -2724,7 +2728,7 @@ namespace Ludots.Core.Engine
 
         public void LoadEntryMap(string mapId) => LoadMap(mapId);
 
-        public void LoadMap(MapId mapId) => LoadMap(mapId.Value);
+        public void LoadMap(MapId mapId) => LoadMap(MapLoadRequest.FromMapId(mapId.Value));
 
         public void Start()
         {

@@ -203,6 +203,74 @@ namespace Ludots.Tests.GAS
             Assert.That(globals[CoreServiceKeys.LocalPlayerEntity.Name], Is.EqualTo(playerSeven));
         }
 
+        [Test]
+        public void ParticipantBindingResolver_LaunchContextSelectedPlayerId_SelectsLocalPlayerWithoutIsLocal()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            map.Players[0].IsLocal = false;
+            var session = new MapSession(new MapId(map.Id), map)
+            {
+                LaunchContext = MapLaunchContext.FromSelection(selectedPlayerId: 8),
+            };
+            var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+
+            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
+
+            Assert.That(result.LocalPlayerId, Is.EqualTo(8));
+            Assert.That(result.LocalPlayerEntity, Is.EqualTo(playerTwo));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_LaunchContextSelectedPlayerId_OverridesAuthoredIsLocal()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            var session = new MapSession(new MapId(map.Id), map)
+            {
+                LaunchContext = MapLaunchContext.FromSelection(selectedPlayerId: 8),
+            };
+            var index = CreateEntityIndex(map.Id, world, out _, out _, out Entity playerOne, out Entity playerTwo);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+
+            ParticipantBindingResult result = ParticipantBindingResolver.Resolve(session, world, index, relationships, types);
+
+            Assert.That(result.LocalPlayerId, Is.EqualTo(8));
+            Assert.That(result.LocalPlayerEntity, Is.EqualTo(playerTwo));
+            Assert.That(result.LocalPlayerEntity, Is.Not.EqualTo(playerOne));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_LaunchContextUnknownSelectedPlayerId_FailsExplicitly()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            var session = new MapSession(new MapId(map.Id), map)
+            {
+                LaunchContext = MapLaunchContext.FromSelection(selectedPlayerId: 99),
+            };
+            var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                ParticipantBindingResolver.Resolve(session, world, index, relationships, types))!;
+
+            Assert.That(ex.Message, Does.Contain("SelectedPlayerId 99"));
+        }
+
         private static MapConfig CreateMap()
         {
             return new MapConfig

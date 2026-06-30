@@ -10,6 +10,8 @@ namespace Ludots.Core.Scripting
         public static GameEngine GetEngine(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.Engine);
         public static World GetWorld(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.World);
         public static MapSession GetMapSession(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.MapSession);
+        public static MapLaunchContext? GetMapLaunchContext(this ScriptContext ctx) =>
+            ctx.TryGet(CoreServiceKeys.MapLaunchContext, out MapLaunchContext context) ? context : null;
         public static ILogBackend GetLogBackend(this ScriptContext ctx) => ctx.Get(CoreServiceKeys.LogBackend);
 
         public static bool IsMap(this ScriptContext ctx, MapId mapId)

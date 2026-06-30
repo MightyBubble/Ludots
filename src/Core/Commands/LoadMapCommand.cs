@@ -1,4 +1,5 @@
 using Ludots.Core.Engine;
+using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using System.Threading.Tasks;
 
@@ -7,6 +8,9 @@ namespace Ludots.Core.Commands
     public class LoadMapCommand : GameCommand
     {
         public string MapId { get; set; }
+        public string ScenarioId { get; set; }
+        public int SelectedPlayerId { get; set; }
+        public int SelectedFactionId { get; set; }
 
         public override Task ExecuteAsync(ScriptContext context)
         {
@@ -15,7 +19,11 @@ namespace Ludots.Core.Commands
             var engine = context.GetEngine();
             if (engine != null)
             {
-                engine.LoadMap(MapId);
+                MapLaunchContext? launchContext = MapLaunchContext.FromSelection(
+                    ScenarioId,
+                    SelectedPlayerId,
+                    SelectedFactionId);
+                engine.LoadMap(MapLoadRequest.FromMapId(MapId, launchContext));
             }
             return Task.CompletedTask;
         }
