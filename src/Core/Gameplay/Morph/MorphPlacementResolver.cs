@@ -63,12 +63,6 @@ namespace Ludots.Core.Gameplay.Morph
                 return true;
             }
 
-            if (world.IsAlive(request.EffectContextTarget) && world.Has<WorldPositionCm>(request.EffectContextTarget))
-            {
-                positionCm = world.Get<WorldPositionCm>(request.EffectContextTarget).Value;
-                return true;
-            }
-
             if (world.IsAlive(request.EffectContextSource) && world.Has<AbilityExecInstance>(request.EffectContextSource))
             {
                 ref readonly var exec = ref world.Get<AbilityExecInstance>(request.EffectContextSource);

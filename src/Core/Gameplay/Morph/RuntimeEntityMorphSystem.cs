@@ -71,6 +71,11 @@ namespace Ludots.Core.Gameplay.Morph
                 throw new MorphExecutionException("Entity morph failed because the source entity is no longer alive.");
             }
 
+            if (World.Has<PresentationDestroyPending>(source))
+            {
+                throw new MorphExecutionException("Entity morph failed because the source entity is already pending destroy.");
+            }
+
             if (string.IsNullOrWhiteSpace(request.TargetTemplateId))
             {
                 throw new InvalidOperationException("Runtime entity morph requires a non-empty TargetTemplateId.");

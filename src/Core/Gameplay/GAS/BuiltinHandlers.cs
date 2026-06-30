@@ -481,9 +481,14 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             ref readonly var morph = ref templateData.Morph;
-            if (string.IsNullOrWhiteSpace(morph.TargetTemplateId) || morph.MorphProfileId <= 0)
+            if (string.IsNullOrWhiteSpace(morph.TargetTemplateId))
             {
-                return;
+                throw new InvalidOperationException("MorphEntity requires a non-empty morph.targetTemplateId.");
+            }
+
+            if (morph.MorphProfileId <= 0)
+            {
+                throw new InvalidOperationException("MorphEntity requires a valid morph.morphProfileId.");
             }
 
             Entity subject = ResolveRelationEntity(in context, morph.Subject);
@@ -502,6 +507,12 @@ namespace Ludots.Core.Gameplay.GAS
                 MorphProfileId = morph.MorphProfileId,
                 OnMorphEffectTemplateId = morph.OnMorphEffectTemplateId,
             };
+
+            if (TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTargetPoint))
+            {
+                request.HasPlacementOverride = 1;
+                request.PlacementOverrideCm = preservedTargetPoint;
+            }
 
             if (!runtime.MorphRequests.TryEnqueue(request))
             {

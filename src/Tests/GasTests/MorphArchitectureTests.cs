@@ -306,6 +306,186 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
+        public void RuntimeEntityMorphSystem_AtTargetPoint_SelfTarget_PrefersAbilityTargetOverUnitPosition()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""morph_target_only"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.at_target", new MorphProfileDescriptor
+            {
+                Placement = MorphPlacementMode.AtTargetPoint,
+                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
+                DestroySource = false,
+            });
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new PresentationStableId { Value = 12 },
+                new AbilityExecInstance
+                {
+                    HasTargetPos = 1,
+                    TargetPosCm = Fix64Vec2.FromInt(900, 800),
+                });
+
+            var requests = new RuntimeEntityMorphQueue(capacity: 1);
+            var system = new RuntimeEntityMorphSystem(
+                world,
+                requests,
+                profiles,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntityMorphRequest
+            {
+                Source = source,
+                EffectContextSource = source,
+                EffectContextTarget = source,
+                TargetTemplateId = "morph_target_only",
+                MorphProfileId = profiles.GetId("morph.at_target"),
+            }), Is.True);
+
+            system.Update(0f);
+
+            Entity target = default;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    target = entity;
+                }
+            });
+
+            That(world.IsAlive(target), Is.True);
+            That(world.Get<WorldPositionCm>(target).Value, Is.EqualTo(Fix64Vec2.FromInt(900, 800)));
+        }
+
+        [Test]
+        public void RuntimeEntityMorphSystem_RejectsSourceAlreadyPendingDestroy()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""morph_target_only"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.at_source", new MorphProfileDescriptor
+            {
+                Placement = MorphPlacementMode.AtSource,
+                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
+                DestroySource = true,
+            });
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new PresentationStableId { Value = 12 },
+                new PresentationDestroyPending());
+
+            var requests = new RuntimeEntityMorphQueue(capacity: 1);
+            var system = new RuntimeEntityMorphSystem(
+                world,
+                requests,
+                profiles,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntityMorphRequest
+            {
+                Source = source,
+                TargetTemplateId = "morph_target_only",
+                MorphProfileId = profiles.GetId("morph.at_source"),
+            }), Is.True);
+
+            var ex = Throws<MorphExecutionException>(() => system.Update(0f));
+            That(ex!.Message, Does.Contain("pending destroy"));
+
+            int targetCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity _, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    targetCount++;
+                }
+            });
+            That(targetCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void BuiltinHandlers_MorphEntity_ThrowsOnInvalidMorphConfig()
+        {
+            using var world = World.Create();
+            var source = world.Create();
+            var effect = world.Create();
+            var queue = new RuntimeEntityMorphQueue(capacity: 4);
+            var runtime = new BuiltinHandlerExecutionContext
+            {
+                MorphRequests = queue,
+            };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            var ctx = new EffectContext { Source = source, Target = source };
+            var emptyParams = new EffectConfigParams();
+            var tplMissingProfile = new EffectTemplateData
+            {
+                Morph = new MorphDescriptor
+                {
+                    Subject = RelationEntitySlot.Source,
+                    TargetTemplateId = "morph_target",
+                    MorphProfileId = 0,
+                },
+            };
+
+            Throws<InvalidOperationException>(() =>
+                registry.Invoke(BuiltinHandlerId.MorphEntity, world, effect, ref ctx, in emptyParams, in tplMissingProfile, runtime));
+
+            var tplMissingTemplate = new EffectTemplateData
+            {
+                Morph = new MorphDescriptor
+                {
+                    Subject = RelationEntitySlot.Source,
+                    TargetTemplateId = "",
+                    MorphProfileId = 3,
+                },
+            };
+
+            Throws<InvalidOperationException>(() =>
+                registry.Invoke(BuiltinHandlerId.MorphEntity, world, effect, ref ctx, in emptyParams, in tplMissingTemplate, runtime));
+        }
+
+        [Test]
         public void MorphProfileLoader_CompilesDeployProfile()
         {
             const string json = @"[
