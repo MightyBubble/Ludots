@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -160,8 +162,147 @@ namespace Ludots.Tests.GasTests
             That(world.IsAlive(target), Is.True);
             That(world.Get<PresentationStableId>(target).Value, Is.EqualTo(77));
             That(world.Get<WorldPositionCm>(target).Value, Is.EqualTo(Fix64Vec2.FromInt(1000, 2000)));
+            That(world.Get<AttributeBuffer>(target).GetBase(AttributeRegistry.GetId("Health")), Is.EqualTo(75f).Within(0.001f));
             That(world.Get<AttributeBuffer>(target).GetCurrent(AttributeRegistry.GetId("Health")), Is.EqualTo(75f).Within(0.001f));
             That(world.Get<GameplayTagContainer>(target).HasTag(TagRegistry.GetId("Unit.Mobile")), Is.False);
+        }
+
+        [Test]
+        public void RuntimeEntityMorphSystem_AtTargetPoint_WithoutTargetPoint_FailsAndLeavesSourceIntact()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""morph_target_only"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.at_target", new MorphProfileDescriptor
+            {
+                Placement = MorphPlacementMode.AtTargetPoint,
+                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
+                DestroySource = true,
+            });
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(500, 600),
+                new PresentationStableId { Value = 12 });
+
+            var requests = new RuntimeEntityMorphQueue(capacity: 1);
+            var system = new RuntimeEntityMorphSystem(
+                world,
+                requests,
+                profiles,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntityMorphRequest
+            {
+                Source = source,
+                TargetTemplateId = "morph_target_only",
+                MorphProfileId = profiles.GetId("morph.at_target"),
+            }), Is.True);
+
+            var ex = Throws<MorphExecutionException>(() => system.Update(0f));
+            That(ex!.Message, Does.Contain("placement mode"));
+
+            That(world.IsAlive(source), Is.True);
+            That(world.Has<PresentationDestroyPending>(source), Is.False);
+
+            int targetCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity _, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    targetCount++;
+                }
+            });
+            That(targetCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void RuntimeEntityMorphSystem_AtTargetPoint_UsesAbilityTargetPosition()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""morph_target_only"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            var profiles = new MorphProfileRegistry();
+            profiles.Register("morph.at_target", new MorphProfileDescriptor
+            {
+                Placement = MorphPlacementMode.AtTargetPoint,
+                StableIdPolicy = MorphStableIdPolicy.AllocateNew,
+                DestroySource = false,
+            });
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new PresentationStableId { Value = 12 },
+                new AbilityExecInstance
+                {
+                    HasTargetPos = 1,
+                    TargetPosCm = Fix64Vec2.FromInt(900, 800),
+                });
+
+            var requests = new RuntimeEntityMorphQueue(capacity: 1);
+            var system = new RuntimeEntityMorphSystem(
+                world,
+                requests,
+                profiles,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntityMorphRequest
+            {
+                Source = source,
+                EffectContextSource = source,
+                TargetTemplateId = "morph_target_only",
+                MorphProfileId = profiles.GetId("morph.at_target"),
+            }), Is.True);
+
+            system.Update(0f);
+
+            Entity target = default;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    target = entity;
+                }
+            });
+
+            That(world.IsAlive(target), Is.True);
+            That(world.Get<WorldPositionCm>(target).Value, Is.EqualTo(Fix64Vec2.FromInt(900, 800)));
         }
 
         [Test]

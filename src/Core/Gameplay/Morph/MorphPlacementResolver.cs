@@ -38,12 +38,7 @@ namespace Ludots.Core.Gameplay.Morph
                 case MorphPlacementMode.AtSource:
                     return TryResolveEntityPosition(world, request.Source, out positionCm, out facingAngleRad, out hasFacing);
                 case MorphPlacementMode.AtTargetPoint:
-                    if (TryResolveTargetPoint(world, in request, out positionCm))
-                    {
-                        return true;
-                    }
-
-                    return TryResolveEntityPosition(world, request.Source, out positionCm, out facingAngleRad, out hasFacing);
+                    return TryResolveTargetPoint(world, in request, out positionCm, out facingAngleRad, out hasFacing);
                 case MorphPlacementMode.PreservedExplicit:
                     return request.HasPlacementOverride != 0;
                 default:
@@ -51,8 +46,17 @@ namespace Ludots.Core.Gameplay.Morph
             }
         }
 
-        private static bool TryResolveTargetPoint(World world, in RuntimeEntityMorphRequest request, out Fix64Vec2 positionCm)
+        private static bool TryResolveTargetPoint(
+            World world,
+            in RuntimeEntityMorphRequest request,
+            out Fix64Vec2 positionCm,
+            out float facingAngleRad,
+            out bool hasFacing)
         {
+            positionCm = default;
+            facingAngleRad = 0f;
+            hasFacing = false;
+
             if (world.IsAlive(request.EffectContextTargetContext) && world.Has<WorldPositionCm>(request.EffectContextTargetContext))
             {
                 positionCm = world.Get<WorldPositionCm>(request.EffectContextTargetContext).Value;
@@ -75,7 +79,6 @@ namespace Ludots.Core.Gameplay.Morph
                 }
             }
 
-            positionCm = default;
             return false;
         }
 

@@ -36,6 +36,32 @@ namespace Ludots.Core.Gameplay.GAS
                 return;
             }
 
+            MarkAttributeChanged(world, target, attributeId);
+        }
+
+        public static void SetBase(World world, Entity target, int attributeId, float value)
+        {
+            if (!world.IsAlive(target) || !world.Has<AttributeBuffer>(target))
+            {
+                return;
+            }
+
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
+            float beforeBase = attributes.GetBase(attributeId);
+            float beforeCurrent = attributes.GetCurrent(attributeId);
+            attributes.SetBase(attributeId, value);
+            float afterBase = attributes.GetBase(attributeId);
+            float afterCurrent = attributes.GetCurrent(attributeId);
+            if (beforeBase == afterBase && beforeCurrent == afterCurrent)
+            {
+                return;
+            }
+
+            MarkAttributeChanged(world, target, attributeId);
+        }
+
+        private static void MarkAttributeChanged(World world, Entity target, int attributeId)
+        {
             EnsureDirtyFlags(world, target);
             world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
             MarkPresentationChanged(world, target, attributeId);

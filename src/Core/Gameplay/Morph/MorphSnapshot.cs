@@ -1,5 +1,6 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
 
@@ -94,8 +95,7 @@ namespace Ludots.Core.Gameplay.Morph
 
             if (snapshot.HasAttributes && world.Has<AttributeBuffer>(target))
             {
-                ref var targetAttributes = ref world.Get<AttributeBuffer>(target);
-                ApplyAttributes(ref targetAttributes, in snapshot.Attributes, in profile);
+                ApplyAttributes(world, target, in snapshot.Attributes, in profile);
             }
 
             if (snapshot.HasTags && world.Has<GameplayTagContainer>(target))
@@ -103,45 +103,50 @@ namespace Ludots.Core.Gameplay.Morph
                 ref var targetTags = ref world.Get<GameplayTagContainer>(target);
                 ApplyTags(ref targetTags, in snapshot.Tags, in profile);
             }
+
+            if (profile.EffectInheritMode == MorphEffectInheritMode.StripAll)
+            {
+                MorphEffectCleanup.EnsureTargetStartsWithoutInheritedEffects(world, target);
+            }
         }
 
-        private static void ApplyAttributes(ref AttributeBuffer target, in AttributeBuffer source, in MorphProfileDescriptor profile)
+        private static void ApplyAttributes(World world, Entity target, in AttributeBuffer source, in MorphProfileDescriptor profile)
         {
             switch (profile.AttributeInheritMode)
             {
                 case MorphAttributeInheritMode.AllDefined:
-                    CopyAllDefinedAttributes(ref target, in source);
+                    CopyAllDefinedAttributes(world, target, in source);
                     break;
                 case MorphAttributeInheritMode.IntersectByName:
-                    CopyNamedAttributes(ref target, in source, profile.InheritAttributeIds);
+                    CopyNamedAttributes(world, target, in source, profile.InheritAttributeIds);
                     break;
             }
         }
 
-        private static void CopyAllDefinedAttributes(ref AttributeBuffer target, in AttributeBuffer source)
+        private static void CopyAllDefinedAttributes(World world, Entity target, in AttributeBuffer source)
         {
             for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
             {
-                if (!source.HasAttribute(attributeId) || !target.HasAttribute(attributeId))
+                if (!source.HasAttribute(attributeId) || !world.Get<AttributeBuffer>(target).HasAttribute(attributeId))
                 {
                     continue;
                 }
 
-                target.SetCurrent(attributeId, source.GetCurrent(attributeId));
+                AttributeMutationOps.SetBase(world, target, attributeId, source.GetCurrent(attributeId));
             }
         }
 
-        private static void CopyNamedAttributes(ref AttributeBuffer target, in AttributeBuffer source, int[] attributeIds)
+        private static void CopyNamedAttributes(World world, Entity target, in AttributeBuffer source, int[] attributeIds)
         {
             for (int i = 0; i < attributeIds.Length; i++)
             {
                 int attributeId = attributeIds[i];
-                if (!source.HasAttribute(attributeId) || !target.HasAttribute(attributeId))
+                if (!source.HasAttribute(attributeId) || !world.Get<AttributeBuffer>(target).HasAttribute(attributeId))
                 {
                     continue;
                 }
 
-                target.SetCurrent(attributeId, source.GetCurrent(attributeId));
+                AttributeMutationOps.SetBase(world, target, attributeId, source.GetCurrent(attributeId));
             }
         }
 
@@ -159,6 +164,29 @@ namespace Ludots.Core.Gameplay.Morph
                 {
                     target.AddTag(tagId);
                 }
+            }
+        }
+    }
+
+    internal static class MorphEffectCleanup
+    {
+        public static void EnsureTargetStartsWithoutInheritedEffects(World world, Entity target)
+        {
+            if (!world.IsAlive(target) || !world.Has<ActiveEffectContainer>(target))
+            {
+                return;
+            }
+
+            ref var container = ref world.Get<ActiveEffectContainer>(target);
+            while (container.Count > 0)
+            {
+                Entity effectEntity = container.GetEntity(0);
+                if (world.IsAlive(effectEntity))
+                {
+                    world.Destroy(effectEntity);
+                }
+
+                container.Remove(effectEntity);
             }
         }
     }

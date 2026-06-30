@@ -58,22 +58,17 @@ namespace Ludots.Core.Gameplay.Morph
         {
             while (_requests.TryDequeue(out RuntimeEntityMorphRequest request))
             {
-                if (!TryExecute(in request, out Entity target))
-                {
-                    continue;
-                }
-
+                Entity target = Execute(in request);
                 PublishReceipt(in request, target);
             }
         }
 
-        private bool TryExecute(in RuntimeEntityMorphRequest request, out Entity target)
+        private Entity Execute(in RuntimeEntityMorphRequest request)
         {
-            target = default;
             Entity source = request.Source;
             if (!World.IsAlive(source))
             {
-                return false;
+                throw new MorphExecutionException("Entity morph failed because the source entity is no longer alive.");
             }
 
             if (string.IsNullOrWhiteSpace(request.TargetTemplateId))
@@ -88,38 +83,69 @@ namespace Ludots.Core.Gameplay.Morph
 
             if (!MorphPlacementResolver.TryResolve(World, in request, profile.Placement, out Fix64Vec2 positionCm, out float facingAngleRad, out bool hasFacing))
             {
-                return false;
+                throw new MorphExecutionException(
+                    $"Entity morph failed because placement mode '{profile.Placement}' could not resolve a world position.");
             }
 
             MorphSnapshot snapshot = MorphSnapshot.Capture(World, source, in profile);
-            target = MaterializeTarget(request.TargetTemplateId);
+            ValidateStableIdPolicy(in snapshot, profile.StableIdPolicy);
+
+            Entity target = Entity.Null;
+            try
+            {
+                target = MaterializeTarget(request.TargetTemplateId);
+                ApplyWorldPosition(World, target, positionCm);
+                if (hasFacing)
+                {
+                    ApplyFacing(World, target, facingAngleRad);
+                }
+
+                ApplyStableIdPolicy(target, in snapshot, profile.StableIdPolicy);
+                MorphInheritanceApplier.Apply(World, target, in snapshot, in profile);
+
+                if (profile.ReplaceSelection)
+                {
+                    MorphSelectionRewire.ReplaceSource(_selection, source, target);
+                }
+
+                PublishOnMorphEffect(in request, target);
+
+                if (profile.DestroySource)
+                {
+                    PresentationEntityLifecycle.RequestDestroy(World, source, "Entity morph consume source");
+                }
+
+                return target;
+            }
+            catch
+            {
+                RollbackMaterializedTarget(target);
+                throw;
+            }
+        }
+
+        private static void ValidateStableIdPolicy(in MorphSnapshot snapshot, MorphStableIdPolicy policy)
+        {
+            if (policy == MorphStableIdPolicy.Transfer && !snapshot.HasStableId)
+            {
+                throw new MorphExecutionException("Entity morph failed because stableIdPolicy=Transfer requires source PresentationStableId.");
+            }
+        }
+
+        private void RollbackMaterializedTarget(Entity target)
+        {
             if (!World.IsAlive(target))
             {
-                return false;
+                return;
             }
 
-            ApplyWorldPosition(World, target, positionCm);
-            if (hasFacing)
+            if (World.Has<PresentationStableId>(target))
             {
-                ApplyFacing(World, target, facingAngleRad);
+                PresentationEntityLifecycle.RequestDestroy(World, target, "Entity morph rollback");
+                return;
             }
 
-            ApplyStableIdPolicy(target, in snapshot, profile.StableIdPolicy);
-            MorphInheritanceApplier.Apply(World, target, in snapshot, in profile);
-
-            if (profile.ReplaceSelection)
-            {
-                MorphSelectionRewire.ReplaceSource(_selection, source, target);
-            }
-
-            PublishOnMorphEffect(in request, target);
-
-            if (profile.DestroySource)
-            {
-                PresentationEntityLifecycle.RequestDestroy(World, source, "Entity morph consume source");
-            }
-
-            return true;
+            World.Destroy(target);
         }
 
         private Entity MaterializeTarget(string templateId)
@@ -140,11 +166,6 @@ namespace Ludots.Core.Gameplay.Morph
             switch (policy)
             {
                 case MorphStableIdPolicy.Transfer:
-                    if (!snapshot.HasStableId)
-                    {
-                        throw new InvalidOperationException("Morph stableIdPolicy=Transfer requires source PresentationStableId.");
-                    }
-
                     if (World.Has<PresentationStableId>(target))
                     {
                         World.Set(target, new PresentationStableId { Value = snapshot.StableId });
