@@ -22,8 +22,8 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
-    "runtimeEntityMorphQueueCapacity": 131072,
-    "runtimeEntityMorphReceiptQueueCapacity": 131072,
+    "runtimeEntityLifecycleQueueCapacity": 131072,
+    "runtimeEntityLifecycleReceiptQueueCapacity": 131072,
     "cameraCulling": {
       "highLodDistanceCm": 4000.0,
       "mediumLodDistanceCm": 10000.0,

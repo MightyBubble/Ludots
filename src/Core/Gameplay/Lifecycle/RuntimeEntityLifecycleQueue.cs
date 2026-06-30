@@ -2,9 +2,9 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 
-namespace Ludots.Core.Gameplay.Morph
+namespace Ludots.Core.Gameplay.Lifecycle
 {
-    public struct RuntimeEntityMorphRequest
+    public struct RuntimeEntityLifecycleRequest
     {
         public Entity Source;
         public Entity EffectContextSource;
@@ -12,18 +12,15 @@ namespace Ludots.Core.Gameplay.Morph
         public Entity EffectContextTargetContext;
         public EffectConfigParams EffectConfigParams;
         public string TargetTemplateId;
-        public int MorphProfileId;
-        public int OnMorphEffectTemplateId;
+        public int OnCompleteEffectTemplateId;
         public Fix64Vec2 PlacementOverrideCm;
         public byte HasPlacementOverride;
-        public float FacingOverrideRad;
-        public byte HasFacingOverride;
         public int ReceiptChannelId;
         public int ReceiptId;
         public byte EmitReceipt;
     }
 
-    public struct RuntimeEntityMorphReceipt
+    public struct RuntimeEntityLifecycleReceipt
     {
         public int ReceiptChannelId;
         public int ReceiptId;
@@ -32,28 +29,28 @@ namespace Ludots.Core.Gameplay.Morph
         public string TargetTemplateId;
     }
 
-    public sealed class RuntimeEntityMorphQueue
+    public sealed class RuntimeEntityLifecycleQueue
     {
-        private readonly RuntimeEntityMorphRequest[] _items;
+        private readonly RuntimeEntityLifecycleRequest[] _items;
         private int _head;
         private int _tail;
         private int _count;
 
-        public RuntimeEntityMorphQueue(int capacity = 4096)
+        public RuntimeEntityLifecycleQueue(int capacity = 4096)
         {
             if (capacity < 16)
             {
                 capacity = 16;
             }
 
-            _items = new RuntimeEntityMorphRequest[capacity];
+            _items = new RuntimeEntityLifecycleRequest[capacity];
         }
 
         public int Count => _count;
         public int Capacity => _items.Length;
         public int FreeCapacity => _items.Length - _count;
 
-        public bool TryEnqueue(in RuntimeEntityMorphRequest request)
+        public bool TryEnqueue(in RuntimeEntityLifecycleRequest request)
         {
             if (_count >= _items.Length)
             {
@@ -66,7 +63,7 @@ namespace Ludots.Core.Gameplay.Morph
             return true;
         }
 
-        public bool TryDequeue(out RuntimeEntityMorphRequest request)
+        public bool TryDequeue(out RuntimeEntityLifecycleRequest request)
         {
             if (_count == 0)
             {
@@ -88,26 +85,26 @@ namespace Ludots.Core.Gameplay.Morph
         }
     }
 
-    public sealed class RuntimeEntityMorphReceiptQueue
+    public sealed class RuntimeEntityLifecycleReceiptQueue
     {
-        private readonly RuntimeEntityMorphReceipt[] _items;
+        private readonly RuntimeEntityLifecycleReceipt[] _items;
         private int _head;
         private int _tail;
         private int _count;
 
-        public RuntimeEntityMorphReceiptQueue(int capacity = 4096)
+        public RuntimeEntityLifecycleReceiptQueue(int capacity = 4096)
         {
             if (capacity < 16)
             {
                 capacity = 16;
             }
 
-            _items = new RuntimeEntityMorphReceipt[capacity];
+            _items = new RuntimeEntityLifecycleReceipt[capacity];
         }
 
         public int Count => _count;
 
-        public bool TryEnqueue(in RuntimeEntityMorphReceipt receipt)
+        public bool TryEnqueue(in RuntimeEntityLifecycleReceipt receipt)
         {
             if (_count >= _items.Length)
             {
@@ -120,7 +117,7 @@ namespace Ludots.Core.Gameplay.Morph
             return true;
         }
 
-        public bool TryDequeue(out RuntimeEntityMorphReceipt receipt)
+        public bool TryDequeue(out RuntimeEntityLifecycleReceipt receipt)
         {
             if (_count == 0)
             {

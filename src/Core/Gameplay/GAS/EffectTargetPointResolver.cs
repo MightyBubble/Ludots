@@ -83,6 +83,6 @@ namespace Ludots.Core.Gameplay.GAS
         public bool AllowSourceWorldPositionFallback { get; init; }
 
         public static EffectTargetPointResolveOptions CreateUnit => new() { AllowSourceWorldPositionFallback = true };
-        public static EffectTargetPointResolveOptions MorphAtTargetPoint => new() { AllowSourceWorldPositionFallback = false };
+        public static EffectTargetPointResolveOptions DeployAtTargetPoint => new() { AllowSourceWorldPositionFallback = false };
     }
 }

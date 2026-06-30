@@ -29,7 +29,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "Relation", EffectPresetType.Relation },
             { "Exchange", EffectPresetType.Exchange },
             { "CompleteProgression", EffectPresetType.CompleteProgression },
-            { "Morph", EffectPresetType.Morph },
+            { "DeployConsumeSource", EffectPresetType.DeployConsumeSource },
         };
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
-            { "MorphEntity", BuiltinHandlerId.MorphEntity },
+            { "DeployConsumeSource", BuiltinHandlerId.DeployConsumeSource },
         };
 
         /// <summary>

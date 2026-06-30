@@ -12,7 +12,6 @@
   { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" },
-  { "Path": "GAS/morph_profiles.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/target_dispatch_presets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/ability_form_sets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/context_groups.json", "Policy": "ArrayById", "IdField": "id" },

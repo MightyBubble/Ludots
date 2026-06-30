@@ -13,14 +13,13 @@
     }
   },
   {
-    "id": "Effect.Morph.Reference.DeployConsumeSource",
-    "presetType": "Morph",
+    "id": "Effect.Lifecycle.Reference.DeployConsumeSource",
+    "presetType": "DeployConsumeSource",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "morph": {
+    "lifecycleDeploy": {
       "subject": "Source",
-      "targetTemplateId": "Entity.Template.MorphTarget",
-      "morphProfileId": "morph.rts.deploy_consume_source"
+      "targetTemplateId": "Entity.Template.LifecycleTarget"
     }
   }
 ]

@@ -1,9 +1,9 @@
 using Arch.Core;
 using Ludots.Core.Input.Selection;
 
-namespace Ludots.Core.Gameplay.Morph
+namespace Ludots.Core.Gameplay.Lifecycle
 {
-    internal static class MorphSelectionRewire
+    internal static class LifecycleSelectionRewire
     {
         public static void ReplaceSource(SelectionRuntime? selection, Entity source, Entity target)
         {

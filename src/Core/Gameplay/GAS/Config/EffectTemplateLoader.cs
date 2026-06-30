@@ -11,7 +11,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
-using Ludots.Core.Gameplay.Morph;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -26,7 +26,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
-        private readonly MorphProfileRegistry? _morphProfiles;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -42,8 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
-            ScopeKeyRegistry? progressionScopeKeys = null,
-            MorphProfileRegistry? morphProfiles = null)
+            ScopeKeyRegistry? progressionScopeKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -51,7 +49,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _targetDispatchPresets = targetDispatchPresets;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
-            _morphProfiles = morphProfiles;
         }
 
         public void Load(
@@ -287,7 +284,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
-            var morph = CompileMorph(cfg.Morph, cfg.Id, relativePath);
+            var lifecycleDeploy = CompileLifecycleDeploy(cfg.LifecycleDeploy, cfg.Id, relativePath);
             var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
             int progressionId = 0;
@@ -414,22 +411,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.Morph != null && presetType != EffectPresetType.Morph)
+            if (cfg.LifecycleDeploy != null && presetType != EffectPresetType.DeployConsumeSource)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'morph' block is only valid when presetType=Morph.");
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'lifecycleDeploy' block is only valid when presetType=DeployConsumeSource.");
             }
-            if (presetType == EffectPresetType.Morph)
+            if (presetType == EffectPresetType.DeployConsumeSource)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Morph requires lifetime=Instant.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires lifetime=Instant.");
                 }
-                if (cfg.Morph == null)
+                if (cfg.LifecycleDeploy == null)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Morph requires a 'morph' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires a 'lifecycleDeploy' block.");
                 }
             }
 
@@ -453,7 +450,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
-                Morph = morph,
+                LifecycleDeploy = lifecycleDeploy,
                 ProgressionScope = progressionScope,
                 ProgressionChange = progressionChange,
                 ProgressionId = progressionId,
@@ -564,56 +561,42 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private MorphDescriptor CompileMorph(MorphConfig? cfg, string ownerId, string relativePath)
-        {
-            return Compile(cfg, ownerId, relativePath, _morphProfiles);
-        }
-
-        public static MorphDescriptor Compile(MorphConfig? cfg, string ownerId, string relativePath, MorphProfileRegistry? morphProfiles = null)
+        private static LifecycleDeployDescriptor CompileLifecycleDeploy(LifecycleDeployConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null)
             {
                 return default;
             }
 
-            if (morphProfiles == null)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: morph profiles are not loaded.");
-            }
-
             RelationEntitySlot subject = ParseRelationEntitySlot(
                 cfg.Subject ?? "Source",
                 ownerId,
-                "morph.subject",
+                "lifecycleDeploy.subject",
                 relativePath);
             if (subject == RelationEntitySlot.None)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: morph.subject cannot be None.");
+                    $"Effect template '{ownerId}' in {relativePath}: lifecycleDeploy.subject cannot be None.");
             }
 
-            string targetTemplateId = RequireString(cfg.TargetTemplateId, ownerId, relativePath, "morph.targetTemplateId");
-            string morphProfileId = RequireString(cfg.MorphProfileId, ownerId, relativePath, "morph.morphProfileId");
-            int profileId = morphProfiles.GetId(morphProfileId);
+            string targetTemplateId = RequireString(cfg.TargetTemplateId, ownerId, relativePath, "lifecycleDeploy.targetTemplateId");
 
-            int onMorphEffectTemplateId = 0;
-            if (!string.IsNullOrWhiteSpace(cfg.OnMorphEffect))
+            int onCompleteEffectTemplateId = 0;
+            if (!string.IsNullOrWhiteSpace(cfg.OnCompleteEffect))
             {
-                onMorphEffectTemplateId = EffectTemplateIdRegistry.GetId(cfg.OnMorphEffect);
-                if (onMorphEffectTemplateId <= 0)
+                onCompleteEffectTemplateId = EffectTemplateIdRegistry.GetId(cfg.OnCompleteEffect);
+                if (onCompleteEffectTemplateId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{ownerId}' in {relativePath}: morph.onMorphEffect references unknown effect template '{cfg.OnMorphEffect}'.");
+                        $"Effect template '{ownerId}' in {relativePath}: lifecycleDeploy.onCompleteEffect references unknown effect template '{cfg.OnCompleteEffect}'.");
                 }
             }
 
-            return new MorphDescriptor
+            return new LifecycleDeployDescriptor
             {
                 Subject = subject,
                 TargetTemplateId = targetTemplateId,
-                MorphProfileId = profileId,
-                OnMorphEffectTemplateId = onMorphEffectTemplateId,
+                OnCompleteEffectTemplateId = onCompleteEffectTemplateId,
             };
         }
 

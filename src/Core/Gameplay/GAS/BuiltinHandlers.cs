@@ -7,7 +7,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Morph;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
@@ -34,7 +34,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
-            registry.Register(BuiltinHandlerId.MorphEntity, HandleMorphEntity);
+            registry.Register(BuiltinHandlerId.DeployConsumeSource, HandleDeployConsumeSource);
         }
 
         public static void HandleApplyModifiers(
@@ -468,7 +468,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        public static void HandleMorphEntity(
+        public static void HandleDeployConsumeSource(
             World world,
             Entity effectEntity,
             ref EffectContext context,
@@ -476,33 +476,18 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectTemplateData templateData)
         {
             var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.MorphRequests == null)
+            if (runtime?.LifecycleRequests == null)
             {
-                throw new InvalidOperationException("MorphEntity requires RuntimeEntityMorphQueue in BuiltinHandlerExecutionContext.");
+                throw new InvalidOperationException("DeployConsumeSource requires RuntimeEntityLifecycleQueue in BuiltinHandlerExecutionContext.");
             }
 
-            if (runtime.MorphProfiles == null)
+            ref readonly var deploy = ref templateData.LifecycleDeploy;
+            if (string.IsNullOrWhiteSpace(deploy.TargetTemplateId))
             {
-                throw new InvalidOperationException("MorphEntity requires MorphProfileRegistry in BuiltinHandlerExecutionContext.");
+                throw new InvalidOperationException("DeployConsumeSource requires a non-empty lifecycleDeploy.targetTemplateId.");
             }
 
-            ref readonly var morph = ref templateData.Morph;
-            if (string.IsNullOrWhiteSpace(morph.TargetTemplateId))
-            {
-                throw new InvalidOperationException("MorphEntity requires a non-empty morph.targetTemplateId.");
-            }
-
-            if (morph.MorphProfileId <= 0)
-            {
-                throw new InvalidOperationException("MorphEntity requires a valid morph.morphProfileId.");
-            }
-
-            if (!runtime.MorphProfiles.TryGet(morph.MorphProfileId, out MorphProfileDescriptor profile))
-            {
-                throw new InvalidOperationException($"MorphEntity references unknown morph profile id '{morph.MorphProfileId}'.");
-            }
-
-            Entity subject = ResolveRelationEntity(in context, morph.Subject);
+            Entity subject = ResolveRelationEntity(in context, deploy.Subject);
             if (!world.IsAlive(subject))
             {
                 return;
@@ -510,19 +495,18 @@ namespace Ludots.Core.Gameplay.GAS
 
             if (world.Has<PresentationDestroyPending>(subject))
             {
-                throw new MorphExecutionException("Entity morph failed because the source entity is already pending destroy.");
+                throw new LifecycleExecutionException("DeployConsumeSource failed because the source entity is already pending destroy.");
             }
 
-            var request = new RuntimeEntityMorphRequest
+            var request = new RuntimeEntityLifecycleRequest
             {
                 Source = subject,
                 EffectContextSource = context.Source,
                 EffectContextTarget = context.Target,
                 EffectContextTargetContext = context.TargetContext,
                 EffectConfigParams = mergedParams,
-                TargetTemplateId = morph.TargetTemplateId,
-                MorphProfileId = morph.MorphProfileId,
-                OnMorphEffectTemplateId = morph.OnMorphEffectTemplateId,
+                TargetTemplateId = deploy.TargetTemplateId,
+                OnCompleteEffectTemplateId = deploy.OnCompleteEffectTemplateId,
             };
 
             if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out Fix64Vec2 preservedTargetPoint))
@@ -531,15 +515,15 @@ namespace Ludots.Core.Gameplay.GAS
                 request.PlacementOverrideCm = preservedTargetPoint;
             }
 
-            if (!MorphPlacementResolver.TryResolve(world, in request, profile.Placement, out _, out _, out _))
+            if (!LifecyclePlacementResolver.TryResolveAtTargetPoint(world, in request, out _))
             {
-                throw new MorphExecutionException(
-                    $"Entity morph failed because placement mode '{profile.Placement}' could not resolve a world position.");
+                throw new LifecycleExecutionException(
+                    "DeployConsumeSource failed because target point could not be resolved.");
             }
 
-            if (!runtime.MorphRequests.TryEnqueue(request))
+            if (!runtime.LifecycleRequests.TryEnqueue(request))
             {
-                throw new InvalidOperationException("RuntimeEntityMorphQueue capacity exceeded while handling MorphEntity.");
+                throw new InvalidOperationException("RuntimeEntityLifecycleQueue capacity exceeded while handling DeployConsumeSource.");
             }
         }
 
