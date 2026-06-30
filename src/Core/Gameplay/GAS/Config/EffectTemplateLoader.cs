@@ -584,7 +584,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "submitOrderFromBlackboard.storedTarget");
             string pointMoveOrderTypeKey = RequireString(cfg.PointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
             string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
-            int entityOrderIntArg0 = cfg.EntityOrderIntArg0 ?? 0;
+            int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
             OrderSubmitMode submitMode = ParseOrderSubmitMode(
                 RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
                 ownerId,
