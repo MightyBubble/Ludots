@@ -1289,28 +1289,28 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            int moveToCount = 0;
+            int formationEligibleCount = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
-                if (string.Equals(_routedOrdersScratch[i].OrderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase))
+                if (IsGroupMoveFormationOrderType(_routedOrdersScratch[i].OrderTypeKey))
                 {
-                    moveToCount++;
+                    formationEligibleCount++;
                 }
             }
 
-            int moveToIndex = 0;
+            int formationIndex = 0;
             for (int i = 0; i < _routedOrdersScratch.Count; i++)
             {
                 Order order = _routedOrdersScratch[i].Order;
                 string orderTypeKey = _routedOrdersScratch[i].OrderTypeKey;
-                if (moveToCount > 1 &&
+                if (formationEligibleCount > 1 &&
                     !mapping.IsSkillMapping &&
                     mapping.SelectionType == OrderSelectionType.Position &&
                     _config.GroupMoveFormation.Mode != GroupMoveFormationMode.None &&
-                    string.Equals(orderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase))
+                    IsGroupMoveFormationOrderType(orderTypeKey))
                 {
-                    ApplyGroupMoveFormation(mapping, orderTypeKey, moveToCount, moveToIndex, ref order);
-                    moveToIndex++;
+                    ApplyGroupMoveFormation(mapping, orderTypeKey, formationEligibleCount, formationIndex, ref order);
+                    formationIndex++;
                 }
 
                 _orderSubmitHandler!(in order);
@@ -1395,7 +1395,7 @@ namespace Ludots.Core.Input.Orders
             if (totalCount <= 1 ||
                 mapping.IsSkillMapping ||
                 mapping.SelectionType != OrderSelectionType.Position ||
-                !string.Equals(orderTypeKey, "moveTo", StringComparison.OrdinalIgnoreCase) ||
+                !IsGroupMoveFormationOrderType(orderTypeKey) ||
                 _config.GroupMoveFormation.Mode != GroupMoveFormationMode.Grid ||
                 order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
                 order.Args.Spatial.Mode != OrderCollectionMode.Single)
@@ -1405,6 +1405,31 @@ namespace Ludots.Core.Input.Orders
 
             int spacingCm = Math.Max(1, _config.GroupMoveFormation.SpacingCm);
             order.Args.Spatial.WorldCm = MoveFormationPlanner.ComputeOffsetTarget(order.Args.Spatial.WorldCm, index, totalCount, spacingCm);
+        }
+
+        private bool IsGroupMoveFormationOrderType(string orderTypeKey)
+        {
+            if (_config.GroupMoveFormation.Mode == GroupMoveFormationMode.None ||
+                string.IsNullOrWhiteSpace(orderTypeKey))
+            {
+                return false;
+            }
+
+            List<string> keys = _config.GroupMoveFormation.OrderTypeKeys;
+            if (keys == null || keys.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < keys.Count; i++)
+            {
+                if (string.Equals(keys[i], orderTypeKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool TryResolveHoveredEntity(out Entity entity)

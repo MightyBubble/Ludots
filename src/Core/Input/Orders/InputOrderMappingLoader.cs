@@ -189,6 +189,38 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.cursorTargetRangeCm must be positive when cursorTargetPolicy is {mapping.CursorTargetPolicy}.");
                 }
             }
+
+            ValidateGroupMoveFormation(config.GroupMoveFormation, source);
+        }
+
+        private static void ValidateGroupMoveFormation(GroupMoveFormationSettings settings, string source)
+        {
+            if (settings.Mode != GroupMoveFormationMode.Grid)
+            {
+                return;
+            }
+
+            if (settings.OrderTypeKeys == null || settings.OrderTypeKeys.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{source}.groupMoveFormation.orderTypeKeys must be a non-empty array when mode is Grid.");
+            }
+
+            for (int i = 0; i < settings.OrderTypeKeys.Count; i++)
+            {
+                string key = settings.OrderTypeKeys[i];
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    throw new InvalidOperationException(
+                        $"{source}.groupMoveFormation.orderTypeKeys[{i}] must be a non-empty string.");
+                }
+
+                if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"{source}.groupMoveFormation.orderTypeKeys[{i}] must not contain leading or trailing whitespace.");
+                }
+            }
         }
 
         private static void ValidateActorOrderRouting(ActorOrderRoutingSettings routing, string path)

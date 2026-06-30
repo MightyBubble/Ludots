@@ -216,6 +216,12 @@ namespace Ludots.Core.Input.Orders
         public GroupMoveFormationMode Mode { get; set; } = GroupMoveFormationMode.None;
 
         public int SpacingCm { get; set; } = 120;
+
+        /// <summary>
+        /// Order type keys eligible for grid formation when mode is Grid.
+        /// Required when mode is Grid.
+        /// </summary>
+        public List<string> OrderTypeKeys { get; set; } = new();
     }
 
     public sealed class ActorOrderRoutingMatch

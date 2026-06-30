@@ -22,8 +22,17 @@ InstantCompleteOrderSystem
   └─ CommitFromOrder → building blackboard
 
 CreateUnit onSpawnEffect
-  └─ SubmitOrderFromBlackboard → spawned unit moveTo / castAbility
+  └─ SubmitOrderFromBlackboard（Effect.Rts.Shared.ApplySpawnTargetOrder）
+       └─ unitCreation.onSpawnEffect + copySourcePlayerOwner: true
+       └─ spawned unit moveTo / castAbility（需 PlayerOwner）
 ```
+
+## 前置条件
+
+- `actorOrderRouting` mapping 须 `isSkillMapping: false`
+- `TagOps` 在 mapping 创建期必须可用（RtsDemoMod 经 LudotsCoreMod 注册）
+- Train CreateUnit effect 须设置 `unitCreation.onSpawnEffect` 指向 `SubmitOrderFromBlackboard` preset
+- Spawn 出的单位须继承 `PlayerOwner`（`copySourcePlayerOwner: true`）
 
 ## 交互层
 
@@ -38,7 +47,7 @@ CreateUnit onSpawnEffect
 
 - `assets/GAS/order_types.json` — `setSpawnTarget`, `Rts.SpawnTarget.*`
 - `assets/Input/input_order_mappings.json` — `actorOrderRouting`
-- `assets/GAS/effects.json` — `Effect.Rts.Shared.ApplySpawnTargetOrder`
+- `assets/GAS/effects.json` — `Effect.Rts.Shared.ApplySpawnTargetOrder` + train `unitCreation.onSpawnEffect`
 
 ## 参考案例
 

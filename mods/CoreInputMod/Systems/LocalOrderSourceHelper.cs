@@ -161,9 +161,15 @@ namespace CoreInputMod.Systems
                 mapping.SetSkillMappingOverrideProvider(mappingOverrideProvider.TryResolve);
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) &&
-                tagOpsObj is TagOps tagOps)
+            if (RequiresActorOrderRouting(config))
             {
+                if (!_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) ||
+                    tagOpsObj is not TagOps tagOps)
+                {
+                    throw new InvalidOperationException(
+                        $"[{ctx.ModId}] input_order_mappings.json defines actorOrderRouting but TagOps is not registered.");
+                }
+
                 mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                     ActorOrderRoutingMatcher.TryResolveCandidate(_world, tagOps, actor, routing.Candidates, out matchedCandidate));
             }
@@ -493,6 +499,20 @@ namespace CoreInputMod.Systems
 
                 return target != Entity.Null;
             }
+        }
+
+        private static bool RequiresActorOrderRouting(InputOrderMappingConfig config)
+        {
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                InputOrderMapping mapping = config.Mappings[i];
+                if (mapping?.ActorOrderRouting is { Candidates.Count: > 0 })
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
     }

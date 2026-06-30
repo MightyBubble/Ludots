@@ -104,7 +104,7 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new Team { Id = 1 });
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
             BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(900f, 0f, 1200f), in keys);
 
             var registry = new BuiltinHandlerRegistry();
@@ -196,7 +196,7 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new Team { Id = 1 });
+            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
             Entity garrison = world.Create();
             BlackboardStoredTargetOps.SetEntity(world, source, garrison, in keys);
 

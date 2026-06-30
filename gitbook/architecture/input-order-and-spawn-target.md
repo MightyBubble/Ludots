@@ -25,7 +25,8 @@
         "selectionType": "HoveredEntityOrPosition",
         "match": {
           "abilitySlotIndex": 2,
-          "abilityIdKeySuffix": ".Train"
+          "abilityIdKeySuffix": ".Train",
+          "blockedAnyTags": [ "Progression.Rts.WarpGate" ]
         }
       },
       {
@@ -46,14 +47,37 @@
 - `blockedAnyTags`：actor 带任一 tag 时不匹配（如 Gateway 研究 WarpGate 后跳过 Train 路由）
 - 多 candidate 命中时取最高 `priority`
 
+### 前置条件
+
+- `isSkillMapping: false`：actor 路由仅用于非技能 Command 类输入
+- `TagOps` 必须已注册：`LocalOrderSourceHelper` 在 mapping 创建期检测 `actorOrderRouting`，缺少 TagOps 时 fail-fast（不延迟到运行时 Command）
+- per-candidate `selectionType` 可覆盖 mapping 级默认值
+
 ### Per-candidate selection
 
 - `selectionType` 可选；缺省时继承 mapping 级 `selectionType`
 - `HoveredEntityOrPosition`：优先 hovered command target，否则 ground position（用于 point rally 与 entity/garrison rally 共用一条路由）
 
-Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；未配置 resolver 且 mapping 声明了 `actorOrderRouting` 时运行时 fail-fast。
+Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；mapping 声明了 `actorOrderRouting` 但未注册 TagOps 时，在 mapping 创建期 fail-fast。
 
-## 3 Order：`instantComplete` + `persistentStoredTarget`
+## 3 Group move formation
+
+`groupMoveFormation` 为全局配置，控制多选 position move 的网格偏移：
+
+```json
+{
+  "groupMoveFormation": {
+    "mode": "Grid",
+    "spacingCm": 140,
+    "orderTypeKeys": [ "moveTo" ]
+  }
+}
+```
+
+- `mode: Grid` 时 `orderTypeKeys` 必填且非空；Core 不得硬编码具体 order type key
+- 混合 actor 路由提交时，仅对命中 `orderTypeKeys` 的子集应用 formation
+
+## 4 Order：`instantComplete` + `persistentStoredTarget`
 
 Mod 在 `order_types.json` 注册 instant-complete order：
 
@@ -65,29 +89,42 @@ Mod 在 `order_types.json` 注册 instant-complete order：
 
 `InstantCompleteOrderSystem` 要求 `instantComplete=true` 的 order 必须完整配置 `persistentStoredTarget`。
 
-## 4 Blackboard：`BlackboardStoredTargetOps`
+## 5 Blackboard：`BlackboardStoredTargetOps`
 
 通用读写/提交 API，key 集合由 Mod 在 `orderBlackboardKeys` 注册：
 
 - `Point` / `HexCell` / `Entity` 三种 target kind
 - `CommitFromOrder` 优先级：Entity > Hex > Point
 
-## 5 Effect：`SubmitOrderFromBlackboard`
+## 6 Effect：`SubmitOrderFromBlackboard`
 
 `presetType: SubmitOrderFromBlackboard`（`lifetime: Instant`）在 on-spawn 等时机从 source entity 读取 stored target，向 target entity 提交 Mod 配置的 order：
 
 - point/hex → `pointMoveOrderTypeKey`（如 `moveTo`）
 - entity → `entityOrderTypeKey` + `entityOrderIntArg0`（如 garrison `castAbility` slot 1）
+- 目标 entity 必须带 `PlayerOwner`；Core 不接受 `Team.Id` 作为 player 身份 fallback
+- source 无 stored target 时不提交 order（静默 no-op，由 Mod 决定是否配置 on-spawn effect）
 
-## 6 Mod 挂靠示例
+Train CreateUnit 挂接示例：
+
+```json
+{
+  "unitCreation": {
+    "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
+    "copySourcePlayerOwner": true
+  }
+}
+```
+
+## 7 Mod 挂靠示例
 
 RtsDemoMod：
 
 - `setSpawnTarget` order + `Rts.SpawnTarget.*` keys
 - Command 路由：Train slot → set spawn target；其他单位 → moveTo
-- `Effect.Rts.Shared.ApplySpawnTargetOrder` 挂于 train `onSpawnEffect`
+- `Effect.Rts.Shared.ApplySpawnTargetOrder` 挂于 train CreateUnit 的 `unitCreation.onSpawnEffect`
 
-## 7 深度材料
+## 8 深度材料
 
 - 机制说明：`docs/architecture/interaction/features/companion/r6_rally_point.md`
 - Kanban：SY56 Blackboard Rally Point、SY14 Actor Routing

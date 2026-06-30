@@ -514,6 +514,7 @@ namespace Ludots.Tests.GAS
                 {
                     Mode = GroupMoveFormationMode.Grid,
                     SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -572,6 +573,35 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 Vector3.Distance(orders[0].Args.Spatial.WorldCm, orders[1].Args.Spatial.WorldCm),
                 Is.GreaterThan(50f));
+        }
+
+        [Test]
+        public void GroupMoveFormation_GridMode_RequiresOrderTypeKeys()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveFormation = new GroupMoveFormationSettings
+                {
+                    Mode = GroupMoveFormationMode.Grid,
+                    SpacingCm = 120,
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveFormation.orderTypeKeys"));
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()
