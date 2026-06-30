@@ -2,13 +2,11 @@
   {
     "id": "rts_war3_peasant",
     "components": {
-      "Name": { "Value": "Peasant" },
-      "MoveToCapable": {},
-      "Team": { "Id": 1 },
+      "Name": { "Value": "Peasant" },      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400 } },
+      "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.War3.BuildLumberMill",
@@ -99,13 +97,11 @@
   {
     "id": "rts_war3_footman",
     "components": {
-      "Name": { "Value": "Footman" },
-      "MoveToCapable": {},
-      "Team": { "Id": 1 },
+      "Name": { "Value": "Footman" },      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 420 } },
+      "AttributeBuffer": { "base": { "Health": 420, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold",
@@ -239,13 +235,11 @@
   {
     "id": "rts_ra2_rhino",
     "components": {
-      "Name": { "Value": "Rhino Tank" },
-      "MoveToCapable": {},
-      "Team": { "Id": 1 },
+      "Name": { "Value": "Rhino Tank" },      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 660 } },
+      "AttributeBuffer": { "base": { "Health": 660, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -263,13 +257,11 @@
   {
     "id": "rts_ra2_rocket_trooper",
     "components": {
-      "Name": { "Value": "Rocket Trooper" },
-      "MoveToCapable": {},
-      "Team": { "Id": 1 },
+      "Name": { "Value": "Rocket Trooper" },      "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 240 } },
+      "AttributeBuffer": { "base": { "Health": 240, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold",
@@ -316,13 +308,11 @@
   {
     "id": "rts_sc2_probe",
     "components": {
-      "Name": { "Value": "Probe" },
-      "MoveToCapable": {},
-      "Team": { "Id": 3 },
+      "Name": { "Value": "Probe" },      "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500 } },
+      "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -340,13 +330,11 @@
   {
     "id": "rts_sc2_zealot",
     "components": {
-      "Name": { "Value": "Zealot" },
-      "MoveToCapable": {},
-      "Team": { "Id": 3 },
+      "Name": { "Value": "Zealot" },      "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 500, "Shield": 500 } },
+      "AttributeBuffer": { "base": { "Health": 500, "Shield": 500, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -364,13 +352,11 @@
   {
     "id": "rts_zerg_drone",
     "components": {
-      "Name": { "Value": "Drone" },
-      "MoveToCapable": {},
-      "Team": { "Id": 2 },
+      "Name": { "Value": "Drone" },      "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700 } },
+      "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Zerg.MorphSpawningPool"

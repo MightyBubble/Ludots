@@ -8,7 +8,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -20,7 +19,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly int _moveToOrderTypeId;
-        private readonly float _defaultSpeedCmPerSec;
         private readonly float _stopRadiusCm;
         private readonly int _moveSpeedAttributeId;
         private readonly List<Entity> _completedOrders = new(64);
@@ -29,12 +27,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             World world,
             OrderTypeRegistry orderTypeRegistry,
             int moveToOrderTypeId,
-            float defaultSpeedCmPerSec = 600f,
             float stopRadiusCm = 40f) : base(world)
         {
             _orderTypeRegistry = orderTypeRegistry ?? throw new ArgumentNullException(nameof(orderTypeRegistry));
             _moveToOrderTypeId = moveToOrderTypeId;
-            _defaultSpeedCmPerSec = Math.Max(0f, defaultSpeedCmPerSec);
             _stopRadiusCm = Math.Max(0f, stopRadiusCm);
             _moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
         }
@@ -76,8 +72,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    float speedCmPerSec = ResolveMoveSpeed(entity, out bool hasExplicitMoveSpeed);
-                    if (speedCmPerSec <= 0f)
+                    // Movement is gated on an explicit, authored MoveSpeed attribute, which is the single
+                    // source of truth for both "is this entity movable" and "how fast". OrderBuffer alone is
+                    // a general command/ability queue and does not imply movability; there is no implicit
+                    // default speed. Structures and other orderable-but-immovable entities (no MoveSpeed)
+                    // ignore moveTo instead of teleporting.
+                    if (!TryResolveMoveSpeed(entity, out float speedCmPerSec))
                     {
                         continue;
                     }
@@ -91,16 +91,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             _completedOrders.Add(entity);
                         }
 
-                        continue;
-                    }
-
-                    // Direct WorldPositionCm movement is gated on explicit movement capability.
-                    // OrderBuffer alone is a general command/ability queue and does not imply movability;
-                    // a dynamic (non-static) physics body already qualified above. Structures and other
-                    // orderable-but-immovable entities ignore moveTo instead of teleporting their position
-                    // off the implicit default speed.
-                    if (!IsLinearMoveCapable(entity, hasExplicitMoveSpeed))
-                    {
                         continue;
                     }
 
@@ -124,29 +114,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        // An orderable entity may be driven along a direct WorldPositionCm route only when it declares an
-        // explicit movement capability: a positive authored MoveSpeed attribute, a core MoveToCapable marker,
-        // or a mass-navigation agent. (Dynamic physics bodies are handled by TryDrivePhysicsBody above.)
-        private bool IsLinearMoveCapable(Entity entity, bool hasExplicitMoveSpeed)
-            => hasExplicitMoveSpeed
-               || World.Has<MoveToCapable>(entity)
-               || World.Has<MassNavigationAgent>(entity);
-
-        private float ResolveMoveSpeed(Entity entity, out bool hasExplicitMoveSpeed)
+        // Resolves the authored move speed. Returns false when the entity declares no positive MoveSpeed
+        // attribute: such an entity is not movable via this system and its moveTo orders are ignored.
+        // There is intentionally no default-speed fallback — speed must be explicit, data-driven (SSOT).
+        private bool TryResolveMoveSpeed(Entity entity, out float speedCmPerSec)
         {
-            hasExplicitMoveSpeed = false;
+            speedCmPerSec = 0f;
             if (_moveSpeedAttributeId != AttributeRegistry.InvalidId &&
                 World.TryGet(entity, out AttributeBuffer attributes))
             {
                 float configured = attributes.GetCurrent(_moveSpeedAttributeId);
                 if (configured > 0f)
                 {
-                    hasExplicitMoveSpeed = true;
-                    return configured;
+                    speedCmPerSec = configured;
+                    return true;
                 }
             }
 
-            return _defaultSpeedCmPerSec;
+            return false;
         }
 
         private bool TryDrivePhysicsBody(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)

@@ -54,7 +54,6 @@ namespace Ludots.Core.Config
             Register<FacingDirection>("FacingDirection");
             Register("WorldPositionCm", SetWorldPositionCm);
             Register<SpatialPartitionExcluded>("SpatialPartitionExcluded");
-            Register<MoveToCapable>("MoveToCapable");
             Register<Ludots.Core.Gameplay.Components.Team>("Team");
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");

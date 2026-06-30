@@ -57,7 +57,8 @@
       },
       "AttributeBuffer": {
         "base": {
-          "Health": 100
+          "Health": 100,
+          "MoveSpeed": 600
         }
       },
       "AbilityStateBuffer": {
@@ -65,7 +66,6 @@
       },
       "GameplayTagContainer": {},
       "OrderBuffer": {},
-      "MoveToCapable": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
       "BlackboardIntBuffer": {}

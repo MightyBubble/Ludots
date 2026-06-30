@@ -1180,7 +1180,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var firstStepPos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
@@ -1229,7 +1229,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var worldPos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
@@ -1273,7 +1273,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var velocity = world.Get<Velocity2D>(actor).Linear;
@@ -1316,7 +1316,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             var velocity = world.Get<Velocity2D>(actor).Linear;
@@ -1364,7 +1364,7 @@ namespace Ludots.Tests.GAS
             buffer.SetActiveDirect(in firstOrder, priority: 60);
             buffer.Enqueue(in secondOrder, priority: 60, expireStep: -1, insertStep: 1);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
 
             ref var promotedBuffer = ref world.Get<OrderBuffer>(actor);
@@ -1385,7 +1385,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             // Structure-like entity: keeps OrderBuffer for production/ability queues but declares no
-            // movement capability (no MoveSpeed attribute, no MoveToCapable marker, no physics body).
+            // movement capability (no positive MoveSpeed attribute, no physics body).
             var structure = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 OrderBuffer.CreateEmpty());
@@ -1408,7 +1408,7 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = structure, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
             system.Update(0.10f);
             system.Update(0.10f);
 
@@ -1420,16 +1420,20 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void MoveToWorldCmOrderSystem_MoveToCapableMarker_MovesUsingDefaultSpeed()
+        public void MoveToWorldCmOrderSystem_ZeroMoveSpeed_IgnoresMoveToWithoutDefaultFallback()
         {
             using var world = World.Create();
 
-            // No MoveSpeed attribute: movement capability comes solely from the explicit marker,
-            // and the per-system default speed is used.
+            // Entity declares an explicit MoveSpeed of 0 (intentionally immovable). With no implicit
+            // default-speed fallback, it must not move.
+            int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                OrderBuffer.CreateEmpty(),
-                new MoveToCapable());
+                new AttributeBuffer(),
+                OrderBuffer.CreateEmpty());
+
+            ref var attributes = ref world.Get<AttributeBuffer>(actor);
+            attributes.SetBase(moveSpeedId, 0f);
 
             var orderTypes = new OrderTypeRegistry();
             orderTypes.Register(new OrderTypeConfig
@@ -1449,11 +1453,13 @@ namespace Ludots.Tests.GAS
             var order = new Order { Actor = actor, OrderTypeId = 101, Args = args };
             buffer.SetActiveDirect(in order, priority: 60);
 
-            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, defaultSpeedCmPerSec: 300f, stopRadiusCm: 5f);
+            var system = new MoveToWorldCmOrderSystem(world, orderTypes, 101, stopRadiusCm: 5f);
+            system.Update(0.10f);
             system.Update(0.10f);
 
             var pos = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
-            That(pos.X, Is.EqualTo(30).Within(1), "MoveToCapable marker must enable default-speed movement.");
+            That(pos.X, Is.EqualTo(0), "MoveSpeed of 0 must not fall back to a default speed.");
+            That(pos.Y, Is.EqualTo(0));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
         }
 
