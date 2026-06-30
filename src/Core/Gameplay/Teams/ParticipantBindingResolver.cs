@@ -128,17 +128,20 @@ namespace Ludots.Core.Gameplay.Teams
                 Upsert(world, entity, new PlayerOwner { PlayerId = binding.PlayerId });
                 Upsert(world, entity, new Team { Id = binding.TeamId });
                 playerLookup.Register(binding.PlayerId, entity);
+            }
 
-                if (binding.IsLocal)
+            MapLaunchContext? launchContext = session.LaunchContext;
+            if (launchContext?.HasSelectedPlayer == true)
+            {
+                int selectedPlayerId = launchContext.SelectedPlayerId;
+                if (!playerLookup.TryGet(selectedPlayerId, out Entity selectedEntity))
                 {
-                    if (localPlayerId != 0)
-                    {
-                        throw new InvalidOperationException($"Map '{mapId}' declares multiple local player bindings.");
-                    }
-
-                    localPlayerId = binding.PlayerId;
-                    localPlayerEntity = entity;
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' launch context SelectedPlayerId {selectedPlayerId} references an unbound player.");
                 }
+
+                localPlayerId = selectedPlayerId;
+                localPlayerEntity = selectedEntity;
             }
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes);

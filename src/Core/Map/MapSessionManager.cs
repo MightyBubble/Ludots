@@ -6,7 +6,10 @@ using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Map
 {
-    public sealed record MapSessionEntrySnapshot(string MapId, MapSessionState State);
+    public sealed record MapSessionEntrySnapshot(
+        string MapId,
+        MapSessionState State,
+        MapLaunchContext? LaunchContext = null);
 
     public sealed record MapSessionManagerSnapshot(
         IReadOnlyList<MapSessionEntrySnapshot> Sessions,
@@ -142,7 +145,7 @@ namespace Ludots.Core.Map
             var sessions = new List<MapSessionEntrySnapshot>(_sessions.Count);
             foreach (var pair in _sessions)
             {
-                sessions.Add(new MapSessionEntrySnapshot(pair.Key.Value, pair.Value.State));
+                sessions.Add(new MapSessionEntrySnapshot(pair.Key.Value, pair.Value.State, pair.Value.LaunchContext));
             }
 
             var focusTopFirst = _focusStack.ToArray();
@@ -171,6 +174,7 @@ namespace Ludots.Core.Map
                 }
 
                 session.State = sessionSnapshot.State;
+                session.LaunchContext = sessionSnapshot.LaunchContext;
             }
 
             for (int i = 0; i < snapshot.FocusStack.Count; i++)

@@ -296,7 +296,7 @@ namespace Ludots.Adapter.Raylib
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
-                engine.LoadMap(config.StartupMapId);
+                engine.LoadStartupMap();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;

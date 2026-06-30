@@ -364,11 +364,18 @@ namespace Ludots.Core.Persistence
                 for (int i = 0; i < snapshot.Sessions.Count; i++)
                 {
                     MapSessionEntrySnapshot session = snapshot.Sessions[i];
-                    sessions.Add(new JsonObject
+                    var sessionObject = new JsonObject
                     {
                         ["mapId"] = session.MapId,
                         ["state"] = session.State.ToString()
-                    });
+                    };
+                    JsonObject? launchContext = WriteLaunchContext(session.LaunchContext);
+                    if (launchContext != null)
+                    {
+                        sessionObject["launchContext"] = launchContext;
+                    }
+
+                    sessions.Add(sessionObject);
                 }
 
                 var focusStack = new JsonArray();
@@ -404,7 +411,8 @@ namespace Ludots.Core.Persistence
 
                     sessions.Add(new MapSessionEntrySnapshot(
                         RequireString(session, "mapId"),
-                        sessionState));
+                        sessionState,
+                        ReadLaunchContext(session["launchContext"])));
                 }
 
                 JsonArray focusStackArray = RequireArray(root, "focusStack");
@@ -817,6 +825,59 @@ namespace Ludots.Core.Persistence
             }
 
             return node.GetValue<string>();
+        }
+
+        private static JsonObject? WriteLaunchContext(MapLaunchContext? launchContext)
+        {
+            if (launchContext == null || launchContext.IsEmpty)
+            {
+                return null;
+            }
+
+            var root = new JsonObject();
+            if (launchContext.HasSelectedPlayer)
+            {
+                root["selectedPlayerId"] = launchContext.SelectedPlayerId;
+            }
+
+            if (launchContext.Metadata != null && launchContext.Metadata.Count > 0)
+            {
+                var metadata = new JsonObject();
+                foreach (KeyValuePair<string, object> pair in launchContext.Metadata)
+                {
+                    metadata[pair.Key] = WriteGlobal(pair.Key, pair.Value);
+                }
+
+                root["metadata"] = metadata;
+            }
+
+            return root;
+        }
+
+        private static MapLaunchContext? ReadLaunchContext(JsonNode? node)
+        {
+            if (node == null)
+            {
+                return null;
+            }
+
+            JsonObject root = node as JsonObject ??
+                throw new SaveContextException("Map session launchContext must be an object.");
+
+            int selectedPlayerId = root["selectedPlayerId"]?.GetValue<int>() ?? 0;
+            IReadOnlyDictionary<string, object>? metadata = null;
+            if (root["metadata"] is JsonObject metadataObject)
+            {
+                var values = new Dictionary<string, object>(StringComparer.Ordinal);
+                foreach (KeyValuePair<string, JsonNode?> pair in metadataObject)
+                {
+                    values[pair.Key] = ReadGlobal(pair.Key, pair.Value);
+                }
+
+                metadata = values;
+            }
+
+            return MapLaunchContext.Create(selectedPlayerId, metadata);
         }
     }
 }

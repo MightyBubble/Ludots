@@ -41,7 +41,7 @@
     { "TeamId": 2, "RepresentativeInstanceId": "road.team.red" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue", "IsLocal": true }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "road.player.blue" }
   ],
   "ParticipantRelationships": {
     "Teams": [
