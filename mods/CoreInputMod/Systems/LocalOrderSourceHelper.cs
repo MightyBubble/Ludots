@@ -161,6 +161,13 @@ namespace CoreInputMod.Systems
                 mapping.SetSkillMappingOverrideProvider(mappingOverrideProvider.TryResolve);
             }
 
+            if (_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) &&
+                tagOpsObj is TagOps tagOps)
+            {
+                mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out string orderTypeKey) =>
+                    ActorOrderRoutingMatcher.TryResolveOrderTypeKey(_world, tagOps, actor, routing.Candidates, out orderTypeKey));
+            }
+
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
             return mapping;
         }

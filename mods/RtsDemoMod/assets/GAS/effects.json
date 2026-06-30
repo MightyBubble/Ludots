@@ -1,15 +1,22 @@
 [
   {
-    "id": "Effect.Rts.Shared.ApplyProducerRally",
+    "id": "Effect.Rts.Shared.ApplySpawnTargetOrder",
     "tags": [
-      "Effect.Rts.Shared.Rally"
+      "Effect.Rts.Shared.SpawnTarget"
     ],
-    "presetType": "SubmitOrderFromRally",
+    "presetType": "SubmitOrderFromBlackboard",
     "lifetime": "Instant",
     "participatesInResponse": false,
-    "submitOrderFromRally": {
-      "rallyHolder": "Source",
-      "orderActor": "Target",
+    "submitOrderFromBlackboard": {
+      "source": "Source",
+      "target": "Target",
+      "storedTarget": {
+        "targetKindKey": "Rts.SpawnTarget.Kind",
+        "targetPositionKey": "Rts.SpawnTarget.Position",
+        "targetEntityKey": "Rts.SpawnTarget.Entity",
+        "hexQKey": "Rts.SpawnTarget.HexQ",
+        "hexRKey": "Rts.SpawnTarget.HexR"
+      },
       "pointMoveOrderTypeKey": "moveTo",
       "entityOrderTypeKey": "castAbility",
       "entityOrderIntArg0": 1,
@@ -222,7 +229,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 280,
-      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
     }
   },
@@ -335,7 +342,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 340,
-      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
     }
   },
@@ -405,7 +412,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 260,
-      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
+      "onSpawnEffect": "Effect.Rts.Shared.ApplySpawnTargetOrder",
       "copySourcePlayerOwner": true
     }
   },

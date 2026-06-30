@@ -36,6 +36,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
             public JsonNode? ValidationGraph { get; set; }
+            public bool? InstantComplete { get; set; }
+            public PersistentStoredTargetConfigJson? PersistentStoredTarget { get; set; }
+        }
+
+        public sealed class PersistentStoredTargetConfigJson
+        {
+            public string? TargetKindKey { get; set; }
+            public string? TargetPositionKey { get; set; }
+            public string? TargetEntityKey { get; set; }
+            public string? HexQKey { get; set; }
+            public string? HexRKey { get; set; }
         }
 
         public sealed class OrderRuleConfigJson
@@ -178,8 +189,52 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
                 EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
                 IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
-                ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path)
+                ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path),
+                InstantComplete = RequireBool(json.InstantComplete, key, path, "instantComplete"),
+                PersistentStoredTargetKeys = ResolvePersistentStoredTarget(json.PersistentStoredTarget, json.InstantComplete, key, path),
             };
+        }
+
+        private static BlackboardStoredTargetKeys ResolvePersistentStoredTarget(
+            PersistentStoredTargetConfigJson? json,
+            bool? instantComplete,
+            string key,
+            string path)
+        {
+            bool isInstant = instantComplete == true;
+            if (json == null)
+            {
+                if (isInstant)
+                {
+                    throw new InvalidOperationException(
+                        $"Order type '{key}' in '{path}' with instantComplete=true must define persistentStoredTarget.");
+                }
+
+                return default;
+            }
+
+            if (!isInstant)
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' defines persistentStoredTarget but instantComplete is not true.");
+            }
+
+            return new BlackboardStoredTargetKeys(
+                ResolveBlackboardKeyFromString(RequireString(json.TargetKindKey, key, path, "persistentStoredTarget.targetKindKey"), key, path, "persistentStoredTarget.targetKindKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.TargetPositionKey, key, path, "persistentStoredTarget.targetPositionKey"), key, path, "persistentStoredTarget.targetPositionKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.TargetEntityKey, key, path, "persistentStoredTarget.targetEntityKey"), key, path, "persistentStoredTarget.targetEntityKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.HexQKey, key, path, "persistentStoredTarget.hexQKey"), key, path, "persistentStoredTarget.hexQKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.HexRKey, key, path, "persistentStoredTarget.hexRKey"), key, path, "persistentStoredTarget.hexRKey"));
+        }
+
+        private static int ResolveBlackboardKeyFromString(string text, string key, string path, string fieldName)
+        {
+            if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
+            {
+                return blackboardKey;
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.");
         }
 
         private static int RequireInt(int? value, string key, string path, string fieldName)

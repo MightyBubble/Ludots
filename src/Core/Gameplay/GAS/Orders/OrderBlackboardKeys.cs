@@ -80,33 +80,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         /// </summary>
         public const int Hold_Active = 140;
         
-        // ========== Rally Point (160-169) ==========
-
-        /// <summary>
-        /// Rally target kind (BlackboardIntBuffer). Values from <see cref="RallyTargetKind"/>.
-        /// </summary>
-        public const int Rally_TargetKind = 160;
-
-        /// <summary>
-        /// Rally world position for point / cached hex resolution (BlackboardSpatialBuffer).
-        /// </summary>
-        public const int Rally_TargetPosition = 161;
-
-        /// <summary>
-        /// Rally target entity for garrison / entity-target orders (BlackboardEntityBuffer).
-        /// </summary>
-        public const int Rally_TargetEntity = 162;
-
-        /// <summary>
-        /// Rally hex axial Q (BlackboardIntBuffer).
-        /// </summary>
-        public const int Rally_HexQ = 163;
-
-        /// <summary>
-        /// Rally hex axial R (BlackboardIntBuffer).
-        /// </summary>
-        public const int Rally_HexR = 164;
-
         // ========== Patrol Order (150-159) ==========
         
         /// <summary>
@@ -162,11 +135,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             new("Attack.IsAttackMove", Attack_IsAttackMove),
             new("Stop.Type", Stop_Type),
             new("Hold.Active", Hold_Active),
-            new("Rally.TargetKind", Rally_TargetKind),
-            new("Rally.TargetPosition", Rally_TargetPosition),
-            new("Rally.TargetEntity", Rally_TargetEntity),
-            new("Rally.HexQ", Rally_HexQ),
-            new("Rally.HexR", Rally_HexR),
             new("Patrol.Waypoints", Patrol_Waypoints),
             new("Patrol.CurrentIndex", Patrol_CurrentIndex),
             new("Patrol.Direction", Patrol_Direction),

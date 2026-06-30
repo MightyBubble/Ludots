@@ -29,7 +29,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "Relation", EffectPresetType.Relation },
             { "Exchange", EffectPresetType.Exchange },
             { "CompleteProgression", EffectPresetType.CompleteProgression },
-            { "SubmitOrderFromRally", EffectPresetType.SubmitOrderFromRally },
+            { "SubmitOrderFromBlackboard", EffectPresetType.SubmitOrderFromBlackboard },
         };
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
-            { "SubmitOrderFromRally", BuiltinHandlerId.SubmitOrderFromRally },
+            { "SubmitOrderFromBlackboard", BuiltinHandlerId.SubmitOrderFromBlackboard },
         };
 
         /// <summary>

@@ -17,7 +17,8 @@
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
       "intArg0BlackboardKey": "Cast.SlotIndex",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "castAbility.Start": {
       "orderTypeId": 104,
@@ -35,7 +36,8 @@
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
       "intArg0BlackboardKey": "Cast.SlotIndex",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "castAbility.End": {
       "orderTypeId": 105,
@@ -53,7 +55,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "Cast.SlotIndex",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "moveTo": {
       "orderTypeId": 101,
@@ -71,7 +74,8 @@
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "attackTarget": {
       "orderTypeId": 102,
@@ -89,7 +93,8 @@
       "spatialBlackboardKey": "Attack.MovePosition",
       "entityBlackboardKey": "Attack.TargetEntity",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "stop": {
       "orderTypeId": 103,
@@ -107,25 +112,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
-    },
-    "setRallyPoint": {
-      "orderTypeId": 106,
-      "label": "Set Rally Point",
-      "maxQueueSize": 1,
-      "sameTypePolicy": "Replace",
-      "queueFullPolicy": "DropOldest",
-      "priority": 40,
-      "bufferWindowMs": 0,
-      "pendingBufferWindowMs": 0,
-      "canInterruptSelf": true,
-      "queuedModeMaxSize": 1,
-      "allowQueuedMode": false,
-      "clearQueueOnActivate": true,
-      "spatialBlackboardKey": "none",
-      "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "chainPass": {
       "orderTypeId": 1,
@@ -143,7 +131,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "chainNegate": {
       "orderTypeId": 2,
@@ -161,7 +150,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "chainActivateEffect": {
       "orderTypeId": 3,
@@ -179,7 +169,8 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {

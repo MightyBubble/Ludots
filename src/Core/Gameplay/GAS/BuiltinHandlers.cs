@@ -35,7 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
-            registry.Register(BuiltinHandlerId.SubmitOrderFromRally, HandleSubmitOrderFromRally);
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
         }
 
         public static void HandleApplyModifiers(
@@ -469,22 +469,23 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        public static void HandleSubmitOrderFromRally(
+        public static void HandleSubmitOrderFromBlackboard(
             World world,
             Entity effectEntity,
             ref EffectContext context,
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            ref readonly SubmitOrderFromRallyDescriptor descriptor = ref templateData.SubmitOrderFromRally;
-            Entity rallyHolder = ResolveRelationEntity(in context, descriptor.RallyHolderSlot);
-            Entity orderActor = ResolveRelationEntity(in context, descriptor.OrderActorSlot);
-            if (!world.IsAlive(rallyHolder) || !world.IsAlive(orderActor))
+            ref readonly SubmitOrderFromBlackboardDescriptor descriptor = ref templateData.SubmitOrderFromBlackboard;
+            Entity sourceEntity = ResolveRelationEntity(in context, descriptor.SourceSlot);
+            Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);
+            if (!world.IsAlive(sourceEntity) || !world.IsAlive(orderActor))
             {
                 return;
             }
 
-            if (!RallyBlackboardOps.TryRead(world, rallyHolder, out RallyTargetSnapshot rally) || !rally.HasTarget)
+            if (!BlackboardStoredTargetOps.TryRead(world, sourceEntity, in descriptor.StoredTargetKeys, out BlackboardStoredTargetSnapshot storedTarget) ||
+                !storedTarget.HasTarget)
             {
                 return;
             }
@@ -492,16 +493,16 @@ namespace Ludots.Core.Gameplay.GAS
             var runtime = BuiltinHandlerRuntimeScope.Current;
             if (runtime?.OrderTypeRegistry == null)
             {
-                throw new InvalidOperationException("SubmitOrderFromRally requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
             }
 
             if (runtime.StepRateHz <= 0)
             {
-                throw new InvalidOperationException("SubmitOrderFromRally requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
             }
 
-            if (!TryBuildOrderFromRally(
-                    in rally,
+            if (!TryBuildOrderFromStoredTarget(
+                    in storedTarget,
                     in descriptor,
                     orderActor,
                     ResolvePlayerId(world, orderActor),
@@ -526,22 +527,22 @@ namespace Ludots.Core.Gameplay.GAS
                 runtime.StepRateHz);
         }
 
-        private static bool TryBuildOrderFromRally(
-            in RallyTargetSnapshot rally,
-            in SubmitOrderFromRallyDescriptor descriptor,
+        private static bool TryBuildOrderFromStoredTarget(
+            in BlackboardStoredTargetSnapshot storedTarget,
+            in SubmitOrderFromBlackboardDescriptor descriptor,
             Entity orderActor,
             int playerId,
             OrderTypeRegistry orderTypeRegistry,
             out Order order)
         {
             order = default;
-            switch (rally.Kind)
+            switch (storedTarget.Kind)
             {
-                case RallyTargetKind.Point:
-                case RallyTargetKind.HexCell:
+                case BlackboardStoredTargetKind.Point:
+                case BlackboardStoredTargetKind.HexCell:
                     if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
                         !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
-                        !RallyBlackboardOps.TryResolveWorldPositionCm(in rally, out Vector3 worldPositionCm))
+                        !BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
                     {
                         return false;
                     }
@@ -564,10 +565,10 @@ namespace Ludots.Core.Gameplay.GAS
                     };
                     return true;
 
-                case RallyTargetKind.Entity:
+                case BlackboardStoredTargetKind.Entity:
                     if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
                         !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
-                        rally.TargetEntity == Entity.Null)
+                        storedTarget.TargetEntity == Entity.Null)
                     {
                         return false;
                     }
@@ -577,7 +578,7 @@ namespace Ludots.Core.Gameplay.GAS
                         OrderTypeId = entityOrderTypeId,
                         PlayerId = playerId,
                         Actor = orderActor,
-                        Target = rally.TargetEntity,
+                        Target = storedTarget.TargetEntity,
                         SubmitMode = descriptor.SubmitMode,
                         Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
                     };

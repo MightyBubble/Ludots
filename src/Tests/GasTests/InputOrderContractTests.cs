@@ -211,7 +211,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(actionIds.Contains(mapping.ActionId), Is.True, $"RTS mapping action '{mapping.ActionId}' is not declared in default_input.json.");
             }
 
-            Assert.That(mappingConfig.Mappings.Any(mapping => string.Equals(mapping.OrderTypeKey, "moveTo", StringComparison.Ordinal)),
+            Assert.That(mappingConfig.Mappings.Any(ReferencesOrderTypeKey("moveTo")),
                 Is.True,
                 "RTS local command path must resolve to an explicit move order.");
 
@@ -371,6 +371,32 @@ namespace Ludots.Tests.GAS
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private static Func<InputOrderMapping, bool> ReferencesOrderTypeKey(string orderTypeKey)
+        {
+            return mapping =>
+            {
+                if (string.Equals(mapping.OrderTypeKey, orderTypeKey, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+
+                if (mapping.ActorOrderRouting?.Candidates == null)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < mapping.ActorOrderRouting.Candidates.Count; i++)
+                {
+                    if (string.Equals(mapping.ActorOrderRouting.Candidates[i].OrderTypeKey, orderTypeKey, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
         }
 
         private static string FindRepoRoot()

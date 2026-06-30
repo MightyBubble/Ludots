@@ -46,7 +46,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>Complete an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 61,
 
-        /// <summary>Read a producer rally target and submit the configured order to the spawned unit.</summary>
-        SubmitOrderFromRally = 62,
+        /// <summary>Read configured blackboard stored target keys and submit orders to the spawned unit.</summary>
+        SubmitOrderFromBlackboard = 62,
     }
 }

@@ -134,12 +134,28 @@ namespace Ludots.Core.Input.Orders
 
                 if (string.IsNullOrWhiteSpace(mapping.OrderTypeKey))
                 {
-                    throw new InvalidOperationException($"{path}.orderTypeKey must be a non-empty string.");
+                    if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"{path} must define orderTypeKey or actorOrderRouting.candidates.");
+                    }
                 }
-
-                if (!string.Equals(mapping.OrderTypeKey, mapping.OrderTypeKey.Trim(), StringComparison.Ordinal))
+                else if (!string.Equals(mapping.OrderTypeKey, mapping.OrderTypeKey.Trim(), StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException($"{path}.orderTypeKey must not contain leading or trailing whitespace.");
+                }
+
+                if (mapping.ActorOrderRouting != null)
+                {
+                    ValidateActorOrderRouting(mapping.ActorOrderRouting, path);
+                }
+
+                if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
+                {
+                    if (string.IsNullOrWhiteSpace(mapping.OrderTypeKey))
+                    {
+                        throw new InvalidOperationException($"{path}.orderTypeKey must be a non-empty string.");
+                    }
                 }
 
                 if (mapping.HeldPolicy == HeldPolicy.StartEnd && mapping.Trigger != InputTriggerType.Held)
@@ -172,6 +188,32 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException(
                         $"{path}.cursorTargetRangeCm must be positive when cursorTargetPolicy is {mapping.CursorTargetPolicy}.");
                 }
+            }
+        }
+
+        private static void ValidateActorOrderRouting(ActorOrderRoutingSettings routing, string path)
+        {
+            if (routing.Candidates == null || routing.Candidates.Count == 0)
+            {
+                throw new InvalidOperationException($"{path}.actorOrderRouting.candidates must be a non-empty array.");
+            }
+
+            for (int i = 0; i < routing.Candidates.Count; i++)
+            {
+                ActorOrderRoutingCandidate candidate = routing.Candidates[i] ??
+                    throw new InvalidOperationException($"{path}.actorOrderRouting.candidates[{i}] must be an object.");
+                string candidatePath = $"{path}.actorOrderRouting.candidates[{i}]";
+                if (string.IsNullOrWhiteSpace(candidate.OrderTypeKey))
+                {
+                    throw new InvalidOperationException($"{candidatePath}.orderTypeKey must be a non-empty string.");
+                }
+
+                if (!string.Equals(candidate.OrderTypeKey, candidate.OrderTypeKey.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{candidatePath}.orderTypeKey must not contain leading or trailing whitespace.");
+                }
+
+                candidate.Match ??= new ActorOrderRoutingMatch();
             }
         }
 

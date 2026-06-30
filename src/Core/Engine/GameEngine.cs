@@ -1095,10 +1095,7 @@ namespace Ludots.Core.Engine
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
-            int cfgSetRallyPoint = orderTypeRegistry.TryGetId("setRallyPoint", out int setRallyPointId) ? setRallyPointId : 0;
-            var setRallyPointOrderSystem = cfgSetRallyPoint > 0
-                ? new SetRallyPointOrderSystem(World, orderTypeRegistry, cfgSetRallyPoint)
-                : null;
+            var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
             var moveToOrderSystem = new MoveToWorldCmOrderSystem(World, orderTypeRegistry, cfgMoveTo);
             var orderContinuationSystem = new OrderContinuationSystem(World, clock, orderTypeRegistry, orderRuleRegistry, stepRateHz);
 
@@ -1325,10 +1322,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityEndOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
-            if (setRallyPointOrderSystem != null)
-            {
-                RegisterSystem(setRallyPointOrderSystem, SystemGroup.AbilityActivation);
-            }
+            RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);

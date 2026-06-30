@@ -1,6 +1,6 @@
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
-    public enum RallyTargetKind : int
+    public enum BlackboardStoredTargetKind : int
     {
         None = 0,
         Point = 1,

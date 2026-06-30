@@ -47,6 +47,15 @@ namespace Ludots.Core.Input.Orders
     /// Delegate for submitting an order.
     /// </summary>
     public delegate void OrderSubmitHandler(in Order order);
+
+    /// <summary>
+    /// Delegate for resolving a per-actor order type key from actorOrderRouting candidates.
+    /// </summary>
+    public delegate bool ActorOrderRoutingResolver(
+        Entity actor,
+        ActorOrderRoutingSettings routing,
+        out string orderTypeKey);
+    
     
     /// <summary>
     /// Delegate for checking if a modifier key is held.
@@ -180,6 +189,7 @@ namespace Ludots.Core.Input.Orders
         private CursorTargetProvider? _cursorTargetProvider;
         private ContextScoredResolutionProvider? _contextScoredProvider;
         private SkillMappingOverrideProvider? _skillMappingOverrideProvider;
+        private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
         
         // Context
         private Entity _localPlayer;
@@ -324,6 +334,8 @@ namespace Ludots.Core.Input.Orders
         public void SetAutoTargetProvider(AutoTargetProvider provider) => _autoTargetProvider = provider;
         public void SetCursorTargetProvider(CursorTargetProvider provider) => _cursorTargetProvider = provider;
         public void SetContextScoredProvider(ContextScoredResolutionProvider provider) => _contextScoredProvider = provider;
+        public void SetActorOrderRoutingResolver(ActorOrderRoutingResolver resolver) =>
+            _actorOrderRoutingResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         public void SetSkillMappingOverrideProvider(SkillMappingOverrideProvider provider) => _skillMappingOverrideProvider = provider;
 
         public void SetInteractionActionBindings(InteractionActionBindings bindings)
@@ -429,7 +441,11 @@ namespace Ludots.Core.Input.Orders
                 }
                 
                 // TargetFirst or non-skill: immediate build and submit
-                if (TryBuildOrder(effectiveMapping, out var order))
+                if (effectiveMapping.ActorOrderRouting != null && effectiveMapping.ActorOrderRouting.Candidates.Count > 0)
+                {
+                    SubmitRoutedOrders(effectiveMapping);
+                }
+                else if (TryBuildOrder(effectiveMapping, out var order))
                 {
                     SubmitOrder(effectiveMapping, in order);
                 }
@@ -876,18 +892,22 @@ namespace Ludots.Core.Input.Orders
 
         private int RequireOrderTypeId(InputOrderMapping mapping, string orderTypeSuffix = "")
         {
-            string orderTypeKey = mapping.OrderTypeKey + orderTypeSuffix;
+            return RequireOrderTypeId(mapping.ActionId, mapping.OrderTypeKey + orderTypeSuffix);
+        }
+
+        private int RequireOrderTypeId(string actionId, string orderTypeKey)
+        {
             if (string.IsNullOrWhiteSpace(orderTypeKey))
             {
                 throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' must define non-empty orderTypeKey.");
+                    $"Input mapping '{actionId}' must define non-empty orderTypeKey.");
             }
 
             int orderTypeId = _orderTypeKeyResolver!(orderTypeKey);
             if (orderTypeId <= 0)
             {
                 throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' orderTypeKey '{orderTypeKey}' is not registered.");
+                    $"Input mapping '{actionId}' orderTypeKey '{orderTypeKey}' is not registered.");
             }
 
             return orderTypeId;
@@ -1108,12 +1128,23 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private bool TryBuildOrder(InputOrderMapping mapping, out Order order)
         {
-            order = default;
-            if (!HasExplicitLocalPlayer()) return false;
-            
-            int orderTypeId = RequireOrderTypeId(mapping);
-            
             Entity actor = ResolvePrimaryActor(mapping);
+            return TryBuildOrderForActor(mapping, actor, mapping.OrderTypeKey, out order);
+        }
+
+        private bool TryBuildOrderForActor(
+            InputOrderMapping mapping,
+            Entity actor,
+            string orderTypeKey,
+            out Order order)
+        {
+            order = default;
+            if (!HasExplicitLocalPlayer() || actor == default)
+            {
+                return false;
+            }
+
+            int orderTypeId = RequireOrderTypeId(mapping.ActionId, orderTypeKey);
             
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
@@ -1172,6 +1203,55 @@ namespace Ludots.Core.Input.Orders
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
+        }
+
+        private void SubmitRoutedOrders(InputOrderMapping mapping)
+        {
+            if (_actorOrderRoutingResolver == null)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' defines actorOrderRouting but no resolver is configured.");
+            }
+
+            if (mapping.SelectionType == OrderSelectionType.Entities)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' actorOrderRouting does not support Entities selection type.");
+            }
+
+            if (!TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch))
+            {
+                return;
+            }
+
+            for (int i = 0; i < _selectedActorsScratch.Count; i++)
+            {
+                Entity actor = _selectedActorsScratch[i];
+                if (actor == default)
+                {
+                    continue;
+                }
+
+                if (!_actorOrderRoutingResolver(actor, mapping.ActorOrderRouting!, out string orderTypeKey))
+                {
+                    continue;
+                }
+
+                if (!TryBuildOrderForActor(mapping, actor, orderTypeKey, out var order))
+                {
+                    continue;
+                }
+
+                if (_selectedActorsScratch.Count > 1 &&
+                    !mapping.IsSkillMapping &&
+                    mapping.SelectionType == OrderSelectionType.Position &&
+                    _config.GroupMoveFormation.Mode != GroupMoveFormationMode.None)
+                {
+                    ApplyGroupMoveFormation(mapping, _selectedActorsScratch.Count, i, ref order);
+                }
+
+                _orderSubmitHandler!(in order);
+            }
         }
 
         private Entity ResolvePrimaryActor(InputOrderMapping mapping)

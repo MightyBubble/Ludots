@@ -129,12 +129,12 @@
     }
   },
   {
-    "id": "SubmitOrderFromRally",
+    "id": "SubmitOrderFromBlackboard",
     "components": [],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "SubmitOrderFromRally" }
+      "OnApply": { "type": "builtin", "id": "SubmitOrderFromBlackboard" }
     }
   }
 ]

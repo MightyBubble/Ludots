@@ -44,12 +44,28 @@
     {
       "actionId": "Command",
       "trigger": "PressedThisFrame",
-      "orderTypeKey": "moveTo",
       "argsTemplate": {},
       "requireSelection": true,
       "selectionType": "Position",
       "isSkillMapping": false,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "actorOrderRouting": {
+        "candidates": [
+          {
+            "orderTypeKey": "setSpawnTarget",
+            "priority": 10,
+            "match": {
+              "abilitySlotIndex": 2,
+              "abilityIdKeySuffix": ".Train"
+            }
+          },
+          {
+            "orderTypeKey": "moveTo",
+            "priority": 0,
+            "match": {}
+          }
+        ]
+      }
     },
     {
       "actionId": "Stop",
