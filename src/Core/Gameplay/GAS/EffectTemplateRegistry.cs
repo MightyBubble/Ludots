@@ -30,6 +30,8 @@ namespace Ludots.Core.Gameplay.GAS
         Exchange = 13,
         /// <summary>Completes an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 14,
+        /// <summary>Atomic entity template replacement with inheritance profile.</summary>
+        Morph = 15,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -293,6 +295,14 @@ namespace Ludots.Core.Gameplay.GAS
         public bool SnapSubjectToParentPosition;
     }
 
+    public struct MorphDescriptor
+    {
+        public RelationEntitySlot Subject;
+        public string TargetTemplateId;
+        public int MorphProfileId;
+        public int OnMorphEffectTemplateId;
+    }
+
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -320,6 +330,7 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public MorphDescriptor Morph;
         public ScopeKey ProgressionScope;
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
         public int ProgressionId;

@@ -302,6 +302,7 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.ReResolveAndDispatch), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateProjectile), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.MorphEntity), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ExecuteExchange), Is.True);

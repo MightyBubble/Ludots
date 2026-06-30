@@ -1,0 +1,24 @@
+[
+  {
+    "id": "morph.rts.deploy_consume_source",
+    "placement": "AtTargetPoint",
+    "stableIdPolicy": "Transfer",
+    "destroySource": true,
+    "inherit": {
+      "identity": ["PlayerOwner", "Team"],
+      "attributes": {
+        "mode": "IntersectByName",
+        "names": ["Health"]
+      },
+      "tags": {
+        "strip": ["Unit.Mobile"]
+      },
+      "effects": {
+        "mode": "StripAll"
+      },
+      "selection": {
+        "replaceSourceInAllSets": true
+      }
+    }
+  }
+]

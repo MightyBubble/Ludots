@@ -45,5 +45,8 @@ namespace Ludots.Core.Gameplay.GAS
 
         /// <summary>Complete an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 61,
+
+        /// <summary>Replace an entity with a new template through the Morph runtime.</summary>
+        MorphEntity = 62,
     }
 }

@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Morph;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -32,6 +33,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
+            registry.Register(BuiltinHandlerId.MorphEntity, HandleMorphEntity);
         }
 
         public static void HandleApplyModifiers(
@@ -462,6 +464,48 @@ namespace Ludots.Core.Gameplay.GAS
             if (!runtime.ProgressionEvaluator.TryApply(scopeHost, templateData.ProgressionId, templateData.ProgressionChange))
             {
                 throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
+            }
+        }
+
+        public static void HandleMorphEntity(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.MorphRequests == null)
+            {
+                throw new InvalidOperationException("MorphEntity requires RuntimeEntityMorphQueue in BuiltinHandlerExecutionContext.");
+            }
+
+            ref readonly var morph = ref templateData.Morph;
+            if (string.IsNullOrWhiteSpace(morph.TargetTemplateId) || morph.MorphProfileId <= 0)
+            {
+                return;
+            }
+
+            Entity subject = ResolveRelationEntity(in context, morph.Subject);
+            if (!world.IsAlive(subject))
+            {
+                return;
+            }
+
+            var request = new RuntimeEntityMorphRequest
+            {
+                Source = subject,
+                EffectContextSource = context.Source,
+                EffectContextTarget = context.Target,
+                EffectContextTargetContext = context.TargetContext,
+                TargetTemplateId = morph.TargetTemplateId,
+                MorphProfileId = morph.MorphProfileId,
+                OnMorphEffectTemplateId = morph.OnMorphEffectTemplateId,
+            };
+
+            if (!runtime.MorphRequests.TryEnqueue(request))
+            {
+                throw new InvalidOperationException("RuntimeEntityMorphQueue capacity exceeded while handling MorphEntity.");
             }
         }
 

@@ -26,6 +26,8 @@ using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Spawning.Systems;
+using Ludots.Core.Gameplay.Morph;
+using Ludots.Core.Gameplay.Morph.Config;
 using Schedulers; // Added for JobScheduler
 using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
@@ -710,6 +712,8 @@ namespace Ludots.Core.Engine
                 relationshipMetricRegistry,
                 relationshipFlagRegistry);
             exchangeLoader.LoadIds(ConfigCatalog, ConfigConflictReport);
+            var morphProfileRegistry = new MorphProfileRegistry();
+            new MorphProfileLoader(ConfigPipeline, morphProfileRegistry).Load(ConfigCatalog, ConfigConflictReport);
             new ProgressionConfigLoader(
                 ConfigPipeline,
                 progressionDefinitions,
@@ -723,7 +727,8 @@ namespace Ludots.Core.Engine
                 gasConditions,
                 targetDispatchPresetRegistry,
                 exchangeOperations,
-                progressionScopeKeys);
+                progressionScopeKeys,
+                morphProfileRegistry);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
@@ -790,6 +795,7 @@ namespace Ludots.Core.Engine
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
+            var runtimeEntityMorphQueue = new RuntimeEntityMorphQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
@@ -1154,6 +1160,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
+            SetService(CoreServiceKeys.RuntimeEntityMorphQueue, runtimeEntityMorphQueue);
             SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue, runtimeEntitySpawnReceiptQueue);
             SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry, runtimeEntitySpawnReceiptChannels);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
@@ -1337,7 +1344,7 @@ namespace Ludots.Core.Engine
             };
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityMorphQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
@@ -1355,6 +1362,18 @@ namespace Ludots.Core.Engine
                 WorldSizeSpec,
                 presentationTimingDiagnostics,
                 componentAuthoringContext),
+                SystemGroup.EffectProcessing);
+            RegisterSystem(
+                new RuntimeEntityMorphSystem(
+                    World,
+                    runtimeEntityMorphQueue,
+                    morphProfileRegistry,
+                    MapLoader.TemplateRegistry,
+                    MapLoader.EntityTemplateKeys,
+                    presentationStableIds,
+                    effectRequestQueue,
+                    selection: selectionRuntime,
+                    authoringContext: componentAuthoringContext),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);

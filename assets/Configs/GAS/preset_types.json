@@ -127,5 +127,14 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "CompleteProgression" }
     }
+  },
+  {
+    "id": "Morph",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "MorphEntity" }
+    }
   }
 ]

@@ -45,6 +45,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
         public RelationConfig? Relation { get; set; }
+        /// <summary>Entity morph parameters (template replacement with inheritance profile).</summary>
+        public MorphConfig? Morph { get; set; }
         /// <summary>Entity-scoped progression completion parameters.</summary>
         public ProgressionCompletionConfig? Progression { get; set; }
 
@@ -271,5 +273,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public int? Base { get; set; }
         /// <summary>Graph program name for GraphProgram formula.</summary>
         public string? GraphProgram { get; set; }
+    }
+
+    /// <summary>Entity morph component configuration.</summary>
+    public sealed class MorphConfig
+    {
+        public string? Subject { get; set; }
+        public string? TargetTemplateId { get; set; }
+        public string? MorphProfileId { get; set; }
+        public string? OnMorphEffect { get; set; }
     }
 }
