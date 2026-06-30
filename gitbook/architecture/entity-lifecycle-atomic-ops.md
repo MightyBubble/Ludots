@@ -76,11 +76,12 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 
 ## 7 迁移计划（无向后兼容）
 
-| 阶段 | 动作 |
-|------|------|
-| M1 | 实现 Layer 0 ops + transaction executor | 进行中（`DeployConsumeSource` preset 内联；独立 atomic handler 待拆） |
-| M2 | `DeployConsumeSource` preset 替换 `morph.rts.deploy_consume_source` | 完成 |
-| M3 | 删除 Morph profile DSL、Morph preset、平行管线 | 完成 |
+| 阶段 | 动作 | 状态 |
+|------|------|------|
+| M0 | 冻结 morph schema；设计 + skill 落地 | 完成 |
+| M1 | Layer 0 ops + transaction executor | 进行中（preset 内联；独立 handler 待拆） |
+| M2 | `DeployConsumeSource` preset | 完成 |
+| M3 | 删除 Morph DSL / preset / 平行管线 | 完成 |
 
 ## 8 非目标
 
