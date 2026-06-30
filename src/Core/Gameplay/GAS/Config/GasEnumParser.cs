@@ -185,6 +185,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
             { "DeployConsumeSource", BuiltinHandlerId.DeployConsumeSource },
+            { "MaterializeTemplate", BuiltinHandlerId.MaterializeTemplate },
+            { "CopyIdentityComponents", BuiltinHandlerId.CopyIdentityComponents },
+            { "CopyAttributeSlice", BuiltinHandlerId.CopyAttributeSlice },
+            { "ClearActiveEffects", BuiltinHandlerId.ClearActiveEffects },
+            { "TransferStableId", BuiltinHandlerId.TransferStableId },
+            { "RewireSelection", BuiltinHandlerId.RewireSelection },
+            { "ConsumeEntity", BuiltinHandlerId.ConsumeEntity },
         };
 
         /// <summary>

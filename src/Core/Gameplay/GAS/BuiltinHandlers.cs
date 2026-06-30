@@ -35,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
             registry.Register(BuiltinHandlerId.DeployConsumeSource, HandleDeployConsumeSource);
+            EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
         public static void HandleApplyModifiers(

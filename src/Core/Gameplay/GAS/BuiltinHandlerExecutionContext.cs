@@ -22,6 +22,8 @@ namespace Ludots.Core.Gameplay.GAS
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
         public RuntimeEntityLifecycleQueue? LifecycleRequests { get; set; }
+        public EntityLifecycleRuntimeServices? LifecycleServices { get; set; }
+        public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
 

@@ -33,6 +33,73 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
+        public void LifecycleTransactionPrograms_DeployConsumeSource_HasSevenAtomicOps()
+        {
+            var ops = LifecycleTransactionPrograms.DeployConsumeSource;
+            That(ops.Length, Is.EqualTo(7));
+            That(ops[0], Is.EqualTo(LifecycleOpId.MaterializeTemplate));
+            That(ops[1], Is.EqualTo(LifecycleOpId.CopyIdentityComponents));
+            That(ops[2], Is.EqualTo(LifecycleOpId.CopyAttributeSlice));
+            That(ops[3], Is.EqualTo(LifecycleOpId.ClearActiveEffects));
+            That(ops[4], Is.EqualTo(LifecycleOpId.TransferStableId));
+            That(ops[5], Is.EqualTo(LifecycleOpId.RewireSelection));
+            That(ops[6], Is.EqualTo(LifecycleOpId.ConsumeEntity));
+        }
+
+        [Test]
+        public void RuntimeEntityLifecycleTransactionExecutor_RunsDeployProgram()
+        {
+            string templatesJson = @"[
+              {
+                ""id"": ""lifecycle_target"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": { ""Health"": 10 } },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(9000, 8000),
+                new PresentationStableId { Value = 11 },
+                new AttributeBuffer(),
+                new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
+            world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 55f);
+
+            var services = new EntityLifecycleRuntimeServices(
+                world,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new PresentationStableIdAllocator());
+
+            var state = new LifecycleTransactionState
+            {
+                Source = source,
+                TargetTemplateId = "lifecycle_target",
+                PlacementCm = Fix64Vec2.FromInt(9000, 8000),
+                Snapshot = LifecycleSnapshot.Capture(world, source),
+            };
+            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceDefaults(state);
+
+            Entity target = RuntimeEntityLifecycleTransactionExecutor.Execute(
+                services,
+                state,
+                LifecycleTransactionPrograms.DeployConsumeSource);
+
+            That(world.IsAlive(target), Is.True);
+            That(world.Has<PresentationDestroyPending>(source), Is.True);
+            That(world.Get<PresentationStableId>(target).Value, Is.EqualTo(11));
+        }
+
+        [Test]
         public void BuiltinHandlers_DeployConsumeSource_EnqueuesLifecycleRequests()
         {
             using var world = World.Create();

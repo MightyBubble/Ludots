@@ -46,7 +46,16 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>Complete an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 61,
 
-        /// <summary>Deploy at target point, inherit identity/health, transfer stableId, consume source.</summary>
+        /// <summary>Deploy at target point via lifecycle transaction program (Layer 3).</summary>
         DeployConsumeSource = 62,
+
+        // ── Entity lifecycle atomic ops (Layer 0) ──
+        MaterializeTemplate = 63,
+        CopyIdentityComponents = 64,
+        CopyAttributeSlice = 65,
+        ClearActiveEffects = 66,
+        TransferStableId = 67,
+        RewireSelection = 68,
+        ConsumeEntity = 69,
     }
 }

@@ -1342,7 +1342,16 @@ namespace Ludots.Core.Engine
             };
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
+            var entityLifecycleServices = new EntityLifecycleRuntimeServices(
+                World,
+                MapLoader.TemplateRegistry,
+                MapLoader.EntityTemplateKeys,
+                presentationStableIds,
+                selectionRuntime,
+                performerRuntime,
+                performerDefinitions,
+                componentAuthoringContext);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
@@ -1365,15 +1374,9 @@ namespace Ludots.Core.Engine
                 new RuntimeEntityLifecycleSystem(
                     World,
                     runtimeEntityLifecycleQueue,
-                    MapLoader.TemplateRegistry,
-                    MapLoader.EntityTemplateKeys,
-                    presentationStableIds,
+                    entityLifecycleServices,
                     effectRequestQueue,
-                    runtimeEntityLifecycleReceiptQueue,
-                    selection: selectionRuntime,
-                    performerRuntime: performerRuntime,
-                    performerDefinitions: performerDefinitions,
-                    authoringContext: componentAuthoringContext),
+                    runtimeEntityLifecycleReceiptQueue),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);

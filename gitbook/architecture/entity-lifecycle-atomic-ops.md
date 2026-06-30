@@ -79,7 +79,7 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 | 阶段 | 动作 | 状态 |
 |------|------|------|
 | M0 | 冻结 morph schema；设计 + skill 落地 | 完成 |
-| M1 | Layer 0 ops + transaction executor | 进行中（preset 内联；独立 handler 待拆） |
+| M1 | Layer 0 ops + transaction executor | 完成 |
 | M2 | `DeployConsumeSource` preset | 完成 |
 | M3 | 删除 Morph DSL / preset / 平行管线 | 完成 |
 
@@ -90,5 +90,8 @@ Mod 可通过 graph 调整顺序、增删步骤；Core 不新增 `inherit.effect
 
 ## 9 参考实现
 
-- `src/Core/Gameplay/Lifecycle/` — Layer 1 transaction executor + `DeployConsumeSource` preset
+- `src/Core/Gameplay/Lifecycle/EntityLifecycleAtomicOps.cs` — Layer 0 atomic ops
+- `src/Core/Gameplay/Lifecycle/RuntimeEntityLifecycleTransactionExecutor.cs` — Layer 1 transaction
+- `src/Core/Gameplay/Lifecycle/EntityLifecycleBuiltinHandlers.cs` — GAS BuiltinHandler 注册
+- `src/Core/Gameplay/Lifecycle/LifecycleTransactionPrograms.cs` — `DeployConsumeSource` op 程序
 - `presetType: DeployConsumeSource` + `lifecycleDeploy` block in `effects.json`
