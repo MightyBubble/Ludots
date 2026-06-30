@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
@@ -6,8 +7,10 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -32,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
+            registry.Register(BuiltinHandlerId.SubmitOrderFromRally, HandleSubmitOrderFromRally);
         }
 
         public static void HandleApplyModifiers(
@@ -463,6 +467,140 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
             }
+        }
+
+        public static void HandleSubmitOrderFromRally(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            ref readonly SubmitOrderFromRallyDescriptor descriptor = ref templateData.SubmitOrderFromRally;
+            Entity rallyHolder = ResolveRelationEntity(in context, descriptor.RallyHolderSlot);
+            Entity orderActor = ResolveRelationEntity(in context, descriptor.OrderActorSlot);
+            if (!world.IsAlive(rallyHolder) || !world.IsAlive(orderActor))
+            {
+                return;
+            }
+
+            if (!RallyBlackboardOps.TryRead(world, rallyHolder, out RallyTargetSnapshot rally) || !rally.HasTarget)
+            {
+                return;
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.OrderTypeRegistry == null)
+            {
+                throw new InvalidOperationException("SubmitOrderFromRally requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
+            }
+
+            if (runtime.StepRateHz <= 0)
+            {
+                throw new InvalidOperationException("SubmitOrderFromRally requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryBuildOrderFromRally(
+                    in rally,
+                    in descriptor,
+                    orderActor,
+                    ResolvePlayerId(world, orderActor),
+                    runtime.OrderTypeRegistry,
+                    out Order order))
+            {
+                return;
+            }
+
+            if (!world.Has<OrderBuffer>(orderActor))
+            {
+                return;
+            }
+
+            OrderSubmitter.Submit(
+                world,
+                orderActor,
+                in order,
+                runtime.OrderTypeRegistry,
+                runtime.OrderRuleRegistry,
+                runtime.CurrentStep,
+                runtime.StepRateHz);
+        }
+
+        private static bool TryBuildOrderFromRally(
+            in RallyTargetSnapshot rally,
+            in SubmitOrderFromRallyDescriptor descriptor,
+            Entity orderActor,
+            int playerId,
+            OrderTypeRegistry orderTypeRegistry,
+            out Order order)
+        {
+            order = default;
+            switch (rally.Kind)
+            {
+                case RallyTargetKind.Point:
+                case RallyTargetKind.HexCell:
+                    if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
+                        !RallyBlackboardOps.TryResolveWorldPositionCm(in rally, out Vector3 worldPositionCm))
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = pointMoveOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs
+                        {
+                            Spatial = new OrderSpatial
+                            {
+                                Kind = OrderSpatialKind.WorldCm,
+                                Mode = OrderCollectionMode.Single,
+                                WorldCm = worldPositionCm,
+                            },
+                        },
+                    };
+                    return true;
+
+                case RallyTargetKind.Entity:
+                    if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
+                        rally.TargetEntity == Entity.Null)
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = entityOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        Target = rally.TargetEntity,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
+                    };
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static int ResolvePlayerId(World world, Entity entity)
+        {
+            if (world.TryGet(entity, out PlayerOwner owner) && owner.PlayerId > 0)
+            {
+                return owner.PlayerId;
+            }
+
+            if (world.TryGet(entity, out Team team) && team.Id > 0)
+            {
+                return team.Id;
+            }
+
+            return 1;
         }
 
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)

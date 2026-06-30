@@ -1095,6 +1095,10 @@ namespace Ludots.Core.Engine
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
+            int cfgSetRallyPoint = orderTypeRegistry.TryGetId("setRallyPoint", out int setRallyPointId) ? setRallyPointId : 0;
+            var setRallyPointOrderSystem = cfgSetRallyPoint > 0
+                ? new SetRallyPointOrderSystem(World, orderTypeRegistry, cfgSetRallyPoint)
+                : null;
             var moveToOrderSystem = new MoveToWorldCmOrderSystem(World, orderTypeRegistry, cfgMoveTo);
             var orderContinuationSystem = new OrderContinuationSystem(World, clock, orderTypeRegistry, orderRuleRegistry, stepRateHz);
 
@@ -1321,6 +1325,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityEndOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
+            if (setRallyPointOrderSystem != null)
+            {
+                RegisterSystem(setRallyPointOrderSystem, SystemGroup.AbilityActivation);
+            }
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
@@ -1337,7 +1345,7 @@ namespace Ludots.Core.Engine
             };
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(

@@ -3,7 +3,9 @@ using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
@@ -113,8 +115,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
+        private readonly OrderTypeRegistry? _orderTypeRegistry;
+        private readonly OrderRuleRegistry? _orderRuleRegistry;
+        private readonly IClock? _orderClock;
+        private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, IClock orderClock = null, int stepRateHz = 30) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -132,6 +138,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.SpawnRequests = spawnRequests;
             _builtinRuntime.Exchange = exchangeRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
+            _orderTypeRegistry = orderTypeRegistry;
+            _orderRuleRegistry = orderRuleRegistry;
+            _orderClock = orderClock;
+            _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+        }
+
+        private void RefreshBuiltinOrderContext()
+        {
+            _builtinRuntime.OrderTypeRegistry = _orderTypeRegistry;
+            _builtinRuntime.OrderRuleRegistry = _orderRuleRegistry;
+            _builtinRuntime.StepRateHz = _stepRateHz;
+            _builtinRuntime.CurrentStep = _orderClock?.Now(ClockDomainId.Step) ?? 0;
         }
 
         public override void Update(in float dt)
@@ -150,6 +168,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _sliceStage = ApplicationStage.ProcessPending;
                 _cursor = 0;
                 _playbackCursor = 0;
+
+                RefreshBuiltinOrderContext();
 
                 _effectsToDestroy.Clear();
                 _effectsToActivate.Clear();

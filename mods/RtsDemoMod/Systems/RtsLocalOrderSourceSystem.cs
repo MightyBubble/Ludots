@@ -51,6 +51,13 @@ namespace RtsDemoMod.Systems
                 return;
             }
 
+            if (_globals.TryGetValue(RtsProducerRallyOrderSystem.SuppressDefaultCommandKey, out object? suppressObj) &&
+                suppressObj is bool suppress &&
+                suppress)
+            {
+                return;
+            }
+
             var actor = _helper.GetControlledActor();
             if (_helper.TrySetLocalPlayer(_mapping, actor))
             {

@@ -8,6 +8,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -283,6 +284,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var submitOrderFromRally = CompileSubmitOrderFromRally(cfg.SubmitOrderFromRally, cfg.Id, relativePath);
             var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
             int progressionId = 0;
@@ -409,6 +411,25 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
+            if (cfg.SubmitOrderFromRally != null && presetType != EffectPresetType.SubmitOrderFromRally)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'submitOrderFromRally' block is only valid when presetType=SubmitOrderFromRally.");
+            }
+            if (presetType == EffectPresetType.SubmitOrderFromRally)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType SubmitOrderFromRally requires lifetime=Instant.");
+                }
+                if (cfg.SubmitOrderFromRally == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType SubmitOrderFromRally requires a 'submitOrderFromRally' block.");
+                }
+            }
+
             return new EffectTemplateData
             {
                 TagId = tagId,
@@ -429,6 +450,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                SubmitOrderFromRally = submitOrderFromRally,
                 ProgressionScope = progressionScope,
                 ProgressionChange = progressionChange,
                 ProgressionId = progressionId,
@@ -536,6 +558,58 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Subject = subject,
                 Parent = parent,
                 SnapSubjectToParentPosition = snapSubjectToParentPosition
+            };
+        }
+
+        private static SubmitOrderFromRallyDescriptor CompileSubmitOrderFromRally(
+            SubmitOrderFromRallyConfig? cfg,
+            string ownerId,
+            string relativePath)
+        {
+            if (cfg == null)
+            {
+                return default;
+            }
+
+            RelationEntitySlot rallyHolder = string.IsNullOrWhiteSpace(cfg.RallyHolder)
+                ? RelationEntitySlot.Source
+                : ParseRelationEntitySlot(cfg.RallyHolder, ownerId, "submitOrderFromRally.rallyHolder", relativePath);
+            RelationEntitySlot orderActor = string.IsNullOrWhiteSpace(cfg.OrderActor)
+                ? RelationEntitySlot.Target
+                : ParseRelationEntitySlot(cfg.OrderActor, ownerId, "submitOrderFromRally.orderActor", relativePath);
+            string pointMoveOrderTypeKey = RequireString(cfg.PointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromRally.pointMoveOrderTypeKey");
+            string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromRally.entityOrderTypeKey");
+            int entityOrderIntArg0 = cfg.EntityOrderIntArg0 ?? 0;
+            OrderSubmitMode submitMode = ParseOrderSubmitMode(
+                RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromRally.submitMode"),
+                ownerId,
+                relativePath);
+
+            if (rallyHolder == RelationEntitySlot.None || orderActor == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromRally rallyHolder and orderActor cannot be None.");
+            }
+
+            return new SubmitOrderFromRallyDescriptor
+            {
+                RallyHolderSlot = rallyHolder,
+                OrderActorSlot = orderActor,
+                PointMoveOrderTypeKey = pointMoveOrderTypeKey,
+                EntityOrderTypeKey = entityOrderTypeKey,
+                EntityOrderIntArg0 = entityOrderIntArg0,
+                SubmitMode = submitMode,
+            };
+        }
+
+        private static OrderSubmitMode ParseOrderSubmitMode(string raw, string ownerId, string relativePath)
+        {
+            return raw switch
+            {
+                "Immediate" => OrderSubmitMode.Immediate,
+                "Queued" => OrderSubmitMode.Queued,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported submitOrderFromRally.submitMode '{raw}'. Supported: Immediate, Queued.")
             };
         }
 

@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -30,6 +31,8 @@ namespace Ludots.Core.Gameplay.GAS
         Exchange = 13,
         /// <summary>Completes an entity-scoped progression through the Progression runtime.</summary>
         CompleteProgression = 14,
+        /// <summary>Reads a producer rally target and submits the configured order to a spawned unit.</summary>
+        SubmitOrderFromRally = 15,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -293,6 +296,19 @@ namespace Ludots.Core.Gameplay.GAS
         public bool SnapSubjectToParentPosition;
     }
 
+    /// <summary>
+    /// Parameters for on-spawn rally order dispatch.
+    /// </summary>
+    public struct SubmitOrderFromRallyDescriptor
+    {
+        public RelationEntitySlot RallyHolderSlot;
+        public RelationEntitySlot OrderActorSlot;
+        public string PointMoveOrderTypeKey;
+        public string EntityOrderTypeKey;
+        public int EntityOrderIntArg0;
+        public OrderSubmitMode SubmitMode;
+    }
+
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -320,6 +336,7 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public SubmitOrderFromRallyDescriptor SubmitOrderFromRally;
         public ScopeKey ProgressionScope;
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
         public int ProgressionId;

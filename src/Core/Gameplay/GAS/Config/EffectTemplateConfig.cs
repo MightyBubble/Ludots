@@ -45,6 +45,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
         public RelationConfig? Relation { get; set; }
+        /// <summary>On-spawn rally order dispatch parameters.</summary>
+        public SubmitOrderFromRallyConfig? SubmitOrderFromRally { get; set; }
         /// <summary>Entity-scoped progression completion parameters.</summary>
         public ProgressionCompletionConfig? Progression { get; set; }
 
@@ -220,6 +222,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Subject { get; set; }
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
+    }
+
+    public sealed class SubmitOrderFromRallyConfig
+    {
+        public string? RallyHolder { get; set; }
+        public string? OrderActor { get; set; }
+        public string? PointMoveOrderTypeKey { get; set; }
+        public string? EntityOrderTypeKey { get; set; }
+        public int? EntityOrderIntArg0 { get; set; }
+        public string? SubmitMode { get; set; }
     }
 
     public sealed class ProgressionCompletionConfig

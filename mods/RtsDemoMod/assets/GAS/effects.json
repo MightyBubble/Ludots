@@ -1,5 +1,22 @@
 [
   {
+    "id": "Effect.Rts.Shared.ApplyProducerRally",
+    "tags": [
+      "Effect.Rts.Shared.Rally"
+    ],
+    "presetType": "SubmitOrderFromRally",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "submitOrderFromRally": {
+      "rallyHolder": "Source",
+      "orderActor": "Target",
+      "pointMoveOrderTypeKey": "moveTo",
+      "entityOrderTypeKey": "castAbility",
+      "entityOrderIntArg0": 1,
+      "submitMode": "Immediate"
+    }
+  },
+  {
     "id": "Effect.Rts.Shared.EnterGarrison",
     "tags": [
       "Effect.Rts.Shared.Garrison"
@@ -205,6 +222,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 280,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
       "copySourcePlayerOwner": true
     }
   },
@@ -317,6 +335,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 340,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
       "copySourcePlayerOwner": true
     }
   },
@@ -386,6 +405,7 @@
       "placementPattern": "Scatter",
       "count": 1,
       "offsetRadius": 260,
+      "onSpawnEffect": "Effect.Rts.Shared.ApplyProducerRally",
       "copySourcePlayerOwner": true
     }
   },

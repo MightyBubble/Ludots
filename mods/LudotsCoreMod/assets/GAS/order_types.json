@@ -109,6 +109,24 @@
       "intArg0BlackboardKey": "none",
       "validationGraph": "none"
     },
+    "setRallyPoint": {
+      "orderTypeId": 106,
+      "label": "Set Rally Point",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 40,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    },
     "chainPass": {
       "orderTypeId": 1,
       "label": "Pass",
