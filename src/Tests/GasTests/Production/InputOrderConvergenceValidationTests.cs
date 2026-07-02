@@ -150,6 +150,74 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(source, Does.Contain("RequireRegisteredOrderTypeId(orderTypeRegistry, \"castAbility.End\")"));
         }
 
+        [Test]
+        public void InputAndPanelSources_HaveNoImplicitOrderTypeFallbacks()
+        {
+            string repoRoot = FindRepoRoot();
+            string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
+            string inputMappingSystem = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingSystem.cs"));
+            string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
+            string responseChainSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "ResponseChainHumanOrderSourceSystem.cs"));
+            string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
+
+            Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
+            Assert.That(inputMappingSystem, Does.Not.Contain("orderTypeId <= 0) return false"));
+            Assert.That(localOrderSource, Does.Not.Contain("? configOrderTypeId : 0"));
+            Assert.That(responseChainSource, Does.Not.Contain("GetValueOrDefault(\"chainPass\""));
+            Assert.That(responseChainSource, Does.Not.Contain("ResponseChainOrderTypes.Default"));
+            Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
+        }
+
+        [Test]
+        public void Cfg4Guardrails_FailFastAntipatternsDoNotReturn()
+        {
+            string repoRoot = FindRepoRoot();
+            string aiConfigLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Gameplay", "AI", "Config", "AiConfigLoader.cs"));
+            string abilityExecLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Config", "AbilityExecLoader.cs"));
+            string configMerger = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Config", "ConfigMerger.cs"));
+            string inputMappingLoader = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "InputOrderMappingLoader.cs"));
+            string localOrderSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs"));
+            string responseChainSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "ResponseChainHumanOrderSourceSystem.cs"));
+            string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
+
+            Assert.That(aiConfigLoader, Does.Contain("OrderTagId is not a supported AI order contract field"));
+            Assert.That(aiConfigLoader, Does.Contain("Order blackboard key must be a semantic string"));
+            Assert.That(aiConfigLoader, Does.Not.Contain("? ot : 0"));
+            Assert.That(aiConfigLoader, Does.Not.Contain("TryGetValue(\"OrderTypeId\""));
+
+            Assert.That(inputMappingLoader, Does.Not.Contain("CreateDefaultMobaConfig"));
+            Assert.That(localOrderSource, Does.Not.Contain("? v : 0"));
+            Assert.That(responseChainSource, Does.Not.Contain("GetValueOrDefault(\"chainPass\""));
+            Assert.That(responseChainSource, Does.Not.Contain("ResponseChainOrderTypes.Default"));
+            Assert.That(commandPanelSource, Does.Not.Contain("OrderTypeId == 100"));
+
+            Assert.That(abilityExecLoader, Does.Contain("field 'exec' is required"));
+            Assert.That(abilityExecLoader, Does.Not.Contain("if (idx >= AbilityExecSpec.MAX_ITEMS) break"));
+            Assert.That(abilityExecLoader, Does.Not.Contain("if (tid <= 0) continue"));
+
+            Assert.That(configMerger, Does.Contain("must define non-empty string field"));
+            Assert.That(configMerger, Does.Not.Contain("if (!TryReadId(obj, entry.IdField, out string id)) continue"));
+        }
+
+        [Test]
+        public void Cfg4Guardrails_ProductionAiConfigsUseSemanticKeys()
+        {
+            string repoRoot = FindRepoRoot();
+            var aiConfigFiles = Directory.GetFiles(Path.Combine(repoRoot, "mods"), "*.json", SearchOption.AllDirectories);
+            foreach (string file in aiConfigFiles)
+            {
+                string normalized = file.Replace('\\', '/');
+                if (!normalized.Contains("/assets/Configs/AI/", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string source = File.ReadAllText(file);
+                Assert.That(source, Does.Not.Contain("\"OrderTagId\""), file);
+                Assert.That(Regex.IsMatch(source, @"""(?:EntityKey|IntKey)""\s*:\s*\d+"), Is.False, file);
+            }
+        }
+
         private static List<ISystem<float>> GetSystems(GameEngine engine, SystemGroup group)
         {
             var field = typeof(GameEngine).GetField("_systemGroups", BindingFlags.Instance | BindingFlags.NonPublic);

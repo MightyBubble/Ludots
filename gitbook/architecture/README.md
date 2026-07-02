@@ -5,6 +5,7 @@
 ## 核心主题
 
 - [运行时总览](runtime-overview.md)
+- [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [Exchange Operations](exchange-operations.md)
@@ -17,7 +18,13 @@
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
 - [Core Minimap Authoring](core-minimap-authoring.md)
+- [Core Field2D](core-field2d.md)
+- [Global Field Rendering](global-field-rendering.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
+- [Transport Network SSOT](transport-network-ssot.md)
+- [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
+- [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
+- [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)
 - [Map Batch Performer Param Overrides](map-batch-performer-param-overrides.md)
@@ -28,6 +35,8 @@
 - [Performer 现有基建收尾整合](performer-legacy-consolidation.md)
 - [Performer 开发看板](performer-development-kanban.md)
 - [Performer 编译式执行分层](performer-compiled-lanes.md)
+- Browser UI Runtime：正式 contract 位于 `docs/architecture/browser_ui_runtime.md`，用于把真实 Web App 作为平台无关 browser surface 嵌入 Ludots UI；它不改变 native Markup 无 JS 的边界
+- WebUI DataPlane：正式边界位于 `docs/architecture/webui_dataplane_architecture.md`，归属 `Ludots.WebUI` 高层，复用 `EntityCollectionStore` 与 Minimap marker buffer 的 SoA / bucket / drop diagnostics 模式；UE5 BLUI 只作为外部 transport adapter
 
 ## 当前主线重点
 
@@ -48,6 +57,7 @@
 - System 必须归属明确 phase
 - Mod 是功能接入和组合的主要单位
 - 跨层写入优先通过正式 Sink 和 Pipeline
+- 浏览器内核、商业引擎宿主与平台窗口生命周期必须留在 adapter；Core 只定义可复用的 C# contract
 
 ## 深度材料
 

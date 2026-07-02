@@ -8,6 +8,7 @@ namespace RoadNetworkShowcaseMod
         public const string MapTag = "road_network_showcase";
         public const string InstalledKey = "RoadNetworkShowcaseMod.Installed";
         public const string ScenarioServiceKey = "RoadNetworkShowcaseMod.Scenario";
+        public const string GraphLoadedChunksServiceKey = "RoadNetworkShowcaseMod.GraphLoadedChunks";
         public const string PathPlannerAgentTypeId = "RoadColumn";
         public const string RoadMoveFollowOrderTypeKey = "roadMoveFollow";
         public const string RoadSurfacePerformerId = "road_surface_chunk";

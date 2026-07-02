@@ -20,9 +20,9 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -40,10 +40,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Skia;
-using MassNavigationMod;
-using MassNavigationMod.Runtime;
-using Navigation2DPlaygroundMod;
-using Navigation2DPlaygroundMod.Systems;
+using Ludots.UI.Surface;
 using Raylib_cs;
 using SkiaSharp;
 
@@ -74,24 +71,11 @@ public static class LauncherEvidenceRecorder
     private static readonly QueryDescription RoadNamedVisualEntityQuery = new QueryDescription()
         .WithAll<Name, VisualTransform>();
 
-    private static readonly QueryDescription NavDynamicAgentsQuery = new QueryDescription()
-        .WithAll<NavAgent2D, Position2D, Velocity2D, NavPlaygroundTeam>()
-        .WithNone<NavPlaygroundBlocker>();
-
-    private static readonly QueryDescription NavBlockerQuery = new QueryDescription()
-        .WithAll<Position2D, NavPlaygroundBlocker>();
-
-    private static readonly QueryDescription NavScenarioEntitiesQuery = new QueryDescription()
-        .WithAll<NavPlaygroundTeam>();
-
-    private static readonly QueryDescription NavFlowGoalQuery = new QueryDescription()
-        .WithAll<NavFlowGoal2D>();
-
     private static readonly QueryDescription MassNavigationAgentQuery = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, WorldPositionCm>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
 
-    private static readonly QueryDescription MassNavigationControllableQuery = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, MassNavigationControllable, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
+    private static readonly QueryDescription OrderableMassNavigationAgentQuery = new QueryDescription()
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
 
     private static readonly QueryDescription MassNavigationBlockerQuery = new QueryDescription()
         .WithAll<MassNavigationBlocker, MassNavigationBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
@@ -106,8 +90,6 @@ public static class LauncherEvidenceRecorder
     private const int CameraImageHeight = 900;
     private const int RoadImageWidth = 1600;
     private const int RoadImageHeight = 900;
-    private const int NavImageWidth = 1600;
-    private const int NavImageHeight = 900;
     private const int MassNavigationImageWidth = 1600;
     private const int MassNavigationImageHeight = 900;
     private const int MassNavigationInitialSettleTicks = 20;
@@ -115,22 +97,6 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationRemoteSettleTicks = 20;
     private const int MassNavigationReturnSettleTicks = 20;
     private const int MassNavigationSelectionSampleCount = 128;
-    private const int NavAcceptanceAgentsPerTeam = 64;
-    private const int NavFinalTick = 720;
-    private const int NavTraceStrideTicks = 30;
-    private const int NavCaptureStrideTicks = 120;
-    private const float NavMovingSpeedSquaredThreshold = 400f;
-    private const float NavMidProgressMinimumCm = 1200f;
-    private const float NavFinalProgressMinimumCm = 4000f;
-    private const float NavFinalCenterFractionLimit = 0.18f;
-    private const float NavFinalCenterStoppedFractionLimit = 0.08f;
-    private const float NavMovingAgentsFractionLimit = 0.35f;
-    private const float NavCenterHalfWidthCm = 1200f;
-    private const float NavCenterHalfHeightCm = 2600f;
-    private const float NavWorldMinX = -14000f;
-    private const float NavWorldMaxX = 14000f;
-    private const float NavWorldMinY = -9000f;
-    private const float NavWorldMaxY = 9000f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
     private static readonly Vector2 RoadSelectionWorldCm = new(-9800f, 0f);
     private static readonly Vector2 RoadCommandWorldCm = new(0f, 0f);
@@ -168,7 +134,6 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.CameraAcceptanceProjectionClick => Task.FromResult(RecordCameraAcceptanceProjection(request)),
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
-            EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
             EvidenceScenario.MassNavigationLargeWorld => Task.FromResult(RecordMassNavigationLargeWorld(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
@@ -179,11 +144,6 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "CameraAcceptanceMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.CameraAcceptanceProjectionClick;
-        }
-
-        if (plan.RootModIds.Any(id => string.Equals(id, "Navigation2DPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
-        {
-            return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
         }
 
         if (plan.RootModIds.Any(id => string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase)))
@@ -222,11 +182,13 @@ public static class LauncherEvidenceRecorder
         var textMeasurer = new SkiaTextMeasurer();
         var imageSizeProvider = new SkiaImageSizeProvider();
         var uiRoot = new UIRoot(skiaRenderer);
+        var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
@@ -273,7 +235,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -303,11 +265,13 @@ public static class LauncherEvidenceRecorder
         var textMeasurer = new SkiaTextMeasurer();
         var imageSizeProvider = new SkiaImageSizeProvider();
         var uiRoot = new UIRoot(skiaRenderer);
+        var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
         engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+        engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
         var inputBackend = new ScriptedInputBackend();
         var inputHandler = new PlayerInputHandler(inputBackend, new InputConfigPipelineLoader(engine.ConfigPipeline).Load());
@@ -346,7 +310,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -1966,7 +1930,7 @@ public static class LauncherEvidenceRecorder
                 throw new InvalidOperationException("MassNavigation UAT requires a configured startup map.");
             }
 
-            runtime.Engine.LoadMap(runtime.Config.StartupMapId);
+            runtime.Engine.LoadStartupMap();
         }
 
         PresentationTimingDiagnostics timings = runtime.Engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
@@ -1979,7 +1943,7 @@ public static class LauncherEvidenceRecorder
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
-        Entity[] selected = SelectFirstMassNavigationControllables(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
+        Entity[] selected = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
         Vector2 commandTarget = new(
             simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
@@ -2053,10 +2017,10 @@ public static class LauncherEvidenceRecorder
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation scenario did not finish binding spawn receipts: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
+            $"MassNavigation scenario did not finish core-authored MassNavigation binding: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
     }
 
-    private static Entity[] SelectFirstMassNavigationControllables(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
+    private static Entity[] SelectFirstOrderableMassNavigationAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
@@ -2070,7 +2034,7 @@ public static class LauncherEvidenceRecorder
         int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgentSlotCount);
         if (count <= 0)
         {
-            throw new InvalidOperationException("MassNavigation UAT found no controllable MassNavigation agents.");
+            throw new InvalidOperationException("MassNavigation UAT found no OrderBuffer-backed MassNavigation agents.");
         }
 
         var selected = new Entity[count];
@@ -2226,7 +2190,7 @@ public static class LauncherEvidenceRecorder
         int ecsAgentCount = 0;
         int performerPayloadCount = 0;
         var samplePositions = new List<MassNavigationAgentSample>(Math.Min(512, simulation.AgentState.TotalAgents));
-        engine.World.Query(in MassNavigationControllableQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        engine.World.Query(in OrderableMassNavigationAgentQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             ecsAgentCount++;
             teamCounts.TryGetValue(team.Id, out int current);
@@ -2318,7 +2282,7 @@ public static class LauncherEvidenceRecorder
             SceneResetCount: simulation.SceneResetCount,
             CommandCountFrame: simulation.CommandCountFrame,
             SolverWindowMovesTotal: simulation.SolverWindowMovesTotal,
-            CameraBudgetUpdatesTotal: simulation.CameraBudgetUpdatesTotal,
+            FocusBudgetUpdatesTotal: simulation.FocusBudgetUpdatesTotal,
             CommandRejectsTotal: simulation.CommandRejectsTotal,
             FrameMs: timings.LastTotalTickMs,
             SimulationMs: timings.LastSimulationMs,
@@ -2400,8 +2364,8 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Scenario Card: mass-navigation-large-world");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: verify MassNavigation is the massflow SSOT and runs through performer + core minimap on a 64km RTS map.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, template spawn receipts, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
+        sb.AppendLine("- Player goal: verify MassNavigation is the MassNavigationFlow SSOT and runs through performer + core minimap on a 64km RTS map.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
@@ -2410,7 +2374,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- Evidence images: {evidenceImages}");
         sb.AppendLine();
         sb.AppendLine("## Action Script");
-        sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for MassNavigation spawn receipts to bind.");
+        sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
         sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
@@ -2443,7 +2407,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnReceiptQueue`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
+        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
     }
 
@@ -2502,7 +2466,7 @@ public static class LauncherEvidenceRecorder
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
-            "    A[Boot mass_navigation launcher] --> B[Bind template spawn receipts]",
+            "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify performer owners and minimap markers]",
             "    C --> D[Write LivePrimary selection]",
             "    D --> E[Submit massNavigationMove through OrderBuffer]",
@@ -2653,477 +2617,6 @@ public static class LauncherEvidenceRecorder
         };
     }
 
-    private static LauncherRecordingResult RecordNavigation2DTimedAvoidance(LauncherRecordingRequest request)
-    {
-        string screensDir = Path.Combine(request.OutputDirectory, "screens");
-        Directory.CreateDirectory(screensDir);
-
-        var timeline = new List<AvoidanceSnapshot>();
-        var captureFrames = new List<CaptureFrame>();
-        var frameTimesMs = new List<double>();
-
-        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
-        if (!string.Equals(runtime.Config.StartupMapId, "nav2d_playground", StringComparison.OrdinalIgnoreCase))
-        {
-            runtime.Engine.LoadMap("nav2d_playground");
-        }
-
-        var navRuntime = runtime.Engine.GetService(CoreServiceKeys.Navigation2DRuntime)
-            ?? throw new InvalidOperationException("Navigation2DRuntime is missing.");
-        var overlay = runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
-            ?? throw new InvalidOperationException("ScreenOverlayBuffer is missing.");
-
-        Navigation2DPlaygroundState.CurrentScenarioIndex = 0;
-        Navigation2DPlaygroundState.AgentsPerTeam = NavAcceptanceAgentsPerTeam;
-        RespawnNavigationPlaygroundScenario(runtime.Engine, scenarioIndex: 0, agentsPerTeam: NavAcceptanceAgentsPerTeam);
-        Tick(runtime, 2, frameTimesMs);
-
-        if (!string.Equals(runtime.Engine.GetService(Navigation2DPlaygroundKeys.ScenarioName), "Pass Through", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException("Navigation2D playground did not land on the expected Pass Through scenario.");
-        }
-
-        AssertNavigationOverlay(overlay);
-        CaptureNavigationSnapshot(runtime.Engine, navRuntime, screensDir, frameTimesMs, timeline, captureFrames, tick: 0, step: "000_start", captureImage: true);
-
-        for (int tick = 1; tick <= NavFinalTick; tick++)
-        {
-            Tick(runtime, 1, frameTimesMs);
-            if (tick % NavTraceStrideTicks == 0)
-            {
-                bool captureImage = tick % NavCaptureStrideTicks == 0 || tick == NavFinalTick;
-                string step = captureImage ? $"{tick:000}_t{tick:000}" : $"{tick:000}_sample";
-                CaptureNavigationSnapshot(runtime.Engine, navRuntime, screensDir, frameTimesMs, timeline, captureFrames, tick, step, captureImage);
-            }
-        }
-
-        WriteTimelineSheet("Navigation2D timed avoidance timeline", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
-
-        AvoidanceAcceptanceResult acceptance = EvaluateNavigationAcceptance(timeline);
-        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
-        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
-        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
-        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
-        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
-
-        File.WriteAllText(battleReportPath, BuildNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
-        File.WriteAllText(tracePath, BuildNavigationTraceJsonl(request.Plan.AdapterId, timeline));
-        File.WriteAllText(pathPath, BuildNavigationPathMermaid());
-        File.WriteAllText(visibleChecklistPath, BuildNavigationVisibleChecklist(captureFrames));
-        File.WriteAllText(summaryPath, BuildNavigationSummaryJson(request, acceptance));
-
-        if (!acceptance.Success)
-        {
-            throw new InvalidOperationException(acceptance.FailureSummary);
-        }
-
-        return new LauncherRecordingResult(
-            request.OutputDirectory,
-            battleReportPath,
-            tracePath,
-            pathPath,
-            summaryPath,
-            visibleChecklistPath,
-            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
-            acceptance.NormalizedSignature);
-    }
-
-    private static void RespawnNavigationPlaygroundScenario(GameEngine engine, int scenarioIndex, int agentsPerTeam)
-    {
-        GameConfig? gameConfig = engine.GetService(CoreServiceKeys.GameConfig);
-        var playgroundConfig = Navigation2DPlaygroundScenarioSpawner.GetPlaygroundConfig(gameConfig);
-        Navigation2DPlaygroundState.CurrentScenarioIndex = Navigation2DPlaygroundScenarioSpawner.ClampScenarioIndex(playgroundConfig, scenarioIndex);
-        Navigation2DPlaygroundState.AgentsPerTeam = agentsPerTeam;
-        engine.World.Destroy(in NavScenarioEntitiesQuery);
-        engine.World.Destroy(in NavFlowGoalQuery);
-        var scenario = Navigation2DPlaygroundScenarioSpawner.GetScenario(playgroundConfig, Navigation2DPlaygroundState.CurrentScenarioIndex);
-        var summary = Navigation2DPlaygroundScenarioSpawner.SpawnScenario(engine.World, scenario, agentsPerTeam);
-        Navigation2DPlaygroundControlSystem.PublishScenarioServices(engine, playgroundConfig, summary, agentsPerTeam, Navigation2DPlaygroundState.CurrentScenarioIndex);
-    }
-
-    private static void CaptureNavigationSnapshot(
-        GameEngine engine,
-        Navigation2DRuntime navRuntime,
-        string screensDir,
-        IReadOnlyList<double> frameTimesMs,
-        List<AvoidanceSnapshot> timeline,
-        List<CaptureFrame> captureFrames,
-        int tick,
-        string step,
-        bool captureImage)
-    {
-        AvoidanceSnapshot snapshot = SampleNavigationSnapshot(engine, navRuntime, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
-        timeline.Add(snapshot);
-        if (!captureImage)
-        {
-            return;
-        }
-
-        string fileName = $"{step}.png";
-        WriteNavigationSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.CenterCount, snapshot.CenterStoppedAgents, snapshot.Team0CrossedFraction, snapshot.Team1CrossedFraction));
-    }
-
-    private static AvoidanceSnapshot SampleNavigationSnapshot(GameEngine engine, Navigation2DRuntime navRuntime, int tick, string step, double tickMs)
-    {
-        var team0 = new List<Vector2>();
-        var team1 = new List<Vector2>();
-        var blockers = new List<Vector2>();
-        int movingAgents = 0;
-        int centerCount = 0;
-        int centerMovingAgents = 0;
-        int centerStoppedAgents = 0;
-
-        foreach (ref var chunk in engine.World.Query(in NavDynamicAgentsQuery))
-        {
-            var positions = chunk.GetSpan<Position2D>();
-            var velocities = chunk.GetSpan<Velocity2D>();
-            var teams = chunk.GetSpan<NavPlaygroundTeam>();
-            foreach (int entityIndex in chunk)
-            {
-                Vector2 position = positions[entityIndex].Value.ToVector2();
-                if (teams[entityIndex].Id == 0)
-                {
-                    team0.Add(position);
-                }
-                else if (teams[entityIndex].Id == 1)
-                {
-                    team1.Add(position);
-                }
-
-                bool isMoving = velocities[entityIndex].Linear.ToVector2().LengthSquared() > NavMovingSpeedSquaredThreshold;
-                if (isMoving)
-                {
-                    movingAgents++;
-                }
-
-                if (MathF.Abs(position.X) <= NavCenterHalfWidthCm && MathF.Abs(position.Y) <= NavCenterHalfHeightCm)
-                {
-                    centerCount++;
-                    if (isMoving)
-                    {
-                        centerMovingAgents++;
-                    }
-                    else
-                    {
-                        centerStoppedAgents++;
-                    }
-                }
-            }
-        }
-
-        foreach (ref var chunk in engine.World.Query(in NavBlockerQuery))
-        {
-            var positions = chunk.GetSpan<Position2D>();
-            foreach (int entityIndex in chunk)
-            {
-                blockers.Add(positions[entityIndex].Value.ToVector2());
-            }
-        }
-
-        return new AvoidanceSnapshot(
-            Tick: tick,
-            Step: step,
-            ScenarioName: engine.GetService(Navigation2DPlaygroundKeys.ScenarioName) ?? "Unknown",
-            AgentsPerTeam: engine.GetService(Navigation2DPlaygroundKeys.AgentsPerTeam),
-            LiveAgents: engine.GetService(Navigation2DPlaygroundKeys.LiveAgentsTotal),
-            FlowEnabled: navRuntime.FlowEnabled,
-            FlowDebugEnabled: navRuntime.FlowDebugEnabled,
-            TickMs: tickMs,
-            Team0Positions: team0,
-            Team1Positions: team1,
-            BlockerPositions: blockers,
-            Team0MedianPrimary: Median(team0.Select(point => point.X).ToArray()),
-            Team1MedianPrimary: Median(team1.Select(point => point.X).ToArray()),
-            Team0CrossedFraction: Fraction(team0, point => point.X > 0f),
-            Team1CrossedFraction: Fraction(team1, point => point.X < 0f),
-            CenterCount: centerCount,
-            CenterMovingAgents: centerMovingAgents,
-            CenterStoppedAgents: centerStoppedAgents,
-            MovingAgents: movingAgents,
-            FlowActiveTiles: navRuntime.FlowCount > 0 ? navRuntime.Flows.Sum(flow => flow.ActiveTileCount) : 0,
-            FlowFrontierProcessed: navRuntime.FlowCount > 0 ? navRuntime.Flows.Sum(flow => flow.InstrumentedFrontierProcessedFrame) : 0,
-            FlowBudgetClamped: navRuntime.FlowCount > 0 && navRuntime.Flows.Any(flow => flow.InstrumentedWindowBudgetClampedFrame),
-            FlowWorldClamped: navRuntime.FlowCount > 0 && navRuntime.Flows.Any(flow => flow.InstrumentedWindowWorldClampedFrame));
-    }
-
-    private static void WriteNavigationSnapshotImage(AvoidanceSnapshot snapshot, string path)
-    {
-        using var surface = SKSurface.Create(new SKImageInfo(NavImageWidth, NavImageHeight));
-        SKCanvas canvas = surface.Canvas;
-        canvas.Clear(new SKColor(12, 16, 24));
-
-        using var fillCenter = new SKPaint { Color = new SKColor(50, 90, 130, 48), IsAntialias = true, Style = SKPaintStyle.Fill };
-        using var strokeCenter = new SKPaint { Color = new SKColor(80, 180, 255, 140), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
-        using var axisPaint = new SKPaint { Color = new SKColor(90, 100, 120), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 1.5f };
-        using var team0Paint = new SKPaint { Color = new SKColor(64, 220, 110), IsAntialias = true, Style = SKPaintStyle.Fill };
-        using var team1Paint = new SKPaint { Color = new SKColor(255, 88, 88), IsAntialias = true, Style = SKPaintStyle.Fill };
-        using var blockerPaint = new SKPaint { Color = new SKColor(90, 150, 255), IsAntialias = true, Style = SKPaintStyle.Fill };
-        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 24f };
-        using var minorTextPaint = new SKPaint { Color = new SKColor(180, 190, 205), IsAntialias = true, TextSize = 18f };
-
-        SKRect centerRect = ToScreenRect(-NavCenterHalfWidthCm, -NavCenterHalfHeightCm, NavCenterHalfWidthCm, NavCenterHalfHeightCm);
-        canvas.DrawRect(centerRect, fillCenter);
-        canvas.DrawRect(centerRect, strokeCenter);
-        canvas.DrawLine(ToNavigationScreen(new Vector2(NavWorldMinX, 0f)), ToNavigationScreen(new Vector2(NavWorldMaxX, 0f)), axisPaint);
-        canvas.DrawLine(ToNavigationScreen(new Vector2(0f, NavWorldMinY)), ToNavigationScreen(new Vector2(0f, NavWorldMaxY)), axisPaint);
-
-        foreach (Vector2 blocker in snapshot.BlockerPositions)
-        {
-            DrawNavigationAgent(canvas, blockerPaint, blocker, radiusPx: 6f);
-        }
-
-        foreach (Vector2 agent in snapshot.Team0Positions)
-        {
-            DrawNavigationAgent(canvas, team0Paint, agent, radiusPx: 3.8f);
-        }
-
-        foreach (Vector2 agent in snapshot.Team1Positions)
-        {
-            DrawNavigationAgent(canvas, team1Paint, agent, radiusPx: 3.8f);
-        }
-
-        canvas.DrawText($"Navigation2D Timed Avoidance | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, textPaint);
-        canvas.DrawText($"Scenario={snapshot.ScenarioName}  Agents/team={snapshot.AgentsPerTeam}  Live={snapshot.LiveAgents}", 24, 66, minorTextPaint);
-        canvas.DrawText($"MedianX T0={snapshot.Team0MedianPrimary:F0}  T1={snapshot.Team1MedianPrimary:F0}  Crossed T0={snapshot.Team0CrossedFraction:P0}  T1={snapshot.Team1CrossedFraction:P0}", 24, 94, minorTextPaint);
-        canvas.DrawText($"CenterCount={snapshot.CenterCount}  CenterMove={snapshot.CenterMovingAgents}  CenterStop={snapshot.CenterStoppedAgents}  MovingAgents={snapshot.MovingAgents}", 24, 122, minorTextPaint);
-        canvas.DrawText($"FlowActiveTiles={snapshot.FlowActiveTiles}  Frontier={snapshot.FlowFrontierProcessed}", 24, 150, minorTextPaint);
-        canvas.DrawText($"BudgetClamp={snapshot.FlowBudgetClamped}  WorldClamp={snapshot.FlowWorldClamped}  Tick={snapshot.TickMs:F3}ms", 24, 178, minorTextPaint);
-
-        using SKImage image = surface.Snapshot();
-        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
-        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
-        data.SaveTo(stream);
-    }
-
-    private static AvoidanceAcceptanceResult EvaluateNavigationAcceptance(IReadOnlyList<AvoidanceSnapshot> timeline)
-    {
-        var failures = new List<string>();
-        AvoidanceSnapshot start = timeline.First(snapshot => snapshot.Tick == 0);
-        AvoidanceSnapshot mid = timeline.First(snapshot => snapshot.Tick == NavFinalTick / 2);
-        AvoidanceSnapshot final = timeline.First(snapshot => snapshot.Tick == NavFinalTick);
-        AvoidanceSnapshot peak = timeline.OrderByDescending(snapshot => snapshot.CenterCount).First();
-
-        float team0MidAdvance = mid.Team0MedianPrimary - start.Team0MedianPrimary;
-        float team1MidAdvance = start.Team1MedianPrimary - mid.Team1MedianPrimary;
-        float team0FinalAdvance = final.Team0MedianPrimary - start.Team0MedianPrimary;
-        float team1FinalAdvance = start.Team1MedianPrimary - final.Team1MedianPrimary;
-        float finalCenterFraction = final.LiveAgents == 0 ? 0f : final.CenterCount / (float)final.LiveAgents;
-        float finalCenterStoppedFraction = final.LiveAgents == 0 ? 0f : final.CenterStoppedAgents / (float)final.LiveAgents;
-        bool densePeakObserved = peak.CenterCount >= Math.Max(16, (int)Math.Ceiling(final.LiveAgents * NavFinalCenterFractionLimit));
-        bool centerRelieved = !densePeakObserved || final.CenterCount <= Math.Max((int)Math.Ceiling(peak.CenterCount * 0.75f), 8);
-
-        AddAcceptanceCheck(start.Team0MedianPrimary < -3000f, $"Team 0 should spawn well left of center, but median X was {start.Team0MedianPrimary:F0}.", failures);
-        AddAcceptanceCheck(start.Team1MedianPrimary > 3000f, $"Team 1 should spawn well right of center, but median X was {start.Team1MedianPrimary:F0}.", failures);
-        AddAcceptanceCheck(team0MidAdvance > NavMidProgressMinimumCm, $"Team 0 median only advanced {team0MidAdvance:F0}cm by midpoint.", failures);
-        AddAcceptanceCheck(team1MidAdvance > NavMidProgressMinimumCm, $"Team 1 median only advanced {team1MidAdvance:F0}cm by midpoint.", failures);
-        AddAcceptanceCheck(team0FinalAdvance > NavFinalProgressMinimumCm, $"Team 0 median only advanced {team0FinalAdvance:F0}cm by timeout.", failures);
-        AddAcceptanceCheck(team1FinalAdvance > NavFinalProgressMinimumCm, $"Team 1 median only advanced {team1FinalAdvance:F0}cm by timeout.", failures);
-        AddAcceptanceCheck(finalCenterFraction < NavFinalCenterFractionLimit, $"Center box still contains {final.CenterCount}/{final.LiveAgents} agents at timeout ({finalCenterFraction:P0}).", failures);
-        AddAcceptanceCheck(finalCenterStoppedFraction < NavFinalCenterStoppedFractionLimit, $"Center box still contains {final.CenterStoppedAgents}/{final.LiveAgents} stationary agents at timeout ({finalCenterStoppedFraction:P0}).", failures);
-        AddAcceptanceCheck(final.MovingAgents > (int)Math.Ceiling(final.LiveAgents * NavMovingAgentsFractionLimit), $"Only {final.MovingAgents}/{final.LiveAgents} agents are still moving at timeout.", failures);
-        AddAcceptanceCheck(centerRelieved, $"Center occupancy peaked at {peak.CenterCount} on tick {peak.Tick} and only fell to {final.CenterCount} by timeout.", failures);
-
-        string normalizedSignature = string.Join("|", new[]
-        {
-            "navigation2d_playground_timed_avoidance",
-            $"mid:{MathF.Round(team0MidAdvance):F0}/{MathF.Round(team1MidAdvance):F0}",
-            $"final:{MathF.Round(team0FinalAdvance):F0}/{MathF.Round(team1FinalAdvance):F0}",
-            $"center:{final.CenterCount}/{final.LiveAgents}",
-            $"stopped:{final.CenterStoppedAgents}",
-            $"peak:{peak.CenterCount}@{peak.Tick}"
-        });
-
-        string verdict = failures.Count == 0
-            ? $"Timed avoidance passes: median advance is {team0FinalAdvance:F0}/{team1FinalAdvance:F0}cm and timeout center occupancy is {final.CenterCount}/{final.LiveAgents} with {final.CenterStoppedAgents} stationary."
-            : "Timed avoidance fails: timeout still looks jammed by the configured progress and decongestion checks.";
-        string failureSummary = failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures);
-
-        return new AvoidanceAcceptanceResult(
-            Success: failures.Count == 0,
-            Verdict: verdict,
-            FailureSummary: failureSummary,
-            FailedChecks: failures,
-            Team0MidAdvanceCm: team0MidAdvance,
-            Team1MidAdvanceCm: team1MidAdvance,
-            Team0FinalAdvanceCm: team0FinalAdvance,
-            Team1FinalAdvanceCm: team1FinalAdvance,
-            FinalCenterFraction: finalCenterFraction,
-            FinalCenterStoppedFraction: finalCenterStoppedFraction,
-            PeakCenterCount: peak.CenterCount,
-            PeakCenterTick: peak.Tick,
-            FinalCenterCount: final.CenterCount,
-            FinalCenterStoppedAgents: final.CenterStoppedAgents,
-            FinalLiveAgents: final.LiveAgents,
-            NormalizedSignature: normalizedSignature);
-    }
-
-    private static string BuildNavigationBattleReport(
-        LauncherRecordingRequest request,
-        IReadOnlyList<AvoidanceSnapshot> timeline,
-        IReadOnlyList<CaptureFrame> captureFrames,
-        IReadOnlyList<double> frameTimesMs,
-        AvoidanceAcceptanceResult acceptance)
-    {
-        AvoidanceSnapshot final = timeline[^1];
-        double medianTickMs = Median(frameTimesMs.ToArray());
-        double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
-        string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
-
-        var sb = new StringBuilder();
-        sb.AppendLine("# Scenario Card: navigation2d-playground-timed-avoidance");
-        sb.AppendLine();
-        sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: verify the launcher-started Navigation2D playground actually decongests over time instead of timing out as a stationary knot in the center.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, real adapter camera and culling services, real Navigation2D playground scenario state.");
-        sb.AppendLine();
-        sb.AppendLine("## Determinism Inputs");
-        sb.AppendLine("- Seed: none");
-        sb.AppendLine("- Map: `mods/Navigation2DPlaygroundMod/assets/Maps/nav2d_playground.json`");
-        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
-        sb.AppendLine($"- Launch command: `{request.CommandText}`");
-        sb.AppendLine($"- Scenario: `{timeline[0].ScenarioName}`");
-        sb.AppendLine($"- Agents per team: `{NavAcceptanceAgentsPerTeam}`");
-        sb.AppendLine($"- Clock profile: fixed `1/60s`, timeout tick `{NavFinalTick}`");
-        sb.AppendLine($"- Evidence images: {evidenceImages}");
-        sb.AppendLine();
-        sb.AppendLine("## Action Script");
-        sb.AppendLine("1. Boot the real playable Navigation2D playground through the unified launcher bootstrap.");
-        sb.AppendLine("2. Force the Pass Through scenario and deterministic agent count through the existing playground state.");
-        sb.AppendLine("3. Simulate until timeout while sampling crowd progress every 30 ticks and capturing timeline frames every 120 ticks.");
-        sb.AppendLine("4. Fail if timeout still looks like a dense stationary center jam.");
-        sb.AppendLine();
-        sb.AppendLine("## Expected Outcomes");
-        sb.AppendLine("- Primary success condition: both teams measurably advance through the conflict zone and timeout no longer shows a dense stationary center jam.");
-        sb.AppendLine("- Failure branch condition: timeout arrives with weak median progress, excessive center occupancy, or too many stationary agents trapped in the center box.");
-        sb.AppendLine("- Key metrics: team median X progress, center occupancy, stopped center agents, moving agent count, crossed fractions.");
-        sb.AppendLine();
-        sb.AppendLine("## Timeline");
-        foreach (AvoidanceSnapshot snapshot in timeline.Where(item => item.Tick == 0 || item.Tick % NavCaptureStrideTicks == 0 || item.Tick == NavFinalTick))
-        {
-            sb.AppendLine($"- [T+{snapshot.Tick:000}] {snapshot.Step} | MedianX T0={snapshot.Team0MedianPrimary:F0} T1={snapshot.Team1MedianPrimary:F0} | Crossed T0={snapshot.Team0CrossedFraction:P0} T1={snapshot.Team1CrossedFraction:P0} | Center={snapshot.CenterCount} move={snapshot.CenterMovingAgents} stop={snapshot.CenterStoppedAgents} | Moving={snapshot.MovingAgents} | Tick={snapshot.TickMs:F3}ms");
-        }
-
-        sb.AppendLine();
-        sb.AppendLine("## Outcome");
-        sb.AppendLine($"- success: {(acceptance.Success ? "yes" : "no")}");
-        sb.AppendLine($"- verdict: {acceptance.Verdict}");
-        foreach (string failedCheck in acceptance.FailedChecks)
-        {
-            sb.AppendLine($"- failed-check: {failedCheck}");
-        }
-
-        sb.AppendLine($"- reason: median advance reached `{acceptance.Team0FinalAdvanceCm:F0}` / `{acceptance.Team1FinalAdvanceCm:F0}` cm; timeout center box held `{final.CenterCount}` of `{final.LiveAgents}` agents with `{final.CenterStoppedAgents}` stationary; peak center occupancy was `{acceptance.PeakCenterCount}` at tick `{acceptance.PeakCenterTick}`.");
-        sb.AppendLine();
-        sb.AppendLine("## Summary Stats");
-        sb.AppendLine($"- trace samples: `{timeline.Count}`");
-        sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
-        sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
-        sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
-        sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `Navigation2DPlaygroundState`, `Navigation2DRuntime`, `ScreenOverlayBuffer`, `PlayerInputHandler`");
-        return sb.ToString();
-    }
-
-    private static string BuildNavigationTraceJsonl(string adapterId, IReadOnlyList<AvoidanceSnapshot> timeline)
-    {
-        var lines = new List<string>(timeline.Count);
-        for (int index = 0; index < timeline.Count; index++)
-        {
-            AvoidanceSnapshot snapshot = timeline[index];
-            lines.Add(JsonSerializer.Serialize(new
-            {
-                event_id = $"nav2d-{adapterId}-{index + 1:000}",
-                tick = snapshot.Tick,
-                step = snapshot.Step,
-                scenario = snapshot.ScenarioName,
-                agents_per_team = snapshot.AgentsPerTeam,
-                live_agents = snapshot.LiveAgents,
-                team0_median_x = Math.Round(snapshot.Team0MedianPrimary, 2),
-                team1_median_x = Math.Round(snapshot.Team1MedianPrimary, 2),
-                team0_crossed_fraction = Math.Round(snapshot.Team0CrossedFraction, 4),
-                team1_crossed_fraction = Math.Round(snapshot.Team1CrossedFraction, 4),
-                center_count = snapshot.CenterCount,
-                center_moving_agents = snapshot.CenterMovingAgents,
-                center_stopped_agents = snapshot.CenterStoppedAgents,
-                moving_agents = snapshot.MovingAgents,
-                flow_active_tiles = snapshot.FlowActiveTiles,
-                flow_frontier_processed = snapshot.FlowFrontierProcessed,
-                flow_budget_clamped = snapshot.FlowBudgetClamped,
-                flow_world_clamped = snapshot.FlowWorldClamped,
-                tick_ms = Math.Round(snapshot.TickMs, 4),
-                status = "done"
-            }));
-        }
-
-        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
-    }
-
-    private static string BuildNavigationPathMermaid()
-    {
-        return string.Join(Environment.NewLine, new[]
-        {
-            "flowchart TD",
-            "    A[Boot launcher runtime for Navigation2D playground] --> B[Force PassThrough + deterministic agents per team]",
-            "    B --> C[Run timed simulation to timeout]",
-            "    C --> D[Capture multi-frame timeline + trace metrics]",
-            "    D --> E{Median advance strong and timeout center jam low?}",
-            "    E -->|yes| F[Write battle-report + trace + path + PNG timeline]",
-            "    E -->|no| X[Fail acceptance: timeout still looks jammed]"
-        }) + Environment.NewLine;
-    }
-
-    private static string BuildNavigationVisibleChecklist(IReadOnlyList<CaptureFrame> frames)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("# Visible Checklist: navigation2d-playground-timed-avoidance");
-        sb.AppendLine();
-        sb.AppendLine("- Review the PNG sequence chronologically; each later frame should show stronger approach through the conflict zone without a stationary knot surviving at timeout.");
-        sb.AppendLine("- Timeout is acceptable only when the center box is not densely packed and the agents inside it are still moving.");
-        sb.AppendLine("- `screens/timeline.png` is the compact strip for side-by-side adapter review.");
-        sb.AppendLine();
-        foreach (CaptureFrame frame in frames)
-        {
-            sb.AppendLine($"- `{frame.FileName}`: center={frame.CenterCount}, centerStopped={frame.CenterStoppedAgents}, crossed={frame.Team0CrossedFraction:P0}/{frame.Team1CrossedFraction:P0}");
-        }
-
-        return sb.ToString();
-    }
-
-    private static string BuildNavigationSummaryJson(LauncherRecordingRequest request, AvoidanceAcceptanceResult acceptance)
-    {
-        return JsonSerializer.Serialize(new
-        {
-            scenario = "navigation2d_playground_timed_avoidance",
-            adapter = request.Plan.AdapterId,
-            selectors = request.Plan.Selectors,
-            root_mods = request.Plan.RootModIds,
-            team0_mid_advance_cm = Math.Round(acceptance.Team0MidAdvanceCm, 2),
-            team1_mid_advance_cm = Math.Round(acceptance.Team1MidAdvanceCm, 2),
-            team0_final_advance_cm = Math.Round(acceptance.Team0FinalAdvanceCm, 2),
-            team1_final_advance_cm = Math.Round(acceptance.Team1FinalAdvanceCm, 2),
-            final_center_fraction = Math.Round(acceptance.FinalCenterFraction, 4),
-            final_center_stopped_fraction = Math.Round(acceptance.FinalCenterStoppedFraction, 4),
-            final_center_count = acceptance.FinalCenterCount,
-            final_center_stopped_agents = acceptance.FinalCenterStoppedAgents,
-            final_live_agents = acceptance.FinalLiveAgents,
-            peak_center_count = acceptance.PeakCenterCount,
-            peak_center_tick = acceptance.PeakCenterTick,
-            normalized_signature = acceptance.NormalizedSignature
-        }, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    private static void AssertNavigationOverlay(ScreenOverlayBuffer overlay)
-    {
-        string dump = string.Join(" || ", ExtractOverlayText(overlay));
-        if (!dump.Contains("Navigation2D Playground", StringComparison.Ordinal) ||
-            !dump.Contains("FlowEnabled=", StringComparison.Ordinal) ||
-            !dump.Contains("CacheLookups=", StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException($"Navigation overlay lines are incomplete: {dump}");
-        }
-    }
-
     private static List<string> ExtractOverlayText(ScreenOverlayBuffer? overlay)
     {
         var lines = new List<string>();
@@ -3247,26 +2740,6 @@ public static class LauncherEvidenceRecorder
         return new SKPoint(x, height - y);
     }
 
-    private static SKPoint ToNavigationScreen(Vector2 world)
-    {
-        float x = (world.X - NavWorldMinX) / (NavWorldMaxX - NavWorldMinX) * NavImageWidth;
-        float y = (world.Y - NavWorldMinY) / (NavWorldMaxY - NavWorldMinY) * NavImageHeight;
-        return new SKPoint(x, NavImageHeight - y);
-    }
-
-    private static SKRect ToScreenRect(float minX, float minY, float maxX, float maxY)
-    {
-        SKPoint a = ToNavigationScreen(new Vector2(minX, minY));
-        SKPoint b = ToNavigationScreen(new Vector2(maxX, maxY));
-        return SKRect.Create(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y));
-    }
-
-    private static void DrawNavigationAgent(SKCanvas canvas, SKPaint paint, Vector2 world, float radiusPx)
-    {
-        SKPoint point = ToNavigationScreen(world);
-        canvas.DrawCircle(point.X, point.Y, radiusPx, paint);
-    }
-
     private static float Fraction(IReadOnlyList<Vector2> values, Func<Vector2, bool> predicate)
     {
         if (values.Count == 0)
@@ -3321,7 +2794,6 @@ public static class LauncherEvidenceRecorder
         CameraAcceptanceProjectionClick,
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
-        Navigation2DPlaygroundTimedAvoidance,
         MassNavigationLargeWorld
     }
 
@@ -3566,7 +3038,7 @@ public static class LauncherEvidenceRecorder
         int SceneResetCount,
         int CommandCountFrame,
         int SolverWindowMovesTotal,
-        int CameraBudgetUpdatesTotal,
+        int FocusBudgetUpdatesTotal,
         int CommandRejectsTotal,
         float FrameMs,
         float SimulationMs,
@@ -3583,31 +3055,6 @@ public static class LauncherEvidenceRecorder
         IReadOnlyList<string> FailedChecks,
         string NormalizedSignature);
 
-    private readonly record struct AvoidanceSnapshot(
-        int Tick,
-        string Step,
-        string ScenarioName,
-        int AgentsPerTeam,
-        int LiveAgents,
-        bool FlowEnabled,
-        bool FlowDebugEnabled,
-        double TickMs,
-        IReadOnlyList<Vector2> Team0Positions,
-        IReadOnlyList<Vector2> Team1Positions,
-        IReadOnlyList<Vector2> BlockerPositions,
-        float Team0MedianPrimary,
-        float Team1MedianPrimary,
-        float Team0CrossedFraction,
-        float Team1CrossedFraction,
-        int CenterCount,
-        int CenterMovingAgents,
-        int CenterStoppedAgents,
-        int MovingAgents,
-        int FlowActiveTiles,
-        int FlowFrontierProcessed,
-        bool FlowBudgetClamped,
-        bool FlowWorldClamped);
-
     private readonly record struct CaptureFrame(
         int Tick,
         string Step,
@@ -3616,22 +3063,4 @@ public static class LauncherEvidenceRecorder
         int CenterStoppedAgents,
         float Team0CrossedFraction,
         float Team1CrossedFraction);
-
-    private sealed record AvoidanceAcceptanceResult(
-        bool Success,
-        string Verdict,
-        string FailureSummary,
-        IReadOnlyList<string> FailedChecks,
-        float Team0MidAdvanceCm,
-        float Team1MidAdvanceCm,
-        float Team0FinalAdvanceCm,
-        float Team1FinalAdvanceCm,
-        float FinalCenterFraction,
-        float FinalCenterStoppedFraction,
-        int PeakCenterCount,
-        int PeakCenterTick,
-        int FinalCenterCount,
-        int FinalCenterStoppedAgents,
-        int FinalLiveAgents,
-        string NormalizedSignature);
 }

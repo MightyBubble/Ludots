@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly AbilityDefinitionRegistry _registry;
+        private const int MaxToggleActiveEffects = 4;
         private static readonly string[] RemovedAimVisualFieldNames =
         {
             "aimVisual",
@@ -439,14 +440,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (toggleObj["activeEffects"] is JsonArray activeEffects)
             {
+                if (activeEffects.Count > MaxToggleActiveEffects)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' field 'toggleSpec.activeEffects' in '{path}' contains {activeEffects.Count} effects, max {MaxToggleActiveEffects}.");
+                }
+
                 int activeCount = 0;
                 foreach (var effectNode in activeEffects)
                 {
-                    if (activeCount >= 4)
-                    {
-                        break;
-                    }
-
                     string effectId = effectNode?.GetValue<string>() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(effectId))
                     {

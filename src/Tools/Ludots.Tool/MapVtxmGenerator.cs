@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Text;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
 {
@@ -43,7 +44,8 @@ namespace Ludots.Tool
 
             var packed = new byte[chunkSize * chunkSize];
             var layer2 = new byte[chunkSize * chunkSize];
-            var flagsZeros = new byte[(chunkSize * chunkSize / 64) * sizeof(ulong)];
+            int flagWordsPerChunk = chunkSize * chunkSize / SpatialScaleDefaults.BitsPerFlagWord;
+            var flagsZeros = new byte[flagWordsPerChunk * sizeof(ulong)];
             var rampsBytes = new byte[flagsZeros.Length];
             var factions = new byte[chunkSize * chunkSize];
             var extraFlags0 = new byte[flagsZeros.Length];
@@ -52,10 +54,10 @@ namespace Ludots.Tool
             var extraBytes0 = new byte[chunkSize * chunkSize];
             var cliffStraighten = new byte[(chunkSize * chunkSize * 3) / 8];
 
-            var rampsU = new ulong[chunkSize * chunkSize / 64];
-            var ef0U = new ulong[chunkSize * chunkSize / 64];
-            var ef1U = new ulong[chunkSize * chunkSize / 64];
-            var ef2U = new ulong[chunkSize * chunkSize / 64];
+            var rampsU = new ulong[flagWordsPerChunk];
+            var ef0U = new ulong[flagWordsPerChunk];
+            var ef1U = new ulong[flagWordsPerChunk];
+            var ef2U = new ulong[flagWordsPerChunk];
 
             int mapWidth = widthChunks * chunkSize;
             int mapHeight = heightChunks * chunkSize;
@@ -100,7 +102,7 @@ namespace Ludots.Tool
                             if (flag1) ef1U[ulongIndex] |= mask;
                             if (flag2) ef2U[ulongIndex] |= mask;
 
-                            extraBytes0[cell] = (byte)(1 + ((globalC / 64) + (globalR / 64) * 17));
+                            extraBytes0[cell] = (byte)(1 + ((globalC / chunkSize) + (globalR / chunkSize) * 17));
 
                             bool isOdd = (globalR & 1) == 1;
 

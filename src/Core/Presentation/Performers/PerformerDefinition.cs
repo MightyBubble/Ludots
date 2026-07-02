@@ -559,7 +559,8 @@ namespace Ludots.Core.Presentation.Performers
                 VisibilityCondition.GraphProgramId <= 0;
             SupportsSingleRequestReplay =
                 AssetBehaviorIndices.Length == 1 &&
-                SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind);
+                SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind) &&
+                !RequestOutputDependsOnElapsed();
             UsesRetainedPresentationRequest =
                 (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
                 DefaultLifetime <= 0f &&
@@ -586,6 +587,12 @@ namespace Ludots.Core.Presentation.Performers
             SupportsFastParentAttachmentTick =
                 SupportsRetainedParentAttachmentFastTick(Behaviors, TickBehaviorIndices, out int fastParentAttachmentBehaviorIndex);
             FastParentAttachmentBehaviorIndex = fastParentAttachmentBehaviorIndex;
+        }
+
+        private bool RequestOutputDependsOnElapsed()
+        {
+            return PositionYDriftPerSecond != 0f ||
+                   (AlphaFadeOverLifetime && DefaultLifetime > 0f);
         }
 
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)

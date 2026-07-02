@@ -1,0 +1,4 @@
+﻿{"Frame":0,"AgentX":-900,"AgentY":0,"DesiredX":0,"DesiredY":0,"VelocityX":0,"VelocityY":0,"HasGoal":false,"ObstacleNav":true,"ObstaclePhysics":true,"NavAgentCount":1}
+{"Frame":9,"AgentX":-900,"AgentY":0,"DesiredX":0,"DesiredY":0,"VelocityX":0,"VelocityY":0,"HasGoal":true,"ObstacleNav":true,"ObstaclePhysics":true,"NavAgentCount":1}
+{"Frame":12,"AgentX":-876,"AgentY":0,"DesiredX":360,"DesiredY":0,"VelocityX":352.80002,"VelocityY":0,"HasGoal":true,"ObstacleNav":true,"ObstaclePhysics":true,"NavAgentCount":1}
+{"Frame":36,"AgentX":-732,"AgentY":0,"DesiredX":360,"DesiredY":0,"VelocityX":352.80002,"VelocityY":0,"HasGoal":true,"ObstacleNav":true,"ObstaclePhysics":true,"NavAgentCount":1}

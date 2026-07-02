@@ -1,12 +1,13 @@
 using System;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
@@ -19,23 +20,29 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public sealed class RuntimeManifestationBridgeTests
     {
+        private ShapeDataStorage2D _shapeStorage = null!;
+        private ComponentAuthoringContext _authoringContext = null!;
+
         [SetUp]
         public void SetUp()
         {
-            ShapeDataStorage2D.Clear();
+            _shapeStorage = new ShapeDataStorage2D();
+            _authoringContext = new ComponentAuthoringContext();
+            _authoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, _shapeStorage);
         }
 
         [TearDown]
         public void TearDown()
         {
-            ShapeDataStorage2D.Clear();
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource("RuntimeManifestationBridgeTests.ModA");
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource("RuntimeManifestationBridgeTests.ModB");
         }
 
         [Test]
-        public void ManifestationObstacleBridge2D_BoxIntent_CreatesPhysicsAndNavigationObstacle()
+        public void ManifestationObstacleBridge2D_BoxIntent_CreatesPhysicsAndMassNavigationFlowProjection()
         {
             using var world = World.Create();
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             var entity = world.Create(
                 WorldPositionCm.FromCm(1200, 3400),
                 new FacingDirection { AngleRad = MathF.PI / 2f },
@@ -57,7 +64,7 @@ namespace Ludots.Tests.GAS
 
             var collider = world.Get<Collider2D>(entity);
             That(collider.Type, Is.EqualTo(ColliderType2D.Box));
-            That(ShapeDataStorage2D.TryGetBox(collider.ShapeDataIndex, out var box), Is.True);
+            That(_shapeStorage.TryGetBox(collider.ShapeDataIndex, out var box), Is.True);
             That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(240)));
             That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(30)));
 
@@ -66,22 +73,22 @@ namespace Ludots.Tests.GAS
             That(world.Has<Velocity2D>(entity), Is.True);
             That(world.Get<Velocity2D>(entity).Linear, Is.EqualTo(Fix64Vec2.Zero));
 
-            var obstacle = world.Get<NavObstacle2D>(entity);
-            That(obstacle.Shape, Is.EqualTo(NavObstacleShape2D.Box));
-            That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
-
-            var nav = world.Get<NavKinematics2D>(entity);
             Fix64 expectedRadius = Fix64Math.Sqrt(
                 Fix64.FromInt(240 * 240) +
                 Fix64.FromInt(30 * 30));
-            That(nav.RadiusCm, Is.EqualTo(expectedRadius));
+
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
+            That(projection.PieceCount, Is.EqualTo(1));
+            That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(projection.GetRadiusCm(0), Is.EqualTo(expectedRadius.RoundToInt()));
         }
 
         [Test]
         public void ManifestationObstacleBridge2D_SingleSinkTogglesRemoveDerivedState()
         {
             using var world = World.Create();
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             var entity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 new ManifestationObstacleIntent2D
@@ -98,8 +105,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Collider2D>(entity), Is.True);
             That(world.Has<Mass2D>(entity), Is.True);
             That(world.Has<Velocity2D>(entity), Is.True);
-            That(world.Has<NavObstacle2D>(entity), Is.True);
-            That(world.Has<NavKinematics2D>(entity), Is.True);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
 
             var intent = world.Get<ManifestationObstacleIntent2D>(entity);
             intent.SinkPhysicsCollider = 0;
@@ -112,34 +118,25 @@ namespace Ludots.Tests.GAS
             That(world.Has<Collider2D>(entity), Is.False);
             That(world.Has<Mass2D>(entity), Is.False);
             That(world.Has<Velocity2D>(entity), Is.False);
-            That(world.Has<NavObstacle2D>(entity), Is.False);
-            That(world.Has<NavKinematics2D>(entity), Is.False);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.False);
         }
 
         [Test]
         public void ManifestationObstacleBridge2D_DisabledInitialSinksDoNotRemoveAuthoredRuntimeComponents()
         {
             using var world = World.Create();
-            int authoredShapeIndex = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
+            int authoredShapeIndex = _shapeStorage.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
             var authoredVelocity = Velocity2D.FromCmPerSec(7f, 8f, 0.5f);
             var authoredMass = Mass2D.FromFloat(1f, 2f);
-            var authoredNav = new NavKinematics2D
-            {
-                MaxSpeedCmPerSec = Fix64.FromInt(300),
-                MaxAccelCmPerSec2 = Fix64.FromInt(400),
-                RadiusCm = Fix64.FromInt(30),
-                NeighborDistCm = Fix64.FromInt(500),
-                TimeHorizonSec = Fix64.OneValue,
-                MaxNeighbors = 4
-            };
+            var authoredProjection = new MassNavigationFlowObstacleProjection();
+            authoredProjection.SetPiece(0, ManifestationObstacleShape2D.Box, 12, 34, 56);
 
             var entity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = authoredShapeIndex },
                 authoredMass,
                 authoredVelocity,
-                new NavObstacle2D { Shape = NavObstacleShape2D.Box, ShapeDataIndex = authoredShapeIndex },
-                authoredNav,
+                authoredProjection,
                 new ManifestationObstacleIntent2D
                 {
                     Shape = ManifestationObstacleShape2D.Circle,
@@ -149,7 +146,7 @@ namespace Ludots.Tests.GAS
                     NavRadiusCm = 50,
                 });
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Get<Collider2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
@@ -157,9 +154,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<Mass2D>(entity).InverseInertia, Is.EqualTo(authoredMass.InverseInertia));
             That(world.Get<Velocity2D>(entity).Linear, Is.EqualTo(authoredVelocity.Linear));
             That(world.Get<Velocity2D>(entity).Angular, Is.EqualTo(authoredVelocity.Angular));
-            That(world.Get<NavObstacle2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
-            That(world.Get<NavKinematics2D>(entity).MaxSpeedCmPerSec, Is.EqualTo(authoredNav.MaxSpeedCmPerSec));
-            That(world.Get<NavKinematics2D>(entity).MaxNeighbors, Is.EqualTo(authoredNav.MaxNeighbors));
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.False);
         }
 
         [Test]
@@ -179,7 +174,8 @@ namespace Ludots.Tests.GAS
                   "navRadiusCm": 160,
                   "localOffsetCm": { "x": 0, "y": 0 }
                 }
-                """)!);
+                """)!,
+                _authoringContext);
             Ludots.Core.Config.ComponentRegistry.Apply(
                 entity,
                 "ManifestationObstaclePolygon2D",
@@ -191,23 +187,26 @@ namespace Ludots.Tests.GAS
                     { "x": 40, "y": 160 }
                   ]
                 }
-                """)!);
+                """)!,
+                _authoringContext);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Has<ManifestationObstaclePolygon2D>(entity), Is.True);
 
             var collider = world.Get<Collider2D>(entity);
             That(collider.Type, Is.EqualTo(ColliderType2D.Polygon));
-            That(ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var polygon), Is.True);
+            That(_shapeStorage.TryGetPolygon(collider.ShapeDataIndex, out var polygon), Is.True);
             That(polygon.VertexCount, Is.EqualTo(3));
 
-            var obstacle = world.Get<NavObstacle2D>(entity);
-            That(obstacle.Shape, Is.EqualTo(NavObstacleShape2D.Polygon));
-            That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
+            That(projection.PieceCount, Is.EqualTo(1));
+            That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
+            That(projection.GetRadiusCm(0), Is.EqualTo(160));
         }
 
+        [Test]
         public void ComponentRegistry_ParsesCompoundObstacle_AndBridgeCreatesCompoundStateOnSameEntity()
         {
             using var world = World.Create();
@@ -240,31 +239,36 @@ namespace Ludots.Tests.GAS
                     }
                   ]
                 }
-                """)!);
+                """)!,
+                _authoringContext);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
             system.Update(0f);
 
             That(world.Has<CompoundObstacle2D>(entity), Is.True);
             That(world.Has<CompoundObstacle2DState>(entity), Is.True);
-            That(world.Has<Collider2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-collider component.");
-            That(world.Has<NavObstacle2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-nav-obstacle component.");
+            That(world.Has<Collider2D>(entity), Is.False, "Compound obstacles should not collapse into the single-collider component.");
             That(world.Has<Mass2D>(entity), Is.True);
             That(world.Has<Velocity2D>(entity), Is.True);
-            That(world.Has<NavKinematics2D>(entity), Is.True);
+            That(world.Has<MassNavigationFlowObstacleProjection>(entity), Is.True);
 
             var state = world.Get<CompoundObstacle2DState>(entity);
             That(state.PieceCount, Is.EqualTo(2));
             That(state.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
             That(state.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
-            That(ShapeDataStorage2D.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
+            That(_shapeStorage.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
             That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(100)));
             That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(40)));
-            That(ShapeDataStorage2D.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
+            That(_shapeStorage.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
             That(polygon.VertexCount, Is.EqualTo(3));
             That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
-            That(world.Get<NavKinematics2D>(entity).RadiusCm, Is.EqualTo(Fix64.FromInt(120)));
+            var projection = world.Get<MassNavigationFlowObstacleProjection>(entity);
+            That(projection.PieceCount, Is.EqualTo(2));
+            That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(projection.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
+            That(projection.GetRadiusCm(0), Is.EqualTo(120));
+            That(projection.GetRadiusCm(1), Is.EqualTo(80));
         }
 
         [Test]
@@ -282,8 +286,8 @@ namespace Ludots.Tests.GAS
                     HalfHeightCm = 20
                 });
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -344,7 +348,7 @@ namespace Ludots.Tests.GAS
                 navRadiusCm: 10);
             world.Add(entity, compound);
 
-            var system = new ManifestationObstacleBridge2DSystem(world);
+            var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
 
             InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
             That(ex.Message, Does.Contain("must not author both ManifestationObstacleIntent2D and CompoundObstacle2D"));
@@ -368,7 +372,8 @@ namespace Ludots.Tests.GAS
                 Ludots.Core.Config.ComponentRegistry.Apply(
                     invalid,
                     "SpatialBounds",
-                    JsonNode.Parse("""{ "kind": "footprint2d" }""")!))!;
+                    JsonNode.Parse("""{ "kind": "footprint2d" }""")!,
+                    _authoringContext))!;
             That(ex.Message, Does.Contain("Unsupported SpatialBounds kind"));
         }
 
@@ -555,6 +560,76 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ComponentRegistry_DuplicateSameTypedDefinitionAcrossMods_IsNoOp()
+        {
+            const string modA = "RuntimeManifestationBridgeTests.ModA";
+            const string modB = "RuntimeManifestationBridgeTests.ModB";
+            const string name = "RuntimeManifestationBridgeTestSameTypedTag";
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modA);
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modB);
+
+            Ludots.Core.Config.ComponentRegistry.Register<RuntimeManifestationBridgeTestTag>(name, modA);
+
+            DoesNotThrow(() =>
+                Ludots.Core.Config.ComponentRegistry.Register<RuntimeManifestationBridgeTestTag>(name, modB));
+            That(Ludots.Core.Config.ComponentRegistry.TryGetComponentType(name, out _), Is.True);
+        }
+
+        [Test]
+        public void ComponentRegistry_DuplicateSameSetterDefinitionAcrossMods_IsNoOp()
+        {
+            const string modA = "RuntimeManifestationBridgeTests.ModA";
+            const string modB = "RuntimeManifestationBridgeTests.ModB";
+            const string name = "RuntimeManifestationBridgeTestSameSetterTag";
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modA);
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modB);
+            Ludots.Core.Config.ComponentSetter setter = SetRuntimeManifestationBridgeTestTag;
+
+            Ludots.Core.Config.ComponentRegistry.Register(name, setter, modA);
+
+            DoesNotThrow(() =>
+                Ludots.Core.Config.ComponentRegistry.Register(name, setter, modB));
+        }
+
+        [Test]
+        public void ComponentRegistry_DuplicateDifferentTypedDefinitionAcrossMods_Throws()
+        {
+            const string modA = "RuntimeManifestationBridgeTests.ModA";
+            const string modB = "RuntimeManifestationBridgeTests.ModB";
+            const string name = "RuntimeManifestationBridgeTestDifferentTypedTag";
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modA);
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modB);
+
+            Ludots.Core.Config.ComponentRegistry.Register<RuntimeManifestationBridgeTestTag>(name, modA);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Config.ComponentRegistry.Register<RuntimeManifestationBridgeDifferentTestTag>(name, modB))!;
+            That(ex.Message, Does.Contain("already registered"));
+        }
+
+        [Test]
+        public void ComponentRegistry_DuplicateDifferentSetterDefinitionAcrossMods_Throws()
+        {
+            const string modA = "RuntimeManifestationBridgeTests.ModA";
+            const string modB = "RuntimeManifestationBridgeTests.ModB";
+            const string name = "RuntimeManifestationBridgeTestDifferentSetterTag";
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modA);
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modB);
+
+            Ludots.Core.Config.ComponentRegistry.Register(
+                name,
+                SetRuntimeManifestationBridgeTestTag,
+                modA);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Config.ComponentRegistry.Register(
+                    name,
+                    SetRuntimeManifestationBridgeDifferentTestTag,
+                    modB))!;
+            That(ex.Message, Does.Contain("already registered"));
+        }
+
+        [Test]
         public void EntityBuilder_RejectsUnknownTemplatesAndNullOverrides()
         {
             using var world = World.Create();
@@ -593,6 +668,23 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.Contain(expectedMessage));
         }
 
+        private static void SetRuntimeManifestationBridgeTestTag(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<RuntimeManifestationBridgeTestTag>())
+            {
+                entity.Add(new RuntimeManifestationBridgeTestTag());
+            }
+        }
+
+        private static void SetRuntimeManifestationBridgeDifferentTestTag(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<RuntimeManifestationBridgeDifferentTestTag>())
+            {
+                entity.Add(new RuntimeManifestationBridgeDifferentTestTag());
+            }
+        }
+
         private struct RuntimeManifestationBridgeTestTag { }
+        private struct RuntimeManifestationBridgeDifferentTestTag { }
     }
 }

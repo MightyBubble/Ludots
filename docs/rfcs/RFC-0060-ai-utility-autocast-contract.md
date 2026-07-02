@@ -1,4 +1,4 @@
-# RFC-0060 AI Utility Autocast 契约收敛
+﻿# RFC-0060 AI Utility Autocast 契约收敛
 
 状态：Accepted for issue #225 implementation slice
 
@@ -6,7 +6,7 @@
 
 ## 背景
 
-Epic #224 要把现有 `src/Core/Gameplay/AI` 深化为通用 Utility AI + OpenRA Stance 行为包。#225 先处理契约前提，不实现 scoring、target acquisition、autocast 仲裁、stance/order 行为包或主循环接入。
+Epic #224 要把现有 `src/Core/Gameplay/AI` 深化为通用 Utility AI + Combat Stance 行为包。#225 先处理契约前提，不实现 scoring、target acquisition、autocast 仲裁、stance/order 行为包或主循环接入。
 
 SSOT 参考材料来自 `docs/ai-utility-autocast-ssot` 分支：
 
@@ -63,5 +63,5 @@ SSOT 参考材料来自 `docs/ai-utility-autocast-ssot` 分支：
 
 - Utility AI 编译结果进入 `AiCompiledRuntime.UtilityRuntime`。
 - target acquisition、decision-target evaluator、共享 cooldown 仲裁、order task submission、actuator gate、主循环接入由 `src/Tests/GasTests/UtilityAiRuntimeTests.cs` 覆盖。
-- OpenRA stance 业务行为留在 `mods/OpenRaStanceBehaviorMod`，不进入 AI Core；该 Mod 通过 GAS/order config 声明业务 order，并只提交 `Order` intent。
+- Combat stance 业务行为留在 `mods/CombatStanceBehaviorMod`，不进入 AI Core；该 Mod 通过 GAS/order config 声明业务 order，并只提交 `Order` intent。
 - AI Inspector 补充 Utility AI runtime inventory 与 opt-in trace 摘要，用于调试候选、过滤原因、分数、task status 和已提交 order。

@@ -1,0 +1,606 @@
+:root {
+  color: #f7fbff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: transparent;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.showcase-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.react-flow-alpha-cutout {
+  -webkit-mask:
+    linear-gradient(#000 0 0),
+    linear-gradient(#000 0 0);
+  -webkit-mask-position:
+    0 0,
+    520px 300px;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size:
+    100% 100%,
+    320px 160px;
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0),
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  mask-position:
+    0 0,
+    520px 300px;
+  mask-repeat: no-repeat;
+  mask-size:
+    100% 100%,
+    320px 160px;
+}
+
+.react-flow {
+  background: transparent;
+  --xy-edge-stroke-default: rgba(247, 251, 255, 0.82);
+  --xy-edge-stroke-width-default: 2.4;
+  --xy-handle-background-color-default: #f8fbff;
+  --xy-handle-border-color-default: #06101f;
+}
+
+.react-flow__renderer {
+  z-index: 2;
+}
+
+.react-flow__pane {
+  cursor: grab;
+}
+
+.react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.lane-bg {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--lane-accent) 58%, rgba(255, 255, 255, 0.18));
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--lane-accent) 16%, transparent), rgba(255, 255, 255, 0.035)),
+    rgba(6, 12, 22, 0.32);
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 10px;
+  text-transform: uppercase;
+}
+
+.lane-bg span {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(2, 8, 16, 0.42);
+  color: color-mix(in srgb, var(--lane-accent) 84%, white);
+}
+
+.react-flow__edges {
+  z-index: 3;
+  overflow: visible;
+}
+
+.react-flow__edges svg {
+  overflow: visible;
+}
+
+.react-flow__edge-path,
+.react-flow__connection-path {
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.48));
+}
+
+.lane-edge .react-flow__edge-path {
+  stroke-width: 3.2;
+}
+
+.cross-edge .react-flow__edge-path {
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 7px rgba(247, 251, 255, 0.42));
+}
+
+.react-flow__nodes {
+  z-index: 4;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(2, 8, 16, 0.52);
+  opacity: 1;
+}
+
+.stage-node {
+  width: 220px;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--node-accent) 70%, white 14%);
+  border-radius: 8px;
+  background: rgba(8, 15, 28, 0.78);
+  color: #f8fbff;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+  padding: 10px;
+}
+
+.stage-index {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--node-accent) 32%, rgba(255, 255, 255, 0.08));
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.stage-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.stage-copy strong {
+  font-size: 13px;
+  line-height: 1.05;
+}
+
+.stage-copy span {
+  color: rgba(235, 245, 255, 0.72);
+  font-size: 11px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-panel {
+  max-width: 430px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(6, 12, 22, 0.7);
+  padding: 14px 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+}
+
+.top-panel h1 {
+  margin: 3px 0 0;
+  color: white;
+  font-size: 26px;
+  line-height: 1;
+}
+
+.top-panel p {
+  margin: 0;
+  color: rgba(236, 246, 255, 0.78);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.eyebrow {
+  color: #7ee7b2;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.metrics-panel {
+  display: flex;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  background: rgba(4, 8, 16, 0.72);
+  padding: 8px;
+}
+
+.metrics-panel div {
+  min-width: 74px;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.metrics-panel strong {
+  color: white;
+  font-size: 15px;
+}
+
+.metrics-panel span {
+  color: rgba(230, 240, 252, 0.7);
+  font-size: 11px;
+}
+
+.interaction-panel {
+  display: flex;
+  gap: 8px;
+  border: 1px solid rgba(126, 231, 178, 0.36);
+  border-radius: 8px;
+  background: rgba(4, 10, 16, 0.78);
+  padding: 8px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.26);
+}
+
+.interaction-panel div {
+  min-width: 88px;
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(126, 231, 178, 0.1);
+}
+
+.interaction-panel div:nth-child(4) {
+  min-width: 144px;
+}
+
+.interaction-panel div:nth-child(6) {
+  min-width: 128px;
+}
+
+.interaction-panel strong {
+  color: white;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.interaction-panel span {
+  color: rgba(218, 255, 234, 0.74);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.mini-map {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 12, 20, 0.72);
+}
+
+.flow-controls {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 12, 20, 0.72);
+}
+
+.dataplane-panel {
+  width: min(520px, calc(100vw - 32px));
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(100, 210, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(4, 10, 18, 0.78);
+  padding: 10px;
+  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
+}
+
+.dataplane-stress {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.stress-head {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.stress-head h2 {
+  margin: 3px 0 0;
+  color: white;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.stress-head > strong {
+  border: 1px solid rgba(126, 231, 178, 0.44);
+  border-radius: 6px;
+  background: rgba(126, 231, 178, 0.14);
+  color: #dfffee;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.stress-profile-grid,
+.stress-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stress-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric-cell {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+  border-radius: 6px;
+  background: rgba(100, 210, 255, 0.1);
+  padding: 7px;
+}
+
+.metric-cell strong {
+  color: white;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric-cell span {
+  color: rgba(215, 242, 255, 0.7);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.stress-meta {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.stress-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(224, 243, 255, 0.74);
+  font-size: 10px;
+  padding: 6px 7px;
+}
+
+.bucket-strip {
+  height: 70px;
+  display: grid;
+  grid-template-columns: repeat(64, minmax(2px, 1fr));
+  gap: 2px;
+  align-items: end;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(2, 8, 16, 0.48);
+  padding: 8px;
+}
+
+.bucket-strip i {
+  display: block;
+  min-height: 8px;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #7ee7b2, #64d2ff);
+}
+
+.bucket-strip.empty i {
+  height: 8px;
+}
+
+.entity-window-control {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(126, 231, 178, 0.26);
+  border-radius: 8px;
+  background: rgba(7, 18, 28, 0.62);
+  padding: 8px;
+}
+
+.entity-window-control label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: rgba(218, 255, 234, 0.74);
+  font-size: 11px;
+}
+
+.entity-window-control strong {
+  color: white;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.entity-window-control input {
+  width: 100%;
+  accent-color: #7ee7b2;
+}
+
+.entity-attribute-list {
+  max-height: min(342px, calc(100vh - 480px));
+  min-height: 168px;
+  overflow: hidden auto;
+  display: grid;
+  gap: 5px;
+  padding-right: 2px;
+}
+
+.entity-attribute-list button {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 38px 38px;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: white;
+  padding: 7px 8px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.entity-attribute-list button:hover {
+  border-color: rgba(126, 231, 178, 0.68);
+  background: rgba(126, 231, 178, 0.14);
+}
+
+.entity-attribute-list span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.entity-id {
+  color: #f8d66d;
+  font-weight: 800;
+}
+
+.entity-hp {
+  position: relative;
+  height: 18px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.entity-hp i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8ee6a8, #f8d66d);
+}
+
+.entity-hp strong {
+  position: relative;
+  display: block;
+  color: #06101f;
+  font-size: 11px;
+  line-height: 18px;
+  padding-left: 6px;
+}
+
+.keyboard-probe {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(126, 231, 178, 0.32);
+  border-radius: 8px;
+  background: rgba(7, 18, 28, 0.72);
+  padding: 9px;
+}
+
+.keyboard-probe label,
+.keyboard-probe span {
+  color: rgba(218, 255, 234, 0.74);
+  font-size: 11px;
+}
+
+.keyboard-probe input,
+.perf-panel input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #06101f;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 9px;
+  outline: none;
+}
+
+.keyboard-probe input:focus,
+.perf-panel input:focus {
+  border-color: rgba(126, 231, 178, 0.95);
+  box-shadow: 0 0 0 3px rgba(126, 231, 178, 0.22);
+}
+
+.alpha-panel {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(126, 231, 178, 0.38);
+  border-radius: 8px;
+  background: rgba(4, 10, 18, 0.78);
+  padding: 10px;
+}
+
+.alpha-panel button {
+  border: 1px solid rgba(126, 231, 178, 0.7);
+  border-radius: 6px;
+  background: rgba(126, 231, 178, 0.18);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.alpha-panel button:hover {
+  background: rgba(126, 231, 178, 0.28);
+}
+
+.alpha-panel span {
+  color: rgba(218, 255, 234, 0.72);
+  font-size: 11px;
+}
+
+.perf-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.perf-canvas {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+.perf-panel {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 240px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(100, 210, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(4, 10, 18, 0.78);
+  padding: 10px;
+}
+
+.perf-panel strong {
+  color: white;
+  font-size: 20px;
+}
+
+.perf-panel span {
+  color: rgba(224, 243, 255, 0.72);
+  font-size: 12px;
+}

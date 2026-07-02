@@ -38,9 +38,9 @@ namespace Ludots.Tests.ThreeC
             LowLodDistanceCm = 20000f,
         };
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  Test Doubles
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         /// <summary>Captures CameraRenderState3D sent by CameraPresenter.</summary>
         private sealed class StubCameraAdapter : ICameraAdapter
@@ -84,7 +84,7 @@ namespace Ludots.Tests.ThreeC
             public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
         }
 
-        private sealed class StubLoadedChunks : Ludots.Core.Spatial.ILoadedChunks
+        private sealed class StubLoadedChunks : Ludots.Core.Spatial.ILoadedChunks, Ludots.Core.Spatial.IWorldChunkKeyResolver
         {
             private readonly HashSet<long> _active = new();
 
@@ -103,6 +103,14 @@ namespace Ludots.Tests.ThreeC
             }
 
             public bool IsLoaded(long chunkKey) => _active.Contains(chunkKey);
+
+            public long GetChunkKeyForWorldCm(float worldXCm, float worldYCm)
+            {
+                Ludots.Core.Map.Hex.HexCoordinates hex = Ludots.Core.Map.Hex.HexCoordinates.FromWorldPositionCm(
+                    new Vector3(worldXCm, 0f, worldYCm));
+                (int col, int row) = hex.ToOffsetCoordinates();
+                return Ludots.Core.Map.Hex.HexCoordinates.GetChunkKey(col >> 6, row >> 6);
+            }
 
             public void SetLoaded(params long[] keys)
             {
@@ -141,9 +149,9 @@ namespace Ludots.Tests.ThreeC
             public Ludots.Core.Map.Hex.HexCoordinates WorldToHex(in WorldCmInt2 world) => default;
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  SetUp
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         [SetUp]
         public void Setup()
@@ -160,9 +168,9 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  A. Camera State & Manager
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         [Test]
         public void CameraState_DefaultValues_MatchExpected()
@@ -212,9 +220,9 @@ namespace Ludots.Tests.ThreeC
             That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  B. Camera Preset Runtime Behaviors
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildOrbitInputHandler()
         {
@@ -404,7 +412,7 @@ namespace Ludots.Tests.ThreeC
             return manager;
         }
         //  C. Camera Presenter
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         [Test]
         public void Presenter_FirstUpdate_SphericalToCartesianCorrect()
@@ -427,12 +435,12 @@ namespace Ludots.Tests.ThreeC
 
             presenter.Update(manager, 1f);
 
-            // Yaw=0 �?sin(0)=0, cos(0)=1
-            // Pitch=45�?�?cos(�?4)�?.7071, sin(�?4)�?.7071
-            // distM = 10m, hDist = 10*cos(45�?�?.071, vDist = 10*sin(45�?�?.071
+            // Yaw=0 -> sin(0)=0, cos(0)=1
+            // Pitch=45 deg -> cos(pi/4)=0.7071, sin(pi/4)=0.7071
+            // distM = 10m, hDist = 10*cos(45 deg)=7.071, vDist = 10*sin(45 deg)=7.071
             // offsetX = 7.071 * sin(0) = 0
             // offsetZ = -7.071 * cos(0) = -7.071
-            // position �?(0, 7.071, -7.071)
+            // position -> (0, 7.071, -7.071)
             var pos = adapter.LastState.Position;
             That(pos.X, Is.EqualTo(0f).Within(0.1f));
             That(pos.Y, Is.EqualTo(7.071f).Within(0.1f));
@@ -447,7 +455,7 @@ namespace Ludots.Tests.ThreeC
             var coords = new StubSpatialCoordinateConverter();
             var presenter = new CameraPresenter(coords, adapter);
 
-            // Pitch �?89�?�?forward �?(0, -1, 0) �?dot(forward, UnitY) > 0.99 �?up switches to UnitZ
+            // Pitch ~= 89 deg -> forward ~= (0, -1, 0); dot(forward, UnitY) > 0.99 -> up switches to UnitZ
             var manager = new CameraManager();
             manager.PreviousState.Yaw = 0f;
             manager.PreviousState.Pitch = 89f;
@@ -481,7 +489,7 @@ namespace Ludots.Tests.ThreeC
             manager.PreviousState.FovYDeg = 60f;
             manager.PreviousState.TargetCm = Vector2.Zero;
 
-            // Second frame: move target �?position should lerp, not snap
+            // Second frame: move target -> position should lerp, not snap
             manager.State.Yaw = 0f;
             manager.State.Pitch = 45f;
             manager.State.DistanceCm = 1000f;
@@ -496,9 +504,9 @@ namespace Ludots.Tests.ThreeC
             That(adapter.LastState.Target.X, Is.EqualTo(25f).Within(0.01f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  D. Camera Culling
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         private static PerformerEntityRuntime CreatePerformerPayload(World world, Entity entity)
         {
@@ -620,15 +628,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance -> viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~7000cm from origin �?between High(4000) and Medium(10000)
-            var entity = CreateCullableEntity(world, 5000, 5000); // dist �?7071cm
+            // Place entity at ~7000cm from origin -> between High(4000) and Medium(10000)
+            var entity = CreateCullableEntity(world, 5000, 5000); // dist ~= 7071cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
@@ -645,15 +653,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance -> viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~14142cm from origin �?between Medium(10000) and Low(20000)
-            var entity = CreateCullableEntity(world, 10000, 10000); // dist �?14142cm
+            // Place entity at ~14142cm from origin -> between Medium(10000) and Low(20000)
+            var entity = CreateCullableEntity(world, 10000, 10000); // dist ~= 14142cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
@@ -670,15 +678,15 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance -> viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~28284cm �?beyond Low(20000) threshold
-            var entity = CreateCullableEntity(world, 20000, 20000); // dist �?28284cm
+            // Place entity at ~28284cm -> beyond Low(20000) threshold
+            var entity = CreateCullableEntity(world, 20000, 20000); // dist ~= 28284cm
             spatial.Entities.Add(entity);
 
             var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
@@ -856,9 +864,9 @@ namespace Ludots.Tests.ThreeC
             That(cull.ScreenCoverage01, Is.EqualTo(0f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  E. Character Position Pipeline
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         [Test]
         public void Culling_StaticCameraYawChange_RecomputesStaticVisibility()
@@ -1013,7 +1021,7 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // Midpoint: (500, 1000) cm �?(5, 0, 10) m (XY logic �?XZ visual)
+            // Midpoint: (500, 1000) cm -> (5, 0, 10) m (XY logic -> XZ visual)
             That(visual.Position.X, Is.EqualTo(5f).Within(0.05f));
             That(visual.Position.Y, Is.EqualTo(0f).Within(0.01f));
             That(visual.Position.Z, Is.EqualTo(10f).Within(0.05f));
@@ -1083,7 +1091,7 @@ namespace Ludots.Tests.ThreeC
                 new PresentationFrameStateTag()
             );
 
-            // Entity WITHOUT CullState component �?should always sync
+            // Entity WITHOUT CullState component -> should always sync
             var entity = world.Create(
                 WorldPositionCm.FromCm(300, 400),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 400) },
@@ -1094,14 +1102,14 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // (300, 400) cm �?(3, 0, 4) m
+            // (300, 400) cm -> (3, 0, 4) m
             That(visual.Position.X, Is.EqualTo(3f).Within(0.05f));
             That(visual.Position.Z, Is.EqualTo(4f).Within(0.05f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
         //  F. Input Edge Detection & Order Building
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+        // ------------------------------------------------------------
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildSimpleInputHandler()
         {

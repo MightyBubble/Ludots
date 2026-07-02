@@ -1,0 +1,12 @@
+{
+  "name": "GapGeneratorShowcaseMod",
+  "version": "1.0.0",
+  "description": "Deny-polarity generator showcase root.",
+  "main": "bin/net8.0/GapGeneratorShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "vision", "generator", "deny"]
+}

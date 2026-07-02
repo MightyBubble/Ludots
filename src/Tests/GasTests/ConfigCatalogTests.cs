@@ -130,7 +130,7 @@ namespace Ludots.Tests.GAS
         public void ConfigCatalog_PathsAreCaseExact()
         {
             var catalog = new ConfigCatalog();
-            catalog.Add(new ConfigCatalogEntry("MassNavigationConfig.json", ConfigMergePolicy.Replace));
+            catalog.Add(new ConfigCatalogEntry("MassNavigationConfig.json", ConfigMergePolicy.DeepObject));
 
             Assert.That(catalog.TryGet("MassNavigationConfig.json", out _), Is.True);
             Assert.That(catalog.TryGet("massnavigationconfig.json", out _), Is.False);
@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS
                 Directory.CreateDirectory(Path.Combine(core, "Configs"));
                 File.WriteAllText(
                     Path.Combine(core, "Configs", "game.json"),
-                    "{ \"startupMapId\": \"canonical_map\", \"windowWidth\": 1440, \"navigation2D\": { \"enabled\": true } }");
+                    "{ \"startupMapId\": \"canonical_map\", \"windowWidth\": 1440 }");
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("Core", core);
@@ -217,7 +217,6 @@ namespace Ludots.Tests.GAS
                 var config = pipeline.MergeGameConfig();
                 Assert.That(config.StartupMapId, Is.EqualTo("canonical_map"));
                 Assert.That(config.WindowWidth, Is.EqualTo(1440));
-                Assert.That(config.Navigation2D.Enabled, Is.True);
 
                 File.WriteAllText(
                     Path.Combine(core, "Configs", "game.json"),

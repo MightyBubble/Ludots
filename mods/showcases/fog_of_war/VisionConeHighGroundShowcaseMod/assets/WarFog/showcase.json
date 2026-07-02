@@ -1,0 +1,5 @@
+{
+  "capability": "FOG-3",
+  "apertures": ["disk", "cone", "box", "line"],
+  "verticalRule": { "enabled": true, "upTolerance": 0 }
+}

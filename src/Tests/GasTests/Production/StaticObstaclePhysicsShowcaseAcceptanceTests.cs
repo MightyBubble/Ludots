@@ -48,7 +48,6 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = CreateEngine(repoRoot);
             Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(config.MapId));
-            Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.True);
 
             Physics2DSimulationSystem physics = FindSystem<Physics2DSimulationSystem>(engine, SystemGroup.InputCollection);
             RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
@@ -72,7 +71,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(engine, frameTimesMs, () => physics.Build.StaticBodyVersion > 0, maxFrames: 8);
             int materializedStaticVersion = physics.Build.StaticBodyVersion;
             int materializedDescriptorCount = physics.Build.StaticRigidBodyDescriptors.Count;
-            Assert.That(physics.Build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(config.TotalObstacleCount));
+            Assert.That(physics.Build.DirtyStaticBodyCountLastRebuild, Is.EqualTo(config.TotalObstacleCount));
             Assert.That(materializedDescriptorCount, Is.EqualTo(config.TotalObstacleCount * piecesPerObstacle));
             Assert.That(materializedStaticVersion, Is.GreaterThan(0));
 

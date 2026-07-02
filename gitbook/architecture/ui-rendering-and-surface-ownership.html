@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UI 渲染控制与 Surface 所有权（SSOT）· Ludots</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --bg-card: #1a2029;
+    --border: #2a3441;
+    --text: #d7dee8;
+    --text-dim: #9aa7b6;
+    --accent: #58a6ff;
+    --accent-soft: #1f6feb33;
+    --gold: #e3b341;
+    --gold-soft: #e3b34122;
+    --red: #f85149;
+    --red-soft: #f8514922;
+    --green: #3fb950;
+    --green-soft: #3fb95022;
+    --mono: "Cascadia Code", "JetBrains Mono", "Consolas", ui-monospace, monospace;
+    --sans: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.7;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    font-family: var(--mono);
+    background: #0000004d;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-size: 0.86em;
+    color: #b9c6d6;
+  }
+  pre {
+    font-family: var(--mono);
+    background: #080b10;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #c8d3e0;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  .layout { display: flex; max-width: 1180px; margin: 0 auto; }
+  nav.toc {
+    position: sticky; top: 0; align-self: flex-start;
+    width: 256px; height: 100vh; overflow-y: auto;
+    padding: 28px 18px 40px 24px;
+    border-right: 1px solid var(--border);
+    font-size: 13.5px;
+  }
+  nav.toc .brand { font-weight: 700; color: var(--text); font-size: 15px; letter-spacing: .3px; margin-bottom: 4px; }
+  nav.toc .brand span { color: var(--accent); }
+  nav.toc .tag { color: var(--text-dim); font-size: 11.5px; margin-bottom: 18px; display:block; }
+  nav.toc a { display: block; color: var(--text-dim); padding: 5px 10px; border-radius: 6px; border-left: 2px solid transparent; }
+  nav.toc a:hover { color: var(--text); background: var(--bg-soft); text-decoration: none; }
+  nav.toc a.lead { color: var(--text); font-weight: 600; margin-top: 10px; }
+
+  main { flex: 1; min-width: 0; padding: 40px 46px 100px; }
+  header.page h1 { font-size: 30px; margin: 0 0 8px; line-height: 1.25; }
+  header.page .sub { color: var(--text-dim); font-size: 15px; margin-bottom: 6px; }
+  header.page .meta { color: var(--text-dim); font-size: 12.5px; border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
+
+  section { margin-top: 44px; scroll-margin-top: 20px; }
+  h2 { font-size: 21px; border-bottom: 1px solid var(--border); padding-bottom: 8px; margin: 0 0 16px; }
+  h2 .num { color: var(--accent); font-family: var(--mono); font-size: 16px; margin-right: 10px; }
+  h3 { font-size: 16.5px; color: #e7edf4; margin: 26px 0 10px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid var(--border); padding: 9px 12px; text-align: left; vertical-align: top; }
+  th { background: var(--bg-soft); color: #e7edf4; font-weight: 600; }
+  tr:nth-child(even) td { background: #12171f; }
+
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 18px 0; border: 1px solid var(--border); background: var(--bg-card); }
+  .callout .t { font-weight: 700; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout.gold { border-color: #e3b34155; background: var(--gold-soft); }
+  .callout.gold .t { color: var(--gold); }
+  .callout.note { border-color: #58a6ff55; background: var(--accent-soft); }
+  .callout.note .t { color: var(--accent); }
+  .callout.danger { border-color: #f8514955; background: var(--red-soft); }
+  .callout.danger .t { color: var(--red); }
+  .callout.tldr { border-color: #3fb95055; background: var(--green-soft); }
+  .callout.tldr .t { color: var(--green); }
+
+  ol, ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .pill { font-family: var(--mono); font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-dim); }
+  .never li::marker { content: "✕  "; color: var(--red); font-weight: 700; }
+  .do li::marker { content: "✓  "; color: var(--green); font-weight: 700; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 900px) {
+    nav.toc { display: none; }
+    main { padding: 28px 20px 80px; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+  .footer-note { color: var(--text-dim); font-size: 12.5px; margin-top: 50px; border-top: 1px solid var(--border); padding-top: 16px; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc">
+    <div class="brand">Ludots<span> · UI</span></div>
+    <span class="tag">渲染控制与 Surface 所有权 · SSOT</span>
+    <a href="#tldr" class="lead">0 · 一句话心智模型</a>
+    <a href="#hex">1 · 三层（六边形）</a>
+    <a href="#ownership">2 · Surface 所有权黄金规则</a>
+    <a href="#flow">3 · 一帧 UI 更新流程</a>
+    <a href="#input">4 · 输入流程与帧安全</a>
+    <a href="#mix">5 · Skia / WebUI 混排</a>
+    <a href="#howto">6 · 我要加 UI 怎么做</a>
+    <a href="#gates">7 · 验收入口与护栏</a>
+    <a href="#refs">8 · 相关文档</a>
+  </nav>
+
+  <main>
+    <header class="page">
+      <h1>UI 渲染控制与 Surface 所有权</h1>
+      <div class="sub">Ludots UI 渲染控制的正式总览 —— 用「说人话」的方式让新接手的人（含 AI agent）不踩坑地往里加 UI。</div>
+      <div class="meta">正式真相以本页对应的 GitBook 页面为准：<code>gitbook/architecture/ui-rendering-and-surface-ownership.md</code> · 本 HTML 为同内容的可视化阅读版。</div>
+    </header>
+
+    <p>本页讲清三件事：</p>
+    <ol>
+      <li>一帧 UI 怎么从「数据变化」走到「屏幕像素更新」（<b>更新流程</b>）。</li>
+      <li>谁有权改屏幕上的 UI，谁只能旁观（<b>Surface 所有权</b>）。</li>
+      <li>Skia 与 WebUI 怎么混排，高性能大批量数据走哪条路（<b>渲染分层</b>）。</li>
+    </ol>
+
+    <section id="tldr">
+      <h2><span class="num">0</span>一句话心智模型</h2>
+      <div class="callout tldr">
+        <div class="t">TL;DR</div>
+        <p>UI 不是「谁想画就画」，而是「向唯一的 <code>UiSurfaceHost</code> 租一块位置，提交一个<b>构建器</b>，由 Host 合成成唯一一棵 <code>UiScene</code>，交给唯一的 <code>UIRoot</code> 渲染 / 处理输入」。</p>
+      </div>
+      <ul>
+        <li>想显示 UI 的人（mod / 能力控制器 / showcase / Markup / 浏览器面板）都是<b>贡献者 contributor</b>。</li>
+        <li><code>UiSurfaceHost</code> 是<b>唯一</b>能写 <code>UIRoot.Scene</code> 的生产组件。</li>
+        <li><code>UIRoot</code> 是<b>渲染 + 输入的设备端口</b>，不再是谁都能塞场景的公共槽。</li>
+        <li>适配器（Raylib / Web / 商业引擎）只<b>消费</b>那棵合成好的场景，不做场景堆叠，也没有 fallback。</li>
+      </ul>
+      <pre><code>贡献者（mod / 控制器 / showcase / Markup / 浏览器面板）
+        │  Acquire 租约 → Publish(UiSurfaceContribution)
+        ▼
+UiSurfaceHost  ← 唯一写 UIRoot.Scene 的人；按 segment / 优先级 / 独占 合成成 1 棵 UiScene
+        │  内部 MountSceneFromHost / ClearSceneFromHost + 置 UIRoot.IsDirty
+        ▼
+UIRoot         ← 渲染 + 输入端口；持有当前 Scene、IsDirty、输入帧快照
+        │
+        ├─ 渲染端口 IUiRenderer ── SkiaUiRenderer 画 UiScene
+        └─ 输入：HandleInput(PointerEvent / KeyboardEvent) → 派发到节点 / Canvas sink
+        ▼
+适配器（驱动适配器）
+   Raylib: RaylibOverlayCompositor 按 IsDirty 决定是否重绘 Skia UI 层
+   Web:    WebUiRuntimeBridge.TryConsumeScene 按 IsDirty 决定是否序列化推给浏览器</code></pre>
+    </section>
+
+    <section id="hex">
+      <h2><span class="num">1</span>三层（六边形）：谁是 domain，谁是 adapter</h2>
+      <table>
+        <thead><tr><th>层</th><th>是谁</th><th>职责</th><th>红线</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>Domain</b><br>UI 模型层</td>
+            <td><code>src/Libraries/Ludots.UI/</code>（<code>UiSurfaceHost</code>、<code>UIRoot</code>、<code>UiScene</code>、<code>ReactivePage</code>、<code>Compose</code>）</td>
+            <td>UI 唯一真相：合成策略、所有权、布局、输入语义。零平台依赖。</td>
+            <td><b>绝不</b>引用 SkiaSharp / Raylib / CEF 等任何后端。</td>
+          </tr>
+          <tr>
+            <td><b>Ports</b><br>策略接口</td>
+            <td><code>IUiRenderer</code>、<code>IUiTextMeasurer</code>、<code>IUiImageSizeProvider</code>、<code>IUiCanvasContent</code>、<code>IUiCanvasInputSink</code> …</td>
+            <td>把渲染 / 测量 / 自定义画布抽象成接口，由 domain 注入使用。</td>
+            <td>domain 只依赖接口，不依赖实现。</td>
+          </tr>
+          <tr>
+            <td><b>Adapters</b><br>驱动 / 被驱动</td>
+            <td><code>Ludots.UI.Skia</code>、<code>src/Adapters/Raylib</code>、<code>src/Adapters/Web</code>、<code>Ludots.UI.Browser</code>、商业引擎 adapter</td>
+            <td>平台输入 → <code>PointerEvent</code> 喂给 <code>UIRoot</code>；把 <code>UIRoot.Scene</code> 渲染 / 序列化出去；托管浏览器内核与窗口生命周期。</td>
+            <td><b>不做场景堆叠、不做 fallback、不持有 gameplay 真相。</b></td>
+          </tr>
+        </tbody>
+      </table>
+      <h3>依赖方向（只能从下往上指）</h3>
+      <pre><code>Ludots.UI            → 零平台依赖（仅 FlexLayoutSharp）
+Ludots.UI.Skia       → Ludots.UI + SkiaSharp
+Ludots.UI.Browser    → Ludots.UI（浏览器表面契约，无 native 内核）
+Adapter (Raylib/Web) → Ludots.UI + Ludots.UI.Skia + Core</code></pre>
+      <div class="callout note">
+        <div class="t">为什么这样分</div>
+        <p>合成「屏幕上该显示什么」是<b>业务策略</b>，必须留在 domain；具体用 Skia 画、序列化给浏览器、还是 UE5 BLUI 画，是<b>适配器细节</b>。换适配器不该改动一行合成逻辑。</p>
+      </div>
+    </section>
+
+    <section id="ownership">
+      <h2><span class="num">2</span>Surface 所有权：黄金规则</h2>
+      <p>历史问题：以前 <code>UIRoot.Scene</code> 是个公共可变槽，N 个控制器按表现系统注册顺序各写各的 → <b>后写者赢</b>，谁也说不清屏幕上到底该是谁的 UI。Epic #398 把这事收口了。</p>
+      <div class="callout gold">
+        <div class="t">黄金规则（务必背下来）</div>
+        <ol style="margin:0">
+          <li><b>唯一写者</b>：生产代码只有 <code>UiSurfaceHost</code> 能挂 / 清 <code>UIRoot.Scene</code>。<code>MountSceneFromHost / ClearSceneFromHost</code> 是 <code>internal</code>，编译期就挡住外部调用。</li>
+          <li><b>贡献者用租约</b>：先 <code>Acquire</code> 租约，再 <code>Publish</code> 一个<b>构建器</b>（不是已挂好的场景）。</li>
+          <li><b>失败即炸</b>：句柄过期 / 未注册 / 越权 → 抛异常或返回 false，<b>没有 fallback、不静默降级</b>。</li>
+          <li><b>脏标记归 Host</b>：贡献者改了内容只调 <code>Invalidate(handle)</code>，<b>不要</b>自己写 <code>UIRoot.IsDirty</code>。</li>
+          <li><b>CI 护栏</b>：<code>mods/**</code>、<code>src/Adapters</code>、<code>Ludots.UI.HtmlEngine</code> 里出现 <code>.MountScene(</code> / <code>.ClearScene(</code> 会被架构测试判失败。</li>
+        </ol>
+      </div>
+
+      <h3>2.1 Host 接口与租约模型</h3>
+      <p>源码：<code>src/Libraries/Ludots.UI/Surface/</code></p>
+      <pre><code>public interface IUiSurfaceHost
+{
+    UiScene? Scene { get; }
+    UiSurfaceLeaseHandle Acquire(UiSurfaceLeaseRequest request);
+    bool Revalidate(UiSurfaceLeaseHandle handle);
+    void Publish(UiSurfaceLeaseHandle handle, UiSurfaceContribution contribution);
+    void Invalidate(UiSurfaceLeaseHandle handle);
+    bool Release(UiSurfaceLeaseHandle handle);
+}</code></pre>
+      <ul>
+        <li><code>UiSurfaceLeaseRequest(OwnerId, Segment, Priority, Exclusive)</code>
+          <ul>
+            <li><code>OwnerId</code> 必须<b>稳定</b>（用 mod / 系统 / showcase 的稳定 id，<b>不要</b>用控制器实例名）。</li>
+            <li><code>Segment</code>：<span class="pill">Background 0</span> <span class="pill">Main 100</span> <span class="pill">Overlay 200</span> <span class="pill">Modal 300</span> <span class="pill">Debug 400</span>，决定 z 序大区间。</li>
+            <li><code>Priority</code>：同区间内细排序。</li>
+            <li><code>Exclusive=true</code>：独占接管 —— 优先级最高的独占租约会<b>隐藏所有非独占贡献</b>（用于 showcase 全屏接管、浏览器 demo）。</li>
+          </ul>
+        </li>
+        <li><code>UiSurfaceContribution</code>：携带一个 <code>UiElementBuilder</code> 工厂（<code>FromBuilder</code>）或一个 <code>ReactivePage</code>（<code>FromReactivePage</code>），外加 theme / stylesheets / reactive 钩子。<b>Host 负责合成最终场景</b>，贡献者永远不碰 <code>UiScene</code> 本体。</li>
+      </ul>
+
+      <h3>2.2 Host 内部做了什么（你不用改，但要知道）</h3>
+      <p><code>UiSurfaceHost</code>（<code>Surface/UiSurfaceHost.cs</code>）持有<b>一棵</b> <code>UiScene</code>：</p>
+      <ul>
+        <li><b>可见性</b>：有独占租约就只显示优先级最高那张；否则按 <code>Segment → Priority → LeaseId</code> 排序全部显示。</li>
+        <li><b>合成</b>：每个贡献者包进一个全屏 <code>&lt;section&gt;</code>，z 序 = <code>Segment + Priority + i</code>，且 <b>Host 外壳与每个 section 都设 <code>PointerEvents.None</code></b> —— 命中测试可穿透到真正可交互的叶子节点和浏览器画布，外壳不「吞」点击。</li>
+        <li><b>重建</b>：结构变更（Publish/Release）走全量重建 + 增量 patch；运行时变更（<code>Invalidate</code>）走增量。<b>带 <code>_isRebuilding</code> 重入护栏</b>，防止重建中被回调再次触发而错乱。</li>
+        <li><b>收尾</b>：重建后调 <code>MountSceneFromHost / ClearSceneFromHost</code> 并置 <code>UIRoot.IsDirty = true</code>。</li>
+      </ul>
+    </section>
+
+    <section id="flow">
+      <h2><span class="num">3</span>一帧 UI 的更新流程（数据 → 像素）</h2>
+      <ol>
+        <li><b>贡献者改状态</b>：例如能力控制器在表现系统 tick 里检测到选中变化，调 <code>host.Invalidate(handle)</code>（或重新 <code>Publish</code> 新构建器）。</li>
+        <li><b>Host 标脏</b>：<code>UiSurfaceHost</code> 置 <code>pendingRebuild</code>，并把 <code>UIRoot.IsDirty = true</code>。</li>
+        <li><b>Host 合成</b>：在重建时机把所有可见贡献合成进那棵唯一 <code>UiScene</code>，做布局（<code>UiScene.Layout</code>）与增量 patch。</li>
+        <li><b>适配器按 <code>IsDirty</code> 出帧</b>：
+          <ul>
+            <li><b>Raylib（桌面 / 原生）</b>：<code>RaylibOverlayCompositor.Render</code> 看 <code>!_uiHadContent || uiRoot.IsDirty</code> 决定是否重画 Skia UI 层；要画就 <code>uiRoot.Render()</code>，画完 <code>IsDirty=false</code>。</li>
+            <li><b>Web（远程串流原生 UI）</b>：<code>WebUiRuntimeBridge.TryConsumeScene</code> 看 <code>IsDirty</code> 决定是否把 <code>Scene</code> 序列化成 JSON 推给瘦客户端；推完 <code>IsDirty=false</code>（consume-once）。</li>
+          </ul>
+        </li>
+        <li><b>下一帧</b>：没人标脏 → <code>IsDirty=false</code> → 不重画 / 不重新序列化，省成本。</li>
+      </ol>
+      <div class="callout note">
+        <div class="t">关键</div>
+        <p><code>UIRoot.IsDirty</code> 是<b>唯一</b>的「要不要重新出帧」的门，且<b>只由 Host 置位</b>。这保证 Skia 重绘门和 Web 序列化门共享同一个真相源。所以你绝对不能在 mod 里自己写 <code>root.IsDirty = true</code> 去「强制刷新」。</p>
+      </div>
+    </section>
+
+    <section id="input">
+      <h2><span class="num">4</span>输入流程与输入帧安全</h2>
+      <p><code>UIRoot.HandleInput</code>（<code>src/Libraries/Ludots.UI/UIRoot.cs</code>）是所有平台输入的统一入口：</p>
+      <ol>
+        <li>适配器把平台输入（鼠标 / 键盘 / 触摸）翻译成 <code>PointerEvent</code> / <code>KeyboardEvent</code> 喂进来。</li>
+        <li><code>HandleInput</code> <b>先把当前 <code>Scene</code> 快照到局部变量</b>，整帧用这个快照做命中测试与派发。</li>
+        <li>派发到命中的节点；若命中的是 <code>Ui.Canvas(...)</code> 且其内容实现了 <code>IUiCanvasInputSink</code> / <code>IUiCanvasKeyboardInputSink</code> / <code>IUiCanvasFocusSink</code>（如浏览器表面），就把输入交给该 sink，并支持 alpha 命中穿透。</li>
+        <li>派发可能触发回调（按钮点击等），回调<b>可能在派发过程中</b>让 Host 重挂 / 清场景。<code>HandleInput</code> 在尾部用 <code>ReferenceEquals(Scene, snapshot)</code> 对账：若场景已被换 / 清，则只置 <code>IsDirty=true</code> 并安全收尾，<b>绝不</b>去读已失效的旧场景（这就是 issue #394 修复的崩溃）。</li>
+      </ol>
+      <div class="callout note">
+        <div class="t">含义</div>
+        <p>「点击 → 切地图 / 关面板 / 换 showcase」这类在输入帧内改变 UI 的操作是<b>一等公民、保证安全</b>。新写按钮回调时不用担心「点完把自己清掉会不会崩」。</p>
+      </div>
+    </section>
+
+    <section id="mix">
+      <h2><span class="num">5</span>Skia 与 WebUI 混排：什么走哪条路</h2>
+      <p>Ludots 同屏混排两类 UI，<b>职责不重叠</b>：</p>
+      <table>
+        <thead><tr><th>用途</th><th>走哪条路</th><th>在哪</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><b>高性能大批量原生数据</b><br>（如 30k 单位 HUD 血条 / 文字、minimap marker）</td>
+            <td>Core Presentation 批渲染（SoA 批量，零每实体分配），<b>不进 UiScene</b></td>
+            <td><code>src/Core/Presentation/Hud/</code>（<code>ScreenHudBatchBuffer</code>、<code>PresentationOverlayScene</code>、<code>WorldHudToScreenSystem</code>），Skia 直接批量绘制</td>
+          </tr>
+          <tr>
+            <td><b>retained 交互 UI</b><br>（面板、按钮、表单、表格、节点图编辑器…）</td>
+            <td><code>UiSurfaceHost</code> → <code>UiScene</code> → <code>SkiaUiRenderer</code></td>
+            <td><code>Ludots.UI</code> + <code>Ludots.UI.Skia</code></td>
+          </tr>
+          <tr>
+            <td><b>真 Web 应用</b><br>（React / React Flow 等）</td>
+            <td>作为一个 <code>Ui.Canvas(BrowserSurfaceCanvasContent)</code> 节点<b>嵌进 Host 的 UiScene</b>；数据用 <b>WebUI DataPlane</b> 喂</td>
+            <td><code>Ludots.UI.Browser</code> + <code>Ludots.WebUI.DataPlane</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <ul>
+        <li><b>30k HUD 那条不是 UiScene</b>。它是「高性能大批量」专用通道，不要试图用面板系统去画上万条血条。</li>
+        <li><b>浏览器面板是 Host 的一个租约</b>（通常 <code>Segment.Main</code> + <code>Exclusive</code>），和原生面板在同一棵场景里合成；输入 / 焦点 / 命中穿透全部经 <code>UIRoot</code> 路由。</li>
+        <li><b>WebUI DataPlane 只管「喂数据 / 命令 / 事件给 Web 应用」</b>（传输中立，CEF 与 UE5 BLUI 同一套 <code>window.ludotsDataplane</code> facade），它<b>不</b>序列化 UiScene、不拥有任何 gameplay 真相。</li>
+      </ul>
+    </section>
+
+    <section id="howto">
+      <h2><span class="num">6</span>我要加 UI，怎么做（速查）</h2>
+      <h3>通用步骤（所有写法都一样）</h3>
+      <ol>
+        <li>从 <code>ScriptContext</code> / engine 取 <code>CoreServiceKeys.UiSurfaceHost</code>（拿到 <code>IUiSurfaceHost</code>）。</li>
+        <li>持有一个 <code>UiSurfaceLeaseHandle _lease</code> 字段。</li>
+        <li>显示：<code>host.PublishReactivePage(ref _lease, new UiSurfaceLeaseRequest("YourMod.Panel", segment, priority), page)</code>（<code>UiSurfaceHostExtensions</code> 提供 <code>EnsureLease</code> / <code>PublishReactivePage</code> / <code>ReleaseLease</code> 便捷封装）。</li>
+        <li>内容变化：<code>host.InvalidateLease(_lease)</code>。</li>
+        <li>退出 / 卸载：<code>host.ReleaseLease(ref _lease)</code>。</li>
+      </ol>
+      <h3>按写法选构建器</h3>
+      <ul>
+        <li><b>Compose / Reactive</b>：构造 <code>UiElementBuilder</code> 或 <code>ReactivePage</code>，用 <code>UiSurfaceContribution.FromBuilder(...)</code> / <code>FromReactivePage(page)</code>。</li>
+        <li><b>Markup（HTML/CSS authoring）</b>：走 <code>IUiSystem</code>（<code>MarkupUiSystem</code>），它已改成通过 Host 发布文档 surface，你只管 <code>SetHtml</code>。</li>
+        <li><b>Browser（真 Web 应用）</b>：<code>Acquire</code> 一张 <code>Exclusive</code> 租约，<code>Publish</code> 一个含 <code>Ui.Canvas(BrowserSurfaceCanvasContent)</code> 的构建器；数据走 DataPlane topic。参考 <code>mods/showcases/browser_react_flow/</code>。</li>
+      </ul>
+      <div class="grid2">
+        <div class="callout tldr">
+          <div class="t">✓ 应该这样</div>
+          <ul class="do" style="margin:0">
+            <li>所有 retained UI 都经 <code>UiSurfaceHost</code> 租约发布</li>
+            <li>内容变化用 <code>Invalidate</code>，让 Host 标脏</li>
+            <li>OwnerId 用稳定 id</li>
+            <li>上万条 HUD 用 Core Presentation 批渲染</li>
+          </ul>
+        </div>
+        <div class="callout danger">
+          <div class="t">✕ 绝对不要</div>
+          <ul class="never" style="margin:0">
+            <li><code>root.MountScene(...)</code> / <code>root.ClearScene(...)</code>（编译不过 + CI 拦）</li>
+            <li><code>root.IsDirty = true</code> 强制刷新（脏标记归 Host）</li>
+            <li>自己 new 第二个 <code>UIRoot</code> 或第二套 UI runtime</li>
+            <li>适配器里堆叠多张场景，或给「找不到 Host」加 fallback</li>
+            <li>把上万条 HUD 当成面板节点画</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="gates">
+      <h2><span class="num">7</span>正式验收入口与护栏</h2>
+      <table>
+        <thead><tr><th>护栏 / 验收</th><th>路径</th></tr></thead>
+        <tbody>
+          <tr><td>Host 单测（segment/z-order 合成、过期句柄不能发布、独占接管与恢复）</td><td><code>src/Tests/UiShowcaseTests/UiSurfaceHostTests.cs</code></td></tr>
+          <tr><td>所有权护栏（禁止直写 MountScene/ClearScene；UIRoot 不得暴露 public 写场景方法）</td><td><code>src/Tests/ArchitectureTests/UiSurfaceOwnershipGuardTests.cs</code></td></tr>
+          <tr><td>输入帧安全回归（点击清场景仍完成输入帧）</td><td><code>src/Tests/UiShowcaseTests/UiShowcaseAcceptanceTests.cs</code> · <code>UIRoot_ClickThatClearsScene_CompletesInputFrame</code></td></tr>
+          <tr><td>统一 UI 三写法验收</td><td><code>src/Tests/UiShowcaseTests/UiShowcaseAcceptanceTests.cs</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="refs">
+      <h2><span class="num">8</span>相关文档（深度材料）</h2>
+      <p>正式口径以本页为准；下列文档提供更深的实现细节与决策记录，<b>不重新定义</b>本页规则：</p>
+      <ul>
+        <li>统一 UI Runtime 与三前端写法：<code>docs/architecture/ui_runtime_architecture.md</code></li>
+        <li>WebUI DataPlane 边界：<code>docs/architecture/webui_dataplane_architecture.md</code></li>
+        <li>浏览器 UI Runtime：<code>docs/architecture/browser_ui_runtime.md</code></li>
+        <li>适配器模式与平台抽象：<code>docs/architecture/adapter_pattern.md</code></li>
+        <li>决策记录：<code>docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md</code>、<code>docs/adr/ADR-0003-browser-ui-runtime-contract.md</code></li>
+        <li>关键源码：<code>src/Libraries/Ludots.UI/Surface/</code>、<code>src/Libraries/Ludots.UI/UIRoot.cs</code>、<code>src/Libraries/Ludots.UI.Skia/</code>、<code>src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibOverlayCompositor.cs</code>、<code>src/Adapters/Web/Ludots.Adapter.Web/Services/WebUiRuntimeBridge.cs</code></li>
+      </ul>
+      <p class="footer-note">Ludots · 六边形架构 · 一切皆 Mod · 禁止 fallback / 向后兼容 / 重复造轮子 / 跨越职责 —— 本页是 UI 渲染控制的单一真相导航。</p>
+    </section>
+  </main>
+</div>
+</body>
+</html>

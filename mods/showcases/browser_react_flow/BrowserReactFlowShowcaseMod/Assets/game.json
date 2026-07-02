@@ -1,0 +1,12 @@
+{
+  "windowTitle": "Ludots Engine - Browser React Flow Showcase",
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
+}

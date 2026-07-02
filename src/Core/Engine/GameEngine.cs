@@ -62,21 +62,24 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -87,6 +90,7 @@ using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Config;
 using Ludots.Core.Gameplay.Progression.Systems;
 using Ludots.Core.Persistence;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Engine
 {
@@ -95,31 +99,35 @@ namespace Ludots.Core.Engine
         // Phase 0: Schema更新（运行时注册：属性/Graph等）
         // 说明：为保证确定性，运行时schema变更通过队列提交，在每帧开始统一生效
         SchemaUpdate,
-        
+
         // Phase 1: 输入与状态收集
         InputCollection,
 
         // Phase 1.5: 移动后同步与空间更新（物理/导航输出落地后的 SSOT 更新）
         PostMovement,
-        
+
         // Phase 2: 能力激活
         AbilityActivation,
-        
+
         // Phase 3: Effect处理（含响应链）
         EffectProcessing,
-        
+
+        // Phase 3.5: 运行时实体创建后的能力绑定
+        // 目的：让 RuntimeEntitySpawnSystem 创建的 ECS-authored 实体由各 capability runtime 统一发现、验证并绑定
+        RuntimeEntityBinding,
+
         // Phase 4: 属性计算
         AttributeCalculation,
-        
+
         // Phase 5: 延迟触发器收集
         DeferredTriggerCollection,
-        
+
         // Phase 6: 清理
         Cleanup,
-        
+
         // Phase 7: 事件分发
         EventDispatch,
-        
+
         // Phase 7.1: 表现层标记清理
         // 目的：清理 EffectiveChangedBitset 等仅服务于 UI/表现层的脏标记位
         ClearPresentationFlags,
@@ -133,14 +141,12 @@ namespace Ludots.Core.Engine
 
         private bool _isRunning;
         private EffectTemplateLoader _effectTemplateLoader;
-        private GraphProgramLoader _graphProgramLoader;
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
-        private System.Threading.SynchronizationContext? _previousSyncContext;
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
-        
+
         // Time Control
         public IPacemaker Pacemaker { get; set; } = new RealtimePacemaker();
 
@@ -154,11 +160,12 @@ namespace Ludots.Core.Engine
         public MapLoader MapLoader { get; private set; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; private set; }
         public TriggerDecoratorRegistry TriggerDecoratorRegistry { get; private set; }
-        
+
         // Game State
         public World World { get; private set; }
         public WorldMap WorldMap { get; private set; }
         public VertexMap VertexMap { get; private set; }
+        public LogicTerrainField LogicTerrain { get; private set; }
         public PhysicsWorld PhysicsWorld { get; private set; }
         public GameSession GameSession { get; private set; }
         public WorldSizeSpec WorldSizeSpec { get; private set; }
@@ -172,7 +179,7 @@ namespace Ludots.Core.Engine
         private ChunkedGridSpatialPartitionWorld _spatialPartition;
         public HexGridAOI HexGridAOI { get; private set; }
         private static readonly QueryDescription _mapEntitySuspendQuery = new QueryDescription().WithAll<MapEntity>();
-        
+
         // GAS
         public GameplayEventBus EventBus { get; private set; }
 
@@ -212,9 +219,11 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Rendering.PresentationVisualProxyBuffer _visualProxyBuffer;
         private Ludots.Core.Presentation.Rendering.SkinnedVisualBatchBuffer _skinnedVisualBatchBuffer;
         private Ludots.Core.Presentation.Requests.PresentationRequestBuffer _presentationRequestBuffer;
+        private Ludots.Core.Presentation.Rendering.GlobalFieldVisualBuffer _globalFieldVisualBuffer;
         private Ludots.Core.Presentation.Requests.SoundRequestBuffer _soundRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
+        private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
@@ -222,11 +231,11 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
         private TimeFlowService _timeFlow;
         private int _physics2DBaseHz;
-        private int _navigation2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
         private SpatialPartitionUpdateSystem _spatialPartitionUpdateSystem;
+        private readonly MassNavigationRuntime _massNavigationRuntime = new();
 
         // Multithreading
         private JobScheduler _jobScheduler;
@@ -244,7 +253,7 @@ namespace Ludots.Core.Engine
                 _systemGroups[group] = new List<ISystem<float>>();
             }
             _systemGroups[group].Add(system);
-            
+
             system.Initialize();
         }
 
@@ -300,6 +309,7 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.World, World);
             ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
             ctx.Set(CoreServiceKeys.VertexMap, VertexMap);
+            ctx.Set(CoreServiceKeys.LogicTerrain, LogicTerrain);
             ctx.Set(CoreServiceKeys.GameSession, GameSession);
             ctx.Set(CoreServiceKeys.Engine, this);
             ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
@@ -341,100 +351,124 @@ namespace Ludots.Core.Engine
                 Diagnostics.Log.Initialize(new ConsoleLogBackend());
             Diagnostics.Log.Info(in LogChannels.Engine, "Initializing with ConfigPipeline...");
 
-            _previousSyncContext = System.Threading.SynchronizationContext.Current;
+            // Setup Async Context
+            var previousSyncContext = System.Threading.SynchronizationContext.Current;
             SyncContext = new GameSynchronizationContext();
             System.Threading.SynchronizationContext.SetSynchronizationContext(SyncContext);
-            bool initializationCompleted = false;
+
+            void RestoreInitializationFailureState()
+            {
+                try
+                {
+                    ModLoader?.UnloadAll();
+                }
+                catch (Exception unloadEx)
+                {
+                    Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to unload partially initialized mod state: {unloadEx}");
+                }
+
+                System.Threading.SynchronizationContext.SetSynchronizationContext(previousSyncContext);
+                SyncContext = previousSyncContext as GameSynchronizationContext;
+            }
+
+            // Setup conflict report for mod registration tracing
+            ConflictReport = new RegistrationConflictReport();
+            Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
+            SetService(CoreServiceKeys.Engine, this);
+            SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
+            if (modPlan != null)
+            {
+                SetService(CoreServiceKeys.ModLoadPlan, modPlan);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.ModLoadPlan);
+            }
+
+            // 1. Setup Infrastructure (VFS, ModLoader)
+            VFS = new VirtualFileSystem();
+            VFS.Mount("Core", assetsRoot); // Mount Core Assets
+
+            FunctionRegistry = new FunctionRegistry();
+            FunctionRegistry.SetConflictReport(ConflictReport);
+            TriggerManager = new TriggerManager();
+            SystemFactoryRegistry = new SystemFactoryRegistry();
+            TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
+            ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
+            MapManager = new MapManager(VFS, TriggerManager, ModLoader);
+            ModLoader.MapManager = MapManager;
+            SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
+            SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
 
             try
             {
-                // Setup conflict report for mod registration tracing
-                ConflictReport = new RegistrationConflictReport();
-                Ludots.Core.Config.ComponentRegistry.SetConflictReport(ConflictReport);
-                SetService(CoreServiceKeys.Engine, this);
-                SetService(CoreServiceKeys.RegistrationConflictReport, ConflictReport);
-                if (modPlan != null)
+            // 2. Load Mods first (so ConfigPipeline can access their game.json)
+            if (modPlan != null && modPlan.OrderedMods.Count > 0)
+            {
+                if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
                 {
-                    SetService(CoreServiceKeys.ModLoadPlan, modPlan);
+                    Diagnostics.Log.Info(
+                        in LogChannels.Engine,
+                        $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
                 }
                 else
                 {
-                    RemoveService(CoreServiceKeys.ModLoadPlan);
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
                 }
 
-                // 1. Setup Infrastructure (VFS, ModLoader)
-                VFS = new VirtualFileSystem();
-                VFS.Mount("Core", assetsRoot); // Mount Core Assets
+                ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
+            }
+            else if (modPaths != null && modPaths.Count > 0)
+            {
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
+                ModLoader.LoadMods(modPaths);
+            }
 
-                FunctionRegistry = new FunctionRegistry();
-                FunctionRegistry.SetConflictReport(ConflictReport);
-                TriggerManager = new TriggerManager();
-                SystemFactoryRegistry = new SystemFactoryRegistry();
-                TriggerDecoratorRegistry = new TriggerDecoratorRegistry();
-                ModLoader = new ModLoader(VFS, FunctionRegistry, TriggerManager, SystemFactoryRegistry, TriggerDecoratorRegistry);
-                MapManager = new MapManager(VFS, TriggerManager, ModLoader);
-                ModLoader.MapManager = MapManager;
-                SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
-                SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
-                OrderBlackboardKeyRegistry.ResetToBuiltins();
+            // 3. Create ConfigPipeline and merge all game.json files
+            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
+            ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
+            MergedConfig = ConfigPipeline.MergeGameConfig();
+            (MergedConfig.Presentation
+                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
 
-                // 2. Load Mods first (so ConfigPipeline can access their game.json)
-                if (modPlan != null && modPlan.OrderedMods.Count > 0)
-                {
-                    if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
-                    {
-                        Diagnostics.Log.Info(
-                            in LogChannels.Engine,
-                            $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
-                    }
-                    else
-                    {
-                        Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
-                    }
+            ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
+            ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
+            AiRuntime = default;
+            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
 
-                    ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
-                }
-                else if (modPaths != null && modPaths.Count > 0)
-                {
-                    Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
-                    ModLoader.LoadMods(modPaths);
-                }
+            // Apply log config from merged game.json
+            LogConfigApplier.Apply(MergedConfig.Logging);
 
-                // 3. Create ConfigPipeline and merge all game.json files
-                ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-                ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
-                MergedConfig = ConfigPipeline.MergeGameConfig();
-                (MergedConfig.Presentation
-                    ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
+            Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
 
-                ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
-                ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            // Store merged config in GlobalContext for access throughout the engine
+            SetService(CoreServiceKeys.GameConfig, MergedConfig);
+            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+            }
+            catch
+            {
+                RestoreInitializationFailureState();
+                throw;
+            }
 
-                // Apply log config from merged game.json
-                LogConfigApplier.Apply(MergedConfig.Logging);
-
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
-
-                // Store merged config in GlobalContext for access throughout the engine
-                SetService(CoreServiceKeys.GameConfig, MergedConfig);
-                SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
-                SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
-                SetService(CoreServiceKeys.AiRuntime, AiRuntime);
-
+            try
+            {
                 // 4. Setup ECS & Session using merged config values
-                InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+                InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
                 SetService(CoreServiceKeys.World, World);
-                WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+                WorldMap = new WorldMap(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
                 SetService(CoreServiceKeys.WorldMap, WorldMap);
                 GameSession = new GameSession();
                 SetService(CoreServiceKeys.GameSession, GameSession);
                 int gridCellSizeCm = MergedConfig.GridCellSizeCm;
-                int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-                int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-                WorldSizeSpec = new WorldSizeSpec(
-                    new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                    gridCellSizeCm: gridCellSizeCm);
+                WorldSizeSpec = new WorldExtentSpec(
+                    MergedConfig.WorldWidthInMacroTiles,
+                    MergedConfig.WorldHeightInMacroTiles,
+                    gridCellSizeCm).ToWorldSizeSpec();
                 SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
                 _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
                 SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
@@ -459,28 +493,14 @@ namespace Ludots.Core.Engine
 
                 SimulationBudgetMsPerFrame = MergedConfig.SimulationBudgetMsPerFrame;
                 SimulationMaxSlicesPerLogicFrame = MergedConfig.SimulationMaxSlicesPerLogicFrame;
-            
+
                 // 7. Print registration conflict summary
                 ConflictReport?.PrintSummary();
-                initializationCompleted = true;
             }
-            finally
+            catch
             {
-                if (!initializationCompleted)
-                {
-                    try
-                    {
-                        ModLoader?.UnloadAll();
-                    }
-                    catch (Exception unloadEx)
-                    {
-                        Diagnostics.Log.Error(in LogChannels.Engine, $"Failed to unload partially initialized mod state: {unloadEx}");
-                    }
-
-                    SyncContext = null;
-                    System.Threading.SynchronizationContext.SetSynchronizationContext(_previousSyncContext);
-                    _previousSyncContext = null;
-                }
+                RestoreInitializationFailureState();
+                throw;
             }
         }
 
@@ -489,6 +509,7 @@ namespace Ludots.Core.Engine
             if (ConfigPipeline == null)
             {
                 AiRuntime = default;
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
                 return;
             }
 
@@ -505,6 +526,20 @@ namespace Ludots.Core.Engine
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
+            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
+        }
+
+        private void LoadAgentProfiles()
+        {
+            if (ConfigPipeline == null)
+            {
+                RemoveService(CoreServiceKeys.AgentProfiles);
+                return;
+            }
+
+            AgentProfileRegistry agentProfiles = new AgentProfileConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.AgentProfiles, agentProfiles);
         }
 
         public void ReloadConfigs(string? group = null, string? relativePath = null)
@@ -513,6 +548,7 @@ namespace Ludots.Core.Engine
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
 
             bool reloadAi = string.IsNullOrWhiteSpace(group)
                          || string.Equals(group, "AI", StringComparison.OrdinalIgnoreCase)
@@ -537,12 +573,12 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
-        private void InitializeWorld(int widthInTiles, int heightInTiles)
+        private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
         {
             World = World.Create();
-            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInTiles, heightInChunks: heightInTiles);
+            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInMacroTiles, heightInChunks: heightInMacroTiles);
             EventBus = new GameplayEventBus(); // Initialize EventBus
-            
+
             // Initialize JobScheduler if not already set (Static per AppDomain usually, but we manage it here)
             if (World.SharedJobScheduler == null)
             {
@@ -574,6 +610,17 @@ namespace Ludots.Core.Engine
             });
         }
 
+        private static void RegisterBuiltInEntityCollectionKeys(StringIntRegistry registry)
+        {
+            registry.Register(EntityCollectionKeys.SelectionLivePrimary);
+            registry.Register(EntityCollectionKeys.UiSelectionAcquisition);
+            registry.Register(EntityCollectionKeys.HoveredEntity);
+            registry.Register(EntityCollectionKeys.AbilityAimHover);
+            registry.Register(EntityCollectionKeys.AbilityAimAffected);
+            registry.Register(EntityCollectionKeys.EntityInfoExplicit);
+            registry.Register(EntityCollectionKeys.CommandSource);
+        }
+
         private void InitializeCoreSystems(GameConfig config)
         {
             Diagnostics.Log.Info(in LogChannels.Engine, "Initializing Core GAS Systems...");
@@ -600,6 +647,7 @@ namespace Ludots.Core.Engine
             var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer);
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
@@ -632,10 +680,10 @@ namespace Ludots.Core.Engine
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
-            var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
-            var navigation2dClockConfig = navigation2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
+            var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
+            var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
-            _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
+            var componentAuthoringContext = new ComponentAuthoringContext();
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
@@ -651,6 +699,17 @@ namespace Ludots.Core.Engine
                 knowledgeProjectionStore,
                 knowledgeRelationCollectionProjector,
                 scopeResolver);
+            var visionFogLayerRegistry = new FogLayerRegistry();
+            var visionFogFieldStore = new FogFieldStore();
+            var visionFogSnapshotStore = new FogSnapshotStore(relationships: relationshipRuntime);
+            var visionFogCellMap = new FogCellMap();
+            var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
+            var visionResolver = new VisionResolver(
+                visionFogLayerRegistry,
+                visionFogFieldStore,
+                elevation: visionFogCellMap,
+                occlusion: visionFogCellMap,
+                relationships: relationshipRuntime);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -782,7 +841,7 @@ namespace Ludots.Core.Engine
             var chainOrderQueue = new OrderQueue();
             var orderRequestQueue = new OrderRequestQueue();
             var responseChainTelemetry = new ResponseChainTelemetryBuffer();
-            
+
             var orderTypeIds = config.Constants.OrderTypeIds;
             var responseChainOrderTypeIds = config.Constants.ResponseChainOrderTypeIds;
 
@@ -824,6 +883,10 @@ namespace Ludots.Core.Engine
             var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
             var presentationTargetGeneration = new PresentationTargetGeneration();
             var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.PresentationRequestCapacity);
+            var globalFieldVisualBuffer = new GlobalFieldVisualBuffer(
+                presentationConfig.GlobalFieldVisualRecordCapacity,
+                presentationConfig.GlobalFieldVisualCellCapacity,
+                presentationConfig.GlobalFieldVisualDirtyRectCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
             var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.RoadSplineCapacity);
@@ -854,7 +917,7 @@ namespace Ludots.Core.Engine
                 entityQueries: entitySetQueryRuntime);
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
             {
-                return eventKind is PresentationEventKind.EffectApplied or PresentationEventKind.EffectActivated
+                return eventKind == PresentationEventKind.EffectApplied
                     ? EffectTemplateIdRegistry.GetId(key)
                     : AbilityIdRegistry.GetId(key);
             }
@@ -869,13 +932,10 @@ namespace Ludots.Core.Engine
                     PresentationEventKind.TagEffectiveChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GameplayEvent => TagRegistry.GetId(key),
                     PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
-                    PresentationEventKind.EffectActivated => EffectTemplateIdRegistry.GetId(key),
                     PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
                     PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
                     PresentationEventKind.SelectionMemberAdded => selectionSetKeyRegistry.GetId(key),
                     PresentationEventKind.SelectionMemberRemoved => selectionSetKeyRegistry.GetId(key),
-                    PresentationEventKind.EntityCollectionMemberAdded => entityCollectionKeyRegistry.GetId(key),
-                    PresentationEventKind.EntityCollectionMemberRemoved => entityCollectionKeyRegistry.GetId(key),
                     PresentationEventKind.GlobalDayNight => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalRegionChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalWeather => TagRegistry.GetId(key),
@@ -991,7 +1051,7 @@ namespace Ludots.Core.Engine
                 },
                 selectionSetKeyRegistry.Register,
                 instancedBatchAssets.GetId,
-                entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
+                entityCollectionKeyRegistry.GetId).Load(ConfigCatalog, ConfigConflictReport);
             performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
@@ -1019,8 +1079,10 @@ namespace Ludots.Core.Engine
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
+            var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks);
+            GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
@@ -1036,12 +1098,12 @@ namespace Ludots.Core.Engine
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
-            var navigation2dTickPolicy = new Navigation2DTickPolicy(navigation2dClockConfig.NavigationHz, navigation2dClockConfig.MaxStepsPerFixedTick);
+            var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
             var simulationLoopController = new SimulationLoopController(this);
             _gasController = new Ludots.Core.Gameplay.GAS.GasController(World, clockStepPolicy, simulationLoopController, CreateContext, TriggerManager.FireEvent);
             var timedTagSystem = new TimedTagExpirationSystem(World, clock, tagOps);
-            
+
             // Get order tags from config — fail-fast if missing (SSOT: game.json + OrderStateTags.cs)
             if (!orderTypeIds.ContainsKey("castAbility") ||
                 !orderTypeIds.ContainsKey("moveTo") ||
@@ -1056,11 +1118,11 @@ namespace Ludots.Core.Engine
             // to chainOrderQueue by ResponseChain*Systems, not through the dispatch system.
             // Using -1 prevents accidental match with default OrderTagId == 0.
             var orderRuleRegistry = new OrderRuleRegistry();
-            
+
             // ── OrderBuffer pipeline ──
             var orderTypeRegistry = new OrderTypeRegistry();
             new OrderTypeConfigLoader(ConfigPipeline).Load(orderTypeRegistry, orderRuleRegistry, ConfigCatalog, ConfigConflictReport);
-            
+
             int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
             int cfgMoveTo = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "moveTo", "constants.orderTypeIds");
             int cfgAttackTarget = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "attackTarget", "constants.orderTypeIds");
@@ -1099,7 +1161,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
             SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
-            SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
+            SetService(CoreServiceKeys.Physics2DSolverConfig, physics2dSolverConfig);
+            SetService(CoreServiceKeys.Physics2DBroadphasePolicy, physics2dBroadphasePolicy);
             SetService(CoreServiceKeys.Physics2DController, _physics2DController);
             SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
             SetService(CoreServiceKeys.GasController, _gasController);
@@ -1126,6 +1189,12 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
             SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);
+            SetService(CoreServiceKeys.VisionFogLayerRegistry, visionFogLayerRegistry);
+            SetService(CoreServiceKeys.VisionFogFieldStore, visionFogFieldStore);
+            SetService(CoreServiceKeys.VisionFogSnapshotStore, visionFogSnapshotStore);
+            SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
+            SetService(CoreServiceKeys.VisionResolver, visionResolver);
+            SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
@@ -1143,6 +1212,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.GraphEdgeCostOverlay, graphEdgeCostOverlay);
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
             SetService(CoreServiceKeys.ItemDefinitionRegistry, itemDefinitions);
@@ -1189,9 +1259,11 @@ namespace Ludots.Core.Engine
             _visualProxyBuffer = visualProxyBuffer;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _presentationRequestBuffer = presentationRequestBuffer;
+            _globalFieldVisualBuffer = globalFieldVisualBuffer;
             _soundRequestBuffer = soundRequestBuffer;
             _instancedBatchRequestBuffer = instancedBatchRequests;
             _instancedBatchOperationBuffer = instancedBatchOperations;
+            _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _roadSplineBuffer = roadSplineBuffer;
             _worldHudBuffer = worldHudBuffer;
@@ -1200,6 +1272,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationVisualProxyBuffer, visualProxyBuffer);
             SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, skinnedVisualBatchBuffer);
             SetService(CoreServiceKeys.PresentationRequestBuffer, presentationRequestBuffer);
+            SetService(CoreServiceKeys.GlobalFieldVisualBuffer, globalFieldVisualBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudBuffer, worldHudBuffer);
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
@@ -1240,10 +1313,10 @@ namespace Ludots.Core.Engine
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
-            
+
             // Phase 0.5: 保存上一帧位置（插值前置条件，必须在所有移动系统之前）
             RegisterSystem(new SavePreviousWorldPositionSystem(World), SystemGroup.SchemaUpdate);
-            
+
             // Phase 1: InputCollection
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
@@ -1262,6 +1335,16 @@ namespace Ludots.Core.Engine
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
             RegisterSystem(
+                new VisionSystem(
+                    World,
+                    GameSession,
+                    visionFogLayerRegistry,
+                    visionFogFieldStore,
+                    visionResolver,
+                    fogKnowledgeProjector,
+                    knowledgeProjectionStore),
+                SystemGroup.PostMovement);
+            RegisterSystem(
                 new UtilityAiDecisionSystem(
                     World,
                     clock,
@@ -1272,58 +1355,13 @@ namespace Ludots.Core.Engine
                     gasGraphApi,
                     orderQueue),
                 SystemGroup.PostMovement);
+            RegisterPhysics2DSystems(
+                clock,
+                physics2dTickPolicy,
+                physics2dSolverConfig,
+                physics2dBroadphasePolicy,
+                componentAuthoringContext);
 
-            if (config.Navigation2D.Enabled)
-            {
-                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
-                SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
-
-                const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
-                const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
-                const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
-                const string physics2dAssemblyName = "Ludots.Physics2D";
-                var nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                if (nav2dSystemType == null)
-                {
-                    AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(physics2dAssemblyName));
-                    nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                }
-
-                if (nav2dSystemType == null)
-                {
-                    throw new InvalidOperationException("Navigation2D.Enabled=true requires Ludots.Physics2D and Navigation2DSimulationSystem2D to be loadable.");
-                }
-                else
-                {
-                    var physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    var worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    if (physics2dSystemType == null || worldSyncSystemType == null)
-                    {
-                        throw new InvalidOperationException("Navigation2D.Enabled=true requires Physics2DSimulationSystem and Physics2DToWorldPositionSyncSystem to be loadable.");
-                    }
-
-                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavOrderAgentBootstrapSystem(World), SystemGroup.InputCollection);
-
-                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy);
-                    if (nav2dSystemObj is ISystem<float> nav2dSystem)
-                    {
-                        RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
-                    }
-
-                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy);
-                    if (physics2dSystemObj is ISystem<float> physics2dSystem)
-                    {
-                        RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
-                    }
-
-                    var worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
-                    if (worldSyncSystemObj is ISystem<float> worldSyncSystem)
-                    {
-                        RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
-                    }
-                }
-            }
-            
             // Phase 2: AbilityActivation
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityEndOrderSystem, SystemGroup.AbilityActivation);
@@ -1334,7 +1372,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(orderContinuationSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
-            
+
             // Phase 3: EffectProcessing (含响应链)
             var responseChainOrderTypes = new ResponseChainOrderTypes
             {
@@ -1360,13 +1398,16 @@ namespace Ludots.Core.Engine
                 presentationEventStream,
                 _spatialPartition,
                 WorldSizeSpec,
-                presentationTimingDiagnostics),
+                presentationTimingDiagnostics,
+                componentAuthoringContext),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)
             {
-                if (Activator.CreateInstance(manifestationObstacleBridgeType, World) is ISystem<float> manifestationObstacleBridgeSystem)
+                object shapeStorage = GetService(CoreServiceKeys.Physics2DShapeStorage)
+                    ?? throw new InvalidOperationException("Manifestation obstacle bridge requires Physics2D shape storage to be registered.");
+                if (Activator.CreateInstance(manifestationObstacleBridgeType, World, shapeStorage) is ISystem<float> manifestationObstacleBridgeSystem)
                 {
                     RegisterSystem(manifestationObstacleBridgeSystem, SystemGroup.EffectProcessing);
                 }
@@ -1375,23 +1416,36 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create manifestation obstacle bridge system '{manifestationObstacleBridgeSystemTypeName}'.");
                 }
             }
+            const string runtimeNavMeshObstacleSystemTypeName = "Ludots.Core.Physics2D.Systems.RuntimeNavMeshObstacleDirtySystem";
+            var runtimeNavMeshObstacleType = Type.GetType($"{runtimeNavMeshObstacleSystemTypeName}, Ludots.Physics2D", throwOnError: false);
+            if (runtimeNavMeshObstacleType != null)
+            {
+                if (Activator.CreateInstance(runtimeNavMeshObstacleType, this) is ISystem<float> runtimeNavMeshObstacleSystem)
+                {
+                    RegisterSystem(runtimeNavMeshObstacleSystem, SystemGroup.EffectProcessing);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
+                }
+            }
             RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
-            
+
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
-            
+
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
             RegisterSystem(deferredTriggerCollectionSystem, SystemGroup.DeferredTriggerCollection);
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
-            
+
             // Phase 6: Cleanup
             RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
 
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
-            
+
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
             // and owner-change index consumed by performer owner bindings.
             // Changed-bit components must remain readable until presentation systems consume them,
@@ -1405,13 +1459,13 @@ namespace Ludots.Core.Engine
 
             var responseChainUiState = new ResponseChainUiState();
             SetService(CoreServiceKeys.ResponseChainUiState, responseChainUiState);
-            
+
             // PresentationFrameSetupSystem MUST be the first presentation system
             // It calculates InterpolationAlpha for all visual sync systems
             var presentationFrameSetup = new PresentationFrameSetupSystem(World, Pacemaker);
             RegisterPresentationSystem(presentationFrameSetup);
             SetService(CoreServiceKeys.PresentationFrameSetup, presentationFrameSetup);
-            
+
             RegisterPresentationSystem(new ProjectilePresentationBootstrapSystem(World, presentationStableIds));
             RegisterPresentationSystem(new PresentationStableIdBootstrapSystem(World, presentationStableIds));
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
@@ -1487,11 +1541,6 @@ namespace Ludots.Core.Engine
             {
                 physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
             }
-
-            if (GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy navigation2dTickPolicy)
-            {
-                navigation2dTickPolicy.SetTargetHz(ScaleRateHz(_navigation2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Navigation2D)));
-            }
         }
 
         private static int ScaleRateHz(int baseHz, int scalePermille)
@@ -1504,6 +1553,88 @@ namespace Ludots.Core.Engine
             long scaled = (long)baseHz * scalePermille;
             int targetHz = (int)((scaled + 999) / 1000);
             return Math.Max(1, targetHz);
+        }
+
+        private void RegisterPhysics2DSystems(
+            IClock clock,
+            Physics2DTickPolicy physics2dTickPolicy,
+            Physics2DSolverConfig physics2dSolverConfig,
+            Physics2DBroadphasePolicy physics2dBroadphasePolicy,
+            ComponentAuthoringContext componentAuthoringContext)
+        {
+            const string physics2dAssemblyName = "Ludots.Physics2D";
+            const string shapeStorageTypeName = "Ludots.Core.Physics2D.ShapeDataStorage2D";
+            const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
+            const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
+
+            ArgumentNullException.ThrowIfNull(physics2dSolverConfig);
+            ArgumentNullException.ThrowIfNull(physics2dBroadphasePolicy);
+            ArgumentNullException.ThrowIfNull(componentAuthoringContext);
+
+            Type? physics2dSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, physics2dSystemTypeName);
+            Type? worldSyncSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, worldSyncSystemTypeName);
+            Type? shapeStorageType = TryResolveOptionalAssemblyType(physics2dAssemblyName, shapeStorageTypeName);
+            if (physics2dSystemType == null && worldSyncSystemType == null && shapeStorageType == null)
+            {
+                return;
+            }
+
+            if (physics2dSystemType == null || worldSyncSystemType == null || shapeStorageType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{physics2dSystemTypeName}', '{worldSyncSystemTypeName}', and '{shapeStorageTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object shapeStorage = GetService(CoreServiceKeys.Physics2DShapeStorage)
+                ?? Activator.CreateInstance(shapeStorageType)
+                ?? throw new InvalidOperationException("Failed to create Physics2D ShapeDataStorage2D.");
+            componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
+            MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
+            SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
+
+            object? physics2dSystemObj = Activator.CreateInstance(
+                physics2dSystemType,
+                World,
+                clock,
+                physics2dTickPolicy,
+                physics2dSolverConfig,
+                shapeStorage,
+                physics2dBroadphasePolicy);
+            if (physics2dSystemObj is not ISystem<float> physics2dSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
+            }
+
+            object? worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
+            if (worldSyncSystemObj is not ISystem<float> worldSyncSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D world sync system '{worldSyncSystemTypeName}'.");
+            }
+
+            RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
+            RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+            GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
+            GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
+        }
+
+        private static Type? TryResolveOptionalAssemblyType(string assemblyName, string typeName)
+        {
+            Type? type = Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
+            if (type != null)
+            {
+                return type;
+            }
+
+            try
+            {
+                AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(assemblyName));
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+
+            return Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
         }
 
         private static int RequireConfiguredOrderTypeId(
@@ -1541,10 +1672,13 @@ namespace Ludots.Core.Engine
             return orderTypeId;
         }
 
-        public void LoadMap(string mapId)
+        public void LoadMap(string mapId) => LoadMap(MapLoadRequest.FromMapId(mapId));
+
+        public void LoadMap(MapLoadRequest request)
         {
+            string mapId = request.MapIdValue;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Loading Map: {mapId}");
-            var mid = new MapId(mapId);
+            var mid = request.MapId;
 
             EnsureMapSessionInfrastructure();
 
@@ -1562,6 +1696,7 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
+                session.LaunchContext = request.LaunchContext;
                 session.VisualHeightmap = visualHeightmap;
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
@@ -1576,6 +1711,7 @@ namespace Ludots.Core.Engine
                 }
                 _mapLoadStatuses[mid] = GetInitialMapLoadStatus();
                 SetCurrentMapSession(session);
+                bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus);
 
                 // Apply primary board spatial config to engine-level services
                 var primaryBoard = session.PrimaryBoard;
@@ -1610,7 +1746,7 @@ namespace Ludots.Core.Engine
                     TriggerManager.RegisterMapTriggers(mid, triggers);
                 }
 
-                if (TryStartPendingMapLoad(session, mapConfig, isPush: false, out var loadStatus))
+                if (pendingMapLoadStarted)
                 {
                     Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for '{mapId}'.");
                     return;
@@ -1645,6 +1781,7 @@ namespace Ludots.Core.Engine
             CancelPendingMapLoad(mid, $"Map '{mapId}' was unloaded before completion.", markFailed: false);
             CancelPendingMapResume(mid, $"Map '{mapId}' was unloaded before resume completion.", markFailed: false);
 
+            _massNavigationRuntime.HandleMapUnloaded(this, mid);
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
@@ -1729,6 +1866,7 @@ namespace Ludots.Core.Engine
             }
             _mapLoadStatuses[inner] = GetInitialMapLoadStatus();
             SetCurrentMapSession(session);
+            bool pendingMapLoadStarted = TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus);
 
             var primaryBoard = session.PrimaryBoard;
             if (primaryBoard != null)
@@ -1754,6 +1892,7 @@ namespace Ludots.Core.Engine
             // Fire MapSuspended on outer (scoped)
             if (outerSession != null)
             {
+                _massNavigationRuntime.HandleMapSuspended(this, outerSession.MapId);
                 var suspendCtx = CreateMapEventContext(outerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(outerSession.MapId, GameEvents.MapSuspended, suspendCtx));
             }
@@ -1768,7 +1907,7 @@ namespace Ludots.Core.Engine
                 TriggerManager.RegisterMapTriggers(inner, triggers);
             }
 
-            if (TryStartPendingMapLoad(session, mapConfig, isPush: true, out var loadStatus))
+            if (pendingMapLoadStarted)
             {
                 Diagnostics.Log.Info(in LogChannels.Engine, $"MapLoaded deferred for pushed map '{innerMapId}'.");
                 return;
@@ -1793,6 +1932,7 @@ namespace Ludots.Core.Engine
             {
                 CancelPendingMapLoad(innerSession.MapId, $"Map '{innerSession.MapId.Value}' was popped before completion.", markFailed: false);
 
+                _massNavigationRuntime.HandleMapUnloaded(this, innerSession.MapId);
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
@@ -2002,11 +2142,6 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.LoadedGraphRuntime);
             }
 
-            if (TryGetService(CoreServiceKeys.Navigation2DRuntime, out Navigation2DRuntime navigation2dRuntime))
-            {
-                navigation2dRuntime.BindLoadedChunks(loadedChunks);
-            }
-
             // Update GlobalContext with rebuilt services
             SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
             SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
@@ -2022,35 +2157,64 @@ namespace Ludots.Core.Engine
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
             VertexMap = null;
+            LogicTerrain = null;
+            RemoveService(CoreServiceKeys.VertexMap);
+            RemoveService(CoreServiceKeys.LogicTerrain);
 
             foreach (var board in session.AllBoards)
             {
                 if (board is ITerrainBoard terrainBoard)
                 {
-                    string dataFile = FindDataFileForBoard(board.Name, mapConfig);
+                    BoardConfig boardConfig = FindConfigForBoard(board.Name, mapConfig);
+                    string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
                         var vtxMap = LoadVertexMapFromFile(dataFile);
                         if (vtxMap != null)
                         {
                             terrainBoard.VertexMap = vtxMap;
+                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
                             VertexMap = vtxMap;
+                            LogicTerrain = terrainBoard.LogicTerrain;
                             SetService(CoreServiceKeys.VertexMap, vtxMap);
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
                             Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         }
+
+                        continue;
+                    }
+
+                    if (board is GridBoard gridBoard && boardConfig != null)
+                    {
+                        int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                            widthCells,
+                            heightCells,
+                            boardConfig.GridCellSizeCm,
+                            boardConfig.ChunkSizeCells);
+                        if (LogicTerrain == null)
+                        {
+                            LogicTerrain = gridBoard.LogicTerrain;
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                        }
+
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
         }
 
-        private string FindDataFileForBoard(string boardName, MapConfig mapConfig)
+        private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
         {
             if (mapConfig.Boards == null) return null;
             foreach (var b in mapConfig.Boards)
             {
                 if (string.Equals(b.Name, boardName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return b.DataFile;
+                    return b;
                 }
             }
             return null;
@@ -2215,19 +2379,21 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}'.");
+            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
 
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
-            var profileRegistry = new NavMeshProfileRegistry(bakeConfig);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMesh bootstrap requires AgentProfiles.");
+            var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = VertexMap.WidthInChunks;
-            int heightChunks = VertexMap.HeightInChunks;
+            int widthChunks = LogicTerrain.WidthChunks;
+            int heightChunks = LogicTerrain.HeightChunks;
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -2261,7 +2427,47 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
+            var navRegistry = new NavQueryServiceRegistry(stores);
+            SetService(CoreServiceKeys.NavQueryServices, navRegistry);
+            if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
+            {
+                var runtimeObstacles = new NavObstacleSet();
+                SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
+                var runtimeContext = new NavBakeContext
+                {
+                    MapId = mapId,
+                    ModId = string.Empty,
+                    SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
+                    Terrain = LogicTerrain,
+                    Obstacles = runtimeObstacles,
+                    Config = bakeConfig,
+                    AgentProfiles = agentProfiles,
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(
+                        bakeConfig.RuntimeIncremental.HeightScaleMeters,
+                        bakeConfig.RuntimeIncremental.MinWalkableUpDot,
+                        bakeConfig.RuntimeIncremental.CliffHeightThreshold),
+                    TileVersion = 1,
+                    Mode = bakeConfig.ParsedMode,
+                    Algorithm = bakeConfig.ParsedAlgorithm,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                };
+                var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    runtimeContext,
+                    navRegistry,
+                    profileRegistry);
+                SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, runtimeQueue);
+            }
+            if (MapSessions?.FocusedSession?.PrimaryBoard is INavigableBoard navigableBoard)
+            {
+                navigableBoard.NavServices = navRegistry;
+            }
+        }
+
+        internal void LoadNavForMapForTests(string mapId, MapConfig mapConfig)
+        {
+            LoadNavForMap(mapId, mapConfig);
         }
 
         private void ClearNavServices()
@@ -2269,6 +2475,8 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }
 
         private void LoadPathingForSession(MapSession session)
@@ -2295,11 +2503,15 @@ namespace Ludots.Core.Engine
 
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
+            var graphEdgeCostOverlay = GetService(CoreServiceKeys.GraphEdgeCostOverlay);
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
+            bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
 
-            if (loadedGraphRuntime == null && !hasNavServices)
+            if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
@@ -2321,10 +2533,10 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore);
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
@@ -2334,7 +2546,11 @@ namespace Ludots.Core.Engine
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, pathStore, pathingConfig);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig, graphEdgeCostOverlay);
+            }
+            else
+            {
+                pathService = new DirectPathService(pathStore);
             }
 
             SetService(CoreServiceKeys.PathingConfig, pathingConfig);
@@ -2404,10 +2620,30 @@ namespace Ludots.Core.Engine
             return false;
         }
 
+        private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
+        {
+            if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            {
+                var agent = pathingConfig.AgentTypes[i];
+                if (agent == null || agent.Selection?.Mode != PathSelectionMode.Direct)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static IPathService CreateDefaultNavMeshPathService(
             PathingConfig pathingConfig,
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
             PathStore pathStore)
         {
             if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
@@ -2422,11 +2658,12 @@ namespace Ludots.Core.Engine
                     $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
             }
 
+            AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agent.Layer, profileIndex, areaCosts, out var query))
+            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
             {
                 throw new InvalidOperationException(
-                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agent.Layer}, profile '{agent.ProfileId}'.");
+                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
             }
 
             return new NavMeshPathServiceAdapter(query, pathStore);
@@ -2469,7 +2706,9 @@ namespace Ludots.Core.Engine
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
-            return new NavMeshBakeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
+            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
         }
 
         private string ResolveSingleExistingUri(string relPath)
@@ -2533,9 +2772,37 @@ namespace Ludots.Core.Engine
             return new NavAreaCostTable(arr);
         }
 
-        public void LoadEntryMap(string mapId) => LoadMap(mapId);
+        public void LoadEntryMap(string mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new ArgumentException("Map id is required.", nameof(mapId));
+            }
 
-        public void LoadMap(MapId mapId) => LoadMap(mapId.Value);
+            if (!string.Equals(MergedConfig?.StartupMapId, mapId, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"LoadEntryMap requires startup map '{MergedConfig?.StartupMapId}', got '{mapId}'.");
+            }
+
+            LoadStartupMap();
+        }
+
+        public void LoadStartupMap()
+        {
+            string mapId = MergedConfig?.StartupMapId;
+            if (string.IsNullOrWhiteSpace(mapId))
+            {
+                throw new InvalidOperationException("StartupMapId is required.");
+            }
+
+            MapLaunchContext? launchContext = MergedConfig!.StartupSelectedPlayerId > 0
+                ? MapLaunchContext.Create(MergedConfig.StartupSelectedPlayerId)
+                : null;
+            LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
+        }
+
+        public void LoadMap(MapId mapId) => LoadMap(MapLoadRequest.FromMapId(mapId.Value));
 
         public void Start()
         {
@@ -2607,12 +2874,6 @@ namespace Ludots.Core.Engine
                 World.SharedJobScheduler = null;
             }
 
-            if (_previousSyncContext != null)
-            {
-                System.Threading.SynchronizationContext.SetSynchronizationContext(_previousSyncContext);
-                _previousSyncContext = null;
-            }
-            
             if (World != null)
             {
                 World.Destroy(World);
@@ -2631,7 +2892,7 @@ namespace Ludots.Core.Engine
             float dt = platformDeltaTime * Time.TimeScale;
             Time.DeltaTime = dt;
             Time.TotalTime += dt;
-            
+
             GameTask.Update(dt);
             SyncContext.ProcessQueue();
             EnsureCameraRuntimeConfigured();
@@ -2731,6 +2992,9 @@ namespace Ludots.Core.Engine
                     _instancedBatchOperationBuffer,
                     capabilities);
             }
+
+            // Clear GAS presentation events AFTER all presentation systems have consumed them
+            _gasPresentationEvents?.Clear();
         }
 
         private void BeginPresentationCameraSnapshotScope()

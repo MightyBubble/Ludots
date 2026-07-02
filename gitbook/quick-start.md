@@ -24,7 +24,7 @@
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 
 # 在 web 上启动多个 root mod
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 规则：
@@ -39,7 +39,6 @@
 dotnet test src/Tests/GasTests/GasTests.csproj
 dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
 dotnet test src/Tests/PresentationTests/PresentationTests.csproj
-dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 

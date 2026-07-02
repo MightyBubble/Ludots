@@ -22,7 +22,7 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 规则：
@@ -37,7 +37,6 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 dotnet test src/Tests/GasTests/GasTests.csproj
 dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
 dotnet test src/Tests/PresentationTests/PresentationTests.csproj
-dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 

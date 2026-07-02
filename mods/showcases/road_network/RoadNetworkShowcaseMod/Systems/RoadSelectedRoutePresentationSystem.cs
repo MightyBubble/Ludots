@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
 using RoadNetworkShowcaseMod.Gameplay;
 
@@ -21,7 +22,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly List<RoadRoutePreviewFactScope> _previousScopes = new();
         private readonly HashSet<RoadRoutePreviewFactScope> _currentScopeSet = new();
 
-        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection, RoadNavPlanStore plans)
+        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection, MovePlanStore plans)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));

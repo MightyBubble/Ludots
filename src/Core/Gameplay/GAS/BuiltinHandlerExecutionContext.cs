@@ -27,6 +27,9 @@ namespace Ludots.Core.Gameplay.GAS
         public int DroppedCount { get; private set; }
         public bool HasExchangeResult { get; private set; }
         public ExchangeExecutionResult LastExchangeResult { get; private set; }
+        public int AttributeDeltaId { get; private set; } = -1;
+        public float AttributeDelta { get; private set; }
+        public bool HasAttributeDelta => AttributeDeltaId >= 0 && AttributeDelta != 0f;
 
         public void ResetPerEffect()
         {
@@ -34,6 +37,8 @@ namespace Ludots.Core.Gameplay.GAS
             DroppedCount = 0;
             HasExchangeResult = false;
             LastExchangeResult = default;
+            AttributeDeltaId = -1;
+            AttributeDelta = 0f;
         }
 
         public void SetResolvedCandidateCount(int count)
@@ -58,6 +63,26 @@ namespace Ludots.Core.Gameplay.GAS
         {
             HasExchangeResult = true;
             LastExchangeResult = result;
+        }
+
+        public void RecordAttributeDelta(int attributeId, float delta)
+        {
+            if (attributeId < 0 || delta == 0f)
+            {
+                return;
+            }
+
+            if (AttributeDeltaId == attributeId)
+            {
+                AttributeDelta += delta;
+                return;
+            }
+
+            if (AttributeDeltaId < 0)
+            {
+                AttributeDeltaId = attributeId;
+                AttributeDelta = delta;
+            }
         }
     }
 

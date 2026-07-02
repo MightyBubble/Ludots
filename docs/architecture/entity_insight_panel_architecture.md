@@ -133,7 +133,7 @@ RTS 多选时分成三层：
 - `mods/showcases/info_panels/GenreInfoShowcaseMod/UI/GenreInfoShowcasePanelController.cs`
 - `src/Libraries/Ludots.UI/Runtime/UiScene.cs`
 
-这条路径覆盖“头像融合”、“SC2 主头像 + 多选补充”、“Total War 兵牌网格”三种读取需求。
+这条路径覆盖“头像融合”、“SC2 主头像 + 多选补充”、“Formation Capability 兵牌网格”三种读取需求。
 
 ## 3. 4X 战略纵卡
 

@@ -44,7 +44,8 @@ namespace Ludots.Core.Config
             options.Converters.Add(new JsonStringEnumConverter());
             
             var jsonString = merged.ToJsonString();
-            var config = JsonSerializer.Deserialize<GameConfig>(jsonString, options) ?? new GameConfig();
+            var config = JsonSerializer.Deserialize<GameConfig>(jsonString, options)
+                ?? throw new InvalidOperationException("Merged game.json deserialized to null GameConfig.");
             
             return config;
         }
@@ -107,19 +108,10 @@ namespace Ludots.Core.Config
             var fragments = new List<ConfigFragment>();
             LoadFromAllSources(relativePath, (stream, sourceUri) =>
             {
-                try
-                {
-                    var node = JsonNode.Parse(stream);
-                    if (node != null)
-                    {
-                        fragments.Add(new ConfigFragment(node, sourceUri));
-                        Log.Info(in LogChannels.Config, $"Merged fragment from: {sourceUri}");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(in LogChannels.Config, $"Error parsing JSON from {sourceUri}: {ex.Message}");
-                }
+                var node = JsonNode.Parse(stream)
+                    ?? throw new JsonException($"JSON root in {sourceUri} is null.");
+                fragments.Add(new ConfigFragment(node, sourceUri));
+                Log.Info(in LogChannels.Config, $"Merged fragment from: {sourceUri}");
             });
             return fragments;
         }
@@ -156,7 +148,14 @@ namespace Ludots.Core.Config
             var result = report != null
                 ? MergeFromCatalog(in deepEntry, report)
                 : MergeFromCatalog(in deepEntry);
-            return result as JsonObject;
+            if (result == null)
+            {
+                return null;
+            }
+
+            return result as JsonObject
+                ?? throw new InvalidOperationException(
+                    $"Config '{entry.RelativePath}' must merge to a JSON object for DeepObject policy.");
         }
 
         public static ConfigCatalogEntry RequireEntry(
@@ -204,9 +203,13 @@ namespace Ludots.Core.Config
             {
                 // Ignore missing files
             }
-            catch (Exception ex)
+            catch (InvalidDataException ex)
             {
-                Log.Error(in LogChannels.Config, $"Error loading {uri}: {ex.Message}");
+                throw new InvalidOperationException($"Error loading {uri}: {ex.Message}", ex);
+            }
+            catch (JsonException ex)
+            {
+                throw new JsonException($"Error parsing JSON from {uri}: {ex.Message}", ex);
             }
         }
     }

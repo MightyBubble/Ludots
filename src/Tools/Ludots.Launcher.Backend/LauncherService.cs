@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.Hosting;
 using Ludots.Core.Modding;
 
@@ -293,7 +294,7 @@ public sealed class LauncherService
         var config = LoadConfig();
         var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
         WriteLaunchGraphDocument(resolveResult.Plan);
-        return await BuildPlannedModsAsync(resolveResult.Plan, config, ct);
+        return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
     }
 
     public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
@@ -394,7 +395,7 @@ public sealed class LauncherService
             .ToList();
         var config = LoadConfig();
         var resolveResult = ResolvePlan(resolvedSelectors, adapterId, buildMode, config, BuildCatalog(config), LoadPresets());
-        var buildResults = await BuildPlannedModsAsync(resolveResult.Plan, config, CancellationToken.None);
+        var buildResults = await BuildPlanRuntimeAsync(resolveResult.Plan, config, CancellationToken.None);
         var failedModBuild = buildResults.FirstOrDefault(result => !result.Ok);
         if (failedModBuild != null)
         {
@@ -559,6 +560,7 @@ public sealed class LauncherService
             .Select(entry => entry.Info.Id)
             .ToList();
         var diagnostics = BuildPlanDiagnostics(roots, ordered);
+        var browserRuntime = ResolveBrowserRuntimeConfig(selectors, presetDocument, diagnostics, config);
         var adapterDescriptor = BuildAdapterDescriptor(profile);
         var bootstrapArtifactPath = Path.Combine(profile.OutputDirectory, profile.RuntimeBootstrapFileName);
         var appAssemblyPath = ResolveAppAssemblyPath(profile);
@@ -576,7 +578,8 @@ public sealed class LauncherService
             graphArtifactPath,
             profile.OutputDirectory,
             appAssemblyPath,
-            profile.LaunchUrl);
+            profile.LaunchUrl,
+            browserRuntime);
 
         var plan = new LauncherLaunchPlan(
             profile.Id,
@@ -590,6 +593,7 @@ public sealed class LauncherService
             profile.OutputDirectory,
             appAssemblyPath,
             profile.LaunchUrl,
+            browserRuntime,
             diagnostics,
             adapterDescriptor,
             LaunchGraphSchemaVersion,
@@ -780,10 +784,162 @@ public sealed class LauncherService
         {
             ResolveGameJsonSetting("defaultCoreMod", fragments),
             ResolveGameJsonSetting("startupMapId", fragments),
-            ResolveGameJsonSetting("startupInputContexts", fragments)
+            ResolveGameJsonSetting("startupInputContexts", fragments),
+            ResolveGameJsonSetting("browserRuntime", fragments)
         };
         var warnings = BuildPlanWarnings(roots, settings);
         return new LauncherPlanDiagnostics(settings, warnings);
+    }
+
+    private BrowserRuntimeConfig? ResolveBrowserRuntimeConfig(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presetDocument,
+        LauncherPlanDiagnostics diagnostics,
+        LauncherConfig config)
+    {
+        BrowserRuntimeConfig? gameConfig = ResolveBrowserRuntimeFromDiagnostics(diagnostics);
+        BrowserRuntimeConfig? presetConfig = ResolveBrowserRuntimeFromSelectors(selectors, presetDocument);
+        BrowserRuntimeConfig? effective = presetConfig ?? gameConfig;
+        return effective == null ? null : CompleteHostBrowserRuntimeConfig(effective, config);
+    }
+
+    private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromDiagnostics(LauncherPlanDiagnostics diagnostics)
+    {
+        LauncherResolvedSetting? setting = diagnostics.Settings.FirstOrDefault(item =>
+            string.Equals(item.Key, "browserRuntime", StringComparison.OrdinalIgnoreCase));
+        if (setting?.EffectiveValue == null)
+        {
+            return null;
+        }
+
+        var options = StrictJsonOptions.CreateCamelCase();
+        return JsonSerializer.Deserialize<BrowserRuntimeConfig>(
+            setting.EffectiveValue.ToJsonString(),
+            options);
+    }
+
+    private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromSelectors(
+        IReadOnlyList<string> selectors,
+        LauncherPresetDocument presetDocument)
+    {
+        var presetStack = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        BrowserRuntimeConfig? runtime = null;
+        foreach (var selector in selectors)
+        {
+            BrowserRuntimeConfig? candidate = ResolveBrowserRuntimeFromSelector(selector, presetDocument, presetStack);
+            if (candidate != null)
+            {
+                runtime = candidate;
+            }
+        }
+
+        return runtime;
+    }
+
+    private static BrowserRuntimeConfig? ResolveBrowserRuntimeFromSelector(
+        string selector,
+        LauncherPresetDocument presetDocument,
+        HashSet<string> presetStack)
+    {
+        if (!selector.StartsWith("preset:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string presetId = selector["preset:".Length..];
+        if (!presetStack.Add(presetId))
+        {
+            throw new InvalidOperationException($"Preset cycle detected at '{presetId}'.");
+        }
+
+        try
+        {
+            LauncherPresetDefinition? preset = presetDocument.Presets.FirstOrDefault(item =>
+                string.Equals(item.Id, presetId, StringComparison.OrdinalIgnoreCase));
+            if (preset == null)
+            {
+                throw new InvalidOperationException($"Preset not found: {presetId}");
+            }
+
+            BrowserRuntimeConfig? runtime = null;
+            foreach (string nestedSelector in preset.Selectors)
+            {
+                BrowserRuntimeConfig? nestedRuntime = ResolveBrowserRuntimeFromSelector(nestedSelector, presetDocument, presetStack);
+                if (nestedRuntime != null)
+                {
+                    runtime = nestedRuntime;
+                }
+            }
+
+            return preset.BrowserRuntime ?? runtime;
+        }
+        finally
+        {
+            presetStack.Remove(presetId);
+        }
+    }
+
+    private BrowserRuntimeConfig CompleteHostBrowserRuntimeConfig(BrowserRuntimeConfig source, LauncherConfig config)
+    {
+        BrowserRuntimeConfig runtime = CloneBrowserRuntimeConfig(source);
+        if (!runtime.Enabled && !runtime.Required)
+        {
+            return runtime;
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.Provider))
+        {
+            return runtime;
+        }
+
+        LauncherBrowserRuntimeProvider? provider = config.BrowserRuntimeProviders.FirstOrDefault(item =>
+            string.Equals(item.Id, runtime.Provider, StringComparison.OrdinalIgnoreCase));
+        if (provider == null)
+        {
+            if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath) &&
+                string.IsNullOrWhiteSpace(runtime.ProviderProjectPath))
+            {
+                throw new InvalidOperationException(
+                    $"browserRuntime provider '{runtime.Provider}' is not registered in launcher.config.json browserRuntimeProviders.");
+            }
+
+            return runtime;
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.ProviderProjectPath) &&
+            !string.IsNullOrWhiteSpace(provider.ProjectPath))
+        {
+            runtime.ProviderProjectPath = ResolveRepoRelativePath(provider.ProjectPath);
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath) &&
+            !string.IsNullOrWhiteSpace(provider.AssemblyPath))
+        {
+            runtime.ProviderAssemblyPath = ResolveRepoRelativePath(provider.AssemblyPath);
+        }
+
+        return runtime;
+    }
+
+    private static BrowserRuntimeConfig CloneBrowserRuntimeConfig(BrowserRuntimeConfig source)
+    {
+        return new BrowserRuntimeConfig
+        {
+            Enabled = source.Enabled,
+            Required = source.Required,
+            Provider = source.Provider,
+            ProviderAssemblyPath = source.ProviderAssemblyPath,
+            ProviderProjectPath = source.ProviderProjectPath,
+            RuntimeRootPath = source.RuntimeRootPath,
+            CacheRootPath = source.CacheRootPath
+        };
+    }
+
+    private string ResolveRepoRelativePath(string path)
+    {
+        return Path.IsPathRooted(path)
+            ? Path.GetFullPath(path)
+            : Path.GetFullPath(Path.Combine(_repoRoot, path));
     }
 
     private List<GameConfigFragment> CollectGameConfigFragments(
@@ -1005,7 +1161,8 @@ public sealed class LauncherService
         string graphArtifactPath,
         string appOutputDirectory,
         string appAssemblyPath,
-        string launchUrl)
+        string launchUrl,
+        BrowserRuntimeConfig? browserRuntime)
     {
         var payload = new PlanFingerprintPayload(
             LaunchGraphSchemaVersion,
@@ -1028,7 +1185,8 @@ public sealed class LauncherService
             graphArtifactPath,
             appOutputDirectory,
             appAssemblyPath,
-            launchUrl);
+            launchUrl,
+            browserRuntime);
         var json = JsonSerializer.Serialize(payload);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash).ToLowerInvariant();
@@ -1217,12 +1375,97 @@ public sealed class LauncherService
                 Selectors = preset.Selectors.ToList(),
                 AdapterId = string.IsNullOrWhiteSpace(preset.AdapterId) ? ResolveSelectedAdapterId(config, LoadPreferences()) : preset.AdapterId!,
                 BuildMode = NormalizeBuildMode(preset.BuildMode),
+                BrowserRuntime = preset.BrowserRuntime,
                 ActiveModIds = activeModIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
                 IncludeDependencies = true
             });
         }
 
         return output;
+    }
+
+    private async Task<IReadOnlyList<LauncherBuildResult>> BuildPlanRuntimeAsync(
+        LauncherLaunchPlan plan,
+        LauncherConfig config,
+        CancellationToken ct)
+    {
+        var results = new List<LauncherBuildResult>();
+        results.AddRange(await BuildPlannedModsAsync(plan, config, ct));
+        results.AddRange(await BuildHostBrowserRuntimeAsync(plan, ct));
+        return results;
+    }
+
+    private async Task<IReadOnlyList<LauncherBuildResult>> BuildHostBrowserRuntimeAsync(
+        LauncherLaunchPlan plan,
+        CancellationToken ct)
+    {
+        BrowserRuntimeConfig? browserRuntime = plan.BrowserRuntime;
+        if (browserRuntime == null || !browserRuntime.Enabled)
+        {
+            return Array.Empty<LauncherBuildResult>();
+        }
+
+        string resultId = $"browserRuntime:{browserRuntime.Provider}";
+        if (string.IsNullOrWhiteSpace(browserRuntime.ProviderAssemblyPath))
+        {
+            return new[]
+            {
+                new LauncherBuildResult(
+                    resultId,
+                    false,
+                    1,
+                    "browserRuntime.providerAssemblyPath is required for a host-owned browser runtime provider.")
+            };
+        }
+
+        if (string.IsNullOrWhiteSpace(browserRuntime.ProviderProjectPath))
+        {
+            bool exists = File.Exists(browserRuntime.ProviderAssemblyPath);
+            return new[]
+            {
+                new LauncherBuildResult(
+                    resultId,
+                    exists,
+                    exists ? 0 : 1,
+                    exists
+                        ? $"Host browser runtime provider assembly already exists: {browserRuntime.ProviderAssemblyPath}"
+                        : $"Host browser runtime provider assembly is missing: {browserRuntime.ProviderAssemblyPath}")
+            };
+        }
+
+        ct.ThrowIfCancellationRequested();
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
+            File.Exists(browserRuntime.ProviderAssemblyPath))
+        {
+            return new[]
+            {
+                new LauncherBuildResult(
+                    resultId,
+                    true,
+                    0,
+                    "Host browser runtime provider build skipped by request.")
+            };
+        }
+
+        string projectDirectory = Path.GetDirectoryName(browserRuntime.ProviderProjectPath) ?? _repoRoot;
+        var output = new StringBuilder();
+        var build = await RunDotnetAsync(
+            $"build \"{browserRuntime.ProviderProjectPath}\" -c Release",
+            projectDirectory,
+            timeoutMs: 300_000);
+        output.AppendLine(build.Output);
+        if (build.ExitCode != 0)
+        {
+            return new[] { new LauncherBuildResult(resultId, false, build.ExitCode, output.ToString()) };
+        }
+
+        if (!File.Exists(browserRuntime.ProviderAssemblyPath))
+        {
+            output.AppendLine($"Host browser runtime provider assembly missing after build: {browserRuntime.ProviderAssemblyPath}");
+            return new[] { new LauncherBuildResult(resultId, false, 1, output.ToString()) };
+        }
+
+        return new[] { new LauncherBuildResult(resultId, true, 0, output.ToString()) };
     }
 
     private async Task<IReadOnlyList<LauncherBuildResult>> BuildPlannedModsAsync(
@@ -1307,15 +1550,6 @@ public sealed class LauncherService
         var referenceExportPath = ExportReferenceAssembly(entry.Info, projectDirectory);
         output.AppendLine($"Exported ref: {referenceExportPath}");
 
-        var graphCompile = await RunLudotsToolAsync(
-            $"graph compile --modPath \"{entry.Info.RootPath}\" --assetsRoot \"{_repoRoot}\"",
-            timeoutMs: 300_000);
-        output.AppendLine(graphCompile.Output);
-        if (graphCompile.ExitCode != 0)
-        {
-            return new LauncherBuildResult(entry.Info.Id, false, graphCompile.ExitCode, output.ToString());
-        }
-
         var mainAssemblyPath = ResolveMainAssemblyPath(entry.Info.RootPath, entry.Manifest.Main);
         if (!string.IsNullOrWhiteSpace(entry.Manifest.Main) && !File.Exists(mainAssemblyPath))
         {
@@ -1373,7 +1607,8 @@ public sealed class LauncherService
             PlanOrderedModIds = plan.OrderedModIds,
             PlanFingerprint = plan.PlanFingerprint,
             PlanSchemaVersion = plan.SchemaVersion,
-            PlanGeneratedAtUtc = plan.GeneratedAtUtc
+            PlanGeneratedAtUtc = plan.GeneratedAtUtc,
+            BrowserRuntime = plan.BrowserRuntime
         }, BootstrapJsonWriteOptions);
         File.WriteAllText(plan.BootstrapArtifactPath, json);
         return plan.BootstrapArtifactPath;
@@ -1398,6 +1633,7 @@ public sealed class LauncherService
                 plan.AppOutputDirectory,
                 plan.AppAssemblyPath,
                 plan.LaunchUrl),
+            plan.BrowserRuntime,
             plan.Diagnostics);
         var directory = Path.GetDirectoryName(plan.GraphArtifactPath);
         if (!string.IsNullOrWhiteSpace(directory))
@@ -1960,7 +2196,8 @@ public sealed class LauncherService
         string GraphArtifactPath,
         string AppOutputDirectory,
         string AppAssemblyPath,
-        string LaunchUrl);
+        string LaunchUrl,
+        BrowserRuntimeConfig? BrowserRuntime);
 
     private sealed record CatalogEntry(LauncherModInfo Info, ModManifest Manifest);
     private sealed record GameConfigFragment(string Source, string? OwnerModId, bool IsRootSelection, JsonObject Content);

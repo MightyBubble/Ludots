@@ -7,32 +7,29 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 
 namespace CameraShowcaseMod.UI
 {
     internal sealed class CameraShowcasePanelController
     {
-        private UiScene? _mountedScene;
+        private UiSurfaceLeaseHandle _lease;
 
-        public UiScene BuildScene(GameEngine engine, string mapId, ViewModeManager? viewModeManager)
+        public void PublishOrRefresh(GameEngine engine, string mapId, ViewModeManager? viewModeManager, IUiSurfaceHost surfaceHost)
         {
-            var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
-            var imageSizeProvider = (IUiImageSizeProvider)engine.GetService(CoreServiceKeys.UiImageSizeProvider);
-            var scene = new UiScene(textMeasurer, imageSizeProvider);
-            int nextId = 1;
-            scene.Mount(BuildRoot(engine, mapId, viewModeManager).Build(scene.Dispatcher, ref nextId));
-            _mountedScene = scene;
-            return scene;
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("Showcase.Camera.Panel", UiSurfaceSegment.Overlay, priority: 40)),
+                UiSurfaceContribution.FromBuilder(() => BuildRoot(engine, mapId, viewModeManager)));
         }
 
-        public void ClearIfOwned(UIRoot root)
+        public void ClearIfOwned(IUiSurfaceHost surfaceHost)
         {
-            if (ReferenceEquals(root.Scene, _mountedScene))
+            if (_lease.IsValid)
             {
-                root.ClearScene();
+                surfaceHost.ReleaseLease(ref _lease);
             }
-
-            _mountedScene = null;
         }
 
         private UiElementBuilder BuildRoot(GameEngine engine, string mapId, ViewModeManager? viewModeManager)

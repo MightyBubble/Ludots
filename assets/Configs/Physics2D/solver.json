@@ -1,0 +1,16 @@
+{
+  "SolverIterations": 12,
+  "Epsilon": 0.000001,
+  "PositionCorrectionPercentage": 1.0,
+  "PositionCorrectionSlopCm": 0.01,
+  "MinVelocityCmPerSecSquared": 0.0001,
+  "LinearMotionThresholdCmPerSec": 0.01,
+  "AngularMotionThresholdRadPerSec": 0.01,
+  "SleepTimeSeconds": 4.0,
+  "DefaultFriction": 0.5,
+  "DefaultRestitution": 0.0,
+  "DefaultBaseDamping": 0.98,
+  "CollisionPairInitialCapacity": 0,
+  "CollisionPairGrowthStep": 256,
+  "MaxCollisionPairs": 4096
+}

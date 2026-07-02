@@ -472,21 +472,21 @@ namespace Ludots.Tests.Architecture
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_mass_nav_large_world_10k" },
+                        new[] { "$capability_standard_mass_navigation_large_world_10k" },
                         LauncherPlatformIds.Raylib,
-                        LauncherBuildMode.Never).Plan,
+                    LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
                     expectedStartupMapId: "mass_navigation",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
-                        new[] { "$capability_standard_total_war_like" },
+                        new[] { "$formation_capability_showcase" },
                         LauncherPlatformIds.Raylib,
-                        LauncherBuildMode.Never).Plan,
-                    expectedRootModId: "CapabilityStandardTotalWarLikeMod",
-                    expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardTotalWarLikeMod" });
+                    LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "FormationCapabilityShowcaseMod",
+                    expectedStartupMapId: "formation_capability_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "FormationCapabilityShowcaseMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -499,11 +499,18 @@ namespace Ludots.Tests.Architecture
                     {
                         "LudotsCoreMod",
                         "CoreInputMod",
-                        "CameraProfilesMod",
-                        "MassNavigationMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
                     });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_transport_network" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardTransportNetworkMod",
+                    expectedStartupMapId: "capability_standard_transport_network",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardTransportNetworkMod" });
             }
             finally
             {
@@ -557,6 +564,66 @@ namespace Ludots.Tests.Architecture
                 var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
                 Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo("progression_scope_showcase"));
                 Assert.That(startupMapSetting.EffectiveSource, Does.Contain("ProgressionScopeShowcaseMod"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_ResolvesAiShowcases_AsSingleFeatureRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-ai-showcases-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var utilityPlan = launcher.Resolve(
+                    new[] { "$utility_autocast_showcase" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                AssertAiShowcasePlan(
+                    utilityPlan,
+                    "UtilityAutocastShowcaseMod",
+                    "utility_autocast_showcase",
+                    new[]
+                    {
+                        "LudotsCoreMod",
+                        "AIInspectorMod",
+                        "UtilityAutocastShowcaseMod"
+                    });
+
+                var combatStancePlan = launcher.Resolve(
+                    new[] { "$combat_stance_showcase" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                AssertAiShowcasePlan(
+                    combatStancePlan,
+                    "CombatStanceShowcaseMod",
+                    "combat_stance_showcase",
+                    new[]
+                    {
+                        "LudotsCoreMod",
+                        "CombatStanceBehaviorMod",
+                        "CombatStanceShowcaseMod"
+                    });
             }
             finally
             {
@@ -971,7 +1038,25 @@ namespace Ludots.Tests.Architecture
             Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
-            Assert.That(plan.OrderedModIds, Does.Not.Contain("MassNavigationTotalWarEntryMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
+        }
+
+        private static void AssertAiShowcasePlan(
+            LauncherLaunchPlan plan,
+            string expectedRootModId,
+            string expectedStartupMapId,
+            string[] allowedModIds)
+        {
+            Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
+            Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("AIDemoMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsDemoMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("RelationshipShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("FourXAssociationShowcaseMod"));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));

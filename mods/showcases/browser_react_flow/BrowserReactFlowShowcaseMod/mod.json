@@ -1,0 +1,12 @@
+{
+  "name": "BrowserReactFlowShowcaseMod",
+  "version": "1.0.0",
+  "description": "Loads a packaged React Flow web app through the Ludots browser runtime surface.",
+  "main": "bin/net8.0/BrowserReactFlowShowcaseMod.dll",
+  "priority": 191,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "react-flow"]
+}

@@ -763,6 +763,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Down,
+                Button = PointerButton.Left,
                 X = 900f,
                 Y = 420f
             });
@@ -772,6 +773,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Down,
+                Button = PointerButton.Left,
                 X = 80f,
                 Y = 80f
             });
@@ -803,6 +805,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Down,
+                Button = PointerButton.Left,
                 X = click.X,
                 Y = click.Y
             }), Is.True);
@@ -812,6 +815,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 DeviceType = InputDeviceType.Mouse,
                 PointerId = 0,
                 Action = PointerAction.Up,
+                Button = PointerButton.Left,
                 X = click.X,
                 Y = click.Y
             }), Is.True);

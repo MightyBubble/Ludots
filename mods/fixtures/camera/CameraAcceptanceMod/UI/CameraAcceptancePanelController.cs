@@ -23,6 +23,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using Ludots.Platform.Abstractions;
 
 namespace CameraAcceptanceMod.UI
@@ -69,6 +70,7 @@ namespace CameraAcceptanceMod.UI
         private bool _cachedGuidesEnabled = true;
         private bool _cachedPrimitivesEnabled = true;
         private bool _cachedHotpathCullCrowdEnabled = true;
+        private UiSurfaceLeaseHandle _lease;
         private readonly Dictionary<int, string> _visibleEntityRowTextCache = new();
 
         public CameraAcceptancePanelController(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
@@ -88,23 +90,24 @@ namespace CameraAcceptanceMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
             ArgumentNullException.ThrowIfNull(engine);
+            if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return false;
+            }
 
             _engine = engine;
 
-            bool changed = false;
-            if (!ReferenceEquals(root.Scene, _page.Scene))
-            {
-                root.MountScene(_page.Scene);
-                root.IsDirty = true;
-                changed = true;
-            }
-
+            bool changed = !_lease.IsValid || !surfaceHost.Revalidate(_lease);
             if (ApplyStateSnapshot(engine))
             {
-                root.IsDirty = true;
                 changed = true;
             }
 
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("CameraAcceptance.Panel", UiSurfaceSegment.Overlay, priority: 45)),
+                UiSurfaceContribution.FromReactivePage(_page));
             return changed;
         }
 
@@ -112,9 +115,11 @@ namespace CameraAcceptanceMod.UI
         {
             ArgumentNullException.ThrowIfNull(root);
 
-            if (ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.Release(_lease);
+                _lease = default;
             }
 
             _lastState = CameraAcceptancePanelState.Empty;
@@ -1133,19 +1138,16 @@ namespace CameraAcceptanceMod.UI
         private void SyncMountedRoot()
         {
             GameEngine engine = RequireEngine();
-            if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
-            {
-                return;
-            }
-
-            if (!ReferenceEquals(root.Scene, _page.Scene))
+            if (!_lease.IsValid ||
+                engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost ||
+                !surfaceHost.Revalidate(_lease))
             {
                 return;
             }
 
             if (ApplyStateSnapshot(engine))
             {
-                root.IsDirty = true;
+                surfaceHost.Invalidate(_lease);
             }
         }
 

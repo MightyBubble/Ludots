@@ -7,6 +7,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 
 namespace PerformanceMod.Triggers
 {
@@ -25,47 +26,48 @@ namespace PerformanceMod.Triggers
         public override Task ExecuteAsync(ScriptContext context)
         {
             var engine = context.GetEngine();
-            if (engine == null || context.Get(CoreServiceKeys.UIRoot) is not UIRoot uiRoot)
+            if (engine == null)
             {
                 return Task.CompletedTask;
             }
 
-            var textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
-            var imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
-            UiScene scene = CreateScene(
-                textMeasurer,
-                imageSizeProvider,
-                () => engine.LoadMap(PerformanceMapIds.Benchmark),
-                () => engine.LoadMap(new MapId(engine.MergedConfig.StartupMapId)));
-            uiRoot.MountScene(scene);
-            uiRoot.IsDirty = true;
+            if (context.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return Task.CompletedTask;
+            }
+
+            UiSurfaceLeaseHandle lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                "Performance.EntryMenu",
+                UiSurfaceSegment.Main,
+                priority: 10,
+                exclusive: true));
+            surfaceHost.Publish(
+                lease,
+                UiSurfaceContribution.FromBuilder(() => BuildRoot(
+                    () => engine.LoadMap(PerformanceMapIds.Benchmark),
+                    () => engine.LoadMap(new MapId(engine.MergedConfig.StartupMapId)))));
             return Task.CompletedTask;
         }
 
-        private static UiScene CreateScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, System.Action goBenchmark, System.Action goEntry)
+        private static UiElementBuilder BuildRoot(System.Action goBenchmark, System.Action goEntry)
         {
-            var scene = new UiScene(textMeasurer, imageSizeProvider);
-            int nextId = 1;
-            scene.Mount(
-                Ui.Column(
-                        Ui.Text("PERFORMANCE")
-                            .FontSize(54f)
-                            .Bold()
-                            .Color(UiColor.White),
-                        Ui.Text("Entry menu: open benchmark map from here.")
-                            .FontSize(20f)
-                            .Color(UiColor.LightGray)
-                            .Margin(0f, 12f),
-                        BuildButton("Open Benchmark Map", UiColor.Gold, UiColor.Black, _ => goBenchmark()),
-                        BuildButton("Back to Entry", UiColor.DimGray, UiColor.White, _ => goEntry()))
-                    .WidthPercent(100f)
-                    .HeightPercent(100f)
-                    .Justify(UiJustifyContent.Center)
-                    .Align(UiAlignItems.Center)
-                    .Background(new UiColor(0, 0, 0, 200))
-                    .Gap(16f)
-                    .Build(scene.Dispatcher, ref nextId));
-            return scene;
+            return Ui.Column(
+                    Ui.Text("PERFORMANCE")
+                        .FontSize(54f)
+                        .Bold()
+                        .Color(UiColor.White),
+                    Ui.Text("Entry menu: open benchmark map from here.")
+                        .FontSize(20f)
+                        .Color(UiColor.LightGray)
+                        .Margin(0f, 12f),
+                    BuildButton("Open Benchmark Map", UiColor.Gold, UiColor.Black, _ => goBenchmark()),
+                    BuildButton("Back to Entry", UiColor.DimGray, UiColor.White, _ => goEntry()))
+                .WidthPercent(100f)
+                .HeightPercent(100f)
+                .Justify(UiJustifyContent.Center)
+                .Align(UiAlignItems.Center)
+                .Background(new UiColor(0, 0, 0, 200))
+                .Gap(16f);
         }
 
         private static UiElementBuilder BuildButton(string text, UiColor background, UiColor foreground, System.Action<UiActionContext> onClick)

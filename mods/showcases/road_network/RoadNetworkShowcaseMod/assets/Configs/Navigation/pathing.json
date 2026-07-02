@@ -3,7 +3,6 @@
     {
       "id": "RoadColumn",
       "profileId": "Small",
-      "layer": 0,
       "selection": {
         "mode": "PreferGraph",
         "graphBias": -0.25,
@@ -18,6 +17,7 @@
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 6000,
+        "useDynamicOverlay": false,
         "forbiddenTagsAny": [],
         "requiredTagsAll": [],
         "tagCostRules": []
@@ -26,7 +26,6 @@
     {
       "id": "Humanoid",
       "profileId": "Small",
-      "layer": 0,
       "selection": {
         "mode": "PreferGraph",
         "graphBias": 0.0,
@@ -41,6 +40,7 @@
       },
       "nodeGraph": {
         "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": false,
         "forbiddenTagsAny": [],
         "requiredTagsAll": [],
         "tagCostRules": []

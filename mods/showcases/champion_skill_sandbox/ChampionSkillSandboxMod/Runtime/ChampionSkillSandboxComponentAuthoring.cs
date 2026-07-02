@@ -5,7 +5,6 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Config;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
@@ -17,21 +16,21 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             Ludots.Core.Config.ComponentRegistry.Register("Collider2D", SetCollider2D, modId);
             Ludots.Core.Config.ComponentRegistry.Register("PhysicsMaterial2D", SetPhysicsMaterial2D, modId);
-            Ludots.Core.Config.ComponentRegistry.Register("NavKinematics2D", SetNavKinematics2D, modId);
         }
 
-        private static void SetCollider2D(Entity entity, JsonNode data)
+        private static void SetCollider2D(Entity entity, JsonNode data, ComponentAuthoringContext context)
         {
             JsonObject obj = RequireObject(data, "Collider2D");
             ValidateProperties(obj, "Collider2D", "shape");
+            var shapeStorage = context.Require<ShapeDataStorage2D>(ComponentAuthoringServiceKeys.Physics2DShapeStorage);
 
             JsonObject shape = GetRequiredObject(obj, "shape", "Collider2D");
             ColliderType2D type = ParseColliderType(ReadRequiredString(shape, "type", "Collider2D.shape"));
             int shapeDataIndex = type switch
             {
-                ColliderType2D.Circle => RegisterCircle(shape),
-                ColliderType2D.Box => RegisterBox(shape),
-                ColliderType2D.Polygon => RegisterPolygon(shape),
+                ColliderType2D.Circle => RegisterCircle(shapeStorage, shape),
+                ColliderType2D.Box => RegisterBox(shapeStorage, shape),
+                ColliderType2D.Polygon => RegisterPolygon(shapeStorage, shape),
                 _ => throw new InvalidOperationException($"Unsupported Collider2D type '{type}'."),
             };
 
@@ -39,30 +38,6 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 Type = type,
                 ShapeDataIndex = shapeDataIndex
-            });
-        }
-
-        private static void SetNavKinematics2D(Entity entity, JsonNode data)
-        {
-            JsonObject obj = RequireObject(data, "NavKinematics2D");
-            ValidateProperties(
-                obj,
-                "NavKinematics2D",
-                "maxSpeedCmPerSec",
-                "maxAccelCmPerSec2",
-                "radiusCm",
-                "neighborDistCm",
-                "timeHorizonSec",
-                "maxNeighbors");
-
-            entity.Add(new NavKinematics2D
-            {
-                MaxSpeedCmPerSec = Fix64.FromFloat(ReadRequiredFloat(obj, "maxSpeedCmPerSec", "NavKinematics2D")),
-                MaxAccelCmPerSec2 = Fix64.FromFloat(ReadRequiredFloat(obj, "maxAccelCmPerSec2", "NavKinematics2D")),
-                RadiusCm = Fix64.FromFloat(ReadRequiredFloat(obj, "radiusCm", "NavKinematics2D")),
-                NeighborDistCm = Fix64.FromFloat(ReadRequiredFloat(obj, "neighborDistCm", "NavKinematics2D")),
-                TimeHorizonSec = Fix64.FromFloat(ReadRequiredFloat(obj, "timeHorizonSec", "NavKinematics2D")),
-                MaxNeighbors = ReadRequiredInt(obj, "maxNeighbors", "NavKinematics2D")
             });
         }
 
@@ -90,27 +65,27 @@ namespace ChampionSkillSandboxMod.Runtime
             };
         }
 
-        private static int RegisterCircle(JsonObject shape)
+        private static int RegisterCircle(ShapeDataStorage2D shapeStorage, JsonObject shape)
         {
             ValidateProperties(shape, "Collider2D.shape Circle", "type", "radiusCm", "localCenterCm");
-            return ShapeDataStorage2D.RegisterCircle(
+            return shapeStorage.RegisterCircle(
                 Fix64.FromFloat(ReadRequiredFloat(shape, "radiusCm", "Collider2D.shape Circle")),
                 ReadRequiredVector2(shape, "localCenterCm", "Collider2D.shape Circle"));
         }
 
-        private static int RegisterBox(JsonObject shape)
+        private static int RegisterBox(ShapeDataStorage2D shapeStorage, JsonObject shape)
         {
             ValidateProperties(shape, "Collider2D.shape Box", "type", "halfWidthCm", "halfHeightCm", "localCenterCm");
-            return ShapeDataStorage2D.RegisterBox(
+            return shapeStorage.RegisterBox(
                 Fix64.FromFloat(ReadRequiredFloat(shape, "halfWidthCm", "Collider2D.shape Box")),
                 Fix64.FromFloat(ReadRequiredFloat(shape, "halfHeightCm", "Collider2D.shape Box")),
                 ReadRequiredVector2(shape, "localCenterCm", "Collider2D.shape Box"));
         }
 
-        private static int RegisterPolygon(JsonObject shape)
+        private static int RegisterPolygon(ShapeDataStorage2D shapeStorage, JsonObject shape)
         {
             ValidateProperties(shape, "Collider2D.shape Polygon", "type", "verticesCm");
-            return ShapeDataStorage2D.RegisterPolygon(ParsePolygonVertices(shape));
+            return shapeStorage.RegisterPolygon(ParsePolygonVertices(shape));
         }
 
         private static Fix64Vec2[] ParsePolygonVertices(JsonObject shape)

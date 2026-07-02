@@ -9,8 +9,8 @@
   "simulationBudgetMsPerFrame": 4,
   "simulationMaxSlicesPerLogicFrame": 120,
   "gridCellSizeCm": 100,
-  "worldWidthInTiles": 64,
-  "worldHeightInTiles": 64,
+  "worldWidthInMacroTiles": 64,
+  "worldHeightInMacroTiles": 64,
   "selection": {
     "targetFilter": { "relationFilter": "All" },
     "clickPickRadiusPixels": 20,

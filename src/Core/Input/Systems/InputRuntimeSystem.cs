@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -43,8 +44,13 @@ namespace Ludots.Core.Input.Systems
             }
 
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
+            bool uiWheelCaptured = _globals.TryGetValue(CoreServiceKeys.UiWheelCaptured.Name, out var wheelCapturedObj) && wheelCapturedObj is bool wb && wb;
             input.InputBlocked = uiCaptured;
             input.Update();
+            if (uiWheelCaptured)
+            {
+                SuppressCameraZoom(input);
+            }
             RunFrameConsumers(input, dt);
             ApplyPointerCaptureSuppression(input);
             if (_authoritativeInput != null)
@@ -140,6 +146,25 @@ namespace Ludots.Core.Input.Systems
                 overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
                 pointerOverride.HasOverride &&
                 string.Equals(pointerOverride.ActionId, actionId, System.StringComparison.Ordinal);
+        }
+
+        private void SuppressCameraZoom(PlayerInputHandler input)
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
+                sessionObj is GameSession session)
+            {
+                string? zoomActionId = session.Camera.VirtualCameraBrain?.ActiveDefinition?.ZoomActionId;
+                if (!string.IsNullOrWhiteSpace(zoomActionId))
+                {
+                    Suppress(input, zoomActionId);
+                }
+            }
+
+            Suppress(input, VirtualCameraDefinition.DefaultZoomActionId);
+            if (_globals is Dictionary<string, object> mutable)
+            {
+                mutable[CoreServiceKeys.UiWheelCaptured.Name] = false;
+            }
         }
 
         private void Suppress(PlayerInputHandler input, string actionId)

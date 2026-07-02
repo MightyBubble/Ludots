@@ -49,6 +49,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        public static bool IsBuiltinKey(string key)
+        {
+            return TryRequireCanonicalKey(key, out string canonicalKey) &&
+                   BuiltinIdsByKey.ContainsKey(canonicalKey);
+        }
+
         public static string GetKey(int id)
         {
             if (BuiltinKeysById.TryGetValue(id, out string? builtinKey))

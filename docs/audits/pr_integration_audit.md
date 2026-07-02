@@ -96,7 +96,7 @@ cursor/prs-dbf7 (当前)
 合并后建议执行：
 
 - [ ] `dotnet test src/Tests/GasTests/GasTests.csproj`
-- [ ] `dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj`
+- [ ] `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj`
 - [ ] `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj`
 - [ ] ModLauncher 全 Mod 构建与运行验证
 

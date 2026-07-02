@@ -107,6 +107,32 @@ namespace ChampionSkillSandboxMod.Runtime
             SyncFocusPanel(engine);
         }
 
+        public void CaptureCommandSnapshot(GameEngine engine, Entity commandSnapshot)
+        {
+            if (!ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value))
+            {
+                return;
+            }
+
+            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
+            if (selection == null || !IsUsableSelectionContainer(selection, commandSnapshot))
+            {
+                return;
+            }
+
+            if (_debugViewer == Entity.Null || !engine.World.IsAlive(_debugViewer))
+            {
+                _debugViewer = EnsureViewerEntity(engine, _debugViewer, "Stress Viewer Debug", playerId: null);
+            }
+
+            if (_debugViewer == Entity.Null)
+            {
+                return;
+            }
+
+            SyncCommandPreviewSelection(selection, _debugViewer, commandSnapshot);
+        }
+
         private void EnsureScenarioState(GameEngine engine)
         {
             string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
@@ -298,15 +324,14 @@ namespace ChampionSkillSandboxMod.Runtime
             selection.ReplaceSelection(aiViewer, SelectionSetKeys.FormationPrimary, _teamBFormation.ToArray());
             selection.TryBindView(aiViewer, SelectionViewKeys.Formation, aiViewer, SelectionSetKeys.FormationPrimary);
 
-            Entity commandSnapshot = ResolveLatestSelectionSnapshotContainer(engine);
+            Entity commandSnapshot = ResolveLatestSelectionSnapshotContainer(engine, selection);
             if (commandSnapshot != Entity.Null)
             {
-                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, commandSnapshot);
+                SyncCommandPreviewSelection(selection, debugViewer, commandSnapshot);
             }
             else
             {
-                selection.ReplaceSelection(debugViewer, SelectionSetKeys.CommandPreview, Array.Empty<Entity>());
-                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, debugViewer, SelectionSetKeys.CommandPreview);
+                BindExistingCommandPreviewSelection(selection, debugViewer);
             }
         }
 
@@ -549,10 +574,11 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
+            engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
             engine.GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+                followTarget: null,
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
                 resetRuntimeState: true);
 
@@ -572,6 +598,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 DistanceCm = cameraConfig.DistanceCm,
                 FovYDeg = cameraConfig.FovYDeg,
             });
+            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
         }
 
         private static void SyncCameraFollow(GameEngine engine)
@@ -749,45 +776,66 @@ namespace ChampionSkillSandboxMod.Runtime
             destination.Add(order.Target);
         }
 
-        private static Entity ResolveLatestSelectionSnapshotContainer(GameEngine engine)
+        private static Entity ResolveLatestSelectionSnapshotContainer(GameEngine engine, SelectionRuntime selection)
         {
             Entity bestContainer = Entity.Null;
             int bestOrderId = 0;
 
-            if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue queue)
+            if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue queue &&
+                TryResolveQueuedSelectionContainer(queue, selection, out Entity queuedContainer))
             {
-                CollectLatestSelectionContainer(queue, ref bestOrderId, ref bestContainer);
+                return queuedContainer;
             }
 
+            string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
             engine.World.Query(in StressOrderBufferQuery, (Entity entity, ref Team team, ref MapEntity mapEntity, ref OrderBuffer orders) =>
             {
-                ConsiderOrderSelection(orders.ActiveOrder.Order, orders.HasActive, ref bestOrderId, ref bestContainer);
-                ConsiderOrderSelection(orders.PendingOrder.Order, orders.HasPending, ref bestOrderId, ref bestContainer);
+                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                ConsiderOrderSelection(selection, orders.ActiveOrder.Order, orders.HasActive, ref bestOrderId, ref bestContainer);
+                ConsiderOrderSelection(selection, orders.PendingOrder.Order, orders.HasPending, ref bestOrderId, ref bestContainer);
                 for (int i = 0; i < orders.QueuedCount; i++)
                 {
-                    ConsiderOrderSelection(orders.GetQueued(i).Order, include: true, ref bestOrderId, ref bestContainer);
+                    ConsiderOrderSelection(selection, orders.GetQueued(i).Order, include: true, ref bestOrderId, ref bestContainer);
                 }
             });
 
             return bestContainer;
         }
 
-        private static void CollectLatestSelectionContainer(OrderQueue queue, ref int bestOrderId, ref Entity bestContainer)
+        private static bool TryResolveQueuedSelectionContainer(
+            OrderQueue queue,
+            SelectionRuntime selection,
+            out Entity container)
         {
+            container = Entity.Null;
             var liveContainers = new HashSet<Entity>();
             queue.CollectSelectionContainers(liveContainers);
-            foreach (Entity container in liveContainers)
+            foreach (Entity candidate in liveContainers)
             {
-                if (container != Entity.Null)
+                if (IsUsableSelectionContainer(selection, candidate))
                 {
-                    bestContainer = container;
+                    container = candidate;
+                    return true;
                 }
             }
+
+            return false;
         }
 
-        private static void ConsiderOrderSelection(in Order order, bool include, ref int bestOrderId, ref Entity bestContainer)
+        private static void ConsiderOrderSelection(
+            SelectionRuntime selection,
+            in Order order,
+            bool include,
+            ref int bestOrderId,
+            ref Entity bestContainer)
         {
-            if (!include || !order.Args.Selection.HasContainer || order.Args.Selection.Container == Entity.Null)
+            if (!include ||
+                !order.Args.Selection.HasContainer ||
+                !IsUsableSelectionContainer(selection, order.Args.Selection.Container))
             {
                 return;
             }
@@ -796,6 +844,54 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 bestOrderId = order.OrderId;
                 bestContainer = order.Args.Selection.Container;
+            }
+        }
+
+        private static bool IsUsableSelectionContainer(SelectionRuntime selection, Entity container)
+        {
+            return container != Entity.Null &&
+                   selection.TryDescribeContainer(container, out _);
+        }
+
+        private static void SyncCommandPreviewSelection(
+            SelectionRuntime selection,
+            Entity debugViewer,
+            Entity commandSnapshot)
+        {
+            if (commandSnapshot == Entity.Null ||
+                !selection.TryGetOrCreateContainer(
+                    debugViewer,
+                    SelectionSetKeys.CommandPreview,
+                    SelectionContainerKind.CommandBinding,
+                    out Entity previewContainer))
+            {
+                return;
+            }
+
+            int count = selection.GetSelectionCount(commandSnapshot);
+            if (count <= 0)
+            {
+                selection.ReplaceSelection(previewContainer, Array.Empty<Entity>());
+                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, previewContainer);
+                return;
+            }
+
+            Entity[] snapshot = new Entity[count];
+            int written = selection.CopySelection(commandSnapshot, snapshot);
+            selection.ReplaceSelection(previewContainer, snapshot.AsSpan(0, written));
+            selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, previewContainer);
+        }
+
+        private static void BindExistingCommandPreviewSelection(SelectionRuntime selection, Entity debugViewer)
+        {
+            if (selection.TryGetSelectionEntity(debugViewer, SelectionSetKeys.CommandPreview, out Entity existingPreview) ||
+                selection.TryGetOrCreateContainer(
+                    debugViewer,
+                    SelectionSetKeys.CommandPreview,
+                    SelectionContainerKind.CommandBinding,
+                    out existingPreview))
+            {
+                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, existingPreview);
             }
         }
 

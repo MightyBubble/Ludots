@@ -9,9 +9,8 @@
     "../../../../../../../mods/TcgDemoMod",
     "../../../../../../../mods/FourXDemoMod",
     "../../../../../../../mods/AuditPlaygroundMod",
-    "../../../../../../../mods/Navigation2DPlaygroundMod",
     "../../../../../../../mods/PerformanceVisualizationMod",
-    "../../../../../../../mods/Physics2DPlaygroundMod",
+    "../../../../../../../mods/showcases/capability_standard/CapabilityStandardPhysics2DPlaygroundV2Mod",
     "../../../../../../../mods/DiagnosticsOverlayMod",
     "../../../../../../../mods/FeatureHubMod"
   ]

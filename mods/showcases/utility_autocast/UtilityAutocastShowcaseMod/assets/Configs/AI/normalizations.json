@@ -1,0 +1,5 @@
+[
+  { "id": "Norm.UtilityAutocast.CloseHostile", "Kind": "RangeInverse", "Min": 0, "Max": 1600 },
+  { "id": "Norm.UtilityAutocast.LowHealth", "Kind": "RangeInverse", "Min": 0, "Max": 120 },
+  { "id": "Norm.UtilityAutocast.HighHealth", "Kind": "Range", "Min": 0, "Max": 180 }
+]

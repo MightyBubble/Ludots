@@ -9,7 +9,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 440,
       "totalDurationTicks": 4,
       "overrideNavigation": true
@@ -359,10 +358,7 @@
       "templateId": "champion_skill_sandbox_runic_beacon",
       "count": 1,
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -381,10 +377,7 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.Geomancer.RuneFieldPersistent",
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -445,10 +438,7 @@
       "templateId": "champion_skill_sandbox_stone_pillar",
       "count": 1,
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -769,7 +759,7 @@
       "travelMode": "Direction",
       "impactPolicy": "DestroyOnFirstHit",
       "collisionHalfWidth": 100,
-      "collisionRelationFilter": "All",
+      "collisionRelationFilter": "Hostile",
       "collisionExcludeSource": true,
       "maxHitCount": 1
     }
@@ -830,7 +820,7 @@
       "travelMode": "Direction",
       "impactPolicy": "DestroyOnFirstHit",
       "collisionHalfWidth": 70,
-      "collisionRelationFilter": "All",
+      "collisionRelationFilter": "Hostile",
       "collisionExcludeSource": true,
       "maxHitCount": 1
     }
@@ -902,10 +892,7 @@
       "templateId": "champion_skill_sandbox_spell_beacon",
       "count": 1,
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -924,10 +911,7 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GravityWellPersistent",
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }
@@ -987,7 +971,6 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_barrier_segment",
       "count": 10,
-      "offsetRadius": 280,
       "placementPattern": "Circle",
       "facingPattern": "TangentCounterClockwise",
       "placementRadiusCm": 280,
@@ -1010,10 +993,7 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
       "offsetRadius": 0,
-      "placementPattern": "Circle",
-      "facingPattern": "PreserveTemplate",
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
+      "placementPattern": "Scatter",
       "copySourcePlayerOwner": true,
       "linkSourceAsParent": true
     }

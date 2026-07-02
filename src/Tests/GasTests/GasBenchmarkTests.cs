@@ -5,6 +5,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -307,6 +308,52 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"  Operations/sec: {opsPerSecond:F0}");
             Console.WriteLine($"  Memory Allocated: {allocatedMemory / 1024.0:F2} KB");
             Console.WriteLine($"  GC Collections: Gen0={GC.CollectionCount(0)}, Gen1={GC.CollectionCount(1)}, Gen2={GC.CollectionCount(2)}");
+        }
+
+        [Test]
+        public void Benchmark_DeferredTriggerCollectionSystem_SparseDirtyTags()
+        {
+            const int entityCount = 1000;
+            var queue = new DeferredTriggerQueue();
+            var system = new DeferredTriggerCollectionSystem(_world, queue, _tagOps);
+
+            for (int i = 0; i < entityCount; i++)
+            {
+                int tagId = (i % 31) + 1;
+                var tags = default(GameplayTagContainer);
+                var counts = default(TagCountContainer);
+                var dirty = default(DirtyFlags);
+                tags.AddTag(tagId);
+                counts.AddCount(tagId);
+                dirty.MarkTagDirty(tagId);
+                _world.Create(tags, counts, dirty);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long startAlloc = GC.GetAllocatedBytesForCurrentThread();
+            var sw = Stopwatch.StartNew();
+
+            system.Update(0.016f);
+
+            sw.Stop();
+            long allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - startAlloc;
+
+            That(queue.TagTriggerCount, Is.EqualTo(entityCount));
+            That(queue.TagCountTriggerCount, Is.EqualTo(entityCount));
+
+            int previousFullScanChecks = entityCount * GameplayTagContainer.MAX_TAG_ID;
+            int dirtyBitVisits = entityCount;
+            Console.WriteLine("[Benchmark] DeferredTriggerCollectionSystem.SparseDirtyTags:");
+            Console.WriteLine($"  Entities: {entityCount}");
+            Console.WriteLine($"  PreviousFullScanTagChecks: {previousFullScanChecks}");
+            Console.WriteLine($"  DirtyBitTagVisits: {dirtyBitVisits}");
+            Console.WriteLine($"  Total Time: {sw.Elapsed.TotalMilliseconds:F3}ms");
+            Console.WriteLine($"  AllocatedBytes(CurrentThread): {allocatedBytes} bytes");
+
+            system.Dispose();
         }
         
         [Test]

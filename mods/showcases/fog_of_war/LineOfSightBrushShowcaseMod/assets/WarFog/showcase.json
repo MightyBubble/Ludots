@@ -1,0 +1,5 @@
+{
+  "capability": "FOG-4",
+  "lineOfSight": { "enabled": true, "toggleable": true },
+  "concealment": { "enabled": true }
+}

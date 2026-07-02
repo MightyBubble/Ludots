@@ -1,4 +1,4 @@
-﻿# Ludots
+# Ludots
 
 **SuperFastECSGameplayFramework** - A high-performance, data-oriented gameplay framework built on Arch ECS.
 
@@ -15,7 +15,7 @@ Ludots is a modern C# game framework designed for high-performance gameplay logi
 *   **High-Performance ECS**: Built on [Arch](https://github.com/genaray/Arch), optimized for speed and memory efficiency.
 *   **Gameplay Ability System (GAS)**: A robust ability system inspired by UE GAS, supporting attributes, effects, and tags.
 *   **Modular Architecture**: Fully moddable with a Virtual File System (VFS) and hot-reloadable configurations.
-*   **Advanced Navigation**: Integrated 2D navigation with NavMesh, FlowField, and local avoidance (ORCA).
+*   **Advanced Navigation**: Integrated NavMesh, MassNavigationFlow movement, and local avoidance (ORCA).
 *   **Deterministic Simulation**: Fixed-point math and deterministic scheduling for reliable networking and replay.
 *   **Visual Editor**: React-based visual editor for map editing and debugging.
 
@@ -45,8 +45,8 @@ Scripts are located in the `scripts/` directory:
 # Build the main Raylib App
 dotnet build .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release
 
-# Run Navigation2D Playground
-dotnet run --project .\src\Apps\Raylib\Ludots.App.Raylib\Ludots.App.Raylib.csproj -c Release -- game.navigation2d.json
+# Run the Mass Navigation showcase through the launcher
+.\scripts\run-mod-launcher.cmd preset mass_navigation
 ```
 
 ## 📂 Project Structure

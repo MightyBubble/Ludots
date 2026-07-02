@@ -1,0 +1,5 @@
+{
+  "capability": "FOG-5",
+  "projection": { "presence": ["LiveVisible", "Known", "HiddenWithSource"], "aspectMask": true },
+  "memoryTtlTicks": 5
+}

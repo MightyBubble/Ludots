@@ -136,7 +136,18 @@ namespace Ludots.Tests.GAS
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var timedTags = new TimedTagExpirationSystem(world, clock);
                 var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, selReq, selResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry);
-                var effectLoop = new EffectProcessingLoopSystem(world, effectRequests, clock, conditions, budget, templates, inputReq, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
+                var effectLoop = new EffectProcessingLoopSystem(
+                    world,
+                    effectRequests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    inputReq,
+                    chainOrders,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -348,7 +359,18 @@ namespace Ludots.Tests.GAS
 
                 var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, incomingOrders, 30);
-                var effectLoop = new EffectProcessingLoopSystem(world, effectRequests, clock, conditions, budget, templates, inputReq, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue());
+                var effectLoop = new EffectProcessingLoopSystem(
+                    world,
+                    effectRequests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    inputReq,
+                    chainOrders,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
                 var agg = new AttributeAggregatorSystem(world);
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
@@ -465,7 +487,18 @@ namespace Ludots.Tests.GAS
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, incomingOrders, 30);
                 var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, selReq, selResp, effectRequests, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3);
-                var effectLoop = new EffectProcessingLoopSystem(world, effectRequests, clock, conditions, budget, templates, null, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
+                var effectLoop = new EffectProcessingLoopSystem(
+                    world,
+                    effectRequests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    null,
+                    chainOrders,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

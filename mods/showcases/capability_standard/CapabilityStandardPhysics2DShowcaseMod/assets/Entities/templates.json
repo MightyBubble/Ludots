@@ -1,0 +1,37 @@
+[
+  {
+    "id": "capability_standard_physics2d_static_obstacle",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.StaticObstacle" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CompoundObstacle2D": {
+        "sinkPhysicsCollider": true,
+        "sinkNavigationObstacle": false,
+        "pieces": [
+          {
+            "shape": "Box",
+            "halfWidthCm": 84,
+            "halfHeightCm": 34,
+            "localOffsetCm": { "x": -64, "y": 0 },
+            "navRadiusCm": 90
+          },
+          {
+            "shape": "Box",
+            "halfWidthCm": 84,
+            "halfHeightCm": 34,
+            "localOffsetCm": { "x": 64, "y": 0 },
+            "navRadiusCm": 90
+          },
+          {
+            "shape": "Circle",
+            "radiusCm": 36,
+            "localOffsetCm": { "x": 0, "y": 74 },
+            "navRadiusCm": 36
+          }
+        ]
+      }
+    }
+  }
+]

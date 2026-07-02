@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.Presentation.Skia\Ludots.Presentation.Skia.csproj" />
     <ProjectReference Include="..\..\Client\Ludots.Client.Raylib\Ludots.Client.Raylib.csproj" />
@@ -42,7 +43,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\info_panels\GenreInfoShowcaseMod\GenreInfoShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\performer_blacksmith\PerformerBlacksmithShowcaseMod\PerformerBlacksmithShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\mass_navigation_total_war_entry\MassNavigationTotalWarEntryMod\MassNavigationTotalWarEntryMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\FormationCapabilityShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\RaylibIsmBenchmarkShowcaseMod.csproj" />
   </ItemGroup>
 

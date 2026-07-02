@@ -89,10 +89,29 @@ namespace CoreInputMod.Triggers
 
             var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
+            RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
             _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimPresentation, SelectedMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
+        }
+
+        private void RegisterLoadedModViewModes(GameEngine engine)
+        {
+            if (engine.ModLoader?.LoadedModIds == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < engine.ModLoader.LoadedModIds.Count; i++)
+            {
+                string modId = engine.ModLoader.LoadedModIds[i];
+                ViewModeRegistrar.RegisterFromVfs(
+                    _ctx,
+                    engine.GlobalContext,
+                    sourceModId: modId,
+                    activateWhenUnset: false);
+            }
         }
     }
 }

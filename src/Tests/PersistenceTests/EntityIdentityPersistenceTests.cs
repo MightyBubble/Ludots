@@ -165,6 +165,49 @@ public sealed class EntityIdentityPersistenceTests
         AssertAliveName(restored, restoredTeam, "team");
     }
 
+    [Test]
+    public void ImportIntoKeepsTargetStableAfterImportedSourceIsDisposedAndWorldsAllocate()
+    {
+        using World source = World.Create();
+        Entity childA = source.Create(new Name { Value = "child-a" });
+        Entity childB = source.Create(new Name { Value = "child-b" });
+        var children = new ChildrenBuffer();
+        Assert.That(children.Add(childA), Is.True);
+        Assert.That(children.Add(childB), Is.True);
+        source.Create(new Name { Value = "parent" }, children, WorldPositionCm.FromCm(25, 75));
+        source.Create(new Name { Value = "excluded" }, new SaveExcludedTag());
+
+        using World target = World.Create();
+        using (World normalized = new LudotsBinaryWorldSerializer().CloneIncludedWorld(source))
+        {
+            LudotsWorldStateImporter.ImportOwnedSnapshotInto(normalized, target);
+        }
+
+        for (int i = 0; i < 128; i++)
+        {
+            source.Create(new Name { Value = $"source-noise-{i}" }, WorldPositionCm.FromCm(i, -i));
+        }
+
+        for (int i = 0; i < 128; i++)
+        {
+            using World pressure = World.Create();
+            pressure.Create(new Name { Value = $"pressure-{i}" }, WorldPositionCm.FromCm(i * 2, i * 3));
+        }
+
+        Entity restoredParent = FindSingle<ChildrenBuffer>(target);
+        ref readonly ChildrenBuffer restoredChildren = ref target.Get<ChildrenBuffer>(restoredParent);
+        Entity restoredChildA = restoredChildren.Get(0);
+        Entity restoredChildB = restoredChildren.Get(1);
+
+        Assert.Multiple(() =>
+        {
+            AssertAliveName(target, restoredChildA, "child-a");
+            AssertAliveName(target, restoredChildB, "child-b");
+            Assert.That(FindByName(target, "excluded"), Is.EqualTo(Entity.Null));
+            Assert.That(target.Get<WorldPositionCm>(restoredParent).ToWorldCmInt2(), Is.EqualTo(new Ludots.Core.Mathematics.WorldCmInt2(25, 75)));
+        });
+    }
+
     private static World CoreRoundTrip(World world)
     {
         var serializer = new LudotsBinaryWorldSerializer();
@@ -192,6 +235,25 @@ public sealed class EntityIdentityPersistenceTests
         });
 
         Assert.That(matches, Is.EqualTo(1));
+        return found;
+    }
+
+    private static Entity FindByName(World world, string name)
+    {
+        var query = new QueryDescription().WithAll<Name>();
+        Entity found = Entity.Null;
+        int matches = 0;
+
+        world.Query(in query, (Entity entity, ref Name entityName) =>
+        {
+            if (string.Equals(entityName.Value, name, StringComparison.Ordinal))
+            {
+                found = entity;
+                matches++;
+            }
+        });
+
+        Assert.That(matches, Is.LessThanOrEqualTo(1));
         return found;
     }
 }

@@ -237,13 +237,11 @@
     "unitCreation": {
       "unitType": "Unit.Skeleton",
       "count": 1,
-      "offsetRadius": 200,
       "placementPattern": "Circle",
       "facingPattern": "RadialOutward",
       "placementRadiusCm": 200,
       "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -406,7 +404,6 @@
     "participatesInResponse": true,
     "displacement": {
       "directionMode": "AwayFromSource",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 350,
       "totalDurationTicks": 12,
       "overrideNavigation": true

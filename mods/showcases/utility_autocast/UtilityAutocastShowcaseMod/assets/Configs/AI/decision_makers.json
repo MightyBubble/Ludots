@@ -1,0 +1,12 @@
+[
+  {
+    "id": "DM.UtilityAutocast.Mage",
+    "SelectionMode": "UtilityScore",
+    "SwitchMargin": 0,
+    "Decisions": [
+      "Decision.UtilityAutocast.Attack",
+      "Decision.UtilityAutocast.HealBurst",
+      "Decision.UtilityAutocast.Curse"
+    ]
+  }
+]

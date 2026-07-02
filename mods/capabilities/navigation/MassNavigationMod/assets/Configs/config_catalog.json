@@ -1,7 +1,6 @@
 [
-  { "Path": "MassNavigationConfig.json", "Policy": "Replace" },
+  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
   { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/animation_clips.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/animation_profiles.json", "Policy": "ArrayById", "IdField": "id" }
 ]
-

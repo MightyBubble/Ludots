@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -339,7 +340,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// </summary>
         private static List<IntPoint> TraceRing(DirectedEdge startEdge, Dictionary<IntPoint, List<IntPoint>> adjacency, HashSet<DirectedEdge> usedEdges)
         {
-            var ring = new List<IntPoint>(64);
+            var ring = new List<IntPoint>(SpatialScaleDefaults.ContourRingInitialCapacity);
             var current = startEdge.From;
             var next = startEdge.To;
             ring.Add(current);

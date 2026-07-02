@@ -39,4 +39,4 @@ SpawnPipeline:
 ## 参考案例
 - **StarCraft**: 右键设置集结点
 - **Age of Empires**: 兵营集结点旗帜
-- **Total War**: 部队集结位置
+- **Formation Capability**: 部队集结位置

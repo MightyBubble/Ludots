@@ -27,7 +27,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Components;
@@ -957,11 +957,7 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
 
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
-            engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+            AcceptanceUiHostInstaller.Install(engine);
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
@@ -2254,12 +2250,12 @@ namespace Ludots.Tests.GAS.Production
         private static void AssertBlockerManifestationBridge(World world, string entityName)
         {
             Entity entity = FindEntityByName(world, entityName);
-            AssertManifestationBridge(world, entity, entityName, ManifestationObstacleShape2D.Circle, ColliderType2D.Circle, NavObstacleShape2D.Circle);
+            AssertManifestationBridge(world, entity, entityName, ManifestationObstacleShape2D.Circle, ColliderType2D.Circle);
         }
 
         private static void AssertBarrierSegmentManifestationBridge(World world, Entity entity, string entityLabel)
         {
-            AssertManifestationBridge(world, entity, entityLabel, ManifestationObstacleShape2D.Box, ColliderType2D.Box, NavObstacleShape2D.Box);
+            AssertManifestationBridge(world, entity, entityLabel, ManifestationObstacleShape2D.Box, ColliderType2D.Box);
         }
 
         private static void AssertManifestationBridge(
@@ -2267,8 +2263,7 @@ namespace Ludots.Tests.GAS.Production
             Entity entity,
             string entityLabel,
             ManifestationObstacleShape2D expectedIntentShape,
-            ColliderType2D expectedColliderType,
-            NavObstacleShape2D expectedNavShape)
+            ColliderType2D expectedColliderType)
         {
             Assert.That(world.TryGet(entity, out ManifestationObstacleIntent2D intent), Is.True, $"{entityLabel} should author blocker intent.");
             Assert.That(intent.Shape, Is.EqualTo(expectedIntentShape));
@@ -2276,10 +2271,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(intent.SinkNavigationObstacle, Is.EqualTo(1));
             Assert.That(world.TryGet(entity, out Collider2D collider), Is.True, $"{entityLabel} should bridge into physics collider.");
             Assert.That(collider.Type, Is.EqualTo(expectedColliderType));
-            Assert.That(world.TryGet(entity, out NavObstacle2D obstacle), Is.True, $"{entityLabel} should bridge into navigation obstacle.");
-            Assert.That(obstacle.Shape, Is.EqualTo(expectedNavShape));
+            Assert.That(world.TryGet(entity, out MassNavigationFlowObstacleProjection projection), Is.True, $"{entityLabel} should bridge into MassNavigationFlow obstacle projection.");
+            Assert.That(projection.PieceCount, Is.EqualTo(1));
+            Assert.That(projection.GetShape(0), Is.EqualTo(expectedIntentShape));
+            Assert.That(projection.GetRadiusCm(0), Is.GreaterThan(0));
             Assert.That(world.Has<ManifestationObstacleBridge2DState>(entity), Is.True, $"{entityLabel} should retain manifestation bridge state.");
-            Assert.That(world.Has<NavKinematics2D>(entity), Is.True, $"{entityLabel} should provide navigation obstacle kinematics.");
             Assert.That(world.Has<Mass2D>(entity), Is.True, $"{entityLabel} should become a static physics body.");
             Assert.That(world.Has<Position2D>(entity), Is.True, $"{entityLabel} should project into physics position space.");
         }

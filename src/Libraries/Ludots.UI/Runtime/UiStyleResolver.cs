@@ -879,6 +879,11 @@ public sealed class UiStyleResolver
 			{
 				Visible = !string.Equals(text, "hidden", StringComparison.OrdinalIgnoreCase)
 			};
+		case "pointer-events":
+			return style with
+			{
+				PointerEvents = ParsePointerEvents(text)
+			};
 		case "overflow":
 		{
 			UiOverflow uiOverflow = ParseOverflow(text);
@@ -924,6 +929,13 @@ public sealed class UiStyleResolver
 		{
 		}
 		return result;
+	}
+
+	private static UiPointerEvents ParsePointerEvents(string value)
+	{
+		return value.Trim().Equals("none", StringComparison.OrdinalIgnoreCase)
+			? UiPointerEvents.None
+			: UiPointerEvents.Auto;
 	}
 
 	private static UiFlexDirection ParseFlexDirection(string value)

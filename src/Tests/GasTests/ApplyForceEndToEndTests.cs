@@ -146,7 +146,14 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
-                var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(world, requests, budget: null, templates: templates, inputRequests: null, chainOrders: chainOrders);
+                var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
+                    world,
+                    requests,
+                    budget: null,
+                    templates: templates,
+                    inputRequests: null,
+                    chainOrders: chainOrders,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -159,6 +166,8 @@ namespace Ludots.Tests.GAS
                 ref var force = ref world.Get<ForceInput2D>(target);
                 That(force.Force.X.ToFloat(), Is.EqualTo(12.5f).Within(0.001f));
                 That(force.Force.Y.ToFloat(), Is.EqualTo(-7.0f).Within(0.001f));
+                That(world.Get<AttributeBuffer>(target).GetCurrent(fxId), Is.EqualTo(0f).Within(0.001f));
+                That(world.Get<AttributeBuffer>(target).GetCurrent(fyId), Is.EqualTo(0f).Within(0.001f));
             }
             finally
             {
@@ -185,4 +194,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

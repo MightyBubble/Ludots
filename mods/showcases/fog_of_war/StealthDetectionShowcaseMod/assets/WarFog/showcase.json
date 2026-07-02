@@ -1,0 +1,5 @@
+{
+  "capability": "FOG-7",
+  "detectionLayer": "detection",
+  "stealthLevels": [1, 2]
+}

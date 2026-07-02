@@ -25,7 +25,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 520,
       "totalDurationTicks": 2,
       "overrideNavigation": true
@@ -118,7 +117,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 320,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -231,7 +229,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 460,
       "totalDurationTicks": 10,
       "overrideNavigation": true
@@ -325,7 +322,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 300,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -423,7 +419,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 560,
       "totalDurationTicks": 8,
       "overrideNavigation": true
@@ -499,7 +494,6 @@
     "participatesInResponse": false,
     "displacement": {
       "directionMode": "ToTarget",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 320,
       "totalDurationTicks": 7,
       "overrideNavigation": true

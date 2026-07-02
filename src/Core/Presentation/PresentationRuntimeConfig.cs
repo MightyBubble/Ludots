@@ -18,6 +18,9 @@ namespace Ludots.Core.Presentation
         private int? _visualProxyBufferCapacity;
         private int? _skinnedVisualBatchCapacity;
         private int? _presentationRequestCapacity;
+        private int? _globalFieldVisualRecordCapacity;
+        private int? _globalFieldVisualCellCapacity;
+        private int? _globalFieldVisualDirtyRectCapacity;
         private int? _groundOverlayCapacity;
         private int? _roadSplineCapacity;
         private int? _worldHudCapacity;
@@ -38,6 +41,9 @@ namespace Ludots.Core.Presentation
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
         public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
         public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
+        public int GlobalFieldVisualRecordCapacity { get => _globalFieldVisualRecordCapacity ?? 0; set => _globalFieldVisualRecordCapacity = value; }
+        public int GlobalFieldVisualCellCapacity { get => _globalFieldVisualCellCapacity ?? 0; set => _globalFieldVisualCellCapacity = value; }
+        public int GlobalFieldVisualDirtyRectCapacity { get => _globalFieldVisualDirtyRectCapacity ?? 0; set => _globalFieldVisualDirtyRectCapacity = value; }
         public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
         public int RoadSplineCapacity { get => _roadSplineCapacity ?? 0; set => _roadSplineCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
@@ -70,6 +76,9 @@ namespace Ludots.Core.Presentation
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
             RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
             RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
+            RequirePositive(_globalFieldVisualRecordCapacity, "presentation.globalFieldVisualRecordCapacity");
+            RequirePositive(_globalFieldVisualCellCapacity, "presentation.globalFieldVisualCellCapacity");
+            RequirePositive(_globalFieldVisualDirtyRectCapacity, "presentation.globalFieldVisualDirtyRectCapacity");
             RequirePositive(_groundOverlayCapacity, "presentation.groundOverlayCapacity");
             RequirePositive(_roadSplineCapacity, "presentation.roadSplineCapacity");
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");

@@ -1,0 +1,14 @@
+{
+  "Id": "capability_standard_physics2d_showcase",
+  "Tags": ["showcase", "capability-standard", "physics2d", "benchmark"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 18000,
+    "Pitch": 64,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

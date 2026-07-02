@@ -218,9 +218,14 @@ namespace Ludots.Core.Gameplay.GAS
                     if ((entityCategory & filter.LayerMask) == 0) continue;
                 }
 
-                // Relationship filter (only if source team is known)
-                if (filter.RelationFilter != RelationshipFilter.All && sourceTeamId != 0 && world.Has<Team>(entity))
+                // Relationship filter
+                if (filter.RelationFilter != RelationshipFilter.All)
                 {
+                    if (sourceTeamId == 0 || !world.Has<Team>(entity))
+                    {
+                        continue;
+                    }
+
                     int entityTeamId = world.Get<Team>(entity).Id;
                     if (!RelationshipFilterUtil.Passes(filter.RelationFilter, sourceTeamId, entityTeamId)) continue;
                 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -53,16 +53,10 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_PerformanceVisualizationMod");
 
             yield return new TestCaseData(new ModCase(
-                    "Physics2DPlaygroundMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "Physics2DPlaygroundMod" },
+                    "CapabilityStandardPhysics2DShowcaseMod",
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "CapabilityStandardPhysics2DShowcaseMod" },
                     true))
-                .SetName("ProdModSmoke_Physics2DPlaygroundMod");
-
-            yield return new TestCaseData(new ModCase(
-                    "Navigation2DPlaygroundMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "Navigation2DPlaygroundMod" },
-                    true))
-                .SetName("ProdModSmoke_Navigation2DPlaygroundMod");
+                .SetName("ProdModSmoke_CapabilityStandardPhysics2DShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "TerrainBenchmarkMod",
@@ -185,10 +179,22 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_AIInspectorMod");
 
             yield return new TestCaseData(new ModCase(
-                    "OpenRaStanceBehaviorMod",
-                    new[] { "LudotsCoreMod", "OpenRaStanceBehaviorMod" },
+                    "CombatStanceBehaviorMod",
+                    new[] { "LudotsCoreMod", "CombatStanceBehaviorMod" },
                     true))
-                .SetName("ProdModSmoke_OpenRaStanceBehaviorMod");
+                .SetName("ProdModSmoke_CombatStanceBehaviorMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "UtilityAutocastShowcaseMod",
+                    new[] { "LudotsCoreMod", "AIInspectorMod", "UtilityAutocastShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_UtilityAutocastShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "CombatStanceShowcaseMod",
+                    new[] { "LudotsCoreMod", "CombatStanceBehaviorMod", "CombatStanceShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_CombatStanceShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
                     "DepConsumerMod",
@@ -256,7 +262,7 @@ namespace Ludots.Tests.GAS.Production
                 InstallDummyInput(engine);
 
                 engine.Start();
-                engine.LoadMap(engine.MergedConfig.StartupMapId);
+                engine.LoadStartupMap();
 
                 for (int i = 0; i < 10; i++)
                 {

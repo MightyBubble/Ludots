@@ -337,7 +337,11 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var requests = new EffectRequestQueue();
             var templates = new EffectTemplateRegistry();
-            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
             var application = new EffectApplicationSystem(world, requests, templates: templates);
 
             var source = world.Create();

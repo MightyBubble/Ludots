@@ -6,6 +6,8 @@ public class PointerEvent : InputEvent
 
 	public PointerAction Action { get; set; }
 
+	public PointerButton? Button { get; set; }
+
 	public float X { get; set; }
 
 	public float Y { get; set; }

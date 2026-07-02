@@ -23,8 +23,6 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Hosting;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Systems;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -123,7 +121,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndNavRuntimeComponents()
+        public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndPerformerComponents()
         {
             using var engine = CreateEngine();
             LoadMap(engine, StressMapId, frames: 8);
@@ -137,11 +135,12 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.World.Has<Collider2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PhysicsMaterial2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<NavKinematics2D>(warrior), Is.True);
 
             var collider = engine.World.Get<Collider2D>(warrior);
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
             Assert.That(collider.Type, Is.EqualTo(ColliderType2D.Circle));
-            Assert.That(ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle), Is.True);
+            Assert.That(shapeStorage.TryGetCircle(collider.ShapeDataIndex, out var circle), Is.True);
             Assert.That(circle.Radius.ToFloat(), Is.EqualTo(46f).Within(0.01f));
 
             var physicsMaterial = engine.World.Get<PhysicsMaterial2D>(warrior);
@@ -149,22 +148,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(physicsMaterial.Restitution.ToFloat(), Is.EqualTo(0f).Within(0.001f));
             Assert.That(physicsMaterial.BaseDamping.ToFloat(), Is.EqualTo(0.94f).Within(0.001f));
 
-            var navKinematics = engine.World.Get<NavKinematics2D>(warrior);
-            Assert.That(navKinematics.MaxAccelCmPerSec2.ToFloat(), Is.EqualTo(1800f).Within(0.01f));
-            Assert.That(navKinematics.RadiusCm.ToFloat(), Is.EqualTo(46f).Within(0.01f));
-            Assert.That(navKinematics.NeighborDistCm.ToFloat(), Is.EqualTo(320f).Within(0.01f));
-            Assert.That(navKinematics.TimeHorizonSec.ToFloat(), Is.EqualTo(2.4f).Within(0.01f));
-            Assert.That(navKinematics.MaxNeighbors, Is.EqualTo(20));
-
-            var bootstrap = new NavOrderAgentBootstrapSystem(engine.World);
-            bootstrap.Update(0f);
-
-            Assert.That(engine.World.Has<NavAgent2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Position2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PreviousWorldPositionCm>(warrior), Is.True);
-            Assert.That(engine.World.Has<PreviousPosition2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Velocity2D>(warrior), Is.True);
-            Assert.That(engine.World.Has<Mass2D>(warrior), Is.True);
 
             var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
                 ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
@@ -186,8 +170,10 @@ namespace Ludots.Tests.GAS.Production
                 return counts.TeamA >= 48 && counts.TeamB >= 48;
             }, maxFrames: 240);
 
-            float teamAClearanceCm = ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 1);
-            float teamBClearanceCm = ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 2);
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
+            float teamAClearanceCm = ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 1);
+            float teamBClearanceCm = ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 2);
 
             Assert.That(teamAClearanceCm, Is.GreaterThanOrEqualTo(0f), $"Team A should not spawn overlapped, observed clearance={teamAClearanceCm:0.##}cm.");
             Assert.That(teamBClearanceCm, Is.GreaterThanOrEqualTo(0f), $"Team B should not spawn overlapped, observed clearance={teamBClearanceCm:0.##}cm.");
@@ -1026,7 +1012,7 @@ namespace Ludots.Tests.GAS.Production
         private static void InstallInput(GameEngine engine)
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            var backend = new NullInputBackend();
+            var backend = new NullInputBackend(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
@@ -1211,6 +1197,8 @@ namespace Ludots.Tests.GAS.Production
             int peakContactPairs = 0;
             int peakActiveCollisionPairs = 0;
             int peakPhysicsStepsLastFixedTick = 0;
+            var shapeStorage = engine.GetService(CoreServiceKeys.Physics2DShapeStorage) as ShapeDataStorage2D
+                ?? throw new InvalidOperationException("Physics2D shape storage missing.");
 
             for (int i = 0; i < frames; i++)
             {
@@ -1221,8 +1209,8 @@ namespace Ludots.Tests.GAS.Production
                 peakContactPairs = Math.Max(peakContactPairs, stats.ContactPairs);
                 peakActiveCollisionPairs = Math.Max(peakActiveCollisionPairs, CountActiveCollisionPairs(engine.World));
                 peakProjectiles = Math.Max(peakProjectiles, CountProjectiles(engine.World));
-                worstTeamAClearanceCm = Math.Min(worstTeamAClearanceCm, ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 1));
-                worstTeamBClearanceCm = Math.Min(worstTeamBClearanceCm, ComputeMinimumStressTeamClearance(engine.World, StressMapId, teamId: 2));
+                worstTeamAClearanceCm = Math.Min(worstTeamAClearanceCm, ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 1));
+                worstTeamBClearanceCm = Math.Min(worstTeamBClearanceCm, ComputeMinimumStressTeamClearance(engine.World, shapeStorage, StressMapId, teamId: 2));
             }
 
             return new StressPhysicsTelemetry(
@@ -1394,7 +1382,11 @@ namespace Ludots.Tests.GAS.Production
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
         }
 
-        private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)
+        private static float ComputeMinimumStressTeamClearance(
+            World world,
+            ShapeDataStorage2D shapeStorage,
+            string mapId,
+            int teamId)
         {
             var units = new List<StressBodySample>(128);
             var query = new QueryDescription().WithAll<Team, MapEntity, AbilityStateBuffer, WorldPositionCm, Collider2D>();
@@ -1403,7 +1395,7 @@ namespace Ludots.Tests.GAS.Production
                 if (team.Id != teamId ||
                     !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal) ||
                     collider.Type != ColliderType2D.Circle ||
-                    !ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle))
+                    !shapeStorage.TryGetCircle(collider.ShapeDataIndex, out var circle))
                 {
                     return;
                 }
@@ -1810,7 +1802,7 @@ namespace Ludots.Tests.GAS.Production
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"build \"{projectPath}\" -c Debug --nologo",
+                Arguments = $"build \"{projectPath}\" -c Debug --nologo -p:BuildInParallel=false -m:1 -nodeReuse:false",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -1823,9 +1815,23 @@ namespace Ludots.Tests.GAS.Production
                 throw new InvalidOperationException("Failed to start dotnet build process.");
             }
 
-            string output = process.StandardOutput.ReadToEnd();
-            string error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(TimeSpan.FromMinutes(2)))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                }
+
+                throw new TimeoutException($"dotnet build timed out for '{projectPath}'.");
+            }
+
+            string output = outputTask.GetAwaiter().GetResult();
+            string error = errorTask.GetAwaiter().GetResult();
 
             if (process.ExitCode != 0)
             {
@@ -1874,9 +1880,18 @@ namespace Ludots.Tests.GAS.Production
         {
             private Vector2 _mousePosition;
 
+            public NullInputBackend()
+            {
+            }
+
+            public NullInputBackend(Vector2 mousePosition)
+            {
+                _mousePosition = mousePosition;
+            }
+
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => false;
-            public System.Numerics.Vector2 GetMousePosition() => _mousePosition;
+            public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }

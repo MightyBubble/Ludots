@@ -26,9 +26,11 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
+using Ludots.UI.Browser;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
@@ -43,7 +45,107 @@ namespace Ludots.Adapter.Raylib
         private const uint FlagWindowResizable = 4;
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
+        private static PointerButton? _uiCapturedPointerButton;
+        private static bool _hasLastUiPointerMove;
+        private static float _lastUiPointerMoveX;
+        private static float _lastUiPointerMoveY;
         private static bool _emptyBufferWarned;
+        private static readonly MouseButton[] MouseButtonsInPriorityOrder =
+        {
+            MouseButton.MOUSE_LEFT_BUTTON,
+            MouseButton.MOUSE_RIGHT_BUTTON,
+            MouseButton.MOUSE_MIDDLE_BUTTON
+        };
+        private static readonly KeyboardKey[] BrowserForwardedKeys =
+        {
+            KeyboardKey.KEY_ENTER,
+            KeyboardKey.KEY_TAB,
+            KeyboardKey.KEY_BACKSPACE,
+            KeyboardKey.KEY_DELETE,
+            KeyboardKey.KEY_ESCAPE,
+            KeyboardKey.KEY_LEFT,
+            KeyboardKey.KEY_RIGHT,
+            KeyboardKey.KEY_UP,
+            KeyboardKey.KEY_DOWN,
+            KeyboardKey.KEY_HOME,
+            KeyboardKey.KEY_END,
+            KeyboardKey.KEY_PAGE_UP,
+            KeyboardKey.KEY_PAGE_DOWN,
+            KeyboardKey.KEY_SPACE,
+            KeyboardKey.KEY_A,
+            KeyboardKey.KEY_B,
+            KeyboardKey.KEY_C,
+            KeyboardKey.KEY_D,
+            KeyboardKey.KEY_E,
+            KeyboardKey.KEY_F,
+            KeyboardKey.KEY_G,
+            KeyboardKey.KEY_H,
+            KeyboardKey.KEY_I,
+            KeyboardKey.KEY_J,
+            KeyboardKey.KEY_K,
+            KeyboardKey.KEY_L,
+            KeyboardKey.KEY_M,
+            KeyboardKey.KEY_N,
+            KeyboardKey.KEY_O,
+            KeyboardKey.KEY_P,
+            KeyboardKey.KEY_Q,
+            KeyboardKey.KEY_R,
+            KeyboardKey.KEY_S,
+            KeyboardKey.KEY_T,
+            KeyboardKey.KEY_U,
+            KeyboardKey.KEY_V,
+            KeyboardKey.KEY_W,
+            KeyboardKey.KEY_X,
+            KeyboardKey.KEY_Y,
+            KeyboardKey.KEY_Z,
+            KeyboardKey.KEY_ZERO,
+            KeyboardKey.KEY_ONE,
+            KeyboardKey.KEY_TWO,
+            KeyboardKey.KEY_THREE,
+            KeyboardKey.KEY_FOUR,
+            KeyboardKey.KEY_FIVE,
+            KeyboardKey.KEY_SIX,
+            KeyboardKey.KEY_SEVEN,
+            KeyboardKey.KEY_EIGHT,
+            KeyboardKey.KEY_NINE
+        };
+
+        private sealed class SyntheticUiPlayback
+        {
+            public bool Enabled { get; init; }
+
+            public int StartFrame { get; init; }
+
+            public int EndFrame { get; init; }
+
+            public float StartX { get; init; }
+
+            public float StartY { get; init; }
+
+            public float EndX { get; init; }
+
+            public float EndY { get; init; }
+
+            public int ScrollFrame { get; init; }
+
+            public float ScrollDeltaY { get; init; }
+
+            public int KeyFrame { get; init; }
+
+            public string Key { get; init; } = string.Empty;
+
+            public string KeyText { get; init; } = string.Empty;
+        }
+
+        private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
+
+        internal static bool ShouldCaptureWorldPointer(
+            bool pointerCaptured,
+            bool wheelCaptured,
+            bool inputHandled)
+        {
+            return pointerCaptured || wheelCaptured || inputHandled;
+        }
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -56,7 +158,7 @@ namespace Ludots.Adapter.Raylib
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
-            // targetFps = 0 表示不锁帧，< 0 使用默认 60
+            // targetFps = 0 琛ㄧず涓嶉攣甯э紝< 0 浣跨敤榛樿 60
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
@@ -94,6 +196,7 @@ namespace Ludots.Adapter.Raylib
 
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
+                IntPtr nativeWindowHandle = Rl.GetWindowHandle();
 
                 screenWidth = Math.Max(1, Rl.GetScreenWidth());
                 screenHeight = Math.Max(1, Rl.GetScreenHeight());
@@ -101,6 +204,8 @@ namespace Ludots.Adapter.Raylib
                 config.WindowHeight = screenHeight;
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
+                using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
+                var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -170,6 +275,9 @@ namespace Ludots.Adapter.Raylib
                 ValidateRequiredContextBeforeLoop(engine);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
+                var fogFieldProjector = new FogGlobalFieldVisualProjector();
+                using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
@@ -188,7 +296,7 @@ namespace Ludots.Adapter.Raylib
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
-                engine.LoadMap(config.StartupMapId);
+                engine.LoadStartupMap();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -210,6 +318,7 @@ namespace Ludots.Adapter.Raylib
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
                     ? Math.Max(0, parsedAutoExitFrame)
                     : 0;
+                int minRuntimeMsBeforeScreenshot = ReadEnvIntOrDefault("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", 0);
                 int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
                     ? Math.Max(0, parsedTimingLogIntervalFrames)
                     : 0;
@@ -225,7 +334,9 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
+                Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
                 while (true)
@@ -246,6 +357,7 @@ namespace Ludots.Adapter.Raylib
                         long preTickStart = wallFrameStart;
                         int w = Math.Max(1, Rl.GetScreenWidth());
                         int h = Math.Max(1, Rl.GetScreenHeight());
+                        windowRepaintGuard.ObserveWindowRect(nativeWindowHandle, Rl.GetWindowPosition(), w, h);
                         if (w != lastW || h != lastH)
                         {
                             lastW = w;
@@ -275,19 +387,31 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForFrame is IVisualHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
+                        bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         double uiInputMs = 0d;
                         bool uiCaptured = false;
+                        bool uiWheelCaptured = false;
+                        bool uiInputHandled = false;
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            uiCaptured = UpdateInput(uiRoot);
+                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            uiCaptured = uiInput.PointerCaptured;
+                            uiWheelCaptured = uiInput.WheelCaptured;
+                            uiInputHandled = uiInput.Handled;
                             uiInputMs = ElapsedMs(uiInputStart);
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
-                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        engine.SetService(
+                            CoreServiceKeys.UiCaptured,
+                            ShouldCaptureWorldPointer(
+                                uiCaptured,
+                                uiWheelCaptured,
+                                uiInputHandled));
+                        engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.Tick(dt);
@@ -305,6 +429,14 @@ namespace Ludots.Adapter.Raylib
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
+                        if (globalFieldVisualBuffer != null)
+                        {
+                            globalFieldVisualBuffer.BeginFrame();
+                            if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
+                            {
+                                fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
+                            }
+                        }
 
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
@@ -348,7 +480,7 @@ namespace Ludots.Adapter.Raylib
                             Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
                         }
 
-                        // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
+                        // 閿氬畾鍒?target锛岀綉鏍间互瑙傚療鐐逛负涓績锛沨alfCount 瓒婂ぇ杈圭晫瓒婅繙
                         if (drawVisualHeightmap &&
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
@@ -376,6 +508,22 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
 
+                        if (drawFieldOverlays && globalFieldVisualBuffer != null)
+                        {
+                            long fieldRenderStart = Stopwatch.GetTimestamp();
+                            fieldRenderPerformer.Draw(globalFieldVisualBuffer);
+                            presentationTiming?.ObserveGlobalFieldRender(
+                                ElapsedMs(fieldRenderStart),
+                                fieldRenderPerformer.LastFieldTextureCount,
+                                fieldRenderPerformer.LastDirtyUploadCount,
+                                fieldRenderPerformer.LastDirtyUploadArea,
+                                fieldRenderPerformer.LastDrawCount);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+                        }
+
                         bool benchmarkDrew = false;
                         if (benchmarkRenderer != null)
                         {
@@ -389,7 +537,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame — no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();
@@ -464,6 +612,11 @@ namespace Ludots.Adapter.Raylib
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
+                        if (drawSkiaUi)
+                        {
+                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
+                        }
+
                         long overlayStart = Stopwatch.GetTimestamp();
                         OverlayCompositeResult overlayResult = overlayCompositor.Render(
                             overlayScene,
@@ -505,6 +658,7 @@ namespace Ludots.Adapter.Raylib
 
                         long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
+                        windowRepaintGuard.AfterPresent();
                         presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
                         previousLoopEnd = Stopwatch.GetTimestamp();
@@ -516,7 +670,8 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame)
+                        if (screenshotPending && frameIndex >= screenshotFrame &&
+                            runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotTargetPath!;
                             string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
@@ -552,7 +707,7 @@ namespace Ludots.Adapter.Raylib
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
                         }
 
-                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame)
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
@@ -684,6 +839,47 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
+        private static SyntheticUiPlayback ReadSyntheticUiPlayback()
+        {
+            bool enabled = ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_PLAYBACK", defaultValue: false);
+            int startFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_FRAME", 180);
+            int endFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_FRAME", 260);
+            if (endFrame <= startFrame)
+            {
+                endFrame = startFrame + 1;
+            }
+
+            return new SyntheticUiPlayback
+            {
+                Enabled = enabled,
+                StartFrame = startFrame,
+                EndFrame = endFrame,
+                StartX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_X", 190f),
+                StartY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_Y", 205f),
+                EndX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_X", 310f),
+                EndY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_Y", 270f),
+                ScrollFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_FRAME", -1),
+                ScrollDeltaY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_DELTA_Y", 0f),
+                KeyFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_FRAME", -1),
+                Key = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY") ?? string.Empty,
+                KeyText = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_TEXT") ?? string.Empty
+            };
+        }
+
+        private static int ReadEnvIntOrDefault(string key, int defaultValue)
+        {
+            return int.TryParse(Environment.GetEnvironmentVariable(key), out int value)
+                ? value
+                : defaultValue;
+        }
+
+        private static float ReadEnvFloatOrDefault(string key, float defaultValue)
+        {
+            return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
+                ? value
+                : defaultValue;
+        }
+
         private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
         {
             if (timing == null)
@@ -699,7 +895,7 @@ namespace Ludots.Adapter.Raylib
                 : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
-            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  SKIN {FormatFixed(timing.GpuSkinnedInstancesLastFrame, 6)}/{FormatFixed(timing.SkinnedRawLastFrame, 6)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
+            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
             string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPerformerEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPerformerBehaviorMs, 5, 1)}MS";
             string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
@@ -867,7 +1063,7 @@ namespace Ludots.Adapter.Raylib
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
             string performerDefs = performers?.BuildActiveDefinitionSummary(8) ?? string.Empty;
-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
@@ -895,49 +1091,393 @@ namespace Ludots.Adapter.Raylib
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
-        private static bool UpdateInput(UIRoot uiRoot)
+        private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath)
         {
+            if (syntheticUiPlayback.Enabled &&
+                HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath) is { Handled: true } syntheticResult)
+            {
+                ForwardKeyboardInput(uiRoot);
+                return syntheticResult;
+            }
+
             var mousePos = Rl.GetMousePosition();
             bool windowFocused = Rl.IsWindowFocused();
-            bool leftMouseDown = Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
-            bool leftMouseReleased = Rl.IsMouseButtonReleased(MouseButton.MOUSE_LEFT_BUTTON);
-            UiNode? hitNode = uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
-            bool hitInteractiveUi = IsInteractiveUiNode(hitNode);
+            float mouseWheel = Rl.GetMouseWheelMove();
+            UiNode? hitNode = _uiPointerCaptured ? null : uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
+            bool hitInteractiveUi = !_uiPointerCaptured && IsInteractiveUiNode(hitNode);
+            bool uiWheelCaptured = false;
+            bool uiInputHandled = false;
 
-            if (_uiPointerCaptured && (!windowFocused || (!leftMouseDown && !leftMouseReleased)))
+            if (_uiPointerCaptured)
             {
-                if (windowFocused)
+                bool capturedButtonDown = _uiCapturedPointerButton.HasValue &&
+                    Rl.IsMouseButtonDown(ToMouseButton(_uiCapturedPointerButton.Value));
+                bool capturedButtonReleased = _uiCapturedPointerButton.HasValue &&
+                    Rl.IsMouseButtonReleased(ToMouseButton(_uiCapturedPointerButton.Value));
+
+                if (!windowFocused || (!_uiCapturedPointerButton.HasValue && !capturedButtonDown && !capturedButtonReleased) || capturedButtonReleased)
                 {
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
+                    if (windowFocused && _uiCapturedPointerButton.HasValue && capturedButtonReleased)
+                    {
+                        uiInputHandled |= uiRoot.HandleInput(new PointerEvent
+                        {
+                            DeviceType = InputDeviceType.Mouse,
+                            PointerId = 0,
+                            Action = PointerAction.Up,
+                            Button = _uiCapturedPointerButton.Value,
+                            X = mousePos.X,
+                            Y = mousePos.Y
+                        });
+                    }
+
+                    _uiPointerCaptured = false;
+                    _uiCapturedPointerButton = null;
+                    ResetUiPointerMoveCache();
+                }
+            }
+
+            if ((_uiPointerCaptured || hitInteractiveUi) && ShouldForwardUiPointerMove(mousePos.X, mousePos.Y))
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    Button = _uiCapturedPointerButton,
+                    X = mousePos.X,
+                    Y = mousePos.Y
+                });
+            }
+
+            if ((_uiPointerCaptured || hitInteractiveUi) && Math.Abs(mouseWheel) > float.Epsilon)
+            {
+                uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Scroll,
+                    X = mousePos.X,
+                    Y = mousePos.Y,
+                    DeltaX = 0f,
+                    DeltaY = -mouseWheel * 120f
+                });
+            }
+
+            bool shouldRouteMouseDownToUi = hitInteractiveUi || uiRoot.HasFocusedCanvas || _uiPointerCaptured;
+            foreach (MouseButton mouseButton in MouseButtonsInPriorityOrder)
+            {
+                if (!Rl.IsMouseButtonPressed(mouseButton))
+                {
+                    continue;
                 }
 
-                _uiPointerCaptured = false;
-            }
+                PointerButton pointerButton = ToPointerButton(mouseButton);
+                if (!shouldRouteMouseDownToUi)
+                {
+                    continue;
+                }
 
-            if (_uiPointerCaptured || hitInteractiveUi)
-            {
-                uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = mousePos.X, Y = mousePos.Y });
-            }
+                bool handled = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Down,
+                    Button = pointerButton,
+                    X = mousePos.X,
+                    Y = mousePos.Y
+                });
 
-            if (Rl.IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON))
-            {
-                if (hitInteractiveUi &&
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Down, X = mousePos.X, Y = mousePos.Y }))
+                uiInputHandled |= handled;
+                if (handled)
                 {
                     _uiPointerCaptured = true;
+                    _uiCapturedPointerButton = pointerButton;
+                    ResetUiPointerMoveCache();
                 }
             }
 
-            if (leftMouseReleased)
+            ForwardKeyboardInput(uiRoot);
+            return new UiInputFrameResult(Handled: uiInputHandled, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
+        }
+
+        private static bool ShouldForwardUiPointerMove(float x, float y)
+        {
+            if (!_hasLastUiPointerMove ||
+                Math.Abs(_lastUiPointerMoveX - x) > 0.01f ||
+                Math.Abs(_lastUiPointerMoveY - y) > 0.01f)
             {
-                if (_uiPointerCaptured)
+                _hasLastUiPointerMove = true;
+                _lastUiPointerMoveX = x;
+                _lastUiPointerMoveY = y;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void ResetUiPointerMoveCache()
+        {
+            _hasLastUiPointerMove = false;
+            _lastUiPointerMoveX = 0f;
+            _lastUiPointerMoveY = 0f;
+        }
+
+        private static MouseButton ToMouseButton(PointerButton button)
+        {
+            return button switch
+            {
+                PointerButton.Left => MouseButton.MOUSE_LEFT_BUTTON,
+                PointerButton.Middle => MouseButton.MOUSE_MIDDLE_BUTTON,
+                PointerButton.Right => MouseButton.MOUSE_RIGHT_BUTTON,
+                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported pointer button.")
+            };
+        }
+
+        private static PointerButton ToPointerButton(MouseButton button)
+        {
+            return button switch
+            {
+                MouseButton.MOUSE_LEFT_BUTTON => PointerButton.Left,
+                MouseButton.MOUSE_MIDDLE_BUTTON => PointerButton.Middle,
+                MouseButton.MOUSE_RIGHT_BUTTON => PointerButton.Right,
+                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.")
+            };
+        }
+
+        private static void ForwardKeyboardInput(UIRoot uiRoot)
+        {
+            if (!uiRoot.HasFocusedCanvas)
+            {
+                DrainCharQueue();
+                return;
+            }
+
+            int modifiers = ReadBrowserInputModifiers();
+            foreach (KeyboardKey key in BrowserForwardedKeys)
+            {
+                if (Rl.IsKeyPressed(key))
                 {
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
-                    _uiPointerCaptured = false;
+                    uiRoot.HandleInput(new KeyboardEvent
+                    {
+                        DeviceType = InputDeviceType.Keyboard,
+                        Action = KeyboardAction.Down,
+                        Key = MapKeyboardKey(key),
+                        Code = key.ToString(),
+                        Modifiers = modifiers
+                    });
+                }
+
+                if (Rl.IsKeyReleased(key))
+                {
+                    uiRoot.HandleInput(new KeyboardEvent
+                    {
+                        DeviceType = InputDeviceType.Keyboard,
+                        Action = KeyboardAction.Up,
+                        Key = MapKeyboardKey(key),
+                        Code = key.ToString(),
+                        Modifiers = modifiers
+                    });
                 }
             }
 
-            return _uiPointerCaptured;
+            while (true)
+            {
+                int codePoint = Rl.GetCharPressed();
+                if (codePoint == 0)
+                {
+                    break;
+                }
+
+                string text = char.ConvertFromUtf32(codePoint);
+                uiRoot.HandleInput(new KeyboardEvent
+                {
+                    DeviceType = InputDeviceType.Keyboard,
+                    Action = KeyboardAction.Character,
+                    Key = text,
+                    Text = text,
+                    Modifiers = modifiers
+                });
+            }
+        }
+
+        private static void DrainCharQueue()
+        {
+            while (Rl.GetCharPressed() != 0)
+            {
+            }
+        }
+
+        private static int ReadBrowserInputModifiers()
+        {
+            BrowserInputModifiers modifiers = BrowserInputModifiers.None;
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT))
+            {
+                modifiers |= BrowserInputModifiers.Shift;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL))
+            {
+                modifiers |= BrowserInputModifiers.Control;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_ALT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_ALT))
+            {
+                modifiers |= BrowserInputModifiers.Alt;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SUPER) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SUPER))
+            {
+                modifiers |= BrowserInputModifiers.Meta;
+            }
+
+            return (int)modifiers;
+        }
+
+        private static string MapKeyboardKey(KeyboardKey key)
+        {
+            return key switch
+            {
+                KeyboardKey.KEY_ENTER => "Enter",
+                KeyboardKey.KEY_TAB => "Tab",
+                KeyboardKey.KEY_BACKSPACE => "Backspace",
+                KeyboardKey.KEY_DELETE => "Delete",
+                KeyboardKey.KEY_ESCAPE => "Escape",
+                KeyboardKey.KEY_LEFT => "ArrowLeft",
+                KeyboardKey.KEY_RIGHT => "ArrowRight",
+                KeyboardKey.KEY_UP => "ArrowUp",
+                KeyboardKey.KEY_DOWN => "ArrowDown",
+                KeyboardKey.KEY_HOME => "Home",
+                KeyboardKey.KEY_END => "End",
+                KeyboardKey.KEY_PAGE_UP => "PageUp",
+                KeyboardKey.KEY_PAGE_DOWN => "PageDown",
+                KeyboardKey.KEY_SPACE => "Space",
+                KeyboardKey.KEY_ZERO => "0",
+                KeyboardKey.KEY_ONE => "1",
+                KeyboardKey.KEY_TWO => "2",
+                KeyboardKey.KEY_THREE => "3",
+                KeyboardKey.KEY_FOUR => "4",
+                KeyboardKey.KEY_FIVE => "5",
+                KeyboardKey.KEY_SIX => "6",
+                KeyboardKey.KEY_SEVEN => "7",
+                KeyboardKey.KEY_EIGHT => "8",
+                KeyboardKey.KEY_NINE => "9",
+                >= KeyboardKey.KEY_A and <= KeyboardKey.KEY_Z => key.ToString()[4..],
+                _ => key.ToString()
+            };
+        }
+
+        private static UiInputFrameResult HandleSyntheticUiPlayback(UIRoot uiRoot, SyntheticUiPlayback playback, int frameIndex, string? diagnosticPath)
+        {
+            if (frameIndex < playback.StartFrame)
+            {
+                return default;
+            }
+
+            if (frameIndex == playback.StartFrame)
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    X = playback.StartX,
+                    Y = playback.StartY
+                });
+                _uiPointerCaptured = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Down,
+                    Button = PointerButton.Left,
+                    X = playback.StartX,
+                    Y = playback.StartY
+                });
+                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui down frame={frameIndex} x={playback.StartX:F1} y={playback.StartY:F1} captured={_uiPointerCaptured}");
+                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: false);
+            }
+
+            if (frameIndex > playback.StartFrame && frameIndex < playback.EndFrame)
+            {
+                (float x, float y) = InterpolateSyntheticPointer(playback, frameIndex);
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    Button = PointerButton.Left,
+                    X = x,
+                    Y = y
+                });
+
+                bool uiWheelCaptured = false;
+                if (playback.ScrollFrame == frameIndex && Math.Abs(playback.ScrollDeltaY) > float.Epsilon)
+                {
+                    uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
+                    {
+                        DeviceType = InputDeviceType.Mouse,
+                        PointerId = 0,
+                        Action = PointerAction.Scroll,
+                        X = x,
+                        Y = y,
+                        DeltaX = 0f,
+                        DeltaY = playback.ScrollDeltaY
+                    });
+                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui scroll frame={frameIndex} x={x:F1} y={y:F1} deltaY={playback.ScrollDeltaY:F1}");
+                }
+
+                if (playback.KeyFrame == frameIndex)
+                {
+                    if (!string.IsNullOrWhiteSpace(playback.Key))
+                    {
+                        RaylibSyntheticKeyboardInput.SendKeyStroke(uiRoot, playback.Key);
+                    }
+
+                    if (!string.IsNullOrEmpty(playback.KeyText))
+                    {
+                        RaylibSyntheticKeyboardInput.SendTextInput(uiRoot, playback.KeyText);
+                    }
+
+                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui key frame={frameIndex} key={playback.Key} textLength={playback.KeyText.Length}");
+                }
+
+                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
+            }
+
+            if (frameIndex == playback.EndFrame)
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    Button = PointerButton.Left,
+                    X = playback.EndX,
+                    Y = playback.EndY
+                });
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Up,
+                    Button = PointerButton.Left,
+                    X = playback.EndX,
+                    Y = playback.EndY
+                });
+                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui up frame={frameIndex} x={playback.EndX:F1} y={playback.EndY:F1}");
+                _uiPointerCaptured = false;
+                return new UiInputFrameResult(Handled: true, PointerCaptured: false, WheelCaptured: false);
+            }
+
+            return default;
+        }
+
+        private static (float X, float Y) InterpolateSyntheticPointer(SyntheticUiPlayback playback, int frameIndex)
+        {
+            int moveFrames = Math.Max(1, playback.EndFrame - playback.StartFrame);
+            float progress = Math.Clamp((frameIndex - playback.StartFrame) / (float)moveFrames, 0f, 1f);
+            float x = playback.StartX + ((playback.EndX - playback.StartX) * progress);
+            float y = playback.StartY + ((playback.EndY - playback.StartY) * progress);
+            return (x, y);
         }
 
         private static bool IsInteractiveUiNode(UiNode? node)
@@ -945,6 +1485,11 @@ namespace Ludots.Adapter.Raylib
             for (UiNode? current = node; current != null; current = current.Parent)
             {
                 if (current.ActionHandles.Count > 0)
+                {
+                    return true;
+                }
+
+                if (current.CanvasContent is Ludots.UI.Runtime.IUiCanvasInputSink)
                 {
                     return true;
                 }

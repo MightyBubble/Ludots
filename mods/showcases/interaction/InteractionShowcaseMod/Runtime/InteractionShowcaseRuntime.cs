@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
-using CoreInputMod;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using CoreInputMod.ViewMode;
@@ -44,13 +43,12 @@ namespace InteractionShowcaseMod.Runtime
 
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             bool showcaseActive = InteractionShowcaseIds.IsShowcaseMap(activeMapId);
-            var viewModeManager = ResolveViewModeManager(engine);
             var input = context.Get(CoreServiceKeys.InputHandler);
 
             if (showcaseActive)
             {
                 ActivateInputContext(input);
-                EnsureDefaultShowcaseMode(viewModeManager);
+                EnsureDefaultShowcaseMode(engine);
                 EnsureShowcaseLocalPlayer(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!);
                 EnsureShowcaseSelectionView(engine);
@@ -60,7 +58,7 @@ namespace InteractionShowcaseMod.Runtime
             else
             {
                 CloseEntityInfoPanels(context);
-                ClearShowcaseModeIfOwned(viewModeManager);
+                ClearShowcaseModeIfOwned(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -82,7 +80,7 @@ namespace InteractionShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ClearShowcaseModeIfOwned(ResolveViewModeManager(engine));
+            ClearShowcaseModeIfOwned(engine);
             CloseEntityInfoPanels(context);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
@@ -111,7 +109,7 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
-            _panelController.MountOrRefresh(root, engine, activeMapId!, ResolveViewModeManager(engine));
+            _panelController.MountOrRefresh(root, engine, activeMapId!);
         }
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
@@ -366,31 +364,21 @@ namespace InteractionShowcaseMod.Runtime
             }.ExecuteAsync(context).GetAwaiter().GetResult();
         }
 
-        private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
+        private static void EnsureDefaultShowcaseMode(GameEngine engine)
         {
-            return CoreInputRuntimeServices.GetViewModeManager(engine);
-        }
-
-        private static void EnsureDefaultShowcaseMode(ViewModeManager? viewModeManager)
-        {
-            if (viewModeManager == null)
-            {
-                return;
-            }
-
-            string? activeModeId = viewModeManager.ActiveMode?.Id;
+            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
             if (!InteractionShowcaseIds.IsShowcaseMode(activeModeId))
             {
-                viewModeManager.SwitchTo(InteractionShowcaseIds.LolModeId);
+                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, InteractionShowcaseIds.LolModeId);
             }
         }
 
-        private static void ClearShowcaseModeIfOwned(ViewModeManager? viewModeManager)
+        private static void ClearShowcaseModeIfOwned(GameEngine engine)
         {
-            if (viewModeManager != null &&
-                InteractionShowcaseIds.IsShowcaseMode(viewModeManager.ActiveMode?.Id))
+            if (ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) &&
+                InteractionShowcaseIds.IsShowcaseMode(activeModeId))
             {
-                viewModeManager.ClearActiveMode();
+                ViewModeRuntime.TryClearActiveMode(engine.GlobalContext);
             }
         }
 

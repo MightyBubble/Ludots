@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -9,7 +8,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -24,7 +22,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly float _defaultSpeedCmPerSec;
         private readonly float _stopRadiusCm;
         private readonly int _moveSpeedAttributeId;
-        private readonly CommandBuffer _commandBuffer = new();
         private readonly List<Entity> _completedOrders = new(64);
 
         public MoveToWorldCmOrderSystem(
@@ -66,18 +63,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ref var buffer = ref buffers[index];
                     if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _moveToOrderTypeId)
                     {
-                        SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity, _commandBuffer);
                         continue;
                     }
 
                     int currentWaypointIndex = SyncMoveRuntime(ref buffer.ActiveOrder);
-                    SetSmartStopSuppression(entity, buffer.ActiveOrder.Order.Args.Spatial.Mode == OrderCollectionMode.List);
 
                     if (!TryResolveTarget(in buffer.ActiveOrder.Order, currentWaypointIndex, out var target))
                     {
-                        SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity, _commandBuffer);
                         ResetMoveRuntime(ref buffer.ActiveOrder);
                         _completedOrders.Add(entity);
                         continue;
@@ -86,18 +78,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     float speedCmPerSec = ResolveMoveSpeed(entity);
                     if (speedCmPerSec <= 0f)
                     {
-                        SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity, _commandBuffer);
                         continue;
                     }
 
-                    if (TryDriveNavigationGoal(entity, in buffer.ActiveOrder.Order, currentWaypointIndex, speedCmPerSec, out bool navCompleted, out int nextWaypointIndex))
+                    if (TryDrivePhysicsBody(entity, in buffer.ActiveOrder.Order, currentWaypointIndex, speedCmPerSec, out bool physicsCompleted, out int physicsNextWaypointIndex))
                     {
-                        WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
-                        if (navCompleted)
+                        WriteMoveRuntimeIndex(ref buffer.ActiveOrder, physicsNextWaypointIndex);
+                        if (physicsCompleted)
                         {
-                            SetSmartStopSuppression(entity, suppressed: false);
-                            ClearNavGoal(entity, _commandBuffer);
                             ResetMoveRuntime(ref buffer.ActiveOrder);
                             _completedOrders.Add(entity);
                         }
@@ -107,23 +95,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     ref var position = ref positions[index];
                     var current = position.Value;
-                    bool completed = AdvanceLinearRoute(in buffer.ActiveOrder.Order, currentWaypointIndex, ref current, speedCmPerSec * dt, out nextWaypointIndex);
+                    bool completed = AdvanceLinearRoute(in buffer.ActiveOrder.Order, currentWaypointIndex, ref current, speedCmPerSec * dt, out int nextWaypointIndex);
                     WriteMoveRuntimeIndex(ref buffer.ActiveOrder, nextWaypointIndex);
                     if (completed)
                     {
-                        SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity, _commandBuffer);
                         ResetMoveRuntime(ref buffer.ActiveOrder);
                         _completedOrders.Add(entity);
                     }
 
                     position.Value = current;
                 }
-            }
-
-            if (_commandBuffer.Size > 0)
-            {
-                _commandBuffer.Playback(World);
             }
 
             for (int i = 0; i < _completedOrders.Count; i++)
@@ -147,93 +128,84 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return _defaultSpeedCmPerSec;
         }
 
-        private bool TryDriveNavigationGoal(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)
+        private bool TryDrivePhysicsBody(Entity entity, in Order order, int currentWaypointIndex, float speedCmPerSec, out bool completed, out int nextWaypointIndex)
         {
             completed = false;
             nextWaypointIndex = currentWaypointIndex;
-            if (!World.Has<NavAgent2D>(entity) ||
-                !World.Has<Position2D>(entity))
+            if (!World.TryGet(entity, out Position2D physicsPosition) ||
+                !World.TryGet(entity, out Velocity2D velocity) ||
+                !World.TryGet(entity, out Mass2D mass) ||
+                mass.IsStatic)
             {
                 return false;
             }
 
-            if (World.Has<NavKinematics2D>(entity))
-            {
-                ref var kinematics = ref World.Get<NavKinematics2D>(entity);
-                kinematics.MaxSpeedCmPerSec = Fix64.FromFloat(speedCmPerSec);
-            }
-
-            ref var position = ref World.Get<Position2D>(entity);
-            NavGoal2D goal = World.Has<NavGoal2D>(entity)
-                ? World.Get<NavGoal2D>(entity)
-                : new NavGoal2D();
-            goal.RadiusCm = Fix64.FromFloat(_stopRadiusCm);
-
             while (TryResolveCurrentTarget(in order, nextWaypointIndex, out var target))
             {
-                goal.Kind = NavGoalKind2D.Point;
-                goal.TargetCm = target;
-
-                var delta = target - position.Value;
-                if (delta.LengthSquared() > goal.RadiusCm * goal.RadiusCm)
+                var delta = target - physicsPosition.Value;
+                float distanceCm = LengthCm(delta);
+                if (distanceCm > _stopRadiusCm)
                 {
-                    CommitGoal(in goal);
+                    velocity.Linear = ComposePhysicsMoveVelocity(velocity.Linear, delta, speedCmPerSec);
+                    World.Set(entity, velocity);
                     return true;
                 }
 
                 if (!TryAdvanceRoute(in order, ref nextWaypointIndex))
                 {
-                    goal.Kind = NavGoalKind2D.None;
+                    velocity.Linear = Fix64Vec2.Zero;
+                    World.Set(entity, velocity);
                     completed = true;
-                    CommitGoal(in goal);
                     return true;
                 }
             }
 
-            goal.Kind = NavGoalKind2D.None;
+            velocity.Linear = Fix64Vec2.Zero;
+            World.Set(entity, velocity);
             completed = true;
-            CommitGoal(in goal);
             return true;
-
-            void CommitGoal(in NavGoal2D value)
-            {
-                if (World.Has<NavGoal2D>(entity))
-                {
-                    World.Set(entity, value);
-                }
-                else
-                {
-                    _commandBuffer.Add(entity, value);
-                }
-            }
         }
 
-        private void ClearNavGoal(Entity entity, CommandBuffer commandBuffer)
+        private static Fix64Vec2 ComposePhysicsMoveVelocity(Fix64Vec2 currentVelocity, Fix64Vec2 toTarget, float speedCmPerSec)
         {
-            if (!World.Has<NavGoal2D>(entity))
+            var speed = Fix64.FromFloat(speedCmPerSec);
+            if (speed <= Fix64.Zero)
             {
-                return;
+                return Fix64Vec2.Zero;
             }
 
-            ref var goal = ref World.Get<NavGoal2D>(entity);
-            goal.Kind = NavGoalKind2D.None;
+            var desiredDirection = toTarget.Normalized();
+            var currentForwardSpeed = Fix64Vec2.Dot(currentVelocity, desiredDirection);
+            var lateralVelocity = currentVelocity - desiredDirection * currentForwardSpeed;
+            var drivenVelocity = currentForwardSpeed < Fix64.Zero
+                ? desiredDirection * currentForwardSpeed
+                : desiredDirection * speed;
+
+            var combined = drivenVelocity + lateralVelocity;
+            return ClampLength(combined, speed);
         }
 
-        private void SetSmartStopSuppression(Entity entity, bool suppressed)
+        private static Fix64Vec2 ClampLength(Fix64Vec2 value, Fix64 maxLength)
         {
-            if (!World.Has<NavAgent2D>(entity))
+            if (maxLength <= Fix64.Zero)
             {
-                return;
+                return Fix64Vec2.Zero;
             }
 
-            ref var navAgent = ref World.Get<NavAgent2D>(entity);
-            byte suppressedByte = suppressed ? (byte)1 : (byte)0;
-            if (navAgent.SmartStopSuppressed == suppressedByte)
+            var lengthSq = value.LengthSquared();
+            var maxLengthSq = maxLength * maxLength;
+            if (lengthSq <= maxLengthSq)
             {
-                return;
+                return value;
             }
 
-            navAgent.SmartStopSuppressed = suppressedByte;
+            var length = Fix64Math.Sqrt(lengthSq);
+            if (length <= Fix64.Zero)
+            {
+                return Fix64Vec2.Zero;
+            }
+
+            return value * (maxLength / length);
         }
 
         private static bool TryResolveTarget(in Order order, int currentWaypointIndex, out Fix64Vec2 target)
@@ -364,10 +336,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return MathF.Sqrt((dx * dx) + (dy * dy));
         }
 
-        public override void Dispose()
+        private static float LengthCm(Fix64Vec2 value)
         {
-            _commandBuffer.Dispose();
-            base.Dispose();
+            float dx = value.X.ToFloat();
+            float dy = value.Y.ToFloat();
+            return MathF.Sqrt((dx * dx) + (dy * dy));
         }
+
+        public override void Dispose() => base.Dispose();
     }
 }

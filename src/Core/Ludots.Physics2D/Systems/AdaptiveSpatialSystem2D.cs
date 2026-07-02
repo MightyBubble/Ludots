@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Physics.Broadphase;
 using Ludots.Physics.Broadphase.Strategies;
@@ -54,6 +55,7 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         private readonly int _maxCollisionPairs;
+        private readonly int _pairGrowthStep;
 
         private readonly BuildPhysicsWorldSystem2D _buildPhysicsWorld;
         private readonly List<(int, int)> _potentialPairs;
@@ -64,22 +66,30 @@ namespace Ludots.Core.Physics2D.Systems
 
         private ISpatialPartitionStrategy _currentStrategy = null!;
         private int _observedStaticBodyVersion = -1;
+        private int _observedBroadphasePolicyVersion = -1;
 
         public CollisionPairOverflowPolicy2D OverflowPolicy { get; set; } = CollisionPairOverflowPolicy2D.Throw;
         public int DroppedPairsLastUpdate { get; private set; }
+        public Physics2DBroadphaseStrategyKind CurrentStrategyKind { get; private set; } = Physics2DBroadphaseStrategyKind.SortAndSweep;
+        public int CurrentCellSizeCm { get; private set; }
 
-        public AdaptiveSpatialSystem2D(World world, BuildPhysicsWorldSystem2D buildPhysicsWorld, int maxCollisionPairs = 100_000) : base(world)
+        public AdaptiveSpatialSystem2D(
+            World world,
+            BuildPhysicsWorldSystem2D buildPhysicsWorld,
+            Physics2DSolverConfig solverConfig) : base(world)
         {
             _buildPhysicsWorld = buildPhysicsWorld ?? throw new ArgumentNullException(nameof(buildPhysicsWorld));
+            ArgumentNullException.ThrowIfNull(solverConfig);
 
-            _maxCollisionPairs = maxCollisionPairs;
-            _potentialPairs = new List<(int, int)>(_maxCollisionPairs);
-            _pairPool = new Stack<Entity>(_maxCollisionPairs);
+            _maxCollisionPairs = solverConfig.MaxCollisionPairs;
+            _pairGrowthStep = solverConfig.CollisionPairGrowthStep;
+            _potentialPairs = new List<(int, int)>(Math.Min(Math.Max(0, _maxCollisionPairs), 4096));
+            _pairPool = new Stack<Entity>(Math.Max(0, solverConfig.CollisionPairInitialCapacity));
             _pairMap = new Dictionary<PairKey, Entity>(4096);
             _usedPairKeys = new HashSet<PairKey>();
             _unusedPairKeys = new List<PairKey>(4096);
 
-            InitializeCollisionPairPool();
+            GrowCollisionPairPool(solverConfig.CollisionPairInitialCapacity);
             SetStrategy(new SortAndSweepStrategy());
         }
 
@@ -91,6 +101,28 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         public ISpatialPartitionStrategy CurrentStrategy => _currentStrategy;
+
+        public void ApplyBroadphasePolicy(Physics2DBroadphasePolicy policy)
+        {
+            ArgumentNullException.ThrowIfNull(policy);
+            if (_observedBroadphasePolicyVersion == policy.Version)
+            {
+                return;
+            }
+
+            ISpatialPartitionStrategy strategy = policy.Strategy switch
+            {
+                Physics2DBroadphaseStrategyKind.SortAndSweep => new SortAndSweepStrategy(),
+                Physics2DBroadphaseStrategyKind.UniformGrid => new UniformGridStrategy(policy.CellSizeCm),
+                _ => throw new ArgumentOutOfRangeException(nameof(policy), policy.Strategy, "Unknown Physics2D broadphase strategy.")
+            };
+
+            SetStrategy(strategy);
+            CurrentStrategyKind = policy.Strategy;
+            CurrentCellSizeCm = policy.CellSizeCm;
+            _observedBroadphasePolicyVersion = policy.Version;
+            _observedStaticBodyVersion = -1;
+        }
 
         public override void Update(in float deltaTime)
         {
@@ -149,8 +181,13 @@ namespace Ludots.Core.Physics2D.Systems
 
                 byte shapeSlotA = shapeSlots[rigidBodyIndexA];
                 byte shapeSlotB = shapeSlots[rigidBodyIndexB];
+                if (!_buildPhysicsWorld.TryGetSnapshot(rigidBodyIndexA, out var snapshotA) ||
+                    !_buildPhysicsWorld.TryGetSnapshot(rigidBodyIndexB, out var snapshotB))
+                {
+                    continue;
+                }
 
-                if (World.Has<SleepingTag>(entityA) && World.Has<SleepingTag>(entityB))
+                if (snapshotA.IsSleeping != 0 && snapshotB.IsSleeping != 0)
                 {
                     continue;
                 }
@@ -159,6 +196,7 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     (entityA, entityB) = (entityB, entityA);
                     (shapeSlotA, shapeSlotB) = (shapeSlotB, shapeSlotA);
+                    (snapshotA, snapshotB) = (snapshotB, snapshotA);
                 }
 
                 var key = new PairKey(entityA.Id, shapeSlotA, entityB.Id, shapeSlotB);
@@ -171,13 +209,7 @@ namespace Ludots.Core.Physics2D.Systems
                 if (_pairMap.TryGetValue(key, out var pairEntity) && World.IsAlive(pairEntity))
                 {
                     ref var collisionPair = ref pairEntity.Get<CollisionPair>();
-                    collisionPair.IsActive = true;
-                    collisionPair.EntityA = entityA;
-                    collisionPair.EntityB = entityB;
-                    collisionPair.ShapeSlotA = shapeSlotA;
-                    collisionPair.ShapeSlotB = shapeSlotB;
-                    collisionPair.ContactCount = 0;
-                    collisionPair.Penetration = Fix64.Zero;
+                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB);
                     if (!World.Has<ActiveCollisionPairTag>(pairEntity))
                     {
                         World.Add<ActiveCollisionPairTag>(pairEntity);
@@ -187,28 +219,24 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     if (_pairPool.Count == 0)
                     {
-                        if (OverflowPolicy == CollisionPairOverflowPolicy2D.Throw)
+                        GrowCollisionPairPool(_pairGrowthStep);
+                        if (_pairPool.Count == 0 && OverflowPolicy == CollisionPairOverflowPolicy2D.Throw)
                         {
                             throw new InvalidOperationException($"Collision pair pool exhausted. Needed={needed}, Available=0, Capacity={_maxCollisionPairs}");
                         }
 
-                        DroppedPairsLastUpdate++;
-                        continue;
+                        if (_pairPool.Count == 0)
+                        {
+                            DroppedPairsLastUpdate++;
+                            continue;
+                        }
                     }
 
                     pairEntity = _pairPool.Pop();
                     ref var collisionPair = ref pairEntity.Get<CollisionPair>();
-                    collisionPair.IsActive = true;
-                    collisionPair.EntityA = entityA;
-                    collisionPair.EntityB = entityB;
-                    collisionPair.ShapeSlotA = shapeSlotA;
-                    collisionPair.ShapeSlotB = shapeSlotB;
-                    collisionPair.ContactCount = 0;
-                    collisionPair.Penetration = Fix64.Zero;
+                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB);
                     collisionPair.AccumulatedNormalImpulse0 = Fix64.Zero;
                     collisionPair.AccumulatedTangentImpulse0 = Fix64.Zero;
-                    collisionPair.AccumulatedNormalImpulse1 = Fix64.Zero;
-                    collisionPair.AccumulatedTangentImpulse1 = Fix64.Zero;
                     World.Add<ActiveCollisionPairTag>(pairEntity);
                     _pairMap[key] = pairEntity;
                 }
@@ -245,9 +273,48 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        private void InitializeCollisionPairPool()
+        private void ResetActivePair(
+            ref CollisionPair pair,
+            in BuildPhysicsWorldSystem2D.BodySnapshot snapshotA,
+            in BuildPhysicsWorldSystem2D.BodySnapshot snapshotB)
         {
-            for (int i = 0; i < _maxCollisionPairs; i++)
+            pair.IsActive = true;
+            pair.EntityA = snapshotA.Entity;
+            pair.EntityB = snapshotB.Entity;
+            pair.ShapeSlotA = snapshotA.ShapeSlot;
+            pair.ShapeSlotB = snapshotB.ShapeSlot;
+            pair.PositionA = snapshotA.Position;
+            pair.PositionB = snapshotB.Position;
+            pair.RotationA = snapshotA.Rotation;
+            pair.RotationB = snapshotB.Rotation;
+            pair.ColliderA = snapshotA.Collider;
+            pair.ColliderB = snapshotB.Collider;
+            pair.VelocityA = snapshotA.Velocity;
+            pair.VelocityB = snapshotB.Velocity;
+            pair.MassA = snapshotA.Mass;
+            pair.MassB = snapshotB.Mass;
+            pair.MaterialA = snapshotA.Material;
+            pair.MaterialB = snapshotB.Material;
+            pair.HasMaterialA = snapshotA.HasMaterial;
+            pair.HasMaterialB = snapshotB.HasMaterial;
+            pair.IsSleepingA = snapshotA.IsSleeping;
+            pair.IsSleepingB = snapshotB.IsSleeping;
+            pair.IslandA = snapshotA.IslandId;
+            pair.IslandB = snapshotB.IslandId;
+            pair.ContactCount = 0;
+            pair.Penetration = Fix64.Zero;
+        }
+
+        private void GrowCollisionPairPool(int requestedCount)
+        {
+            if (requestedCount <= 0)
+            {
+                return;
+            }
+
+            int existing = _pairPool.Count + _pairMap.Count;
+            int count = Math.Min(requestedCount, _maxCollisionPairs - existing);
+            for (int i = 0; i < count; i++)
             {
                 var e = World.Create(new CollisionPair { IsActive = false });
                 _pairPool.Push(e);

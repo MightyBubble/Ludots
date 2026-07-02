@@ -6,6 +6,7 @@ using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Events;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 using UiShowcaseCoreMod.Showcase;
 using UiSkinClassicMod;
@@ -83,14 +84,17 @@ public sealed class UiShowcaseAcceptanceTests
     {
         var page = new ReactivePage<int>(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), 0, BuildVirtualizedList);
         var root = new UIRoot(new SkiaUiRenderer());
+        var host = new UiSurfaceHost(root, new SkiaTextMeasurer(), new SkiaImageSizeProvider());
         root.Resize(1280f, 720f);
-        root.MountScene(page.Scene);
-        page.Scene.Layout(1280f, 720f);
+        UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.virtual-window"));
+        host.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
+        UiScene scene = host.Scene!;
+        scene.Layout(1280f, 720f);
 
-        Assert.That(page.Scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow initialWindow), Is.True);
+        Assert.That(scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow initialWindow), Is.True);
         Assert.That(initialWindow.VisibleCount, Is.GreaterThan(0));
 
-        UiNode scrollHost = page.Scene.FindByElementId("ui-showcase-virtual-window")!;
+        UiNode scrollHost = scene.FindByElementId("ui-showcase-virtual-window")!;
         bool handled = root.HandleInput(new PointerEvent
         {
             DeviceType = InputDeviceType.Mouse,
@@ -104,8 +108,59 @@ public sealed class UiShowcaseAcceptanceTests
         Assert.That(handled, Is.True);
         Assert.That(page.LastUpdateMetrics.Reason, Is.EqualTo(UiReactiveUpdateReason.RuntimeWindowChange));
         Assert.That(page.LastUpdateStats.Mode, Is.EqualTo(ReactiveApplyMode.IncrementalPatch));
-        Assert.That(page.Scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow scrolledWindow), Is.True);
+        Assert.That(scene.TryGetVirtualWindow("ui-showcase-virtual-window", out UiVirtualWindow scrolledWindow), Is.True);
         Assert.That(scrolledWindow.StartIndex, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void UIRoot_ClickThatClearsScene_CompletesInputFrame()
+    {
+        var root = new UIRoot(new NullUiRenderer());
+        var host = new UiSurfaceHost(root, new FixedTextMeasurer(), new NullImageSizeProvider());
+        root.Resize(320f, 200f);
+        UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.clear-during-click"));
+
+        host.Publish(
+            lease,
+            UiSurfaceContribution.FromBuilder(() => Ui.Column(
+                    Ui.Button("Clear", _ => host.Release(lease))
+                        .Id("clear-scene-button")
+                        .Width(120f)
+                        .Height(32f))
+                .Width(320f)
+                .Height(200f)
+                .Padding(8f)));
+
+        UiScene scene = host.Scene!;
+        scene.Layout(320f, 200f);
+        UiNode button = scene.FindByElementId("clear-scene-button")!;
+        float x = button.LayoutRect.X + 2f;
+        float y = button.LayoutRect.Y + 2f;
+
+        bool downHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Down,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+
+        bool upHandled = root.HandleInput(new PointerEvent
+        {
+            DeviceType = InputDeviceType.Mouse,
+            PointerId = 0,
+            Action = PointerAction.Up,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+
+        Assert.That(downHandled, Is.True);
+        Assert.That(upHandled, Is.True);
+        Assert.That(root.Scene, Is.Null);
+        Assert.That(root.IsDirty, Is.True);
     }
 
     [Test]
@@ -270,5 +325,36 @@ public sealed class UiShowcaseAcceptanceTests
              + (0.7152d * Linearize(color.Green))
              + (0.0722d * Linearize(color.Blue));
     }
-}
 
+    private sealed class NullUiRenderer : IUiRenderer
+    {
+        public void Render(UiScene scene, float width, float height)
+        {
+        }
+    }
+
+    private sealed class FixedTextMeasurer : IUiTextMeasurer
+    {
+        public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
+        {
+            float width = MeasureWidth(text, style);
+            float lineHeight = Math.Max(1f, style.FontSize);
+            return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, lineHeight, lineHeight);
+        }
+
+        public float MeasureWidth(string? text, UiStyle style)
+        {
+            return (text?.Length ?? 0) * 8f;
+        }
+    }
+
+    private sealed class NullImageSizeProvider : IUiImageSizeProvider
+    {
+        public bool TryGetSize(string? source, out float width, out float height)
+        {
+            width = 0f;
+            height = 0f;
+            return false;
+        }
+    }
+}

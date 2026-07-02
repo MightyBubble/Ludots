@@ -13,11 +13,11 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Navigation2D.Components;
 using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -146,6 +146,41 @@ namespace Ludots.Tests.GAS
             var ex = Throws<KeyNotFoundException>(() => registry.Get(999));
 
             That(ex!.Message, Does.Contain("999"));
+        }
+
+        [Test]
+        public void OrderQueue_InvalidOrderTypeId_Throws()
+        {
+            var queue = new OrderQueue();
+            var order = new Order { OrderTypeId = 0 };
+
+            var ex = Throws<InvalidOperationException>(() => queue.TryEnqueue(in order));
+
+            That(ex!.Message, Does.Contain("OrderQueue"));
+            That(ex.Message, Does.Contain("0"));
+        }
+
+        [Test]
+        public void PlanExecutor_UnregisteredOrderTypeId_Throws()
+        {
+            var queue = new OrderQueue();
+            var orderTypes = new OrderTypeRegistry();
+            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var ints = new BlackboardIntBuffer();
+            var entities = new BlackboardEntityBuffer();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                PlanExecutor.TrySubmitOrder(
+                    in spec,
+                    ReadOnlySpan<ActionBinding>.Empty,
+                    Entity.Null,
+                    ref ints,
+                    ref entities,
+                    submitStep: 0,
+                    queue,
+                    orderTypes));
+
+            That(ex!.Message, Does.Contain("unregistered order type id 42"));
         }
 
         [Test]
@@ -590,6 +625,82 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityExecSystem_SourceDispatch_PreservesOriginalTargetAsContext()
+        {
+            using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
+            const int abilityId = 9002;
+            const int sourceEffectTemplateId = 7001;
+
+            var actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                new AbilityStateBuffer());
+            var target = world.Create();
+
+            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
+            abilities.AddAbility(abilityId);
+
+            ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
+            var order = new Order
+            {
+                OrderId = 8,
+                Actor = actor,
+                Target = target,
+                OrderTypeId = castAbilityOrderTypeId,
+                Args = new OrderArgs { I0 = 0 }
+            };
+            orderBuffer.SetActiveDirect(in order, priority: 100);
+
+            ref var bbI = ref world.Get<BlackboardIntBuffer>(actor);
+            bbI.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+            ref var bbE = ref world.Get<BlackboardEntityBuffer>(actor);
+            bbE.Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(
+                0,
+                ExecItemKind.EffectSignal,
+                tick: 0,
+                templateId: sourceEffectTemplateId,
+                payloadA: (int)ExecEffectDispatchTarget.Source);
+
+            var defs = new AbilityDefinitionRegistry();
+            var def = new AbilityDefinition { ExecSpec = spec };
+            defs.Register(abilityId, in def);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100
+            });
+
+            var effectRequests = new EffectRequestQueue();
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new SelectionRequestQueue(),
+                new SelectionResponseBuffer(),
+                effectRequests,
+                defs,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes);
+
+            system.Update(0f);
+
+            That(effectRequests.Count, Is.EqualTo(1));
+            That(effectRequests[0].Source, Is.EqualTo(actor));
+            That(effectRequests[0].Target, Is.EqualTo(actor));
+            That(effectRequests[0].TargetContext, Is.EqualTo(target));
+        }
+
+        [Test]
         public void AbilityExecSystem_ValidCast_PublishesCastCommittedPresentationEvent()
         {
             using var world = World.Create();
@@ -1019,8 +1130,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var actor = world.Create(
                 OrderBuffer.CreateEmpty(),
-                new AbilityExecInstance(),
-                new NavGoal2D { Kind = NavGoalKind2D.Point });
+                new AbilityExecInstance());
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             var stopOrder = new Order { Actor = actor, OrderTypeId = 103 };
@@ -1033,12 +1143,11 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             That(world.Has<AbilityExecInstance>(actor), Is.False);
-            That(world.Get<NavGoal2D>(actor).Kind, Is.EqualTo(NavGoalKind2D.None));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
         }
 
         [Test]
-        public void StopOrderNavMoveCleanupSystem_ActiveStopOrder_ClearsNavigationTag()
+        public void StopOrderMoveCleanupSystem_ActiveStopOrder_ClearsMoveTag()
         {
             TagRegistry.Clear();
             int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
@@ -1047,7 +1156,6 @@ namespace Ludots.Tests.GAS
             var actor = world.Create(
                 OrderBuffer.CreateEmpty(),
                 new AbilityExecInstance(),
-                new NavGoal2D { Kind = NavGoalKind2D.Point },
                 new GameplayTagContainer());
 
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
@@ -1061,8 +1169,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             That(tags.HasTag(navMoveTagId), Is.False);
-            That(world.Has<AbilityExecInstance>(actor), Is.True, "Navigation tag cleanup must stay separate from generic stop processing.");
-            That(world.Get<NavGoal2D>(actor).Kind, Is.EqualTo(NavGoalKind2D.Point));
+            That(world.Has<AbilityExecInstance>(actor), Is.True, "Move tag cleanup must stay separate from generic stop processing.");
             That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
         }
 

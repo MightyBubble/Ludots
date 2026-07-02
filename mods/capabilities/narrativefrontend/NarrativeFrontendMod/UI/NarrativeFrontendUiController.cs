@@ -3,6 +3,7 @@ using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using NarrativeFrontendMod.Runtime;
 
 namespace NarrativeFrontendMod.UI;
@@ -10,9 +11,17 @@ namespace NarrativeFrontendMod.UI;
 internal sealed class NarrativeFrontendUiController
 {
     private ReactivePage<NarrativeFrontendRenderState>? _page;
+    private IUiSurfaceHost? _surfaceHost;
+    private UiSurfaceLeaseHandle _lease;
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, NarrativeFrontendRenderState state)
     {
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+        _surfaceHost = surfaceHost;
+
         if (_page == null)
         {
             var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
@@ -24,19 +33,20 @@ internal sealed class NarrativeFrontendUiController
             _page.SetState(_ => state);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
-
-        root.IsDirty = true;
+        surfaceHost.Publish(
+            surfaceHost.EnsureLease(
+                ref _lease,
+                new UiSurfaceLeaseRequest("NarrativeFrontend.Ui", UiSurfaceSegment.Overlay, priority: 60)),
+            UiSurfaceContribution.FromReactivePage(_page));
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid && _surfaceHost != null)
         {
-            root.ClearScene();
+            _surfaceHost.Release(_lease);
+            _lease = default;
+            _surfaceHost = null;
         }
     }
 }

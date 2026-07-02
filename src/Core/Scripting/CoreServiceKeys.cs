@@ -5,7 +5,6 @@ using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
@@ -39,12 +38,15 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
-using Ludots.Core.Navigation2D.Runtime;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Persistence;
 using Ludots.Core.Presentation;
@@ -69,6 +71,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Core.UI;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Scripting
@@ -102,11 +105,14 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IFocusedMapLoadStateSink> FocusedMapLoadStateSink = new("FocusedMapLoadStateSink");
         public static readonly ServiceKey<BoardIdRegistry> BoardIdRegistry = new("BoardIdRegistry");
         public static readonly ServiceKey<MapContext> MapContext = new("MapContext");
+        public static readonly ServiceKey<MapLaunchContext> MapLaunchContext = new("MapLaunchContext");
 
         // --- UI ---
         public static readonly ServiceKey<IUiSystem> UISystem = new("UISystem");
         public static readonly ServiceKey<object> UIRoot = new("UIRoot");
+        public static readonly ServiceKey<object> UiSurfaceHost = new("UiSurfaceHost");
         public static readonly ServiceKey<bool> UiCaptured = new("UiCaptured");
+        public static readonly ServiceKey<bool> UiWheelCaptured = new("UiWheelCaptured");
         public static readonly ServiceKey<IEntityCommandPanelService> EntityCommandPanelService = new("EntityCommandPanelService");
         public static readonly ServiceKey<IEntityCommandPanelHandleStore> EntityCommandPanelHandleStore = new("EntityCommandPanelHandleStore");
         public static readonly ServiceKey<IEntityCommandPanelSourceRegistry> EntityCommandPanelSourceRegistry = new("EntityCommandPanelSourceRegistry");
@@ -190,6 +196,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
         public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
         public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
+        public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
+        public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
+        public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
+        public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");
+        public static readonly ServiceKey<FogKnowledgeProjector> FogKnowledgeProjector = new("Vision.FogKnowledgeProjector");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
@@ -231,8 +243,10 @@ namespace Ludots.Core.Scripting
         // --- Simulation ---
         public static readonly ServiceKey<SimulationLoopController> SimulationLoopController = new("SimulationLoopController");
         public static readonly ServiceKey<Physics2DTickPolicy> Physics2DTickPolicy = new("Physics2DTickPolicy");
+        public static readonly ServiceKey<Physics2DSolverConfig> Physics2DSolverConfig = new("Physics2DSolverConfig");
+        public static readonly ServiceKey<Physics2DBroadphasePolicy> Physics2DBroadphasePolicy = new("Physics2DBroadphasePolicy");
+        public static readonly ServiceKey<object> Physics2DShapeStorage = new("Physics2D.ShapeStorage");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
-        public static readonly ServiceKey<Navigation2DTickPolicy> Navigation2DTickPolicy = new("Navigation2DTickPolicy");
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
@@ -260,6 +274,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PresentationAdapterCapabilities> PresentationAdapterCapabilities = new("PresentationAdapterCapabilities");
         public static readonly ServiceKey<SkinnedVisualBatchBuffer> PresentationSkinnedVisualBatchBuffer = new("PresentationSkinnedVisualBatchBuffer");
         public static readonly ServiceKey<PresentationRequestBuffer> PresentationRequestBuffer = new("PresentationRequestBuffer");
+        public static readonly ServiceKey<GlobalFieldVisualBuffer> GlobalFieldVisualBuffer = new("GlobalFieldVisualBuffer");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
@@ -299,10 +314,14 @@ namespace Ludots.Core.Scripting
 
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
-        public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
+        public static readonly ServiceKey<GraphEdgeCostOverlay> GraphEdgeCostOverlay = new("GraphEdgeCostOverlay");
+        public static readonly ServiceKey<LogicTerrainField> LogicTerrain = new("LogicTerrain");
+        public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
+        public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshObstacles = new("RuntimeNavMeshObstacles");
+        public static readonly ServiceKey<RuntimeIncrementalNavMeshRebuildQueue> RuntimeNavMeshRebuildQueue = new("RuntimeNavMeshRebuildQueue");
         public static readonly ServiceKey<PathingConfig> PathingConfig = new("PathingConfig");
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");

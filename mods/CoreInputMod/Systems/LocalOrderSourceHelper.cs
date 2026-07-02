@@ -101,7 +101,13 @@ namespace CoreInputMod.Systems
                     return registryOrderTypeId;
                 }
 
-                return _orderTypeIds.TryGetValue(key, out int configOrderTypeId) ? configOrderTypeId : 0;
+                if (_orderTypeIds.TryGetValue(key, out int configOrderTypeId) && configOrderTypeId > 0)
+                {
+                    return configOrderTypeId;
+                }
+
+                throw new InvalidOperationException(
+                    $"[{ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
             });
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {

@@ -9,10 +9,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Physics;
-using Ludots.Core.Physics2D.Components;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
@@ -64,16 +63,13 @@ namespace RoadNetworkShowcaseMod.Runtime
             string world = _world.Has<WorldPositionCm>(actor)
                 ? FormatFixVec(_world.Get<WorldPositionCm>(actor).Value)
                 : "<no-world>";
-            string position2D = _world.Has<Position2D>(actor)
-                ? FormatFixVec(_world.Get<Position2D>(actor).Value)
-                : "<no-pos2d>";
             RoadRoutePlannerProfile planner = _profiles.ResolvePlanner(actor);
             RoadRouteExecutionProfile execution = _profiles.ResolveExecution(actor);
 
             OrderBuffer buffer = _world.Has<OrderBuffer>(actor) ? _world.Get<OrderBuffer>(actor) : default;
-            RoadMoveOrderRuntime orderRuntime = _world.Has<RoadMoveOrderRuntime>(actor) ? _world.Get<RoadMoveOrderRuntime>(actor) : default;
-            RoadNavPlanRuntime planRuntime = _world.Has<RoadNavPlanRuntime>(actor) ? _world.Get<RoadNavPlanRuntime>(actor) : default;
-            RoadMoveExecutionIntent intent = _world.Has<RoadMoveExecutionIntent>(actor) ? _world.Get<RoadMoveExecutionIntent>(actor) : default;
+            MovePlanOrderRuntime orderRuntime = _world.Has<MovePlanOrderRuntime>(actor) ? _world.Get<MovePlanOrderRuntime>(actor) : default;
+            MovePlanRuntime planRuntime = _world.Has<MovePlanRuntime>(actor) ? _world.Get<MovePlanRuntime>(actor) : default;
+            MovePlanExecutionIntent intent = _world.Has<MovePlanExecutionIntent>(actor) ? _world.Get<MovePlanExecutionIntent>(actor) : default;
 
             int roadMoveFollowOrderTypeId = ResolveRoadMoveFollowOrderTypeId();
             bool hasRoadActiveOrder = RoadMoveActiveOrderResolver.TryResolve(_world, actor, roadMoveFollowOrderTypeId, out Order activeOrder) &&
@@ -83,7 +79,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 ? $"{name}  [Primary]"
                 : name;
             string queue = BuildQueueLine(in buffer, hasRoadActiveOrder ? activeOrder : default, hasRoadActiveOrder, roadMoveFollowOrderTypeId);
-            string query = $"Query  world={world} pos2d={position2D} planner={planner.Label} execution={execution.Label}";
+            string query = $"Query  world={world} planner={planner.Label} execution={execution.Label}";
             string plan = BuildPlanLine(hasRoadActiveOrder, in activeOrder, in orderRuntime, in planRuntime);
             string select = BuildSelectionLine(actor, hasRoadActiveOrder, in activeOrder, in planRuntime, execution);
             string execute = BuildExecutionLine(actor, in intent);
@@ -154,7 +150,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             return $"Queue  active={active} | roadActive={road} | queued={queued} | pending={pending}";
         }
 
-        private string BuildPlanLine(bool hasRoadActiveOrder, in Order activeOrder, in RoadMoveOrderRuntime orderRuntime, in RoadNavPlanRuntime planRuntime)
+        private string BuildPlanLine(bool hasRoadActiveOrder, in Order activeOrder, in MovePlanOrderRuntime orderRuntime, in MovePlanRuntime planRuntime)
         {
             if (!hasRoadActiveOrder)
             {
@@ -167,26 +163,26 @@ namespace RoadNetworkShowcaseMod.Runtime
             return $"Plan  lifecycle={orderRuntime.LifecycleState} failure={orderRuntime.FailureReason} order={DescribeOrder(in activeOrder, activeOrder.OrderTypeId)} planGen={planRuntime.PlanGeneration} points={planRuntime.PointCount} final={finalGoal}";
         }
 
-        private string BuildSelectionLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in RoadNavPlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
+        private string BuildSelectionLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in MovePlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
         {
             if (!hasRoadActiveOrder)
             {
                 return "Pick  no road-follow active order";
             }
 
-            if (!_world.Has<Position2D>(actor))
+            if (!_world.Has<WorldPositionCm>(actor))
             {
-                return "Pick  actor has no Position2D";
+                return "Pick  actor has no WorldPositionCm";
             }
 
-            if (!TryGetPlanStore(out RoadNavPlanStore? plans) ||
+            if (!TryGetPlanStore(out MovePlanStore? plans) ||
                 plans == null ||
-                !plans.TryGetPlan(actor, activeOrder.OrderId, out RoadNavPlanView plan))
+                !plans.TryGetPlan(actor, activeOrder.OrderId, out MovePlanView plan))
             {
                 return "Pick  active order exists but no bound plan";
             }
 
-            Fix64Vec2 position = _world.Get<Position2D>(actor).Value;
+            Vector2 position = ToVector2(_world.Get<WorldPositionCm>(actor));
             int currentIndex = Math.Clamp(planRuntime.CurrentWaypointIndex, 0, Math.Max(0, plan.Count - 1));
             if (!_selection.TrySelect(in plan, position, currentIndex, execution.WaypointRadiusCm, out RoadRouteSelection selection))
             {
@@ -199,49 +195,32 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             float distanceCm = DistanceCm(position, selection.Target);
-            return $"Pick  currentIndex={currentIndex} -> selectedIndex={selection.WaypointIndex} target={FormatFixVec(selection.Target)} dist={distanceCm:0.0} stopRadius={execution.WaypointRadiusCm:0}";
+            return $"Pick  currentIndex={currentIndex} -> selectedIndex={selection.WaypointIndex} target={FormatVector2(selection.Target)} dist={distanceCm:0.0} stopRadius={execution.WaypointRadiusCm:0}";
         }
 
-        private string BuildExecutionLine(Entity actor, in RoadMoveExecutionIntent intent)
+        private string BuildExecutionLine(Entity actor, in MovePlanExecutionIntent intent)
         {
             string intentText = intent.HasTarget != 0
-                ? $"{FormatFixVec(intent.Target)} speed={intent.SpeedCmPerSec:0} stop={intent.StopRadiusCm:0}"
+                ? $"{FormatVector2(intent.TargetWorldCm)} speed={intent.SpeedCmPerSec:0} stop={intent.StopRadiusCm:0}"
                 : "<none>";
-            string goal = "<none>";
-            if (_world.Has<NavGoal2D>(actor))
-            {
-                ref readonly var navGoal = ref _world.Get<NavGoal2D>(actor);
-                goal = navGoal.Kind == NavGoalKind2D.Point
-                    ? $"{FormatFixVec(navGoal.TargetCm)} r={navGoal.RadiusCm.ToFloat():0}"
-                    : navGoal.Kind.ToString();
-            }
-
-            string desired = _world.Has<NavDesiredVelocity2D>(actor)
-                ? FormatFixVec(_world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec)
-                : "<none>";
-            string velocity = _world.Has<Velocity2D>(actor)
-                ? FormatFixVec(_world.Get<Velocity2D>(actor).Linear)
-                : "<none>";
-            string force = _world.Has<ForceInput2D>(actor)
-                ? FormatFixVec(_world.Get<ForceInput2D>(actor).Force)
-                : "<none>";
-            string maxSpeed = _world.Has<NavKinematics2D>(actor)
-                ? _world.Get<NavKinematics2D>(actor).MaxSpeedCmPerSec.ToFloat().ToString("0")
-                : "<none>";
-            return $"Move  intent={intentText} | navGoal={goal} | desired={desired} | vel={velocity} | force={force} | maxSpeed={maxSpeed}";
+            string massTarget = ResolveMassTargetText(actor);
+            string massAgent = _world.Has<MassNavigationAgentIndex>(actor)
+                ? _world.Get<MassNavigationAgentIndex>(actor).Value.ToString()
+                : "<unbound>";
+            return $"Move  intent={intentText} | massAgent={massAgent} | massTarget={massTarget}";
         }
 
-        private string BuildCheckLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in RoadMoveOrderRuntime orderRuntime, in RoadNavPlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
+        private string BuildCheckLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in MovePlanOrderRuntime orderRuntime, in MovePlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
         {
             string stall = $"{planRuntime.StallSeconds:0.00}/{execution.StallTimeoutSeconds:0.00}";
             string lastProgress = planRuntime.Initialized != 0
-                ? FormatFixVec(planRuntime.LastProgressPosition)
+                ? FormatVector2(planRuntime.LastProgressPositionCm)
                 : "<uninitialized>";
             string distanceToGoal = "<none>";
-            if (_world.Has<Position2D>(actor) && planRuntime.PointCount > 0)
+            if (_world.Has<WorldPositionCm>(actor) && planRuntime.PointCount > 0)
             {
-                Fix64Vec2 position = _world.Get<Position2D>(actor).Value;
-                Fix64Vec2 finalGoal = Fix64Vec2.FromInt(planRuntime.FinalGoalXcm, planRuntime.FinalGoalYcm);
+                Vector2 position = ToVector2(_world.Get<WorldPositionCm>(actor));
+                var finalGoal = new Vector2(planRuntime.FinalGoalXcm, planRuntime.FinalGoalYcm);
                 distanceToGoal = DistanceCm(position, finalGoal).ToString("0.0");
             }
 
@@ -249,16 +228,16 @@ namespace RoadNetworkShowcaseMod.Runtime
             return $"Check  activeOrderId={activeOrderId} timeoutCount={orderRuntime.TimeoutCount} execGen={orderRuntime.ExecutionGeneration} stall={stall} lastProgress={lastProgress} lastWp={planRuntime.LastResolvedWaypointIndex} distToFinal={distanceToGoal} arrivalRadius={execution.FinalArrivalRadiusCm:0}";
         }
 
-        private string BuildPathLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in RoadNavPlanRuntime planRuntime)
+        private string BuildPathLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in MovePlanRuntime planRuntime)
         {
             if (!hasRoadActiveOrder)
             {
                 return "Path  <none>";
             }
 
-            if (TryGetPlanStore(out RoadNavPlanStore? plans) &&
+            if (TryGetPlanStore(out MovePlanStore? plans) &&
                 plans != null &&
-                plans.TryGetPlan(actor, activeOrder.OrderId, out RoadNavPlanView plan))
+                plans.TryGetPlan(actor, activeOrder.OrderId, out MovePlanView plan))
             {
                 return BuildPlanPointList("Path(plan)", in plan, planRuntime.CurrentWaypointIndex);
             }
@@ -295,13 +274,13 @@ namespace RoadNetworkShowcaseMod.Runtime
             return text.ToString();
         }
 
-        private static string BuildPlanPointList(string label, in RoadNavPlanView plan, int currentIndex)
+        private static string BuildPlanPointList(string label, in MovePlanView plan, int currentIndex)
         {
             var text = new StringBuilder();
             text.Append(label).Append(' ').Append(plan.Count).Append(" pts");
             for (int i = 0; i < plan.Count; i++)
             {
-                if (!plan.TryGetWaypoint(i, out Fix64Vec2 waypoint))
+                if (!plan.TryGetWaypoint(i, out Vector2 waypoint))
                 {
                     continue;
                 }
@@ -315,7 +294,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                     text.Append("  ");
                 }
 
-                text.Append(i).Append(':').Append(FormatFixVec(waypoint));
+                text.Append(i).Append(':').Append(FormatVector2(waypoint));
                 if (i == currentIndex)
                 {
                     text.Append(" <- current");
@@ -325,10 +304,10 @@ namespace RoadNetworkShowcaseMod.Runtime
             return text.ToString();
         }
 
-        private bool TryGetPlanStore(out RoadNavPlanStore? plans)
+        private bool TryGetPlanStore(out MovePlanStore? plans)
         {
-            plans = _engine.GlobalContext.TryGetValue(typeof(RoadNavPlanStore).FullName!, out object? planObj) &&
-                    planObj is RoadNavPlanStore resolved
+            plans = _engine.GlobalContext.TryGetValue(typeof(MovePlanStore).FullName!, out object? planObj) &&
+                    planObj is MovePlanStore resolved
                 ? resolved
                 : null;
             return plans != null;
@@ -412,17 +391,45 @@ namespace RoadNetworkShowcaseMod.Runtime
             return $"{name}#{actor.Id}";
         }
 
-        private static float DistanceCm(Fix64Vec2 from, Fix64Vec2 to)
+        private string ResolveMassTargetText(Entity actor)
         {
-            Fix64Vec2 delta = to - from;
-            float dx = delta.X.ToFloat();
-            float dy = delta.Y.ToFloat();
+            if (!_world.TryGet(actor, out MassNavigationAgentIndex index))
+            {
+                return "<unbound>";
+            }
+
+            MassNavigationSimulationRuntime? simulation = _engine.GetService(MassNavigationKeys.SimulationRuntime);
+            if (simulation == null ||
+                !simulation.TryGetAgentNavigationTargetWorldCm(index.Value, out float xCm, out float yCm))
+            {
+                return "<none>";
+            }
+
+            return FormatVector2(new Vector2(xCm, yCm));
+        }
+
+        private static Vector2 ToVector2(in WorldPositionCm position)
+        {
+            var worldCm = position.ToWorldCmInt2();
+            return new Vector2(worldCm.X, worldCm.Y);
+        }
+
+        private static float DistanceCm(Vector2 from, Vector2 to)
+        {
+            Vector2 delta = to - from;
+            float dx = delta.X;
+            float dy = delta.Y;
             return MathF.Sqrt((dx * dx) + (dy * dy));
         }
 
-        private static string FormatFixVec(in Fix64Vec2 value)
+        private static string FormatFixVec(in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 value)
         {
             return $"({value.X.ToFloat():0},{value.Y.ToFloat():0})";
+        }
+
+        private static string FormatVector2(in Vector2 value)
+        {
+            return $"({value.X:0},{value.Y:0})";
         }
     }
 }

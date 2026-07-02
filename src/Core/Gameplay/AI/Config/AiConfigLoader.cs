@@ -69,9 +69,27 @@ namespace Ludots.Core.Gameplay.AI.Config
                         throw Fail($"AI/projection.json:{id}.Op", $"Unsupported projection op '{op}'.");
                     }
 
-                    int intKey = TryReadInt(obj, "IntKey", out int ik) ? ik : -1;
-                    int intValue = TryReadInt(obj, "IntValue", out int iv) ? iv : 0;
-                    int entityKey = TryReadInt(obj, "EntityKey", out int ek) ? ek : -1;
+                    int intKey = -1;
+                    int intValue = 0;
+                    int entityKey = -1;
+                    switch (pOp)
+                    {
+                        case WorldStateProjectionOp.IntEquals:
+                        case WorldStateProjectionOp.IntGreaterOrEqual:
+                        case WorldStateProjectionOp.IntLessOrEqual:
+                            intKey = RequireOrderBlackboardKey(obj, "IntKey", $"AI/projection.json:{id}.IntKey");
+                            intValue = RequireInt(obj, "IntValue", $"AI/projection.json:{id}");
+                            RejectProjectionField(obj, "EntityKey", $"AI/projection.json:{id}.EntityKey", op);
+                            break;
+                        case WorldStateProjectionOp.EntityIsNonNull:
+                        case WorldStateProjectionOp.EntityIsNull:
+                            entityKey = RequireOrderBlackboardKey(obj, "EntityKey", $"AI/projection.json:{id}.EntityKey");
+                            RejectProjectionField(obj, "IntKey", $"AI/projection.json:{id}.IntKey", op);
+                            RejectProjectionField(obj, "IntValue", $"AI/projection.json:{id}.IntValue", op);
+                            break;
+                        default:
+                            throw Fail($"AI/projection.json:{id}.Op", $"Unsupported projection op '{op}'.");
+                    }
 
                     tmp.Add(new WorldStateProjectionRule(atomId, pOp, intKey, intValue, entityKey));
                 }
@@ -421,7 +439,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             CompileStances(stanceNode, stances, stanceIds, targetFilterIds);
 
             var actuators = new List<UtilityAiActuatorDefinition>();
-            CompileActuators(actuatorNode, actuators, inputIds);
+            var actuatorIds = new Dictionary<string, int>(StringComparer.Ordinal);
+            CompileActuators(actuatorNode, actuators, actuatorIds, inputIds);
 
             var decisions = new List<UtilityAiDecisionDefinition>();
             var considerations = new List<UtilityAiConsiderationDefinition>();
@@ -433,7 +452,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             CompileDecisionMakers(decisionMakerNode, decisionMakers, decisionMakerIds, decisionIds);
 
             var profiles = new List<UtilityAiProfileDefinition>();
-            CompileProfiles(profileNode, profiles, decisionMakerIds, stances);
+            var profileIds = new Dictionary<string, int>(StringComparer.Ordinal);
+            CompileProfiles(profileNode, profiles, profileIds, decisionMakerIds, stanceIds);
 
             if (profiles.Count == 0)
             {
@@ -452,7 +472,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                 curves.ToArray(),
                 tasks.ToArray(),
                 stances.ToArray(),
-                actuators.ToArray());
+                actuators.ToArray(),
+                new UtilityAiAuthoringCatalog(profileIds, stanceIds, actuatorIds));
         }
 
         private void CompileTargetFilters(
@@ -785,7 +806,11 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
         }
 
-        private void CompileActuators(JsonNode? node, List<UtilityAiActuatorDefinition> actuators, Dictionary<string, int> inputIds)
+        private void CompileActuators(
+            JsonNode? node,
+            List<UtilityAiActuatorDefinition> actuators,
+            Dictionary<string, int> actuatorIds,
+            Dictionary<string, int> inputIds)
         {
             if (node is not JsonArray arr) return;
 
@@ -793,7 +818,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 string path = $"AI/actuators.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
-                RequireRecordId(obj, path);
+                string id = RequireRecordId(obj, path);
                 int abilityId = ResolveAbilityReference(obj, path, required: false);
                 int readinessInputId = TryReadString(obj, "ReadinessInput", out string readiness)
                     ? ResolveLocalId(inputIds, readiness, $"{path}.ReadinessInput", "input")
@@ -801,6 +826,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                 int aimGateInputId = TryReadString(obj, "AimGateInput", out string aim)
                     ? ResolveLocalId(inputIds, aim, $"{path}.AimGateInput", "input")
                     : -1;
+                actuatorIds.Add(id, actuators.Count);
                 actuators.Add(new UtilityAiActuatorDefinition(actuators.Count, abilityId, readinessInputId, aimGateInputId));
             }
         }
@@ -965,8 +991,9 @@ namespace Ludots.Core.Gameplay.AI.Config
         private void CompileProfiles(
             JsonNode? node,
             List<UtilityAiProfileDefinition> profiles,
+            Dictionary<string, int> profileIds,
             Dictionary<string, int> decisionMakerIds,
-            List<UtilityAiStanceDefinition> stances)
+            Dictionary<string, int> stanceIds)
         {
             if (node is not JsonArray arr) return;
 
@@ -974,7 +1001,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 string path = $"AI/profiles.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
-                RequireRecordId(obj, path);
+                string id = RequireRecordId(obj, path);
                 int offset = ResolveDecisionMakerRange(obj, path, decisionMakerIds, out int count);
                 int interval = TryReadInt(obj, "DecisionIntervalSteps", out int authoredInterval) ? authoredInterval : 1;
                 if (interval <= 0)
@@ -988,12 +1015,16 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.MaxCandidates", "MaxCandidates must be positive.");
                 }
 
-                int defaultStanceId = TryReadInt(obj, "DefaultStanceId", out int authoredStanceId) ? authoredStanceId : -1;
-                if (defaultStanceId >= stances.Count)
+                if (obj.ContainsKey("DefaultStanceId"))
                 {
-                    throw Fail($"{path}.DefaultStanceId", $"References unknown stance id {defaultStanceId}.");
+                    throw Fail($"{path}.DefaultStanceId", "DefaultStanceId is not supported. Use DefaultStance with a stance key.");
                 }
 
+                int defaultStanceId = TryReadString(obj, "DefaultStance", out string stanceKey)
+                    ? ResolveLocalId(stanceIds, stanceKey, $"{path}.DefaultStance", "stance")
+                    : -1;
+
+                profileIds.Add(id, profiles.Count);
                 profiles.Add(new UtilityAiProfileDefinition(offset, count, interval, maxCandidates, defaultStanceId));
             }
         }
@@ -1483,6 +1514,47 @@ namespace Ludots.Core.Gameplay.AI.Config
             return value;
         }
 
+        private static int RequireOrderBlackboardKey(JsonObject obj, string key, string path)
+        {
+            if (!obj.TryGetPropertyValue(key, out JsonNode? node) || node == null)
+            {
+                throw Fail(path, "Order blackboard key is required.");
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    throw Fail(path, $"Order blackboard key must be a semantic string, not numeric id {numericId}.");
+                }
+
+                if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+                {
+                    if (!string.Equals(text, text.Trim(), StringComparison.Ordinal))
+                    {
+                        throw Fail(path, "Order blackboard key must not contain leading or trailing whitespace.");
+                    }
+
+                    if (OrderBlackboardKeyRegistry.TryGetId(text, out int keyId))
+                    {
+                        return keyId;
+                    }
+
+                    throw Fail(path, $"References unknown order blackboard key '{text}'. Declare it in GAS/order_types.json orderBlackboardKeys or use a built-in key.");
+                }
+            }
+
+            throw Fail(path, "Order blackboard key must be a non-empty semantic string.");
+        }
+
+        private static void RejectProjectionField(JsonObject obj, string key, string path, string op)
+        {
+            if (obj.ContainsKey(key))
+            {
+                throw Fail(path, $"Field is not valid for projection op '{op}'.");
+            }
+        }
+
         private static int RequireInt(JsonObject obj, string key, string path)
         {
             if (!TryReadInt(obj, key, out int value))
@@ -1594,4 +1666,3 @@ namespace Ludots.Core.Gameplay.AI.Config
         }
     }
 }
-

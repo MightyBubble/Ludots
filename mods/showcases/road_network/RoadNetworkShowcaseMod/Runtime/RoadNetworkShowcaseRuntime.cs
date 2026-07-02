@@ -76,6 +76,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             ActiveBoard = board;
             Scenario = RoadNetworkScenarioDefinition.Create(board.LoadedChunksSource.ChunkSizeCm);
             engine.GlobalContext[RoadNetworkShowcaseIds.ScenarioServiceKey] = Scenario;
+            engine.GlobalContext[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = board.LoadedChunksSource;
             board.LoadedChunksSource.ChunkLoaded += HandleChunkLoaded;
 
             EnsureShowcaseProfiles(engine.World);
@@ -496,6 +497,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             if (engine != null)
             {
                 engine.GlobalContext.Remove(RoadNetworkShowcaseIds.ScenarioServiceKey);
+                engine.GlobalContext.Remove(RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey);
             }
 
             _activeMapId = null;

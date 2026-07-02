@@ -2107,6 +2107,7 @@ namespace Ludots.Core.Presentation.Config
                 ["attribute"] = 8,
                 ["tag"] = 9,
                 ["orientation"] = 10,
+                ["hud"] = 11,
             };
 
             public static int Register(string key)

@@ -22,6 +22,7 @@ namespace GasTests
                 nameof(SystemGroup.PostMovement),
                 nameof(SystemGroup.AbilityActivation),
                 nameof(SystemGroup.EffectProcessing),
+                nameof(SystemGroup.RuntimeEntityBinding),
                 nameof(SystemGroup.AttributeCalculation),
                 nameof(SystemGroup.DeferredTriggerCollection),
                 nameof(SystemGroup.Cleanup),
@@ -451,10 +452,8 @@ namespace GasTests
                 Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),
-                Path.Combine(repoRoot, "mods", "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod", "Runtime", "TotalWarObstacleOverlayPresentationSystem.cs"),
-                Path.Combine(repoRoot, "mods", "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod", "Runtime", "TotalWarFormationOutlinePresentationSystem.cs"),
-                Path.Combine(repoRoot, "mods", "showcases", "capability_standard", "CapabilityStandardTotalWarLikeMod", "Runtime", "CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem.cs"),
-                Path.Combine(repoRoot, "mods", "showcases", "capability_standard", "CapabilityStandardTotalWarLikeMod", "Runtime", "CapabilityStandardTotalWarLikeFormationOutlinePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "formation_capability", "FormationCapabilityShowcaseMod", "Runtime", "FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "formation_capability", "FormationCapabilityShowcaseMod", "Runtime", "FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Systems", "RoadSelectedRoutePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Gameplay", "RoadRoutePreviewSplineBuilder.cs")
             };
@@ -528,6 +527,152 @@ namespace GasTests
                     "Issue #200 expects warmed knowledge/input/minimap hot paths to stay SoA and avoid LINQ/iterator allocation patterns:\n" +
                     string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void Issue358_Physics2DHotPaths_AvoidRandomWorldAccessAndKeepThroughputGuarded()
+        {
+            var repoRoot = FindRepoRoot();
+            string integration = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "IntegrationSystem2D.cs"));
+            string impulses = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "ApplyImpulsesSystem2D.cs"));
+            string adaptiveSpatial = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "AdaptiveSpatialSystem2D.cs"));
+            string sleeping = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "SleepingSystem.cs"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(integration, Does.Not.Contain("World.TryGet"), "0Alloc tests are blind to TryGet throughput regressions; Integration must stay chunk/span based.");
+                Assert.That(integration, Does.Not.Contain("World.Set("), "Integration hot path must mutate chunk spans instead of random World.Set writes.");
+                Assert.That(integration, Does.Not.Contain("Nav" + "Desired" + "Velocity" + "2D"), "Navigation-to-Physics velocity handoff belongs in a gateable bridge, not the physics integrator.");
+                Assert.That(adaptiveSpatial, Does.Not.Contain("World.Has<SleepingTag>"), "Broadphase should use BodySnapshot.IsSleeping instead of random World.Has calls.");
+                Assert.That(impulses, Does.Not.Contain("World.Has<SleepingTag>"), "Impulse application should use CollisionPair.IsSleepingA/B snapshot bits.");
+                Assert.That(sleeping, Does.Not.Contain("Dictionary<int, List<Entity>>"), "Sleeping island collection must not allocate one List per island.");
+                Assert.That(sleeping, Does.Not.Contain("new List<Entity>"), "Sleeping island collection must reuse storage across frames.");
+                Assert.That(sleeping, Does.Not.Contain("World.TryGet(pair.Entity"), "Wake collection should use collision-pair island snapshots instead of per-pair TryGet.");
+                Assert.That(sleeping, Does.Not.Contain("World.Has<SleepingTag>(pair.Entity"), "Wake collection should use collision-pair sleeping snapshots instead of per-pair World.Has.");
+            });
+        }
+
+        [Test]
+        public void Issue361_Physics2DNavUatShowcases_AreFormalCapabilityStandardRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            string launcherConfig = File.ReadAllText(Path.Combine(repoRoot, "launcher.config.json"));
+            string launcherPresets = File.ReadAllText(Path.Combine(repoRoot, "launcher.presets.json"));
+            string docs = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "architecture", "capability-standard-showcases.md"));
+            string gasTestsProject = File.ReadAllText(Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj"));
+
+            Issue361ShowcaseSpec[] specs =
+            {
+                new(
+                    Issue: "#361",
+                    Binding: "capability_standard_physics2d",
+                    ModName: "CapabilityStandardPhysics2DMod",
+                    ArtifactFolder: "capability-standard-physics2d",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DAcceptanceTests.cs",
+                    PurePhysics: true),
+                new(
+                    Issue: "#361",
+                    Binding: "capability_standard_physics2d_stress",
+                    ModName: "CapabilityStandardPhysics2DStressMod",
+                    ArtifactFolder: "capability-standard-physics2d-stress",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests.cs",
+                    PurePhysics: true),
+                new(
+                    Issue: "#361",
+                    Binding: "capability_standard_physics2d_showcase",
+                    ModName: "CapabilityStandardPhysics2DShowcaseMod",
+                    ArtifactFolder: "capability-standard-physics2d-showcase",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DShowcaseAcceptanceTests.cs",
+                    PurePhysics: true)
+            };
+
+            var missing = new List<string>();
+            for (int i = 0; i < specs.Length; i++)
+            {
+                Issue361ShowcaseSpec spec = specs[i];
+                string modDir = Path.Combine(repoRoot, "mods", "showcases", "capability_standard", spec.ModName);
+                string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", spec.AcceptanceTestName);
+
+                if (!Directory.Exists(modDir))
+                {
+                    missing.Add($"{spec.Issue}: missing mod directory {ToRepoRelativePath(repoRoot, modDir)}");
+                    continue;
+                }
+
+                string gameJsonPath = Path.Combine(modDir, "assets", "game.json");
+                string templatesPath = Path.Combine(modDir, "assets", "Entities", "templates.json");
+                string configPath = Path.Combine(modDir, "assets", "Configs", "config_catalog.json");
+                string projectFile = Path.Combine(modDir, $"{spec.ModName}.csproj");
+                Assert.That(File.Exists(projectFile), Is.True, $"Missing {projectFile}");
+                Assert.That(File.Exists(gameJsonPath), Is.True, $"Missing {gameJsonPath}");
+                Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
+                Assert.That(File.Exists(templatesPath), Is.True, $"Missing {templatesPath}");
+                Assert.That(File.Exists(acceptancePath), Is.True, $"Missing {acceptancePath}");
+
+                string relativeModDir = ToRepoRelativePath(repoRoot, modDir);
+                string acceptance = File.ReadAllText(acceptancePath);
+                string gameJson = File.ReadAllText(gameJsonPath);
+                string manifest = File.ReadAllText(Path.Combine(modDir, "mod.json"));
+                string templates = File.ReadAllText(templatesPath);
+
+                if (!launcherConfig.Contains($"\"name\": \"{spec.Binding}\"", StringComparison.Ordinal) ||
+                    !launcherConfig.Contains(relativeModDir, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: launcher.config.json missing binding {spec.Binding} -> {relativeModDir}");
+                }
+
+                if (!launcherPresets.Contains($"\"id\": \"{spec.Binding}_raylib\"", StringComparison.Ordinal) ||
+                    !launcherPresets.Contains($"\"${spec.Binding}\"", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: launcher.presets.json missing raylib preset for {spec.Binding}");
+                }
+
+                if (!docs.Contains($"`{spec.Binding}`", StringComparison.Ordinal) ||
+                    !docs.Contains(relativeModDir, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: capability-standard-showcases.md missing {spec.Binding}");
+                }
+
+                if (!gasTestsProject.Contains($"{spec.ModName}.csproj", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: GasTests.csproj missing {spec.ModName}.csproj reference");
+                }
+
+                if (!acceptance.Contains("\"artifacts\"", StringComparison.Ordinal) ||
+                    !acceptance.Contains("\"showcases\"", StringComparison.Ordinal) ||
+                    !acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: acceptance test missing artifacts/showcases/{spec.ArtifactFolder}");
+                }
+
+                if (spec.PurePhysics)
+                {
+                    Assert.That(gameJson, Does.Contain("\"physics2D\""));
+                    Assert.That(gameJson, Does.Not.Contain("\"navigation" + "2D\""));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Kinematics" + "2D"));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Desired" + "Velocity" + "2D"));
+                    Assert.That(templates, Does.Not.Contain("Nav" + "Obstacle" + "2D"));
+                }
+
+                if (gameJson.Contains("Camera.Profile.", StringComparison.Ordinal))
+                {
+                    Assert.That(manifest, Does.Contain("\"CameraProfilesMod\""),
+                        $"{spec.Issue}: {spec.ModName} uses shared Camera.Profile.* IDs and must declare CameraProfilesMod so launcher presets are runnable.");
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(launcherConfig, Does.Not.Contain("Physics2DPlaygroundMod"));
+                Assert.That(launcherPresets, Does.Not.Contain("Physics2DPlaygroundMod"));
+                Assert.That(docs, Does.Contain("retires old `Physics2DPlaygroundMod` as formal entry"));
+            });
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "Issue #361 requires every Physics2D/Nav UAT showcase to be a formal capability-standard root with launcher, docs, test, and artifact evidence:\n" +
+                string.Join("\n", missing));
         }
 
         [Test]
@@ -1252,6 +1397,189 @@ namespace GasTests
             });
         }
 
+        [Test]
+        public void Issue306_WarFogAdr_VisionDomainGuardrails()
+        {
+            var repoRoot = FindRepoRoot();
+            string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
+            string coreServiceKeysPath = Path.Combine(repoRoot, "src", "Core", "Scripting", "CoreServiceKeys.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+            string knowledgeStorePath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionStore.cs");
+            string knowledgeContractsPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionContracts.cs");
+
+            Assert.That(Directory.Exists(visionRoot), Is.True, "FOG-2 starts the cell-keyed Vision domain root.");
+
+            string[] visionFiles = Directory.GetFiles(visionRoot, "*.cs", SearchOption.AllDirectories);
+            string visionSource = string.Join('\n', Array.ConvertAll(visionFiles, File.ReadAllText));
+            string coreServiceKeys = File.ReadAllText(coreServiceKeysPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+            string knowledgeStore = File.ReadAllText(knowledgeStorePath);
+            string knowledgeContracts = File.ReadAllText(knowledgeContractsPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(visionSource, Does.Contain("FogField"), "FOG-1 #306 section 1.1/1.3: fog stores cell-keyed visibility fields.");
+                Assert.That(visionSource, Does.Contain("ScopeKey"), "FOG-1 #306 section 1.4: VisionScope is the existing ScopeKey contract.");
+                Assert.That(visionSource, Does.Not.Contain("EntityKeyedSoaTable"), "FOG-1 #306 section 1.3: FogField must not use the entity-keyed AAC table.");
+                Assert.That(visionSource, Does.Contain("CellVisibility"), "FOG-1 #306 section 1.4: layers carry Unseen/Explored/Visible/Denied states.");
+                Assert.That(visionSource, Does.Contain("VerticalVisionRule"), "FOG-1 #306 section 1.5: vertical vision remains independent.");
+                Assert.That(visionSource, Does.Contain("LineOfSightRule"), "FOG-1 #306 section 1.5: LoS remains an independent switch.");
+                Assert.That(visionSource, Does.Contain("Concealment"), "FOG-1 #306 section 1.5: concealment remains an independent switch.");
+                Assert.That(visionSource, Does.Contain("KnowledgeIdMask256"), "FOG-1 #306 section 1.6: projection uses finite Knowledge masks.");
+                Assert.That(visionSource, Does.Contain("KnowledgeProjectionStore"), "FOG-1 #306 section 1.1: entity disclosure flows through Knowledge.");
+                Assert.That(visionSource, Does.Contain("RelationshipRuntime"), "FOG-1 #306 section 1.7: sharing and cross-scope effects use relationship edges.");
+                Assert.That(visionSource, Does.Not.Contain("PlayerId"), "FOG-1 #306 section 1.2/1.8: Core Vision has no participant business semantics.");
+                Assert.That(visionSource, Does.Not.Contain("TeamId"), "FOG-1 #306 section 1.2/1.8: Core Vision has no team shortcuts.");
+                Assert.That(knowledgeStore, Does.Contain("EntityKeyedSoaTable"), "Knowledge remains the entity-keyed projection SSOT.");
+                Assert.That(knowledgeContracts, Does.Contain("KnowledgeIdMask256"));
+                Assert.That(coreServiceKeys, Does.Contain("Vision"));
+                Assert.That(gameEngine, Does.Contain("Vision"));
+            });
+        }
+
+        [Test]
+        public void Issue314_WarFogGuardrails_CellKeyedKnowledgeOnlyAndShowcasesExist()
+        {
+            var repoRoot = FindRepoRoot();
+            string visionRoot = Path.Combine(repoRoot, "src", "Core", "Vision");
+            string testsProjectPath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj");
+            string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "FogOfWarShowcaseAcceptanceTests.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+            string coreServiceKeysPath = Path.Combine(repoRoot, "src", "Core", "Scripting", "CoreServiceKeys.cs");
+            string testsProject = File.ReadAllText(testsProjectPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+            string coreServiceKeys = File.ReadAllText(coreServiceKeysPath);
+            string[] visionFiles = Directory.GetFiles(visionRoot, "*.cs", SearchOption.AllDirectories);
+            string[] forbiddenVisionTokens =
+            {
+                "EntityKeyedSoaTable",
+                "PlayerId",
+                "TeamId",
+                "TeamManager",
+                "ra2",
+                "war3",
+                "moba",
+                "commando"
+            };
+            string[] forbiddenHotPathTokens =
+            {
+                "using System.Linq",
+                ".Where(",
+                ".Select(",
+                ".ToArray(",
+                ".ToList(",
+                "yield return",
+                "IEnumerator",
+                "IEnumerable<",
+                "new Dictionary<",
+                "new List<"
+            };
+
+            var hits = new List<string>();
+            for (int i = 0; i < visionFiles.Length; i++)
+            {
+                AppendForbiddenSourceTokens(repoRoot, visionFiles[i], forbiddenVisionTokens, hits);
+                AppendForbiddenSourceTokens(repoRoot, visionFiles[i], forbiddenHotPathTokens, hits);
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "FOG-9 #314 keeps Core Vision cell-keyed, topic-neutral, and allocation-conscious:\n" +
+                string.Join("\n", hits));
+            Assert.Multiple(() =>
+            {
+                Assert.That(coreServiceKeys, Does.Contain("VisionFogCellMap"), "FOG runtime must expose the shared elevation/occlusion/concealment source.");
+                Assert.That(coreServiceKeys, Does.Contain("FogKnowledgeProjector"), "FOG runtime must expose the fog-to-Knowledge bridge.");
+                Assert.That(gameEngine, Does.Contain("new FogCellMap"), "GameEngine must construct the runtime fog cell map.");
+                Assert.That(gameEngine, Does.Contain("new FogKnowledgeProjector"), "GameEngine must register the fog-to-Knowledge bridge outside tests.");
+                Assert.That(gameEngine, Does.Contain("elevation: visionFogCellMap"), "VisionResolver must receive elevation data in the real engine loop.");
+                Assert.That(gameEngine, Does.Contain("occlusion: visionFogCellMap"), "VisionResolver must receive LoS occlusion data in the real engine loop.");
+                Assert.That(gameEngine, Does.Contain("new VisionSystem"), "GameEngine must drive resolve/project from the simulation loop.");
+                Assert.That(gameEngine, Does.Contain("SystemGroup.PostMovement"), "VisionSystem belongs after movement so it reads authoritative positions.");
+            });
+
+            ShowcaseCapabilitySpec[] specs =
+            {
+                new(
+                    Issue: "#307",
+                    ModName: "MultiLayerFogFieldShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "MultiLayerFogFieldShowcaseMod"),
+                    EntryFileName: "MultiLayerFogFieldShowcaseModEntry.cs",
+                    ProjectFileName: "MultiLayerFogFieldShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#308",
+                    ModName: "VisionConeHighGroundShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "VisionConeHighGroundShowcaseMod"),
+                    EntryFileName: "VisionConeHighGroundShowcaseModEntry.cs",
+                    ProjectFileName: "VisionConeHighGroundShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#309",
+                    ModName: "LineOfSightBrushShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "LineOfSightBrushShowcaseMod"),
+                    EntryFileName: "LineOfSightBrushShowcaseModEntry.cs",
+                    ProjectFileName: "LineOfSightBrushShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#310",
+                    ModName: "ExploredMemoryShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "ExploredMemoryShowcaseMod"),
+                    EntryFileName: "ExploredMemoryShowcaseModEntry.cs",
+                    ProjectFileName: "ExploredMemoryShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#311",
+                    ModName: "GapGeneratorShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "GapGeneratorShowcaseMod"),
+                    EntryFileName: "GapGeneratorShowcaseModEntry.cs",
+                    ProjectFileName: "GapGeneratorShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#312",
+                    ModName: "StealthDetectionShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "StealthDetectionShowcaseMod"),
+                    EntryFileName: "StealthDetectionShowcaseModEntry.cs",
+                    ProjectFileName: "StealthDetectionShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#313",
+                    ModName: "SharedVisionSnapshotShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "SharedVisionSnapshotShowcaseMod"),
+                    EntryFileName: "SharedVisionSnapshotShowcaseModEntry.cs",
+                    ProjectFileName: "SharedVisionSnapshotShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase"),
+                new(
+                    Issue: "#315",
+                    ModName: "FogOfWarShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_of_war", "FogOfWarShowcaseMod"),
+                    EntryFileName: "FogOfWarShowcaseModEntry.cs",
+                    ProjectFileName: "FogOfWarShowcaseMod.csproj",
+                    AcceptanceTestPath: acceptancePath,
+                    ArtifactFolder: "fog-of-war-showcase")
+            };
+
+            var missing = new List<string>();
+            for (int i = 0; i < specs.Length; i++)
+            {
+                AssertShowcaseCapability(repoRoot, testsProject, specs[i], missing);
+            }
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "FOG-9 #314 and FOG-10 #315 require formal War Fog showcase roots and headless acceptance evidence:\n" +
+                string.Join("\n", missing));
+        }
+
         private static void AssertShowcaseCapability(
             string repoRoot,
             string gasTestsProject,
@@ -1283,6 +1611,31 @@ namespace GasTests
             if (!File.Exists(entryPath))
             {
                 missing.Add($"{spec.Issue}: missing mod entry {ToRepoRelativePath(repoRoot, entryPath)}");
+            }
+            else
+            {
+                string entry = File.ReadAllText(entryPath);
+                if (!entry.Contains("context.OnEvent(GameEvents.GameStart", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not install runtime on GameStart");
+                }
+
+                if (!entry.Contains("context.OnEvent(GameEvents.MapLoaded", StringComparison.Ordinal) ||
+                    !entry.Contains("context.OnEvent(GameEvents.MapResumed", StringComparison.Ordinal) ||
+                    !entry.Contains("context.OnEvent(GameEvents.MapUnloaded", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not handle MapLoaded/MapResumed/MapUnloaded");
+                }
+
+                if (!entry.Contains("RegisterSystem(", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not register a simulation system");
+                }
+
+                if (!entry.Contains("RegisterPresentationSystem(", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: entry does not register a presentation system");
+                }
             }
 
             if (!File.Exists(projectPath))
@@ -1329,6 +1682,14 @@ namespace GasTests
             string ProjectFileName,
             string AcceptanceTestPath,
             string ArtifactFolder);
+
+        private readonly record struct Issue361ShowcaseSpec(
+            string Issue,
+            string Binding,
+            string ModName,
+            string ArtifactFolder,
+            string AcceptanceTestName,
+            bool PurePhysics);
 
         private static string FindRepoRoot()
         {

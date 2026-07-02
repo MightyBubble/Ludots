@@ -1,7 +1,7 @@
+using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
-using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Collision;
 using Ludots.Core.Physics2D.Components;
@@ -14,46 +14,50 @@ namespace Ludots.Core.Physics2D.Systems
     public sealed class NarrowPhaseSystem2D : BaseSystem<World, float>
     {
         private readonly QueryDescription _pairsQuery;
+        private readonly ShapeDataStorage2D _shapeStorage;
 
-        public NarrowPhaseSystem2D(World world) : base(world)
+        public NarrowPhaseSystem2D(World world, ShapeDataStorage2D shapeStorage) : base(world)
         {
             _pairsQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
         }
 
         public override void Update(in float deltaTime)
         {
-            World.Query(in _pairsQuery, (ref CollisionPair pair) =>
+            var job = new NarrowPhaseJob
+            {
+                World = World,
+                ShapeStorage = _shapeStorage
+            };
+            World.InlineQuery<NarrowPhaseJob, CollisionPair>(in _pairsQuery, ref job);
+        }
+
+        private struct NarrowPhaseJob : IForEach<CollisionPair>
+        {
+            public World World;
+            public ShapeDataStorage2D ShapeStorage;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
             {
                 if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB))
-                {
-                    return;
-                }
-
-                ref var posA = ref pair.EntityA.Get<Position2D>();
-                ref var posB = ref pair.EntityB.Get<Position2D>();
-                if (!TryResolveCollider(pair.EntityA, pair.ShapeSlotA, out var colliderA) ||
-                    !TryResolveCollider(pair.EntityB, pair.ShapeSlotB, out var colliderB))
                 {
                     pair.ContactCount = 0;
                     pair.Penetration = Fix64.Zero;
                     return;
                 }
 
-                var rotA = World.TryGet(pair.EntityA, out Rotation2D ra) ? ra : Rotation2D.Identity;
-                var rotB = World.TryGet(pair.EntityB, out Rotation2D rb) ? rb : Rotation2D.Identity;
-
                 bool hasCollision = CollisionAlgorithms2D.Detect(
-                    posA.Value, rotA, colliderA,
-                    posB.Value, rotB, colliderB,
+                    ShapeStorage,
+                    pair.PositionA.Value, pair.RotationA, pair.ColliderA,
+                    pair.PositionB.Value, pair.RotationB, pair.ColliderB,
                     out Fix64Vec2 normal,
-                    out Fix64 penetration,
-                    out Fix64Vec2 contactPoint);
+                    out Fix64 penetration);
 
                 if (hasCollision)
                 {
                     pair.Normal = normal;
                     pair.Penetration = penetration;
-                    pair.LocalContactPoint0 = contactPoint;
                     pair.ContactCount = 1;
                 }
                 else
@@ -62,48 +66,8 @@ namespace Ludots.Core.Physics2D.Systems
                     pair.Penetration = Fix64.Zero;
                     pair.AccumulatedNormalImpulse0 = Fix64.Zero;
                     pair.AccumulatedTangentImpulse0 = Fix64.Zero;
-                    pair.AccumulatedNormalImpulse1 = Fix64.Zero;
-                    pair.AccumulatedTangentImpulse1 = Fix64.Zero;
                 }
-            });
-        }
-
-        private bool TryResolveCollider(Entity entity, byte shapeSlot, out Collider2D collider)
-        {
-            if (World.TryGet(entity, out CompoundObstacle2DState compoundState))
-            {
-                if (shapeSlot >= compoundState.PieceCount)
-                {
-                    collider = default;
-                    return false;
-                }
-
-                collider = new Collider2D
-                {
-                    Type = ToColliderType(compoundState.GetShape(shapeSlot)),
-                    ShapeDataIndex = compoundState.GetShapeDataIndex(shapeSlot)
-                };
-                return true;
             }
-
-            if (shapeSlot == 0 && World.TryGet(entity, out collider))
-            {
-                return true;
-            }
-
-            collider = default;
-            return false;
-        }
-
-        private static ColliderType2D ToColliderType(ManifestationObstacleShape2D shape)
-        {
-            return shape switch
-            {
-                ManifestationObstacleShape2D.Circle => ColliderType2D.Circle,
-                ManifestationObstacleShape2D.Box => ColliderType2D.Box,
-                ManifestationObstacleShape2D.Polygon => ColliderType2D.Polygon,
-                _ => throw new ArgumentOutOfRangeException(nameof(shape))
-            };
         }
     }
 }

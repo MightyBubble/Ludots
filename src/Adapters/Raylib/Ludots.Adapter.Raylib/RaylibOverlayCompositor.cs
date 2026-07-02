@@ -313,8 +313,8 @@ namespace Ludots.Adapter.Raylib
             Log.Info(
                 in LogChannels.Presentation,
                 _useFramebufferDirectUnderlay
-                    ? "Skia overlay backend: GPU direct framebuffer underlay with raster compositor fallback for UI/top overlay"
-                    : "Skia overlay backend: GPU render-texture underlay with raster compositor fallback for UI/top overlay");
+                    ? "Skia overlay backend: GPU direct framebuffer underlay with raster compositor for UI/top overlay"
+                    : "Skia overlay backend: GPU render-texture underlay with raster compositor for UI/top overlay");
         }
 
         private void RenderUnderlay(

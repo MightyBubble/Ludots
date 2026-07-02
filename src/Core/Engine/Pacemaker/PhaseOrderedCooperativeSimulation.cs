@@ -16,6 +16,7 @@ namespace Ludots.Core.Engine.Pacemaker
             SystemGroup.PostMovement,
             SystemGroup.AbilityActivation,
             SystemGroup.EffectProcessing,
+            SystemGroup.RuntimeEntityBinding,
             SystemGroup.AttributeCalculation,
             SystemGroup.DeferredTriggerCollection,
             SystemGroup.Cleanup,

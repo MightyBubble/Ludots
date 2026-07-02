@@ -158,7 +158,7 @@ engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
 |:--|:--|:--|
 | `TerrainBenchmarkMod` | 仍在 trigger 里补 pose | 尽量把基础机位前移到 `DefaultCamera` |
 | `Physics2DPlaygroundMod` | 仍有场景特定 pose override | 保留 override，避免重复声明基础 virtual camera |
-| `Navigation2DPlaygroundMod` | 仍有场景特定 pose override | 同上 |
+| `CapabilityStandardMassNavigationLargeWorld10kMod` | 使用大规模导航 showcase 相机 preset | 同上 |
 | `PerformanceVisualizationMod` | 仍有远景 pose override | 同上 |
 
 ## 废弃项

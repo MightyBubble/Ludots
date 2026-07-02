@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -154,15 +155,21 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int goalXcm, int goalZcm,
             IReadOnlyList<(int LeftXcm, int LeftZcm, int RightXcm, int RightZcm)> portalsCm)
         {
-            var start = new Vector2(startXcm / 100f, startZcm / 100f);
-            var goal = new Vector2(goalXcm / 100f, goalZcm / 100f);
+            var start = new Vector2(
+                SpatialScaleDefaults.CentimetersToMeters(startXcm),
+                SpatialScaleDefaults.CentimetersToMeters(startZcm));
+            var goal = new Vector2(
+                SpatialScaleDefaults.CentimetersToMeters(goalXcm),
+                SpatialScaleDefaults.CentimetersToMeters(goalZcm));
 
             var portals = new List<FunnelPortal>(portalsCm.Count);
             foreach (var p in portalsCm)
             {
                 portals.Add(new FunnelPortal(
-                    p.LeftXcm / 100f, p.LeftZcm / 100f,
-                    p.RightXcm / 100f, p.RightZcm / 100f));
+                    SpatialScaleDefaults.CentimetersToMeters(p.LeftXcm),
+                    SpatialScaleDefaults.CentimetersToMeters(p.LeftZcm),
+                    SpatialScaleDefaults.CentimetersToMeters(p.RightXcm),
+                    SpatialScaleDefaults.CentimetersToMeters(p.RightZcm)));
             }
 
             return SmoothPath(start, goal, portals);
@@ -178,8 +185,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             for (int i = 0; i < result.Path.Length; i++)
             {
-                xcm[i] = (int)MathF.Round(result.Path[i].X * 100f);
-                zcm[i] = (int)MathF.Round(result.Path[i].Y * 100f);
+                xcm[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(result.Path[i].X));
+                zcm[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(result.Path[i].Y));
             }
 
             return (xcm, zcm);

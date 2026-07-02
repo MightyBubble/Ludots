@@ -1,0 +1,7 @@
+{
+  "capability": "FOG-2",
+  "layers": [
+    { "id": "ground", "cellSizeCm": 100, "updateHz": 10 },
+    { "id": "air", "cellSizeCm": 250, "updateHz": 5 }
+  ]
+}

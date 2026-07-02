@@ -241,6 +241,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
 
                                 _fanOutDropped += _builtinRuntime.DroppedCount;
+                                PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
                             }
                         }
 
@@ -649,6 +650,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     OwnerEffectId = effectEntity.Id,
                 });
             }
+        }
+
+        private void PublishBuiltinAttributeDelta(
+            in EffectContext context,
+            int templateId,
+            BuiltinHandlerExecutionContext runtime)
+        {
+            if (_presentationEvents == null || !runtime.HasAttributeDelta)
+            {
+                return;
+            }
+
+            _presentationEvents.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.EffectApplied,
+                Actor = context.Source,
+                Target = context.Target,
+                EffectTemplateId = templateId,
+                AttributeId = runtime.AttributeDeltaId,
+                Delta = runtime.AttributeDelta
+            });
         }
 
         /// <summary>

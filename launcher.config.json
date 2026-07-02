@@ -26,14 +26,6 @@
       }
     },
     {
-      "name": "nav_playground",
-      "target": {
-        "type": "path",
-        "value": "mods/Navigation2DPlaygroundMod",
-        "projectPath": "Navigation2DPlaygroundMod.csproj"
-      }
-    },
-    {
       "name": "champion_skill_stress",
       "target": {
         "type": "path",
@@ -114,7 +106,7 @@
       }
     },
     {
-      "name": "capability_standard_mass_nav_large_world_10k",
+      "name": "capability_standard_mass_navigation_large_world_10k",
       "target": {
         "type": "path",
         "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
@@ -122,11 +114,11 @@
       }
     },
     {
-      "name": "capability_standard_total_war_like",
+      "name": "formation_capability_showcase",
       "target": {
         "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod",
-        "projectPath": "CapabilityStandardTotalWarLikeMod.csproj"
+        "value": "mods/showcases/formation_capability/FormationCapabilityShowcaseMod",
+        "projectPath": "FormationCapabilityShowcaseMod.csproj"
       }
     },
     {
@@ -138,16 +130,87 @@
       }
     },
     {
+      "name": "capability_standard_physics2d",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DMod",
+        "projectPath": "CapabilityStandardPhysics2DMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_stress",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod",
+        "projectPath": "CapabilityStandardPhysics2DStressMod.csproj"
+      }
+    },
+    {
       "name": "entity_query_tactics",
       "target": {
         "type": "path",
         "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
         "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "browser_ui_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_ui/BrowserUiShowcaseMod",
+        "projectPath": "BrowserUiShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_react_flow_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod",
+        "projectPath": "BrowserReactFlowShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "utility_autocast_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod",
+        "projectPath": "UtilityAutocastShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "combat_stance_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
+        "projectPath": "CombatStanceShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
+        "projectPath": "CapabilityStandardPhysics2DShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_transport_network",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
+        "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
+      }
     }
   ],
   "adapters": {
     "default": "raylib"
   },
+  "browserRuntimeProviders": [
+    {
+      "id": "cef",
+      "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
+      "assemblyPath": "src/Libraries/Ludots.UI.Browser.Cef/bin/Release/net8.0-windows/Ludots.UI.Browser.Cef.dll"
+    }
+  ],
   "projectHints": []
 }

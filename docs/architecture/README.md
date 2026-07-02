@@ -25,6 +25,8 @@
 - [Time Flow](time_flow.md)
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
+- [Browser UI Runtime](browser_ui_runtime.md)
+- [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
 
 ## Target State And Migration
 

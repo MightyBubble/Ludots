@@ -583,7 +583,7 @@ namespace Ludots.Tests.GAS
             var queue = new OrderQueue();
             var order = new Order
             {
-                OrderTypeId = 1001,
+                OrderTypeId = 101,
                 Actor = first,
                 Args = new OrderArgs
                 {
@@ -1300,6 +1300,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var actor = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
             var enemy = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var bindings = new InteractionActionBindings();
 
             var globals = new Dictionary<string, object>
             {
@@ -1310,7 +1311,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
                 [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.InteractionActionBindings.Name] = bindings,
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             SeedLivePrimarySelection(world, globals, local, actor);
@@ -1326,12 +1327,14 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
                         RequireSelection = false,
                         SelectionType = OrderSelectionType.Entity,
                         IsSkillMapping = true,
                     },
                 },
             });
+            mapping.SetInteractionActionBindings(bindings);
 
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);

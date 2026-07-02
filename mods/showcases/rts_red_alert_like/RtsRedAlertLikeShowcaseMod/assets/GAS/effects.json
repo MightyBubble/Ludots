@@ -1,0 +1,132 @@
+[
+  {
+    "id": "Effect.Rts.RedAlert.Construction",
+    "tags": ["Effect.Rts.RedAlert.Construction"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 45,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Rts.RedAlert.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Rts.RedAlert.CostPowerPlantStep",
+    "tags": ["Effect.Rts.RedAlert.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -62.5 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.RedAlert.CostRefineryStep",
+    "tags": ["Effect.Rts.RedAlert.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -140 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.RedAlert.CostWarFactoryStep",
+    "tags": ["Effect.Rts.RedAlert.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -166.6667 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.RedAlert.CostTrainRhinoStep",
+    "tags": ["Effect.Rts.RedAlert.Cost"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      { "attribute": "Credits", "op": "Add", "value": -100 }
+    ]
+  },
+  {
+    "id": "Effect.Rts.RedAlert.PlacePowerPlant",
+    "tags": ["Effect.Rts.RedAlert.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra_power_plant",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.RedAlert.PlaceRefinery",
+    "tags": ["Effect.Rts.RedAlert.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra_refinery",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.RedAlert.PlaceWarFactory",
+    "tags": ["Effect.Rts.RedAlert.Build"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra_war_factory",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.RedAlert.TrainRhino",
+    "tags": ["Effect.Rts.RedAlert.Train"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra_rhino",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 340,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Rts.RedAlert.DeployMcv",
+    "tags": ["Effect.Rts.RedAlert.Deploy"],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "rts_ra_conyard",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 220,
+      "onSpawnEffect": "Effect.Rts.RedAlert.Construction",
+      "copySourcePlayerOwner": true
+    }
+  }
+]

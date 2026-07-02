@@ -16,8 +16,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 256,
-      "HeightInTiles": 256,
+      "WidthInMacroTiles": 256,
+      "HeightInMacroTiles": 256,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64
     }

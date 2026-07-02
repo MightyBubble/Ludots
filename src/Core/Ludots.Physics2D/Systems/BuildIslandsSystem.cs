@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Physics2D.Components;
 
@@ -30,14 +30,13 @@ namespace Ludots.Core.Physics2D.Systems
             _entityToIndex.Clear();
             _indexToEntity.Clear();
 
-            int entityCount = 0;
-            World.Query(in _dynamicEntitiesQuery, (Entity entity, ref Mass2D mass) =>
+            var collectJob = new CollectDynamicEntitiesJob
             {
-                if (mass.IsStatic) return;
-                _entityToIndex[entity] = entityCount;
-                _indexToEntity.Add(entity);
-                entityCount++;
-            });
+                EntityToIndex = _entityToIndex,
+                IndexToEntity = _indexToEntity
+            };
+            World.InlineEntityQuery<CollectDynamicEntitiesJob, Mass2D>(in _dynamicEntitiesQuery, ref collectJob);
+            int entityCount = collectJob.EntityCount;
 
             if (entityCount == 0) return;
 
@@ -53,19 +52,14 @@ namespace Ludots.Core.Physics2D.Systems
                 _rank[i] = 0;
             }
 
-            World.Query(in _collisionPairQuery, (ref CollisionPair pair) =>
+            var unionJob = new UnionPairsJob
             {
-                if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB)) return;
-                if (pair.ContactCount == 0) return;
-
-                if (!_entityToIndex.TryGetValue(pair.EntityA, out int indexA) ||
-                    !_entityToIndex.TryGetValue(pair.EntityB, out int indexB))
-                {
-                    return;
-                }
-
-                Union(indexA, indexB);
-            });
+                World = World,
+                EntityToIndex = _entityToIndex,
+                Parent = _parent,
+                Rank = _rank
+            };
+            World.InlineQuery<UnionPairsJob, CollisionPair>(in _collisionPairQuery, ref unionJob);
 
             _rootToIslandId.Clear();
             int nextIslandId = 0;
@@ -119,6 +113,75 @@ namespace Ludots.Core.Physics2D.Systems
             {
                 _parent[rootY] = rootX;
                 _rank[rootX]++;
+            }
+        }
+
+        private struct CollectDynamicEntitiesJob : IForEachWithEntity<Mass2D>
+        {
+            public Dictionary<Entity, int> EntityToIndex;
+            public List<Entity> IndexToEntity;
+            public int EntityCount;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Mass2D mass)
+            {
+                if (mass.IsStatic) return;
+                EntityToIndex[entity] = EntityCount;
+                IndexToEntity.Add(entity);
+                EntityCount++;
+            }
+        }
+
+        private struct UnionPairsJob : IForEach<CollisionPair>
+        {
+            public World World;
+            public Dictionary<Entity, int> EntityToIndex;
+            public int[] Parent;
+            public int[] Rank;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
+            {
+                if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB)) return;
+                if (pair.ContactCount == 0) return;
+
+                if (!EntityToIndex.TryGetValue(pair.EntityA, out int indexA) ||
+                    !EntityToIndex.TryGetValue(pair.EntityB, out int indexB))
+                {
+                    return;
+                }
+
+                Union(indexA, indexB);
+            }
+
+            private int Find(int x)
+            {
+                if (Parent[x] != x)
+                {
+                    Parent[x] = Find(Parent[x]);
+                }
+                return Parent[x];
+            }
+
+            private void Union(int x, int y)
+            {
+                int rootX = Find(x);
+                int rootY = Find(y);
+                if (rootX == rootY) return;
+
+                if (Rank[rootX] < Rank[rootY])
+                {
+                    Parent[rootX] = rootY;
+                }
+                else if (Rank[rootX] > Rank[rootY])
+                {
+                    Parent[rootY] = rootX;
+                }
+                else
+                {
+                    Parent[rootY] = rootX;
+                    Rank[rootX]++;
+                }
             }
         }
     }

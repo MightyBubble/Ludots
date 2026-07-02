@@ -15,7 +15,7 @@ public static class EditorTerrainConverter
         using var bw = new BinaryWriter(outputReactTerrain, Encoding.UTF8, leaveOpen: true);
         bw.Write(map.WidthInChunks);
         bw.Write(map.HeightInChunks);
-        bw.Write((byte)2);
+        bw.Write((byte)4);
 
         for (int cy = 0; cy < map.HeightInChunks; cy++)
         {
@@ -42,6 +42,7 @@ public static class EditorTerrainConverter
                         if (chunk.GetExtraFlag(lx, ly, 0)) b2 |= 0b0100_0000;
                         if (chunk.GetExtraFlag(lx, ly, 1)) b2 |= 0b0010_0000;
                         if (chunk.GetExtraFlag(lx, ly, 2)) b2 |= 0b0001_0000;
+                        if (chunk.GetFlag(lx, ly)) b2 |= 0b0000_1000;
 
                         byte b3 = chunk.GetExtraByte(lx, ly, 0);
 

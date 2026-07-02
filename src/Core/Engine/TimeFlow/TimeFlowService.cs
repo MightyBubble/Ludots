@@ -35,7 +35,6 @@ namespace Ludots.Core.Engine.TimeFlow
             EnsureDomain(TimeFlowDomainIds.Simulation, parentName: null, baseScalePermille: DefaultScalePermille);
             EnsureDomain(TimeFlowDomainIds.Gas, TimeFlowDomainIds.Simulation, DefaultScalePermille);
             EnsureDomain(TimeFlowDomainIds.Physics2D, TimeFlowDomainIds.Simulation, DefaultScalePermille);
-            EnsureDomain(TimeFlowDomainIds.Navigation2D, TimeFlowDomainIds.Simulation, DefaultScalePermille);
         }
 
         public int EnsureDomain(string name, string? parentName = null, int baseScalePermille = DefaultScalePermille)

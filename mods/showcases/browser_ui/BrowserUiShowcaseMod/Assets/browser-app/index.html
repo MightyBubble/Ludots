@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots Browser Showcase</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div class="eyebrow">Browser UI runtime</div>
+      <h1>Ludots Browser Showcase</h1>
+      <p>The same web bundle can be served by a browser runtime and embedded into Ludots UI as a live surface.</p>
+      <div class="actions">
+        <button id="refresh">Refresh</button>
+        <button id="toggle">Toggle highlight</button>
+      </div>
+    </header>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <h2>Status</h2>
+        <p id="status">Waiting for host bridge.</p>
+      </article>
+      <article class="panel">
+        <h2>Provider</h2>
+        <p id="provider">CEF / Ultralight provider ready.</p>
+      </article>
+      <article class="panel">
+        <h2>Bridge</h2>
+        <p id="bridge">No message received yet.</p>
+      </article>
+    </section>
+
+    <section class="timeline" id="timeline"></section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

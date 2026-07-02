@@ -29,24 +29,6 @@
       "buildMode": "auto"
     },
     {
-      "id": "nav_playground_raylib",
-      "name": "Navigation Playground Raylib",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "raylib",
-      "buildMode": "auto"
-    },
-    {
-      "id": "nav_playground_web",
-      "name": "Navigation Playground Web",
-      "selectors": [
-        "$nav_playground"
-      ],
-      "adapterId": "web",
-      "buildMode": "auto"
-    },
-    {
       "id": "champion_skill_stress_raylib",
       "name": "Champion Skill Stress Raylib",
       "selectors": [
@@ -119,19 +101,19 @@
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_mass_nav_large_world_10k_raylib",
+      "id": "capability_standard_mass_navigation_large_world_10k_raylib",
       "name": "Capability Standard Mass Navigation Large World 10K Raylib",
       "selectors": [
-        "$capability_standard_mass_nav_large_world_10k"
+        "$capability_standard_mass_navigation_large_world_10k"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
     },
     {
-      "id": "capability_standard_total_war_like_raylib",
-      "name": "Capability Standard Total War Like Raylib",
+      "id": "formation_capability_showcase_raylib",
+      "name": "Formation Capability Showcase Raylib",
       "selectors": [
-        "$capability_standard_total_war_like"
+        "$formation_capability_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
@@ -146,10 +128,101 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_physics2d_raylib",
+      "name": "Capability Standard Physics2D Raylib",
+      "selectors": [
+        "$capability_standard_physics2d"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_stress_raylib",
+      "name": "Capability Standard Physics2D Stress Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_stress"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "entity_query_tactics_raylib",
       "name": "Entity Query Tactics Raylib",
       "selectors": [
         "$entity_query_tactics"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_ui_showcase_raylib",
+      "name": "Browser UI Showcase Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_ui_cef_raylib",
+      "name": "Browser UI CEF Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "browser_react_flow_cef_raylib",
+      "name": "Browser React Flow CEF Raylib",
+      "selectors": [
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "utility_autocast_showcase_raylib",
+      "name": "Utility Autocast Showcase Raylib",
+      "selectors": [
+        "$utility_autocast_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "combat_stance_showcase_raylib",
+      "name": "Combat Stance Showcase Raylib",
+      "selectors": [
+        "$combat_stance_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_physics2d_showcase_raylib",
+      "name": "Capability Standard Physics2D Raylib",
+      "selectors": [
+        "$capability_standard_physics2d_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_transport_network_raylib",
+      "name": "Capability Standard Transport Network Raylib",
+      "selectors": [
+        "$capability_standard_transport_network"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

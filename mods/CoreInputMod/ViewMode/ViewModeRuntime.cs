@@ -80,6 +80,32 @@ namespace CoreInputMod.ViewMode
             return true;
         }
 
+        public static bool TryGetActiveModeDisplayName(Dictionary<string, object> globals, out string displayName)
+        {
+            displayName = string.Empty;
+            if (globals == null || !TryGetManager(globals, out object manager))
+            {
+                return false;
+            }
+
+            var activeModeProperty = manager.GetType().GetProperty("ActiveMode");
+            object? activeMode = activeModeProperty?.GetValue(manager);
+            if (activeMode == null)
+            {
+                return false;
+            }
+
+            var displayNameProperty = activeMode.GetType().GetProperty("DisplayName");
+            if (displayNameProperty?.GetValue(activeMode) is not string reflectedDisplayName ||
+                string.IsNullOrWhiteSpace(reflectedDisplayName))
+            {
+                return false;
+            }
+
+            displayName = reflectedDisplayName;
+            return true;
+        }
+
         private static bool TryGetManager(Dictionary<string, object> globals, out object manager)
         {
             if (globals.TryGetValue(ViewModeManager.GlobalKey, out var managerObj) &&

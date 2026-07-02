@@ -9,7 +9,6 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 using ScopeSwitchShowcaseMod;
 using ScopeSwitchShowcaseMod.Runtime;
@@ -95,11 +94,7 @@ public sealed class ScopeSwitchShowcaseAcceptanceTests
             Path.Combine(repoRoot, "assets"));
         InstallInput(engine);
 
-        var uiRoot = new UIRoot(new SkiaUiRenderer());
-        uiRoot.Resize(1920f, 1080f);
-        engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-        engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-        engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+        AcceptanceUiHostInstaller.Install(engine);
         return engine;
     }
 

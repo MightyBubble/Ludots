@@ -1,0 +1,18 @@
+[
+  {
+    "id": "TF.UtilityAutocast.Hostile",
+    "MaxResults": 16,
+    "Ops": [
+      { "Kind": "SpatialRadius", "RadiusCm": 1600 },
+      { "Kind": "Relationship", "Value": "Hostile" }
+    ]
+  },
+  {
+    "id": "TF.UtilityAutocast.Friendly",
+    "MaxResults": 16,
+    "Ops": [
+      { "Kind": "SpatialRadius", "RadiusCm": 1200 },
+      { "Kind": "Relationship", "Value": "Friendly" }
+    ]
+  }
+]

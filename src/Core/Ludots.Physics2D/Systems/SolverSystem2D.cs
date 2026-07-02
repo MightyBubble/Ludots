@@ -1,6 +1,8 @@
+using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Utils;
@@ -13,63 +15,81 @@ namespace Ludots.Core.Physics2D.Systems
     /// </summary>
     public sealed class SolverSystem2D : BaseSystem<World, float>
     {
-        private const int NumIterations = 6;
-        private static readonly Fix64 Epsilon = Fix64.FromFloat(0.000001f);
-
         private readonly QueryDescription _pairsQuery;
+        private readonly Physics2DSolverConfig _config;
 
-        public SolverSystem2D(World world) : base(world)
+        public SolverSystem2D(World world, Physics2DSolverConfig config) : base(world)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
             _pairsQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
         }
 
         public override void Update(in float deltaTime)
         {
             // Phase 1: 复制速度快照到 CollisionPair 并计算组合材质
-            World.Query(in _pairsQuery, (ref CollisionPair pair) =>
+            var prepareJob = new PrepareSolverPairsJob
+            {
+                World = World,
+                DefaultFriction = _config.DefaultFrictionFix64,
+                DefaultRestitution = _config.DefaultRestitutionFix64
+            };
+            World.InlineQuery<PrepareSolverPairsJob, CollisionPair>(in _pairsQuery, ref prepareJob);
+
+            // Phase 2: 迭代求解
+            for (int iteration = 0; iteration < _config.SolverIterations; iteration++)
+            {
+                var solveJob = new SolvePairsJob
+                {
+                    Epsilon = _config.EpsilonFix64
+                };
+                World.InlineQuery<SolvePairsJob, CollisionPair>(in _pairsQuery, ref solveJob);
+            }
+        }
+
+        private struct PrepareSolverPairsJob : IForEach<CollisionPair>
+        {
+            public World World;
+            public Fix64 DefaultFriction;
+            public Fix64 DefaultRestitution;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
             {
                 if (pair.ContactCount == 0)
                 {
                     pair.AccumulatedNormalImpulse0 = Fix64.Zero;
                     pair.AccumulatedTangentImpulse0 = Fix64.Zero;
-                    pair.AccumulatedNormalImpulse1 = Fix64.Zero;
-                    pair.AccumulatedTangentImpulse1 = Fix64.Zero;
                     return;
                 }
 
                 if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB))
                 {
+                    pair.ContactCount = 0;
                     return;
                 }
 
-                ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
-                ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
-                ref var massA = ref pair.EntityA.Get<Mass2D>();
-                ref var massB = ref pair.EntityB.Get<Mass2D>();
+                Fix64 frictionA = pair.HasMaterialA != 0 ? pair.MaterialA.Friction : DefaultFriction;
+                Fix64 frictionB = pair.HasMaterialB != 0 ? pair.MaterialB.Friction : DefaultFriction;
+                Fix64 restitutionA = pair.HasMaterialA != 0 ? pair.MaterialA.Restitution : DefaultRestitution;
+                Fix64 restitutionB = pair.HasMaterialB != 0 ? pair.MaterialB.Restitution : DefaultRestitution;
 
-                pair.VelocityA = velocityA;
-                pair.VelocityB = velocityB;
-                pair.MassA = massA;
-                pair.MassB = massB;
-
-                var materialA = World.TryGet(pair.EntityA, out PhysicsMaterial2D matA) ? matA : PhysicsMaterial2D.Default;
-                var materialB = World.TryGet(pair.EntityB, out PhysicsMaterial2D matB) ? matB : PhysicsMaterial2D.Default;
-
-                pair.CombinedFriction = MaterialCombiner.CombineFriction(materialA.Friction, materialB.Friction);
-                pair.CombinedRestitution = MaterialCombiner.CombineRestitution(materialA.Restitution, materialB.Restitution);
+                pair.CombinedFriction = MaterialCombiner.CombineFriction(frictionA, frictionB);
+                pair.CombinedRestitution = MaterialCombiner.CombineRestitution(restitutionA, restitutionB);
 
                 ApplyWarmStart(ref pair);
-            });
+            }
+        }
 
-            // Phase 2: 迭代求解
-            for (int iteration = 0; iteration < NumIterations; iteration++)
+        private struct SolvePairsJob : IForEach<CollisionPair>
+        {
+            public Fix64 Epsilon;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
             {
-                World.Query(in _pairsQuery, (ref CollisionPair pair) =>
-                {
-                    if (pair.ContactCount == 0) return;
+                if (pair.ContactCount == 0) return;
 
-                    SolveContact0(ref pair);
-                });
+                SolveContact0(ref pair, Epsilon);
             }
         }
 
@@ -83,7 +103,7 @@ namespace Ludots.Core.Physics2D.Systems
             ApplyImpulseToSnapshot(ref pair, pair.AccumulatedNormalImpulse0, pair.AccumulatedTangentImpulse0);
         }
 
-        private static void SolveContact0(ref CollisionPair pair)
+        private static void SolveContact0(ref CollisionPair pair, Fix64 epsilon)
         {
             var relativeVelocity = pair.VelocityB.Linear - pair.VelocityA.Linear;
             Fix64 relativeNormalVelocity = Fix64Vec2.Dot(relativeVelocity, pair.Normal);
@@ -91,7 +111,7 @@ namespace Ludots.Core.Physics2D.Systems
             if (relativeNormalVelocity >= Fix64.Zero) return;
 
             Fix64 effectiveMass = pair.MassA.InverseMass + pair.MassB.InverseMass;
-            if (effectiveMass < Epsilon) return;
+            if (effectiveMass < epsilon) return;
 
             Fix64 normalImpulse = -(Fix64.OneValue + pair.CombinedRestitution) * relativeNormalVelocity / effectiveMass;
             normalImpulse = Fix64.Max(normalImpulse, Fix64.Zero);
@@ -105,7 +125,7 @@ namespace Ludots.Core.Physics2D.Systems
             Fix64 relativeTangentVelocity = Fix64Vec2.Dot(relativeVelocity, tangent);
 
             Fix64 tangentImpulse = Fix64.Zero;
-            if (Fix64.Abs(relativeTangentVelocity) >= Epsilon)
+            if (Fix64.Abs(relativeTangentVelocity) >= epsilon)
             {
                 tangentImpulse = -relativeTangentVelocity / effectiveMass;
             }

@@ -18,7 +18,7 @@
 ```powershell
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli workspace add --path ..\ExternalMods
 ```
