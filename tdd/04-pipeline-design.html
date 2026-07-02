@@ -49,12 +49,16 @@ const mdContent = "# 架构与基础设施 — Pipeline 设计\n\n## 设计目�
 
 function buildNav() {
   let html = '';
+  const pathParts = window.location.pathname.split('/');
+  // 提取项目根路径（如 /Ludots 或 /）
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
   for (const [group, items] of Object.entries(navData)) {
     if (items.length === 0) continue;
     html += '<div class="group"><div class="group-title">' + group + '</div>';
     for (const [href, title] of items) {
       const cls = href === currentPage ? 'active' : '';
-      html += '<a href="' + href + '" class="' + cls + '">' + title + '</a>';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
     }
     html += '</div>';
   }
