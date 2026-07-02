@@ -34,7 +34,11 @@ html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Mic
 .main pre code { padding: 0; background: transparent; }
 .main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
 .main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }</style>
+@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }
+.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
+.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+</style>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
