@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/user-guide.schema.json",
+  "title": "用户指南文档",
+  "description": "面向最终用户 / Mod 作者的指南。明确受众，分节组织，引用 reference / tutorial。比 tutorial 更偏整体说明。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "user-guide" },
+    "audience": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "overview": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "prerequisites": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "body": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+        },
+        "required": ["title", "body"],
+        "additionalProperties": false
+      }
+    },
+    "faq": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "q": { "type": "string", "maxLength": 280 }, "a": { "type": "string", "maxLength": 600 } },
+        "required": ["q", "a"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["audience", "overview", "sections"],
+  "unevaluatedProperties": false
+}

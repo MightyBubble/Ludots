@@ -1,0 +1,97 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-06-27T12:44:28Z",
+  "generator": "ludots-doc-constants-exporter",
+  "constants": {
+    "SpatialScaleDefaults.CellCm": {
+      "value": "100",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.DefaultHexEdgeLengthCm": {
+      "value": "400",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.MacroTileCells": {
+      "value": "256",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.DefaultWorldWidthMacroTiles": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.DefaultWorldHeightMacroTiles": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.DefaultTerrainWidthChunks": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.DefaultTerrainHeightChunks": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.PartitionChunkCells": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.TerrainChunkCells": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.FlowCellCm": {
+      "value": "100",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.AvoidanceSeparationHashCellCm": {
+      "value": "100",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.AvoidanceHardResolveHashCellCm": {
+      "value": "50",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.PhysicsBroadphaseCellCm": {
+      "value": "100",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.LogicTerrainHeightLevels": {
+      "value": "16",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.LogicTerrainMaxHeightLevel": {
+      "value": "15",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.BitsPerFlagWord": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.NavPortalInitialCapacity": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    "SpatialScaleDefaults.ContourRingInitialCapacity": {
+      "value": "64",
+      "type": "int",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    }
+  }
+}

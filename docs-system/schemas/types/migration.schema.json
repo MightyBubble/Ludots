@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/migration.schema.json",
+  "title": "迁移文档（长周期 / 分阶段并主分支）",
+  "description": "建模持续较久、阶段性合并到 main 的迁移。每阶段独立追踪并主状态。临时双态必须显式声明 sanctionedTemporaryState + guardrails + expiry；未完成阶段挂成 residueDebt。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "migration" },
+    "goal": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "from": { "type": "string", "maxLength": 280 },
+    "to": { "type": "string", "maxLength": 280 },
+    "phases": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "title": { "type": "string", "maxLength": 120 },
+          "status": { "type": "string", "enum": ["planned", "in-progress", "merged", "done", "abandoned"] },
+          "mergedIn": { "type": "string", "maxLength": 120, "description": "并入 main 的 PR/commit 引用。" },
+          "codeScope": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": { "type": "string", "minLength": 1 },
+                "note": { "type": "string", "maxLength": 280 }
+              },
+              "required": ["path"],
+              "additionalProperties": false
+            }
+          },
+          "exitCriteria": { "type": "array", "items": { "type": "string", "maxLength": 280 } }
+        },
+        "required": ["id", "title", "status"],
+        "additionalProperties": false
+      }
+    },
+    "sanctionedTemporaryState": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "guardrails": { "type": "array", "items": { "type": "string", "maxLength": 280 }, "description": "半迁移期间必须维持的不变量。" },
+    "residueDebt": { "type": "array", "items": { "type": "string" }, "description": "未完成阶段对应的 debt 文档 id，CI 校验存在。" },
+    "expiry": { "type": "string", "format": "date", "description": "迁移必须完成的硬期限，过期 CI 报错。" },
+    "rollback": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["goal", "phases", "expiry"],
+  "unevaluatedProperties": false
+}

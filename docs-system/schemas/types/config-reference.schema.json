@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/config-reference.schema.json",
+  "title": "配置 Schema 参考",
+  "description": "数据驱动配置的权威字段表。每个字段说明单位、是否必填、默认值、约束与 fail-fast 行为。loader 必须指向真实代码。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "config-reference" },
+    "configName": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "loader": { "type": "string", "minLength": 1, "description": "负责加载/校验该配置的真实代码路径，CI 校验存在。" },
+    "fields": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "type": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "unit": { "type": "string", "maxLength": 40 },
+          "required": { "type": "boolean" },
+          "default": { "type": "string", "maxLength": 120 },
+          "constraint": { "type": "string", "maxLength": 280 },
+          "failFast": { "type": "string", "maxLength": 280, "description": "违反约束时的 fail-fast 行为描述。" }
+        },
+        "required": ["name", "type", "required"],
+        "additionalProperties": false
+      }
+    },
+    "example": { "$ref": "../blocks.schema.json#/$defs/codeBlock" }
+  },
+  "required": ["configName", "loader", "fields"],
+  "unevaluatedProperties": false
+}

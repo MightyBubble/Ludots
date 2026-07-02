@@ -1,0 +1,1135 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\001_AI\\LudotsProd\\docs-system\\tools\\constants-export\\ConstantsExport.csproj": {}
+  },
+  "projects": {
+    "C:\\001_AI\\LudotsProd\\docs-system\\tools\\constants-export\\ConstantsExport.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\docs-system\\tools\\constants-export\\ConstantsExport.csproj",
+        "projectName": "LudotsConstantsExport",
+        "projectPath": "C:\\001_AI\\LudotsProd\\docs-system\\tools\\constants-export\\ConstantsExport.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\docs-system\\tools\\constants-export\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Core\\Ludots.Core.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Core\\Ludots.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Core\\Ludots.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Core\\Ludots.Core.csproj",
+        "projectName": "Ludots.Core",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Core\\Ludots.Core.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\Arch.Persistence.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\Arch.Persistence.csproj"
+              },
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\Arch.Relationships.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\Arch.Relationships.csproj"
+              },
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\Arch.System.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\Arch.System.csproj"
+              },
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              },
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\DotRecast.Detour.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\DotRecast.Detour.csproj"
+              },
+              "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\Ludots.Platform.Abstractions.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\Ludots.Platform.Abstractions.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Collections.Pooled": {
+              "target": "Package",
+              "version": "[2.0.0-preview.27, )"
+            },
+            "CommunityToolkit.HighPerformance": {
+              "target": "Package",
+              "version": "[8.2.2, )"
+            },
+            "Microsoft.Extensions.ObjectPool": {
+              "target": "Package",
+              "version": "[8.0.0, )"
+            },
+            "System.Runtime.CompilerServices.Unsafe": {
+              "target": "Package",
+              "version": "[6.1.2, )"
+            },
+            "ZeroAllocJobScheduler": {
+              "target": "Package",
+              "version": "[1.1.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\Arch.Persistence.csproj": {
+      "version": "2.1.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\Arch.Persistence.csproj",
+        "projectName": "Arch.Persistence",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\Arch.Persistence.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Persistence\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net6.0",
+          "net7.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net6.0": {
+            "targetAlias": "net6.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          },
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "noWarn": [
+            "NU1902"
+          ],
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "dependencies": {
+            "MessagePack": {
+              "target": "Package",
+              "version": "[2.6.100-alpha, )"
+            },
+            "Utf8Json": {
+              "target": "Package",
+              "version": "[1.3.7, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "dependencies": {
+            "MessagePack": {
+              "target": "Package",
+              "version": "[2.6.100-alpha, )"
+            },
+            "Utf8Json": {
+              "target": "Package",
+              "version": "[1.3.7, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "dependencies": {
+            "MessagePack": {
+              "target": "Package",
+              "version": "[2.6.100-alpha, )"
+            },
+            "Utf8Json": {
+              "target": "Package",
+              "version": "[1.3.7, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\Arch.Relationships.csproj": {
+      "version": "2.1.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\Arch.Relationships.csproj",
+        "projectName": "Arch.Relationships",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\Arch.Relationships.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.Relationships\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net6.0",
+          "net7.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net6.0": {
+            "targetAlias": "net6.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          },
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\Arch.System.csproj": {
+      "version": "1.1.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\Arch.System.csproj",
+        "projectName": "Arch.System",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\Arch.System.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch.Extended\\Arch.System\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net6.0",
+          "net7.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net6.0": {
+            "targetAlias": "net6.0",
+            "projectReferences": {}
+          },
+          "net7.0": {
+            "targetAlias": "net7.0",
+            "projectReferences": {}
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "net7.0": {
+          "targetAlias": "net7.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[7.0.20, 7.0.20]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj": {
+      "version": "2.1.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj",
+        "projectName": "Arch",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\Arch.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\Arch\\src\\Arch\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net6.0",
+          "net8.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net6.0": {
+            "targetAlias": "net6.0",
+            "projectReferences": {}
+          },
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net6.0": {
+          "targetAlias": "net6.0",
+          "dependencies": {
+            "Arch.LowLevel": {
+              "target": "Package",
+              "version": "[1.1.5, )"
+            },
+            "Collections.Pooled": {
+              "target": "Package",
+              "version": "[2.0.0-preview.27, )"
+            },
+            "CommunityToolkit.HighPerformance": {
+              "target": "Package",
+              "version": "[8.2.2, )"
+            },
+            "Microsoft.Extensions.ObjectPool": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "System.Runtime.CompilerServices.Unsafe": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "ZeroAllocJobScheduler": {
+              "target": "Package",
+              "version": "[1.1.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[6.0.36, 6.0.36]"
+            }
+          ],
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        },
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Arch.LowLevel": {
+              "target": "Package",
+              "version": "[1.1.5, )"
+            },
+            "Collections.Pooled": {
+              "target": "Package",
+              "version": "[2.0.0-preview.27, )"
+            },
+            "CommunityToolkit.HighPerformance": {
+              "target": "Package",
+              "version": "[8.2.2, )"
+            },
+            "Microsoft.Extensions.ObjectPool": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "System.Runtime.CompilerServices.Unsafe": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "ZeroAllocJobScheduler": {
+              "target": "Package",
+              "version": "[1.1.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "dependencies": {
+            "Arch.LowLevel": {
+              "target": "Package",
+              "version": "[1.1.5, )"
+            },
+            "Collections.Pooled": {
+              "target": "Package",
+              "version": "[2.0.0-preview.27, )"
+            },
+            "CommunityToolkit.HighPerformance": {
+              "target": "Package",
+              "version": "[8.2.2, )"
+            },
+            "Microsoft.Extensions.ObjectPool": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "System.Runtime.CompilerServices.Unsafe": {
+              "target": "Package",
+              "version": "[6.0.0, )"
+            },
+            "ZeroAllocJobScheduler": {
+              "target": "Package",
+              "version": "[1.1.2, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj",
+        "projectName": "DotRecast.Core",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0",
+          "net9.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          },
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {}
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        },
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\DotRecast.Detour.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\DotRecast.Detour.csproj",
+        "projectName": "DotRecast.Detour",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\DotRecast.Detour.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Detour\\obj\\",
+        "projectStyle": "PackageReference",
+        "crossTargeting": true,
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0",
+          "net9.0",
+          "netstandard2.1"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj"
+              }
+            }
+          },
+          "net9.0": {
+            "targetAlias": "net9.0",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj"
+              }
+            }
+          },
+          "netstandard2.1": {
+            "targetAlias": "netstandard2.1",
+            "projectReferences": {
+              "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj": {
+                "projectPath": "C:\\001_AI\\LudotsProd\\src\\Libraries\\DotRecast\\src\\DotRecast.Core\\DotRecast.Core.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        },
+        "net9.0": {
+          "targetAlias": "net9.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        },
+        "netstandard2.1": {
+          "targetAlias": "netstandard2.1",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "NETStandard.Library": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312\\RuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\Ludots.Platform.Abstractions.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\Ludots.Platform.Abstractions.csproj",
+        "projectName": "Ludots.Platform.Abstractions",
+        "projectPath": "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\Ludots.Platform.Abstractions.csproj",
+        "packagesPath": "C:\\Users\\sietg\\AppData\\Local\\Temp\\cursor-sandbox-cache\\f136fc4c947f2b99d57cfaec3930baba\\nuget",
+        "outputPath": "C:\\001_AI\\LudotsProd\\src\\Platform\\Ludots.Platform.Abstractions\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\sietg\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "9.0.300"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.312/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

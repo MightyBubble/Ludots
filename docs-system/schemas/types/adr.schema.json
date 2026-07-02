@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/adr.schema.json",
+  "title": "架构决策记录 (ADR)",
+  "description": "记录一次决策的背景、结论、后果与被否方案。决策一旦 accepted 不再改写，只能被 supersede。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "adr" },
+    "decisionStatus": {
+      "type": "string",
+      "enum": ["proposed", "accepted", "superseded", "rejected"]
+    },
+    "decisionDate": { "type": "string", "format": "date" },
+    "context": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "decision": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "consequences": {
+      "type": "object",
+      "properties": {
+        "positive": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+        "negative": { "type": "array", "items": { "type": "string", "maxLength": 280 } }
+      },
+      "required": ["positive", "negative"],
+      "additionalProperties": false
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "option": { "type": "string", "maxLength": 120 },
+          "whyNot": { "type": "string", "maxLength": 400 }
+        },
+        "required": ["option", "whyNot"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["decisionStatus", "decisionDate", "context", "decision", "consequences", "alternatives"],
+  "unevaluatedProperties": false
+}

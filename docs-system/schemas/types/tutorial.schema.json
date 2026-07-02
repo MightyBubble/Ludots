@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/tutorial.schema.json",
+  "title": "教程",
+  "description": "学习导向，端到端从零跑通，含前置条件与预期结果。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "tutorial" },
+    "goal": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "prerequisites": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string", "maxLength": 120 },
+          "instruction": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+          "expected": { "type": "string", "maxLength": 400 }
+        },
+        "required": ["title", "instruction"],
+        "additionalProperties": false
+      }
+    },
+    "result": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["goal", "steps", "result"],
+  "unevaluatedProperties": false
+}

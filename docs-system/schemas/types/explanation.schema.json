@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/explanation.schema.json",
+  "title": "概念解释",
+  "description": "面向理解的概念/原理说明（为什么这样设计），不含操作步骤。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "explanation" },
+    "body": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "concepts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string", "maxLength": 80 },
+          "explanation": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+        },
+        "required": ["term", "explanation"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["body"],
+  "unevaluatedProperties": false
+}

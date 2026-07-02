@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1.0",
+  "id": "spatial-and-scale.glossary",
+  "type": "glossary",
+  "domain": "spatial-and-scale",
+  "tier": "formal",
+  "title": "空间与尺度术语表",
+  "summary": "空间尺度领域术语的唯一定义源；可绑定代码常量显示实时值。",
+  "status": "active",
+  "ssot": true,
+  "ssotTopic": "terms",
+  "owner": "TBD",
+  "updated": "2026-06-27",
+  "reviewBy": "2026-09-27",
+  "supersedes": [],
+  "relatedCode": ["src/Core/Spatial/SpatialScaleDefaults.cs"],
+  "relatedDocs": [],
+  "terms": [
+    {
+      "id": "cell-cm",
+      "term": "CellCm",
+      "aliases": ["cell size"],
+      "definition": "sim 原子 cell 的厘米边长，所有 cm/cells 换算的唯一基准。",
+      "owner": "SpatialScaleDefaults.CellCm",
+      "constantRef": "SpatialScaleDefaults.CellCm",
+      "sourceCode": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    {
+      "id": "macro-tile",
+      "term": "MacroTile",
+      "definition": "256-cell 的 IO/寻址宏块；世界宽高以 MacroTile 数量计。",
+      "owner": "MapTile.Size",
+      "constantRef": "SpatialScaleDefaults.MacroTileCells",
+      "sourceCode": "src/Core/Spatial/SpatialScaleDefaults.cs",
+      "seeAlso": ["cell-cm"]
+    }
+  ]
+}

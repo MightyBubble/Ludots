@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/contract.schema.json",
+  "title": "契约 / 边界文档",
+  "description": "跨层不可破坏的接口约定。各方、保证项（由谁强制）、禁止事项，可含时序。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "contract" },
+    "parties": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 120 } },
+    "guarantees": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "statement": { "type": "string", "maxLength": 400 },
+          "enforcedBy": { "type": "string", "description": "强制该保证的真实代码路径/符号，CI 校验路径存在。" }
+        },
+        "required": ["id", "statement", "enforcedBy"],
+        "additionalProperties": false
+      }
+    },
+    "forbidden": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "sequence": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["parties", "guarantees", "forbidden"],
+  "unevaluatedProperties": false
+}

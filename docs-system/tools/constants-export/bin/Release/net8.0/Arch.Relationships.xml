@@ -1,0 +1,371 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Arch.Relationships</name>
+    </assembly>
+    <members>
+        <member name="T:Arch.Relationships.EntityRelationshipExtensions">
+            <summary>
+                The <see cref="T:Arch.Relationships.EntityRelationshipExtensions"/> class
+                stores several methods to forward relationship methods from the <see cref="T:Arch.Core.World"/> to the <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.AddRelationship``1(Arch.Core.Entity@,Arch.Core.Entity,``0)">
+            <summary>
+                Adds a new relationship to the <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="relationship">The relationship instance.</param>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.SetRelationship``1(Arch.Core.Entity@,Arch.Core.Entity,``0)">
+            <summary>
+                Sets a relationship to the <see cref="T:Arch.Core.Entity"/> by updating its relationship data.
+            </summary>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="relationship">The relationship instance.</param>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.HasRelationship``1(Arch.Core.Entity@,Arch.Core.Entity)">
+            <summary>
+                Checks if an <see cref="T:Arch.Core.Entity"/> has a certain relationship.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>True if it has the desired relationship, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.HasRelationship``1(Arch.Core.Entity@)">
+            <summary>
+                Checks if an <see cref="T:Arch.Core.Entity"/> has a certain relationship.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>True if it has the desired relationship, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.GetRelationship``1(Arch.Core.Entity@,Arch.Core.Entity)">
+            <summary>
+                Returns a relationship of an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>The relationship.</returns>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.GetRelationships``1(Arch.Core.Entity@)">
+            <summary>
+                Returns a relationship of an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>The <see cref="T:Arch.Relationships.Relationship`1"/>.</returns>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.TryGetRelationship``1(Arch.Core.Entity@,Arch.Core.Entity,``0@)">
+            <summary>
+                Tries to return an <see cref="T:Arch.Core.Entity"/>s relationship of the specified type.
+                Will copy the relationship if its a struct.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="relationship">The found relationship.</param>
+            <returns>True if it exists, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.EntityRelationshipExtensions.RemoveRelationship``1(Arch.Core.Entity@,Arch.Core.Entity)">
+            <summary>
+                Removes a relationship from an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="source">The <see cref="T:Arch.Core.Entity"/> to remove the relationship from.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+        </member>
+        <member name="T:Arch.Relationships.SortedListEnumerator`1">
+            <summary>
+                The <see cref="T:Arch.Relationships.SortedListEnumerator`1"/> struct
+                is a enumerator to enumerate a passed <see cref="T:System.Collections.Generic.SortedList`2"/> in an efficient way. 
+            </summary>
+            <typeparam name="TValue"></typeparam>
+        </member>
+        <member name="M:Arch.Relationships.SortedListEnumerator`1.#ctor(System.Collections.Generic.SortedList{Arch.Core.Entity,`0})">
+            <summary>
+            Constructor.
+            </summary>
+            <param name="list">List.</param>
+        </member>
+        <member name="P:Arch.Relationships.SortedListEnumerator`1.Current">
+            <summary>
+            Current.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.SortedListEnumerator`1.MoveNext">
+            <summary>
+            Moves to the next element in the enumerator.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.SortedListEnumerator`1.Reset">
+            <summary>
+            Resets the enumerator to its initial position.
+            </summary>
+        </member>
+        <member name="T:Arch.Relationships.InRelationship">
+            <summary>
+                The struct <see cref="T:Arch.Relationships.InRelationship"/>
+                represents a reference to a <see cref="T:Arch.Relationships.Relationship`1"/>.
+                It sits on an <see cref="T:Arch.Core.Entity"/> to indicate in which other <see cref="T:Arch.Relationships.Relationship`1"/>s it is involved in.
+            </summary>
+        </member>
+        <member name="F:Arch.Relationships.InRelationship.ComponentTypeId">
+            <summary>
+                The id of the <see cref="T:Arch.Relationships.Relationship`1"/>-Component that this <see cref="T:Arch.Relationships.InRelationship"/> points to.
+                Basically the <see cref="T:Arch.Relationships.Relationship`1"/> the <see cref="T:Arch.Core.Entity"/> is in.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.InRelationship.#ctor(Arch.Core.ComponentType)">
+            <summary>
+                Creates a new <see cref="T:Arch.Relationships.InRelationship"/> instance.
+            </summary>
+            <param name="targetRelation">The <see cref="T:Arch.Core.ComponentType"/> that represents the relation.</param>
+        </member>
+        <member name="M:Arch.Relationships.InRelationship.#ctor(System.Int32)">
+            <summary>
+                Creates a new <see cref="T:Arch.Relationships.InRelationship"/> instance.
+            <remarks>Mostly for binary serialization.</remarks>
+            </summary>
+            <param name="componentTypeId">The <see cref="F:Arch.Relationships.InRelationship.ComponentTypeId"/>.</param>
+        </member>
+        <member name="T:Arch.Relationships.IRelationship">
+            <summary>
+                The <see cref="T:Arch.Relationships.IRelationship"/> interface
+                is an interface that provides all methods required to act as a relationship.
+            </summary>
+        </member>
+        <member name="P:Arch.Relationships.IRelationship.Count">
+            <summary>
+                The amount of relationships currently in the buffer.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.IRelationship.Destroy(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Removes the buffer as a component from the given world and entity.
+            </summary>
+            <param name="world"></param>
+            <param name="source"></param>
+        </member>
+        <member name="M:Arch.Relationships.IRelationship.Remove(Arch.Core.Entity)">
+            <summary>
+                Removes the relationship targeting <paramref name="target"/> from this buffer.
+            </summary>
+            <param name="target">The <see cref="T:Arch.Core.Entity"/> in the relationship to remove.</param>
+        </member>
+        <member name="T:Arch.Relationships.Relationship`1">
+            <summary>
+                A buffer storing relationships of <see cref="T:Arch.Core.Entity"/> and <typeparamref name="T"/>.
+            </summary>
+            <typeparam name="T">The type of the second relationship element.</typeparam>
+        </member>
+        <member name="F:Arch.Relationships.Relationship`1.Elements">
+            <summary>
+                Its relations. 
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.#ctor">
+            <summary>
+                Initializes a new instance of an <see cref="T:Arch.Relationships.Relationship`1"/>.
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.#ctor(System.Collections.Generic.SortedList{Arch.Core.Entity,`0})">
+            <summary>
+                Initializes a new instance of an <see cref="T:Arch.Relationships.Relationship`1"/>.
+            <remarks>Mostly for binary serialization.</remarks>
+            </summary>
+        </member>
+        <member name="P:Arch.Relationships.Relationship`1.Arch#Relationships#IRelationship#Count">
+            <inheritdoc/>
+        </member>
+        <member name="P:Arch.Relationships.Relationship`1.Count">
+            <inheritdoc cref="P:Arch.Relationships.IRelationship.Count"/>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Add(`0@,Arch.Core.Entity)">
+            <summary>
+                Adds a relationship to this buffer.
+            </summary>
+            <param name="relationship">The instance of the relationship.</param>
+            <param name="target">The target of the relationship.</param>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Set(Arch.Core.Entity,`0)">
+            <summary>
+                Sets the stored <typeparamref name="T"/> for the given <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <param name="data">The data to store.</param>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Contains(Arch.Core.Entity)">
+            <summary>
+                Determines whether the given <see cref="T:Arch.Relationships.Relationship`1"/> contains the passed <see cref="T:Arch.Core.Entity"/> or not.
+            </summary>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <returns>True or false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Get(Arch.Core.Entity)">
+            <summary>
+                Returns the stored <typeparamref name="T"/> for the given <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <returns>The stored <typeparamref name="T"/>.</returns>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.TryGetValue(Arch.Core.Entity,`0@)">
+            <summary>
+                Returns the stored <typeparamref name="T"/> for the given <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <param name="value">The stored <typeparamref name="T"/>.</param>
+            <returns>The stored <typeparamref name="T"/>.</returns>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Arch#Relationships#IRelationship#Remove(Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Remove(Arch.Core.Entity)">
+            <inheritdoc cref="M:Arch.Relationships.IRelationship.Remove(Arch.Core.Entity)"/>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Arch#Relationships#IRelationship#Destroy(Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.Destroy(Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc cref="M:Arch.Relationships.IRelationship.Destroy(Arch.Core.World,Arch.Core.Entity)"/>
+        </member>
+        <member name="M:Arch.Relationships.Relationship`1.GetEnumerator">
+            <summary>
+                Creates a new <see cref="T:Arch.Relationships.SortedListEnumerator`1"/>.
+            </summary>
+            <returns>The new <see cref="T:Arch.Relationships.SortedListEnumerator`1"/>.</returns>
+        </member>
+        <member name="T:Arch.Relationships.WorldRelationshipExtensions">
+            <summary>
+                The <see cref="T:Arch.Relationships.WorldRelationshipExtensions"/> class
+                stores several extension methods for relationships handling. 
+            </summary>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.AddRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity,``0@)">
+            <summary>
+                Adds a new relationship to the <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="relationship">The relationship instance.</param>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.AddOrGetRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity,``0@)">
+            <summary>
+                Ensures the existence of a relationship on an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="relationship">The relationship value used if its being added.</param>
+            <returns>The relationship.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.AddOrGetRelationships``1(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Ensures the existence of a buffer of relationships on an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationships.</param>
+            <typeparam name="T">The relationship type.</typeparam>
+            <returns>The relationships.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.SetRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity,``0@)">
+            <summary>
+                Sets the existing relationship data.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="relationship">The new data.</param>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.HasRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity)">
+            <summary>
+                Checks if an <see cref="T:Arch.Core.Entity"/> has a certain relationship.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>True if it has the desired relationship, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.HasRelationship``1(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Checks if an <see cref="T:Arch.Core.Entity"/> has a certain relationship.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>True if it has the desired relationship, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.GetRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity)">
+            <summary>
+                Returns a relationship of an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>The relationship.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.TryGetRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity,``0@)">
+            <summary>
+                Tries to return an <see cref="T:Arch.Core.Entity"/>s relationship of the specified type.
+                Will copy the relationship if its a struct.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <param name="relationship">The found relationship.</param>
+            <returns>True if it exists, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.GetRelationships``1(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Returns all relationships of the given type of an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The source <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+            <returns>A reference to the relationships.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.TryGetRelationships``1(Arch.Core.World,Arch.Core.Entity,Arch.Relationships.Relationship{``0}@)">
+            <summary>
+                Tries to return an <see cref="T:Arch.Core.Entity"/>s relationships of the specified type.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <param name="relationships">The found relationships.</param>
+            <returns>True if it exists, otherwise false.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.TryGetRefRelationships``1(Arch.Core.World,Arch.Core.Entity,System.Boolean@)">
+            <summary>
+                Tries to return a reference to an <see cref="T:Arch.Core.Entity"/>s relationships of the
+                specified type.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <param name="exists">True if it exists, otherwise false.</param>
+            <returns>A reference to the relationships.</returns>
+        </member>
+        <member name="M:Arch.Relationships.WorldRelationshipExtensions.RemoveRelationship``1(Arch.Core.World,Arch.Core.Entity,Arch.Core.Entity)">
+            <summary>
+                Removes a relationship from an <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+            <typeparam name="T">The relationship type.</typeparam>
+            <param name="world">World.</param>
+            <param name="source">The <see cref="T:Arch.Core.Entity"/> to remove the relationship from.</param>
+            <param name="target">The target <see cref="T:Arch.Core.Entity"/> of the relationship.</param>
+        </member>
+    </members>
+</doc>

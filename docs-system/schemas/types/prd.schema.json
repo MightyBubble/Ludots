@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/prd.schema.json",
+  "title": "产品需求文档 (PRD)",
+  "description": "从产品视角定义『为什么 / 要什么』。需求项字段化、可优先级排序、可验收。不写实现方案（那是 technical-design / architecture）。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "prd" },
+    "problem": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "goals": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 280 } },
+    "nonGoals": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "personas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "name": { "type": "string", "maxLength": 80 }, "need": { "type": "string", "maxLength": 280 } },
+        "required": ["name", "need"],
+        "additionalProperties": false
+      }
+    },
+    "requirements": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "statement": { "type": "string", "maxLength": 400 },
+          "priority": { "type": "string", "enum": ["must", "should", "could", "wont"] },
+          "rationale": { "type": "string", "maxLength": 280 }
+        },
+        "required": ["id", "statement", "priority"],
+        "additionalProperties": false
+      }
+    },
+    "successMetrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": { "metric": { "type": "string", "maxLength": 120 }, "target": { "type": "string", "maxLength": 120 } },
+        "required": ["metric", "target"],
+        "additionalProperties": false
+      }
+    },
+    "openQuestions": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "stakeholders": { "type": "array", "items": { "type": "string", "maxLength": 80 } }
+  },
+  "required": ["problem", "goals", "requirements"],
+  "unevaluatedProperties": false
+}

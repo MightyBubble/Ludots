@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/constants-manifest.schema.json",
+  "title": "代码常量清单（生成物）",
+  "description": "由 C# 常量导出器从编译后的代码生成，是文档引用代码常量的解析源。禁止手写；CI 每次重新生成并要求 git diff 干净，保证清单永远与代码一致。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "generatedAt": { "type": "string", "description": "生成时间戳。" },
+    "generator": { "type": "string", "description": "生成工具标识。" },
+    "constants": {
+      "type": "object",
+      "description": "key = 完全限定符号名，如 SpatialScaleDefaults.CellCm。",
+      "patternProperties": {
+        "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)+$": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "string" },
+            "type": { "type": "string" },
+            "unit": { "type": "string" },
+            "declaredIn": { "type": "string", "description": "源码相对路径（best-effort）。" },
+            "summary": { "type": "string", "description": "来自 XML doc / 属性，可选。" }
+          },
+          "required": ["value", "type"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["schemaVersion", "constants"],
+  "additionalProperties": false
+}

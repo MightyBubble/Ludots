@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "1.0",
+  "id": "spatial-and-scale.scale-ssot",
+  "type": "ssot",
+  "domain": "spatial-and-scale",
+  "tier": "formal",
+  "title": "空间尺度与分辨率 SSOT",
+  "summary": "Cell/MacroTile/Chunk/Flow 等空间尺度的唯一权威定义：每个单位的 owner、单位、约束与派生关系。",
+  "status": "active",
+  "ssot": true,
+  "ssotTopic": "scale",
+  "owner": "TBD",
+  "updated": "2026-06-27",
+  "reviewBy": "2026-09-27",
+  "supersedes": [],
+  "relatedCode": [
+    "src/Core/Spatial/SpatialScaleDefaults.cs",
+    "src/Core/Spatial/WorldExtentSpec.cs",
+    "src/Core/Spatial/WorldSizeSpec.cs"
+  ],
+  "relatedDocs": [],
+  "tags": ["scale", "spatial"],
+  "definitions": [
+    {
+      "term": "CellCm",
+      "owner": "SpatialScaleDefaults.CellCm / BoardConfig.GridCellSizeCm",
+      "unit": "cm",
+      "valueRef": "SpatialScaleDefaults.CellCm",
+      "configurable": true,
+      "constraint": "唯一基准单位；所有 cm/cells 换算必须从这里解释；必须 > 0。",
+      "sourceCode": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    {
+      "term": "MacroTileCells",
+      "owner": "MapTile.Size",
+      "unit": "cells",
+      "valueRef": "SpatialScaleDefaults.MacroTileCells",
+      "configurable": false,
+      "constraint": "尺寸不可配；常量模块只能引用 MapTile.Size，不能复制第二个 256 owner。",
+      "sourceCode": "src/Core/Spatial/SpatialScaleDefaults.cs"
+    },
+    {
+      "term": "WorldExtentSpec",
+      "owner": "WorldExtentSpec",
+      "unit": "cells / cm",
+      "configurable": false,
+      "constraint": "由 WidthInMacroTiles * MacroTileCells * CellCm 派生；产出 WorldSizeSpec，不替换它。",
+      "sourceCode": "src/Core/Spatial/WorldExtentSpec.cs"
+    }
+  ],
+  "invariants": [
+    "CellCm 是唯一平面基准单位，其余 cm/cells 换算必须以它为参照。",
+    "WorldExtent 由 MacroTile 数量派生，不是 TerrainChunk 个数。"
+  ],
+  "antiPatterns": [
+    "缺失尺度时静默 fallback 一个默认值。",
+    "为已有 owner 复制一个平行的尺度 owner 或别名。"
+  ],
+  "body": [
+    { "kind": "callout", "level": "warn", "text": "FlowCell / AvoidanceHashCell / PhysicsBroadphaseCell 默认可等于 CellCm，但各自 owner 独立，不是 CellCm 的别名。" },
+    { "kind": "constantRef", "symbol": "SpatialScaleDefaults.PartitionChunkCells", "note": "查询分区块边长，值由清单解析，文档不抄写。" },
+    { "kind": "termRef", "id": "macro-tile" },
+    { "kind": "diagram", "format": "mermaid", "caption": "尺度派生关系", "source": "graph LR; CellCm --> MacroTileCells --> WorldExtentSpec --> WorldSizeSpec" }
+  ]
+}

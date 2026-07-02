@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/blocks.schema.json",
+  "title": "Ludots 受约束内容块模型",
+  "description": "正文不允许自由 markdown 字符串。需要散文时，必须用受约束的块数组：每块有明确 kind、字段化、文本有长度上限。可视化通过 diagram / codeRef 块嵌入。",
+  "$defs": {
+    "blocks": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "block": {
+      "oneOf": [
+        { "$ref": "#/$defs/textBlock" },
+        { "$ref": "#/$defs/listBlock" },
+        { "$ref": "#/$defs/codeBlock" },
+        { "$ref": "#/$defs/codeRefBlock" },
+        { "$ref": "#/$defs/constantRefBlock" },
+        { "$ref": "#/$defs/termRefBlock" },
+        { "$ref": "#/$defs/diagramBlock" },
+        { "$ref": "#/$defs/tableBlock" },
+        { "$ref": "#/$defs/calloutBlock" }
+      ]
+    },
+    "textBlock": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "text" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 600 }
+      },
+      "required": ["kind", "text"],
+      "additionalProperties": false
+    },
+    "listBlock": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "list" },
+        "ordered": { "type": "boolean", "default": false },
+        "items": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "maxLength": 280 }
+        }
+      },
+      "required": ["kind", "items"],
+      "additionalProperties": false
+    },
+    "codeBlock": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "code" },
+        "lang": { "type": "string" },
+        "code": { "type": "string", "minLength": 1 },
+        "caption": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["kind", "lang", "code"],
+      "additionalProperties": false
+    },
+    "codeRefBlock": {
+      "type": "object",
+      "description": "引用真实源码位置而非粘贴。CI 校验 path 存在。",
+      "properties": {
+        "kind": { "const": "codeRef" },
+        "path": { "type": "string", "minLength": 1 },
+        "lines": { "type": "string", "pattern": "^\\d+(-\\d+)?$" },
+        "note": { "type": "string", "maxLength": 280 }
+      },
+      "required": ["kind", "path"],
+      "additionalProperties": false
+    },
+    "constantRefBlock": {
+      "type": "object",
+      "description": "对代码常量 SSOT 的引用。只写符号，不写值；值由站点从 generated/constants.json 解析注入。CI 校验 symbol 在清单中存在。",
+      "properties": {
+        "kind": { "const": "constantRef" },
+        "symbol": { "type": "string", "minLength": 1, "description": "如 SpatialScaleDefaults.CellCm，必须是 constants 清单的 key。" },
+        "display": { "type": "string", "maxLength": 80, "description": "可选展示别名；不影响取值。" },
+        "note": { "type": "string", "maxLength": 280 }
+      },
+      "required": ["kind", "symbol"],
+      "additionalProperties": false
+    },
+    "termRefBlock": {
+      "type": "object",
+      "description": "对术语 SSOT（glossary）的引用。定义只在 glossary 存一份。CI 校验 id 存在。",
+      "properties": {
+        "kind": { "const": "termRef" },
+        "id": { "type": "string", "minLength": 1, "description": "glossary 术语 id。" },
+        "display": { "type": "string", "maxLength": 80 }
+      },
+      "required": ["kind", "id"],
+      "additionalProperties": false
+    },
+    "diagramBlock": {
+      "type": "object",
+      "description": "可视化入口：mermaid 源码内联，或引用 assets 下的 svg/png/交互 html。",
+      "properties": {
+        "kind": { "const": "diagram" },
+        "format": { "type": "string", "enum": ["mermaid", "svg-asset", "image-asset", "embed-html"] },
+        "source": { "type": "string", "description": "format=mermaid 时为 mermaid 源码。" },
+        "src": { "type": "string", "description": "format 为 asset/embed 时为 assets 相对路径。" },
+        "caption": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["kind", "format", "caption"],
+      "additionalProperties": false
+    },
+    "tableBlock": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "table" },
+        "columns": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "rows": {
+          "type": "array",
+          "items": { "type": "array", "items": { "type": "string" } }
+        },
+        "caption": { "type": "string", "maxLength": 200 }
+      },
+      "required": ["kind", "columns", "rows"],
+      "additionalProperties": false
+    },
+    "calloutBlock": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "callout" },
+        "level": { "type": "string", "enum": ["info", "warn", "danger"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 400 }
+      },
+      "required": ["kind", "level", "text"],
+      "additionalProperties": false
+    }
+  }
+}

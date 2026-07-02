@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/reference.schema.json",
+  "title": "通用参考 / 查表",
+  "description": "通用查表型参考（非配置、非 API）。用块模型承载表格与说明。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "reference" },
+    "body": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["body"],
+  "unevaluatedProperties": false
+}

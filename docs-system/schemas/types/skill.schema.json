@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/skill.schema.json",
+  "title": "Skill 文档",
+  "description": "共享 agent skill 规格：何时使用、过程步骤、输入输出与护栏。skillId 必须与 skills/registry.json 注册项一致（CI 交叉校验）。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "skill" },
+    "skillId": { "type": "string", "minLength": 1, "maxLength": 80, "description": "与 skills/registry.json 中的注册 id 一致。" },
+    "registryRef": { "type": "string", "description": "skills/registry.json 路径，CI 校验存在且包含 skillId。" },
+    "whenToUse": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "inputs": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "procedure": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "step": { "type": "integer", "minimum": 1 },
+          "instruction": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+        },
+        "required": ["step", "instruction"],
+        "additionalProperties": false
+      }
+    },
+    "outputs": { "type": "array", "items": { "type": "string", "maxLength": 280 } },
+    "guardrails": { "type": "array", "items": { "type": "string", "maxLength": 280 }, "description": "必须遵守 / 禁止的事项。" }
+  },
+  "required": ["skillId", "whenToUse", "procedure"],
+  "unevaluatedProperties": false
+}

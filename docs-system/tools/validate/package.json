@@ -1,0 +1,15 @@
+﻿{
+  "name": "ludots-docs-validate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "description": "Ludots structured-docs governance validator (JSON Schema + cross-reference + freshness).",
+  "bin": { "ludots-docs-validate": "validate.js" },
+  "scripts": {
+    "validate": "node validate.js"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  }
+}

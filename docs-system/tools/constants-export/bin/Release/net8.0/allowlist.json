@@ -1,0 +1,10 @@
+{
+  "note": "导出器允许列表：列出要导出为文档常量 SSOT 的静态类。无需改动引擎代码（无需 [DocConstant] 属性）；导出该类所有 public const / static readonly 基元字段。也支持可选 [DocConstant(Unit=...)] 覆盖单位。",
+  "types": [
+    {
+      "type": "Ludots.Core.Spatial.SpatialScaleDefaults",
+      "declaredIn": "src/Core/Spatial/SpatialScaleDefaults.cs",
+      "defaultUnit": ""
+    }
+  ]
+}

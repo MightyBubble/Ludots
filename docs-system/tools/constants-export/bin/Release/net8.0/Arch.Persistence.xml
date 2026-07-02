@@ -1,0 +1,582 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Arch.Persistence</name>
+    </assembly>
+    <members>
+        <member name="T:Arch.Persistence.SingleEntityFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.SingleEntityFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter"/> to (de)serialize a single <see cref="T:Arch.Core.Entity"/>to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.SingleEntityFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize a single <see cref="T:Arch.Core.Entity"/>to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.SingleEntityFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.Entity,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.SingleEntityFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="P:Arch.Persistence.SingleEntityFormatter.EntityWorld">
+            <summary>
+                The <see cref="P:Arch.Persistence.SingleEntityFormatter.EntityWorld"/> the entity belongs to. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.SingleEntityFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.Entity,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.SingleEntityFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.EntityFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.EntityFormatter"/> class
+                is a formatter that (de)serializes <see cref="T:Arch.Core.Entity"/> structs. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.EntityFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.Entity,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.EntityFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="P:Arch.Persistence.EntityFormatter.WorldId">
+            <summary>
+                The <see cref="P:Arch.Core.World.Id"/> all deserialized <see cref="T:Arch.Core.Entity"/>s will belong to.
+                <remarks>Due to the nature of deserialisation and changing world landscape we need to assign new WorldIds to the deserialized entities.</remarks>
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.EntityFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.Entity,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.EntityFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.ArrayFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ArrayFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:System.Array"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ArrayFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:System.Array"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArrayFormatter.Serialize(MessagePack.MessagePackWriter@,System.Array,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ArrayFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ArrayFormatter.Serialize(Utf8Json.JsonWriter@,System.Array,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.ArrayFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.JaggedArrayFormatter`1">
+            <summary>
+                The <see cref="T:Arch.Persistence.JaggedArrayFormatter`1"/> class
+                (de)serializes a <see cref="T:Arch.LowLevel.Jagged.JaggedArray`1"/>.
+            </summary>
+            <typeparam name="T">The type stored in the <see cref="T:Arch.LowLevel.Jagged.JaggedArray`1"/>.</typeparam>
+            <summary>
+                The <see cref="T:Arch.Persistence.JaggedArrayFormatter`1"/> class
+                (de)serializes a <see cref="T:Arch.LowLevel.Jagged.JaggedArray`1"/>.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.JaggedArrayFormatter`1.#ctor(`0)">
+            <summary>
+            Constructor.
+            </summary>
+            <param name="filler">Filler.</param>
+        </member>
+        <member name="M:Arch.Persistence.JaggedArrayFormatter`1.Serialize(MessagePack.MessagePackWriter@,Arch.LowLevel.Jagged.JaggedArray{`0},MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.JaggedArrayFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.JaggedArrayFormatter`1.Serialize(Utf8Json.JsonWriter@,Arch.LowLevel.Jagged.JaggedArray{`0},Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.JaggedArrayFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.ComponentTypeFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.ComponentType"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.ComponentType"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ComponentTypeFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.ComponentType,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ComponentTypeFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ComponentTypeFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.ComponentType,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.ComponentTypeFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.SignatureFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Signature"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Signature"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.SignatureFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.Signature,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.SignatureFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.SignatureFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.Signature,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.SignatureFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.EntitySlotFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.ComponentType"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ComponentTypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.ComponentType"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.EntitySlotFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.EntityData,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.EntitySlotFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.EntitySlotFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.EntityData,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.EntitySlotFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.WorldFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.WorldFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.World"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.WorldFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.World"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.WorldFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.World,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.WorldFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.WorldFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.World,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.WorldFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.ArchetypeFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ArchetypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Archetype"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ArchetypeFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Archetype"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchetypeFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.Archetype,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ArchetypeFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="P:Arch.Persistence.ArchetypeFormatter.World">
+            <summary>
+                The <see cref="P:Arch.Persistence.ArchetypeFormatter.World"/> which is being used by this formatter during serialisation/deserialisation. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchetypeFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.Archetype,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.ArchetypeFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.ChunkFormatter">
+            <summary>
+                The <see cref="T:Arch.Persistence.ChunkFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Chunk"/>s to or from json.
+            </summary>
+            <summary>
+                The <see cref="T:Arch.Persistence.ChunkFormatter"/> class
+                is a <see cref="T:Utf8Json.IJsonFormatter`1"/> to (de)serialize <see cref="T:Arch.Core.Chunk"/>s to or from json.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ChunkFormatter.Serialize(MessagePack.MessagePackWriter@,Arch.Core.Chunk,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Serialize(MessagePack.MessagePackWriter@,`0,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="M:Arch.Persistence.ChunkFormatter.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)">
+            <inheritdoc cref="M:MessagePack.Formatters.IMessagePackFormatter`1.Deserialize(MessagePack.MessagePackReader@,MessagePack.MessagePackSerializerOptions)"/>
+        </member>
+        <member name="P:Arch.Persistence.ChunkFormatter.World">
+            <summary>
+                The <see cref="P:Arch.Persistence.ChunkFormatter.Archetype"/> the current (de)serialized <see cref="T:Arch.Core.Chunk"/> belongs to.
+                Since chunks do not know this, we need to pass this information along it. 
+            </summary>
+        </member>
+        <member name="P:Arch.Persistence.ChunkFormatter.Archetype">
+            <summary>
+                The <see cref="P:Arch.Persistence.ChunkFormatter.Archetype"/> the current (de)serialized <see cref="T:Arch.Core.Chunk"/> belongs to.
+                Since chunks do not know this, we need to pass this information along it. 
+            </summary>
+        </member>
+        <member name="P:Arch.Persistence.ChunkFormatter.Signature">
+            <summary>
+                The types used in the <see cref="T:Arch.Core.Chunk"/> in each <see cref="T:Arch.Core.Chunk"/> (de)serialized by this formatter.
+                <remarks>Since <see cref="T:Arch.Core.Chunk"/> does not have a reference to them and its controlled by its <see cref="P:Arch.Persistence.ChunkFormatter.Archetype"/>.</remarks>
+            </summary>
+        </member>
+        <member name="P:Arch.Persistence.ChunkFormatter.LookupArray">
+            <summary>
+                The lookup array used by each <see cref="T:Arch.Core.Chunk"/> (de)serialized by this formatter.
+                <remarks>Since <see cref="T:Arch.Core.Chunk"/> does not have a reference to them and its controlled by its <see cref="P:Arch.Persistence.ChunkFormatter.Archetype"/>.</remarks>
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ChunkFormatter.Serialize(Utf8Json.JsonWriter@,Arch.Core.Chunk,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Serialize(Utf8Json.JsonWriter@,`0,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="M:Arch.Persistence.ChunkFormatter.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)">
+            <inheritdoc cref="M:Utf8Json.IJsonFormatter`1.Deserialize(Utf8Json.JsonReader@,Utf8Json.IJsonFormatterResolver)"/>
+        </member>
+        <member name="T:Arch.Persistence.IArchSerializer">
+            <summary>
+                The <see cref="T:Arch.Persistence.IArchSerializer"/> interface
+                represents an interface with shared methods to (de)serialize worlds and entities.
+                <remarks>It might happen that the serialized object is too large to fit into a regular c# byte-array. In this case use the <see cref="T:System.Buffers.IBufferWriter`1"/>-API.</remarks>
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Serializes an <see cref="T:Arch.Core.Entity"/> to a <see cref="T:System.Byte"/>-array.
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(System.IO.Stream,Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Serializes an <see cref="T:Arch.Core.Entity"/> to a <see cref="T:System.IO.Stream"/> e.g. a File or existing array.
+            </summary>
+            <param name="stream">The <see cref="T:System.IO.Stream"/>.</param>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Serializes an <see cref="T:Arch.Core.Entity"/> to a <see cref="T:System.Buffers.IBufferWriter`1"/> e.g. a File or existing array.
+            </summary>
+            <param name="writer">The <see cref="T:System.Buffers.IBufferWriter`1"/>.</param>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Deserialize(Arch.Core.World,System.Byte[])">
+            <summary>
+                Deserializes an <see cref="T:Arch.Core.Entity"/> from its bytes to an real <see cref="T:Arch.Core.Entity"/> in a <see cref="T:Arch.Core.World"/>.
+                <remarks>The new <see cref="F:Arch.Core.Entity.Id"/> and <see cref="F:Arch.Core.Entity.WorldId"/> will differ.</remarks>
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Deserialize(System.IO.Stream,Arch.Core.World)">
+            <summary>
+                Deserializes an <see cref="T:Arch.Core.Entity"/> from its bytes to an real <see cref="T:Arch.Core.Entity"/> in a <see cref="T:Arch.Core.World"/>.
+                <remarks>The new <see cref="F:Arch.Core.Entity.Id"/> and <see cref="F:Arch.Core.Entity.WorldId"/> will differ.</remarks>
+            </summary>
+            <param name="stream">The <see cref="T:System.IO.Stream"/>.</param>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(Arch.Core.World)">
+            <summary>
+                Serializes a <see cref="T:Arch.Core.World"/> to a <see cref="T:System.Byte"/>-array.
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(System.IO.Stream,Arch.Core.World)">
+            <summary>
+                Serializes a <see cref="T:Arch.Core.World"/> to a <see cref="T:System.IO.Stream"/>.
+            </summary>
+            <param name="stream">The <see cref="T:System.IO.Stream"/>.</param>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World)">
+            <summary>
+                Serializes a <see cref="T:Arch.Core.World"/> to a <see cref="T:System.Buffers.IBufferWriter`1"/>.
+            </summary>
+            <param name="writer">The <see cref="T:System.Buffers.IBufferWriter`1"/>.</param>
+            <param name="world">The <see cref="T:Arch.Core.World"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Deserialize(System.Byte[])">
+            <summary>
+                Deserializes a byte-array into a <see cref="T:Arch.Core.World"/>.
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/> as an byte-array.</param>
+            <returns>The new <see cref="T:Arch.Core.World"/>.</returns>
+        </member>
+        <member name="M:Arch.Persistence.IArchSerializer.Deserialize(System.IO.Stream)">
+            <summary>
+                Deserializes a byte-array into a <see cref="T:Arch.Core.World"/>.
+            </summary>
+            <param name="stream">The <see cref="T:System.IO.Stream"/>.</param>
+            <returns>The new <see cref="T:Arch.Core.World"/>.</returns>
+        </member>
+        <member name="T:Arch.Persistence.ArchBinarySerializer">
+            <summary>
+                The <see cref="T:Arch.Persistence.ArchBinarySerializer"/> class
+                represents a binary serializer for arch to (de)serialize single entities and whole worlds by binary. 
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchBinarySerializer._formatters">
+            <summary>
+                The default formatters used to (de)serialize the <see cref="T:Arch.Core.World"/>.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchBinarySerializer._singleEntityFormatters">
+            <summary>
+                The default formatters used to (de)serialize a single <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchBinarySerializer._options">
+            <summary>
+                The standard <see cref="T:MessagePack.MessagePackSerializerOptions"/> for world (de)serialization.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchBinarySerializer._singleEntityOptions">
+            <summary>
+                The standard <see cref="T:MessagePack.MessagePackSerializerOptions"/> for single entity (de)serialization.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.#ctor(MessagePack.Formatters.IMessagePackFormatter[])">
+            <summary>
+                The static constructor gets called during compile time to setup the serializer. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(System.IO.Stream,Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Deserialize(Arch.Core.World,System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Deserialize(System.IO.Stream,Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(System.IO.Stream,Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Deserialize(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchBinarySerializer.Deserialize(System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Arch.Persistence.ArchJsonSerializer">
+            <summary>
+                The <see cref="T:Arch.Persistence.ArchJsonSerializer"/> class
+                represents a json serializer for arch to (de)serialize single entities and whole worlds by binary. 
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchJsonSerializer._formatters">
+            <summary>
+                The default formatters used to (de)serialize the <see cref="T:Arch.Core.World"/>.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.ArchJsonSerializer._singleEntityFormatters">
+            <summary>
+                The default formatters used to (de)serialize a single <see cref="T:Arch.Core.Entity"/>.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.#ctor(Utf8Json.IJsonFormatter[])">
+            <summary>
+                The static constructor gets called during compile time to setup the serializer. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.#ctor(Utf8Json.IJsonFormatter[],Utf8Json.IJsonFormatterResolver[])">
+            <summary>
+                The static constructor gets called during compile time to setup the serializer. 
+                This variant allows custom resolvers to be passed in as well.
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.ToJson(Arch.Core.World)">
+            <summary>
+                Serializes the given <see cref="T:Arch.Core.World"/> to a json-string.
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/> to serialize.</param>
+            <returns>Its json-string.</returns>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.ToJson(Arch.Core.World,Arch.Core.Entity)">
+            <summary>
+                Serializes the given <see cref="T:Arch.Core.Entity"/> to a json-string.
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/> the entity belongs to..</param>
+            <param name="entity">The <see cref="T:Arch.Core.Entity"/>.</param>
+            <returns>Its json-string.</returns>
+            <returns>A json-string of the entity with all its components.</returns>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.FromJson(System.String)">
+            <summary>
+                Deserializes the given json <see cref="T:System.String"/> to a <see cref="T:Arch.Core.World"/>.
+            </summary>
+            <param name="jsonWorld">The json <see cref="T:System.String"/> to deserialize.</param>
+            <returns>A new <see cref="T:Arch.Core.World"/>.</returns>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.FromJson(Arch.Core.World,System.String)">
+            <summary>
+                Deserializes the given json <see cref="T:System.String"/> to a <see cref="T:Arch.Core.World"/>.
+                <remarks>The deserialized <see cref="T:Arch.Core.Entity"/> will receive a new id and a new worldId.</remarks>
+            </summary>
+            <param name="world">The <see cref="T:Arch.Core.World"/> to deserialize the entity into.</param>
+            <param name="jsonEntity">The json <see cref="T:System.String"/> of the entity to deserialize.</param>
+            <returns>A new <see cref="T:Arch.Core.Entity"/>.</returns>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(System.IO.Stream,Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World,Arch.Core.Entity)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Deserialize(Arch.Core.World,System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Deserialize(System.IO.Stream,Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(System.IO.Stream,Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Serialize(System.Buffers.IBufferWriter{System.Byte},Arch.Core.World)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Deserialize(System.Byte[])">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.Persistence.ArchJsonSerializer.Deserialize(System.IO.Stream)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Arch.Persistence.StreamBufferWriter">
+            <summary>
+                The <see cref="T:Arch.Persistence.StreamBufferWriter"/> class
+                is a small wrapper around a <see cref="T:System.IO.Stream"/> implementing a <see cref="T:System.Buffers.IBufferWriter`1"/>.
+                It buffers incoming bytes in an internally stored array and flushes it regulary into the <see cref="F:Arch.Persistence.StreamBufferWriter._destination"/>-<see cref="T:System.IO.Stream"/>.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.StreamBufferWriter._buffer">
+            <summary>
+                The buffer.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.StreamBufferWriter._destination">
+            <summary>
+                The <see cref="T:System.IO.Stream"/>.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.StreamBufferWriter._ownsStream">
+            <summary>
+                If this instance owns the <see cref="F:Arch.Persistence.StreamBufferWriter._destination"/> stream.
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.StreamBufferWriter._position">
+            <summary>
+                The current position and the amount of total leased bytes. 
+            </summary>
+        </member>
+        <member name="F:Arch.Persistence.StreamBufferWriter._leased">
+            <summary>
+                The current position and the amount of total leased bytes. 
+            </summary>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.#ctor(System.IO.Stream,System.Int32,System.Boolean)">
+            <summary>
+                Creates a new <see cref="T:Arch.Persistence.StreamBufferWriter"/> instance.
+            </summary>
+            <param name="destination">The <see cref="T:System.IO.Stream"/>.</param>
+            <param name="bufferSize">The buffer-size of the <see cref="F:Arch.Persistence.StreamBufferWriter._buffer"/>.</param>
+            <param name="ownsStream">If it owns the stream.</param>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.Lease(System.Int32)">
+            <summary>
+                Leases an amount of bytes from the <see cref="F:Arch.Persistence.StreamBufferWriter._buffer"/>.
+            </summary>
+            <param name="sizeHint">The total amount.</param>
+            <returns>The leased amount.</returns>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.Flush(System.Boolean)">
+            <summary>
+                Flushes the buffered bytes to the <see cref="F:Arch.Persistence.StreamBufferWriter._destination"/>.
+            </summary>
+            <param name="flushUnderlyingStream">If it also should flush the <see cref="T:System.IO.Stream"/>.</param>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.System#Buffers#IBufferWriter{System#Byte}#Advance(System.Int32)">
+            <summary>
+                Advances the buffer, notifies this instance that there was something new written into the <see cref="F:Arch.Persistence.StreamBufferWriter._buffer"/> memory. 
+            </summary>
+            <param name="count">The amount of bytes written.</param>
+            <exception cref="T:System.ArgumentOutOfRangeException">Throws if we are out of memory.</exception>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.System#Buffers#IBufferWriter{System#Byte}#GetMemory(System.Int32)">
+            <summary>
+                Returns a partion of the <see cref="F:Arch.Persistence.StreamBufferWriter._buffer"/> as a <see cref="T:System.Memory`1"/>.
+            </summary>
+            <param name="sizeHint">The total amount.</param>
+            <returns>The new <see cref="T:System.Memory`1"/> instance.</returns>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.System#Buffers#IBufferWriter{System#Byte}#GetSpan(System.Int32)">
+            <summary>
+                Returns a partion of the <see cref="F:Arch.Persistence.StreamBufferWriter._buffer"/> as a <see cref="T:System.Span`1"/>.
+            </summary>
+            <param name="sizeHint">The total amount.</param>
+            <returns>The new <see cref="T:System.Span`1"/> instance.</returns>
+        </member>
+        <member name="M:Arch.Persistence.StreamBufferWriter.Dispose">
+            <summary>
+                Disposes this instance, flushes and releases all memory. 
+            </summary>
+        </member>
+    </members>
+</doc>

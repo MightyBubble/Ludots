@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/audit.schema.json",
+  "title": "审计 / 验收证据",
+  "description": "时间点审计或验收证据，默认冻结归档。范围、发现、证据路径、结论。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "audit" },
+    "auditDate": { "type": "string", "format": "date" },
+    "scope": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "findings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "observation": { "type": "string", "maxLength": 400 },
+          "evidence": { "type": "string", "description": "证据/产物/测试路径，CI 校验存在。" }
+        },
+        "required": ["id", "observation"],
+        "additionalProperties": false
+      }
+    },
+    "conclusion": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["auditDate", "scope", "findings", "conclusion"],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "1.0",
+  "id": "platform.overview",
+  "type": "overview",
+  "domain": "platform",
+  "tier": "formal",
+  "title": "Ludots 是什么：给开发者的十分钟心智模型",
+  "summary": "一个确定性、数据驱动、可无头运行的大规模 gameplay 仿真内核；本页建立读其余文档所需的心智模型与分层架构思想。",
+  "status": "active",
+  "owner": "TBD",
+  "updated": "2026-06-28",
+  "reviewBy": "2026-09-28",
+  "tags": ["overview", "architecture", "getting-started"],
+  "keyTopics": [
+    "确定性与定点数",
+    "固定步多相位调度",
+    "一切皆 Mod 的组合根",
+    "GAS 能力系统",
+    "MassNavigation 大规模导航",
+    "知识投影 / 雾",
+    "六边形表现层边界",
+    "数据驱动配置"
+  ],
+  "relatedCode": ["src/Core"],
+  "relatedDocs": [{ "id": "spatial-and-scale.overview", "relation": "see-also" }],
+  "components": [
+    {
+      "name": "GameEngine",
+      "responsibility": "引擎宿主：装配各 Mod 的系统与配置，驱动一帧仿真。开发者的总入口。",
+      "code": "src/Core/Engine/GameEngine.cs"
+    },
+    {
+      "name": "PhaseOrderedCooperativeSimulation",
+      "responsibility": "固定步、多相位调度器：把所有系统按 11 个确定相位顺序推进一个 tick。",
+      "code": "src/Core/Engine/Pacemaker/PhaseOrderedCooperativeSimulation.cs"
+    },
+    {
+      "name": "IMod / IModContext",
+      "responsibility": "Mod 组合根契约：Mod 通过它注册系统、配置与内容，是『一切皆 Mod』的挂靠点。",
+      "code": "src/Core/Modding/IModContext.cs"
+    },
+    {
+      "name": "KnowledgeProjection",
+      "responsibility": "把『地面真相』投影成每个观察者各自的知识（雾/情报/最后已知位置）。",
+      "code": "src/Core/Knowledge/KnowledgeProjectionContracts.cs"
+    },
+    {
+      "name": "MassNavigationSimulationRuntime",
+      "responsibility": "大规模单位的战术运动运行时：在 navmesh 之上做流场/避障，支撑 RTS 级数量。",
+      "code": "src/Core/MassNavigation/Runtime/MassNavigationSimulationRuntime.cs"
+    }
+  ],
+  "body": [
+    {
+      "kind": "callout",
+      "level": "info",
+      "text": "一句话：Ludots 是一个确定性、数据驱动、可无头运行的大规模 gameplay 仿真内核。同一套逻辑能跑在服务器、回放、编辑器与客户端上，目标是扛住 RTS 级（上千单位）的实时仿真。它不是一个游戏，也不是一个渲染器。"
+    },
+    {
+      "kind": "text",
+      "text": "面向谁：想做 RTS / MOBA / 大规模模拟类游戏的开发者。你写 Mod（数据 + 系统），引擎负责把这些 Mod 组合成一个可确定复现的仿真。渲染、输入、平台 IO 都被隔在六边形架构的边界之外——因此核心逻辑可以无头跑测试、可以被不同客户端（桌面 Raylib、Web）复用，而不需要改动仿真代码。"
+    },
+    {
+      "kind": "text",
+      "text": "怎么读这份文档（开发者主轴）：① 先读本页，建立整体心智模型；② 看下面的分层架构，理解每一层在赌什么、用什么机制兑现；③ 按子系统深入（GAS 能力、MassNavigation 导航、表现边界、数据配置）；④ 学扩展点与 Mod 接口，自己挂一个 Mod；⑤ 最后看贡献规范与编码铁律。"
+    },
+    {
+      "kind": "table",
+      "caption": "分层架构思想（L0–L5）：每层一个设计赌注、一套真实机制、一句兑现度实话",
+      "columns": ["层", "设计赌注", "真实机制（代码锚点）", "兑现度实话"],
+      "rows": [
+        ["L0 决定论基座", "同样输入 → 逐位相同结果，才能做回放/网络/服务器权威", "定点数 Fix64、固定步进、确定的相位调度与种子化 RNG", "设计目标已成形，但寻路等局部仍有 float 泄漏，尚未端到端逐位可复现"],
+        ["L1 仿真内核", "用 ECS 把状态与行为拆成数据 + 系统，便于大规模并行与组合", "Arch ECS + 11 相位 PhaseOrderedCooperativeSimulation 调度", "稳定、是其余一切的地基"],
+        ["L2 组合根 / Mod", "『一切皆 Mod』：游戏行为由 Mod 注册，引擎只提供机制", "IMod / IModContext 注册系统、配置、内容", "约完成一半：核心脊柱（GAS/AI/导航）仍由引擎直接装配，未完全 Mod 化"],
+        ["L3 玩法能力层", "数据驱动的能力/效果/属性/标签，避免硬编码玩法", "GAS：tag/effect/attribute + 图编译为字节码的 graph VM", "可用且在持续收敛（近期补齐 graph config 管线）"],
+        ["L4 空间与运动", "RTS 级数量下仍要可信的移动与碰撞", "Spatial 尺度 SSOT、MassNavigation 流场/避障、TransportNetwork、轻量 2D 物理", "近期做过 mass-navigation 整治与传输网络 SSOT，仍是重点演进区"],
+        ["L5 表现 / 知识边界", "仿真不感知渲染；每个观察者只看到自己该看到的", "六边形 Presentation 缓冲 + Performer；KnowledgeProjection 投影雾/情报", "边界清晰，是项目最成熟的设计之一"]
+      ]
+    },
+    {
+      "kind": "text",
+      "text": "和『又一个 ECS 框架』比，Ludots 真正下注的差异点是这几条——它们也是后续文档反复回到的主题："
+    },
+    {
+      "kind": "list",
+      "ordered": true,
+      "items": [
+        "确定性优先：定点数 + 固定步 + 确定相位调度，目标是回放与服务器权威，而不是只在单机跑得动。",
+        "知识投影模型：把地面真相与『每个观察者各自知道什么』分开，雾/情报/最后已知位置是一等公民，而非渲染层的事后过滤。",
+        "大规模运动作为内核问题：MassNavigation 在 navmesh 之上做战术流场与避障，针对成千上万单位设计，而不是逐个 A* 单位。",
+        "数据驱动到底：玩法能力、配置、内容都走 JSON 数据管线与 fail-fast 校验，禁止隐式硬编码与 fallback。"
+      ]
+    },
+    {
+      "kind": "constantRef",
+      "symbol": "SpatialScaleDefaults.CellCm",
+      "note": "全引擎的逻辑位置以它为基准单位（定点厘米）。本数值由代码生成的常量清单注入，文档不手写、不会过期。"
+    },
+    {
+      "kind": "callout",
+      "level": "warn",
+      "text": "成熟度实话（给认真评估的开发者）：确定性是设计赌注而非既成事实——已知寻路存在 float 泄漏，合作式时间切片仍可能与挂钟耦合；『一切皆 Mod』约完成一半，引擎核心仍直接装配 GAS/AI/导航脊柱。这是一个正在收敛中的框架，不是成品。文档会在各子系统页用 debt 文档标明确切缺口与证据。"
+    }
+  ]
+}

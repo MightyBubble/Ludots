@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "id": "spatial-and-scale.debt-terrainchunk-fixed-size",
+  "type": "debt",
+  "domain": "spatial-and-scale",
+  "tier": "deep",
+  "title": "TerrainChunk 尺寸当前硬固定，未抽象",
+  "summary": "TerrainChunkCells 当前固定 64、不可配；grid/hex 共用抽象未落地，属架构债务。",
+  "status": "active",
+  "owner": "TBD",
+  "updated": "2026-06-27",
+  "reviewBy": "2026-09-27",
+  "supersedes": [],
+  "relatedCode": ["src/Core/Spatial/SpatialScaleDefaults.cs"],
+  "relatedDocs": [{ "id": "spatial-and-scale.scale-ssot", "relation": "refines" }],
+  "tags": ["scale", "debt"],
+  "debtType": "architectural",
+  "severity": "medium",
+  "debtStatus": "open",
+  "statement": [
+    { "kind": "text", "text": "TerrainChunkCells 目前是固定常量，grid 与 hex 尚未共用统一 chunk 抽象，限制了非 64 尺寸的地形分块。" }
+  ],
+  "targetDocs": ["spatial-and-scale.scale-ssot"],
+  "codeScope": [
+    { "path": "src/Core/Spatial/SpatialScaleDefaults.cs", "lines": "18-18", "note": "TerrainChunkCells 常量" }
+  ],
+  "remediation": [
+    { "kind": "list", "ordered": true, "items": ["设计 grid/hex 共用 chunk 抽象", "让 TerrainChunk 尺寸可由 board 配置驱动", "更新 scale SSOT 中该项 constraint"] }
+  ],
+  "introducedIn": "#286",
+  "dueBy": "2026-12-31",
+  "enforce": true
+}

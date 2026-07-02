@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "1.0",
+  "id": "spatial-and-scale.overview",
+  "type": "overview",
+  "domain": "spatial-and-scale",
+  "tier": "formal",
+  "title": "空间与尺度 — 领域总览",
+  "summary": "空间尺度领域入口：单位体系、关键组件与子文档导航。",
+  "status": "active",
+  "owner": "TBD",
+  "updated": "2026-06-27",
+  "reviewBy": "2026-09-27",
+  "supersedes": [],
+  "relatedCode": ["src/Core/Spatial"],
+  "relatedDocs": [
+    { "id": "spatial-and-scale.scale-ssot", "relation": "see-also" },
+    { "id": "spatial-and-scale.glossary", "relation": "see-also" }
+  ],
+  "tags": ["scale", "spatial"],
+  "body": [
+    { "kind": "text", "text": "空间与尺度领域定义 sim 的平面/垂直离散单位，以及世界范围、分区、流场与物理 broadphase 的尺度换算。所有换算以 CellCm 为唯一基准。" },
+    { "kind": "constantRef", "symbol": "SpatialScaleDefaults.CellCm", "note": "基准单位，实时值由清单解析。" }
+  ],
+  "components": [
+    { "name": "SpatialScaleDefaults", "responsibility": "尺度默认值与换算辅助。", "code": "src/Core/Spatial/SpatialScaleDefaults.cs" },
+    { "name": "WorldExtentSpec / WorldSizeSpec", "responsibility": "世界范围派生与运行时边界。", "code": "src/Core/Spatial/WorldExtentSpec.cs" }
+  ],
+  "keyTopics": ["CellCm 基准", "MacroTile 世界范围", "Chunk 分区", "MassFlow 尺度"]
+}

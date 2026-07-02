@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/ssot.schema.json",
+  "title": "SSOT 定义文档",
+  "description": "某主题的唯一权威定义。强字段化：每个定义必须有 owner 与真实源码 sourceCode，杜绝口胡。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "ssot" },
+    "ssot": { "const": true },
+    "definitions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "term": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "owner": { "type": "string", "minLength": 1, "description": "该术语/数值的唯一 owner（代码符号或模块）。" },
+          "unit": { "type": "string", "maxLength": 40 },
+          "valueRef": { "type": "string", "minLength": 1, "description": "首选：绑定到代码常量符号（constants 清单 key），值由构建期解析，杜绝抄写。" },
+          "value": { "type": "string", "maxLength": 120, "description": "仅当该值没有对应代码常量时才允许内联字面值；与 valueRef 互斥。" },
+          "configurable": { "type": "boolean" },
+          "constraint": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "sourceCode": { "type": "string", "minLength": 1, "description": "真实源码路径，CI 校验存在。" }
+        },
+        "required": ["term", "owner", "constraint", "sourceCode"],
+        "not": { "required": ["value", "valueRef"] },
+        "additionalProperties": false
+      }
+    },
+    "invariants": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 280 },
+      "description": "必须始终成立的约束。"
+    },
+    "antiPatterns": {
+      "type": "array",
+      "items": { "type": "string", "maxLength": 280 },
+      "description": "明确禁止的做法（fallback / 平行 owner / 别名复制等）。"
+    },
+    "body": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["definitions", "invariants", "antiPatterns"],
+  "unevaluatedProperties": false
+}

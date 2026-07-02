@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/overview.schema.json",
+  "title": "领域 / 系统总览",
+  "description": "领域或系统的入口文档：是什么、边界、关键组件与子文档导航。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "overview" },
+    "body": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 80 },
+          "responsibility": { "type": "string", "maxLength": 280 },
+          "code": { "type": "string", "description": "真实源码路径，CI 校验存在。" }
+        },
+        "required": ["name", "responsibility"],
+        "additionalProperties": false
+      }
+    },
+    "keyTopics": { "type": "array", "items": { "type": "string", "maxLength": 120 } }
+  },
+  "required": ["body"],
+  "unevaluatedProperties": false
+}

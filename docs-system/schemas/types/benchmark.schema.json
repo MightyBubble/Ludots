@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/benchmark.schema.json",
+  "title": "性能基准 / 预算",
+  "description": "性能基准与预算。指标、目标阈值、测量方法、证据路径，可接入 CI。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "benchmark" },
+    "metrics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 120 },
+          "target": { "type": "string", "maxLength": 120 },
+          "measured": { "type": "string", "maxLength": 120 },
+          "method": { "type": "string", "maxLength": 280 },
+          "evidence": { "type": "string", "description": "基准产物/测试路径，CI 校验存在。" }
+        },
+        "required": ["name", "target", "method"],
+        "additionalProperties": false
+      }
+    },
+    "notes": { "$ref": "../blocks.schema.json#/$defs/blocks" }
+  },
+  "required": ["metrics"],
+  "unevaluatedProperties": false
+}

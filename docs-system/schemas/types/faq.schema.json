@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/faq.schema.json",
+  "title": "常见问题 FAQ",
+  "description": "问答对 + 关联文档。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "faq" },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "q": { "type": "string", "maxLength": 280 },
+          "a": { "type": "string", "maxLength": 800 }
+        },
+        "required": ["q", "a"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "unevaluatedProperties": false
+}

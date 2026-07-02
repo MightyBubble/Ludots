@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/issue.schema.json",
+  "title": "Issue / 工作项规格",
+  "description": "可独立认领的工作项：陈述、验收标准（DoD）、优先级、依赖与父 epic。可挂接外部 GitHub issue 号。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "issue" },
+    "issueType": { "type": "string", "enum": ["epic", "feature", "task", "bug", "chore", "spike"] },
+    "statement": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "acceptanceCriteria": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 280 } },
+    "priority": { "type": "string", "enum": ["p0", "p1", "p2", "p3"] },
+    "estimate": { "type": "string", "maxLength": 40 },
+    "parent": { "type": "string", "description": "父 epic 的文档 id 或外部引用。" },
+    "dependsOn": { "type": "array", "items": { "type": "string" }, "description": "依赖的 issue id。" },
+    "externalRef": { "type": "string", "maxLength": 120, "description": "外部跟踪号，如 GitHub #239。" }
+  },
+  "required": ["issueType", "statement", "acceptanceCriteria"],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/glossary.schema.json",
+  "title": "术语表（术语 SSOT）",
+  "description": "全仓术语的唯一定义源。每个术语定义只此一份；其它文档用 termRef 引用，不得重复定义。术语可绑定到代码常量符号，显示其实时值。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "glossary" },
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$", "description": "术语稳定 id，termRef 引用它。" },
+          "term": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "aliases": { "type": "array", "items": { "type": "string", "maxLength": 80 } },
+          "definition": { "type": "string", "minLength": 1, "maxLength": 400 },
+          "owner": { "type": "string", "minLength": 1 },
+          "constantRef": { "type": "string", "description": "可选：绑定到 constants 清单的符号 key，渲染时显示实时值。CI 校验存在。" },
+          "sourceCode": { "type": "string", "description": "可选：术语对应的权威源码路径，CI 校验存在。" },
+          "seeAlso": { "type": "array", "items": { "type": "string" }, "description": "相关术语 id 或文档 id。" }
+        },
+        "required": ["id", "term", "definition", "owner"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["terms"],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,862 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Arch.System</name>
+    </assembly>
+    <members>
+        <member name="T:Arch.System.QueryAttribute">
+            <summary>
+                Marks a method to generate a high performance query for it. 
+            </summary>
+        </member>
+        <member name="P:Arch.System.QueryAttribute.Parallel">
+            <summary>
+            If set to true, Query will be run in parallel.
+            </summary>
+        </member>
+        <member name="T:Arch.System.DataAttribute">
+            <summary>
+                Marks a parameter as "data". This will be taken into account during source generation and will still be passed as a parameter in the query method.
+                Is not treated as an entity component.
+            </summary>
+        </member>
+        <member name="T:Arch.System.AllAttribute">
+            <summary>
+                Defines a set of components each entity requires. 
+            </summary>
+        </member>
+        <member name="P:Arch.System.AllAttribute.ComponentTypes">
+            <summary>
+            The types of the component.
+            </summary>
+        </member>
+        <member name="M:Arch.System.AllAttribute.#ctor(System.Type[])">
+            <summary>
+            Constructs an All attribute with the specified component types.
+            </summary>
+            <param name="componentTypes">The types of the components that should be present.</param>
+        </member>
+        <member name="T:Arch.System.AnyAttribute">
+            <summary>
+                Defines a set of components each entity requires any from. 
+            </summary>
+        </member>
+        <member name="P:Arch.System.AnyAttribute.ComponentTypes">
+            <summary>
+            The types of the component.
+            </summary>
+        </member>
+        <member name="M:Arch.System.AnyAttribute.#ctor(System.Type[])">
+            <summary>
+            Constructs an Any attribute with the specified component types.
+            </summary>
+            <param name="componentTypes">The types of the components that can be present.</param>
+        </member>
+        <member name="T:Arch.System.NoneAttribute">
+            <summary>
+                Defines a set of components none of the entities should have. 
+            </summary>
+        </member>
+        <member name="P:Arch.System.NoneAttribute.ComponentTypes">
+            <summary>
+            The types of the component.
+            </summary>
+        </member>
+        <member name="M:Arch.System.NoneAttribute.#ctor(System.Type[])">
+            <summary>
+            Constructs a None attribute with the specified component types.
+            </summary>
+            <param name="componentTypes">The types of the components that should not be present.</param>
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute">
+            <summary>
+                Defines an exclusive set of components an entity should have. 
+            </summary>
+        </member>
+        <member name="P:Arch.System.ExclusiveAttribute.ComponentTypes">
+            <summary>
+            The types of the component.
+            </summary>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])">
+            <summary>
+            Constructs an exclusive attribute with the specified component types.
+            </summary>
+            <param name="componentTypes">The types of the components that should be present exclusively.</param>
+        </member>
+        <member name="T:Arch.System.ISystem`1">
+            <summary>
+                An interface providing several methods for a system. 
+            </summary>
+            <typeparam name="T">The type passed to each method. For example a delta time or some other data.</typeparam>
+        </member>
+        <member name="M:Arch.System.ISystem`1.Initialize">
+            <summary>
+                Initializes a system, before its first ever run.
+            </summary>
+        </member>
+        <member name="M:Arch.System.ISystem`1.BeforeUpdate(`0@)">
+            <summary>
+                Runs before <see cref="M:Arch.System.ISystem`1.Update(`0@)"/>.
+            </summary>
+            <param name="t">An instance passed to it.</param>
+        </member>
+        <member name="M:Arch.System.ISystem`1.Update(`0@)">
+            <summary>
+                Updates the system.
+            </summary>
+            <param name="t">An instance passed to it.</param>
+        </member>
+        <member name="M:Arch.System.ISystem`1.AfterUpdate(`0@)">
+            <summary>
+                Runs after <see cref="M:Arch.System.ISystem`1.Update(`0@)"/>.
+            </summary>
+            <param name="t">An instance passed to it.</param>
+        </member>
+        <member name="T:Arch.System.BaseSystem`2">
+            <summary>
+                A basic implementation of a <see cref="T:Arch.System.ISystem`1"/>.
+            </summary>
+            <typeparam name="W">The world type.</typeparam>
+            <typeparam name="T">The type passed to the <see cref="T:Arch.System.ISystem`1"/> interface.</typeparam>
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.#ctor(`0)">
+            <summary>
+                Creates an instance. 
+            </summary>
+            <param name="world">The <see cref="P:Arch.System.BaseSystem`2.World"/>.</param>
+        </member>
+        <member name="P:Arch.System.BaseSystem`2.World">
+            <summary>
+                The world instance. 
+            </summary>
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.Initialize">
+            <inheritdoc />
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.BeforeUpdate(`1@)">
+            <inheritdoc />
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.Update(`1@)">
+            <inheritdoc />
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.AfterUpdate(`1@)">
+            <inheritdoc />
+        </member>
+        <member name="M:Arch.System.BaseSystem`2.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="T:Arch.System.Group`1">
+            <summary>
+                A group of <see cref="T:Arch.System.ISystem`1"/>'s to organize them.
+                They will run in order.
+            </summary>
+            <typeparam name="T">The type passed to the <see cref="T:Arch.System.ISystem`1"/>.</typeparam>
+        </member>
+        <member name="P:Arch.System.Group`1.Name">
+            <summary>
+            A unique name to identify this group
+            </summary>
+        </member>
+        <member name="F:Arch.System.Group`1._systems">
+            <summary>
+            All <see cref="T:Arch.System.Group`1.SystemEntry"/>'s in this group. 
+            </summary>
+        </member>
+        <member name="M:Arch.System.Group`1.#ctor(System.String,Arch.System.ISystem{`0}[])">
+            <summary>
+                Creates an instance with an array of <see cref="T:Arch.System.ISystem`1"/>'s that will belong to this group.
+            </summary>
+            <param name="name">A unique name to identify this group</param>
+            <param name="systems">An <see cref="T:Arch.System.ISystem`1"/> array.</param>
+        </member>
+        <member name="M:Arch.System.Group`1.#ctor(System.String,System.Collections.Generic.IEnumerable{Arch.System.ISystem{`0}})">
+            <summary>
+                Creates an instance with an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of <see cref="T:Arch.System.ISystem`1"/>'s that will belong to this group.
+            </summary>
+            <param name="name">A unique name to identify this group</param>
+            <param name="systems">An <see cref="T:System.Collections.Generic.IEnumerable`1"/> of <see cref="T:Arch.System.ISystem`1"/>.</param>
+        </member>
+        <member name="M:Arch.System.Group`1.Add(Arch.System.ISystem{`0}[])">
+            <summary>
+                Adds several new <see cref="T:Arch.System.ISystem`1"/>'s to this group.
+            </summary>
+            <param name="systems">An <see cref="T:Arch.System.ISystem`1"/> array.</param>
+            <returns>The same <see cref="T:Arch.System.Group`1"/>.</returns>
+        </member>
+        <member name="M:Arch.System.Group`1.Add``1">
+            <summary>
+                Adds an single <see cref="T:Arch.System.ISystem`1"/> to this group by its generic.
+                Automatically initializes it properly. Must be contructorless.
+            </summary>
+            <typeparam name="G">Its generic type.</typeparam>
+            <returns>The same <see cref="T:Arch.System.Group`1"/>.</returns>
+        </member>
+        <member name="M:Arch.System.Group`1.Add(Arch.System.ISystem{`0})">
+            <summary>
+                Adds an single <see cref="T:Arch.System.ISystem`1"/> to this group.
+            </summary>
+            <param name="system"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.System.Group`1.Get``1">
+            <summary>
+                Return the first <typeparamref name="G"/> which was found in the hierachy.
+            </summary>
+            <typeparam name="G">The Type.</typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.System.Group`1.Find``1">
+            <summary>
+                Finds all <see cref="T:Arch.System.ISystem`1"/>s which can be cast into the given type.
+            </summary>
+            <typeparam name="G">The Type.</typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.System.Group`1.Initialize">
+            <summary>
+                Initializes all <see cref="T:Arch.System.ISystem`1"/>'s in this <see cref="T:Arch.System.Group`1"/>.
+            </summary>
+        </member>
+        <member name="M:Arch.System.Group`1.BeforeUpdate(`0@)">
+            <summary>
+                Runs <see cref="M:Arch.System.ISystem`1.BeforeUpdate(`0@)"/> on each <see cref="T:Arch.System.ISystem`1"/> of this <see cref="T:Arch.System.Group`1"/>..
+            </summary>
+            <param name="t">An instance passed to each <see cref="M:Arch.System.ISystem`1.Initialize"/> method.</param>
+        </member>
+        <member name="M:Arch.System.Group`1.Update(`0@)">
+            <summary>
+                Runs <see cref="M:Arch.System.ISystem`1.Update(`0@)"/> on each <see cref="T:Arch.System.ISystem`1"/> of this <see cref="T:Arch.System.Group`1"/>..
+            </summary>
+            <param name="t">An instance passed to each <see cref="M:Arch.System.ISystem`1.Initialize"/> method.</param>
+        </member>
+        <member name="M:Arch.System.Group`1.AfterUpdate(`0@)">
+            <summary>
+                Runs <see cref="M:Arch.System.ISystem`1.AfterUpdate(`0@)"/> on each <see cref="T:Arch.System.ISystem`1"/> of this <see cref="T:Arch.System.Group`1"/>..
+            </summary>
+            <param name="t">An instance passed to each <see cref="M:Arch.System.ISystem`1.Initialize"/> method.</param>
+        </member>
+        <member name="M:Arch.System.Group`1.Dispose">
+            <summary>
+                Disposes this <see cref="T:Arch.System.Group`1"/> and all <see cref="T:Arch.System.ISystem`1"/>'s within.
+            </summary>
+        </member>
+        <member name="M:Arch.System.Group`1.ToString">
+            <summary>
+                Converts this <see cref="T:Arch.System.Group`1"/> to a human readable string.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Arch.System.Group`1.GetEnumerator">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.Group`1.System#Collections#IEnumerable#GetEnumerator">
+            <inheritdoc/>
+        </member>
+        <member name="T:Arch.System.Group`1.SystemEntry">
+            <summary>
+                The struct <see cref="T:Arch.System.Group`1.SystemEntry"/> represents the given <see cref="T:Arch.System.ISystem`1"/> in the <see cref="T:Arch.System.Group`1"/> with all its performance statistics.
+            </summary>
+        </member>
+        <member name="T:Arch.System.AllAttribute`1">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`1.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`2">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`2.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`3">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`3.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`4">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`4.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`5">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`5.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`6">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`6.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`7">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`7.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`8">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`8.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`9">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`9.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`10">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`10.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`11">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`11.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`12">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`12.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`13">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`13.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`14">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`14.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`15">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`15.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`16">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`16.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`17">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`17.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`18">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`18.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`19">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`19.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`20">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`20.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`21">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`21.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`22">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`22.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`23">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`23.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`24">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`24.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AllAttribute`25">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AllAttribute`25.#ctor">
+            <inheritdoc cref="M:Arch.System.AllAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`1">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`1.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`2">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`2.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`3">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`3.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`4">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`4.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`5">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`5.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`6">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`6.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`7">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`7.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`8">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`8.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`9">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`9.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`10">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`10.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`11">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`11.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`12">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`12.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`13">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`13.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`14">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`14.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`15">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`15.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`16">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`16.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`17">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`17.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`18">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`18.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`19">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`19.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`20">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`20.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`21">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`21.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`22">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`22.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`23">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`23.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`24">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`24.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.AnyAttribute`25">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.AnyAttribute`25.#ctor">
+            <inheritdoc cref="M:Arch.System.AnyAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`1">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`1.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`2">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`2.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`3">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`3.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`4">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`4.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`5">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`5.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`6">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`6.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`7">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`7.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`8">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`8.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`9">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`9.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`10">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`10.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`11">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`11.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`12">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`12.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`13">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`13.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`14">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`14.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`15">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`15.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`16">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`16.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`17">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`17.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`18">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`18.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`19">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`19.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`20">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`20.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`21">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`21.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`22">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`22.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`23">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`23.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`24">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`24.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.NoneAttribute`25">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.NoneAttribute`25.#ctor">
+            <inheritdoc cref="M:Arch.System.NoneAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`1">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`1.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`2">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`2.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`3">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`3.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`4">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`4.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`5">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`5.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`6">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`6.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`7">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`7.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`8">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`8.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`9">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`9.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`10">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`10.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`11">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`11.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`12">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`12.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`13">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`13.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`14">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`14.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`15">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`15.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`16">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`16.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`17">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`17.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`18">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`18.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`19">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`19.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`20">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`20.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`21">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`21.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`22">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`22.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`23">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`23.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`24">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`24.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+        <member name="T:Arch.System.ExclusiveAttribute`25">
+            <inheritdoc/>
+        </member>
+        <member name="M:Arch.System.ExclusiveAttribute`25.#ctor">
+            <inheritdoc cref="M:Arch.System.ExclusiveAttribute.#ctor(System.Type[])" />
+        </member>
+    </members>
+</doc>

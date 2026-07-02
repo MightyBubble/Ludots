@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/roadmap.schema.json",
+  "title": "路线图",
+  "description": "方向性路线图（偏方向；执行追踪用 project-management）。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "roadmap" },
+    "direction": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "milestones": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 120 },
+          "target": { "type": "string", "maxLength": 80 },
+          "status": { "type": "string", "enum": ["planned", "in-progress", "done", "dropped"] }
+        },
+        "required": ["name", "status"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["direction", "milestones"],
+  "unevaluatedProperties": false
+}

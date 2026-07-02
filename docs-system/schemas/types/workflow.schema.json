@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/workflow.schema.json",
+  "title": "Workflow 文档",
+  "description": "可执行的流程规格：何时触发、角色、顺序步骤（每步可带退出 gate）、输入输出产物与检查清单。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "workflow" },
+    "purpose": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "trigger": { "type": "string", "maxLength": 280, "description": "何时使用该流程。" },
+    "roles": { "type": "array", "items": { "type": "string", "maxLength": 80 } },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "properties": {
+          "order": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "maxLength": 120 },
+          "action": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+          "gate": { "type": "string", "maxLength": 280, "description": "进入下一步的退出条件。" }
+        },
+        "required": ["order", "title", "action"],
+        "additionalProperties": false
+      }
+    },
+    "artifacts": { "type": "array", "items": { "type": "string", "maxLength": 200 }, "description": "输入/输出产物。" },
+    "checklists": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "maxLength": 120 },
+          "items": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 280 } }
+        },
+        "required": ["name", "items"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["purpose", "trigger", "steps"],
+  "unevaluatedProperties": false
+}

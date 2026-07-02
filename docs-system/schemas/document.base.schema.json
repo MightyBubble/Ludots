@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/document.base.schema.json",
+  "title": "Ludots 文档基础信封",
+  "description": "所有文档类型共享的元数据信封。具体类型 schema 用 allOf 引用本文件并追加字段，且必须用 unevaluatedProperties:false 锁死，禁止自由发挥。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "id": {
+      "type": "string",
+      "description": "全仓唯一稳定 id，建议 <domain>.<topic>[.<sub>] 点分。",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*(?:\\.[a-z0-9]+(?:-[a-z0-9]+)*)+$"
+    },
+    "type": {
+      "type": "string",
+      "description": "文档类型，决定用哪套类型 schema 校验与渲染。",
+      "enum": [
+        "overview",
+        "explanation",
+        "ssot",
+        "contract",
+        "architecture",
+        "reference",
+        "config-reference",
+        "api-reference",
+        "tutorial",
+        "howto",
+        "user-guide",
+        "adr",
+        "rfc",
+        "prd",
+        "product-design",
+        "technical-design",
+        "issue",
+        "uat",
+        "audit",
+        "benchmark",
+        "debt",
+        "project-management",
+        "workflow",
+        "skill",
+        "glossary",
+        "roadmap",
+        "migration",
+        "faq"
+      ]
+    },
+    "domain": {
+      "type": "string",
+      "description": "必须是 registry/domains.json 中存在的领域 id。CI 校验。"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["formal", "deep"],
+      "description": "formal=正式真相区；deep=深度材料区。formal 文档禁止依赖 deep 文档（CI 单向校验）。"
+    },
+    "title": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 280,
+      "description": "一句话摘要，硬上限 280 字，逼迫精炼。"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "superseded", "archived"]
+    },
+    "ssot": {
+      "type": "boolean",
+      "description": "本文档是否为该 (domain, ssotTopic) 的唯一权威定义。CI 校验：同一 domain 下同一 ssotTopic 仅允许一处 ssot:true。"
+    },
+    "ssotTopic": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "description": "ssot:true 时必填。该 SSOT 的主题键（如 scale / terms），与 domain 组合保证唯一。"
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "description": "负责人或团队 handle。"
+    },
+    "updated": {
+      "type": "string",
+      "format": "date",
+      "description": "最后修改日期 YYYY-MM-DD。"
+    },
+    "reviewBy": {
+      "type": "string",
+      "format": "date",
+      "description": "下次必须复核日期。过期 CI 报 warning（freshness gate）。"
+    },
+    "supersedes": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "本文档取代的旧文档 id 列表。"
+    },
+    "relatedCode": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "结论关联的真实源码/测试路径（repo 相对路径）。CI 校验路径必须存在 —— 这是反幻觉的核心约束。"
+    },
+    "relatedDocs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "relation": {
+            "type": "string",
+            "enum": ["depends-on", "refines", "implements", "superseded-by", "see-also"]
+          }
+        },
+        "required": ["id", "relation"],
+        "additionalProperties": false
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "type",
+    "domain",
+    "tier",
+    "title",
+    "summary",
+    "status",
+    "owner",
+    "updated",
+    "relatedCode"
+  ],
+  "if": { "properties": { "ssot": { "const": true } }, "required": ["ssot"] },
+  "then": { "required": ["ssotTopic"] }
+}

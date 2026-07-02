@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0",
+  "id": "spatial-and-scale.migration-chunk-abstraction",
+  "type": "migration",
+  "domain": "spatial-and-scale",
+  "tier": "deep",
+  "title": "统一 grid/hex chunk 抽象迁移",
+  "summary": "把固定的 TerrainChunk 尺寸迁移到 grid/hex 共用、可配置的 chunk 抽象；分阶段并入 main。",
+  "status": "active",
+  "owner": "TBD",
+  "updated": "2026-06-27",
+  "reviewBy": "2026-09-27",
+  "supersedes": [],
+  "relatedCode": ["src/Core/Spatial/SpatialScaleDefaults.cs"],
+  "relatedDocs": [{ "id": "spatial-and-scale.scale-ssot", "relation": "depends-on" }],
+  "tags": ["scale", "migration"],
+  "goal": [
+    { "kind": "text", "text": "消除 TerrainChunk 尺寸硬编码，建立 grid/hex 共用的可配置 chunk 抽象。" }
+  ],
+  "from": "TerrainChunkCells 固定 64，grid/hex 各自处理分块",
+  "to": "统一 chunk 抽象，尺寸由 board 配置驱动",
+  "phases": [
+    {
+      "id": "p1",
+      "title": "抽出 chunk 抽象接口（不改默认值）",
+      "status": "merged",
+      "mergedIn": "#290",
+      "codeScope": [{ "path": "src/Core/Spatial/SpatialScaleDefaults.cs" }],
+      "exitCriteria": ["接口落地", "默认行为不变", "无 fallback 分支"]
+    },
+    {
+      "id": "p2",
+      "title": "board 配置驱动 chunk 尺寸",
+      "status": "in-progress",
+      "exitCriteria": ["loader fail-fast 校验", "移除固定常量引用"]
+    }
+  ],
+  "sanctionedTemporaryState": [
+    { "kind": "callout", "level": "warn", "text": "p1 合并后、p2 完成前，抽象接口与旧固定常量并存。此双态为受控豁免，仅限本迁移窗口，禁止新增代码依赖旧常量。" }
+  ],
+  "guardrails": [
+    "新代码只能依赖 chunk 抽象接口，不得新引用 TerrainChunkCells 常量。",
+    "默认尺寸在迁移完成前保持 64，不得静默改变。"
+  ],
+  "residueDebt": ["spatial-and-scale.debt-terrainchunk-fixed-size"],
+  "expiry": "2026-12-31"
+}

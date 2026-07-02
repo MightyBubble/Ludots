@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/rfc.schema.json",
+  "title": "RFC 提案",
+  "description": "提案：问题、方案、权衡、决策状态。被接受后由 ADR 固化或转为实现。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "rfc" },
+    "rfcStatus": { "type": "string", "enum": ["draft", "accepted", "rejected", "superseded"] },
+    "problem": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "proposal": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "tradeoffs": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "option": { "type": "string", "maxLength": 120 },
+          "whyNot": { "type": "string", "maxLength": 400 }
+        },
+        "required": ["option", "whyNot"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["rfcStatus", "problem", "proposal"],
+  "unevaluatedProperties": false
+}

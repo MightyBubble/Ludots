@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludots.dev/schemas/types/debt.schema.json",
+  "title": "技术债务条目",
+  "description": "债务区的一等公民。必须显式关联债务对象（targetDocs 文档 和/或 codeScope 代码范围），CI 校验存在。change-coupling gate：碰了 codeScope 覆盖的代码就强制在同一 PR 更新本债务或 ack。",
+  "type": "object",
+  "allOf": [{ "$ref": "../document.base.schema.json" }],
+  "properties": {
+    "type": { "const": "debt" },
+    "debtType": {
+      "type": "string",
+      "enum": ["architectural", "code-drift", "doc-drift", "test-gap", "performance", "dependency", "migration-residue", "other"]
+    },
+    "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+    "debtStatus": { "type": "string", "enum": ["open", "in-progress", "accepted", "resolved"] },
+    "statement": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "targetDocs": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "债务对象文档 id 列表，CI 校验存在。"
+    },
+    "codeScope": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "minLength": 1, "description": "文件或目录路径，CI 校验存在；change-coupling gate 以此监听 diff。" },
+          "lines": { "type": "string", "pattern": "^\\d+(-\\d+)?$" },
+          "note": { "type": "string", "maxLength": 280 }
+        },
+        "required": ["path"],
+        "additionalProperties": false
+      }
+    },
+    "remediation": { "$ref": "../blocks.schema.json#/$defs/blocks" },
+    "introducedIn": { "type": "string", "maxLength": 120, "description": "引入来源：PR/commit/issue 引用。" },
+    "dueBy": { "type": "string", "format": "date", "description": "结清硬期限，过期 CI 报错。" },
+    "enforce": { "type": "boolean", "default": true, "description": "是否启用 change-coupling 强制更新闸。" },
+    "ack": {
+      "type": "object",
+      "description": "accepted（暂不还）时的显式确认。",
+      "properties": {
+        "by": { "type": "string", "maxLength": 80 },
+        "date": { "type": "string", "format": "date" },
+        "reason": { "type": "string", "maxLength": 400 }
+      },
+      "required": ["by", "date", "reason"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["debtType", "severity", "debtStatus", "statement", "remediation", "dueBy"],
+  "anyOf": [
+    { "required": ["targetDocs"] },
+    { "required": ["codeScope"] }
+  ],
+  "unevaluatedProperties": false
+}

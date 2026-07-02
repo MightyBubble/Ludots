@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "1.0",
+  "note": "领域注册表（Domain Registry）。这是文档体系的领域 SSOT，直接派生自 src/Core 与 src/Core/Gameplay 的 bounded context。新增/合并领域必须改这里，并通过 CI。codePaths 必须指向真实存在的目录，CI 校验。",
+  "owners": {
+    "_default": "TBD"
+  },
+  "domains": [
+    {
+      "id": "platform",
+      "title": "平台总览与架构",
+      "tier": "formal",
+      "summary": "跨切面的项目级叙事：Ludots 是什么、分层架构思想（L0–L5）、差异点、面向开发者的阅读主轴。",
+      "codePaths": ["src/Core"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "runtime-core",
+      "title": "Runtime 内核",
+      "tier": "deep",
+      "summary": "ECS 调度、host、system group、layer、诊断等运行时基座。",
+      "codePaths": ["src/Core/Engine", "src/Core/Hosting", "src/Core/Systems", "src/Core/Layers", "src/Core/Diagnostics"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "modding-and-config",
+      "title": "Mod 与配置平台",
+      "tier": "formal",
+      "summary": "一切皆 Mod 的挂靠机制：Mod、Registry、配置加载与数据驱动 fail-fast。",
+      "codePaths": ["src/Core/Modding", "src/Core/Registry", "src/Core/Config"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "spatial-and-scale",
+      "title": "空间与尺度",
+      "tier": "formal",
+      "summary": "Cell/MacroTile/Chunk 等空间尺度 SSOT、坐标换算与 field。",
+      "codePaths": ["src/Core/Spatial", "src/Core/Math", "src/Core/Fields"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "navigation",
+      "title": "导航与 MassFlow",
+      "tier": "formal",
+      "summary": "navmesh、流场、避障、路由、传输网络与大规模移动执行。",
+      "codePaths": ["src/Core/Navigation", "src/Core/MovePlanning", "src/Core/MassNavigation", "src/Core/TransportNetwork"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "physics",
+      "title": "物理",
+      "tier": "deep",
+      "summary": "2D 物理与 broadphase。",
+      "codePaths": ["src/Core/Physics", "src/Core/Physics2D", "src/Core/Ludots.Physics2D", "src/Core/Ludots.Physics.Broadphase"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "map-and-terrain",
+      "title": "地图与地形",
+      "tier": "deep",
+      "summary": "map、逻辑地形与拓扑。",
+      "codePaths": ["src/Core/Map", "src/Core/Maps"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "entity-query-and-command",
+      "title": "实体查询与命令",
+      "tier": "deep",
+      "summary": "实体集合查询、命令面板与组件基建。",
+      "codePaths": ["src/Core/EntityCollections", "src/Core/EntityQueries", "src/Core/Collections", "src/Core/Commands", "src/Core/Components"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "input-and-orders",
+      "title": "输入与命令路由",
+      "tier": "deep",
+      "summary": "输入映射、order 解析与 ContextScored 路由。",
+      "codePaths": ["src/Core/Input"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "graph-and-scripting",
+      "title": "Graph 与脚本",
+      "tier": "deep",
+      "summary": "graph runtime、node library 与脚本执行。",
+      "codePaths": ["src/Core/GraphRuntime", "src/Core/NodeLibraries", "src/Core/Scripting"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "save-and-persistence",
+      "title": "存档与持久化",
+      "tier": "formal",
+      "summary": "通用存档系统与持久化。",
+      "codePaths": ["src/Core/Persistence"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "presentation-and-ui",
+      "title": "表现与 UI",
+      "tier": "formal",
+      "summary": "Performer、surface 所有权、snapshot 契约、UI 渲染与补间。",
+      "codePaths": ["src/Core/Presentation", "src/Core/UI", "src/Core/Tweening"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "perception",
+      "title": "感知与知识",
+      "tier": "deep",
+      "summary": "vision、感知模式与 knowledge。",
+      "codePaths": ["src/Core/Vision", "src/Core/Knowledge"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "entity-association",
+      "title": "实体关联 (AAC)",
+      "tier": "formal",
+      "summary": "Entity Association Core；计划与 ADR SSOT 在 GitHub issue #239 / #244。",
+      "codePaths": ["src/Core/Association"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "gas-ability-interaction",
+      "title": "GAS / 能力 / 交互",
+      "tier": "formal",
+      "summary": "Gameplay Ability System、tag/effect/attribute、ContextGroup、form routing 与交互模型。",
+      "codePaths": ["src/Core/Gameplay/GAS"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "ai-autocast",
+      "title": "AI 与 Autocast",
+      "tier": "formal",
+      "summary": "AI utility 与 autocast 契约。",
+      "codePaths": ["src/Core/Gameplay/AI"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "camera-3c",
+      "title": "相机与 3C",
+      "tier": "formal",
+      "summary": "相机、角色控制与 3C 能力矩阵。",
+      "codePaths": ["src/Core/Gameplay/Camera"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "exchange-and-economy",
+      "title": "Exchange 与经济",
+      "tier": "formal",
+      "summary": "exchange operation、关系与市场抽象。",
+      "codePaths": ["src/Core/Gameplay/Exchange", "src/Core/Gameplay/Relationships"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "items-inventory",
+      "title": "物品 / 背包 / 装备",
+      "tier": "deep",
+      "summary": "item、inventory 与 equipment 架构。",
+      "codePaths": ["src/Core/Gameplay/Items"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "narrative",
+      "title": "叙事",
+      "tier": "deep",
+      "summary": "quest、dialogue、cinematic 与叙事前端套件。",
+      "codePaths": ["src/Core/Gameplay/Narrative"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "progression",
+      "title": "成长",
+      "tier": "deep",
+      "summary": "progression。",
+      "codePaths": ["src/Core/Gameplay/Progression"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "spawning-and-teams",
+      "title": "生成与阵营",
+      "tier": "deep",
+      "summary": "实体 spawn 流程与 team。",
+      "codePaths": ["src/Core/Gameplay/Spawning", "src/Core/Gameplay/Teams"],
+      "owner": "TBD",
+      "status": "active"
+    },
+    {
+      "id": "cue",
+      "title": "Cue",
+      "tier": "deep",
+      "summary": "gameplay cue。",
+      "codePaths": ["src/Core/Gameplay/Cue"],
+      "owner": "TBD",
+      "status": "active"
+    }
+  ]
+}
