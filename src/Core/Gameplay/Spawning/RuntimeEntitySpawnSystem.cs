@@ -278,7 +278,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 features |= TemplateBatchSpawnFeatures.MapEntity;
             }
 
-            if (CanPreseedOwnerPayloadMarker(template, templateKeyId))
+            if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, template, templateKeyId))
             {
                 features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
             }
@@ -420,39 +420,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 performerChildStableIdMs);
 
             return true;
-        }
-
-        private bool CanPreseedOwnerPayloadMarker(EntityTemplate template, int templateKeyId)
-        {
-            if (_performerBootstrap == null ||
-                templateKeyId <= 0 ||
-                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) ||
-                rules.Length == 0)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < rules.Length; i++)
-            {
-                ref readonly var rule = ref rules[i];
-                if (rule.ResolveScopeTag(1) <= 0 || !TemplateSatisfiesBootstrapCondition(template, rule.InlineCondition))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private static bool TemplateSatisfiesBootstrapCondition(EntityTemplate template, InlineConditionKind condition)
-        {
-            return condition switch
-            {
-                InlineConditionKind.None => true,
-                InlineConditionKind.SourceHasVisualTransform => true,
-                InlineConditionKind.SourceHasAttributes => template.Components != null && template.Components.ContainsKey("AttributeBuffer"),
-                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{condition}'."),
-            };
         }
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)

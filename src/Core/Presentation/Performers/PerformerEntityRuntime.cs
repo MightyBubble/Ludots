@@ -68,6 +68,7 @@ namespace Ludots.Core.Presentation.Performers
         public double LastRootBatchComponentFillMs { get; private set; }
         public double LastRootBatchIndexWriteMs { get; private set; }
         public double LastRootBatchOwnerPayloadMs { get; private set; }
+        public int LastRootBatchOwnerPayloadCount { get; private set; }
         public double LastRootBatchPostCreateMs { get; private set; }
         public double LastChildBatchSetupMs { get; private set; }
         public double LastChildBatchWorldCreateMs { get; private set; }
@@ -170,6 +171,7 @@ namespace Ludots.Core.Presentation.Performers
             LastRootBatchComponentFillMs = 0d;
             LastRootBatchIndexWriteMs = 0d;
             LastRootBatchOwnerPayloadMs = 0d;
+            LastRootBatchOwnerPayloadCount = 0;
             LastRootBatchPostCreateMs = 0d;
             LastChildBatchSetupMs = 0d;
             LastChildBatchWorldCreateMs = 0d;
@@ -387,6 +389,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 long payloadStart = Stopwatch.GetTimestamp();
                 WriteSingleRootOwnerPayloadMarkersBatch(owners, created.Slice(0, owners.Length));
+                LastRootBatchOwnerPayloadCount = owners.Length;
                 LastRootBatchOwnerPayloadMs = ElapsedMs(payloadStart);
             }
 

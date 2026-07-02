@@ -153,6 +153,7 @@ namespace Ludots.Core.Systems
                 }
 
                 int templateKeyId = ResolveTemplateKeyId(activeBatchTemplateId);
+                EntityTemplate activeBatchTemplate = templates[activeBatchTemplateId];
                 bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
                 bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
 
@@ -169,6 +170,10 @@ namespace Ludots.Core.Systems
                 if (hasDirectBootstrap)
                 {
                     features |= TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled;
+                    if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, activeBatchTemplate, templateKeyId))
+                    {
+                        features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+                    }
                 }
 
                 int batchCount = pendingBatchRequests.Count;
@@ -190,7 +195,7 @@ namespace Ludots.Core.Systems
 
                 if (!_templateBatchSpawner.TryCreateBatch(
                     activeBatchTemplateId,
-                    templates[activeBatchTemplateId],
+                    activeBatchTemplate,
                     CollectionsMarshal.AsSpan(pendingBatchRequests),
                     features,
                     out var created,
