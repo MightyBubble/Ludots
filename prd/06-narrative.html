@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>06 Narrative — Ludots Wiki</title>
+<style>:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+.container { display: flex; min-height: 100vh; }
+.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
+.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
+.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
+.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.sidebar .group { margin-bottom: 18px; }
+.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
+.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
+.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
+.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
+.main h4 { font-size: 16px; margin-top: 24px; }
+.main p { margin: 12px 0; }
+.main a { color: var(--accent); text-decoration: none; }
+.main a:hover { text-decoration: underline; }
+.main ul, .main ol { margin: 12px 0; padding-left: 24px; }
+.main li { margin: 4px 0; }
+.main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.main th, .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.main th { background: var(--accent-light); font-weight: 600; }
+.main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
+.main pre code { padding: 0; background: transparent; }
+.main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
+.main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div class="container">
+<nav class="sidebar" id="nav"></nav>
+<main class="main" id="content"></main>
+</div>
+<script>
+const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "01 Product Overview"], ["prd/02-feature-architecture.html", "02 Feature Architecture"], ["prd/03-core-engine.html", "03 Core Engine"], ["prd/04-gas-combat.html", "04 Gas Combat"], ["prd/05-items-inventory.html", "05 Items Inventory"], ["prd/06-narrative.html", "06 Narrative"], ["prd/07-relationships-teams.html", "07 Relationships Teams"], ["prd/08-input-orders.html", "08 Input Orders"], ["prd/09-navigation-movement.html", "09 Navigation Movement"], ["prd/10-presentation-rendering.html", "10 Presentation Rendering"], ["prd/11-map-spatial.html", "11 Map Spatial"], ["prd/12-config-scripting.html", "12 Config Scripting"], ["prd/13-modding.html", "13 Modding"], ["prd/14-persistence.html", "14 Persistence"], ["prd/15-platform-adapters.html", "15 Platform Adapters"], ["prd/16-feature-matrix.html", "16 Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "01 Data Model"], ["tdd/02-systemgroup.html", "02 Systemgroup"], ["tdd/03-registry-design.html", "03 Registry Design"], ["tdd/04-pipeline-design.html", "04 Pipeline Design"], ["tdd/05-extension-points.html", "05 Extension Points"], ["tdd/06-gas-tdd.html", "06 Gas Tdd"], ["tdd/07-navigation-tdd.html", "07 Navigation Tdd"], ["tdd/08-presentation-tdd.html", "08 Presentation Tdd"], ["tdd/09-performance-constraints.html", "09 Performance Constraints"]], "Reference": [["reference/api-quickref.html", "Api Quickref"], ["reference/glossary.html", "Glossary"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"]]};
+const currentPage = "prd/06-narrative.html";
+const mdContent = "# Narrative System PRD\n\n## 1. 功能概述\n\nNarrative System 是 Ludots 引擎中负责任务（Quest）、对话（Dialogue）、过场动画（Cinematic）与叙事变量管理的核心子系统。它以 `NarrativeDirector` 为统一导演入口，通过 `NarrativeRuntimeSystem` 在每帧驱动叙事状态机更新，并通过 `NarrativeValueStore` 提供全局/局部变量存储。\n\n叙事系统与 GAS 紧密集成：任务目标可通过 GAS 标签/属性条件来评估；对话选择可触发 GAS Effect 或 GameplayEvent；过场动画可触发能力激活或属性修改。`NarrativeViews` 提供只读视图模型，供 UI 层绑定（任务追踪面板、对话窗口、过场动画提示）。\n\n---\n\n## 2. 目标用户\n\n| 用户类型 | 使用方式 |\n|----------|----------|\n| **Gameplay 程序员** | 调用 `NarrativeDirector` API 启动/推进任务和对话；实现叙事条件评估器 |\n| **Mod 开发者** | 通过 JSON 配置 Quest、Dialogue、Cinematic 定义；注册到 `NarrativeDefinitionRegistry` |\n| **技术策划** | 编写任务流程、对话树、过场动画时间线；配置条件（标签/属性/变量）与动作（给予物品、触发效果） |\n| **UI 程序员** | 绑定 `NarrativeViews` 渲染对话 UI、任务追踪、过场动画触发提示 |\n\n---\n\n## 3. 使用场景\n\n| 场景 | 描述 |\n|------|------|\n| **任务发布与推进** | `NarrativeDirector.StartQuest(questId)` 启动任务 → 玩家完成目标条件（杀敌/收集/到达地点）→ `AdvanceQuestStage(...)` 推进阶段 → `CompleteQuest(...)` 完成任务并发放奖励 |\n| **分支对话** | `StartDialogue(dialogueId)` 打开对话 → 玩家 `ChooseDialogueOption(optionIndex)` 选择分支 → 不同分支触发不同 Effect/变量修改/进入子对话 |\n| **过场动画触发** | `StartCinematic(cinematicId)` 播放过场 → 过场中可触发 GAS 能力/属性修改/实体生成 → `SkipCinematic()` 跳过（需配置可跳过标记） |\n| **叙事变量驱动** | `NarrativeValueStore.Set(key, value)` 存储变量 → 任务条件/对话条件读取变量决定分支可见性 → 实现“多周目继承”或“动态世界状态” |\n| **信号广播** | `EmitSignal(signalId)` 向订阅系统广播叙事信号，GAS/AI/Exchange 均可监听并响应 |\n| **多周目变量继承** | 通关时 `NarrativeValueStore.CaptureSnapshot()` 捕获关键变量 → 新周目启动时 `RestoreSnapshot(...)` 恢复，实现\"继承上一周目好感度\"或\"解锁隐藏剧情\" |\n\n---\n\n## 4. 核心能力\n\n### 4.1 Quest（任务）\n\n- **任务定义**：`NarrativeQuestDefinition`（`Narrative/NarrativeDefinitions.cs`）包含阶段列表、目标条件、完成奖励。\n- **任务注册**：`NarrativeDefinitionRegistry`（同文件内部类）提供 `TryGetQuest`、`TryGetDialogue`、`TryGetCinematic`。\n- **任务状态**：`NarrativeRuntimeSystem` 每帧更新，驱动任务阶段推进。\n- **导演 API**：`NarrativeDirector.StartQuest(...)` / `AdvanceQuestStage(...)` / `CompleteQuest(...)`。\n- **快照/恢复**：`NarrativeDirector` 支持 `CaptureSnapshot()` 和 `RestoreSnapshot(...)`，用于存档/读档。\n\n### 4.2 Dialogue（对话）\n\n- **对话定义**：`NarrativeDialogueDefinition`（`Narrative/NarrativeDefinitions.cs`）包含节点列表、选项列表、条件与动作。\n- **状态机**：`StartDialogue` → `AdvanceDialogue`（自动推进） / `ChooseDialogueOption`（玩家选择）。\n- **条件评估**：`NarrativeDirector` 内置 `EvaluateEntityTag`、`EvaluateEntityAttribute` 等条件评估。> **注意**：`EvaluateEntityTag` 和 `EvaluateEntityAttribute` 使用 `TagRegistry.GetId(condition.TagId)` 和 `AttributeRegistry.GetId(condition.AttributeId)`，传入字符串形式的 ID。如果配置中已将 ID 预解析为 int，则此处传入 int 的字符串表示会出错。需确认 `NarrativeConditionDefinition` 的字段类型契约。\n- **对话动作**：`NarrativeActionDefinition` 支持多种动作类型：修改变量（`SetVariable`）、发布 EffectRequest（`ApplyEffect`）、激活 Ability（`ActivateAbility`）、改变关系指标（`ModifyRelationship`）、给予/移除物品（`GiveItem` / `RemoveItem`）、发布叙事信号（`EmitSignal`）。动作在玩家选择对话选项后由 `NarrativeRuntimeSystem` 按顺序执行。\n\n### 4.3 Cinematic（过场动画）\n\n- **过场定义**：`NarrativeCinematicDefinition`（`Narrative/NarrativeDefinitions.cs`）包含时间线事件、摄像机路径、实体动画触发。\n- **导演控制**：`StartCinematic(...)` / `SkipCinematic()`。过场动画中可嵌入 GAS 信号（`EffectSignal`、`EventSignal`）驱动 gameplay 事件。\n- **与 Spawning 集成**：过场动画可触发 `RuntimeEntitySpawnSystem` 生成临时实体（如特效、背景角色）。过场动画时间线支持按帧触发 GAS 信号，实现\"动画播放到第 120 帧时释放 AOE 技能\"的同步需求。过场动画的摄像机控制由 Presentation Pipeline 消费，不直接操作 ECS 组件。\n\n### 4.4 NarrativeValueStore（变量存储）\n\n- **API**：`Get(...)` / `Set(...)` / `Add(...)` 支持数值型变量读写。\n- **快照**：`CaptureSnapshot()` / `RestoreSnapshot(...)` 支持存档级变量持久化。\n- **作用域**：支持全局变量与任务局部变量（通过 key 前缀或命名空间区分）。\n\n### 4.5 Frontend Kit（UI 绑定）\n\n- **视图模型**：`NarrativeViews`（`Narrative/NarrativeViews.cs`）提供：\n  - `NarrativeQuestView`：只读任务状态（名称、当前阶段、目标列表、完成标记）\n  - `NarrativeDialogueView`：只读对话状态（当前节点文本、选项列表、说话者）\n  - `NarrativeCinematicView`：只读过场状态（播放中/可跳过/剩余时间）\n- **UI 使用方式**：UI 层每帧查询 `NarrativeViews` 刷新面板，**不直接调用 `NarrativeDirector`**。所有修改通过导演 API 或 GAS 事件触发。UI 与导演的通信采用单向数据流：UI 只读取 View，玩家交互通过 Input System 生成意图，由 Gameplay 层调用导演 API，导演更新状态后 View 在下一帧刷新。\n- **任务追踪面板数据流**：`NarrativeQuestView` 提供当前活跃任务列表、每个任务的阶段列表、各阶段目标描述及完成标记。UI 层按优先级排序（主线优先于支线），在 HUD 右侧或地图界面中展示。任务目标文本支持动态变量插值（如\"击杀 3/5 只史莱姆\"中的数字从 `NarrativeValueStore` 读取）。\n- **对话窗口数据流**：`NarrativeDialogueView` 提供当前节点说话者名称、头像 ID、节点文本、可用选项列表（含条件过滤后的可见选项）。UI 层在对话开始时显示对话窗口，玩家选择选项后 UI 将 `optionIndex` 提交给 `NarrativeDirector.ChooseDialogueOption(index)`，导演推进状态机后，`NarrativeDialogueView` 在下一帧刷新为新节点内容。\n- **过场动画触发提示**：UI 监听 `NarrativeCinematicView` 状态，显示\"按 Space 跳过\"等提示。过场动画跳过并非直接销毁过场实体，而是通过 `SkipCinematic()` 向导演发送跳过请求，由导演按配置决定是直接跳到结尾还是加速播放。\n\n---\n\n## 5. 输入 / 输出\n\n### 5.1 输入\n\n| 输入 | 来源 | 处理者 |\n|------|------|--------|\n| 叙事配置 JSON | Mod / ConfigPipeline | `NarrativeConfigLoader` |\n| 玩家选择 | UI / 输入系统 | `NarrativeDirector.ChooseDialogueOption` |\n| 任务推进信号 | GAS（击杀/收集/到达标签） | `NarrativeDirector.AdvanceQuestStage` |\n| 过场控制 | UI / 自动触发 | `NarrativeDirector.StartCinematic` / `SkipCinematic` |\n| 变量修改 | 对话动作 / Exchange / GAS | `NarrativeValueStore.Set` |\n| 叙事信号 | 任意系统 | `NarrativeDirector.EmitSignal` |\n\n### 5.2 输出\n\n| 输出 | 目标 | 驱动者 |\n|------|------|--------|\n| 任务状态 | UI 任务追踪面板 | `NarrativeQuestView` |\n| 对话状态 | UI 对话窗口 | `NarrativeDialogueView` |\n| 过场状态 | UI 过场提示 | `NarrativeCinematicView` |\n| EffectRequest | GAS Effect Pipeline | 对话/任务/过场动作配置 |\n| GameplayEvent | GAS EventBus | 叙事信号/过场事件 |\n| 变量快照 | 存档系统 | `NarrativeValueStore.CaptureSnapshot` |\n\n---\n\n## 6. 依赖关系\n\n```\nNarrative System\n├── 依赖 GAS：任务条件通过 Tag/Attribute 评估；对话动作可发布 EffectRequest\n├── 依赖 Items/Exchange：任务奖励可通过 Exchange 原子结算发放\n├── 依赖 Relationships：对话选项可见性可依赖关系指标\n├── 依赖 AI：AI 行为可受叙事变量/任务状态影响（如护送目标切换）\n├── 依赖 Presentation：过场动画驱动 Camera/Animator/VFX\n├── 依赖 ConfigPipeline：NarrativeConfigLoader 加载 JSON 定义\n└── 依赖 Arch ECS：NarrativeRuntimeSystem 查询叙事组件\n```\n\n---\n\n## 7. 非功能需求\n\n| 需求 | 目标 | 实现方式 |\n|------|------|----------|\n| **性能** | 叙事更新不阻塞主循环 | `NarrativeRuntimeSystem.Update(float)` 按帧切片，每帧只处理有限任务 |\n| **内存** | 存档体积可控 | `NarrativeValueStore` 快照只存储变更变量，不全量复制 |\n| **可扩展性** | Mod 可新增任务/对话/过场 | 加载期 `NarrativeDefinitionRegistry` 注册 |\n| **可重入性** | 支持存档/读档 | `CaptureSnapshot` / `RestoreSnapshot` 全链路快照 |\n| **UI 解耦** | 表现层不直接修改叙事状态 | `NarrativeViews` 只读视图，修改必须通过 `NarrativeDirector` |\n\n---\n\n## 8. 关键类清单\n\n### 8.1 导演与运行时\n\n| 类 | 路径 | 职责 |\n|----|------|------|\n| `NarrativeDirector` | `src/Core/Gameplay/Narrative/NarrativeDirector.cs` | 叙事导演（任务/对话/过场/变量/信号） |\n| `NarrativeRuntimeSystem` | `src/Core/Gameplay/Narrative/NarrativeRuntimeSystem.cs` | 叙事运行时系统（每帧更新） |\n| `NarrativeValueStore` | `src/Core/Gameplay/Narrative/NarrativeValueStore.cs` | 变量存储（Get/Set/Add/快照） |\n| `NarrativeViews` | `src/Core/Gameplay/Narrative/NarrativeViews.cs` | 视图模型（UI 只读） |\n\n### 8.2 定义与配置\n\n| 类 | 路径 | 职责 |\n|----|------|------|\n| `NarrativeDefinitions` | `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs` | 定义模型（Quest/Dialogue/Cinematic/Action/Condition） |\n| `NarrativeDefinitionRegistry` | `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`（内部类） | 定义注册表 |\n| `NarrativeConfigLoader` | `src/Core/Gameplay/Narrative/NarrativeConfigLoader.cs` | 配置加载器 |\n| `NarrativeServiceKeys` / `NarrativeEventKeys` | `src/Core/Gameplay/Narrative/NarrativeServiceKeys.cs` | 服务键与事件键常量 |\n\n---\n\n*本 PRD 基于 `report_Gameplay_GAS.md` Stage 1 扫描报告编写。条件评估配置契约风险已在文中标注。*\n";
+
+function buildNav() {
+  let html = '';
+  for (const [group, items] of Object.entries(navData)) {
+    if (items.length === 0) continue;
+    html += '<div class="group"><div class="group-title">' + group + '</div>';
+    for (const [href, title] of items) {
+      const cls = href === currentPage ? 'active' : '';
+      html += '<a href="' + href + '" class="' + cls + '">' + title + '</a>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('nav').innerHTML = html;
+}
+
+function render() {
+  buildNav();
+  document.getElementById('content').innerHTML = marked.parse(mdContent);
+}
+render();
+</script>
+</body>
+</html>
