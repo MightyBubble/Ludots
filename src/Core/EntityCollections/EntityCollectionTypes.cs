@@ -21,6 +21,7 @@ namespace Ludots.Core.EntityCollections
         SpatialQuery = 5,
         GasGraphResult = 6,
         Debug = 7,
+        DynamicParticipant = 8,
     }
 
     public enum EntityCollectionRoleKind : byte
