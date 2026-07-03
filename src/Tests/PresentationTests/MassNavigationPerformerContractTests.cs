@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation.Runtime;
@@ -22,6 +24,7 @@ namespace Ludots.Tests.Presentation
         private const string HealthRatioParamKey = "massNavigation.agent.health.ratio";
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
+        private const string LargeWorldCameraId = "MassNavigation.Camera.LargeWorldHeightmap";
 
         [Test]
         public void AgentPerformers_UseMassNavigationOwnedGpuSkinnedAsset()
@@ -525,6 +528,49 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+        }
+
+        [Test]
+        public void LargeWorldMap_UsesVisualHeightmapCameraProfile()
+        {
+            string modRoot = MassNavigationModRoot();
+            JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
+            JsonObject defaultCamera = map["DefaultCamera"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigation map must declare DefaultCamera.");
+
+            Assert.That(RequireString(defaultCamera, "VirtualCameraId"), Is.EqualTo(LargeWorldCameraId));
+            Assert.That(defaultCamera["TargetXCm"]?.GetValue<float>(), Is.EqualTo(0f));
+            Assert.That(defaultCamera["TargetYCm"]?.GetValue<float>(), Is.EqualTo(0f));
+
+            JsonArray catalog = ReadArray(Path.Combine(modRoot, "assets", "Configs", "config_catalog.json"));
+            Assert.That(
+                catalog.Select(node => node?.AsObject()).Any(entry =>
+                    string.Equals(entry?["Path"]?.GetValue<string>(), "Camera/virtual_cameras.json", StringComparison.Ordinal) &&
+                    string.Equals(entry?["Policy"]?.GetValue<string>(), "ArrayById", StringComparison.Ordinal) &&
+                    string.Equals(entry?["IdField"]?.GetValue<string>(), "id", StringComparison.Ordinal)),
+                Is.True,
+                "MassNavigation camera profiles must be registered through ConfigPipeline, not by host-loop defaults.");
+
+            JsonArray cameras = ReadArray(Path.Combine(modRoot, "assets", "Configs", "Camera", "virtual_cameras.json"));
+            JsonObject camera = FindObjectById(cameras, LargeWorldCameraId);
+            Assert.That(camera["targetHeightMode"]?.GetValue<string>(), Is.EqualTo("VisualHeightmap"));
+            Assert.That(camera["targetHeightLayerIndex"]?.GetValue<int>(), Is.EqualTo(0));
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("MassNavigationMod", modRoot);
+            var modLoader = new Ludots.Core.Modding.ModLoader(
+                vfs,
+                new Ludots.Core.Scripting.FunctionRegistry(),
+                new Ludots.Core.Scripting.TriggerManager());
+            modLoader.LoadedModIds.Add("MassNavigationMod");
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            ConfigCatalog loadedCatalog = ConfigCatalogLoader.Load(pipeline);
+            var registry = new VirtualCameraRegistry();
+            new VirtualCameraDefinitionLoader(pipeline, registry).Load(loadedCatalog, new ConfigConflictReport());
+
+            Assert.That(registry.TryGet(LargeWorldCameraId, out VirtualCameraDefinition? definition), Is.True);
+            Assert.That(definition!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(definition.TargetHeightLayerIndex, Is.EqualTo(0));
         }
 
         [Test]
