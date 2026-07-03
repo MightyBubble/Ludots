@@ -242,6 +242,7 @@ public sealed class MassNavigationSimulationRuntime
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
+        MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
@@ -707,6 +708,13 @@ public sealed class MassNavigationSimulationRuntime
         if (entities.Length != agentSeeds.Length || entities.Length != controllableFlags.Length)
         {
             throw new InvalidOperationException("MassNavigation authored rebuild requires matching entity, seed, and controllable spans.");
+        }
+
+        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (agentSeeds.Length > membershipCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
         }
 
         int previousSelectedCount = _selectedCount;
