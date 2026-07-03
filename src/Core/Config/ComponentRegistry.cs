@@ -52,6 +52,7 @@ namespace Ludots.Core.Config
             Register<Health>("Health");
             Register<Name>("Name");
             Register<FacingDirection>("FacingDirection");
+            Register<MapEntity>("MapEntity");
             Register("WorldPositionCm", SetWorldPositionCm);
             Register<SpatialPartitionExcluded>("SpatialPartitionExcluded");
             Register<Ludots.Core.Gameplay.Components.Team>("Team");

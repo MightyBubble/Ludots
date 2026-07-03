@@ -6,10 +6,12 @@ using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
+using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Scripting;
 using ParticipantViewCapabilityMod.Runtime;
 
@@ -45,16 +47,46 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
         RelationshipCatalogRuntime relationshipCatalog = engine.GetService(CoreServiceKeys.RelationshipCatalogRuntime)
             ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod requires RelationshipCatalogRuntime.");
 
-        var store = new KnowledgeProjectionStore(initialCapacity: Math.Max(64, metadata.Projections.Length * 16));
+        int dynamicCapacity = Math.Max(0, metadata.DynamicParticipants.Length * 32);
+        var store = new KnowledgeProjectionStore(initialCapacity: Math.Max(64, (metadata.Projections.Length * 16) + dynamicCapacity));
         var projector = new KnowledgeRelationCollectionProjector(relationships, collections, relationshipCatalog, store);
 
         InstallCollections(session, collections, metadata.Collections);
         InstallRelations(session, relationships, relationshipTypes, metadata.Relations);
         InstallDirectProjections(engine.World, session, relationshipTypes, store, metadata.Projections);
+        DynamicParticipantVisibilityPublisher? publisher = InstallDynamicParticipants(
+            engine,
+            session,
+            collections,
+            relationshipTypes,
+            store,
+            metadata.DynamicParticipants);
 
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, store);
         engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, projector);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, new KnowledgeProjectionResolver(store, projector));
+        if (publisher != null)
+        {
+            engine.SetService(CoreServiceKeys.DynamicParticipantVisibilityPublisher, publisher);
+        }
+        else
+        {
+            engine.RemoveService(CoreServiceKeys.DynamicParticipantVisibilityPublisher);
+        }
+    }
+
+    public static void Clear(GameEngine engine)
+    {
+        ArgumentNullException.ThrowIfNull(engine);
+        if (engine.GetService(CoreServiceKeys.DynamicParticipantVisibilityPublisher) is DynamicParticipantVisibilityPublisher publisher)
+        {
+            publisher.Clear();
+        }
+
+        engine.RemoveService(CoreServiceKeys.DynamicParticipantVisibilityPublisher);
+        engine.RemoveService(CoreServiceKeys.KnowledgeProjectionStore);
+        engine.RemoveService(CoreServiceKeys.KnowledgeRelationCollectionProjector);
+        engine.RemoveService(CoreServiceKeys.KnowledgeProjectionResolver);
     }
 
     private static ParticipantViewKnowledgeMetadata ReadRequiredMetadata(MapSession session)
@@ -172,6 +204,38 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
                 }
             }
         }
+    }
+
+    private static DynamicParticipantVisibilityPublisher? InstallDynamicParticipants(
+        GameEngine engine,
+        MapSession session,
+        EntityCollectionStore collections,
+        RelationshipTypeRegistry relationshipTypes,
+        KnowledgeProjectionStore store,
+        DynamicParticipantQuerySpec[] specs)
+    {
+        if (specs.Length == 0)
+        {
+            return null;
+        }
+
+        DynamicParticipantVisibilityBinding[] bindings = DynamicParticipantVisibilityCompiler.Compile(
+            session,
+            specs,
+            relationshipTypes);
+        if (bindings.Length == 0)
+        {
+            return null;
+        }
+
+        var publisher = new DynamicParticipantVisibilityPublisher(
+            engine.World,
+            collections,
+            store,
+            bindings,
+            engine.GetService(CoreServiceKeys.TagOps));
+        publisher.Publish(KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext));
+        return publisher;
     }
 
     private static Entity[] ResolveTargets(World world, MapSession session, KnowledgeTargetSelector selector, int projectionIndex)
@@ -385,6 +449,7 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
         public KnowledgeProjectionSpec[] Projections { get; set; } = Array.Empty<KnowledgeProjectionSpec>();
         public KnowledgeRelationSpec[] Relations { get; set; } = Array.Empty<KnowledgeRelationSpec>();
         public KnowledgeCollectionSpec[] Collections { get; set; } = Array.Empty<KnowledgeCollectionSpec>();
+        public DynamicParticipantQuerySpec[] DynamicParticipants { get; set; } = Array.Empty<DynamicParticipantQuerySpec>();
     }
 
     private sealed class KnowledgeProjectionSpec

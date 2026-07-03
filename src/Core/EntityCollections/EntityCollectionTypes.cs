@@ -25,6 +25,7 @@ namespace Ludots.Core.EntityCollections
         GasGraphResult = 6,
         Debug = 7,
         UiHover = 8,
+        DynamicParticipant = 9,
     }
 
     public enum EntityCollectionRoleKind : byte
