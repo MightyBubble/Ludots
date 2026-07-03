@@ -719,6 +719,7 @@ public sealed class MassNavigationSimulationRuntime
             _selectedEntities.AsSpan(0, previousSelectedCount).CopyTo(previousSelectedEntities);
         }
 
+        var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
         ClearAuthoredRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
@@ -726,6 +727,7 @@ public sealed class MassNavigationSimulationRuntime
             BindSpawnedAgent(world, entities[i], i, controllableFlags[i]);
         }
 
+        NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
         RestoreSelectionAfterAuthoredRebuild(world, previousSelectedEntities, previousSelectionRevision);
         MarkStructuralChange();
     }

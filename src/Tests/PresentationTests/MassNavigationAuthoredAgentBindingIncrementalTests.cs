@@ -146,6 +146,179 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
         }
 
+        [Test]
+        public void RebuildFromAuthoredAgents_RestoresOrderGroupAcrossAgentIndexDrift()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out Entity agent2,
+                out _,
+                out MassNavigationAgentSeed[] seeds);
+            int orderToken = 42;
+            int[] members = { 0, 1, 2 };
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                simulation.MassNavigationFlow,
+                simulation.AgentState,
+                orderToken,
+                members,
+                TeamId,
+                new Vector2(2600f, 2200f),
+                MassNavigationFormationMode.Square,
+                rotationRadians: 0f);
+            Assert.That(movedCount, Is.EqualTo(3));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float agent0OrderX, out float agent0OrderY), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float agent0TargetX, out float agent0TargetY), Is.True);
+            int revisionBeforeRebuild = simulation.AuthoredRuntimeBindingRevision;
+
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { agent2, agent0, agent1 },
+                new[] { seeds[2], seeds[0], seeds[1] },
+                new[] { true, true, true });
+
+            Assert.That(world.TryGet(agent2, out MassNavigationAgentIndex agent2Index), Is.True);
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
+            Assert.That(world.TryGet(agent1, out MassNavigationAgentIndex agent1Index), Is.True);
+            Assert.That(agent2Index.Value, Is.EqualTo(0));
+            Assert.That(agent0Index.Value, Is.EqualTo(1));
+            Assert.That(agent1Index.Value, Is.EqualTo(2));
+            Assert.That(simulation.AuthoredRuntimeBindingRevision, Is.GreaterThan(revisionBeforeRebuild));
+            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out float restoredOrderX, out float restoredOrderY), Is.True);
+            Assert.That(restoredOrderX, Is.EqualTo(agent0OrderX).Within(0.001f));
+            Assert.That(restoredOrderY, Is.EqualTo(agent0OrderY).Within(0.001f));
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float restoredTargetX, out float restoredTargetY), Is.True);
+            Assert.That(restoredTargetX, Is.EqualTo(agent0TargetX).Within(0.001f));
+            Assert.That(restoredTargetY, Is.EqualTo(agent0TargetY).Within(0.001f));
+        }
+
+        [Test]
+        public void RebuildFromAuthoredAgents_RestoresOrderGroupForSurvivingMembers()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out Entity agent2,
+                out _,
+                out MassNavigationAgentSeed[] seeds);
+            simulation.SetSelection(new[] { agent0, agent1, agent2 }, revision: 7);
+            int orderToken = 84;
+            int[] members = { 0, 1, 2 };
+            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                simulation.MassNavigationFlow,
+                simulation.AgentState,
+                orderToken,
+                members,
+                TeamId,
+                new Vector2(2800f, 2200f),
+                MassNavigationFormationMode.Square,
+                rotationRadians: 0f);
+            Assert.That(movedCount, Is.EqualTo(3));
+
+            world.Remove<MassNavigationAgent>(agent1);
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { agent0, agent2 },
+                new[] { seeds[0], seeds[2] },
+                new[] { true, true });
+
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
+            Assert.That(world.TryGet(agent2, out MassNavigationAgentIndex agent2Index), Is.True);
+            Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
+            Assert.That(simulation.SelectedEntities.Length, Is.EqualTo(2));
+            Assert.That(simulation.SelectedEntities[0], Is.EqualTo(agent0));
+            Assert.That(simulation.SelectedEntities[1], Is.EqualTo(agent2));
+            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.True);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent2Index.Value, out _, out _), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out _, out _), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent2Index.Value, out _, out _), Is.True);
+        }
+
+        [Test]
+        public void RebuildFromAuthoredAgents_DissolvesSelectionGroupWithOneSurvivor()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out MassNavigationAgentLayer layer);
+            MassNavigationAgentSeed survivingSeed = CreateSeed(localX: 1000f, localY: 1000f, layer);
+            simulation.SetSelection(new[] { agent0, agent1 }, revision: 9);
+            int movedCount = simulation.NavGroupRuntime.IssueSelectionMoveCommand(
+                simulation.MassNavigationFlow,
+                world,
+                simulation.AgentState,
+                simulation.SelectedEntities,
+                new Vector2(2400f, 2200f),
+                MassNavigationFormationMode.Square);
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
+            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
+
+            world.Remove<MassNavigationAgent>(agent1);
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { agent0 },
+                new[] { survivingSeed },
+                new[] { true });
+
+            Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
+            Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
+            Assert.That(simulation.SelectedEntities.Length, Is.EqualTo(1));
+            Assert.That(simulation.SelectedEntities[0], Is.EqualTo(agent0));
+            Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
+            Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
+            Assert.That(simulation.NavGroupRuntime.HasGroup(agent0Index.Value), Is.False);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.False);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float heldTargetX, out float heldTargetY), Is.True);
+            Assert.That(heldTargetX, Is.EqualTo(1000f).Within(0.001f));
+            Assert.That(heldTargetY, Is.EqualTo(1000f).Within(0.001f));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_FullRebuild_RestoresOrderGroupForSurvivor()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int orderToken = 126;
+            int[] members = { 0, 1 };
+            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+                harness.Simulation.MassNavigationFlow,
+                harness.Simulation.AgentState,
+                orderToken,
+                members,
+                TeamId,
+                new Vector2(2600f, 2200f),
+                MassNavigationFormationMode.Square,
+                rotationRadians: 0f);
+            Assert.That(movedCount, Is.EqualTo(2));
+            Assert.That(harness.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+
+            harness.Engine.World.Remove<MassNavigationAgent>(harness.Agent1);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Engine.World.TryGet(harness.Agent0, out MassNavigationAgentIndex agent0Index), Is.True);
+            Assert.That(agent0Index.Value, Is.EqualTo(0));
+            Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(harness.Agent1), Is.False);
+            Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
+            Assert.That(harness.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
+            Assert.That(harness.Simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
+            Assert.That(harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.True);
+            Assert.That(harness.Simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out _, out _), Is.True);
+        }
+
         private static MassNavigationSimulationRuntime CreateSimulation(
             World world,
             out Entity agent0,
@@ -163,6 +336,30 @@ namespace Ludots.Tests.Presentation
             agent0 = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1000f, layer);
             agent1 = CreateAuthoredAgentEntity(world, localX: 1200f, localY: 1000f, layer);
             simulation.RebuildFromAuthoredAgents(world, new[] { agent0, agent1 }, seeds, new[] { true, true });
+            return simulation;
+        }
+
+        private static MassNavigationSimulationRuntime CreateSimulation(
+            World world,
+            out Entity agent0,
+            out Entity agent1,
+            out Entity agent2,
+            out MassNavigationAgentLayer layer,
+            out MassNavigationAgentSeed[] seeds,
+            int membershipCapacity = 16)
+        {
+            MassNavigationSimulationRuntime simulation = CreateConfiguredSimulation(CreateTestConfig(membershipCapacity));
+            layer = CreateAgentLayer();
+            seeds = new[]
+            {
+                CreateSeed(localX: 1000f, localY: 1000f, layer),
+                CreateSeed(localX: 1200f, localY: 1000f, layer),
+                CreateSeed(localX: 1400f, localY: 1000f, layer),
+            };
+            agent0 = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1000f, layer);
+            agent1 = CreateAuthoredAgentEntity(world, localX: 1200f, localY: 1000f, layer);
+            agent2 = CreateAuthoredAgentEntity(world, localX: 1400f, localY: 1000f, layer);
+            simulation.RebuildFromAuthoredAgents(world, new[] { agent0, agent1, agent2 }, seeds, new[] { true, true, true });
             return simulation;
         }
 
