@@ -730,6 +730,41 @@ public sealed class MassNavigationSimulationRuntime
         MarkStructuralChange();
     }
 
+    public void AppendAuthoredAgents(
+        World world,
+        ReadOnlySpan<Entity> newEntities,
+        ReadOnlySpan<MassNavigationAgentSeed> newAgentSeeds,
+        ReadOnlySpan<bool> controllableFlags)
+    {
+        if (newEntities.Length != newAgentSeeds.Length || newEntities.Length != controllableFlags.Length)
+        {
+            throw new InvalidOperationException("MassNavigation authored append requires matching entity, seed, and controllable spans.");
+        }
+
+        if (newAgentSeeds.Length <= 0)
+        {
+            return;
+        }
+
+        int newTotal = checked(AgentState.TotalAgents + newAgentSeeds.Length);
+        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (newTotal > membershipCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored append required {newTotal} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
+        }
+
+        int startIndex = MassNavigationFlow.UnitCount;
+        MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
+        for (int i = 0; i < newEntities.Length; i++)
+        {
+            BindSpawnedAgent(world, newEntities[i], startIndex + i, controllableFlags[i]);
+        }
+
+        MarkStructuralChange();
+        MarkAuthoredRuntimeBindingChanged();
+    }
+
     private void RestoreSelectionAfterAuthoredRebuild(
         World world,
         ReadOnlySpan<Entity> previousSelectedEntities,

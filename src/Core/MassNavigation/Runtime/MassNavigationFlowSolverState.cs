@@ -356,6 +356,83 @@ public sealed partial class MassNavigationFlowSolverState
         _arrivalEventCount = 0;
     }
 
+    public void AppendAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> newAgentSeeds)
+    {
+        if (newAgentSeeds.Length <= 0)
+        {
+            return;
+        }
+
+        int startIndex = UnitCount;
+        int newTotal = checked(startIndex + newAgentSeeds.Length);
+        EnsureCapacity(newTotal);
+        for (int i = 0; i < newAgentSeeds.Length; i++)
+        {
+            MassNavigationAgentSeed seed = newAgentSeeds[i];
+            int teamId = seed.TeamId;
+            if (!_teamStateIndexById.TryGetValue(teamId, out _))
+            {
+                var state = new TeamRuntimeState(teamId)
+                {
+                    UnitCount = 0,
+                    TargetX = seed.LocalPositionXCm,
+                    TargetY = seed.LocalPositionYCm,
+                };
+                _teamStateIndexById[teamId] = _teamStates.Count;
+                _teamStates.Add(state);
+                _teamRelationshipRevision = int.MinValue;
+            }
+        }
+
+        for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
+        {
+            MassNavigationAgentSeed seed = newAgentSeeds[unitIndex - startIndex];
+            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            {
+                throw new InvalidOperationException($"MassNavigationFlow append references unregistered team {seed.TeamId}.");
+            }
+
+            int localIndex = _teamStates[teamStateIndex].UnitCount;
+            _teamStates[teamStateIndex].UnitCount++;
+            int i2 = unitIndex << 1;
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
+            _teams[unitIndex] = seed.TeamId;
+            _teamRuntimeIndices[unitIndex] = teamStateIndex;
+            _teamLocalIndices[unitIndex] = localIndex;
+            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer);
+            _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
+            _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
+            _navMasses[unitIndex] = seed.NavMass;
+            _visualScales[unitIndex] = seed.VisualScale;
+            _bodyRadiiCm[unitIndex] = seed.BodyRadiusCm;
+            _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
+            _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
+            _heavyProfileFlags[unitIndex] = seed.Heavy ? (byte)1 : (byte)0;
+            _positionsCm[i2] = ClampXPosition(seed.LocalPositionXCm);
+            _positionsCm[i2 + 1] = ClampYPosition(seed.LocalPositionYCm);
+            _velocitiesCm[i2] = 0f;
+            _velocitiesCm[i2 + 1] = 0f;
+            _unitTargetsCm[i2] = 0f;
+            _unitTargetsCm[i2 + 1] = 0f;
+            _unitTargetStopThresholdsCm[unitIndex] = 0f;
+            _hasUnitTarget[unitIndex] = 0;
+            _selectedFlags[unitIndex] = 0;
+            _unitProgressAnchorCm[i2] = _positionsCm[i2];
+            _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledAnchorCm[i2] = _positionsCm[i2];
+            _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledFlags[unitIndex] = 0;
+            _arrivalEventEmittedFlags[unitIndex] = 0;
+            _unitRetryCounts[unitIndex] = 0;
+            _unitStuckSeconds[unitIndex] = 0f;
+            MarkEntityDirty(unitIndex);
+        }
+
+        UnitCount = newTotal;
+        _maxInteractingBodyRadiiDirty = true;
+        MarkFlowDirty();
+    }
+
     public void SetTeamTarget(int teamId, Vector2 targetCm)
     {
         if (!TryGetTeamState(teamId, out TeamRuntimeState team))
