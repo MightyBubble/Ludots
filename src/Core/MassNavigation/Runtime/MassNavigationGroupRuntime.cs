@@ -8,6 +8,8 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationGroupRuntime
 {
+    internal const float OrderPathRestoreTargetToleranceCm = 0.001f;
+
     private readonly MassNavigationFormationRuntime _formationLayout;
     private readonly List<NavGroupState?> _groups;
     private readonly HashSet<int> _visitedGroupIds;
@@ -1508,8 +1510,8 @@ public sealed class MassNavigationGroupRuntime
         for (int i = 0; i < restoredMemberCount; i++)
         {
             AuthoredRebuildMemberSnapshot member = captured.Members[memberSnapshotIndices[i]];
-            if (MathF.Abs(group.MemberOrderTargetWorldX[i] - member.OrderTargetWorldX) > 0.001f ||
-                MathF.Abs(group.MemberOrderTargetWorldY[i] - member.OrderTargetWorldY) > 0.001f)
+            if (MathF.Abs(group.MemberOrderTargetWorldX[i] - member.OrderTargetWorldX) > OrderPathRestoreTargetToleranceCm ||
+                MathF.Abs(group.MemberOrderTargetWorldY[i] - member.OrderTargetWorldY) > OrderPathRestoreTargetToleranceCm)
             {
                 allOrderTargetsPreserved = false;
                 continue;

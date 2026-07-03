@@ -25,6 +25,7 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationAuthoredAgentBindingIncrementalTests
     {
         private const int TeamId = 1;
+        private const float PositionToleranceCm = MassNavigationGroupRuntime.OrderPathRestoreTargetToleranceCm;
 
         [Test]
         public void AppendAuthoredAgents_PreservesActiveMoveGroupState()
@@ -55,11 +56,11 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float preservedOrderX, out float preservedOrderY), Is.True);
-            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(0.001f));
-            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(0.001f));
+            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(0, out float preservedTarget0X, out float preservedTarget0Y), Is.True);
-            Assert.That(preservedTarget0X, Is.EqualTo(target0X).Within(0.001f));
-            Assert.That(preservedTarget0Y, Is.EqualTo(target0Y).Within(0.001f));
+            Assert.That(preservedTarget0X, Is.EqualTo(target0X).Within(PositionToleranceCm));
+            Assert.That(preservedTarget0Y, Is.EqualTo(target0Y).Within(PositionToleranceCm));
             Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(3));
             Assert.That(world.Has<MassNavigationAgentIndex>(newAgent), Is.True);
         }
@@ -89,8 +90,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(harness.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(harness.Simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(0, out float preservedOrderX, out float preservedOrderY), Is.True);
-            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(0.001f));
-            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(0.001f));
+            Assert.That(preservedOrderX, Is.EqualTo(orderTargetX).Within(PositionToleranceCm));
+            Assert.That(preservedOrderY, Is.EqualTo(orderTargetY).Within(PositionToleranceCm));
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
             Assert.That(harness.Engine.World.Has<MassNavigationAgentIndex>(newAgent), Is.True);
         }
@@ -112,6 +113,38 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(simulation.AuthoredRuntimeBindingRevision, Is.EqualTo(revisionBeforeAppend));
             Assert.That(simulation.StructuralChangeRevision, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void AppendAuthoredAgents_MarksNewAgentDirtyForFirstEntitySync()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer);
+            simulation.MassNavigationFlow.SyncEntities(world, simulation.AgentState);
+
+            float appendedLocalX = simulation.MassNavigationFlow.PlayAreaMaxXCm + 1000f;
+            float appendedLocalY = simulation.MassNavigationFlow.PlayAreaMaxYCm + 1000f;
+            Entity newAgent = CreateAuthoredAgentEntity(
+                world,
+                simulation.ToWorldXCm(appendedLocalX),
+                simulation.ToWorldYCm(appendedLocalY),
+                layer);
+            var newSeed = CreateSeed(appendedLocalX, appendedLocalY, layer);
+
+            simulation.AppendAuthoredAgents(world, new[] { newAgent }, new[] { newSeed }, new[] { true });
+            simulation.MassNavigationFlow.SyncEntities(world, simulation.AgentState);
+
+            WorldPositionCm worldPosition = world.Get<WorldPositionCm>(newAgent);
+            Assert.That(
+                worldPosition.Value.X.ToFloat(),
+                Is.EqualTo(simulation.ToWorldXCm(simulation.MassNavigationFlow.PlayAreaMaxXCm)).Within(PositionToleranceCm));
+            Assert.That(
+                worldPosition.Value.Y.ToFloat(),
+                Is.EqualTo(simulation.ToWorldYCm(simulation.MassNavigationFlow.PlayAreaMaxYCm)).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -143,6 +176,42 @@ namespace Ludots.Tests.Presentation
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 simulation.AppendAuthoredAgents(world, new[] { newAgent }, new[] { seed }, new[] { true }));
+            Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
+        }
+
+        [Test]
+        public void RebuildFromAuthoredAgents_ExceedsMembershipCapacity_Throws()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateConfiguredSimulation(CreateTestConfig(membershipCapacity: 2));
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            Entity agent0 = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1000f, layer);
+            Entity agent1 = CreateAuthoredAgentEntity(world, localX: 1200f, localY: 1000f, layer);
+            Entity agent2 = CreateAuthoredAgentEntity(world, localX: 1400f, localY: 1000f, layer);
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateSeed(localX: 1000f, localY: 1000f, layer),
+                CreateSeed(localX: 1200f, localY: 1000f, layer),
+                CreateSeed(localX: 1400f, localY: 1000f, layer),
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                simulation.RebuildFromAuthoredAgents(
+                    world,
+                    new[] { agent0, agent1, agent2 },
+                    seeds,
+                    new[] { true, true, true }));
+            Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_ExceedsMembershipCapacity_ThrowsBeforeAppendOrRebuild()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 2);
+            harness.BindingSystem.Update(0f);
+            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1400f, localY: 1000f, harness.Layer);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => harness.BindingSystem.Update(0f));
             Assert.That(ex!.Message, Does.Contain("groupMembershipAgentCapacity"));
         }
 
@@ -191,11 +260,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out float restoredOrderX, out float restoredOrderY), Is.True);
-            Assert.That(restoredOrderX, Is.EqualTo(agent0OrderX).Within(0.001f));
-            Assert.That(restoredOrderY, Is.EqualTo(agent0OrderY).Within(0.001f));
+            Assert.That(restoredOrderX, Is.EqualTo(agent0OrderX).Within(PositionToleranceCm));
+            Assert.That(restoredOrderY, Is.EqualTo(agent0OrderY).Within(PositionToleranceCm));
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float restoredTargetX, out float restoredTargetY), Is.True);
-            Assert.That(restoredTargetX, Is.EqualTo(agent0TargetX).Within(0.001f));
-            Assert.That(restoredTargetY, Is.EqualTo(agent0TargetY).Within(0.001f));
+            Assert.That(restoredTargetX, Is.EqualTo(agent0TargetX).Within(PositionToleranceCm));
+            Assert.That(restoredTargetY, Is.EqualTo(agent0TargetY).Within(PositionToleranceCm));
         }
 
         [Test]
@@ -283,8 +352,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.NavGroupRuntime.HasGroup(agent0Index.Value), Is.False);
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agent0Index.Value, out _, out _), Is.False);
             Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(agent0Index.Value, out float heldTargetX, out float heldTargetY), Is.True);
-            Assert.That(heldTargetX, Is.EqualTo(1000f).Within(0.001f));
-            Assert.That(heldTargetY, Is.EqualTo(1000f).Within(0.001f));
+            Assert.That(heldTargetX, Is.EqualTo(1000f).Within(PositionToleranceCm));
+            Assert.That(heldTargetY, Is.EqualTo(1000f).Within(PositionToleranceCm));
         }
 
         [Test]

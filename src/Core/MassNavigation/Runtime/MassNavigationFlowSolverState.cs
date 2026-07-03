@@ -201,6 +201,16 @@ public sealed partial class MassNavigationFlowSolverState
         _stepHandles = new JobHandle[_parallelWorkerCount];
     }
 
+    internal void PreallocateAgentCapacity(int unitCapacity)
+    {
+        if (unitCapacity < 0)
+        {
+            throw new InvalidOperationException("MassNavigationFlowSolverState agent capacity preallocation requires unitCapacity >= 0.");
+        }
+
+        EnsureCapacity(unitCapacity);
+    }
+
     public Vector2 WorldToLocalCm(Vector2 worldCm)
     {
         return new Vector2(worldCm.X - _worldOriginXCm, worldCm.Y - _worldOriginYCm);
@@ -425,10 +435,14 @@ public sealed partial class MassNavigationFlowSolverState
             _arrivalEventEmittedFlags[unitIndex] = 0;
             _unitRetryCounts[unitIndex] = 0;
             _unitStuckSeconds[unitIndex] = 0f;
-            MarkEntityDirty(unitIndex);
         }
 
         UnitCount = newTotal;
+        for (int unitIndex = startIndex; unitIndex < newTotal; unitIndex++)
+        {
+            MarkEntityDirty(unitIndex);
+        }
+
         _maxInteractingBodyRadiiDirty = true;
         MarkFlowDirty();
     }
