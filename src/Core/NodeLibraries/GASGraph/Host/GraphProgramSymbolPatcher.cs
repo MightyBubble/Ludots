@@ -1,5 +1,7 @@
 using System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 
@@ -74,6 +76,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.LoadConfigInt:
                     case GraphNodeOp.LoadConfigEffectId:
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.InvokeBuiltin:
+                        ins.Imm = (int)GasEnumParser.ParseBuiltinHandlerId(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.RelationshipSetMetric:
                     case GraphNodeOp.RelationshipAddMetric:

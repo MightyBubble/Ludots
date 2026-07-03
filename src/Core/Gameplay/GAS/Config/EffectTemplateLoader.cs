@@ -12,6 +12,8 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
+using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -26,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
+        private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -41,7 +44,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
-            ScopeKeyRegistry? progressionScopeKeys = null)
+            ScopeKeyRegistry? progressionScopeKeys = null,
+            EntityTemplateKeyRegistry? entityTemplateKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -49,6 +53,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _targetDispatchPresets = targetDispatchPresets;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
+            _entityTemplateKeys = entityTemplateKeys;
         }
 
         public void Load(
@@ -121,6 +126,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException($"Effect template '{id}' in {relativePath} uses scalar 'duration' field. Use 'duration: {{ durationTicks: N }}' object block instead.");
                 }
+            }
+
+            if (obj.ContainsKey("lifecycleDeploy"))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{id}' in {relativePath} uses deprecated 'lifecycleDeploy' block. Use configParams '_ep.targetEntityTemplate' with preset graph composition.");
             }
         }
 
@@ -440,6 +451,23 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType SubmitOrderFromBlackboard requires a 'submitOrderFromBlackboard' block.");
                 }
+            }
+
+            if (presetType == EffectPresetType.DeployConsumeSource)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires lifetime=Instant.");
+                }
+
+                if (!configParams.TryGetInt(EffectParamKeys.TargetEntityTemplateKeyId, out int templateKeyId) || templateKeyId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType DeployConsumeSource requires configParams \"_ep.targetEntityTemplate\" with type \"EntityTemplate\".");
+                }
+
+                RequireDeployConsumeSourceLifecycleConfig(in configParams, cfg.Id, relativePath);
             }
 
             return new EffectTemplateData
@@ -1131,11 +1159,87 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
                     }
                 }
+                else if (type == "EntityTemplate")
+                {
+                    string templateName = paramCfg.Value.ToString()
+                        ?? throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key}.value must convert to a string.");
+                    if (string.IsNullOrWhiteSpace(templateName))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} entity template type requires a non-empty template id.");
+                    }
+
+                    if (_entityTemplateKeys == null)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: EntityTemplate config param requires EntityTemplateKeyRegistry.");
+                    }
+
+                    int templateKeyId = _entityTemplateKeys.Register(templateName);
+                    if (!result.TryAddEntityTemplateKeyId(keyId, templateKeyId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
+                    }
+                }
+                else if (type == "LifecycleAttributeValueSource")
+                {
+                    string sourceName = paramCfg.Value.ToString()
+                        ?? throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key}.value must convert to a string.");
+                    int sourceValue = ParseLifecycleAttributeValueSource(
+                        sourceName,
+                        ownerId,
+                        relativePath,
+                        $"configParams.{kvp.Key}.value");
+
+                    if (!result.TryAddLifecycleAttributeValueSource(keyId, sourceValue))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
+                    }
+                }
                 else
                 {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation.");
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation, EntityTemplate, LifecycleAttributeValueSource.");
                 }
             }
+        }
+
+        private static void RequireDeployConsumeSourceLifecycleConfig(
+            in EffectConfigParams configParams,
+            string effectId,
+            string relativePath)
+        {
+            if (!configParams.TryGetLifecycleAttributeValueSource(EffectParamKeys.LifecycleAttributeValueSource, out int rawSource) ||
+                (rawSource != (int)LifecycleAttributeValueSource.Base &&
+                 rawSource != (int)LifecycleAttributeValueSource.Current))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {relativePath}: presetType DeployConsumeSource requires configParams \"_ep.lifecycleAttributeValueSource\" with type \"LifecycleAttributeValueSource\".");
+            }
+
+            for (int i = 0; i < EffectParamKeys.LifecycleAttributeCapacity; i++)
+            {
+                int keyId = EffectParamKeys.GetLifecycleAttributeKey(i);
+                if (configParams.TryGetAttributeIdStrict(keyId, out int attributeId) && attributeId >= 0)
+                {
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Effect template '{effectId}' in {relativePath}: presetType DeployConsumeSource requires at least one configParams \"_ep.lifecycleAttributeN\" entry with type \"Attribute\".");
+        }
+
+        private static int ParseLifecycleAttributeValueSource(
+            string raw,
+            string effectId,
+            string relativePath,
+            string fieldPath)
+        {
+            return raw switch
+            {
+                "Base" => (int)LifecycleAttributeValueSource.Base,
+                "Current" => (int)LifecycleAttributeValueSource.Current,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {relativePath}: {fieldPath} has unsupported lifecycle attribute value source '{raw}'. Supported: Base, Current."),
+            };
         }
 
         // ── Phase Listeners compilation ──

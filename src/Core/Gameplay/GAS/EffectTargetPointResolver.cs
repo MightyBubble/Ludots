@@ -1,8 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Mathematics;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -12,21 +11,41 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class EffectTargetPointResolver
     {
+        public static bool TryResolvePreservedTargetPoint(in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)
+        {
+            if (mergedParams.TryGetFloat(EffectParamKeys.TargetPosX, out float x) &&
+                mergedParams.TryGetFloat(EffectParamKeys.TargetPosY, out float y))
+            {
+                targetPointCm = Fix64Vec2.FromInt((int)x, (int)y);
+                return true;
+            }
+
+            targetPointCm = default;
+            return false;
+        }
+
+        public static bool TryResolvePreservedTargetOrigin(in EffectConfigParams mergedParams, out Fix64Vec2 originPointCm)
+        {
+            if (mergedParams.TryGetFloat(EffectParamKeys.TargetOriginX, out float x) &&
+                mergedParams.TryGetFloat(EffectParamKeys.TargetOriginY, out float y))
+            {
+                originPointCm = Fix64Vec2.FromInt((int)x, (int)y);
+                return true;
+            }
+
+            originPointCm = default;
+            return false;
+        }
+
         public static bool TryResolve(
             World world,
             in EffectContext context,
             in EffectConfigParams mergedParams,
+            EffectTargetPointResolveOptions options,
             out Fix64Vec2 positionCm)
         {
-            if (TryGetPreservedTargetPoint(in mergedParams, out WorldCmInt2 point))
+            if (TryResolvePreservedTargetPoint(in mergedParams, out positionCm))
             {
-                positionCm = Fix64Vec2.FromInt(point.X, point.Y);
-                return true;
-            }
-
-            if (world.IsAlive(context.Target) && world.Has<WorldPositionCm>(context.Target))
-            {
-                positionCm = world.Get<WorldPositionCm>(context.Target).Value;
                 return true;
             }
 
@@ -36,8 +55,13 @@ namespace Ludots.Core.Gameplay.GAS
                 return true;
             }
 
-            if (world.IsAlive(context.Source) &&
-                world.Has<AbilityExecInstance>(context.Source))
+            if (world.IsAlive(context.Target) && world.Has<WorldPositionCm>(context.Target))
+            {
+                positionCm = world.Get<WorldPositionCm>(context.Target).Value;
+                return true;
+            }
+
+            if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
             {
                 ref readonly var exec = ref world.Get<AbilityExecInstance>(context.Source);
                 if (exec.HasTargetPos != 0)
@@ -47,8 +71,30 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
 
+            if (options.AllowSourceWorldPositionFallback &&
+                world.IsAlive(context.Source) &&
+                world.Has<WorldPositionCm>(context.Source))
+            {
+                positionCm = world.Get<WorldPositionCm>(context.Source).Value;
+                return true;
+            }
+
             positionCm = default;
             return false;
+        }
+
+        public static bool TryResolve(
+            World world,
+            in EffectContext context,
+            in EffectConfigParams mergedParams,
+            out Fix64Vec2 positionCm)
+        {
+            return TryResolve(
+                world,
+                in context,
+                in mergedParams,
+                EffectTargetPointResolveOptions.CreateUnit,
+                out positionCm);
         }
 
         public static bool TryResolveOrigin(
@@ -57,14 +103,12 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             out Fix64Vec2 positionCm)
         {
-            if (TryGetPreservedTargetOrigin(in mergedParams, out WorldCmInt2 point))
+            if (TryResolvePreservedTargetOrigin(in mergedParams, out positionCm))
             {
-                positionCm = Fix64Vec2.FromInt(point.X, point.Y);
                 return true;
             }
 
-            if (world.IsAlive(context.Source) &&
-                world.Has<AbilityExecInstance>(context.Source))
+            if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
             {
                 ref readonly var exec = ref world.Get<AbilityExecInstance>(context.Source);
                 if (exec.HasTargetOriginPos != 0)
@@ -84,30 +128,27 @@ namespace Ludots.Core.Gameplay.GAS
             return false;
         }
 
-        private static bool TryGetPreservedTargetOrigin(in EffectConfigParams mergedParams, out WorldCmInt2 point)
+        public static Fix64Vec2 ResolveOrThrow(
+            World world,
+            in EffectContext context,
+            in EffectConfigParams mergedParams,
+            EffectTargetPointResolveOptions options,
+            string failureMessage)
         {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetOriginX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetOriginY, out float y))
+            if (!TryResolve(world, in context, in mergedParams, options, out Fix64Vec2 positionCm))
             {
-                point = new WorldCmInt2((int)x, (int)y);
-                return true;
+                throw new InvalidOperationException(failureMessage);
             }
 
-            point = default;
-            return false;
+            return positionCm;
         }
+    }
 
-        private static bool TryGetPreservedTargetPoint(in EffectConfigParams mergedParams, out WorldCmInt2 point)
-        {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetPosX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetPosY, out float y))
-            {
-                point = new WorldCmInt2((int)x, (int)y);
-                return true;
-            }
+    public readonly struct EffectTargetPointResolveOptions
+    {
+        public bool AllowSourceWorldPositionFallback { get; init; }
 
-            point = default;
-            return false;
-        }
+        public static EffectTargetPointResolveOptions CreateUnit => new() { AllowSourceWorldPositionFallback = true };
+        public static EffectTargetPointResolveOptions DeployAtTargetPoint => new() { AllowSourceWorldPositionFallback = false };
     }
 }

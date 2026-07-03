@@ -233,6 +233,53 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
+        public bool ReplaceMemberTargetEverywhere(Entity source, Entity target)
+        {
+            if (!_world.IsAlive(source) || !_world.IsAlive(target) || source == target)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            foreach (var pair in _membersByContainer)
+            {
+                Entity container = pair.Key;
+                List<Entity> members = pair.Value;
+                if (!IsContainerAlive(container))
+                {
+                    continue;
+                }
+
+                bool containerChanged = false;
+                for (int i = 0; i < members.Count; i++)
+                {
+                    Entity relation = members[i];
+                    if (!_world.IsAlive(relation) || !_world.Has<SelectionMemberTarget>(relation))
+                    {
+                        continue;
+                    }
+
+                    ref var memberTarget = ref _world.Get<SelectionMemberTarget>(relation);
+                    if (memberTarget.Value != source)
+                    {
+                        continue;
+                    }
+
+                    memberTarget = new SelectionMemberTarget { Value = target };
+                    _world.Set(relation, memberTarget);
+                    containerChanged = true;
+                }
+
+                if (containerChanged)
+                {
+                    UpdateContainerMetadata(container, members.Count, changed: true);
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
         public bool ReplaceSelection(Entity owner, string setKey, ReadOnlySpan<Entity> next)
         {
             return TryGetOrCreateSelectionEntity(owner, setKey, out Entity container) &&

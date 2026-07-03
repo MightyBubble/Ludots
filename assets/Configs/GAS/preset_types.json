@@ -136,5 +136,14 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "SubmitOrderFromBlackboard" }
     }
+  },
+  {
+    "id": "DeployConsumeSource",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "graph", "id": "Graph.Lifecycle.DeployConsumeSource" }
+    }
   }
 ]

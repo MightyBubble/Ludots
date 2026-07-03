@@ -9,8 +9,10 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -36,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
             registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
+            EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
         public static void HandleApplyModifiers(
@@ -332,7 +335,7 @@ namespace Ludots.Core.Gameplay.GAS
                 targetPointCm = world.Get<WorldPositionCm>(context.TargetContext).Value;
                 hasTargetPoint = true;
             }
-            else if (TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
+            else if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
             {
                 hasTargetPoint = true;
             }
@@ -602,31 +605,12 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)
         {
-            if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
-            {
-                return world.Get<WorldPositionCm>(context.TargetContext).Value;
-            }
-
-            if (TryResolvePreservedTargetPoint(in mergedParams, out var preservedPoint))
-            {
-                return preservedPoint;
-            }
-
-            if (world.IsAlive(context.Source) && world.Has<AbilityExecInstance>(context.Source))
-            {
-                ref readonly var exec = ref world.Get<AbilityExecInstance>(context.Source);
-                if (exec.HasTargetPos != 0)
-                {
-                    return exec.TargetPosCm;
-                }
-            }
-
-            if (world.IsAlive(context.Source) && world.Has<WorldPositionCm>(context.Source))
-            {
-                return world.Get<WorldPositionCm>(context.Source).Value;
-            }
-
-            throw new InvalidOperationException("CreateUnit requires target point or source WorldPositionCm.");
+            return EffectTargetPointResolver.ResolveOrThrow(
+                world,
+                in context,
+                in mergedParams,
+                EffectTargetPointResolveOptions.CreateUnit,
+                "CreateUnit requires target point or source WorldPositionCm.");
         }
 
         private static Entity ResolveRelationEntity(in EffectContext context, RelationEntitySlot slot)
@@ -673,19 +657,6 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        private static bool TryResolvePreservedTargetPoint(in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)
-        {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetPosX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetPosY, out float y))
-            {
-                targetPointCm = Fix64Vec2.FromFloat(x, y);
-                return true;
-            }
-
-            targetPointCm = default;
-            return false;
-        }
-
         private static bool TryResolveProjectileTargetPoint(World world, in EffectContext context, in EffectConfigParams mergedParams, out Fix64Vec2 targetPointCm)
         {
             if (world.IsAlive(context.TargetContext) && world.Has<WorldPositionCm>(context.TargetContext))
@@ -694,7 +665,7 @@ namespace Ludots.Core.Gameplay.GAS
                 return true;
             }
 
-            if (TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
+            if (EffectTargetPointResolver.TryResolvePreservedTargetPoint(in mergedParams, out targetPointCm))
             {
                 return true;
             }

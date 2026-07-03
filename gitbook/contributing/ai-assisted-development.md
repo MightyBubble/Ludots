@@ -10,6 +10,8 @@
 
 前三步不得跳过。
 
+**GAS / 实体生命周期 / effect preset / graph op 类任务**：编码前还必须执行共享 skill `ludots-gas-composition-gate`（见 `skills/governance/ludots-gas-composition-gate/`），填写自审清单并产出 `artifacts/gas-composition-gate.md`。核心判断标准：新变体应新增 graph 节点或 effect 步骤，而不是 profile enum 或 preset 开关。
+
 ## 2 防幻觉条款
 
 - 禁止凭空发明类、方法、字段、Registry 能力和 NuGet API。
@@ -50,6 +52,15 @@
 - 只服务当前 Mod 的逻辑，放在当前 Mod。
 - 两个以上 Mod 可能复用的逻辑，提取到 Core 或可复用基础设施。
 - 完整独立功能，提取为独立 Mod。
+
+### 4.5 GAS 组合自审（与 skill 绑定）
+
+适用：新增/修改 `BuiltinHandler`、`EffectPresetType`、实体 spawn/morph/lifecycle、graph op、或 `*_profiles.json` 类 schema。
+
+1. 加载 skill `ludots-gas-composition-gate` 及 `gitbook/architecture/entity-lifecycle-atomic-ops.md`。
+2. 回答判断标准：新变体是 **op 组合** 还是 **新 enum/开关**；后者禁止直接开工。
+3. 填写 `references/self-review-checklist.md` 模板，写入 `artifacts/gas-composition-gate.md`。
+4. 实现 PR 须链接该自审产物或等效填写内容。
 
 ## 5 现有能力速查
 

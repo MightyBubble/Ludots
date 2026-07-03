@@ -33,6 +33,8 @@ namespace Ludots.Core.Gameplay.GAS
         CompleteProgression = 14,
         /// <summary>Reads configured blackboard stored target keys and submits orders to a spawned unit.</summary>
         SubmitOrderFromBlackboard = 15,
+        /// <summary>Atomic entity template replacement with inheritance profile.</summary>
+        DeployConsumeSource = 16,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──

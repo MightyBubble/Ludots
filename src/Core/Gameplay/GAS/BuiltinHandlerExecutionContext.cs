@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Spatial;
 
@@ -21,6 +22,9 @@ namespace Ludots.Core.Gameplay.GAS
         public List<FanOutCommand>? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
+        public RuntimeEntityLifecycleQueue? LifecycleRequests { get; set; }
+        public EntityLifecycleRuntimeServices? LifecycleServices { get; set; }
+        public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
         public OrderTypeRegistry? OrderTypeRegistry { get; set; }

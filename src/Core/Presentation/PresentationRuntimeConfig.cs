@@ -28,6 +28,8 @@ namespace Ludots.Core.Presentation
         private int? _minimapMarkerCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
+        private int? _runtimeEntityLifecycleQueueCapacity;
+        private int? _runtimeEntityLifecycleReceiptQueueCapacity;
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
 
@@ -51,6 +53,8 @@ namespace Ludots.Core.Presentation
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
+        public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
+        public int RuntimeEntityLifecycleReceiptQueueCapacity { get => _runtimeEntityLifecycleReceiptQueueCapacity ?? 0; set => _runtimeEntityLifecycleReceiptQueueCapacity = value; }
 
         public CameraCullingRuntimeConfig CameraCulling
         {
@@ -86,6 +90,8 @@ namespace Ludots.Core.Presentation
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
+            RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");
+            RequirePositive(_runtimeEntityLifecycleReceiptQueueCapacity, "presentation.runtimeEntityLifecycleReceiptQueueCapacity");
 
             if (_cameraCulling == null)
             {

@@ -290,7 +290,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void BuiltinHandlers_RegisterAll_RegistersAllTen()
+        public void BuiltinHandlers_RegisterAll_RegistersAllBuiltinHandlers()
         {
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -302,6 +302,13 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.ReResolveAndDispatch), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateProjectile), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.MaterializeTemplate), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.CopyIdentityComponents), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.CopyAttributeSlice), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ClearActiveEffects), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.TransferStableId), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.RewireSelection), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ConsumeEntity), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ExecuteExchange), Is.True);

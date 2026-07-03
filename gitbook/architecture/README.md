@@ -9,6 +9,7 @@
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
+- [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**
 - [Exchange Operations](exchange-operations.md)
 - [通用存档系统](save-system.md)
 - [AI Utility Autocast 契约](ai-utility-autocast-contract.md)

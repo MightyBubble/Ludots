@@ -51,6 +51,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? Flag { get; set; }
         public string? Reason { get; set; }
         public string? PayloadPreset { get; set; }
+        public string? BuiltinHandler { get; set; }
         public bool Descending { get; set; }
     }
 

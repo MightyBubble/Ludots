@@ -131,6 +131,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
 
+        // ── Entity lifecycle composition (400-401) ──
+        BeginLifecycleTransaction = 400,
+        InvokeBuiltin = 401,
+
         // ── Placement validation (402-406) ──
         LoadTargetPosX = 402,
         LoadTargetPosY = 403,
@@ -157,4 +161,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-
