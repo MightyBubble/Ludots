@@ -147,6 +147,16 @@ namespace Ludots.Core.Input.Orders
 
                 if (mapping.ActorOrderRouting != null)
                 {
+                    if (mapping.IsSkillMapping)
+                    {
+                        throw new InvalidOperationException($"{path}.actorOrderRouting is only valid when isSkillMapping is false.");
+                    }
+
+                    if (mapping.SelectionType == OrderSelectionType.Entities)
+                    {
+                        throw new InvalidOperationException($"{path}.actorOrderRouting does not support selectionType=Entities.");
+                    }
+
                     ValidateActorOrderRouting(mapping.ActorOrderRouting, path);
                 }
 

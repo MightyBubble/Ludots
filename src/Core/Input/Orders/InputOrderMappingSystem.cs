@@ -1246,6 +1246,12 @@ namespace Ludots.Core.Input.Orders
                     $"Input mapping '{mapping.ActionId}' defines actorOrderRouting but no resolver is configured.");
             }
 
+            if (mapping.IsSkillMapping)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' actorOrderRouting is only valid when isSkillMapping is false.");
+            }
+
             if (mapping.SelectionType == OrderSelectionType.Entities)
             {
                 throw new InvalidOperationException(
@@ -1423,7 +1429,7 @@ namespace Ludots.Core.Input.Orders
 
             for (int i = 0; i < keys.Count; i++)
             {
-                if (string.Equals(keys[i], orderTypeKey, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(keys[i], orderTypeKey, StringComparison.Ordinal))
                 {
                     return true;
                 }

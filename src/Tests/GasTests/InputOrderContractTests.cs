@@ -576,6 +576,100 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ActorOrderRouting_SkillMapping_IsRejectedByLoader()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = true,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "castAbility",
+                                    Match = new ActorOrderRoutingMatch(),
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("actorOrderRouting"));
+            Assert.That(ex.Message, Does.Contain("isSkillMapping"));
+        }
+
+        [Test]
+        public void GroupMoveFormation_OrderTypeKeyMatching_IsCaseSensitive()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveFormation = new GroupMoveFormationSettings
+                {
+                    Mode = GroupMoveFormationMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "MoveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity unitA = world.Create();
+            Entity unitB = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.ConfirmActionId = "Confirm";
+            system.CancelActionId = "Cancel";
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(unitA, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetSelectedEntityListProvider((_, list) =>
+            {
+                list.Add(unitA);
+                list.Add(unitB);
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(1000f, 0f, 1000f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(2));
+            Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(orders[1].Args.Spatial.WorldCm));
+        }
+
+        [Test]
         public void GroupMoveFormation_GridMode_RequiresOrderTypeKeys()
         {
             var config = new InputOrderMappingConfig
