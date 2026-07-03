@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="846pt" height="679.68pt" viewBox="0 0 846 679.68" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-07-02T20:11:11.211679</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 679.68
+L 846 679.68
+L 846 0
+L 0 0
+z
+" style="fill: #faf7f2"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 36.306 260.838
+L 210.942 260.838
+Q 219.258 260.838 219.258 252.522
+L 219.258 27.99
+Q 219.258 19.674 210.942 19.674
+L 36.306 19.674
+Q 27.99 19.674 27.99 27.99
+L 27.99 252.522
+Q 27.99 260.838 36.306 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: #e2e4e3; opacity: 0.5; stroke-dasharray: 3.7,1.6; stroke-dashoffset: 0; stroke: #5c7a8e; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 200.461221 223.608497
+Q 227.573811 226.134085 253.01658 223.764077
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 248.848324 222.143694
+L 253.01658 223.764077
+L 249.21932 226.126452
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 424.988653 223.606939
+Q 447.946693 225.71974 469.234738 223.76085
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 465.068304 222.135789
+L 469.234738 223.76085
+L 465.434829 226.118961
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 687.312193 191.032683
+Q 629.965581 218.885352 568.03763 223.168335
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 572.166089 224.887585
+L 568.03763 223.168335
+L 571.890106 220.897117
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 564.181061 258.668653
+Q 562.06826 281.626693 564.02715 302.914738
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 565.652211 298.748304
+L 564.02715 302.914738
+L 561.669039 299.114829
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 564.181061 375.092653
+Q 562.06826 398.050693 564.02715 419.338738
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 565.652211 415.172304
+L 564.02715 419.338738
+L 561.669039 415.538829
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 564.181061 491.516653
+Q 562.06826 514.474693 564.02715 535.762738
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 565.652211 531.596304
+L 564.02715 535.762738
+L 561.669039 531.962829
+" style="fill: none; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 470.979168 572.118048
+Q 364.789313 540.825939 260.208121 571.643244
+" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+    <path d="M 264.610319 572.431058
+L 260.208121 571.643244
+L 263.479691 568.594174
+" style="fill: none; stroke-dasharray: 5.55,2.4; stroke-dashoffset: 0; stroke: #6b6560; stroke-width: 1.5; stroke-linecap: round"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 48.78 423
+L 65.412 423
+L 65.412 406.368
+L 48.78 406.368
+z
+" clip-path="url(#p3d7797363e)" style="fill: #abb8c0; stroke: #5c7a8e; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 48.78 447.948
+L 65.412 447.948
+L 65.412 431.316
+L 48.78 431.316
+z
+" clip-path="url(#p3d7797363e)" style="fill: #c4b1a7; stroke: #8e6b5c; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 48.78 472.896
+L 65.412 472.896
+L 65.412 456.264
+L 48.78 456.264
+z
+" clip-path="url(#p3d7797363e)" style="fill: #bab1c0; stroke: #7a6b8e; stroke-width: 2; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_1">
+    <text style="font-style: italic; font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: start; fill: #5c7a8e" x="48.78" y="38.784516" transform="rotate(-0 48.78 38.784516)">Data Sources</text>
+   </g>
+   <g id="patch_13">
+    <path d="M 57.096 194.31
+L 190.152 194.31
+Q 202.626 194.31 202.626 181.836
+L 202.626 148.572
+Q 202.626 136.098 190.152 136.098
+L 57.096 136.098
+Q 44.622 136.098 44.622 148.572
+L 44.622 181.836
+Q 44.622 194.31 57.096 194.31
+z
+" clip-path="url(#p3d7797363e)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 57.096 260.838
+L 190.152 260.838
+Q 202.626 260.838 202.626 248.364
+L 202.626 215.1
+Q 202.626 202.626 190.152 202.626
+L 57.096 202.626
+Q 44.622 202.626 44.622 215.1
+L 44.622 248.364
+Q 44.622 260.838 57.096 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 57.096 327.366
+L 190.152 327.366
+Q 202.626 327.366 202.626 314.892
+L 202.626 281.628
+Q 202.626 269.154 190.152 269.154
+L 57.096 269.154
+Q 44.622 269.154 44.622 281.628
+L 44.622 314.892
+Q 44.622 327.366 57.096 327.366
+z
+" clip-path="url(#p3d7797363e)" style="fill: #cad1d4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 264.996 260.838
+L 414.684 260.838
+Q 427.158 260.838 427.158 248.364
+L 427.158 198.468
+Q 427.158 185.994 414.684 185.994
+L 264.996 185.994
+Q 252.522 185.994 252.522 198.468
+L 252.522 248.364
+Q 252.522 260.838 264.996 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 481.212 260.838
+L 647.532 260.838
+Q 660.006 260.838 660.006 248.364
+L 660.006 198.468
+Q 660.006 185.994 647.532 185.994
+L 481.212 185.994
+Q 468.738 185.994 468.738 198.468
+L 468.738 248.364
+Q 468.738 260.838 481.212 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 697.428 194.31
+L 797.22 194.31
+Q 809.694 194.31 809.694 181.836
+L 809.694 148.572
+Q 809.694 136.098 797.22 136.098
+L 697.428 136.098
+Q 684.954 136.098 684.954 148.572
+L 684.954 181.836
+Q 684.954 194.31 697.428 194.31
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 481.212 377.262
+L 647.532 377.262
+Q 660.006 377.262 660.006 364.788
+L 660.006 314.892
+Q 660.006 302.418 647.532 302.418
+L 481.212 302.418
+Q 468.738 302.418 468.738 314.892
+L 468.738 364.788
+Q 468.738 377.262 481.212 377.262
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 431.316 493.686
+L 697.428 493.686
+Q 709.902 493.686 709.902 481.212
+L 709.902 431.316
+Q 709.902 418.842 697.428 418.842
+L 431.316 418.842
+Q 418.842 418.842 418.842 431.316
+L 418.842 481.212
+Q 418.842 493.686 431.316 493.686
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d9cdc4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 481.212 610.11
+L 647.532 610.11
+Q 660.006 610.11 660.006 597.636
+L 660.006 547.74
+Q 660.006 535.266 647.532 535.266
+L 481.212 535.266
+Q 468.738 535.266 468.738 547.74
+L 468.738 597.636
+Q 468.738 610.11 481.212 610.11
+z
+" clip-path="url(#p3d7797363e)" style="fill: #d3cdd4; opacity: 0.9; stroke: #e0d8d0; stroke-width: 1.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_2">
+    <text style="font-weight: 700; font-size: 18px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="423" y="37.105031" transform="rotate(-0 423 37.105031)">Minimap Architecture</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 11px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="423" y="60.0935" transform="rotate(-0 423 60.0935)">Data -&gt; Projection -&gt; Rendering -&gt; UI</text>
+   </g>
+   <g id="patch_22">
+    <path d="M 57.096 194.31
+L 190.152 194.31
+Q 202.626 194.31 202.626 181.836
+L 202.626 148.572
+Q 202.626 136.098 190.152 136.098
+L 57.096 136.098
+Q 44.622 136.098 44.622 148.572
+L 44.622 181.836
+Q 44.622 194.31 57.096 194.31
+L 57.096 194.31
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_23">
+    <path d="M 57.096 260.838
+L 190.152 260.838
+Q 202.626 260.838 202.626 248.364
+L 202.626 215.1
+Q 202.626 202.626 190.152 202.626
+L 57.096 202.626
+Q 44.622 202.626 44.622 215.1
+L 44.622 248.364
+Q 44.622 260.838 57.096 260.838
+L 57.096 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 57.096 327.366
+L 190.152 327.366
+Q 202.626 327.366 202.626 314.892
+L 202.626 281.628
+Q 202.626 269.154 190.152 269.154
+L 57.096 269.154
+Q 44.622 269.154 44.622 281.628
+L 44.622 314.892
+Q 44.622 327.366 57.096 327.366
+L 57.096 327.366
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #5c7a8e; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 264.996 260.838
+L 414.684 260.838
+Q 427.158 260.838 427.158 248.364
+L 427.158 198.468
+Q 427.158 185.994 414.684 185.994
+L 264.996 185.994
+Q 252.522 185.994 252.522 198.468
+L 252.522 248.364
+Q 252.522 260.838 264.996 260.838
+L 264.996 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 481.212 260.838
+L 647.532 260.838
+Q 660.006 260.838 660.006 248.364
+L 660.006 198.468
+Q 660.006 185.994 647.532 185.994
+L 481.212 185.994
+Q 468.738 185.994 468.738 198.468
+L 468.738 248.364
+Q 468.738 260.838 481.212 260.838
+L 481.212 260.838
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_27">
+    <path d="M 697.428 194.31
+L 797.22 194.31
+Q 809.694 194.31 809.694 181.836
+L 809.694 148.572
+Q 809.694 136.098 797.22 136.098
+L 697.428 136.098
+Q 684.954 136.098 684.954 148.572
+L 684.954 181.836
+Q 684.954 194.31 697.428 194.31
+L 697.428 194.31
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_28">
+    <path d="M 481.212 377.262
+L 647.532 377.262
+Q 660.006 377.262 660.006 364.788
+L 660.006 314.892
+Q 660.006 302.418 647.532 302.418
+L 481.212 302.418
+Q 468.738 302.418 468.738 314.892
+L 468.738 364.788
+Q 468.738 377.262 481.212 377.262
+L 481.212 377.262
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_29">
+    <path d="M 431.316 493.686
+L 697.428 493.686
+Q 709.902 493.686 709.902 481.212
+L 709.902 431.316
+Q 709.902 418.842 697.428 418.842
+L 431.316 418.842
+Q 418.842 418.842 418.842 431.316
+L 418.842 481.212
+Q 418.842 493.686 431.316 493.686
+L 431.316 493.686
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #8e6b5c; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_30">
+    <path d="M 481.212 610.11
+L 647.532 610.11
+Q 660.006 610.11 660.006 597.636
+L 660.006 547.74
+Q 660.006 535.266 647.532 535.266
+L 481.212 535.266
+Q 468.738 535.266 468.738 547.74
+L 468.738 597.636
+Q 468.738 610.11 481.212 610.11
+L 481.212 610.11
+z
+" clip-path="url(#p3d7797363e)" style="fill: none; stroke: #7a6b8e; stroke-width: 2.5; stroke-linejoin: miter"/>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 7px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="356.472" y="591.247734" transform="rotate(-0 356.472 591.247734)">Click to Jump World Coords</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: start; fill: #2d2a26" x="73.728" y="417.110484" transform="rotate(-0 73.728 417.110484)">Navigation Data</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: start; fill: #2d2a26" x="73.728" y="442.058484" transform="rotate(-0 73.728 442.058484)">Presentation System</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: start; fill: #2d2a26" x="73.728" y="467.058516" transform="rotate(-0 73.728 467.058516)">Input Consumer</text>
+   </g>
+   <g id="text_8">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="123.624" y="155.208516" transform="rotate(-0 123.624 155.208516)">WorldPositionCm</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="123.624" y="183.992875" transform="rotate(-0 123.624 183.992875)">ECS Entity Position</text>
+   </g>
+   <g id="text_10">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="123.624" y="221.736516" transform="rotate(-0 123.624 221.736516)">Terrain / Board</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="123.624" y="250.567125" transform="rotate(-0 123.624 250.567125)">Map Terrain Data</text>
+   </g>
+   <g id="text_12">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="123.624" y="288.321469" transform="rotate(-0 123.624 288.321469)">Performer MinimapMarker</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="123.624" y="317.095125" transform="rotate(-0 123.624 317.095125)">BehaviorSlot</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="339.84" y="213.759187" transform="rotate(-0 339.84 213.759187)">MinimapMarkerBuffer</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="339.84" y="242.251125" transform="rotate(-0 339.84 242.251125)">SoA Buffer</text>
+   </g>
+   <g id="text_16">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="564.372" y="213.6545" transform="rotate(-0 564.372 213.6545)">MinimapPresentationSystem</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="564.372" y="242.274875" transform="rotate(-0 564.372 242.274875)">Refresh + Projection + Render</text>
+   </g>
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="747.324" y="155.208516" transform="rotate(-0 747.324 155.208516)">MinimapRuntime</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="747.324" y="184.039125" transform="rotate(-0 747.324 184.039125)">Zoom/Pan/Rotate</text>
+   </g>
+   <g id="text_20">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="564.372" y="330.183187" transform="rotate(-0 564.372 330.183187)">MinimapScreenMarkerBuffer</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="564.372" y="358.675125" transform="rotate(-0 564.372 358.675125)">Screen Marker Buffer</text>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="564.372" y="446.582969" transform="rotate(-0 564.372 446.582969)">ScreenOverlayBuffer</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="564.372" y="475.099125" transform="rotate(-0 564.372 475.099125)">UI Render Output</text>
+   </g>
+   <g id="text_24">
+    <text style="font-weight: 700; font-size: 9px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #2d2a26" x="564.372" y="562.692516" transform="rotate(-0 564.372 562.692516)">MinimapInputConsumer</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 8px; font-family: 'NotoSansCJKsc', 'PingFang SC', 'Microsoft YaHei', 'SimHei', 'SimSun', 'Arial', sans-serif; text-anchor: middle; fill: #6b6560" x="564.372" y="591.5" transform="rotate(-0 564.372 591.5)">toggle/zoom/pan/click</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p3d7797363e">
+   <rect x="7.2" y="7.2" width="831.6" height="665.28"/>
+  </clipPath>
+ </defs>
+</svg>

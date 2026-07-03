@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagrams — Ludots Wiki</title>
+<base href="/Ludots/">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.0/dist/style.css">
+<link rel="stylesheet" href="assets/diagrams-flow.css">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.0/client",
+    "@xyflow/react": "https://esm.sh/@xyflow/react@12.11.0?deps=react@19.2.0,react-dom@19.2.0"
+  }
+}
+</script>
+</head>
+<body>
+<div class="container">
+<nav class="sidebar" id="nav"></nav>
+<main class="main">
+<div id="diagram-flow-root" class="diagram-flow-root"></div>
+</main>
+</div>
+<script>
+const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
+const currentPage = "diagrams.html";
+
+function buildNav() {
+  let html = '';
+  const pathParts = window.location.pathname.split('/');
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
+  for (const [group, items] of Object.entries(navData)) {
+    if (items.length === 0) continue;
+    html += '<div class="group"><div class="group-title">' + group + '</div>';
+    for (const [href, title] of items) {
+      const cls = href === currentPage ? 'active' : '';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('nav').innerHTML = html;
+}
+
+buildNav();
+</script>
+<script type="module" src="assets/diagrams-flow.js"></script>
+</body>
+</html>

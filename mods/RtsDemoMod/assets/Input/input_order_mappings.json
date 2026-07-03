@@ -44,12 +44,30 @@
     {
       "actionId": "Command",
       "trigger": "PressedThisFrame",
-      "orderTypeKey": "moveTo",
       "argsTemplate": {},
       "requireSelection": true,
       "selectionType": "Position",
       "isSkillMapping": false,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "actorOrderRouting": {
+        "candidates": [
+          {
+            "orderTypeKey": "setSpawnTarget",
+            "priority": 10,
+            "selectionType": "HoveredEntityOrPosition",
+            "match": {
+              "abilitySlotIndex": 2,
+              "abilityIdKeySuffix": ".Train",
+              "blockedAnyTags": ["Progression.Rts.WarpGate"]
+            }
+          },
+          {
+            "orderTypeKey": "moveTo",
+            "priority": 0,
+            "match": {}
+          }
+        ]
+      }
     },
     {
       "actionId": "Stop",

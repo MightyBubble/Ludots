@@ -37,4 +37,5 @@ GAS 的宏观分层由 `SystemGroup` 固化，重点 phase 包括：
 ## 5 深度材料
 
 - 仓库深度版：`docs/architecture/gas_layered_architecture.md`
+- Input / spawn target 基建：`gitbook/architecture/input-order-and-spawn-target.md`
 - 相关实现：`src/Core/Gameplay/GAS/Bindings/`
