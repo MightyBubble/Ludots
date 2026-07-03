@@ -26,15 +26,20 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly List<Entity> _entities = new();
-    private readonly List<MassNavigationAgentSeed> _seeds = new();
-    private readonly List<bool> _controllableFlags = new();
+    private readonly List<Entity> _entities;
+    private readonly List<MassNavigationAgentSeed> _seeds;
+    private readonly List<bool> _controllableFlags;
+    private readonly int _agentCapacity;
     private long _lastAuthoringSignature;
 
     public MassNavigationAuthoredAgentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _simulation = simulation ?? throw new ArgumentNullException(nameof(simulation));
+        _agentCapacity = simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        _entities = new List<Entity>(_agentCapacity);
+        _seeds = new List<MassNavigationAgentSeed>(_agentCapacity);
+        _controllableFlags = new List<bool>(_agentCapacity);
     }
 
     public void Initialize() { }
@@ -60,6 +65,12 @@ internal sealed class MassNavigationAuthoredAgentBindingSystem : ISystem<float>
             }
 
             return;
+        }
+
+        if (scan.AuthoredCount > _agentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored binding observed {scan.AuthoredCount} agents, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_agentCapacity}.");
         }
 
         if (_simulation.AgentState.TotalAgents == scan.AuthoredCount &&
