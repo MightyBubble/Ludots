@@ -105,6 +105,11 @@ namespace Ludots.Core.Input.Orders
         /// Both points are stored in OrderSpatial.
         /// </summary>
         Vector = 5,
+
+        /// <summary>
+        /// Prefer hovered command target entity; fall back to ground position when none.
+        /// </summary>
+        HoveredEntityOrPosition = 6,
         
         /// <summary>
         /// Obsolete alias for Position. Use Position instead.
@@ -211,6 +216,39 @@ namespace Ludots.Core.Input.Orders
         public GroupMoveFormationMode Mode { get; set; } = GroupMoveFormationMode.None;
 
         public int SpacingCm { get; set; } = 120;
+
+        /// <summary>
+        /// Order type keys eligible for grid formation when mode is Grid.
+        /// Required when mode is Grid.
+        /// </summary>
+        public List<string> OrderTypeKeys { get; set; } = new();
+    }
+
+    public sealed class ActorOrderRoutingMatch
+    {
+        public List<string> RequiredAllTags { get; set; } = new();
+        public List<string> BlockedAnyTags { get; set; } = new();
+        public int? AbilitySlotIndex { get; set; }
+        public string? AbilityIdKey { get; set; }
+        public string? AbilityIdKeySuffix { get; set; }
+    }
+
+    public sealed class ActorOrderRoutingCandidate
+    {
+        public string OrderTypeKey { get; set; } = string.Empty;
+        public int Priority { get; set; }
+        public ActorOrderRoutingMatch Match { get; set; } = new();
+
+        /// <summary>
+        /// Optional per-candidate selection resolution. When null, inherits mapping.SelectionType.
+        /// </summary>
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public OrderSelectionType? SelectionType { get; set; }
+    }
+
+    public sealed class ActorOrderRoutingSettings
+    {
+        public List<ActorOrderRoutingCandidate> Candidates { get; set; } = new();
     }
     
     /// <summary>
@@ -237,8 +275,14 @@ namespace Ludots.Core.Input.Orders
         
         /// <summary>
         /// The order type key (must match a key in OrderTypeRegistry).
+        /// Required when <see cref="ActorOrderRouting"/> is null.
         /// </summary>
         public string OrderTypeKey { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Per-actor order type routing for shared input actions such as Command.
+        /// </summary>
+        public ActorOrderRoutingSettings? ActorOrderRouting { get; set; }
         
         /// <summary>
         /// Template for order arguments.

@@ -670,7 +670,8 @@ namespace Ludots.Tests.GAS
                 GroupMoveFormation = new GroupMoveFormationSettings
                 {
                     Mode = GroupMoveFormationMode.Grid,
-                    SpacingCm = 120
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
