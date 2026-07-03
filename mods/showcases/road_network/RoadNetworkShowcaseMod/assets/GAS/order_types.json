@@ -17,7 +17,8 @@
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {

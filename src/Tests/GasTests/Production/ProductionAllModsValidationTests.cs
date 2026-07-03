@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -10,6 +11,7 @@ using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production
 {
+    [NonParallelizable]
     [TestFixture]
     public sealed class ProductionAllModsValidationTests
     {
@@ -275,6 +277,15 @@ namespace Ludots.Tests.GAS.Production
             {
                 engine.Dispose();
             }
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
 
         private static void InstallDummyInput(GameEngine engine)

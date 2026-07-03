@@ -761,6 +761,7 @@ namespace Ludots.Core.Engine
                 progressionScopeKeys,
                 entityCollectionStore,
                 relationshipTypeRegistry).Load(ConfigCatalog, ConfigConflictReport);
+            new OrderTypeConfigLoader(ConfigPipeline).RegisterBlackboardKeys(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
                 ConfigPipeline,
                 effectTemplateRegistry,
@@ -1140,6 +1141,7 @@ namespace Ludots.Core.Engine
             var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
+            var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
             var moveToOrderSystem = new MoveToWorldCmOrderSystem(World, orderTypeRegistry, cfgMoveTo);
             var orderContinuationSystem = new OrderContinuationSystem(World, clock, orderTypeRegistry, orderRuleRegistry, stepRateHz);
 
@@ -1366,6 +1368,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityEndOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
+            RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
@@ -1382,7 +1385,7 @@ namespace Ludots.Core.Engine
             };
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
@@ -2879,6 +2882,32 @@ namespace Ludots.Core.Engine
                 World.Destroy(World);
                 World = null;
             }
+
+            _engineServices?.LegacyStore.Clear();
+            _systemGroups?.Clear();
+            _presentationSystems?.Clear();
+            _inputRuntimeSystem = null;
+            _primitiveDrawBuffer = null;
+            _visualSnapshotBuffer = null;
+            _visualProxyBuffer = null;
+            _skinnedVisualBatchBuffer = null;
+            _presentationRequestBuffer = null;
+            _globalFieldVisualBuffer = null;
+            _soundRequestBuffer = null;
+            _instancedBatchRequestBuffer = null;
+            _instancedBatchOperationBuffer = null;
+            _gasPresentationEvents = null;
+            _groundOverlayBuffer = null;
+            _roadSplineBuffer = null;
+            _worldHudBuffer = null;
+            _physics2DController = null;
+            _gasController = null;
+            _timeFlow = null;
+            _worldToGridSyncSystem = null;
+            _spatialPartitionUpdateSystem = null;
+            MergedConfig = null;
+            ConfigPipeline = null;
+            ConfigCatalog = null;
         }
 
         public void Tick(float platformDeltaTime)

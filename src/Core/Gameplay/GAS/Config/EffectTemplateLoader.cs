@@ -8,6 +8,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Progression.Registry;
@@ -139,9 +140,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
             lifetimeKind = ParseLifetimeKind(cfg.Lifetime, cfg.Id, relativePath);
             if (cfg.Duration != null)
             {
-                durationTicks = RequireInt(cfg.Duration.DurationTicks, cfg.Id, relativePath, "duration.durationTicks");
-                periodTicks = RequireInt(cfg.Duration.PeriodTicks, cfg.Id, relativePath, "duration.periodTicks");
-                clockId = ParseClockId(RequireString(cfg.Duration.ClockId, cfg.Id, relativePath, "duration.clockId"));
+                if (lifetimeKind == EffectLifetimeKind.Infinite)
+                {
+                    durationTicks = cfg.Duration.DurationTicks ?? 0;
+                    periodTicks = cfg.Duration.PeriodTicks ?? 0;
+                    clockId = string.IsNullOrWhiteSpace(cfg.Duration.ClockId)
+                        ? GasClockId.FixedFrame
+                        : ParseClockId(cfg.Duration.ClockId);
+                }
+                else
+                {
+                    durationTicks = RequireInt(cfg.Duration.DurationTicks, cfg.Id, relativePath, "duration.durationTicks");
+                    periodTicks = RequireInt(cfg.Duration.PeriodTicks, cfg.Id, relativePath, "duration.periodTicks");
+                    clockId = ParseClockId(RequireString(cfg.Duration.ClockId, cfg.Id, relativePath, "duration.clockId"));
+                }
+
                 if (lifetimeKind == EffectLifetimeKind.After && durationTicks <= 0)
                 {
                     throw new InvalidOperationException($"Effect template '{cfg.Id}' in {relativePath}: lifetime '{lifetimeKind}' requires duration.durationTicks > 0.");
@@ -283,6 +296,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var submitOrderFromBlackboard = CompileSubmitOrderFromBlackboard(cfg.SubmitOrderFromBlackboard, cfg.Id, relativePath);
             var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
             int progressionId = 0;
@@ -409,6 +423,25 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
+            if (cfg.SubmitOrderFromBlackboard != null && presetType != EffectPresetType.SubmitOrderFromBlackboard)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'submitOrderFromBlackboard' block is only valid when presetType=SubmitOrderFromBlackboard.");
+            }
+            if (presetType == EffectPresetType.SubmitOrderFromBlackboard)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType SubmitOrderFromBlackboard requires lifetime=Instant.");
+                }
+                if (cfg.SubmitOrderFromBlackboard == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType SubmitOrderFromBlackboard requires a 'submitOrderFromBlackboard' block.");
+                }
+            }
+
             return new EffectTemplateData
             {
                 TagId = tagId,
@@ -429,6 +462,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                SubmitOrderFromBlackboard = submitOrderFromBlackboard,
                 ProgressionScope = progressionScope,
                 ProgressionChange = progressionChange,
                 ProgressionId = progressionId,
@@ -536,6 +570,95 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Subject = subject,
                 Parent = parent,
                 SnapSubjectToParentPosition = snapSubjectToParentPosition
+            };
+        }
+
+        private static SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
+            SubmitOrderFromBlackboardConfig? cfg,
+            string ownerId,
+            string relativePath)
+        {
+            if (cfg == null)
+            {
+                return default;
+            }
+
+            RelationEntitySlot sourceSlot = string.IsNullOrWhiteSpace(cfg.Source)
+                ? RelationEntitySlot.Source
+                : ParseRelationEntitySlot(cfg.Source, ownerId, "submitOrderFromBlackboard.source", relativePath);
+            RelationEntitySlot targetSlot = string.IsNullOrWhiteSpace(cfg.Target)
+                ? RelationEntitySlot.Target
+                : ParseRelationEntitySlot(cfg.Target, ownerId, "submitOrderFromBlackboard.target", relativePath);
+            BlackboardStoredTargetKeys storedTargetKeys = CompileStoredTargetKeys(
+                cfg.StoredTarget,
+                ownerId,
+                relativePath,
+                "submitOrderFromBlackboard.storedTarget");
+            string pointMoveOrderTypeKey = RequireString(cfg.PointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
+            string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
+            int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
+            OrderSubmitMode submitMode = ParseOrderSubmitMode(
+                RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
+                ownerId,
+                relativePath);
+
+            if (sourceSlot == RelationEntitySlot.None || targetSlot == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard source and target cannot be None.");
+            }
+
+            return new SubmitOrderFromBlackboardDescriptor
+            {
+                SourceSlot = sourceSlot,
+                TargetSlot = targetSlot,
+                StoredTargetKeys = storedTargetKeys,
+                PointMoveOrderTypeKey = pointMoveOrderTypeKey,
+                EntityOrderTypeKey = entityOrderTypeKey,
+                EntityOrderIntArg0 = entityOrderIntArg0,
+                SubmitMode = submitMode,
+            };
+        }
+
+        private static BlackboardStoredTargetKeys CompileStoredTargetKeys(
+            StoredTargetKeysConfig? cfg,
+            string ownerId,
+            string relativePath,
+            string blockName)
+        {
+            if (cfg == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {blockName} must be defined.");
+            }
+
+            return new BlackboardStoredTargetKeys(
+                ResolveConfiguredBlackboardKey(RequireString(cfg.TargetKindKey, ownerId, relativePath, $"{blockName}.targetKindKey"), ownerId, relativePath, $"{blockName}.targetKindKey"),
+                ResolveConfiguredBlackboardKey(RequireString(cfg.TargetPositionKey, ownerId, relativePath, $"{blockName}.targetPositionKey"), ownerId, relativePath, $"{blockName}.targetPositionKey"),
+                ResolveConfiguredBlackboardKey(RequireString(cfg.TargetEntityKey, ownerId, relativePath, $"{blockName}.targetEntityKey"), ownerId, relativePath, $"{blockName}.targetEntityKey"),
+                ResolveConfiguredBlackboardKey(RequireString(cfg.HexQKey, ownerId, relativePath, $"{blockName}.hexQKey"), ownerId, relativePath, $"{blockName}.hexQKey"),
+                ResolveConfiguredBlackboardKey(RequireString(cfg.HexRKey, ownerId, relativePath, $"{blockName}.hexRKey"), ownerId, relativePath, $"{blockName}.hexRKey"));
+        }
+
+        private static int ResolveConfiguredBlackboardKey(string text, string ownerId, string relativePath, string fieldName)
+        {
+            if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
+            {
+                return blackboardKey;
+            }
+
+            throw new InvalidOperationException(
+                $"Effect template '{ownerId}' in {relativePath}: unknown {fieldName} '{text}'.");
+        }
+
+        private static OrderSubmitMode ParseOrderSubmitMode(string raw, string ownerId, string relativePath)
+        {
+            return raw switch
+            {
+                "Immediate" => OrderSubmitMode.Immediate,
+                "Queued" => OrderSubmitMode.Queued,
+                _ => throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported submitOrderFromBlackboard.submitMode '{raw}'. Supported: Immediate, Queued.")
             };
         }
 

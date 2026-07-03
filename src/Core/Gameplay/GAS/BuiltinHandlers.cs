@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
@@ -6,8 +7,10 @@ using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -32,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
         }
 
         public static void HandleApplyModifiers(
@@ -463,6 +467,137 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
             }
+        }
+
+        public static void HandleSubmitOrderFromBlackboard(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            ref readonly SubmitOrderFromBlackboardDescriptor descriptor = ref templateData.SubmitOrderFromBlackboard;
+            Entity sourceEntity = ResolveRelationEntity(in context, descriptor.SourceSlot);
+            Entity orderActor = ResolveRelationEntity(in context, descriptor.TargetSlot);
+            if (!world.IsAlive(sourceEntity) || !world.IsAlive(orderActor))
+            {
+                return;
+            }
+
+            if (!BlackboardStoredTargetOps.TryRead(world, sourceEntity, in descriptor.StoredTargetKeys, out BlackboardStoredTargetSnapshot storedTarget) ||
+                !storedTarget.HasTarget)
+            {
+                return;
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.OrderTypeRegistry == null)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires OrderTypeRegistry in BuiltinHandlerExecutionContext.");
+            }
+
+            if (runtime.StepRateHz <= 0)
+            {
+                throw new InvalidOperationException("SubmitOrderFromBlackboard requires a positive StepRateHz in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryBuildOrderFromStoredTarget(
+                    in storedTarget,
+                    in descriptor,
+                    orderActor,
+                    ResolvePlayerId(world, orderActor),
+                    runtime.OrderTypeRegistry,
+                    out Order order))
+            {
+                return;
+            }
+
+            if (!world.Has<OrderBuffer>(orderActor))
+            {
+                return;
+            }
+
+            OrderSubmitter.Submit(
+                world,
+                orderActor,
+                in order,
+                runtime.OrderTypeRegistry,
+                runtime.OrderRuleRegistry,
+                runtime.CurrentStep,
+                runtime.StepRateHz);
+        }
+
+        private static bool TryBuildOrderFromStoredTarget(
+            in BlackboardStoredTargetSnapshot storedTarget,
+            in SubmitOrderFromBlackboardDescriptor descriptor,
+            Entity orderActor,
+            int playerId,
+            OrderTypeRegistry orderTypeRegistry,
+            out Order order)
+        {
+            order = default;
+            switch (storedTarget.Kind)
+            {
+                case BlackboardStoredTargetKind.Point:
+                case BlackboardStoredTargetKind.HexCell:
+                    if (string.IsNullOrWhiteSpace(descriptor.PointMoveOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.PointMoveOrderTypeKey, out int pointMoveOrderTypeId) ||
+                        !BlackboardStoredTargetOps.TryResolveWorldPositionCm(in storedTarget, out Vector3 worldPositionCm))
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = pointMoveOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs
+                        {
+                            Spatial = new OrderSpatial
+                            {
+                                Kind = OrderSpatialKind.WorldCm,
+                                Mode = OrderCollectionMode.Single,
+                                WorldCm = worldPositionCm,
+                            },
+                        },
+                    };
+                    return true;
+
+                case BlackboardStoredTargetKind.Entity:
+                    if (string.IsNullOrWhiteSpace(descriptor.EntityOrderTypeKey) ||
+                        !orderTypeRegistry.TryGetId(descriptor.EntityOrderTypeKey, out int entityOrderTypeId) ||
+                        storedTarget.TargetEntity == Entity.Null)
+                    {
+                        return false;
+                    }
+
+                    order = new Order
+                    {
+                        OrderTypeId = entityOrderTypeId,
+                        PlayerId = playerId,
+                        Actor = orderActor,
+                        Target = storedTarget.TargetEntity,
+                        SubmitMode = descriptor.SubmitMode,
+                        Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
+                    };
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static int ResolvePlayerId(World world, Entity entity)
+        {
+            if (world.TryGet(entity, out PlayerOwner owner) && owner.PlayerId > 0)
+            {
+                return owner.PlayerId;
+            }
+
+            throw new InvalidOperationException(
+                $"SubmitOrderFromBlackboard requires PlayerOwner on order actor entity {entity.Id}.");
         }
 
         private static Fix64Vec2 ResolveCreateUnitOrigin(World world, in EffectContext context, in EffectConfigParams mergedParams)

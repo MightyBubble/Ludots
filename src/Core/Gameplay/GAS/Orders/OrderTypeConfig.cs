@@ -39,5 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int EntityBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetEntity;
         public int IntArg0BlackboardKey { get; set; } = -1;
         public int ValidationGraphId { get; set; }
+        public bool InstantComplete { get; set; }
+        public BlackboardStoredTargetKeys PersistentStoredTargetKeys { get; set; }
     }
 }

@@ -4,6 +4,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -796,6 +797,59 @@ namespace Ludots.Tests.GAS
             }
             finally
             {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SubmitOrderFromBlackboard_RequiresEntityOrderIntArg0()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Kind");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Position");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Entity");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
+
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Test.SubmitOrderMissingIntArg0",
+                        "tags": ["Effect.Test.SubmitOrder"],
+                        "presetType": "SubmitOrderFromBlackboard",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "submitOrderFromBlackboard": {
+                          "source": "Source",
+                          "target": "Target",
+                          "storedTarget": {
+                            "targetKindKey": "Test.SpawnTarget.Kind",
+                            "targetPositionKey": "Test.SpawnTarget.Position",
+                            "targetEntityKey": "Test.SpawnTarget.Entity",
+                            "hexQKey": "Test.SpawnTarget.HexQ",
+                            "hexRKey": "Test.SpawnTarget.HexR"
+                          },
+                          "pointMoveOrderTypeKey": "moveTo",
+                          "entityOrderTypeKey": "castAbility",
+                          "submitMode": "Immediate"
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+                That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
                 TryDeleteDirectory(root);
             }
         }

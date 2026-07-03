@@ -36,6 +36,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
             public JsonNode? ValidationGraph { get; set; }
+            public bool? InstantComplete { get; set; }
+            public PersistentStoredTargetConfigJson? PersistentStoredTarget { get; set; }
+        }
+
+        public sealed class PersistentStoredTargetConfigJson
+        {
+            public string? TargetKindKey { get; set; }
+            public string? TargetPositionKey { get; set; }
+            public string? TargetEntityKey { get; set; }
+            public string? HexQKey { get; set; }
+            public string? HexRKey { get; set; }
         }
 
         public sealed class OrderRuleConfigJson
@@ -57,6 +68,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
         }
 
+        public void RegisterBlackboardKeys(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/order_types.json")
+        {
+            OrderTypesRootJson root = LoadOrderTypesRoot(catalog, report, relativePath);
+            RegisterConfiguredBlackboardKeys(root.OrderBlackboardKeys, relativePath);
+        }
+
         public void Load(
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
@@ -70,34 +90,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             orderTypeRegistry.Clear();
             orderRuleRegistry.Clear();
 
-            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
-            {
-                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
-            }
-
-            var root = mergedObject.Deserialize<OrderTypesRootJson>(JsonOptions);
-            if (root == null)
-            {
-                throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
-            }
-
-            if (root.OrderBlackboardKeys == null)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderBlackboardKeys, even when empty.");
-            }
-
-            if (root.OrderTypes == null || root.OrderTypes.Count == 0)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
-            }
-
-            if (root.OrderRules == null)
-            {
-                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderRules, even when empty.");
-            }
-
+            var root = LoadOrderTypesRoot(catalog, report, relativePath);
             RegisterConfiguredBlackboardKeys(root.OrderBlackboardKeys, relativePath);
 
             var assignedIds = new HashSet<int>();
@@ -178,8 +171,52 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
                 EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
                 IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
-                ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path)
+                ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path),
+                InstantComplete = RequireBool(json.InstantComplete, key, path, "instantComplete"),
+                PersistentStoredTargetKeys = ResolvePersistentStoredTarget(json.PersistentStoredTarget, json.InstantComplete, key, path),
             };
+        }
+
+        private static BlackboardStoredTargetKeys ResolvePersistentStoredTarget(
+            PersistentStoredTargetConfigJson? json,
+            bool? instantComplete,
+            string key,
+            string path)
+        {
+            bool isInstant = instantComplete == true;
+            if (json == null)
+            {
+                if (isInstant)
+                {
+                    throw new InvalidOperationException(
+                        $"Order type '{key}' in '{path}' with instantComplete=true must define persistentStoredTarget.");
+                }
+
+                return default;
+            }
+
+            if (!isInstant)
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' defines persistentStoredTarget but instantComplete is not true.");
+            }
+
+            return new BlackboardStoredTargetKeys(
+                ResolveBlackboardKeyFromString(RequireString(json.TargetKindKey, key, path, "persistentStoredTarget.targetKindKey"), key, path, "persistentStoredTarget.targetKindKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.TargetPositionKey, key, path, "persistentStoredTarget.targetPositionKey"), key, path, "persistentStoredTarget.targetPositionKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.TargetEntityKey, key, path, "persistentStoredTarget.targetEntityKey"), key, path, "persistentStoredTarget.targetEntityKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.HexQKey, key, path, "persistentStoredTarget.hexQKey"), key, path, "persistentStoredTarget.hexQKey"),
+                ResolveBlackboardKeyFromString(RequireString(json.HexRKey, key, path, "persistentStoredTarget.hexRKey"), key, path, "persistentStoredTarget.hexRKey"));
+        }
+
+        private static int ResolveBlackboardKeyFromString(string text, string key, string path, string fieldName)
+        {
+            if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
+            {
+                return blackboardKey;
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.");
         }
 
         private static int RequireInt(int? value, string key, string path, string fieldName)
@@ -314,6 +351,42 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException(
                     $"Order type '{key}' in '{path}' orderTypeId semantic key must exactly match the order type key.");
             }
+        }
+
+        private OrderTypesRootJson LoadOrderTypesRoot(
+            ConfigCatalog catalog,
+            ConfigConflictReport report,
+            string relativePath)
+        {
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            if (mergedObject == null)
+            {
+                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
+            }
+
+            var root = mergedObject.Deserialize<OrderTypesRootJson>(JsonOptions);
+            if (root == null)
+            {
+                throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
+            }
+
+            if (root.OrderBlackboardKeys == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderBlackboardKeys, even when empty.");
+            }
+
+            if (root.OrderTypes == null || root.OrderTypes.Count == 0)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
+            }
+
+            if (root.OrderRules == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderRules, even when empty.");
+            }
+
+            return root;
         }
 
         private static void RegisterConfiguredBlackboardKeys(
