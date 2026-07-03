@@ -25,7 +25,9 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
     private readonly MassNavigationSimulationRuntime _simulation;
     private readonly Dictionary<int, AnchorSnapshot> _anchorsByFormationId = new();
     private readonly Dictionary<int, FormationSyncState> _syncStateByFormationId = new();
+    private readonly Dictionary<int, List<int>> _memberAgentIndicesByFormationId = new();
     private readonly List<int> _memberAgentIndices = new();
+    private readonly List<int> _carriedMemberAgentIndices = new();
     private readonly List<int> _staleFormationIds = new();
     private int _observedSceneResetCount;
     private int _observedAuthoredRuntimeBindingRevision;
@@ -54,6 +56,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         if (!_simulation.AgentState.HasBoundAgents(_simulation.MassNavigationFlow.UnitCount))
         {
             _syncStateByFormationId.Clear();
+            _memberAgentIndicesByFormationId.Clear();
             return;
         }
 
@@ -94,6 +97,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         if (_anchorsByFormationId.Count == 0)
         {
             _syncStateByFormationId.Clear();
+            _memberAgentIndicesByFormationId.Clear();
             return;
         }
 
@@ -115,6 +119,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         _observedSceneResetCount = _simulation.SceneResetCount;
         _observedAuthoredRuntimeBindingRevision = _simulation.AuthoredRuntimeBindingRevision;
         _syncStateByFormationId.Clear();
+        _memberAgentIndicesByFormationId.Clear();
     }
 
     private void PruneSyncStateWithoutAnchor()
@@ -136,6 +141,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         for (int i = 0; i < _staleFormationIds.Count; i++)
         {
             _syncStateByFormationId.Remove(_staleFormationIds[i]);
+            _memberAgentIndicesByFormationId.Remove(_staleFormationIds[i]);
         }
     }
 
@@ -162,18 +168,24 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
             }
         }
 
+        List<int> previousMemberAgentIndices = GetMemberAgentIndicesSnapshot(formationId);
         if (_memberAgentIndices.Count == 0)
         {
+            previousMemberAgentIndices.Clear();
             return;
         }
 
         _syncStateByFormationId.TryGetValue(formationId, out FormationSyncState state);
+        bool memberSetChanged = !HaveSameMembers(previousMemberAgentIndices, _memberAgentIndices);
+        _carriedMemberAgentIndices.Clear();
+        AppendRetainedMembers(previousMemberAgentIndices, _memberAgentIndices, _carriedMemberAgentIndices);
         MassNavigationCarriedRangeSyncResult carrierSync = _simulation.SyncCarriedAgentsToCarrier(
             anchor.AgentIndex,
-            CollectionsMarshal.AsSpan(_memberAgentIndices),
+            CollectionsMarshal.AsSpan(_carriedMemberAgentIndices),
             state.CarrierSnapshotInitialized,
             state.CarrierWorldXCm,
             state.CarrierWorldYCm);
+        CopyMembers(previousMemberAgentIndices, _memberAgentIndices);
         state.CarrierSnapshotInitialized = true;
         state.CarrierWorldXCm = carrierSync.CarrierWorldXCm;
         state.CarrierWorldYCm = carrierSync.CarrierWorldYCm;
@@ -183,6 +195,7 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         float deltaY = carrierSync.CarrierWorldYCm - state.TargetCenterWorldYCm;
         float facingDelta = MathF.Abs(NormalizeAngleRadians(anchor.FacingRad - state.TargetFacingRad));
         bool targetChanged =
+            memberSetChanged ||
             !state.TargetSnapshotInitialized ||
             (deltaX * deltaX) + (deltaY * deltaY) >= targetChangeEpsilonSq ||
             facingDelta >= anchor.Locomotion.FacingChangeEpsilonRadians;
@@ -249,6 +262,70 @@ internal sealed class MassNavigationFormationFollowerSystem : ISystem<float>
         state.TargetCenterWorldYCm = carrierSync.CarrierWorldYCm;
         state.TargetFacingRad = anchor.FacingRad;
         _syncStateByFormationId[formationId] = state;
+    }
+
+    private List<int> GetMemberAgentIndicesSnapshot(int formationId)
+    {
+        if (_memberAgentIndicesByFormationId.TryGetValue(formationId, out List<int> members))
+        {
+            return members;
+        }
+
+        members = new List<int>();
+        _memberAgentIndicesByFormationId.Add(formationId, members);
+        return members;
+    }
+
+    private static bool HaveSameMembers(List<int> previous, List<int> current)
+    {
+        if (previous.Count != current.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < previous.Count; i++)
+        {
+            if (!ContainsMember(current, previous[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static void AppendRetainedMembers(List<int> previous, List<int> current, List<int> destination)
+    {
+        for (int i = 0; i < previous.Count; i++)
+        {
+            int memberAgentIndex = previous[i];
+            if (ContainsMember(current, memberAgentIndex))
+            {
+                destination.Add(memberAgentIndex);
+            }
+        }
+    }
+
+    private static bool ContainsMember(List<int> members, int memberAgentIndex)
+    {
+        for (int i = 0; i < members.Count; i++)
+        {
+            if (members[i] == memberAgentIndex)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static void CopyMembers(List<int> destination, List<int> source)
+    {
+        destination.Clear();
+        for (int i = 0; i < source.Count; i++)
+        {
+            destination.Add(source[i]);
+        }
     }
 
     private MassNavigationFollowerLocomotion ResolveLocomotion(int formationId, Entity anchor)
