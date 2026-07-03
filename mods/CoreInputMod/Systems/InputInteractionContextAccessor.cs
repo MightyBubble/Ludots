@@ -11,6 +11,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
@@ -172,6 +173,19 @@ namespace CoreInputMod.Systems
             return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out entity);
         }
 
+        public bool TryGetAbilityDefinitionRegistry(out AbilityDefinitionRegistry registry)
+        {
+            registry = default!;
+            if (_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) &&
+                abilitiesObj is AbilityDefinitionRegistry abilities)
+            {
+                registry = abilities;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryCreateAbilityAimPresentationRuntime(out AbilityAimPresentationRuntime runtime)
         {
             runtime = default!;
@@ -210,6 +224,11 @@ namespace CoreInputMod.Systems
                     eventBus: null,
                     effectRequests: null,
                     _globals);
+                if (_globals.TryGetValue(CoreServiceKeys.LoadedGraphRuntime.Name, out var graphRuntimeObj) &&
+                    graphRuntimeObj is LoadedGraphRuntime graphRuntime)
+                {
+                    graphApi.BindLoadedGraphRuntime(graphRuntime);
+                }
             }
 
             runtime = new AbilityAimPresentationRuntime(

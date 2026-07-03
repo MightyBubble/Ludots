@@ -9,8 +9,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Components;
@@ -1256,22 +1258,15 @@ namespace Ludots.Core.Input.Orders
 
         private static bool ClampTargetToRange(Vector3 originWorldCm, ref Vector3 targetWorldCm, float rangeCm)
         {
-            if (rangeCm <= 0f)
-            {
-                return true;
-            }
-
-            float dx = targetWorldCm.X - originWorldCm.X;
-            float dz = targetWorldCm.Z - originWorldCm.Z;
-            float distance = MathF.Sqrt((dx * dx) + (dz * dz));
-            if (distance <= rangeCm + 0.01f || distance <= 0.001f)
-            {
-                return true;
-            }
-
-            float scale = rangeCm / distance;
-            targetWorldCm = new Vector3(originWorldCm.X + (dx * scale), targetWorldCm.Y, originWorldCm.Z + (dz * scale));
-            return false;
+            Fix64Vec2 originCm = Fix64Vec2.FromFloat(originWorldCm.X, originWorldCm.Z);
+            Fix64Vec2 targetCm = Fix64Vec2.FromFloat(targetWorldCm.X, targetWorldCm.Z);
+            bool inRange = PlacementValidation.ClampToRange(
+                in originCm,
+                ref targetCm,
+                Fix64.FromFloat(rangeCm),
+                out bool _);
+            targetWorldCm = new Vector3(targetCm.X.ToFloat(), targetWorldCm.Y, targetCm.Y.ToFloat());
+            return inRange;
         }
 
         private static Vector3 ResolveAreaCenter(OrderSelectionType selectionType, in TargetQueryDescriptor query, Vector3 originWorldCm, Vector3 aimWorldCm)

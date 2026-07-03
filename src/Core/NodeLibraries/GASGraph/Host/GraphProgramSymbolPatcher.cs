@@ -49,6 +49,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.QueryFromCollection:
                         ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SnapToNearestInCollection:
+                        ins.Imm = ResolveEntityCollectionKey(entityCollections, ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.ApplyEffectTemplate:
                     case GraphNodeOp.FanOutApplyEffect:
                     case GraphNodeOp.RemoveEffectTemplate:

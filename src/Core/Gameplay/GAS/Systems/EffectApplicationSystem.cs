@@ -1,9 +1,11 @@
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.Exchange;
-using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
@@ -12,7 +14,6 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Components;
 using Ludots.Core.Spatial;
-using Ludots.Core.Mathematics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
@@ -645,10 +646,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_graphApiHost != null && mergedConfig.Count > 0)
                 _graphApiHost.SetConfigContext(in mergedConfig);
 
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
                 context.Source, context.Target, context.TargetContext,
-                default,
+                targetPos,
                 phase,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,

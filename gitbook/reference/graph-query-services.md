@@ -17,6 +17,8 @@ These services are intentionally domain-neutral. They do not score business rout
 
 Use them when a mod needs shared graph mechanics such as edge projection, snapping, or multi-leg stitching. Do not clone equivalent helpers into a showcase-specific namespace.
 
+Placement validation graphs consume `GraphEdgeProjectionQuery` through `PlacementValidation.TrySnapToNearestGraphEdge` and graph op `SnapToNearestGraphEdge` (see [Placement Validation SSOT](../architecture/placement-validation-ssot.md)).
+
 ## Failure Semantics
 
 - Empty or invalid input returns `false` or a short failure string.

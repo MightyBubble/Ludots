@@ -10,7 +10,9 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -390,7 +392,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     // Execute OnPropose Phase Graphs (before ResponseChain)
-                    ExecuteOnProposePhase(in root, in rootTpl);
+                    if (!ExecuteOnProposePhase(in root, in rootTpl))
+                    {
+                        root.Cancelled = true;
+                        _window[_window.Count - 1] = root;
+                    }
 
                     if (rootTpl.ParticipatesInResponse)
                     {
@@ -1181,20 +1187,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>
         /// Execute OnPropose phase graphs for a proposal.
         /// Called after EffectProposal is created, before ResponseChain window.
+        /// Returns false when the phase graph sets B[0]=0 (placement/validation rejection).
         /// </summary>
-        private void ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
+        private bool ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
         {
-            if (_phaseExecutor == null || _graphApi == null) return;
+            if (_phaseExecutor == null || _graphApi == null) return true;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
             if (_graphApiHost != null && mergedConfig.Count > 0)
             {
                 _graphApiHost.SetConfigContext(in mergedConfig);
             }
-            _phaseExecutor.ExecutePhase(
+
+            var context = new EffectContext
+            {
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+            bool accepted = _phaseExecutor.ExecutePhaseWithValidationResult(
                 World, _graphApi,
                 proposal.Source, proposal.Target, proposal.TargetContext,
-                default, // targetPos: not needed for Propose
+                targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
@@ -1202,6 +1217,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 proposal.TemplateId,
                 in mergedConfig);
             ClearConfigContext();
+            return accepted;
         }
 
         /// <summary>
@@ -1217,10 +1233,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _graphApiHost.SetConfigContext(in mergedConfig);
             }
+
+            var context = new EffectContext
+            {
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
                 proposal.Source, proposal.Target, proposal.TargetContext,
-                default,
+                targetPos,
                 EffectPhaseId.OnCalculate,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
