@@ -32,6 +32,7 @@ namespace Ludots.Tests.GasTests
         [SetUp]
         public void SetUp()
         {
+            ConfigKeyRegistry.Clear();
             AttributeRegistry.Clear();
             TagRegistry.Clear();
             AttributeRegistry.Register("Health");
@@ -94,7 +95,14 @@ namespace Ludots.Tests.GasTests
                 PlacementCm = Fix64Vec2.FromInt(9000, 8000),
                 Snapshot = LifecycleSnapshot.Capture(world, source),
             };
-            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceDefaults(state);
+            var configParams = new EffectConfigParams();
+            configParams.TryAddAttributeId(EffectParamKeys.LifecycleAttribute0, AttributeRegistry.GetId("Health"));
+            configParams.TryAddLifecycleAttributeValueSource(
+                EffectParamKeys.LifecycleAttributeValueSource,
+                (int)LifecycleAttributeValueSource.Current);
+            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceFromConfig(
+                state,
+                in configParams);
 
             Entity target = RuntimeEntityLifecycleTransactionExecutor.Execute(
                 services,
@@ -149,6 +157,10 @@ namespace Ludots.Tests.GasTests
                 PresetType = EffectPresetType.DeployConsumeSource,
             };
             tpl.ConfigParams.TryAddEntityTemplateKeyId(EffectParamKeys.TargetEntityTemplateKeyId, templateKeys.GetId("lifecycle_target"));
+            tpl.ConfigParams.TryAddAttributeId(EffectParamKeys.LifecycleAttribute0, AttributeRegistry.GetId("Health"));
+            tpl.ConfigParams.TryAddLifecycleAttributeValueSource(
+                EffectParamKeys.LifecycleAttributeValueSource,
+                (int)LifecycleAttributeValueSource.Current);
             EffectTemplateIdRegistry.Register("Effect.Test.DeployConsumeSource");
             int effectTemplateId = EffectTemplateIdRegistry.GetId("Effect.Test.DeployConsumeSource");
             templateRegistry.Register(effectTemplateId, tpl);
@@ -201,6 +213,106 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
+        public void DeployConsumeSource_GraphPreset_CopiesConfiguredAttributeSliceFromBase()
+        {
+            int energyId = AttributeRegistry.Register("Energy");
+            string templatesJson = @"[
+              {
+                ""id"": ""lifecycle_target"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Target"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""AttributeBuffer"": { ""base"": { ""Health"": 10, ""Energy"": 1 } },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateTemplatesPipeline(templatesJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            templateKeys.Register("lifecycle_target");
+
+            using var world = World.Create();
+            var source = world.Create(
+                WorldPositionCm.FromCm(9000, 8000),
+                new PresentationStableId { Value = 43 },
+                new AttributeBuffer(),
+                new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
+            ref var sourceAttributes = ref world.Get<AttributeBuffer>(source);
+            sourceAttributes.SetBase(AttributeRegistry.GetId("Health"), 55f);
+            sourceAttributes.SetBase(energyId, 30f);
+            sourceAttributes.SetCurrent(energyId, 12f);
+
+            var programs = new GraphProgramRegistry();
+            int graphId = RegisterDeployConsumeSourceGraph(programs);
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.DeployConsumeSource };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(graphId);
+            presetTypes.Register(preset);
+
+            var templateRegistry = new EffectTemplateRegistry();
+            var tpl = new EffectTemplateData
+            {
+                PresetType = EffectPresetType.DeployConsumeSource,
+            };
+            tpl.ConfigParams.TryAddEntityTemplateKeyId(EffectParamKeys.TargetEntityTemplateKeyId, templateKeys.GetId("lifecycle_target"));
+            tpl.ConfigParams.TryAddAttributeId(EffectParamKeys.LifecycleAttribute0, energyId);
+            tpl.ConfigParams.TryAddLifecycleAttributeValueSource(
+                EffectParamKeys.LifecycleAttributeValueSource,
+                (int)LifecycleAttributeValueSource.Base);
+            EffectTemplateIdRegistry.Register("Effect.Test.DeployConsumeSource.EnergyBase");
+            int effectTemplateId = EffectTemplateIdRegistry.GetId("Effect.Test.DeployConsumeSource.EnergyBase");
+            templateRegistry.Register(effectTemplateId, tpl);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templateRegistry);
+            var graphApi = new GasGraphRuntimeApi(world);
+            var lifecycleServices = new EntityLifecycleRuntimeServices(
+                world,
+                templates,
+                templateKeys,
+                new PresentationStableIdAllocator());
+            var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
+
+            executor.ExecutePhase(
+                world,
+                graphApi,
+                source,
+                source,
+                source,
+                default,
+                EffectPhaseId.OnApply,
+                default,
+                EffectPresetType.DeployConsumeSource,
+                0,
+                effectTemplateId,
+                in tpl.ConfigParams,
+                runtime);
+
+            Entity target = default;
+            world.Query(new QueryDescription().WithAll<Name>(), (Entity entity, ref Name name) =>
+            {
+                if (name.Value == "Target")
+                {
+                    target = entity;
+                }
+            });
+
+            ref readonly var targetAttributes = ref world.Get<AttributeBuffer>(target);
+            That(targetAttributes.GetBase(energyId), Is.EqualTo(30f).Within(0.001f));
+            That(targetAttributes.GetBase(AttributeRegistry.GetId("Health")), Is.EqualTo(10f).Within(0.001f));
+        }
+
+        [Test]
         public void DeployConsumeSource_GraphPreset_RequiresTargetEntityTemplateConfig()
         {
             string effectsJson = @"[
@@ -223,25 +335,62 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
-        public void RuntimeEntityLifecycleSystem_TransfersTemplateAndConsumesSource()
+        public void DeployConsumeSource_GraphPreset_RequiresExplicitLifecycleAttributeConfig()
         {
-            string templatesJson = @"[
+            string effectsJson = @"[
               {
-                ""id"": ""lifecycle_target"",
-                ""components"": {
-                  ""Name"": { ""Value"": ""Target"" },
-                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
-                  ""AttributeBuffer"": { ""base"": { ""Health"": 10 } },
-                  ""GameplayTagContainer"": {},
-                  ""TagCountContainer"": {}
+                ""id"": ""Effect.Test.DeployMissingLifecycleAttribute"",
+                ""presetType"": ""DeployConsumeSource"",
+                ""lifetime"": ""Instant"",
+                ""participatesInResponse"": true,
+                ""configParams"": {
+                  ""_ep.targetEntityTemplate"": { ""type"": ""EntityTemplate"", ""value"": ""lifecycle_target"" },
+                  ""_ep.lifecycleAttributeValueSource"": { ""type"": ""LifecycleAttributeValueSource"", ""value"": ""Current"" }
                 }
               }
             ]";
 
-            var pipeline = CreateTemplatesPipeline(templatesJson);
-            var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var pipeline = CreateEffectsPipeline(effectsJson);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                new EffectTemplateRegistry(),
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
 
+            var ex = Throws<InvalidOperationException>(() => loader.Load(ConfigCatalogLoader.Load(pipeline)));
+            That(ex!.Message, Does.Contain("_ep.lifecycleAttributeN"));
+        }
+
+        [Test]
+        public void DeployConsumeSource_GraphPreset_RejectsIntLifecycleValueSourceConfig()
+        {
+            string effectsJson = @"[
+              {
+                ""id"": ""Effect.Test.DeployIntLifecycleValueSource"",
+                ""presetType"": ""DeployConsumeSource"",
+                ""lifetime"": ""Instant"",
+                ""participatesInResponse"": true,
+                ""configParams"": {
+                  ""_ep.targetEntityTemplate"": { ""type"": ""EntityTemplate"", ""value"": ""lifecycle_target"" },
+                  ""_ep.lifecycleAttribute0"": { ""type"": ""Attribute"", ""value"": ""Health"" },
+                  ""_ep.lifecycleAttributeValueSource"": { ""type"": ""Int"", ""value"": 1 }
+                }
+              }
+            ]";
+
+            var pipeline = CreateEffectsPipeline(effectsJson);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                new EffectTemplateRegistry(),
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
+
+            var ex = Throws<InvalidOperationException>(() => loader.Load(ConfigCatalogLoader.Load(pipeline)));
+            That(ex!.Message, Does.Contain("_ep.lifecycleAttributeValueSource"));
+            That(ex!.Message, Does.Contain("LifecycleAttributeValueSource"));
+        }
+
+        [Test]
+        public void RuntimeEntityLifecycleSystem_PublishesLifecycleEffectRequestWithoutExecutingTransaction()
+        {
             using var world = World.Create();
             var source = world.Create(
                 WorldPositionCm.FromCm(9000, 8000),
@@ -252,43 +401,34 @@ namespace Ludots.Tests.GasTests
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 75f);
 
             var requests = new RuntimeEntityLifecycleQueue(capacity: 2);
+            var effectRequests = new EffectRequestQueue();
             var system = new RuntimeEntityLifecycleSystem(
                 world,
                 requests,
-                templates,
-                new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                effectRequests);
+            const int effectTemplateId = 123;
+            var callerParams = new EffectConfigParams();
+            callerParams.TryAddFloat(EffectParamKeys.TargetPosX, 9000f);
 
             That(requests.TryEnqueue(new RuntimeEntityLifecycleRequest
             {
                 Source = source,
-                EffectContextSource = source,
-                EffectContextTarget = source,
-                TargetTemplateId = "lifecycle_target",
+                Target = source,
+                TargetContext = source,
+                EffectTemplateId = effectTemplateId,
+                ConfigParams = callerParams,
             }), Is.True);
 
             system.Update(0f);
 
             That(world.IsAlive(source), Is.True);
-            That(world.Has<PresentationDestroyPending>(source), Is.True);
-
-            Entity target = default;
-            int targetCount = 0;
-            var query = new QueryDescription().WithAll<Name>();
-            world.Query(in query, (Entity entity, ref Name name) =>
-            {
-                if (name.Value == "Target")
-                {
-                    target = entity;
-                    targetCount++;
-                }
-            });
-
-            That(targetCount, Is.EqualTo(1));
-            That(world.IsAlive(target), Is.True);
-            That(world.Get<PresentationStableId>(target).Value, Is.EqualTo(77));
-            That(world.Get<WorldPositionCm>(target).Value, Is.EqualTo(Fix64Vec2.FromInt(9000, 8000)));
-            That(world.Get<AttributeBuffer>(target).GetBase(AttributeRegistry.GetId("Health")), Is.EqualTo(75f).Within(0.001f));
+            That(world.Has<PresentationDestroyPending>(source), Is.False);
+            That(effectRequests.Count, Is.EqualTo(1));
+            That(effectRequests[0].Source, Is.EqualTo(source));
+            That(effectRequests[0].Target, Is.EqualTo(source));
+            That(effectRequests[0].TargetContext, Is.EqualTo(source));
+            That(effectRequests[0].TemplateId, Is.EqualTo(effectTemplateId));
+            That(effectRequests[0].HasCallerParams, Is.True);
         }
 
         [Test]
@@ -317,82 +457,53 @@ namespace Ludots.Tests.GasTests
                 new PresentationStableId { Value = 1 });
 
             var requests = new RuntimeEntityLifecycleQueue(capacity: 1);
+            var effectRequests = new EffectRequestQueue();
             var system = new RuntimeEntityLifecycleSystem(
                 world,
                 requests,
-                templates,
-                new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                effectRequests);
 
             That(requests.TryEnqueue(new RuntimeEntityLifecycleRequest
             {
                 Source = source,
-                EffectContextSource = source,
-                EffectContextTarget = source,
-                TargetTemplateId = "lifecycle_target_only",
+                Target = source,
+                TargetContext = source,
             }), Is.True);
 
-            var ex = Throws<LifecycleExecutionException>(() => system.Update(0f));
-            That(ex!.Message, Does.Contain("target point"));
+            var ex = Throws<InvalidOperationException>(() => system.Update(0f));
+            That(ex!.Message, Does.Contain("EffectTemplateId"));
             That(world.IsAlive(source), Is.True);
             That(world.Has<PresentationDestroyPending>(source), Is.False);
         }
 
         [Test]
-        public void RuntimeEntityLifecycleSystem_AtTargetPoint_UsesAbilityTargetPosition()
+        public void RuntimeEntityLifecycleSystem_RequiresLiveTargetForEffectRequest()
         {
-            string templatesJson = @"[
-              {
-                ""id"": ""lifecycle_target_only"",
-                ""components"": {
-                  ""Name"": { ""Value"": ""Target"" },
-                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
-                  ""AttributeBuffer"": { ""base"": { ""Health"": 10 } },
-                  ""GameplayTagContainer"": {},
-                  ""TagCountContainer"": {}
-                }
-              }
-            ]";
-
-            var pipeline = CreateTemplatesPipeline(templatesJson);
-            var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
-
             using var world = World.Create();
             var source = world.Create(
                 WorldPositionCm.FromCm(100, 100),
                 new PresentationStableId { Value = 1 },
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
+            var target = world.Create();
+            world.Destroy(target);
 
             var requests = new RuntimeEntityLifecycleQueue(capacity: 1);
+            var effectRequests = new EffectRequestQueue();
             var system = new RuntimeEntityLifecycleSystem(
                 world,
                 requests,
-                templates,
-                new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                effectRequests);
 
             That(requests.TryEnqueue(new RuntimeEntityLifecycleRequest
             {
                 Source = source,
-                EffectContextSource = source,
-                EffectContextTarget = source,
-                TargetTemplateId = "lifecycle_target_only",
+                Target = target,
+                TargetContext = source,
+                EffectTemplateId = 1,
             }), Is.True);
 
-            system.Update(0f);
-
-            Entity target = default;
-            world.Query(new QueryDescription().WithAll<Name>(), (Entity entity, ref Name name) =>
-            {
-                if (name.Value == "Target")
-                {
-                    target = entity;
-                }
-            });
-
-            That(world.IsAlive(target), Is.True);
-            That(world.Get<WorldPositionCm>(target).Value, Is.EqualTo(Fix64Vec2.FromInt(9000, 8000)));
+            var ex = Throws<LifecycleExecutionException>(() => system.Update(0f));
+            That(ex!.Message, Does.Contain("target"));
         }
 
         [Test]
@@ -423,19 +534,18 @@ namespace Ludots.Tests.GasTests
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(100, 100) });
 
             var requests = new RuntimeEntityLifecycleQueue(capacity: 1);
+            var effectRequests = new EffectRequestQueue();
             var system = new RuntimeEntityLifecycleSystem(
                 world,
                 requests,
-                templates,
-                new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                effectRequests);
 
             That(requests.TryEnqueue(new RuntimeEntityLifecycleRequest
             {
                 Source = source,
-                EffectContextSource = source,
-                EffectContextTarget = source,
-                TargetTemplateId = "lifecycle_target_only",
+                Target = source,
+                TargetContext = source,
+                EffectTemplateId = 1,
             }), Is.True);
 
             var ex = Throws<LifecycleExecutionException>(() => system.Update(0f));
@@ -469,23 +579,32 @@ namespace Ludots.Tests.GasTests
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(5000, 5000) });
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 50f);
 
-            var requests = new RuntimeEntityLifecycleQueue(capacity: 1);
-            var system = new RuntimeEntityLifecycleSystem(
+            var services = new EntityLifecycleRuntimeServices(
                 world,
-                requests,
                 templates,
                 new EntityTemplateKeyRegistry(),
                 new PresentationStableIdAllocator());
-
-            That(requests.TryEnqueue(new RuntimeEntityLifecycleRequest
+            var state = new LifecycleTransactionState
             {
                 Source = source,
-                EffectContextSource = source,
-                EffectContextTarget = source,
                 TargetTemplateId = "lifecycle_target_no_health",
-            }), Is.True);
+                PlacementCm = Fix64Vec2.FromInt(5000, 5000),
+                Snapshot = LifecycleSnapshot.Capture(world, source),
+            };
+            var configParams = new EffectConfigParams();
+            configParams.TryAddAttributeId(EffectParamKeys.LifecycleAttribute0, AttributeRegistry.GetId("Health"));
+            configParams.TryAddLifecycleAttributeValueSource(
+                EffectParamKeys.LifecycleAttributeValueSource,
+                (int)LifecycleAttributeValueSource.Current);
+            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceFromConfig(
+                state,
+                in configParams);
 
-            var ex = Throws<LifecycleExecutionException>(() => system.Update(0f));
+            var ex = Throws<LifecycleExecutionException>(() =>
+                RuntimeEntityLifecycleTransactionExecutor.Execute(
+                    services,
+                    state,
+                    LifecycleTransactionPrograms.DeployConsumeSource));
             That(ex!.Message, Does.Contain("AttributeBuffer"));
         }
 

@@ -1,20 +1,15 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.Lifecycle
 {
     public struct RuntimeEntityLifecycleRequest
     {
         public Entity Source;
-        public Entity EffectContextSource;
-        public Entity EffectContextTarget;
-        public Entity EffectContextTargetContext;
-        public EffectConfigParams EffectConfigParams;
-        public string TargetTemplateId;
-        public int OnCompleteEffectTemplateId;
-        public Fix64Vec2 PlacementOverrideCm;
-        public byte HasPlacementOverride;
+        public Entity Target;
+        public Entity TargetContext;
+        public int EffectTemplateId;
+        public EffectConfigParams ConfigParams;
         public int ReceiptChannelId;
         public int ReceiptId;
         public byte EmitReceipt;
@@ -26,7 +21,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
         public int ReceiptId;
         public Entity Source;
         public Entity Target;
-        public string TargetTemplateId;
+        public int EffectTemplateId;
     }
 
     public sealed class RuntimeEntityLifecycleQueue

@@ -1,6 +1,6 @@
 # Entity Lifecycle 原子 Op 与组合架构（设计）
 
-> **状态**：实现中（`cursor/entity-morph-core-ea2f`），跟踪 GitHub issue [#494](https://github.com/MightyBubble/Ludots/issues/494)  
+> **状态**：实现中（`cursor/entity-morph-core-ea2f`），跟踪 GitHub issue [#494](https://github.com/MightyBubble/Ludots/issues/494)
 > **SSOT**：本文件为实体结构替换唯一架构文档；`entity-morph.md` 已废弃。
 
 ## 1 问题陈述

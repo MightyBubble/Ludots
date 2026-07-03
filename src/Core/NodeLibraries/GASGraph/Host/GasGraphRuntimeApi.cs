@@ -248,7 +248,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 PlacementCm = placementCm,
                 Snapshot = LifecycleSnapshot.Capture(_world, source),
             };
-            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceDefaults(state);
+            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceFromConfig(
+                state,
+                in _currentConfigParams);
             runtime.LifecycleTransaction = state;
         }
 

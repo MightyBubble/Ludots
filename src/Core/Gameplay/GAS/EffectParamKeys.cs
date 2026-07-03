@@ -1,3 +1,4 @@
+using System;
 using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -59,6 +60,25 @@ namespace Ludots.Core.Gameplay.GAS
 
         // ── Entity lifecycle deploy ──
         public static int TargetEntityTemplateKeyId;
+        public static int LifecycleAttribute0;
+        public static int LifecycleAttribute1;
+        public static int LifecycleAttribute2;
+        public static int LifecycleAttribute3;
+        public static int LifecycleAttributeValueSource;
+
+        public const int LifecycleAttributeCapacity = 4;
+
+        public static int GetLifecycleAttributeKey(int index)
+        {
+            return index switch
+            {
+                0 => LifecycleAttribute0,
+                1 => LifecycleAttribute1,
+                2 => LifecycleAttribute2,
+                3 => LifecycleAttribute3,
+                _ => throw new ArgumentOutOfRangeException(nameof(index), index, "Lifecycle attribute config key index is out of range."),
+            };
+        }
 
         /// <summary>
         /// Register all _ep.* keys with the ConfigKeyRegistry.
@@ -112,6 +132,11 @@ namespace Ludots.Core.Gameplay.GAS
 
             // Entity lifecycle deploy
             TargetEntityTemplateKeyId = ConfigKeyRegistry.Register("_ep.targetEntityTemplate");
+            LifecycleAttribute0 = ConfigKeyRegistry.Register("_ep.lifecycleAttribute0");
+            LifecycleAttribute1 = ConfigKeyRegistry.Register("_ep.lifecycleAttribute1");
+            LifecycleAttribute2 = ConfigKeyRegistry.Register("_ep.lifecycleAttribute2");
+            LifecycleAttribute3 = ConfigKeyRegistry.Register("_ep.lifecycleAttribute3");
+            LifecycleAttributeValueSource = ConfigKeyRegistry.Register("_ep.lifecycleAttributeValueSource");
         }
     }
 }

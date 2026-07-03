@@ -1376,7 +1376,6 @@ namespace Ludots.Core.Engine
                 new RuntimeEntityLifecycleSystem(
                     World,
                     runtimeEntityLifecycleQueue,
-                    entityLifecycleServices,
                     effectRequestQueue,
                     runtimeEntityLifecycleReceiptQueue),
                 SystemGroup.EffectProcessing);

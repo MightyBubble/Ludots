@@ -57,8 +57,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 world,
                 state.Target,
                 in state.Snapshot,
-                state.AttributeSliceIds,
-                state.AttributeSliceSource);
+                state);
         }
 
         public static void HandleClearActiveEffects(

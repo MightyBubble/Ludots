@@ -1,5 +1,7 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 
@@ -7,8 +9,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
 {
     public static class LifecycleTransactionPrograms
     {
-        public static ReadOnlySpan<LifecycleOpId> DeployConsumeSource => new[]
-        {
+        private static readonly LifecycleOpId[] DeployConsumeSourceOps =
+        [
             LifecycleOpId.MaterializeTemplate,
             LifecycleOpId.CopyIdentityComponents,
             LifecycleOpId.CopyAttributeSlice,
@@ -16,7 +18,9 @@ namespace Ludots.Core.Gameplay.Lifecycle
             LifecycleOpId.TransferStableId,
             LifecycleOpId.RewireSelection,
             LifecycleOpId.ConsumeEntity,
-        };
+        ];
+
+        public static ReadOnlySpan<LifecycleOpId> DeployConsumeSource => DeployConsumeSourceOps;
     }
 
     public static class RuntimeEntityLifecycleTransactionExecutor
@@ -86,8 +90,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                         world,
                         state.Target,
                         in state.Snapshot,
-                        state.AttributeSliceIds,
-                        state.AttributeSliceSource);
+                        state);
                     break;
                 case LifecycleOpId.ClearActiveEffects:
                     EntityLifecycleAtomicOps.ClearActiveEffects(world, state.Target);
@@ -107,11 +110,58 @@ namespace Ludots.Core.Gameplay.Lifecycle
             }
         }
 
-        public static void ConfigureDeployConsumeSourceDefaults(LifecycleTransactionState state)
+        public static void ConfigureDeployConsumeSourceFromConfig(
+            LifecycleTransactionState state,
+            in EffectConfigParams configParams)
         {
-            int healthId = AttributeRegistry.GetId("Health");
-            state.AttributeSliceIds = healthId >= 0 ? [healthId] : [];
-            state.AttributeSliceSource = LifecycleAttributeValueSource.Current;
+            if (!configParams.TryGetLifecycleAttributeValueSource(
+                    EffectParamKeys.LifecycleAttributeValueSource,
+                    out int rawValueSource) ||
+                (rawValueSource != (int)LifecycleAttributeValueSource.Base &&
+                 rawValueSource != (int)LifecycleAttributeValueSource.Current))
+            {
+                throw new InvalidOperationException(
+                    "DeployConsumeSource requires config param '_ep.lifecycleAttributeValueSource' with type 'LifecycleAttributeValueSource'.");
+            }
+
+            state.AttributeSliceSource = (LifecycleAttributeValueSource)rawValueSource;
+            state.AttributeSliceCount = 0;
+            state.AttributeSlice0 = 0;
+            state.AttributeSlice1 = 0;
+            state.AttributeSlice2 = 0;
+            state.AttributeSlice3 = 0;
+
+            for (int i = 0; i < EffectParamKeys.LifecycleAttributeCapacity; i++)
+            {
+                int keyId = EffectParamKeys.GetLifecycleAttributeKey(i);
+                if (keyId <= 0)
+                {
+                    throw new InvalidOperationException("EffectParamKeys must be initialized before lifecycle config is compiled.");
+                }
+
+                if (!configParams.TryGetAttributeIdStrict(keyId, out int attributeId))
+                {
+                    continue;
+                }
+
+                if (attributeId < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"DeployConsumeSource lifecycle attribute entry {i} resolved to invalid attribute id '{attributeId}'.");
+                }
+
+                if (!state.TryAddAttributeSliceId(attributeId))
+                {
+                    throw new InvalidOperationException(
+                        $"DeployConsumeSource supports at most {EffectParamKeys.LifecycleAttributeCapacity} configured lifecycle attribute slices.");
+                }
+            }
+
+            if (state.AttributeSliceCount == 0)
+            {
+                throw new InvalidOperationException(
+                    "DeployConsumeSource requires at least one configured lifecycle attribute slice.");
+            }
         }
     }
 }

@@ -18,7 +18,9 @@
     "lifetime": "Instant",
     "participatesInResponse": true,
     "configParams": {
-      "_ep.targetEntityTemplate": { "type": "EntityTemplate", "value": "Entity.Template.LifecycleTarget" }
+      "_ep.targetEntityTemplate": { "type": "EntityTemplate", "value": "Entity.Template.LifecycleTarget" },
+      "_ep.lifecycleAttribute0": { "type": "Attribute", "value": "Health" },
+      "_ep.lifecycleAttributeValueSource": { "type": "LifecycleAttributeValueSource", "value": "Current" }
     }
   }
 ]

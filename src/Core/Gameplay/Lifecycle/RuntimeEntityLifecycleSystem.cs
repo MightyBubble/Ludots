@@ -1,130 +1,84 @@
 using System;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
-using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Presentation;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.Lifecycle
 {
     /// <summary>
-    /// Layer 1 transaction executor host. Dequeues lifecycle requests and runs op programs.
+    /// Layer 1 lifecycle request host. Publishes lifecycle effects; graph presets execute atomic transactions.
     /// </summary>
     public sealed class RuntimeEntityLifecycleSystem : BaseSystem<World, float>
     {
         private readonly RuntimeEntityLifecycleQueue _requests;
+        private readonly EffectRequestQueue _effectRequests;
         private readonly RuntimeEntityLifecycleReceiptQueue? _receipts;
-        private readonly EffectRequestQueue? _effectRequests;
-        private readonly EntityLifecycleRuntimeServices _services;
 
         public RuntimeEntityLifecycleSystem(
             World world,
             RuntimeEntityLifecycleQueue requests,
-            EntityLifecycleRuntimeServices services,
-            EffectRequestQueue? effectRequests = null,
+            EffectRequestQueue effectRequests,
             RuntimeEntityLifecycleReceiptQueue? receipts = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
-            _services = services ?? throw new ArgumentNullException(nameof(services));
-            _effectRequests = effectRequests;
+            _effectRequests = effectRequests ?? throw new ArgumentNullException(nameof(effectRequests));
             _receipts = receipts;
         }
-
-        public RuntimeEntityLifecycleSystem(
-            World world,
-            RuntimeEntityLifecycleQueue requests,
-            DataRegistry<EntityTemplate> templateRegistry,
-            EntityTemplateKeyRegistry templateKeys,
-            PresentationStableIdAllocator stableIds,
-            EffectRequestQueue? effectRequests = null,
-            RuntimeEntityLifecycleReceiptQueue? receipts = null,
-            SelectionRuntime? selection = null,
-            PerformerEntityRuntime? performerRuntime = null,
-            PerformerDefinitionRegistry? performerDefinitions = null,
-            ComponentAuthoringContext? authoringContext = null)
-            : this(
-                world,
-                requests,
-                new EntityLifecycleRuntimeServices(
-                    world,
-                    templateRegistry,
-                    templateKeys,
-                    stableIds,
-                    selection,
-                    performerRuntime,
-                    performerDefinitions,
-                    authoringContext),
-                effectRequests,
-                receipts)
-        {
-        }
-
-        public EntityLifecycleRuntimeServices Services => _services;
 
         public override void Update(in float dt)
         {
             while (_requests.TryDequeue(out RuntimeEntityLifecycleRequest request))
             {
-                Entity target = ExecuteDeployConsumeSource(in request);
-                PublishReceipt(in request, target);
+                PublishLifecycleEffectRequest(in request);
+                PublishReceipt(in request);
             }
         }
 
-        private Entity ExecuteDeployConsumeSource(in RuntimeEntityLifecycleRequest request)
+        private void PublishLifecycleEffectRequest(in RuntimeEntityLifecycleRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.TargetTemplateId))
+            if (request.EffectTemplateId <= 0)
             {
-                throw new InvalidOperationException("DeployConsumeSource requires a non-empty TargetTemplateId.");
+                throw new InvalidOperationException("RuntimeEntityLifecycleRequest requires EffectTemplateId.");
             }
 
-            if (!LifecyclePlacementResolver.TryResolveAtTargetPoint(World, in request, out Fix64Vec2 positionCm))
+            if (!World.IsAlive(request.Source))
             {
                 throw new LifecycleExecutionException(
-                    "DeployConsumeSource failed because target point could not be resolved.");
+                    "Entity lifecycle request failed because the source entity is no longer alive.");
             }
 
-            var state = new LifecycleTransactionState
+            if (World.Has<PresentationDestroyPending>(request.Source))
             {
-                Source = request.Source,
-                TargetTemplateId = request.TargetTemplateId,
-                PlacementCm = positionCm,
-                Snapshot = LifecycleSnapshot.Capture(World, request.Source),
-            };
-            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceDefaults(state);
+                throw new LifecycleExecutionException(
+                    "Entity lifecycle request failed because the source entity is already pending destroy.");
+            }
 
-            Entity target = RuntimeEntityLifecycleTransactionExecutor.Execute(
-                _services,
-                state,
-                LifecycleTransactionPrograms.DeployConsumeSource);
-
-            PublishOnCompleteEffect(in request, target);
-            return target;
-        }
-
-        private void PublishOnCompleteEffect(in RuntimeEntityLifecycleRequest request, Entity target)
-        {
-            if (_effectRequests == null || request.OnCompleteEffectTemplateId <= 0)
+            if (!World.IsAlive(request.Target))
             {
-                return;
+                throw new LifecycleExecutionException(
+                    "Entity lifecycle request failed because the target entity is no longer alive.");
+            }
+
+            if (request.TargetContext != Entity.Null && !World.IsAlive(request.TargetContext))
+            {
+                throw new LifecycleExecutionException(
+                    "Entity lifecycle request failed because the target context entity is no longer alive.");
             }
 
             _effectRequests.Publish(new EffectRequest
             {
-                RootId = 0,
-                Source = target,
-                Target = target,
-                TargetContext = target,
-                TemplateId = request.OnCompleteEffectTemplateId,
+                Source = request.Source,
+                Target = request.Target,
+                TargetContext = request.TargetContext,
+                TemplateId = request.EffectTemplateId,
+                CallerParams = request.ConfigParams,
+                HasCallerParams = request.ConfigParams.Count > 0,
             });
         }
 
-        private void PublishReceipt(in RuntimeEntityLifecycleRequest request, Entity target)
+        private void PublishReceipt(in RuntimeEntityLifecycleRequest request)
         {
             if (_receipts == null || request.EmitReceipt == 0)
             {
@@ -136,8 +90,8 @@ namespace Ludots.Core.Gameplay.Lifecycle
                 ReceiptChannelId = request.ReceiptChannelId,
                 ReceiptId = request.ReceiptId,
                 Source = request.Source,
-                Target = target,
-                TargetTemplateId = request.TargetTemplateId,
+                Target = request.Target,
+                EffectTemplateId = request.EffectTemplateId,
             }))
             {
                 throw new InvalidOperationException("RuntimeEntityLifecycleReceiptQueue capacity exceeded.");

@@ -70,12 +70,17 @@ namespace Ludots.Core.Gameplay.Lifecycle
             World world,
             Entity target,
             in LifecycleSnapshot snapshot,
-            int[] attributeIds,
-            LifecycleAttributeValueSource valueSource)
+            LifecycleTransactionState state)
         {
-            if (!snapshot.HasAttributes || attributeIds.Length == 0)
+            if (state.AttributeSliceCount == 0)
             {
-                return;
+                throw new InvalidOperationException("CopyAttributeSlice requires at least one configured lifecycle attribute slice.");
+            }
+
+            if (!snapshot.HasAttributes)
+            {
+                throw new LifecycleExecutionException(
+                    "CopyAttributeSlice failed because source is missing AttributeBuffer.");
             }
 
             if (!world.Has<AttributeBuffer>(target))
@@ -85,9 +90,9 @@ namespace Ludots.Core.Gameplay.Lifecycle
             }
 
             ref AttributeBuffer targetAttributes = ref world.Get<AttributeBuffer>(target);
-            for (int i = 0; i < attributeIds.Length; i++)
+            for (int i = 0; i < state.AttributeSliceCount; i++)
             {
-                int attributeId = attributeIds[i];
+                int attributeId = state.GetAttributeSliceId(i);
                 if (!snapshot.Attributes.HasAttribute(attributeId))
                 {
                     throw new LifecycleExecutionException(
@@ -101,11 +106,11 @@ namespace Ludots.Core.Gameplay.Lifecycle
                         $"CopyAttributeSlice failed because target template is missing attribute '{attributeName}'.");
                 }
 
-                float value = valueSource switch
+                float value = state.AttributeSliceSource switch
                 {
                     LifecycleAttributeValueSource.Base => snapshot.Attributes.GetBase(attributeId),
                     LifecycleAttributeValueSource.Current => snapshot.Attributes.GetCurrent(attributeId),
-                    _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{valueSource}'."),
+                    _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{state.AttributeSliceSource}'."),
                 };
                 AttributeMutationOps.SetBase(world, target, attributeId, value);
             }
