@@ -25,6 +25,7 @@ namespace Ludots.Tests.Presentation
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
         private const string LargeWorldCameraId = "MassNavigation.Camera.LargeWorldHeightmap";
+        private const int LargeWorldEvidenceSelectionSampleCount = 128;
 
         [Test]
         public void AgentPerformers_UseMassNavigationOwnedGpuSkinnedAsset()
@@ -276,6 +277,32 @@ namespace Ludots.Tests.Presentation
                     ?? throw new InvalidOperationException("MassNavigation blocker map entity must author component overrides.");
                 AssertObstacleAuthoring(overrides, entity["InstanceId"]?.GetValue<string>() ?? "mass_navigation_blocker entity");
             }
+        }
+
+        [Test]
+        public void ScenarioRuntimeCapacity_CoversLargeWorldEvidenceSelectionSample()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime missing.");
+            JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity missing.");
+
+            Assert.That(
+                scenarioRuntime["initialSelectedEntityCapacity"]?.GetValue<int>(),
+                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+            Assert.That(
+                scenarioRuntime["initialSelectionScratchCapacity"]?.GetValue<int>(),
+                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+            Assert.That(
+                runtimeCapacity["selectionMemberScratchCapacity"]?.GetValue<int>(),
+                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+            Assert.That(
+                runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
+                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+            Assert.That(
+                runtimeCapacity["orderIngestionMemberCapacity"]?.GetValue<int>(),
+                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
         }
 
         [Test]

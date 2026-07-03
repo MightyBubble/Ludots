@@ -2560,14 +2560,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationShowcaseMods_DoNotDependOnMassNavigationDataMod()
+        public void MassNavigationBusinessShowcaseMods_DoNotDependOnMassNavigationDataMod()
         {
             string modsRoot = Path.Combine(FindRepoRoot(), "mods");
             string[] applyingMods =
             {
                 Path.Combine(modsRoot, "showcases", "formation_capability", "FormationCapabilityShowcaseMod"),
                 Path.Combine(modsRoot, "showcases", "road_network", "RoadNetworkShowcaseMod"),
-                Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardMassNavigationLargeWorld10kMod"),
                 Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardParticipantViewsMod"),
             };
 
@@ -2583,6 +2582,52 @@ namespace Ludots.Tests.Presentation
                 Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
                     $"MassNavigation-using showcase projects must not reference the MassNavigation data mod. Mod: {modRoot}");
             }
+        }
+
+        [Test]
+        public void CapabilityStandardMassNavigationLargeWorldEntry_ComposesFoundationMods()
+        {
+            string modRoot = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardMassNavigationLargeWorld10kMod");
+            JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+            JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException($"{modRoot} mod.json must author dependencies.");
+            string[] projectReferences = ReadProjectReferenceIncludes(Directory.EnumerateFiles(modRoot, "*.csproj").Single());
+
+            Assert.That(dependencies.ContainsKey("LudotsCoreMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("CoreInputMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("MassNavigationMod"), Is.True);
+            Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
+                "The capability entry composes the MassNavigation foundation through the mod graph, not a code-level project reference.");
+        }
+
+        [Test]
+        public void CapabilityStandardMassNavigationLargeWorldEntry_ConfiguresCoreMinimapOnMapFocus()
+        {
+            string modRoot = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardMassNavigationLargeWorld10kMod");
+            string entrySource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kModEntry.cs"));
+
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("engine.MergedConfig?.StartupMapId"));
+            Assert.That(entrySource, Does.Contain("CoreServiceKeys.MinimapRuntime"));
+            Assert.That(entrySource, Does.Contain("runtime.Visible = true;"));
+            Assert.That(entrySource, Does.Contain("runtime.SetRotateWithCamera(false);"));
+            Assert.That(entrySource, Does.Contain("runtime.UseRtsFullMapPreset();"));
+            Assert.That(entrySource, Does.Not.Contain("\"mass_navigation\""),
+                "The capability entry must use authored startupMapId instead of a code-level map-id duplicate.");
+            Assert.That(entrySource, Does.Not.Contain("Environment.GetEnvironmentVariable"),
+                "Capability-standard MassNavigation acceptance must not depend on env fallback toggles.");
         }
 
         [Test]

@@ -146,7 +146,9 @@ public static class LauncherEvidenceRecorder
             return EvidenceScenario.CameraAcceptanceProjectionClick;
         }
 
-        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase)))
+        if (plan.RootModIds.Any(id =>
+                string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(id, "CapabilityStandardMassNavigationLargeWorld10kMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.MassNavigationLargeWorld;
         }

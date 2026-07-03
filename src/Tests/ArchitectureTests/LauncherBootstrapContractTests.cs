@@ -477,7 +477,14 @@ namespace Ludots.Tests.Architecture
                     LauncherBuildMode.Never).Plan,
                     expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
                     expectedStartupMapId: "mass_navigation",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
+                    allowedModIds: new[]
+                    {
+                        "LudotsCoreMod",
+                        "CoreInputMod",
+                        "MassNavigationMod",
+                        "CapabilityStandardMassNavigationLargeWorld10kMod"
+                    },
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "MassNavigationMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -1031,11 +1038,20 @@ namespace Ludots.Tests.Architecture
             LauncherLaunchPlan plan,
             string expectedRootModId,
             string expectedStartupMapId,
-            string[] allowedModIds)
+            string[] allowedModIds,
+            string[]? requiredModIds = null)
         {
             Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
             Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
             Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
+            if (requiredModIds is not null)
+            {
+                foreach (var requiredModId in requiredModIds)
+                {
+                    Assert.That(plan.OrderedModIds, Does.Contain(requiredModId));
+                }
+            }
+
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
 
