@@ -148,6 +148,44 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AppendAuthoredAgents_AfterShrinkRebuild_MarksReusedAgentSlotDirtyForFirstEntitySync()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out Entity agent0,
+                out Entity agent1,
+                out MassNavigationAgentLayer layer,
+                membershipCapacity: 4);
+            world.Remove<MassNavigationAgent>(agent1);
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { agent0 },
+                new[] { CreateSeed(localX: 1000f, localY: 1000f, layer) },
+                new[] { true });
+
+            float appendedLocalX = simulation.MassNavigationFlow.PlayAreaMaxXCm + 1000f;
+            float appendedLocalY = simulation.MassNavigationFlow.PlayAreaMaxYCm + 1000f;
+            Entity newAgent = CreateAuthoredAgentEntity(
+                world,
+                simulation.ToWorldXCm(appendedLocalX),
+                simulation.ToWorldYCm(appendedLocalY),
+                layer);
+            var newSeed = CreateSeed(appendedLocalX, appendedLocalY, layer);
+
+            simulation.AppendAuthoredAgents(world, new[] { newAgent }, new[] { newSeed }, new[] { true });
+            simulation.MassNavigationFlow.SyncEntities(world, simulation.AgentState);
+
+            WorldPositionCm worldPosition = world.Get<WorldPositionCm>(newAgent);
+            Assert.That(
+                worldPosition.Value.X.ToFloat(),
+                Is.EqualTo(simulation.ToWorldXCm(simulation.MassNavigationFlow.PlayAreaMaxXCm)).Within(PositionToleranceCm));
+            Assert.That(
+                worldPosition.Value.Y.ToFloat(),
+                Is.EqualTo(simulation.ToWorldYCm(simulation.MassNavigationFlow.PlayAreaMaxYCm)).Within(PositionToleranceCm));
+        }
+
+        [Test]
         public void AuthoredAgentBindingSystem_IncrementalInsert_DoesNotBumpAuthoredRuntimeBindingRevision()
         {
             using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
