@@ -61,7 +61,7 @@ namespace Ludots.Core.Input.Orders
         /// Trigger while the action is held down.
         /// </summary>
         Held = 2,
-        
+
         /// <summary>
         /// Trigger when the action is pressed twice within the configured window.
         /// </summary>
@@ -283,7 +283,7 @@ namespace Ludots.Core.Input.Orders
         /// Per-actor order type routing for shared input actions such as Command.
         /// </summary>
         public ActorOrderRoutingSettings? ActorOrderRouting { get; set; }
-        
+
         /// <summary>
         /// Template for order arguments.
         /// </summary>
@@ -415,4 +415,3 @@ namespace Ludots.Core.Input.Orders
         public UserOverrideSettings UserOverrides { get; set; } = new();
     }
 }
-
