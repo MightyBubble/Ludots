@@ -150,6 +150,44 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
+        /// Execute a phase graph and return whether validation convention B[0] remains set (1 = pass).
+        /// </summary>
+        public bool ExecutePhaseWithValidationResult(
+            World world,
+            IGraphRuntimeApi api,
+            Entity caster,
+            Entity target,
+            Entity targetContext,
+            IntVector2 targetPos,
+            EffectPhaseId phase,
+            in EffectPhaseGraphBindings behavior,
+            EffectPresetType presetType,
+            int effectTagId,
+            int effectTemplateId,
+            in EffectConfigParams mergedParams,
+            BuiltinHandlerExecutionContext? builtinRuntime = null,
+            uint randomSeed = 0)
+        {
+            _boolRegs[0] = 1;
+            ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                targetContext,
+                targetPos,
+                phase,
+                behavior,
+                presetType,
+                effectTagId,
+                effectTemplateId,
+                in mergedParams,
+                builtinRuntime,
+                randomSeed);
+            return _boolRegs[0] != 0;
+        }
+
+        /// <summary>
         /// Execute the Main handler for a phase based on PresetTypeDefinition.
         /// </summary>
         private void ExecuteMainHandler(

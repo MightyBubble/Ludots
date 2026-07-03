@@ -172,6 +172,19 @@ namespace CoreInputMod.Systems
             return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out entity);
         }
 
+        public bool TryGetAbilityDefinitionRegistry(out AbilityDefinitionRegistry registry)
+        {
+            registry = default!;
+            if (_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) &&
+                abilitiesObj is AbilityDefinitionRegistry abilities)
+            {
+                registry = abilities;
+                return true;
+            }
+
+            return false;
+        }
+
         public bool TryCreateAbilityAimPresentationRuntime(out AbilityAimPresentationRuntime runtime)
         {
             runtime = default!;

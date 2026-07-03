@@ -383,25 +383,9 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static bool TryResolveQueryOrigin(World world, in EffectContext ctx, in EffectConfigParams mergedParams, out WorldCmInt2 point)
         {
-            if (TryGetPreservedTargetOrigin(in mergedParams, out point))
+            if (EffectTargetPointResolver.TryResolveOrigin(world, in ctx, in mergedParams, out Fix64Vec2 positionCm))
             {
-                return true;
-            }
-
-            if (world.IsAlive(ctx.Source) &&
-                world.Has<AbilityExecInstance>(ctx.Source))
-            {
-                ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
-                if (exec.HasTargetOriginPos != 0)
-                {
-                    point = exec.TargetOriginPosCm.ToWorldCmInt2();
-                    return true;
-                }
-            }
-
-            if (world.IsAlive(ctx.Source) && world.Has<WorldPositionCm>(ctx.Source))
-            {
-                point = world.Get<WorldPositionCm>(ctx.Source).Value.ToWorldCmInt2();
+                point = positionCm.ToWorldCmInt2();
                 return true;
             }
 
@@ -417,57 +401,9 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static bool TryResolveTargetPoint(World world, in EffectContext ctx, in EffectConfigParams mergedParams, out WorldCmInt2 point)
         {
-            if (TryGetPreservedTargetPoint(in mergedParams, out point))
+            if (EffectTargetPointResolver.TryResolve(world, in ctx, in mergedParams, out Fix64Vec2 positionCm))
             {
-                return true;
-            }
-
-            if (world.IsAlive(ctx.Target) && world.Has<WorldPositionCm>(ctx.Target))
-            {
-                point = world.Get<WorldPositionCm>(ctx.Target).Value.ToWorldCmInt2();
-                return true;
-            }
-
-            if (world.IsAlive(ctx.TargetContext) && world.Has<WorldPositionCm>(ctx.TargetContext))
-            {
-                point = world.Get<WorldPositionCm>(ctx.TargetContext).Value.ToWorldCmInt2();
-                return true;
-            }
-
-            if (world.IsAlive(ctx.Source) &&
-                world.Has<AbilityExecInstance>(ctx.Source))
-            {
-                ref readonly var exec = ref world.Get<AbilityExecInstance>(ctx.Source);
-                if (exec.HasTargetPos != 0)
-                {
-                    point = exec.TargetPosCm.ToWorldCmInt2();
-                    return true;
-                }
-            }
-
-            point = default;
-            return false;
-        }
-
-        private static bool TryGetPreservedTargetOrigin(in EffectConfigParams mergedParams, out WorldCmInt2 point)
-        {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetOriginX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetOriginY, out float y))
-            {
-                point = new WorldCmInt2((int)x, (int)y);
-                return true;
-            }
-
-            point = default;
-            return false;
-        }
-
-        private static bool TryGetPreservedTargetPoint(in EffectConfigParams mergedParams, out WorldCmInt2 point)
-        {
-            if (mergedParams.TryGetFloat(EffectParamKeys.TargetPosX, out float x) &&
-                mergedParams.TryGetFloat(EffectParamKeys.TargetPosY, out float y))
-            {
-                point = new WorldCmInt2((int)x, (int)y);
+                point = positionCm.ToWorldCmInt2();
                 return true;
             }
 

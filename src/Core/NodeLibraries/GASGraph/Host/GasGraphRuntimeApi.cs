@@ -14,6 +14,8 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Placement;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -587,6 +589,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             value = 0;
             if (!_hasConfigContext) return false;
             return _currentConfigParams.TryGetInt(keyId, out value);
+        }
+
+        public bool TrySnapTargetToNearestInCollection(
+            Entity owner,
+            int collectionKeyId,
+            ref IntVector2 targetPosCm,
+            float maxDistanceCm,
+            out Entity snappedEntity)
+        {
+            snappedEntity = Entity.Null;
+            if (_entityCollections == null)
+            {
+                return false;
+            }
+
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
+            bool found = PlacementValidation.TrySnapToNearestInCollection(
+                _world,
+                _entityCollections,
+                owner,
+                collectionKeyId,
+                in pointCm,
+                Fix64.FromFloat(maxDistanceCm),
+                out Fix64Vec2 snappedCm,
+                out snappedEntity);
+            if (found)
+            {
+                var rounded = snappedCm.RoundToInt();
+                targetPosCm = new IntVector2(rounded.x, rounded.y);
+            }
+
+            return found;
         }
     }
 }

@@ -130,6 +130,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMinMetric = 394,
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
+
+        // ── Placement validation (402-406) ──
+        LoadTargetPosX = 402,
+        LoadTargetPosY = 403,
+        ClampTargetToRange = 404,
+        IsPointInCircle = 405,
+        SnapToNearestInCollection = 406,
     }
 
     public static class GraphNodeOpParser

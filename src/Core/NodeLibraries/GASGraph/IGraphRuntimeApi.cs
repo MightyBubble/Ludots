@@ -276,6 +276,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         bool TryLoadConfigFloat(int keyId, out float value);
         bool TryLoadConfigInt(int keyId, out int value);
+
+        bool TrySnapTargetToNearestInCollection(
+            Entity owner,
+            int collectionKeyId,
+            ref IntVector2 targetPosCm,
+            float maxDistanceCm,
+            out Entity snappedEntity)
+        {
+            snappedEntity = Entity.Null;
+            return false;
+        }
     }
 
     /// <summary>
