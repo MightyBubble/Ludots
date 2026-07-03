@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
@@ -53,9 +54,24 @@ namespace RtsDemoMod.Triggers
 
             RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
             EnsureLocalSelectionOwner(engine, world);
+            EnsurePlayerOwnership(world);
             EnsureSelectionViewBinding(engine, world);
             EnsureDefaultSelection(engine, world);
             return Task.CompletedTask;
+        }
+
+        private static void EnsurePlayerOwnership(World world, int playerId = 1)
+        {
+            var query = new QueryDescription().WithAll<Team>();
+            world.Query(in query, (Entity entity, ref Team team) =>
+            {
+                if (team.Id != playerId || world.Has<PlayerOwner>(entity))
+                {
+                    return;
+                }
+
+                world.Add(entity, new PlayerOwner { PlayerId = playerId });
+            });
         }
 
         private static void EnsureLocalSelectionOwner(GameEngine engine, World world)

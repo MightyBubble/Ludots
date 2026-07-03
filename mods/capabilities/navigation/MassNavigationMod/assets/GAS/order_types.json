@@ -19,15 +19,17 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "MassNavigation.FormationMode",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
     "massNavigationMove": {
       "orderTypeKey": "massNavigationMove",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": [ "attackTarget" ]
+      "interruptsActiveOrderTypeKeys": [
+        "attackTarget"
+      ]
     }
   }
 }
-

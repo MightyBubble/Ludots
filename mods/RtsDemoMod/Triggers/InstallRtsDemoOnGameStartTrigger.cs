@@ -43,7 +43,7 @@ namespace RtsDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var oq) && oq is OrderQueue orders)
             {
                 engine.RegisterSystem(new RtsLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _ctx), SystemGroup.InputCollection);
-                _ctx.Log("[RtsDemoMod] RtsLocalOrderSourceSystem registered");
+                _ctx.Log("[RtsDemoMod] RTS local order source system registered");
             }
 
             engine.RegisterSystem(new RtsPresentationBootstrapSystem(engine), SystemGroup.PostMovement);
