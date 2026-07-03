@@ -394,6 +394,44 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PhaseExecutor_ValidationResult_DefaultsToPassWhenGraphDoesNotWriteB0()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var caster = world.Create();
+            var target = world.Create();
+            const int graphId = 501;
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 7f },
+            });
+
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, graphId);
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                api,
+                caster,
+                target,
+                target,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                default);
+
+            That(accepted, Is.True, "OnPropose validation should pass unless graph explicitly writes B[0]=0.");
+        }
+
+        [Test]
         public void AbilityActivationPrecondition_MissingGraph_ThrowsWithGraphId()
         {
             using var world = World.Create();

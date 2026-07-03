@@ -69,9 +69,9 @@ namespace Ludots.Core.Gameplay.Placement
                 return false;
             }
 
-            Span<Entity> buffer = stackalloc Entity[64];
-            int count = collections.CopyEntities(owner, collectionKeyId, buffer);
-            if (count <= 0)
+            if (!collections.TryGet(owner, collectionKeyId, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
                 return false;
             }
@@ -79,9 +79,13 @@ namespace Ludots.Core.Gameplay.Placement
             Fix64 bestDistanceSq = maxDistanceCm > Fix64.Zero ? maxDistanceCm * maxDistanceCm : Fix64.MaxValue;
             bool found = false;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < view.Count; i++)
             {
-                Entity entity = buffer[i];
+                if (!collections.TryGetEntityAt(handle, i, out Entity entity))
+                {
+                    continue;
+                }
+
                 if (!world.IsAlive(entity) || !world.Has<WorldPositionCm>(entity))
                 {
                     continue;

@@ -178,6 +178,45 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TrySnapToNearestInCollection_ScansPastFirstCopyWindow()
+        {
+            using var world = World.Create();
+            var keyRegistry = new Ludots.Core.Registry.StringIntRegistry();
+            var collections = new EntityCollectionStore(keyRegistry);
+            var owner = world.Create();
+            const string collectionKey = "test.placement.snap.large";
+            int collectionKeyId = keyRegistry.Register(collectionKey);
+            var entities = new Entity[65];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                entities[i] = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(10000 + i, 0) });
+            }
+
+            entities[64] = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(10, 0) });
+            collections.Replace(
+                owner,
+                EntityCollectionDescriptor.Create(
+                    collectionKey,
+                    EntityCollectionSourceKind.Debug,
+                    EntityCollectionRoleKind.Debug),
+                entities);
+
+            bool found = PlacementValidation.TrySnapToNearestInCollection(
+                world,
+                collections,
+                owner,
+                collectionKeyId,
+                Fix64Vec2.Zero,
+                Fix64.FromInt(100),
+                out Fix64Vec2 snappedCm,
+                out Entity snappedEntity);
+
+            That(found, Is.True);
+            That(snappedEntity, Is.EqualTo(entities[64]));
+            That(snappedCm, Is.EqualTo(Fix64Vec2.FromInt(10, 0)));
+        }
+
+        [Test]
         public void TrySnapToNearestGraphEdge_ProjectsOntoNearestSegment()
         {
             var builder = new NodeGraphBuilder(3, 2);
