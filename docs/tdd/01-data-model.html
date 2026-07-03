@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>01 Data Model — Ludots Wiki</title>
+    <base href="/Ludots/">
+<style>:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+.container { display: flex; min-height: 100vh; }
+.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
+.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
+.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
+.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.sidebar .group { margin-bottom: 18px; }
+.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
+.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
+.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
+.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
+.main h4 { font-size: 16px; margin-top: 24px; }
+.main p { margin: 12px 0; }
+.main a { color: var(--accent); text-decoration: none; }
+.main a:hover { text-decoration: underline; }
+.main ul, .main ol { margin: 12px 0; padding-left: 24px; }
+.main li { margin: 4px 0; }
+.main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.main th, .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.main th { background: var(--accent-light); font-weight: 600; }
+.main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
+.main pre code { padding: 0; background: transparent; }
+.main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
+.main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; } .container { flex-direction: column; } }
+.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
+.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div class="container">
+<nav class="sidebar" id="nav"></nav>
+<main class="main" id="content"></main>
+</div>
+<script>
+const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
+const currentPage = "tdd/01-data-model.html";
+const mdContent = "# 架构与基础设施 — 数据模型
+
+## 设计目标
+
+Ludots 的数据模型以 **Arch ECS** 为核心，所有 gameplay 状态表达为 **Entity / Component / System** 三元组。设计目标如下：
+
+1. **连续内存布局**：通过 SoA（Structure of Arrays）实现 CPU 缓存友好型遍历。
+2. **零托管引用**：ECS 组件均为 `unmanaged struct`，排除 GC 干扰。
+3. **定点数一致性**：Gameplay 数值在 `Fix64` 空间运算，消除跨平台浮点差异。
+4. **模板化生成**：`EntityTemplate` + `ComponentRegistry` + `EntityBuilder` 构成声明式实体配置管线。
+
+---
+
+## Entity / Component / System 三元组
+
+![ECS 层级结构](diagrams/ecs-datamodel-ecs-hierarchy.svg)
+
+### 1. Entity
+
+![Entity 生命周期](diagrams/ecs-datamodel-entity-lifecycle.svg)
+
+Entity 在 Arch ECS 中是轻量句柄（`Entity` struct），仅包含 `Id` 和 `WorldId`。Ludots 中 Entity 通过以下方式生成：
+
+- **批量模板生成**：`TemplateEntityBatchSpawner`（`src/Core/Config/TemplateEntityBatchSpawner.cs`）从 `EntityTemplate` 直接通过 Arch chunk span 填充组件，绕过逐 entity `ComponentRegistry` 调用。
+- **运行时生成**：`RuntimeEntitySpawnSystem`（`src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs`，1246 行）处理 `RuntimeEntitySpawnQueue` 中的动态生成请求，在 `RuntimeEntityBinding` phase 统一绑定 `PerformerEntityRuntime`。
+- **表现层安全销毁**：`PresentationEntityLifecycle.RequestDestroy`（`src/Core/Presentation/PresentationEntityLifecycle.cs`）通过 `PresentationDestroyPending` 标签标记，在 `Cleanup` phase 由 `PresentationEntityFinalizeDestroySystem` 执行实际销毁。
+
+### 2. Component
+
+Component 是 ECS 中的数据载体。Ludots 的组件分为三类：
+
+| 后缀 | 含义 | 示例 |
+|------|------|------|
+| **Cm** | 普通数据组件（Component） | `WorldPositionCm`, `FacingDirection`, `AttributeBuffer` |
+| **Tag** | 空结构标签（Empty Struct Tag） | `PresentationDestroyPending`, `SpatialPartitionExcluded`, `ScopeMemberTag` |
+| **Event** | 一次性事件组件（One-frame Event） | `GameplayEvent`, `SimulationBudgetFuseEvent` |
+
+组件约束：
+- 必须是 `unmanaged struct`（不含 `string`、托管引用）。
+- 标识类数据使用 `StringIntRegistry` 预解析为 `int` 后存储（如 `AbilityId`, `EffectTemplateId`, `TagId`）。
+- 变长数据通过 `EntityKeyedSoaTable<TPayload>` 或外部 Buffer 存储，不直接放在组件内。
+
+### 3. System
+
+System 是 ECS 中的逻辑处理器。Ludots 中 System 按 `SystemGroup` 分 phase 执行，详见 `02-systemgroup.md`。System 分为两类：
+
+- **Simulation System**：在 `GameEngine.Tick` 的 Pacemaker 控制下执行，受 `SimulationBudgetMsPerFrame` 约束。
+- **Presentation System**：在 `GameEngine.Update` 中执行，不受预算限制，负责填充各表现 Buffer（`PerformerCommandBuffer`, `InstancedBatchRequestBuffer`, `GroundOverlayBuffer` 等）。
+
+---
+
+## SoA（Structure of Arrays）布局
+
+![Chunk SoA 存储](diagrams/ecs-datamodel-chunk-storage.svg)
+
+### 1. Arch ECS 的 Chunk 布局
+
+Arch ECS 将具有相同组件签名的 Entity 放入同一 **Archetype** 的 **Chunk** 中。每个 Chunk 是一块连续内存，组件按 SoA 排列：
+
+```
+Chunk (16KB)
+├── Entity[capacity]           // 实体句柄数组
+├── ComponentA[capacity]       // 组件 A 的数组
+├── ComponentB[capacity]       // 组件 B 的数组
+└── ComponentC[capacity]       // 组件 C 的数组
+```
+
+这种布局使得 `Query` 遍历同一组件类型的所有 Entity 时具有极佳的缓存局部性。
+
+![Query 执行流程](diagrams/ecs-datamodel-query-execution.svg)
+
+### 2. EntityKeyedSoaTable：ECS 外部的 SoA 关联表
+
+对于无法放入 ECS chunk 的变长或关联数据，Ludots 提供 `EntityKeyedSoaTable<TPayload>`（`src/Core/Association/EntityKeyedSoaTable.cs`，759 行）：
+
+- **键模式**：支持 `Pair`（Primary + Secondary Entity）和 `Entity+Discriminator` 两种键模式（`EntityKeyedSoaKey`）。
+- **容量管理**：哈希桶 + 主实体索引；load factor 0.72；支持 `Upsert`, `Remove`, `Expire`, `Compact`。
+- **过期机制**：支持行级过期，通过 `Expire` 标记后由 `Compact` 回收。
+
+### 3. 存档序列化的 SoA 友好性
+
+`LudotsBinaryWorldSerializer`（`src/Core/Persistence/LudotsBinaryWorldSerializer.cs`）基于 `Arch.Persistence` 对 ECS World 进行二进制快照。SoA 布局使得 chunk 数据可直接 bulk 序列化，无需逐 entity 反射。
+
+---
+
+## blittable struct 约束与示例
+
+### 1. 约束定义
+
+blittable struct 在 Ludots 中的含义是：
+
+- 类型是 C# `unmanaged`（即只包含 `unmanaged` 字段，无 `class`、`string`、托管数组、接口、事件）。
+- 可被 `unsafe` 代码直接按字节复制（`sizeof(T)` 确定）。
+- 可被 `Arch.Persistence` 的 binary formatter 直接序列化。
+
+### 2. 典型组件示例
+
+```csharp
+// 位置组件（Fix64 定点数）
+public struct WorldPositionCm
+{
+    public Fix64 X;
+    public Fix64 Y;
+    public Fix64 Z;
+}
+
+// 朝向组件（Fix64 角度）
+public struct FacingDirection
+{
+    public Fix64 Angle; // 弧度，0 ~ 2π
+}
+
+// 属性缓冲组件（引用外部 SoA 表）
+public struct AttributeBuffer
+{
+    public int BufferId; // StringIntRegistry 预解析的 ID
+}
+
+// 游戏标签容器（引用外部 Tag 存储）
+public struct GameplayTagContainer
+{
+    public int TagSetId; // StringIntRegistry 预解析的 ID
+}
+```
+
+### 3. 非 blittable 数据的处理策略
+
+| 数据类型 | 处理策略 | 关键类型 |
+|----------|----------|----------|
+| `string` 名称 | `StringIntRegistry` 预解析为 `int` ID | `StringIntRegistry`（`src/Core/Registry/StringIntRegistry.cs`） |
+| 变长集合 | `EntityKeyedSoaTable<TPayload>` | `EntityKeyedSoaTable<TPayload>`（`src/Core/Association/EntityKeyedSoaTable.cs`） |
+| 实体引用 | `Entity` struct（Arch 句柄） | `Entity`（Arch.Core） |
+| 关系图 | `Relationship<RelationshipEdgeSet>` | `RelationshipRuntime`（`src/Core/Gameplay/Relationships/RelationshipRuntime.cs`） |
+| 作用域成员 | `ScopeRefBuffer`（unsafe fixed） | `ScopeRefBuffer`（`src/Core/Association/ScopeKey.cs`） |
+
+---
+
+## Fix64 / Fix64Vec2 定点数系统
+
+### 1. Fix64 概述
+
+`Fix64` 是 64 位定点数，通常使用 16.48 或 32.32 格式（具体精度由实现定义）。在 Ludots 中，所有 gameplay 数值计算（属性、伤害、位置、速度）均使用 `Fix64`，仅在表现层转换为 `float`。
+
+### 2. 使用场景
+
+| 场景 | 类型 | 说明 |
+|------|------|------|
+| 世界坐标 | `Fix64Vec2` / `Fix64Vec3` | 单位：厘米（cm） |
+| 属性值 | `Fix64` | 生命值、攻击力、护甲值等 |
+| 角度 | `Fix64` | 弧度表示 |
+| 时间 | `Fix64` | 持续时间、冷却时间 |
+| 插值 | `Fix64` | 线性/缓动插值在 Fix64 空间完成 |
+
+### 3. 与表现层的边界
+
+`Fix64` 到 `float` 的转换只发生在 **Presentation System** 中：
+
+- `PerformerRuntimeSystem` 将 `WorldPositionCm`（Fix64）转换为 `VisualTransform`（float）供渲染器使用。
+- `GridVisualSyncSystem` 将网格坐标同步为视觉坐标。
+- `CameraRuntimeSystem` 将相机逻辑位置（Fix64）转换为视图矩阵（float）。
+
+Simulation System 中严禁使用 `float` 进行 gameplay 计算。
+
+---
+
+## 组件命名约定
+
+### 1. 命名规则
+
+| 模式 | 约定 | 示例 |
+|------|------|------|
+| 数据组件 | 以 `Cm` 结尾或功能名词 | `WorldPositionCm`, `AttributeBuffer`, `InventoryCapacity` |
+| 标签组件 | 以 `Tag` 结尾 | `SpatialPartitionExcluded`, `SaveExcludedTag`, `ScopeMemberTag`, `PresentationDestroyPending` |
+| 事件组件 | 以 `Event` 结尾 | `GameplayEvent`, `SimulationBudgetFuseEvent`, `PresentationEvent` |
+| 状态组件 | 名词 + 状态描述 | `SelectionSelectableState`, `OrderBuffer` |
+| 关系组件 | 使用 Arch `Relationship<T>` | `Relationship<RelationshipEdgeSet>` |
+
+### 2. 命名空间与目录约定
+
+组件定义通常与其 gameplay 域放在一起：
+
+- `src/Core/Gameplay/GAS/`：GAS 相关组件（`AttributeBuffer`, `GameplayTagContainer` 等）
+- `src/Core/Gameplay/Items/`：物品相关组件（`InventoryCapacity` 等）
+- `src/Core/Gameplay/Spawning/`：生成相关组件（`PresentationStableId` 等）
+- `src/Core/Map/`：地图相关组件（`MapEntityTag` 等）
+- `src/Core/Presentation/`：表现相关组件（`VisualTransform`, `PresentationStaticTransform` 等）
+
+---
+
+## 实体模板与批量生成
+
+![EntityTemplate 继承](diagrams/ecs-datamodel-template-inheritance.svg)
+
+### 1. EntityTemplate
+
+`EntityTemplate`（`src/Core/Config/EntityTemplate.cs`）是声明式实体配置：
+
+```csharp
+public class EntityTemplate
+{
+    public string Id { get; set; }
+    public string OnSpawnEffect { get; set; } // 生成时触发的 EffectTemplate ID
+    public Dictionary<string, JsonNode> Components { get; set; } // 组件名 → JSON 配置
+}
+```
+
+### 2. EntityBuilder
+
+`EntityBuilder`（`src/Core/Config/EntityBuilder.cs`）提供 Fluent API：
+
+```
+UseTemplate(templateId) → WithOverride(componentName, jsonValue) → Build(world)
+```
+
+构建时调用 `ComponentRegistry.Apply` 将 JSON 解析为组件值并附加到实体。
+
+### 3. TemplateEntityBatchSpawner（高性能路径）
+
+`TemplateEntityBatchSpawner`（`src/Core/Config/TemplateEntityBatchSpawner.cs`）是 `EntityBuilder` 的高性能替代方案：
+
+- 直接通过 Arch chunk span 填充组件，绕过逐 entity `ComponentRegistry` 调用。
+- 仅支持有限内置组件（`Name`, `WorldPositionCm`, `FacingDirection`, `AttributeBuffer`, `GameplayTagContainer`, `TagCountContainer`, `OrderBuffer`, `SelectionSelectableState`, `EntityLayer`, `Team`, `PlayerOwner`, `PresentationStaticTransform`, `SpatialPartitionExcluded` 等）。
+- 任何其他组件必须通过 `EntityBuilder` 走慢路径。
+
+性能约束：批量生成场景（如 RTS 单位生成、ARPG 怪物刷怪）必须优先使用 `TemplateEntityBatchSpawner`。
+
+---
+
+## 性能约束
+
+| 约束项 | 要求 | 实现 |
+|--------|------|------|
+| 组件大小 | ≤ 64 字节（推荐） | 大字段通过 `EntityKeyedSoaTable` 外置 |
+| 组件对齐 | 自然对齐 | `unmanaged struct` 自动满足 |
+| 查询缓存 | 初始化阶段构造 `QueryDescription` | 运行时只复用已有描述对象 |
+| 批量生成 | 优先使用 `TemplateEntityBatchSpawner` | 直接写 chunk span |
+| 定点数运算 | 全部 gameplay 逻辑使用 `Fix64` | 仅在 Presentation System 转 float |
+
+---
+
+## 扩展契约
+
+| 扩展点 | 方式 | 约束 |
+|--------|------|------|
+| 自定义组件 | `ComponentRegistry.Register<T>(name, modId)` | 必须是 `unmanaged struct`；组件名全局唯一 |
+| 自定义模板 | `MapConfig.Entities` 中声明 | 使用 `EntityTemplate` 格式 |
+| 自定义 SoA 表 | 继承 `EntityKeyedSoaTable<TPayload>` | `TPayload` 必须是 `unmanaged struct` |
+| 批量生成组件扩展 | 修改 `TemplateEntityBatchSpawner.IsBatchCandidate` | 需修改 Core 代码，Mod 无法直接扩展 |
+
+---
+
+> 参考文件
+> - `src/Core/Config/EntityTemplate.cs`（模板定义）
+> - `src/Core/Config/EntityBuilder.cs`（实体构建器）
+> - `src/Core/Config/TemplateEntityBatchSpawner.cs`（批量生成器）
+> - `src/Core/Config/ComponentRegistry.cs`（组件注册表，60+ 组件）
+> - `src/Core/Association/EntityKeyedSoaTable.cs`（SoA 关联表）
+> - `src/Core/Registry/StringIntRegistry.cs`（统一 ID 映射）
+> - `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs`（运行时实体生成）
+> - `src/Core/Presentation/PresentationEntityLifecycle.cs`（表现层生命周期）
+";
+function buildNav() {
+  let html = '';
+  const pathParts = window.location.pathname.split('/');
+  // 提取项目根路径（如 /Ludots 或 /）
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
+  for (const [group, items] of Object.entries(navData)) {
+    if (items.length === 0) continue;
+    html += '<div class="group"><div class="group-title">' + group + '</div>';
+    for (const [href, title] of items) {
+      const cls = href === currentPage ? 'active' : '';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('nav').innerHTML = html;
+}
+
+function render() {
+  buildNav();
+  document.getElementById('content').innerHTML = marked.parse(mdContent);
+}
+render();
+</script>
+</body>
+</html>

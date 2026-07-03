@@ -103,6 +103,43 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ScatterHudTextBenchmarkMap_AppliesMetadataInitialTarget()
+        {
+            using var engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
+            var hudProjection = PerformerBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+
+            engine.LoadMap(PerformerBlacksmithShowcaseIds.ScatterHudTextBenchmarkMapId);
+
+            var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+                ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+            int expected = engine.CurrentMapSession!.MapConfig.Metadata["performerBlacksmith"]!["scatterInitialTarget"]!.GetValue<int>();
+
+            Assert.That(expected, Is.EqualTo(30000));
+            Assert.That(spawnQueue.Count, Is.EqualTo(expected),
+                "The dedicated HUD-text benchmark map must use its metadata scatterInitialTarget as the runtime spawn SSOT.");
+
+            InitializationPhaseResult init = WaitForInitialization(engine, hudProjection);
+            Assert.That(init.QueueCountAfterSettle, Is.EqualTo(0));
+            Assert.That(init.StableFramesReached, Is.True);
+
+            CountHudTextBenchmark(
+                engine,
+                out int entities,
+                out int rootPerformers,
+                out int worldHudBars,
+                out int worldHudText,
+                out int screenHudBars,
+                out int screenHudText);
+
+            Assert.That(entities, Is.EqualTo(expected));
+            Assert.That(rootPerformers, Is.EqualTo(expected));
+            Assert.That(worldHudBars, Is.EqualTo(expected));
+            Assert.That(worldHudText, Is.EqualTo(expected));
+            Assert.That(screenHudBars, Is.EqualTo(expected));
+            Assert.That(screenHudText, Is.EqualTo(expected));
+        }
+
+        [Test]
         public void Scatter_3000_ProductionPathRandomDrift_PropagatesToIsmAndScreenHud()
         {
             using var engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
@@ -735,6 +772,65 @@ namespace Ludots.Tests.Presentation
 
             roadSplineCount = roadSplines.Count;
             groundOverlayCount = overlays.Count;
+        }
+
+        private static void CountHudTextBenchmark(
+            Ludots.Core.Engine.GameEngine engine,
+            out int entities,
+            out int rootPerformers,
+            out int worldHudBars,
+            out int worldHudText,
+            out int screenHudBars,
+            out int screenHudText)
+        {
+            var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
+            var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
+                ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            var screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                ?? throw new InvalidOperationException("PresentationScreenHudBuffer missing.");
+
+            int rootId = definitions.GetId(PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkDefinitionId);
+            int entityCount = 0;
+            var entityQuery = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in entityQuery, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.Ordinal))
+                {
+                    entityCount++;
+                }
+            });
+
+            int performerCount = 0;
+            var performerQuery = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in performerQuery, (ref PerformerState state) =>
+            {
+                if (state.DefId == rootId)
+                {
+                    performerCount++;
+                }
+            });
+
+            int barCount = 0;
+            int textCount = 0;
+            foreach (ref readonly WorldHudItem item in worldHud.GetSpan())
+            {
+                if (item.Kind == WorldHudItemKind.Bar)
+                {
+                    barCount++;
+                }
+                else if (item.Kind == WorldHudItemKind.Text)
+                {
+                    textCount++;
+                }
+            }
+
+            entities = entityCount;
+            rootPerformers = performerCount;
+            worldHudBars = barCount;
+            worldHudText = textCount;
+            screenHudBars = screenHud.BarCount;
+            screenHudText = screenHud.TextCount;
         }
 
         private static string BuildReport(ScatterScenarioResult[] results)
