@@ -5,295 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Diagrams — Ludots Wiki</title>
 <base href="/Ludots/">
-<style>
-:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; --card-bg: #ffffff; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
-.container { display: flex; min-height: 100vh; }
-.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
-.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
-.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
-.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
-.sidebar .group { margin-bottom: 18px; }
-.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
-.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 1200px; }
-.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
-.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
-.diagram-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; margin-top: 24px; }
-.diagram-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; cursor: pointer; transition: box-shadow 0.2s, transform 0.2s; }
-.diagram-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); transform: translateY(-2px); }
-.diagram-card .title { font-weight: 600; font-size: 14px; color: var(--fg); margin-bottom: 8px; }
-.diagram-card .desc { font-size: 12px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
-.diagram-card .preview { width: 100%; height: 180px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--bg); display: flex; align-items: center; justify-content: center; }
-.diagram-card .preview svg { max-width: 100%; max-height: 100%; }
-.diagram-card .tags { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; }
-.diagram-card .tag { font-size: 11px; padding: 2px 8px; border-radius: 12px; background: var(--accent-light); color: var(--accent); }
-.category { margin-bottom: 48px; }
-.category-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-.category-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-.fullscreen-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 100; display: none; align-items: center; justify-content: center; padding: 40px; }
-.fullscreen-overlay.active { display: flex; }
-.fullscreen-overlay .close-btn { position: absolute; top: 20px; right: 30px; color: white; font-size: 32px; cursor: pointer; }
-.fullscreen-overlay svg, .fullscreen-overlay img { max-width: 90vw; max-height: 85vh; background: var(--bg); border-radius: 8px; }
-@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; max-height: 42vh; overflow-y: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; width: 100%; max-width: none; padding: 24px 18px; overflow-x: hidden; } .container { flex-direction: column; } .main table { display: block; overflow-x: auto; max-width: 100%; } .main pre { max-width: 100%; } .diagram-grid { grid-template-columns: 1fr; } }
-
-.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
-.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.0/dist/style.css">
+<link rel="stylesheet" href="assets/diagrams-flow.css">
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@19.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.2.0/client",
+    "@xyflow/react": "https://esm.sh/@xyflow/react@12.11.0?deps=react@19.2.0,react-dom@19.2.0"
+  }
+}
+</script>
 </head>
 <body>
 <div class="container">
 <nav class="sidebar" id="nav"></nav>
-<main class="main" id="content"></main>
+<main class="main">
+<div id="diagram-flow-root" class="diagram-flow-root"></div>
+</main>
 </div>
-<div class="fullscreen-overlay" id="overlay" onclick="closeOverlay()">
-<span class="close-btn">&times;</span>
-<div id="overlay-content"></div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
 const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
 const currentPage = "diagrams.html";
 
 function buildNav() {
   let html = '';
+  const pathParts = window.location.pathname.split('/');
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
   for (const [group, items] of Object.entries(navData)) {
     if (items.length === 0) continue;
     html += '<div class="group"><div class="group-title">' + group + '</div>';
     for (const [href, title] of items) {
       const cls = href === currentPage ? 'active' : '';
-      html += '<a href="' + href + '" class="' + cls + '">' + title + '</a>';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
     }
     html += '</div>';
   }
   document.getElementById('nav').innerHTML = html;
 }
 
-const categories = [
-  {
-    name: "Engine & Architecture",
-    icon: "⚙️",
-    color: "#c45c3e",
-    diagrams: [
-      { file: "engine-architecture.svg", title: "整体引擎架构", desc: "以 GameEngine 为核心，放射状展示 8 大子系统与平台适配器" },
-      { file: "systemgroup-pipeline.svg", title: "SystemGroup 流水线", desc: "10 个 Phase 的完整执行顺序，每个 Phase 展开注册的实际系统" },
-      { file: "hexagonal-architecture.svg", title: "六边形架构", desc: "Core Domain → Ports → Adapters 三层，实线/虚线区分依赖与插件" },
-      { file: "tick-loop.svg", title: "Game Tick 循环", desc: "从 Tick 入口到 Render 输出的 5 大阶段完整流程" },
-      { file: "feature-mind-map.svg", title: "全功能拓扑脑图", desc: "以 Engine 为中心放射状展开 10 大能力域" },
-      { file: "business-game-tick-e2e.svg", title: "端到端 Tick 流程", desc: "Input → ECS → GAS → Navigation → Physics → Presentation → Render" },
-    ]
-  },
-  {
-    name: "GAS & Combat",
-    icon: "⚔️",
-    color: "#6b8e6b",
-    diagrams: [
-      { file: "gas-component-relation.svg", title: "GAS 组件关系", desc: "Ability / Effect / Attribute / Tag / Cue 围绕 GasRuntimeState 的协调关系" },
-      { file: "ability-activation-flow.svg", title: "Ability 激活流程", desc: "Input → Order → 校验 → 时间线执行 → Effect → Attribute → Cue" },
-      { file: "effect-lifecycle.svg", title: "Effect 生命周期", desc: "Apply → Update → Lifetime → Expire → Cleanup → Publish 六阶段" },
-      { file: "attribute-calculation.svg", title: "Attribute 计算链路", desc: "Mod → Calc → Sink → UI 的完整计算与汇出路径" },
-      { file: "target-resolver.svg", title: "Target 解析器", desc: "Query → Filter → Dispatch 三层目标解析架构" },
-    ]
-  },
-  {
-    name: "ECS & Data Model",
-    icon: "📦",
-    color: "#5c7a8e",
-    diagrams: [
-      { file: "ecs-datamodel-ecs-hierarchy.svg", title: "ECS 层级结构", desc: "World → Entity → Component → System → Archetype 的完整层级" },
-      { file: "ecs-datamodel-chunk-storage.svg", title: "Chunk SoA 存储", desc: "Chunk Header + ComponentArray 的内存布局细节" },
-      { file: "ecs-datamodel-entity-lifecycle.svg", title: "Entity 生命周期", desc: "Create → Active → Destroy 的完整流程与分支判断" },
-      { file: "ecs-datamodel-query-execution.svg", title: "Query 执行流程", desc: "System.Update → EntityQuery → Filter → Iterator 五步链" },
-      { file: "ecs-datamodel-template-inheritance.svg", title: "EntityTemplate 继承", desc: "Base → Category → Concrete 三层继承与批量生成" },
-    ]
-  },
-  {
-    name: "Navigation & Movement",
-    icon: "🧭",
-    color: "#5c7a8e",
-    diagrams: [
-      { file: "nav-navigation-stack.svg", title: "导航技术栈", desc: "CDT → NavMesh → HPA → MassNav → ORCA/Sonar 五层架构" },
-      { file: "nav-navmesh-baking.svg", title: "NavMesh 烘焙", desc: "Geometry → CDT → Polygon → Graph 的完整烘焙管线" },
-      { file: "nav-pathfinding-flow.svg", title: "寻路流程", desc: "Query → HPA → Path → Smooth → Execute 的完整链路" },
-      { file: "nav-avoidance-orca.svg", title: "ORCA 避障", desc: "Agent → Neighbor → VO → LP → New Velocity 的避障流程" },
-      { file: "nav-mass-navigation.svg", title: "MassNavigation 架构", desc: "Runtime → 13 步仿真管线 → WorldPosition 的完整系统" },
-      { file: "spatial-query-modes.svg", title: "空间查询模式", desc: "8 种查询模式（AABB/Radius/Cone/Rectangle/Line/Segment/Hex/Point）对比" },
-      { file: "chunk-spatial-partition.svg", title: "Chunk 空间分区", desc: "World → Chunk → Cell → Entity 四级层级与查询执行" },
-      { file: "hex-grid-coordinates.svg", title: "六边形坐标系", desc: "Axial/Cube/Pixel 转换与 Ring/Disk/Spiral 查询" },
-    ]
-  },
-  {
-    name: "Presentation & Rendering",
-    icon: "🎨",
-    color: "#8e6b5c",
-    diagrams: [
-      { file: "performer-lifecycle.svg", title: "Performer 生命周期", desc: "Definition → Compile → Bootstrap → Create → Update → Destroy" },
-      { file: "performer-command-flow.svg", title: "PerformerCommand 流", desc: "Event → CommandBuffer → EmitSystem → EntityRuntime 的完整流" },
-      { file: "behavior-activation.svg", title: "BehaviorSlot 激活", desc: "7 种行为（AssetBinding/Animator/Sound/Material/Spline/Grounding/MinimapMarker）" },
-      { file: "presentation-pipeline.svg", title: "Presentation 渲染管线", desc: "Logic → 10 Phase → 8 Buffer → Platform → Screen" },
-      { file: "minimap-architecture.svg", title: "Minimap 架构", desc: "Data → MarkerBuffer → Presentation → ScreenOverlay 的完整链路" },
-      { file: "raylib-render-loop.svg", title: "Raylib 渲染循环", desc: "Input → Update → Draw → Swap 的环形管线" },
-    ]
-  },
-  {
-    name: "Modding & Configuration",
-    icon: "🔧",
-    color: "#8e7a5c",
-    diagrams: [
-      { file: "mod-loading-flow.svg", title: "Mod 加载流程", desc: "Discover → Resolve → Sort → Load → OnLoad 四阶段" },
-      { file: "alc-isolation.svg", title: "ALC 隔离", desc: "Host App → ALC → 三层解析 → Mod Assembly Types" },
-      { file: "vfs-hierarchy.svg", title: "VFS 层级", desc: "VirtualFileSystem → Mod → Path → Physical File 的挂载层级" },
-      { file: "dependency-resolver.svg", title: "依赖解析", desc: "mod.json → DependencyResolver → 拓扑排序 → SemVer 匹配" },
-      { file: "mod-extension-points.svg", title: "扩展点时序", desc: "IMod → OnLoad → 6 个扩展点的注册链路" },
-    ]
-  },
-  {
-    name: "GraphRuntime & Scripting",
-    icon: "📜",
-    color: "#8e6b8e",
-    diagrams: [
-      { file: "graph-vm-structure.svg", title: "GraphVM 结构", desc: "Instruction → Executor → Handler Table → Register 的 VM 架构" },
-      { file: "graph-compiler-flow.svg", title: "GraphCompiler 编译", desc: "JSON → Validator → Compiler → Bytecode → Program 的完整流程" },
-      { file: "opcode-taxonomy.svg", title: "OpCode 分类", desc: "133 个 OpCode 按 9 大类别网格展开" },
-      { file: "graph-execution-loop.svg", title: "执行循环", desc: "GraphExecutor 38 行核心循环的展开流程图" },
-    ]
-  },
-  {
-    name: "Input & Interaction",
-    icon: "🎮",
-    color: "#7a6b8e",
-    diagrams: [
-      { file: "input-order-flow.svg", title: "Input → Order → Command", desc: "Raw Input → Adapter → Order → Command → GAS 的完整链路" },
-      { file: "selection-state-machine.svg", title: "Selection 状态机", desc: "Empty/Single/Multi/Group/View/Formation 六状态与 13 条转换边" },
-      { file: "interaction-modes.svg", title: "交互模式对比", desc: "SmartCast/AimCast/ContextScored/PressReleaseAimCast 四种模式" },
-      { file: "input-systemgroup.svg", title: "Input 在 SystemGroup 中", desc: "Input Phase 在 10 个 Phase 中的位置与 8 步详细执行" },
-    ]
-  },
-  {
-    name: "Adapter & Platform",
-    icon: "🔌",
-    color: "#6b8e8e",
-    diagrams: [
-      { file: "adapter-comparison.svg", title: "三平台对比", desc: "Raylib / Web / UE5 的架构对比与 IAdapter 接口层" },
-      { file: "web-streaming.svg", title: "Web 串流", desc: "Server → FrameProtocol → DeltaCompressor → WebSocket → Client" },
-      { file: "adapter-sync.svg", title: "AdapterSync", desc: "Simulation → Presentation → Adapter 的同步机制与帧时间轴" },
-    ]
-  },
-  {
-    name: "Business Process",
-    icon: "📋",
-    color: "#5c6b8e",
-    diagrams: [
-      { file: "business-map-load-flow.svg", title: "地图加载", desc: "Launcher → Bootstrap → Mod → Map → Entity 的加载流程" },
-      { file: "business-save-restore-flow.svg", title: "存档/读档", desc: "Save 与 Restore 的双流程对比与 .ldsave 格式" },
-      { file: "business-web-client-flow.svg", title: "Web 客户端帧", desc: "Connect → Receive → Decode → Render → Input → Send" },
-    ]
-  },
-  {
-    name: "Registry & Dependencies",
-    icon: "🔗",
-    color: "#5c6b8e",
-    diagrams: [
-      { file: "registry-dependency.svg", title: "Registry 依赖网络", desc: "30+ 个注册表按 8 大子系统分类的依赖关系图" },
-      { file: "registry-extension.svg", title: "Registry 扩展时序", desc: "ModLoader → ALC → IMod → Registry → GameEngine 的时序" },
-      { file: "system-dependency-matrix.svg", title: "系统依赖矩阵", desc: "14×14 矩阵热力图，颜色深浅表示耦合强度" },
-      { file: "module-coupling.svg", title: "模块耦合网络", desc: "14 个模块的力导向耦合图，粗线/暖色=高耦合" },
-      { file: "call-graph.svg", title: "核心调用图", desc: "GameEngine.Tick() 经 7 个 Phase 到 20+ 子系统的调用链" },
-    ]
-  },
-  {
-    name: "Spatial & Vision",
-    icon: "👁️",
-    color: "#5c7a8e",
-    diagrams: [
-      { file: "vision-fog-flow.svg", title: "视野与迷雾", desc: "VisionEmitter → ChunkedField → FogLayer → Visual 的 6 阶段计算" },
-    ]
-  },
-  {
-    name: "Capability & Showcase",
-    icon: "🏆",
-    color: "#c45c3e",
-    diagrams: [
-      { file: "capability-matrix.svg", title: "Capability 矩阵", desc: "8 模块 × 4 成熟度等级的热力图" },
-      { file: "showcase-topology.svg", title: "Showcase 拓扑", desc: "5 个演示套件与底层引擎能力的映射关系" },
-    ]
-  }
-];
-
-function render() {
-  buildNav();
-  let html = '<h1>Ludots 架构图库</h1>';
-  html += '<p style="color: var(--muted); margin-top: -8px;">57 张专业架构图、流程图、依赖图与数据模型图，覆盖全部子系统</p>';
-
-  for (const cat of categories) {
-    html += '<div class="category">';
-    html += '<div class="category-header">';
-    html += '<div class="category-icon" style="background: ' + cat.color + '15; color: ' + cat.color + ';">' + cat.icon + '</div>';
-    html += '<h2>' + cat.name + '</h2>';
-    html += '<span style="color: var(--muted); font-size: 13px;">' + cat.diagrams.length + ' 张</span>';
-    html += '</div>';
-    html += '<div class="diagram-grid">';
-    for (const d of cat.diagrams) {
-      html += '<div class="diagram-card" onclick="openDiagram(\'' + d.file + '\')">';
-      html += '<div class="title">' + d.title + '</div>';
-      html += '<div class="desc">' + d.desc + '</div>';
-      html += '<div class="preview" id="preview-' + d.file + '">Loading...</div>';
-      html += '<div class="tags"><span class="tag">' + cat.name.split(' ')[0] + '</span></div>';
-      html += '</div>';
-    }
-    html += '</div></div>';
-  }
-  document.getElementById('content').innerHTML = html;
-
-  // Load SVG previews
-  for (const cat of categories) {
-    for (const d of cat.diagrams) {
-      loadSvgPreview(d.file);
-    }
-  }
-}
-
-function loadSvgPreview(filename) {
-  const el = document.getElementById('preview-' + filename);
-  if (!el) return;
-  fetch('diagrams/' + filename)
-    .then(r => r.text())
-    .then(svg => {
-      el.innerHTML = svg;
-      const svgEl = el.querySelector('svg');
-      if (svgEl) {
-        svgEl.style.width = '100%';
-        svgEl.style.height = '100%';
-        svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      }
-    })
-    .catch(() => { el.innerHTML = '<span style="color: var(--muted); font-size: 12px;">SVG 预览不可用</span>'; });
-}
-
-function openDiagram(filename) {
-  const overlay = document.getElementById('overlay');
-  const content = document.getElementById('overlay-content');
-  fetch('diagrams/' + filename)
-    .then(r => r.text())
-    .then(svg => {
-      content.innerHTML = svg;
-      const svgEl = content.querySelector('svg');
-      if (svgEl) {
-        svgEl.style.width = 'auto';
-        svgEl.style.height = 'auto';
-        svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      }
-      overlay.classList.add('active');
-    });
-}
-
-function closeOverlay() {
-  document.getElementById('overlay').classList.remove('active');
-}
-
-render();
+buildNav();
 </script>
+<script type="module" src="assets/diagrams-flow.js"></script>
 </body>
 </html>
