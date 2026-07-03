@@ -100,12 +100,12 @@ public sealed partial class MassNavigationFlowSolverState
     private void MarkAllEntitiesDirty()
     {
         _entitySyncDirtyCount = 0;
+        Array.Clear(_entitySyncDirtyFlags, 0, _entitySyncDirtyFlags.Length);
         if (UnitCount <= 0)
         {
             return;
         }
 
-        Array.Clear(_entitySyncDirtyFlags, 0, UnitCount);
         for (int i = 0; i < UnitCount; i++)
         {
             _entitySyncDirtyFlags[i] = 1;
