@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Index — Ludots Wiki</title>
+    <base href="/Ludots/">
+<style>:root { --bg: #faf7f2; --fg: #2d2a26; --muted: #6b6560; --accent: #c45c3e; --accent-light: #f2e8e0; --border: #e0d8d0; --nav-bg: #f5f0ea; --code-bg: #f0ece6; --code-fg: #3a3530; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--fg); line-height: 1.7; }
+.container { display: flex; min-height: 100vh; }
+.sidebar { width: 280px; background: var(--nav-bg); border-right: 1px solid var(--border); padding: 24px 16px; position: fixed; top: 0; left: 0; height: 100vh; overflow-y: auto; z-index: 10; }
+.sidebar a { display: block; padding: 6px 8px; color: var(--fg); text-decoration: none; border-radius: 4px; font-size: 14px; margin-bottom: 2px; }
+.sidebar a:hover { background: var(--accent-light); color: var(--accent); }
+.sidebar a.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+.sidebar .group { margin-bottom: 18px; }
+.sidebar .group-title { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; padding-left: 8px; }
+.main { margin-left: 280px; flex: 1; padding: 40px 48px; max-width: 960px; }
+.main h1 { font-size: 28px; border-bottom: 2px solid var(--border); padding-bottom: 12px; margin-top: 0; }
+.main h2 { font-size: 22px; margin-top: 36px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+.main h3 { font-size: 18px; margin-top: 28px; color: var(--fg); }
+.main h4 { font-size: 16px; margin-top: 24px; }
+.main p { margin: 12px 0; }
+.main a { color: var(--accent); text-decoration: none; }
+.main a:hover { text-decoration: underline; }
+.main ul, .main ol { margin: 12px 0; padding-left: 24px; }
+.main li { margin: 4px 0; }
+.main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.main th, .main td { border: 1px solid var(--border); padding: 8px 12px; text-align: left; }
+.main th { background: var(--accent-light); font-weight: 600; }
+.main tr:nth-child(even) { background: rgba(0,0,0,0.02); }
+.main pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+.main code { font-family: "SF Mono", "Cascadia Mono", Consolas, monospace; background: var(--code-bg); padding: 2px 6px; border-radius: 3px; font-size: 0.92em; }
+.main pre code { padding: 0; background: transparent; }
+.main blockquote { border-left: 3px solid var(--accent); margin: 16px 0; padding: 8px 16px; background: var(--accent-light); color: var(--muted); }
+.main hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+@media (max-width: 900px) { .sidebar { width: 100%; position: relative; height: auto; max-height: 42vh; overflow-y: auto; border-right: none; border-bottom: 1px solid var(--border); } .main { margin-left: 0; width: 100%; max-width: none; padding: 24px 18px; overflow-x: hidden; } .container { flex-direction: column; } .main table { display: block; overflow-x: auto; max-width: 100%; } .main pre { max-width: 100%; } }
+.main img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; margin: 16px 0; background: var(--bg); }
+.main img:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+<div class="container">
+<nav class="sidebar" id="nav"></nav>
+<main class="main" id="content"></main>
+</div>
+<script>
+const navData = {"PRD": [["prd/00-executive-summary.html", "Executive Summary"], ["prd/01-product-overview.html", "Product Overview"], ["prd/02-feature-architecture.html", "Feature Architecture"], ["prd/03-core-engine.html", "Core Engine"], ["prd/04-gas-combat.html", "Gas Combat"], ["prd/05-items-inventory.html", "Items Inventory"], ["prd/06-narrative.html", "Narrative"], ["prd/07-relationships-teams.html", "Relationships Teams"], ["prd/08-input-orders.html", "Input Orders"], ["prd/09-navigation-movement.html", "Navigation Movement"], ["prd/10-presentation-rendering.html", "Presentation Rendering"], ["prd/11-map-spatial.html", "Map Spatial"], ["prd/12-config-scripting.html", "Config Scripting"], ["prd/13-modding.html", "Modding"], ["prd/14-persistence.html", "Persistence"], ["prd/15-platform-adapters.html", "Platform Adapters"], ["prd/16-feature-matrix.html", "Feature Matrix"]], "TDD": [["tdd/00-architecture-principles.html", "Architecture Principles"], ["tdd/01-data-model.html", "Data Model"], ["tdd/02-systemgroup.html", "Systemgroup"], ["tdd/03-registry-design.html", "Registry Design"], ["tdd/04-pipeline-design.html", "Pipeline Design"], ["tdd/05-extension-points.html", "Extension Points"], ["tdd/06-gas-tdd.html", "Gas Tdd"], ["tdd/07-navigation-tdd.html", "Navigation Tdd"], ["tdd/08-presentation-tdd.html", "Presentation Tdd"], ["tdd/09-performance-constraints.html", "Performance Constraints"]], "Reference": [["reference/glossary.html", "Glossary"], ["reference/api-quickref.html", "Api Quickref"]], "Other": [["index.html", "Index"], ["issues.html", "Issues"], ["diagrams.html", "Diagrams"]]};
+const currentPage = "index.html";
+const mdContent = "# Ludots 产品与技术文档（反推版 Wiki）\n\n> 本文档基于 Ludots 最新 main 分支代码反推生成，按专业 PRD + TDD 结构组织。  \n> 生成时间：2026-07-02  \n> 代码基线：main 分支（约 5,500+ C# 源文件）\n\n---\n\n## 文档结构\n\n![全功能拓扑脑图](diagrams/feature-mind-map.svg)\n\n### 卷一：产品需求文档（PRD）\n\n| 编号 | 文件 | 内容 |\n|------|------|------|\n| PRD-00 | [prd/00-executive-summary.html](prd/00-executive-summary.html) | 执行摘要：Ludots 是什么、解决什么问题、核心价值主张 |\n| PRD-01 | [prd/01-product-overview.html](prd/01-product-overview.html) | 产品概述：定位、用户画像、使用场景、版本目标 |\n| PRD-02 | [prd/02-feature-architecture.html](prd/02-feature-architecture.html) | 功能架构总览：十大能力域、模块依赖图、能力分层 |\n| PRD-03 | [prd/03-core-engine.html](prd/03-core-engine.html) | ECS 引擎核心：Arch ECS、WorldRuntime、GameEngine、SystemGroup、TimeFlow |\n| PRD-04 | [prd/04-gas-combat.html](prd/04-gas-combat.html) | GAS 战斗系统：Ability、Effect、Attribute、Tag、TargetResolver、Cue |\n| PRD-05 | [prd/05-items-inventory.html](prd/05-items-inventory.html) | 物品与装备：Item、Inventory、Equipment、Container、Layout |\n| PRD-06 | [prd/06-narrative.html](prd/06-narrative.html) | 叙事系统：Quest、Dialogue、Cinematic、NarrativeDirector、Frontend Kit |\n| PRD-07 | [prd/07-relationships-teams.html](prd/07-relationships-teams.html) | 关系与阵营：RelationshipGraph、TeamManager、Faction、Diplomacy |\n| PRD-08 | [prd/08-input-orders.html](prd/08-input-orders.html) | 输入与交互：InputConfig、OrderMapping、Selection、InteractionModes |\n| PRD-09 | [prd/09-navigation-movement.html](prd/09-navigation-movement.html) | 寻路与移动：Navigation、Pathing、MovePlanning、MassNavigation、Avoidance |\n| PRD-10 | [prd/10-presentation-rendering.html](prd/10-presentation-rendering.html) | 表现与渲染：Performer、Surface、UI、Camera、Minimap、HUD、Instancing |\n| PRD-11 | [prd/11-map-spatial.html](prd/11-map-spatial.html) | 地图与空间：MapManager、HexGrid、SpatialPartition、Physics2D、Vision、Fog |\n| PRD-12 | [prd/12-config-scripting.html](prd/12-config-scripting.html) | 配置与脚本：ConfigPipeline、ScriptContext、Trigger、FunctionRegistry、GraphRuntime |\n| PRD-13 | [prd/13-modding.html](prd/13-modding.html) | Mod 体系：IMod、ModLoader、VFS、DependencyResolver、ALC 隔离 |\n| PRD-14 | [prd/14-persistence.html](prd/14-persistence.html) | 存档与持久化：SaveSlot、WorldSnapshot、BinarySerializer、ISaveParticipant |\n| PRD-15 | [prd/15-platform-adapters.html](prd/15-platform-adapters.html) | 平台适配：Raylib、Web、UE5（规划）、HostComposer、HostLoop |\n| PRD-16 | [prd/16-feature-matrix.html](prd/16-feature-matrix.html) | 能力矩阵：完整 Feature × 成熟度 × 文档覆盖度矩阵 |\n\n### 卷二：技术设计文档（TDD）\n\n| 编号 | 文件 | 内容 |\n|------|------|------|\n| TDD-00 | [tdd/00-architecture-principles.html](tdd/00-architecture-principles.html) | 架构原则：六边形架构、一切皆 Mod、四个禁止、ECS 约束 |\n| TDD-01 | [tdd/01-data-model.html](tdd/01-data-model.html) | 数据模型：Entity/Component/System、SoA、blittable struct、Fix64 |\n| TDD-02 | [tdd/02-systemgroup.html](tdd/02-systemgroup.html) | SystemGroup 时序：10 个 phase、执行顺序、新增 System 挂靠规则 |\n| TDD-03 | [tdd/03-registry-design.html](tdd/03-registry-design.html) | Registry 体系：20+ Registry 的分类、容量、索引方式、扩展契约 |\n| TDD-04 | [tdd/04-pipeline-design.html](tdd/04-pipeline-design.html) | Pipeline 设计：6 大管线（Launcher、Config、Mod、GAS、Presentation、Trigger） |\n| TDD-05 | [tdd/05-extension-points.html](tdd/05-extension-points.html) | 扩展点：IModContext、SystemFactoryRegistry、TriggerDecorator、FunctionRegistry |\n| TDD-06 | [tdd/06-gas-tdd.html](tdd/06-gas-tdd.html) | GAS 子系统 TDD：EffectPhase、AttributeCalc、TargetResolver、BuiltinHandler |\n| TDD-07 | [tdd/07-navigation-tdd.html](tdd/07-navigation-tdd.html) | 导航子系统 TDD：NavMesh、HPA、Flow、Avoidance、MassExecution |\n| TDD-08 | [tdd/08-presentation-tdd.html](tdd/08-presentation-tdd.html) | 表现子系统 TDD：Performer 编译车道、CommandBuffer、Surface 所有权 |\n| TDD-09 | [tdd/09-performance-constraints.html](tdd/09-performance-constraints.html) | 性能约束：0-GC、热路径、Fix64、QueryCache、Spatial 查询预算 |\n\n### 卷三：参考文档\n\n| 编号 | 文件 | 内容 |\n|------|------|------|\n| REF-00 | [reference/glossary.html](reference/glossary.html) | 术语表：全项目关键术语、缩写、命名约定 |\n| REF-01 | [reference/api-quickref.html](reference/api-quickref.html) | API 速查：核心 Registry、ServiceKey、SystemFactory、扩展接口速查 |\n\n---\n\n## 使用指南\n\n![端到端 Game Tick 流程](diagrams/business-game-tick-e2e.svg)\n\n- **新成员**：从 PRD-00 → PRD-01 → PRD-02 开始，快速建立全景认知。\n- **Mod 开发者**：重点阅读 PRD-13（Modding）、TDD-05（扩展点）、REF-01（API 速查）。\n- **Gameplay 程序员**：重点阅读 PRD-04~07（GAS/Items/Narrative/Relationships）、TDD-06。\n- **引擎程序员**：重点阅读 PRD-03（Core Engine）、TDD-00~05（架构原则与基础设施）。\n- **工具/适配开发者**：重点阅读 PRD-15（Platform Adapters）、PRD-10（Presentation）。\n";
+
+function buildNav() {
+  let html = '';
+  const pathParts = window.location.pathname.split('/');
+  // 提取项目根路径（如 /Ludots 或 /）
+  const basePath = pathParts.length >= 2 && pathParts[1] ? '/' + pathParts[1] : '';
+  for (const [group, items] of Object.entries(navData)) {
+    if (items.length === 0) continue;
+    html += '<div class="group"><div class="group-title">' + group + '</div>';
+    for (const [href, title] of items) {
+      const cls = href === currentPage ? 'active' : '';
+      const link = basePath + '/' + href;
+      html += '<a href="' + link + '" class="' + cls + '">' + title + '</a>';
+    }
+    html += '</div>';
+  }
+  document.getElementById('nav').innerHTML = html;
+}
+
+function render() {
+  buildNav();
+  document.getElementById('content').innerHTML = marked.parse(mdContent);
+}
+render();
+</script>
+</body>
+</html>
