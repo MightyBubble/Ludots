@@ -613,6 +613,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationFormationFollowerSystem_AppendFollowerDoesNotApplyPreviousCarrierDelta()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                int formationId = MassNavigationFormationRegistry.Register("tests.massNavigation.append.follower");
+                Entity anchor = CreateFormationAnchor(engine.World, formationId, slotCount: 2);
+                Entity firstFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { anchor, firstFollower },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 1100f, worldYCm: 1000f),
+                    },
+                    new[] { true, false });
+
+                var followerSystem = new MassNavigationFormationFollowerSystem(engine, simulation);
+                UpdateSystem(followerSystem);
+
+                simulation.MassNavigationFlow.SetUnitPositionForTests(
+                    index: 0,
+                    localXCm: simulation.ToLocalXCm(1200f),
+                    localYCm: simulation.ToLocalYCm(1000f));
+                Entity appendedFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 1, localOffsetXCm: 0f, localOffsetYCm: 200f);
+                simulation.AppendAuthoredAgents(
+                    engine.World,
+                    new[] { appendedFollower },
+                    new[] { CreateAgentSeed(simulation, worldXCm: 1400f, worldYCm: 1000f) },
+                    new[] { false });
+
+                UpdateSystem(followerSystem);
+
+                Assert.That(simulation.GetAgentWorldPositionCm(1).X, Is.EqualTo(1300f).Within(0.001f),
+                    "Existing followers should still receive the carrier delta.");
+                Vector2 appendedFollowerWorld = simulation.GetAgentWorldPositionCm(2);
+                Assert.That(appendedFollowerWorld.X, Is.EqualTo(1400f).Within(0.001f),
+                    "A follower appended after the carrier moved must not receive carrier displacement from before it joined the formation.");
+                Assert.That(appendedFollowerWorld.Y, Is.EqualTo(1000f).Within(0.001f));
+            }
+        }
+
+        [Test]
         public void MassNavigationFormationFollowerSystem_PrunesSyncStateWhenAnchorsDisappear()
         {
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);

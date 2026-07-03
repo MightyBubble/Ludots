@@ -73,6 +73,171 @@ public sealed class MassNavigationGroupRuntime
         SelectedRotationRadians = 0f;
     }
 
+    internal AuthoredRebuildSnapshot CaptureAuthoredRebuildSnapshot()
+    {
+        if (ActiveGroupCount <= 0)
+        {
+            return new AuthoredRebuildSnapshot(Array.Empty<AuthoredRebuildGroupSnapshot>(), SelectedRotationRadians);
+        }
+
+        var groups = new AuthoredRebuildGroupSnapshot[ActiveGroupCount];
+        int capturedCount = 0;
+        for (int groupId = 0; groupId < _groups.Count; groupId++)
+        {
+            NavGroupState? group = _groups[groupId];
+            if (group == null || group.MemberCount <= 0)
+            {
+                continue;
+            }
+
+            var members = new AuthoredRebuildMemberSnapshot[group.MemberCount];
+            for (int memberIndex = 0; memberIndex < group.MemberCount; memberIndex++)
+            {
+                members[memberIndex] = new AuthoredRebuildMemberSnapshot(
+                    group.MemberEntities[memberIndex],
+                    group.MemberOrderTargetWorldX[memberIndex],
+                    group.MemberOrderTargetWorldY[memberIndex],
+                    group.MemberOrderPathStartWorldX[memberIndex],
+                    group.MemberOrderPathStartWorldY[memberIndex],
+                    group.MemberOrderPathAnchorWorldX[memberIndex],
+                    group.MemberOrderPathAnchorWorldY[memberIndex],
+                    group.MemberOrderPathAnchorRevision[memberIndex],
+                    group.MemberOrderPathAnchorInitialized[memberIndex]);
+            }
+
+            groups[capturedCount++] = new AuthoredRebuildGroupSnapshot(
+                groupId,
+                group.CommandToken,
+                group.FormationMode,
+                group.RequestedDestinationWorldX,
+                group.RequestedDestinationWorldY,
+                group.DestinationWorldX,
+                group.DestinationWorldY,
+                group.CenterX,
+                group.CenterY,
+                group.RotationRadians,
+                group.Arrived,
+                members);
+        }
+
+        if (capturedCount != groups.Length)
+        {
+            Array.Resize(ref groups, capturedCount);
+        }
+
+        return new AuthoredRebuildSnapshot(groups, SelectedRotationRadians);
+    }
+
+    internal void RestoreAuthoredRebuildSnapshot(
+        World world,
+        MassNavigationFlowSolverState simulation,
+        MassNavigationAgentState agentState,
+        AuthoredRebuildSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(simulation);
+        ArgumentNullException.ThrowIfNull(agentState);
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        SelectedRotationRadians = snapshot.SelectedRotationRadians;
+        if (snapshot.Groups.Length <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < snapshot.Groups.Length; i++)
+        {
+            AuthoredRebuildGroupSnapshot captured = snapshot.Groups[i];
+            if ((uint)captured.GroupId >= (uint)_groups.Count)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation authored group restore references group id {captured.GroupId}, exceeding configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
+            }
+
+            int[] memberIndices = new int[captured.Members.Length];
+            int[] memberSnapshotIndices = new int[captured.Members.Length];
+            int restoredMemberCount = 0;
+            for (int memberIndex = 0; memberIndex < captured.Members.Length; memberIndex++)
+            {
+                if (!TryResolveAuthoredRebuildMemberIndex(
+                    world,
+                    simulation,
+                    captured.Members[memberIndex].Entity,
+                    out int remappedAgentIndex))
+                {
+                    continue;
+                }
+
+                EnsureMembershipCapacity(remappedAgentIndex + 1);
+                if (_groupIdsByAgentIndex[remappedAgentIndex] >= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"MassNavigation authored group restore resolved agent index {remappedAgentIndex} into more than one active group.");
+                }
+
+                memberIndices[restoredMemberCount] = remappedAgentIndex;
+                memberSnapshotIndices[restoredMemberCount] = memberIndex;
+                restoredMemberCount++;
+            }
+
+            if (restoredMemberCount <= 0)
+            {
+                continue;
+            }
+
+            if (restoredMemberCount == 1 && captured.CommandToken <= 0)
+            {
+                simulation.HoldUnitAtCurrentPosition(memberIndices[0]);
+                continue;
+            }
+
+            if (captured.CommandToken > 0 && _orderTokenToGroupId.ContainsKey(captured.CommandToken))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation authored group restore found duplicate order token {captured.CommandToken}.");
+            }
+
+            int currentTeamId = simulation.GetTeam(memberIndices[0]);
+            NavGroupState group = _groupPool[captured.GroupId];
+            group.Reset(currentTeamId);
+            CopyMembersAndRebuildLayout(
+                simulation,
+                agentState,
+                group,
+                memberIndices.AsSpan(0, restoredMemberCount),
+                captured.FormationMode,
+                captured.RotationRadians);
+            group.CommandToken = captured.CommandToken;
+            group.RequestedDestinationWorldX = captured.RequestedDestinationWorldX;
+            group.RequestedDestinationWorldY = captured.RequestedDestinationWorldY;
+            group.DestinationWorldX = captured.DestinationWorldX;
+            group.DestinationWorldY = captured.DestinationWorldY;
+            group.CenterX = captured.CenterX;
+            group.CenterY = captured.CenterY;
+            _groups[captured.GroupId] = group;
+            if (captured.CommandToken > 0)
+            {
+                _orderTokenToGroupId[captured.CommandToken] = captured.GroupId;
+            }
+
+            if (group.MemberCount == 1)
+            {
+                AssignLooseOrderTargets(simulation, captured.GroupId, group, resetRecovery: true);
+            }
+            else
+            {
+                AssignGroupTargets(simulation, captured.GroupId, group, resetRecovery: true);
+            }
+
+            bool orderTargetsPreserved = RestoreCompatibleOrderPathState(group, captured, memberSnapshotIndices, restoredMemberCount);
+            group.Arrived = captured.Arrived &&
+                restoredMemberCount == captured.Members.Length &&
+                orderTargetsPreserved;
+        }
+
+        ActiveGroupCount = CountActiveGroups();
+    }
+
     public bool HasGroup(int unitIndex)
     {
         return GetGroupId(unitIndex) >= 0;
@@ -1309,6 +1474,58 @@ public sealed class MassNavigationGroupRuntime
         return true;
     }
 
+    private static bool TryResolveAuthoredRebuildMemberIndex(
+        World world,
+        MassNavigationFlowSolverState simulation,
+        Entity entity,
+        out int agentIndex)
+    {
+        agentIndex = -1;
+        if (entity == Entity.Null ||
+            !world.IsAlive(entity) ||
+            !world.TryGet(entity, out MassNavigationAgentIndex index))
+        {
+            return false;
+        }
+
+        if ((uint)index.Value >= (uint)simulation.UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored group restore resolved entity {entity.Id} to agent index {index.Value}, exceeding current MassNavigationFlow unit count {simulation.UnitCount}.");
+        }
+
+        agentIndex = index.Value;
+        return true;
+    }
+
+    private static bool RestoreCompatibleOrderPathState(
+        NavGroupState group,
+        AuthoredRebuildGroupSnapshot captured,
+        int[] memberSnapshotIndices,
+        int restoredMemberCount)
+    {
+        bool allOrderTargetsPreserved = true;
+        for (int i = 0; i < restoredMemberCount; i++)
+        {
+            AuthoredRebuildMemberSnapshot member = captured.Members[memberSnapshotIndices[i]];
+            if (MathF.Abs(group.MemberOrderTargetWorldX[i] - member.OrderTargetWorldX) > 0.001f ||
+                MathF.Abs(group.MemberOrderTargetWorldY[i] - member.OrderTargetWorldY) > 0.001f)
+            {
+                allOrderTargetsPreserved = false;
+                continue;
+            }
+
+            group.MemberOrderPathStartWorldX[i] = member.OrderPathStartWorldX;
+            group.MemberOrderPathStartWorldY[i] = member.OrderPathStartWorldY;
+            group.MemberOrderPathAnchorWorldX[i] = member.OrderPathAnchorWorldX;
+            group.MemberOrderPathAnchorWorldY[i] = member.OrderPathAnchorWorldY;
+            group.MemberOrderPathAnchorRevision[i] = member.OrderPathAnchorRevision;
+            group.MemberOrderPathAnchorInitialized[i] = member.OrderPathAnchorInitialized;
+        }
+
+        return allOrderTargetsPreserved;
+    }
+
     private static bool HaveSameMembers(NavGroupState left, ReadOnlySpan<int> right)
     {
         if (left.MemberCount != right.Length)
@@ -1468,6 +1685,97 @@ public sealed class MassNavigationGroupRuntime
         }
 
         return angle;
+    }
+
+    internal sealed class AuthoredRebuildSnapshot
+    {
+        internal AuthoredRebuildSnapshot(AuthoredRebuildGroupSnapshot[] groups, float selectedRotationRadians)
+        {
+            Groups = groups;
+            SelectedRotationRadians = selectedRotationRadians;
+        }
+
+        internal AuthoredRebuildGroupSnapshot[] Groups { get; }
+        internal float SelectedRotationRadians { get; }
+    }
+
+    internal sealed class AuthoredRebuildGroupSnapshot
+    {
+        public AuthoredRebuildGroupSnapshot(
+            int groupId,
+            int commandToken,
+            MassNavigationFormationMode formationMode,
+            float requestedDestinationWorldX,
+            float requestedDestinationWorldY,
+            float destinationWorldX,
+            float destinationWorldY,
+            float centerX,
+            float centerY,
+            float rotationRadians,
+            bool arrived,
+            AuthoredRebuildMemberSnapshot[] members)
+        {
+            GroupId = groupId;
+            CommandToken = commandToken;
+            FormationMode = formationMode;
+            RequestedDestinationWorldX = requestedDestinationWorldX;
+            RequestedDestinationWorldY = requestedDestinationWorldY;
+            DestinationWorldX = destinationWorldX;
+            DestinationWorldY = destinationWorldY;
+            CenterX = centerX;
+            CenterY = centerY;
+            RotationRadians = rotationRadians;
+            Arrived = arrived;
+            Members = members;
+        }
+
+        public int GroupId { get; }
+        public int CommandToken { get; }
+        public MassNavigationFormationMode FormationMode { get; }
+        public float RequestedDestinationWorldX { get; }
+        public float RequestedDestinationWorldY { get; }
+        public float DestinationWorldX { get; }
+        public float DestinationWorldY { get; }
+        public float CenterX { get; }
+        public float CenterY { get; }
+        public float RotationRadians { get; }
+        public bool Arrived { get; }
+        public AuthoredRebuildMemberSnapshot[] Members { get; }
+    }
+
+    internal readonly struct AuthoredRebuildMemberSnapshot
+    {
+        public AuthoredRebuildMemberSnapshot(
+            Entity entity,
+            float orderTargetWorldX,
+            float orderTargetWorldY,
+            float orderPathStartWorldX,
+            float orderPathStartWorldY,
+            float orderPathAnchorWorldX,
+            float orderPathAnchorWorldY,
+            int orderPathAnchorRevision,
+            byte orderPathAnchorInitialized)
+        {
+            Entity = entity;
+            OrderTargetWorldX = orderTargetWorldX;
+            OrderTargetWorldY = orderTargetWorldY;
+            OrderPathStartWorldX = orderPathStartWorldX;
+            OrderPathStartWorldY = orderPathStartWorldY;
+            OrderPathAnchorWorldX = orderPathAnchorWorldX;
+            OrderPathAnchorWorldY = orderPathAnchorWorldY;
+            OrderPathAnchorRevision = orderPathAnchorRevision;
+            OrderPathAnchorInitialized = orderPathAnchorInitialized;
+        }
+
+        public Entity Entity { get; }
+        public float OrderTargetWorldX { get; }
+        public float OrderTargetWorldY { get; }
+        public float OrderPathStartWorldX { get; }
+        public float OrderPathStartWorldY { get; }
+        public float OrderPathAnchorWorldX { get; }
+        public float OrderPathAnchorWorldY { get; }
+        public int OrderPathAnchorRevision { get; }
+        public byte OrderPathAnchorInitialized { get; }
     }
 
     private sealed class NavGroupState
