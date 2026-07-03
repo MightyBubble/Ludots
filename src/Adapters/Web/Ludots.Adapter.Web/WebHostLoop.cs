@@ -88,7 +88,7 @@ namespace Ludots.Adapter.Web
                 throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
             }
 
-            engine.LoadMap(config.StartupMapId);
+            engine.LoadStartupMap();
             engine.SetService(CoreServiceKeys.UiCaptured, false);
 
             BuildAndSendMeshMap(engine, setup.Transport);

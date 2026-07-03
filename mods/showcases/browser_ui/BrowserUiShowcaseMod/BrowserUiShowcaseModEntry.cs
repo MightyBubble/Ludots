@@ -8,17 +8,16 @@ using Ludots.UI.Browser;
 using Ludots.UI.Browser.Skia;
 using Ludots.UI.Compose;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
-using SkiaSharp;
+using Ludots.UI.Surface;
 
 namespace BrowserUiShowcaseMod;
 
 public sealed class BrowserUiShowcaseModEntry : IMod
 {
-    private const string BrowserServiceKey = "BrowserRuntime";
-
     private IBrowserSurface? _surface;
     private BrowserCanvasContent? _browserContent;
+    private IUiSurfaceHost? _surfaceHost;
+    private UiSurfaceLeaseHandle _lease;
 
     public void OnLoad(IModContext context)
     {
@@ -30,32 +29,42 @@ public sealed class BrowserUiShowcaseModEntry : IMod
     {
         _browserContent?.Dispose();
         _browserContent = null;
+        if (_lease.IsValid && _surfaceHost != null)
+        {
+            _surfaceHost.ReleaseLease(ref _lease);
+        }
+
+        _surfaceHost = null;
         _surface?.DisposeAsync().AsTask().GetAwaiter().GetResult();
         _surface = null;
     }
 
     private async Task OnGameStartAsync(ScriptContext context)
     {
-        IUiTextMeasurer textMeasurer = (IUiTextMeasurer)context.Get(CoreServiceKeys.UiTextMeasurer);
-        IUiImageSizeProvider imageSizeProvider = (IUiImageSizeProvider)context.Get(CoreServiceKeys.UiImageSizeProvider);
+        IUiSurfaceHost surfaceHost = context.Get(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+            ?? throw new InvalidOperationException("UiSurfaceHost service is missing from ScriptContext.");
+        _surfaceHost = surfaceHost;
+        _lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+            "BrowserUiShowcase.Landing",
+            UiSurfaceSegment.Main,
+            priority: 10,
+            exclusive: true));
         BrowserSurfaceAttachment attachment = await TryCreateBrowserSurfaceAsync(context).ConfigureAwait(false);
         _surface = attachment.Surface;
         _browserContent = attachment.Content;
-        UiScene scene = BuildLandingScene(context, textMeasurer, imageSizeProvider, attachment);
-        UIRoot root = context.Get(CoreServiceKeys.UIRoot) as UIRoot
-            ?? throw new InvalidOperationException("UIRoot service is missing from ScriptContext.");
-        root.MountScene(scene);
-        root.IsDirty = true;
+        surfaceHost.Publish(
+            _lease,
+            UiSurfaceContribution.FromBuilder(
+                () => BuildLandingRoot(context, attachment),
+                styleSheets: new[] { BuildBrowserStyleSheet() }));
     }
 
-    private static UiScene BuildLandingScene(
+    private static UiElementBuilder BuildLandingRoot(
         ScriptContext context,
-        IUiTextMeasurer textMeasurer,
-        IUiImageSizeProvider imageSizeProvider,
         BrowserSurfaceAttachment attachment)
     {
         IBrowserSurface? surface = attachment.Surface;
-        UiElementBuilder root = Ui.Column(
+        return Ui.Column(
                 Ui.Text("Browser UI Showcase").Class("skin-header").FontSize(34).Bold(),
                 Ui.Text("Raylib mounts the showcase through Skia UI today; CEF or Ultralight can later render the same packaged web app as a browser surface.").Class("page-copy"),
                 Ui.Row(
@@ -75,8 +84,6 @@ public sealed class BrowserUiShowcaseModEntry : IMod
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Gap(12f);
-
-        return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root, null, BuildBrowserStyleSheet());
     }
 
     private static UiElementBuilder BuildHeroCard(string id, string title, string subtitle, string body)
@@ -108,7 +115,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return Ui.Card(
                 Ui.Text("Diagnostic preview").Class("page-card-title"),
                 Ui.Text("No browser runtime is registered yet, so Raylib renders this native probe instead of pretending to be a browser.").Class("page-copy"),
-                Ui.Canvas(new UiCanvasContent(DrawDiagnosticPreview)).Class("browser-canvas").WidthPercent(100f).Height(320f))
+                BuildDiagnosticPreview())
             .Class("skin-card")
             .FlexGrow(2f)
             .FlexShrink(1f)
@@ -141,12 +148,12 @@ public sealed class BrowserUiShowcaseModEntry : IMod
             string root = ResolveAssetRoot(context);
             var resolver = new BrowserAppResourceResolver(root);
             IBrowserSurface surface = await runtime.CreateSurfaceAsync(new BrowserViewport(960, 360), resolver).ConfigureAwait(false);
-            UIRoot? uiRoot = context.Get(CoreServiceKeys.UIRoot) as UIRoot;
             surface.FrameReady += (_, _) =>
             {
-                if (uiRoot != null)
+                if (_lease.IsValid &&
+                    context.Get(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
                 {
-                    uiRoot.IsDirty = true;
+                    surfaceHost.InvalidateLease(_lease);
                 }
             };
             surface.Messages.MessageReceived += (_, message) =>
@@ -155,7 +162,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
                     "host",
                     $"Host ack received {DateTime.Now:HH:mm:ss}: {message.Payload}"));
             };
-            await surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
+            await surface.NavigateAsync(new BrowserNavigationRequest(BrowserLocalAppUri.Root)).ConfigureAwait(false);
             await surface.Messages.PostMessageAsync(new BrowserScriptMessage(
                 "host",
                 "CEF browser surface is live inside Raylib with transparent background enabled.")).ConfigureAwait(false);
@@ -167,7 +174,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
 
     private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)
     {
-        var key = new ServiceKey<IBrowserRuntime>(BrowserServiceKey);
+        var key = new ServiceKey<IBrowserRuntime>(BrowserRuntimeServiceNames.BrowserRuntime);
         if (context.TryGet(key, out runtime))
         {
             return true;
@@ -201,23 +208,16 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return AppContext.BaseDirectory;
     }
 
-    private static void DrawDiagnosticPreview(SKCanvas canvas, SKRect rect)
+    private static UiElementBuilder BuildDiagnosticPreview()
     {
-        canvas.Clear(SKColor.Parse("#0b1120"));
-        using var titlePaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
-        using var bodyPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#cbd5e1") };
-        using var titleFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), 28f);
-        using var bodyFont = new SKFont(SKTypeface.FromFamilyName("Segoe UI"), 16f);
-        using var accentPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#38bdf8"), Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
-        using var fillPaint = new SKPaint { IsAntialias = true, Color = SKColor.Parse("#1e293b"), Style = SKPaintStyle.Fill };
-
-        var panelRect = new SKRect(rect.Left + 20f, rect.Top + 20f, rect.Right - 20f, rect.Bottom - 20f);
-        var panel = new SKRoundRect(panelRect, 18f, 18f);
-        canvas.DrawRoundRect(panel, fillPaint);
-        canvas.DrawRoundRect(panel, accentPaint);
-        canvas.DrawText("Browser runtime not injected", rect.Left + 40, rect.Top + 72, SKTextAlign.Left, titleFont, titlePaint);
-        canvas.DrawText("This diagnostic confirms Raylib mounted the Skia UI path. A provider is required for real web rendering.", rect.Left + 40, rect.Top + 110, SKTextAlign.Left, bodyFont, bodyPaint);
-        canvas.DrawLine(rect.Left + 40, rect.Top + 140, rect.Right - 40, rect.Top + 140, accentPaint);
+        return Ui.Column(
+                Ui.Text("Browser runtime not injected").Class("page-card-title"),
+                Ui.Text("Native Compose UI remains mounted until an engine-injected browser provider is registered.").Class("page-copy"),
+                Ui.Text("Surface contract: packaged web bundle plus provider-created browser surface.").Class("muted"))
+            .Class("browser-canvas")
+            .WidthPercent(100f)
+            .Height(320f)
+            .Gap(8f);
     }
 
     private static UiStyleSheet BuildBrowserStyleSheet()

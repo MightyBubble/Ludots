@@ -1,0 +1,25 @@
+{
+  "Id": "team_research_showcase",
+  "Tags": ["team_research_showcase", "participant_view_showcase"],
+  "DefaultCamera": {
+    "VirtualCameraId": "TeamResearch.Camera.Overview",
+    "TargetXCm": 6400,
+    "TargetYCm": 6400,
+    "Yaw": 180,
+    "Pitch": 48,
+    "DistanceCm": 9800,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 32,
+      "HeightInMacroTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": []
+}

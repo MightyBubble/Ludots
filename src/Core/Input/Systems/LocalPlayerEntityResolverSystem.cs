@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
  
@@ -33,6 +34,11 @@ namespace Ludots.Core.Input.Systems
                 !lookup.TryGet(playerId, out Entity playerEntity) ||
                 !_world.IsAlive(playerEntity))
             {
+                if (TryKeepExplicitLocalPlayerBinding(playerId))
+                {
+                    return;
+                }
+
                 _globals.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
                 return;
             }
@@ -46,6 +52,18 @@ namespace Ludots.Core.Input.Systems
             }
 
             _globals[CoreServiceKeys.LocalPlayerEntity.Name] = playerEntity;
+        }
+
+        private bool TryKeepExplicitLocalPlayerBinding(int playerId)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object existingObj) ||
+                existingObj is not Entity existing ||
+                !_world.IsAlive(existing))
+            {
+                return false;
+            }
+
+            return _world.TryGet(existing, out PlayerOwner owner) && owner.PlayerId == playerId;
         }
  
         public void BeforeUpdate(in float dt) { }

@@ -26,6 +26,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Core.Vision;
 using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
@@ -274,6 +275,9 @@ namespace Ludots.Adapter.Raylib
                 ValidateRequiredContextBeforeLoop(engine);
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
+                var fogFieldProjector = new FogGlobalFieldVisualProjector();
+                using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
@@ -292,7 +296,7 @@ namespace Ludots.Adapter.Raylib
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
-                engine.LoadMap(config.StartupMapId);
+                engine.LoadStartupMap();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -383,6 +387,7 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForFrame is IVisualHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
                         bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
+                        bool drawFieldOverlays = renderDebug.DrawFieldOverlays && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         double uiInputMs = 0d;
@@ -424,6 +429,14 @@ namespace Ludots.Adapter.Raylib
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
+                        if (globalFieldVisualBuffer != null)
+                        {
+                            globalFieldVisualBuffer.BeginFrame();
+                            if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
+                            {
+                                fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
+                            }
+                        }
 
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
@@ -495,6 +508,22 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
 
+                        if (drawFieldOverlays && globalFieldVisualBuffer != null)
+                        {
+                            long fieldRenderStart = Stopwatch.GetTimestamp();
+                            fieldRenderPerformer.Draw(globalFieldVisualBuffer);
+                            presentationTiming?.ObserveGlobalFieldRender(
+                                ElapsedMs(fieldRenderStart),
+                                fieldRenderPerformer.LastFieldTextureCount,
+                                fieldRenderPerformer.LastDirtyUploadCount,
+                                fieldRenderPerformer.LastDirtyUploadArea,
+                                fieldRenderPerformer.LastDrawCount);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
+                        }
+
                         bool benchmarkDrew = false;
                         if (benchmarkRenderer != null)
                         {
@@ -508,7 +537,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame 鈥?no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();
@@ -866,7 +895,7 @@ namespace Ludots.Adapter.Raylib
                 : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
-            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  SKIN {FormatFixed(timing.GpuSkinnedInstancesLastFrame, 6)}/{FormatFixed(timing.SkinnedRawLastFrame, 6)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
+            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  FIELD {FormatFixed(timing.GlobalFieldTexturesLastFrame, 4)}/{FormatFixed(timing.GlobalFieldDirtyUploadsLastFrame, 4)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
             string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPerformerEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPerformerBehaviorMs, 5, 1)}MS";
             string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
@@ -1034,7 +1063,7 @@ namespace Ludots.Adapter.Raylib
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
             string performerDefs = performers?.BuildActiveDefinitionSummary(8) ?? string.Empty;
-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} field={timing.LastGlobalFieldRenderMs:F2} fieldCount={timing.GlobalFieldTexturesLastFrame} fieldDirty={timing.GlobalFieldDirtyUploadsLastFrame} fieldArea={timing.GlobalFieldDirtyUploadAreaLastFrame} fieldDraws={timing.GlobalFieldDrawsLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)
@@ -1499,7 +1528,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (engine.TryGetService(CoreServiceKeys.HoveredEntity, out Entity hovered) &&
+            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";

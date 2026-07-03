@@ -1,0 +1,4 @@
+[
+  { "Path": "CombatStance/behavior.json", "Policy": "DeepObject" },
+  { "Path": "Relationships/catalog.json", "Policy": "DeepObject" }
+]

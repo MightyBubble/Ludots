@@ -3,6 +3,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 using NUnit.Framework;
 
 namespace Ludots.Tests.RaylibAdapter;
@@ -39,11 +40,9 @@ public sealed class RaylibSyntheticKeyboardInputTests
     private static UIRoot CreateFocusedCanvasRoot(RecordingCanvasKeyboardSink sink)
     {
         var root = new UIRoot(new NullUiRenderer());
-        UiScene scene = UiSceneComposer.Compose(
-            new FixedTextMeasurer(),
-            new NullImageSizeProvider(),
-            Ui.Canvas(sink).Width(100f).Height(100f));
-        root.MountScene(scene);
+        var host = new UiSurfaceHost(root, new FixedTextMeasurer(), new NullImageSizeProvider());
+        UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.raylib-keyboard", UiSurfaceSegment.Main, exclusive: true));
+        host.Publish(lease, UiSurfaceContribution.FromBuilder(() => Ui.Canvas(sink).Width(100f).Height(100f)));
         root.Resize(100f, 100f);
         root.HandleInput(new PointerEvent
         {

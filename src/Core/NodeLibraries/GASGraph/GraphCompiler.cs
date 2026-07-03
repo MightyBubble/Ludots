@@ -119,7 +119,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = node.Inputs.Count > 0
                             ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
                             : (byte)0;
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LoadSelfAttribute:
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.AddInt:
+                    case GraphNodeOp.CompareLtInt:
+                    case GraphNodeOp.CompareEqInt:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.AddFloat:
                     case GraphNodeOp.MulFloat:
@@ -148,19 +157,71 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.QueryRadius:
                         ins.ImmF = node.Radius;
                         break;
+                    case GraphNodeOp.QueryCone:
+                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.HalfAngleDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.ImmF = node.RangeCm;
+                        break;
+                    case GraphNodeOp.QueryRectangle:
+                        ins.A = RequireInputOrConstInt(node, 0, node.HalfWidthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.HalfHeightCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.Imm = node.RotationDeg;
+                        break;
+                    case GraphNodeOp.QueryLine:
+                        ins.A = RequireInputOrConstInt(node, 0, node.DirectionDeg, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.B = RequireInputOrConstInt(node, 1, node.LengthCm, valueMap, instructions, ref intNext, cfg.Id, diagnostics);
+                        ins.Imm = node.HalfWidthCm;
+                        break;
                     case GraphNodeOp.QuerySortStable:
                         break;
                     case GraphNodeOp.QueryLimit:
                         ins.Imm = node.Limit > 0 ? node.Limit : node.IntValue;
                         break;
+                    case GraphNodeOp.QueryFilterNotEntity:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.QueryFilterLayer:
+                        ins.Imm = unchecked((int)node.LayerMask);
+                        break;
+                    case GraphNodeOp.QueryFilterRelationship:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = ParseRelationshipFilterMode(node.RelationshipMode, node, cfg.Id, diagnostics);
+                        break;
                     case GraphNodeOp.AggCount:
                     case GraphNodeOp.AggMinByDistance:
+                        break;
+                    case GraphNodeOp.TargetListGet:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        byte validReg = Alloc(ref boolNext, GraphVmLimits.MaxBoolRegisters, cfg.Id, node.Id, diagnostics);
+                        ins.Flags = validReg;
+                        if (!string.IsNullOrWhiteSpace(node.ValidOutput))
+                        {
+                            if (valueMap.ContainsKey(node.ValidOutput))
+                            {
+                                diagnostics.Add(new GraphDiagnostic(
+                                    GraphDiagnosticSeverity.Error,
+                                    GraphDiagnosticCodes.DuplicateNodeId,
+                                    $"Node '{node.Id}' validOutput '{node.ValidOutput}' conflicts with an existing value id.",
+                                    cfg.Id,
+                                    node.Id));
+                            }
+                            else
+                            {
+                                valueMap[node.ValidOutput] = (GraphValueType.Bool, validReg);
+                            }
+                        }
+                        break;
+                    case GraphNodeOp.QueryHexRange:
+                    case GraphNodeOp.QueryHexRing:
+                        ins.Imm = node.HexRadius;
+                        break;
+                    case GraphNodeOp.QueryHexNeighbors:
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
                         ins.A = node.Inputs.Count > 0
                             ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
                             : (byte)1;
-                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        ins.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         if (node.Inputs.Count > 3)
                         {
                             diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.BudgetExceeded, "ApplyEffectTemplate supports up to 2 float args.", cfg.Id, node.Id));
@@ -184,13 +245,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.B = RequireInput(node, 1, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.FanOutApplyEffect:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        ins.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.FanOutApplyEffectDynamic:
                         ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.FanOutDispatchEffect:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        ins.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         ins.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
                         break;
                     case GraphNodeOp.FanOutDispatchEffectDynamic:
@@ -201,21 +262,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = node.Inputs.Count > 0
                             ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
                             : (byte)1;
-                        ins.Imm = Intern(symbolToIndex, symbols, node.EffectTemplate);
+                        ins.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.HasTag:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
+                        ins.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.ModifyAttributeAdd:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.SendEvent:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
+                        ins.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.RelationshipEnsureLink:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
@@ -325,7 +386,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = node.Inputs.Count > 0
                             ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
                             : (byte)0;
-                        ins.Imm = Intern(symbolToIndex, symbols, node.CollectionKey);
+                        ins.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.QueryFilterTeam:
                         if (node.Inputs.Count > 0)
@@ -340,19 +401,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         }
                         break;
                     case GraphNodeOp.QueryFilterTemplate:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Template);
+                        ins.Imm = RequireSymbol(node.Template, "template", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.QueryFilterAttributeRange:
                         ins.B = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.C = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.QueryFilterTagAny:
                     case GraphNodeOp.QueryFilterTagNone:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
+                        ins.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.QuerySortByAttribute:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         ins.Flags = node.Descending ? (byte)1 : (byte)0;
                         break;
                     case GraphNodeOp.AggSumAttribute:
@@ -361,7 +422,61 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.AggMinAttribute:
                     case GraphNodeOp.AggMaxEntityByAttribute:
                     case GraphNodeOp.AggMinEntityByAttribute:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.ReadBlackboardFloat:
+                    case GraphNodeOp.ReadBlackboardInt:
+                    case GraphNodeOp.ReadBlackboardEntity:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.WriteBlackboardFloat:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.WriteBlackboardInt:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.WriteBlackboardEntity:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.BlackboardKey, "blackboardKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LoadConfigFloat:
+                    case GraphNodeOp.LoadConfigInt:
+                    case GraphNodeOp.LoadConfigEffectId:
+                        ins.Imm = RequireSymbol(node.ConfigKey, "configKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.WriteSelfAttribute:
+                        ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.BeginLifecycleTransaction:
+                        break;
+                    case GraphNodeOp.InvokeBuiltin:
+                        ins.Imm = RequireSymbol(node.BuiltinHandler, "builtinHandler", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LoadTargetPosX:
+                    case GraphNodeOp.LoadTargetPosY:
+                        break;
+                    case GraphNodeOp.ClampTargetToRange:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.IsPointInCircle:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.SnapToNearestInCollection:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.SnapToNearestGraphEdge:
+                        ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         break;
                 }
 
@@ -396,6 +511,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadContextTargetContext => (GraphValueType.Entity, null),
                 GraphNodeOp.RandomFloat01 => (GraphValueType.Float, null),
                 GraphNodeOp.LoadAttribute => (GraphValueType.Float, null),
+                GraphNodeOp.LoadSelfAttribute => (GraphValueType.Float, null),
                 GraphNodeOp.AddFloat => (GraphValueType.Float, null),
                 GraphNodeOp.MulFloat => (GraphValueType.Float, null),
                 GraphNodeOp.SubFloat => (GraphValueType.Float, null),
@@ -405,11 +521,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ClampFloat => (GraphValueType.Float, null),
                 GraphNodeOp.AbsFloat => (GraphValueType.Float, null),
                 GraphNodeOp.NegFloat => (GraphValueType.Float, null),
+                GraphNodeOp.AddInt => (GraphValueType.Int, null),
                 GraphNodeOp.CompareGtFloat => (GraphValueType.Bool, null),
+                GraphNodeOp.CompareLtInt => (GraphValueType.Bool, null),
+                GraphNodeOp.CompareEqInt => (GraphValueType.Bool, null),
                 GraphNodeOp.HasTag => (GraphValueType.Bool, null),
                 GraphNodeOp.SelectEntity => (GraphValueType.Entity, null),
                 GraphNodeOp.AggCount => (GraphValueType.Int, null),
                 GraphNodeOp.AggMinByDistance => (GraphValueType.Entity, null),
+                GraphNodeOp.TargetListGet => (GraphValueType.Entity, null),
+                GraphNodeOp.ReadBlackboardFloat => (GraphValueType.Float, null),
+                GraphNodeOp.ReadBlackboardInt => (GraphValueType.Int, null),
+                GraphNodeOp.ReadBlackboardEntity => (GraphValueType.Entity, null),
+                GraphNodeOp.LoadConfigFloat => (GraphValueType.Float, null),
+                GraphNodeOp.LoadConfigInt => (GraphValueType.Int, null),
+                GraphNodeOp.LoadConfigEffectId => (GraphValueType.Int, null),
                 GraphNodeOp.RelationshipGetMetric => (GraphValueType.Int, null),
                 GraphNodeOp.RelationshipHasFlag => (GraphValueType.Bool, null),
                 GraphNodeOp.RelationshipAggSumMetric => (GraphValueType.Int, null),
@@ -424,6 +550,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.AggMinAttribute => (GraphValueType.Float, null),
                 GraphNodeOp.AggMaxEntityByAttribute => (GraphValueType.Entity, null),
                 GraphNodeOp.AggMinEntityByAttribute => (GraphValueType.Entity, null),
+                GraphNodeOp.LoadTargetPosX => (GraphValueType.Int, null),
+                GraphNodeOp.LoadTargetPosY => (GraphValueType.Int, null),
+                GraphNodeOp.ClampTargetToRange => (GraphValueType.Bool, null),
+                GraphNodeOp.IsPointInCircle => (GraphValueType.Bool, null),
+                GraphNodeOp.SnapToNearestInCollection => (GraphValueType.Entity, null),
+                GraphNodeOp.SnapToNearestGraphEdge => (GraphValueType.Bool, null),
                 _ => (GraphValueType.Void, null)
             };
         }
@@ -686,6 +818,97 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return v.Reg;
         }
 
+        private static byte RequireInputOrConstInt(
+            GraphNodeConfig node,
+            int inputIndex,
+            int constValue,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            List<GraphInstruction> instructions,
+            ref int intNext,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (node.Inputs != null && node.Inputs.Count > inputIndex)
+            {
+                return RequireInput(node, inputIndex, GraphValueType.Int, valueMap, graphId, diagnostics);
+            }
+
+            byte reg = Alloc(ref intNext, GraphVmLimits.MaxIntRegisters, graphId, node.Id, diagnostics);
+            instructions.Add(new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.ConstInt,
+                Dst = reg,
+                Imm = constValue,
+            });
+            return reg;
+        }
+
+        private static int RequireSymbol(
+            string? symbol,
+            string fieldName,
+            GraphNodeConfig node,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires a non-empty {fieldName}.",
+                    graphId,
+                    node.Id));
+                return -1;
+            }
+
+            return Intern(symbolToIndex, symbols, symbol);
+        }
+
+        private static int ParseRelationshipFilterMode(
+            string? mode,
+            GraphNodeConfig node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(mode))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires a non-empty relationshipMode.",
+                    graphId,
+                    node.Id));
+                return 0;
+            }
+
+            return mode switch
+            {
+                "Hostile" => 1,
+                "Friendly" => 2,
+                "Neutral" => 3,
+                "NotFriendly" => 4,
+                "NotHostile" => 5,
+                _ => AddUnsupportedRelationshipMode(mode, node, graphId, diagnostics),
+            };
+        }
+
+        private static int AddUnsupportedRelationshipMode(
+            string mode,
+            GraphNodeConfig node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            diagnostics.Add(new GraphDiagnostic(
+                GraphDiagnosticSeverity.Error,
+                GraphDiagnosticCodes.TypeMismatch,
+                $"Node '{node.Id}' has unsupported relationshipMode '{mode}'. Supported: Hostile, Friendly, Neutral, NotFriendly, NotHostile.",
+                graphId,
+                node.Id));
+            return 0;
+        }
+
         private static int Intern(Dictionary<string, int> symbolToIndex, List<string> symbols, string? symbol)
         {
             if (string.IsNullOrWhiteSpace(symbol)) return -1;
@@ -769,4 +992,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-

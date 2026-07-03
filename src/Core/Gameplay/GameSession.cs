@@ -4,6 +4,15 @@ using Ludots.Core.Gameplay.Camera;
 
 namespace Ludots.Core.Gameplay
 {
+    public sealed record GameSessionSnapshot(
+        int CurrentTick,
+        int LocalPlayerId,
+        IReadOnlyList<PlayerSnapshot> Players,
+        IReadOnlyDictionary<string, object> Globals,
+        CameraStateSnapshot Camera);
+
+    public sealed record PlayerSnapshot(int Id, int TeamId, CameraStateSnapshot Camera);
+
     public class GameSession
     {
         private readonly List<Player> _players = new List<Player>();
@@ -43,6 +52,70 @@ namespace Ludots.Core.Gameplay
             CurrentTick++;
         }
 
+        public GameSessionSnapshot CaptureSnapshot()
+        {
+            var players = new PlayerSnapshot[_players.Count];
+            for (int i = 0; i < _players.Count; i++)
+            {
+                Player player = _players[i];
+                players[i] = new PlayerSnapshot(
+                    player.Id,
+                    player.TeamId,
+                    CameraStateSnapshot.FromState(player.Camera));
+            }
+
+            var globals = new Dictionary<string, object>(Globals.Count, StringComparer.Ordinal);
+            foreach (KeyValuePair<string, object> pair in Globals)
+            {
+                globals[pair.Key] = CopySerializableGlobal(pair.Key, pair.Value);
+            }
+
+            return new GameSessionSnapshot(
+                CurrentTick,
+                LocalPlayerId,
+                players,
+                globals,
+                CameraStateSnapshot.FromState(Camera.State));
+        }
+
+        public void RestoreSnapshot(GameSessionSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+            if (snapshot.CurrentTick < 0)
+            {
+                throw new InvalidOperationException("GameSession snapshot CurrentTick must not be negative.");
+            }
+
+            _players.Clear();
+            _inputCache.Clear();
+            for (int i = 0; i < snapshot.Players.Count; i++)
+            {
+                PlayerSnapshot playerSnapshot = snapshot.Players[i];
+                if (playerSnapshot.Id <= 0)
+                {
+                    throw new InvalidOperationException("GameSession snapshot player id must be positive.");
+                }
+
+                var player = new Player(playerSnapshot.Id, NullInputSource.Instance)
+                {
+                    TeamId = playerSnapshot.TeamId
+                };
+                playerSnapshot.Camera.ApplyTo(player.Camera);
+                _players.Add(player);
+            }
+
+            Globals.Clear();
+            foreach (KeyValuePair<string, object> pair in snapshot.Globals)
+            {
+                Globals[pair.Key] = CopySerializableGlobal(pair.Key, pair.Value);
+            }
+
+            CurrentTick = snapshot.CurrentTick;
+            LocalPlayerId = snapshot.LocalPlayerId;
+            snapshot.Camera.ApplyTo(Camera.State);
+            snapshot.Camera.ApplyTo(Camera.PreviousState);
+        }
+
         public void Update(float dt)
         {
             // Reserved for render-frame/session-level hooks.
@@ -68,6 +141,32 @@ namespace Ludots.Core.Gameplay
             }
 
             LocalPlayerId = playerId;
+        }
+
+        private static object CopySerializableGlobal(string key, object value)
+        {
+            return value switch
+            {
+                null => string.Empty,
+                string text => text,
+                bool boolean => boolean,
+                int integer => integer,
+                long longInteger => longInteger,
+                float single => single,
+                double number => number,
+                _ => throw new InvalidOperationException(
+                    $"GameSession.Globals['{key}'] has unsupported save value type '{value.GetType().FullName}'.")
+            };
+        }
+
+        private sealed class NullInputSource : IInputSource
+        {
+            public static readonly NullInputSource Instance = new();
+
+            public PlayerInputFrame GetInput(int tick)
+            {
+                return new PlayerInputFrame { Tick = tick };
+            }
         }
     }
 }

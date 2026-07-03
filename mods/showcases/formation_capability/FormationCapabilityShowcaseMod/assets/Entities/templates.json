@@ -1,0 +1,185 @@
+[
+  {
+    "id": "formation_capability_showcase_formation_agent",
+    "onSpawnEffect": "Effect.MassNavigation.Agent.HealthDrift",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.FormationAgent"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1080
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": [
+          "massNavigation.formation.agent"
+        ],
+        "mask": [
+          "massNavigation.formation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "formation"
+      },
+      "MassNavigationFollowerLocomotion": {
+        "targetChangeEpsilonCm": 12.0,
+        "facingChangeEpsilonRadians": 0.035
+      }
+    }
+  },
+  {
+    "id": "formation_capability_showcase_soldier_azure_light",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Azure.Light"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.formation.soldierAgent"
+        ],
+        "mask": [
+          "massNavigation.formation.soldierAgent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "light"
+      }
+    }
+  },
+  {
+    "id": "formation_capability_showcase_soldier_azure_heavy",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Azure.Heavy"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.formation.soldierAgent"
+        ],
+        "mask": [
+          "massNavigation.formation.soldierAgent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "heavy"
+      }
+    }
+  },
+  {
+    "id": "formation_capability_showcase_soldier_crimson_light",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Crimson.Light"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.formation.soldierAgent"
+        ],
+        "mask": [
+          "massNavigation.formation.soldierAgent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "light"
+      }
+    }
+  },
+  {
+    "id": "formation_capability_showcase_soldier_crimson_heavy",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.Soldier.Crimson.Heavy"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "EntityLayer": {
+        "category": [
+          "massNavigation.formation.soldierAgent"
+        ],
+        "mask": [
+          "massNavigation.formation.soldierAgent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "heavy"
+      }
+    }
+  },
+  {
+    "id": "formation_capability_showcase_obstacle_overlay",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.FormationCapabilityShowcase.ObstacleOverlay"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      }
+    }
+  }
+]

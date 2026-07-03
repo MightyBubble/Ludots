@@ -18,6 +18,9 @@ namespace Ludots.Core.Presentation
         private int? _visualProxyBufferCapacity;
         private int? _skinnedVisualBatchCapacity;
         private int? _presentationRequestCapacity;
+        private int? _globalFieldVisualRecordCapacity;
+        private int? _globalFieldVisualCellCapacity;
+        private int? _globalFieldVisualDirtyRectCapacity;
         private int? _groundOverlayCapacity;
         private int? _roadSplineCapacity;
         private int? _worldHudCapacity;
@@ -25,6 +28,8 @@ namespace Ludots.Core.Presentation
         private int? _minimapMarkerCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
+        private int? _runtimeEntityLifecycleQueueCapacity;
+        private int? _runtimeEntityLifecycleReceiptQueueCapacity;
         private CameraCullingRuntimeConfig? _cameraCulling;
         private MinimapRuntimeConfig? _minimap;
 
@@ -38,6 +43,9 @@ namespace Ludots.Core.Presentation
         public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
         public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
         public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
+        public int GlobalFieldVisualRecordCapacity { get => _globalFieldVisualRecordCapacity ?? 0; set => _globalFieldVisualRecordCapacity = value; }
+        public int GlobalFieldVisualCellCapacity { get => _globalFieldVisualCellCapacity ?? 0; set => _globalFieldVisualCellCapacity = value; }
+        public int GlobalFieldVisualDirtyRectCapacity { get => _globalFieldVisualDirtyRectCapacity ?? 0; set => _globalFieldVisualDirtyRectCapacity = value; }
         public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
         public int RoadSplineCapacity { get => _roadSplineCapacity ?? 0; set => _roadSplineCapacity = value; }
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
@@ -45,6 +53,8 @@ namespace Ludots.Core.Presentation
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
+        public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
+        public int RuntimeEntityLifecycleReceiptQueueCapacity { get => _runtimeEntityLifecycleReceiptQueueCapacity ?? 0; set => _runtimeEntityLifecycleReceiptQueueCapacity = value; }
 
         public CameraCullingRuntimeConfig CameraCulling
         {
@@ -70,6 +80,9 @@ namespace Ludots.Core.Presentation
             RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
             RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
             RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
+            RequirePositive(_globalFieldVisualRecordCapacity, "presentation.globalFieldVisualRecordCapacity");
+            RequirePositive(_globalFieldVisualCellCapacity, "presentation.globalFieldVisualCellCapacity");
+            RequirePositive(_globalFieldVisualDirtyRectCapacity, "presentation.globalFieldVisualDirtyRectCapacity");
             RequirePositive(_groundOverlayCapacity, "presentation.groundOverlayCapacity");
             RequirePositive(_roadSplineCapacity, "presentation.roadSplineCapacity");
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
@@ -77,6 +90,8 @@ namespace Ludots.Core.Presentation
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
+            RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");
+            RequirePositive(_runtimeEntityLifecycleReceiptQueueCapacity, "presentation.runtimeEntityLifecycleReceiptQueueCapacity");
 
             if (_cameraCulling == null)
             {

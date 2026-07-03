@@ -6,14 +6,14 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation.Pathing;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
 
@@ -23,28 +23,74 @@ namespace CoreInputMod.Systems
     {
         public const string DebugSummaryKey = "CoreInputMod.SelectedMovePath.DebugSummary";
 
-        private const string DebugEnvironmentVariable = "LUDOTS_DEBUG_SELECTED_MOVE_PATH";
-        private static readonly Vector4 DebugTextColor = new(0.92f, 0.97f, 1.0f, 1.0f);
-        private static readonly Vector4 DebugPanelFill = new(0.04f, 0.08f, 0.12f, 0.92f);
-        private static readonly Vector4 DebugPanelBorder = new(0.30f, 0.58f, 0.78f, 0.96f);
+        public const string LineEventKey = "core_input.move_path.line";
+        public const string WaypointEventKey = "core_input.move_path.waypoint";
+
+        private const int MaxSelectedEntities = 4;
+        private const int MaxScopesPerActor = OrderSpatial.MaxPoints + 1;
+        private const int LineScopeBase = 52000;
+        private const int WaypointScopeBase = 52900;
+        private const float OverlayY = 0.035f;
+        private const float PrimaryLineWidthCm = 28f;
+        private const float SecondaryLineWidthCm = 18f;
+        private const float WaypointRadiusCm = 26f;
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
+        private readonly Dictionary<ActorKey, ActorScopeState> _activeScopesByActor = new();
+        private readonly List<ActorKey> _actorRemovalScratch = new(16);
         private Entity[] _selected = new Entity[16];
-        private readonly bool _debugEnabled;
-        private SelectedMovePathOverlayBridge? _bridge;
-        private GroundOverlayBuffer? _groundOverlays;
-        private string _lastBridgeFailureReason = "bridge=uninitialized";
         private int[] _moveOrderTypeIds = Array.Empty<int>();
         private bool _moveOrderTypeIdsResolved;
+        private PresentationEventStream? _events;
+        private GameSession? _session;
+        private int _lineEventKeyId;
+        private int _waypointEventKeyId;
+        private string _lastProjectionSummary = "projection=uninitialized";
+
+        private readonly struct ActorKey : IEquatable<ActorKey>
+        {
+            private readonly int _id;
+            private readonly int _worldId;
+            private readonly int _version;
+
+            public ActorKey(Entity entity)
+            {
+                _id = entity.Id;
+                _worldId = entity.WorldId;
+                _version = entity.Version;
+            }
+
+            public bool Equals(ActorKey other)
+            {
+                return _id == other._id && _worldId == other._worldId && _version == other._version;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is ActorKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(_id, _worldId, _version);
+            }
+        }
+
+        private struct ActorScopeState
+        {
+            public Entity Actor;
+            public int LineCount;
+            public int WaypointCount;
+            public int TouchedFrame;
+        }
 
         public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
-            _world = world;
-            _globals = globals;
-            _selection = selection;
-            _debugEnabled = IsDebugEnabled();
+            _world = world ?? throw new ArgumentNullException(nameof(world));
+            _globals = globals ?? throw new ArgumentNullException(nameof(globals));
+            _selection = selection ?? throw new ArgumentNullException(nameof(selection));
         }
 
         public void Initialize() { }
@@ -54,19 +100,6 @@ namespace CoreInputMod.Systems
 
         public void Update(in float dt)
         {
-            if (_bridge == null && !TryCreateBridge(out _bridge))
-            {
-                PublishDebugState(
-                    selectionCount: 0,
-                    overlayLineDelta: 0,
-                    overlayCircleDelta: 0,
-                    selectionViewer: Entity.Null,
-                    selectionViewKey: SelectionViewKeys.Primary,
-                    viewedContainer: Entity.Null,
-                    primaryViewed: Entity.Null);
-                return;
-            }
-
             Entity selectionViewer = Entity.Null;
             string selectionViewKey = SelectionViewKeys.Primary;
             Entity viewedContainer = Entity.Null;
@@ -75,92 +108,405 @@ namespace CoreInputMod.Systems
                 ? primary
                 : Entity.Null;
 
-            int lineCountBefore = CountOverlayShape(GroundOverlayShape.Line);
-            int circleCountBefore = CountOverlayShape(GroundOverlayShape.Circle);
-            int viewedCount = SelectionViewRuntime.GetViewedSelectionCount(_world, _globals, _selection);
-            EnsureSelectedCapacity(viewedCount);
-            int count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _selected);
-            if (count <= 0)
+            int emittedLines = 0;
+            int emittedWaypoints = 0;
+
+            if (!TryResolveRuntime())
             {
                 PublishDebugState(
                     selectionCount: 0,
-                    overlayLineDelta: 0,
-                    overlayCircleDelta: 0,
-                    selectionViewer: selectionViewer,
-                    selectionViewKey: selectionViewKey,
-                    viewedContainer: viewedContainer,
-                    primaryViewed: primaryViewed);
+                    emittedLines: 0,
+                    emittedWaypoints: 0,
+                    selectionViewer,
+                    selectionViewKey,
+                    viewedContainer,
+                    primaryViewed);
                 return;
             }
 
-            _bridge.UpdateViewedSelection(new ReadOnlySpan<Entity>(_selected, 0, count));
+            int frameId = _session?.CurrentTick ?? Environment.TickCount;
+            int viewedCount = SelectionViewRuntime.GetViewedSelectionCount(_world, _globals, _selection);
+            EnsureSelectedCapacity(viewedCount);
+            int count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _selected);
+            if (count > 0)
+            {
+                int emittedEntities = 0;
+                for (int i = 0; i < count && emittedEntities < MaxSelectedEntities; i++)
+                {
+                    Entity actor = _selected[i];
+                    if (!_world.IsAlive(actor) || !_world.Has<OrderBuffer>(actor))
+                    {
+                        continue;
+                    }
+
+                    EmitActorPath(actor, emittedEntities == 0, frameId, out int actorLines, out int actorWaypoints);
+                    emittedLines += actorLines;
+                    emittedWaypoints += actorWaypoints;
+                    emittedEntities++;
+                }
+            }
+
+            EndUntouchedScopes(frameId);
+            _lastProjectionSummary = $"projection=events line={emittedLines} waypoint={emittedWaypoints}";
             PublishDebugState(
                 selectionCount: count,
-                overlayLineDelta: CountOverlayShape(GroundOverlayShape.Line) - lineCountBefore,
-                overlayCircleDelta: CountOverlayShape(GroundOverlayShape.Circle) - circleCountBefore,
-                selectionViewer: selectionViewer,
-                selectionViewKey: selectionViewKey,
-                viewedContainer: viewedContainer,
-                primaryViewed: primaryViewed);
+                emittedLines,
+                emittedWaypoints,
+                selectionViewer,
+                selectionViewKey,
+                viewedContainer,
+                primaryViewed);
         }
 
-        private bool TryCreateBridge(out SelectedMovePathOverlayBridge bridge)
+        private bool TryResolveRuntime()
         {
-            bridge = default!;
-            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
-                configObj is not GameConfig config)
+            if (_events == null)
             {
-                _lastBridgeFailureReason = "bridge=missing:GameConfig";
+                if (!_globals.TryGetValue(CoreServiceKeys.PresentationEventStream.Name, out var eventsObj) ||
+                    eventsObj is not PresentationEventStream events)
+                {
+                    _lastProjectionSummary = "projection=missing:PresentationEventStream";
+                    return false;
+                }
+
+                _events = events;
+            }
+
+            if (!_moveOrderTypeIdsResolved && !TryResolveMoveOrderTypeIds(out _))
+            {
+                _lastProjectionSummary = "projection=missing:moveOrderType";
                 return false;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) ||
-                orderTypesObj is not OrderTypeRegistry orderTypes)
+            if (_lineEventKeyId <= 0)
             {
-                _lastBridgeFailureReason = "bridge=missing:OrderTypeRegistry";
-                return false;
+                _lineEventKeyId = ResolveEventKeyId(LineEventKey);
             }
 
-            int[] moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
-            if (moveOrderTypeIds.Length == 0)
+            if (_waypointEventKeyId <= 0)
             {
-                _lastBridgeFailureReason = "bridge=missing:moveOrderType";
-                return false;
+                _waypointEventKeyId = ResolveEventKeyId(WaypointEventKey);
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.PathService.Name, out var pathServiceObj) ||
-                pathServiceObj is not IPathService pathService)
+            if (_session == null &&
+                _globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
+                sessionObj is GameSession session)
             {
-                _lastBridgeFailureReason = "bridge=missing:PathService";
-                return false;
+                _session = session;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.PathStore.Name, out var pathStoreObj) ||
-                pathStoreObj is not PathStore pathStore)
-            {
-                _lastBridgeFailureReason = "bridge=missing:PathStore";
-                return false;
-            }
-
-            if (!_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var overlaysObj) ||
-                overlaysObj is not GroundOverlayBuffer overlays)
-            {
-                _lastBridgeFailureReason = "bridge=missing:GroundOverlayBuffer";
-                return false;
-            }
-
-            _groundOverlays = overlays;
-            _moveOrderTypeIds = moveOrderTypeIds;
-            _moveOrderTypeIdsResolved = true;
-            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name} moveTypes={moveOrderTypeIds.Length}";
-            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveOrderTypeIds);
             return true;
+        }
+
+        private void EmitActorPath(Entity actor, bool isPrimary, int frameId, out int emittedLines, out int emittedWaypoints)
+        {
+            emittedLines = 0;
+            emittedWaypoints = 0;
+            if (!OrderWorldSpatialResolver.TryGetEntityWorldCm(_world, actor, out var originWorldCm))
+            {
+                ClearActorScopes(actor, frameId);
+                return;
+            }
+
+            ref var buffer = ref _world.Get<OrderBuffer>(actor);
+            if (buffer.HasActive &&
+                IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId, _moveOrderTypeIds) &&
+                TryEmitOrderPath(actor, in buffer.ActiveOrder.Order, originWorldCm, isPrimary, frameId, ref emittedLines, ref emittedWaypoints, consumeFromCurrentIndex: true, out var activeDestination))
+            {
+                originWorldCm = activeDestination;
+            }
+            else if (buffer.HasActive &&
+                     IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId, _moveOrderTypeIds) &&
+                     OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out activeDestination))
+            {
+                EmitSegment(actor, originWorldCm, activeDestination, isPrimary, frameId, emittedLines++);
+                EmitWaypoint(actor, activeDestination, isPrimary, frameId, emittedWaypoints++);
+                originWorldCm = activeDestination;
+            }
+
+            for (int i = 0; i < buffer.QueuedCount; i++)
+            {
+                Order queued = buffer.GetQueued(i).Order;
+                if (!IsMoveOrderType(queued.OrderTypeId, _moveOrderTypeIds))
+                {
+                    continue;
+                }
+
+                if (TryEmitOrderPath(actor, in queued, originWorldCm, isPrimary, frameId, ref emittedLines, ref emittedWaypoints, consumeFromCurrentIndex: false, out var queuedDestination))
+                {
+                    originWorldCm = queuedDestination;
+                    continue;
+                }
+
+                if (!OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out queuedDestination))
+                {
+                    continue;
+                }
+
+                EmitSegment(actor, originWorldCm, queuedDestination, isPrimary, frameId, emittedLines++);
+                EmitWaypoint(actor, queuedDestination, isPrimary, frameId, emittedWaypoints++);
+                originWorldCm = queuedDestination;
+            }
+
+            TouchActorScopes(actor, emittedLines, emittedWaypoints, frameId);
+        }
+
+        private bool TryEmitOrderPath(
+            Entity actor,
+            in Order order,
+            Vector3 originWorldCm,
+            bool isPrimary,
+            int frameId,
+            ref int emittedLines,
+            ref int emittedWaypoints,
+            bool consumeFromCurrentIndex,
+            out Vector3 finalDestination)
+        {
+            finalDestination = default;
+            if (order.Args.Spatial.Mode != OrderCollectionMode.List)
+            {
+                return false;
+            }
+
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            if (pointCount <= 0)
+            {
+                return false;
+            }
+
+            int startIndex = consumeFromCurrentIndex
+                ? ResolveActiveRouteStartIndex(order.Actor, in order, pointCount)
+                : 0;
+            Vector3 previous = originWorldCm;
+            bool emitted = false;
+            for (int pointIndex = startIndex; pointIndex < pointCount; pointIndex++)
+            {
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var pointWorldCm))
+                {
+                    continue;
+                }
+
+                EmitSegment(actor, previous, pointWorldCm, isPrimary, frameId, emittedLines++);
+                EmitWaypoint(actor, pointWorldCm, isPrimary, frameId, emittedWaypoints++);
+                previous = pointWorldCm;
+                finalDestination = pointWorldCm;
+                emitted = true;
+                if (emittedLines >= MaxScopesPerActor || emittedWaypoints >= MaxScopesPerActor)
+                {
+                    break;
+                }
+            }
+
+            return emitted;
+        }
+
+        private int ResolveActiveRouteStartIndex(Entity entity, in Order order, int pointCount)
+        {
+            if (pointCount <= 0)
+            {
+                return 0;
+            }
+
+            if (_world.IsAlive(entity) && _world.Has<OrderBuffer>(entity))
+            {
+                OrderBuffer buffer = _world.Get<OrderBuffer>(entity);
+                if (buffer.HasActive &&
+                    buffer.ActiveOrder.Order.OrderId == order.OrderId &&
+                    buffer.ActiveOrder.Order.OrderTypeId == order.OrderTypeId)
+                {
+                    return Math.Clamp(buffer.ActiveOrder.RuntimeInt0, 0, pointCount - 1);
+                }
+            }
+
+            return 0;
+        }
+
+        private void EmitSegment(Entity actor, Vector3 startWorldCm, Vector3 endWorldCm, bool isPrimary, int frameId, int segmentIndex)
+        {
+            if (segmentIndex >= MaxScopesPerActor)
+            {
+                return;
+            }
+
+            float dxCm = endWorldCm.X - startWorldCm.X;
+            float dzCm = endWorldCm.Z - startWorldCm.Z;
+            float lengthCm = MathF.Sqrt((dxCm * dxCm) + (dzCm * dzCm));
+            if (!float.IsFinite(lengthCm) || lengthCm <= 0.01f)
+            {
+                return;
+            }
+
+            float widthMeters = WorldUnits.CmToM(isPrimary ? PrimaryLineWidthCm : SecondaryLineWidthCm);
+            float rotationDegrees = WorldPlane2D.RadToDegValue(WorldPlane2D.FacingRadFromDirection(dxCm, dzCm));
+            PublishMovePathEvent(
+                PresentationEventKind.MovePathBegun,
+                _lineEventKeyId,
+                actor,
+                BuildScopeId(actor, LineScopeBase + segmentIndex),
+                startWorldCm,
+                WorldUnits.CmToM(lengthCm),
+                widthMeters,
+                rotationDegrees,
+                isPrimary ? 1f : 0f);
+            PublishMovePathEvent(
+                PresentationEventKind.MovePathUpdated,
+                _lineEventKeyId,
+                actor,
+                BuildScopeId(actor, LineScopeBase + segmentIndex),
+                startWorldCm,
+                WorldUnits.CmToM(lengthCm),
+                widthMeters,
+                rotationDegrees,
+                isPrimary ? 1f : 0f);
+        }
+
+        private void EmitWaypoint(Entity actor, Vector3 pointWorldCm, bool isPrimary, int frameId, int waypointIndex)
+        {
+            if (waypointIndex >= MaxScopesPerActor)
+            {
+                return;
+            }
+
+            PublishMovePathEvent(
+                PresentationEventKind.MovePathBegun,
+                _waypointEventKeyId,
+                actor,
+                BuildScopeId(actor, WaypointScopeBase + waypointIndex),
+                pointWorldCm,
+                WorldUnits.CmToM(WaypointRadiusCm),
+                0f,
+                0f,
+                isPrimary ? 1f : 0f);
+            PublishMovePathEvent(
+                PresentationEventKind.MovePathUpdated,
+                _waypointEventKeyId,
+                actor,
+                BuildScopeId(actor, WaypointScopeBase + waypointIndex),
+                pointWorldCm,
+                WorldUnits.CmToM(WaypointRadiusCm),
+                0f,
+                0f,
+                isPrimary ? 1f : 0f);
+        }
+
+        private void TouchActorScopes(Entity actor, int lineCount, int waypointCount, int frameId)
+        {
+            var key = new ActorKey(actor);
+            if (lineCount == 0 && waypointCount == 0)
+            {
+                ClearActorScopes(actor, frameId);
+                return;
+            }
+
+            if (_activeScopesByActor.TryGetValue(key, out ActorScopeState previous))
+            {
+                PublishEndedScopeRange(previous.Actor, LineScopeBase, lineCount, previous.LineCount, _lineEventKeyId);
+                PublishEndedScopeRange(previous.Actor, WaypointScopeBase, waypointCount, previous.WaypointCount, _waypointEventKeyId);
+            }
+
+            _activeScopesByActor[key] = new ActorScopeState
+            {
+                Actor = actor,
+                LineCount = lineCount,
+                WaypointCount = waypointCount,
+                TouchedFrame = frameId,
+            };
+        }
+
+        private void ClearActorScopes(Entity actor, int frameId)
+        {
+            var key = new ActorKey(actor);
+            if (!_activeScopesByActor.TryGetValue(key, out ActorScopeState state))
+            {
+                return;
+            }
+
+            PublishEndedScopes(state.Actor, state.LineCount, state.WaypointCount);
+            _activeScopesByActor.Remove(key);
+        }
+
+        private void EndUntouchedScopes(int frameId)
+        {
+            _actorRemovalScratch.Clear();
+            foreach (KeyValuePair<ActorKey, ActorScopeState> pair in _activeScopesByActor)
+            {
+                if (pair.Value.TouchedFrame == frameId)
+                {
+                    continue;
+                }
+
+                PublishEndedScopes(pair.Value.Actor, pair.Value.LineCount, pair.Value.WaypointCount);
+                _actorRemovalScratch.Add(pair.Key);
+            }
+
+            for (int i = 0; i < _actorRemovalScratch.Count; i++)
+            {
+                _activeScopesByActor.Remove(_actorRemovalScratch[i]);
+            }
+        }
+
+        private void PublishEndedScopes(Entity actor, int lineCount, int waypointCount)
+        {
+            PublishEndedScopeRange(actor, LineScopeBase, 0, lineCount, _lineEventKeyId);
+            PublishEndedScopeRange(actor, WaypointScopeBase, 0, waypointCount, _waypointEventKeyId);
+        }
+
+        private void PublishEndedScopeRange(Entity actor, int scopeBase, int startIndexInclusive, int endIndexExclusive, int eventKeyId)
+        {
+            for (int i = startIndexInclusive; i < endIndexExclusive; i++)
+            {
+                PublishMovePathEvent(
+                    PresentationEventKind.MovePathEnded,
+                    eventKeyId,
+                    actor,
+                    BuildScopeId(actor, scopeBase + i),
+                    Vector3.Zero,
+                    0f,
+                    0f,
+                    0f,
+                    0f);
+            }
+        }
+
+        private void PublishMovePathEvent(
+            PresentationEventKind kind,
+            int keyId,
+            Entity actor,
+            int scopeId,
+            Vector3 worldCm,
+            float floatA,
+            float floatB,
+            float floatC,
+            float magnitude)
+        {
+            var evt = new PresentationEvent
+            {
+                LogicTickStamp = _session?.CurrentTick ?? 0,
+                Kind = kind,
+                KeyId = keyId,
+                Source = actor,
+                Target = actor,
+                Viewer = actor,
+                PayloadA = scopeId,
+                PayloadB = 0,
+                Magnitude = magnitude,
+                FloatA = floatA,
+                FloatB = floatB,
+                FloatC = floatC,
+                FloatD = magnitude,
+                Position = ToVisualMeters(worldCm),
+            };
+
+            if (!_events!.TryAdd(in evt))
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing selected move path event.");
+            }
         }
 
         private void PublishDebugState(
             int selectionCount,
-            int overlayLineDelta,
-            int overlayCircleDelta,
+            int emittedLines,
+            int emittedWaypoints,
             Entity selectionViewer,
             string selectionViewKey,
             Entity viewedContainer,
@@ -168,34 +514,19 @@ namespace CoreInputMod.Systems
         {
             string summary = BuildDebugSummary(
                 selectionCount,
-                overlayLineDelta,
-                overlayCircleDelta,
+                emittedLines,
+                emittedWaypoints,
                 selectionViewer,
                 selectionViewKey,
                 viewedContainer,
                 primaryViewed);
             _globals[DebugSummaryKey] = summary;
-            if (!_debugEnabled)
-            {
-                return;
-            }
-
-            if (_globals.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) &&
-                overlayObj is ScreenOverlayBuffer overlay)
-            {
-                overlay.AddRect(8, 8, 980, 118, DebugPanelFill, DebugPanelBorder, stableId: 31001, dirtySerial: 1);
-                string[] lines = BuildDebugLines(summary);
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    overlay.AddText(18, 16 + (i * 18), lines[i], 14, DebugTextColor, stableId: 31010 + i, dirtySerial: 1);
-                }
-            }
         }
 
         private string BuildDebugSummary(
             int selectionCount,
-            int overlayLineDelta,
-            int overlayCircleDelta,
+            int emittedLines,
+            int emittedWaypoints,
             Entity selectionViewer,
             string selectionViewKey,
             Entity viewedContainer,
@@ -204,13 +535,9 @@ namespace CoreInputMod.Systems
             Entity inspected = primaryViewed;
 
             bool hasOrderBuffer = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<OrderBuffer>(inspected);
-            bool hasNavAgent = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<NavAgent2D>(inspected);
             bool hasPosition2D = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<Position2D>(inspected);
-            bool hasVelocity2D = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<Velocity2D>(inspected);
-            bool hasNavGoal = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<NavGoal2D>(inspected);
             int activeMoveCount = 0;
             int queuedMoveCount = 0;
-            string navGoalSummary = "goal=(none)";
             string positionSummary = "pos2D=(none)";
             string worldSummary = "world=(none)";
             if (hasOrderBuffer && TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds))
@@ -242,41 +569,15 @@ namespace CoreInputMod.Systems
                     Vector2 world = worldPosition.Value.ToVector2();
                     worldSummary = $"world=({world.X:0.#},{world.Y:0.#})";
                 }
-
-                if (_world.TryGet(inspected, out NavGoal2D navGoal))
-                {
-                    navGoalSummary = $"goal={navGoal.Kind}@({navGoal.TargetCm.X.ToFloat():0.#},{navGoal.TargetCm.Y.ToFloat():0.#}) r={navGoal.RadiusCm.ToFloat():0.#}";
-                }
             }
 
             return
-                $"{_lastBridgeFailureReason} " +
+                $"{_lastProjectionSummary} " +
                 $"viewer={DescribeEntity(selectionViewer)} view={selectionViewKey} container={DescribeEntity(viewedContainer)} " +
                 $"selCount={selectionCount} primary={DescribeEntity(primaryViewed)} " +
                 $"inspect={DescribeEntity(inspected)} orderBuf={hasOrderBuffer} activeMove={activeMoveCount} queuedMove={queuedMoveCount} " +
-                $"navAgent={hasNavAgent} pos2D={hasPosition2D} vel2D={hasVelocity2D} navGoal={hasNavGoal} " +
-                $"{positionSummary} {worldSummary} {navGoalSummary} " +
-                $"overlay+line={overlayLineDelta} overlay+circle={overlayCircleDelta}";
-        }
-
-        private string[] BuildDebugLines(string summary)
-        {
-            return new[]
-            {
-                "MovePath Debug",
-                summary,
-                $"selectionView={DescribeSelectionViewContext()}",
-                $"overlayTotals=line={CountOverlayShape(GroundOverlayShape.Line)} circle={CountOverlayShape(GroundOverlayShape.Circle)} ring={CountOverlayShape(GroundOverlayShape.Ring)}",
-                $"env:{DebugEnvironmentVariable}=1",
-            };
-        }
-
-        private string DescribeSelectionViewContext()
-        {
-            bool hasView = SelectionViewRuntime.TryResolveViewedSelection(_world, _globals, _selection, out var viewer, out var viewKey, out var container);
-            return hasView
-                ? $"viewer={DescribeEntity(viewer)} view={viewKey} container={DescribeEntity(container)}"
-                : "viewer=(none)";
+                $"pos2D={hasPosition2D} {positionSummary} {worldSummary} " +
+                $"events+line={emittedLines} events+waypoint={emittedWaypoints}";
         }
 
         private bool TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds)
@@ -300,15 +601,22 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
+            SelectionRuntimeConfig? selectionConfig = config.Selection;
+            if (selectionConfig == null)
+            {
+                throw new InvalidOperationException(
+                    "game.selection must be configured before SelectedMovePathPresentationSystem resolves move path preview order types.");
+            }
+
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(selectionConfig, orderTypes);
             _moveOrderTypeIds = moveOrderTypeIds;
             _moveOrderTypeIdsResolved = true;
             return moveOrderTypeIds.Length > 0;
         }
 
-        private static int[] ResolveMoveOrderTypeIds(GameConfig config, OrderTypeRegistry orderTypes)
+        private static int[] ResolveMoveOrderTypeIds(SelectionRuntimeConfig config, OrderTypeRegistry orderTypes)
         {
-            string[] orderTypeKeys = config.Selection.MovePathPreviewOrderTypeKeys;
+            string[] orderTypeKeys = config.MovePathPreviewOrderTypeKeys;
             if (orderTypeKeys.Length == 0)
             {
                 throw new InvalidOperationException(
@@ -376,34 +684,6 @@ namespace CoreInputMod.Systems
             return false;
         }
 
-        private int CountOverlayShape(GroundOverlayShape shape)
-        {
-            if (_groundOverlays == null)
-            {
-                if (_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out var overlaysObj) &&
-                    overlaysObj is GroundOverlayBuffer overlays)
-                {
-                    _groundOverlays = overlays;
-                }
-                else
-                {
-                    return 0;
-                }
-            }
-
-            int count = 0;
-            ReadOnlySpan<GroundOverlayItem> span = _groundOverlays.GetSpan();
-            for (int i = 0; i < span.Length; i++)
-            {
-                if (span[i].Shape == shape)
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
         private string DescribeEntity(Entity entity)
         {
             if (entity == Entity.Null)
@@ -424,18 +704,24 @@ namespace CoreInputMod.Systems
             return $"#{entity.Id}";
         }
 
-        private static bool IsDebugEnabled()
+        private static int ResolveEventKeyId(string key)
         {
-            string? raw = Environment.GetEnvironmentVariable(DebugEnvironmentVariable);
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                return false;
-            }
+            int existing = TagRegistry.GetId(key);
+            return existing > 0 ? existing : TagRegistry.Register(key);
+        }
 
-            return raw == "1" ||
-                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        private static Vector3 ToVisualMeters(Vector3 worldCm)
+        {
+            return new Vector3(WorldUnits.CmToM(worldCm.X), OverlayY, WorldUnits.CmToM(worldCm.Z));
+        }
+
+        private static int BuildScopeId(Entity owner, int offset)
+        {
+            unchecked
+            {
+                int scope = (owner.Id * 100000) + offset;
+                return scope <= 0 ? offset : scope;
+            }
         }
 
         private void EnsureSelectedCapacity(int required)

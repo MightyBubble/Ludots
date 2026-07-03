@@ -65,7 +65,7 @@
     <None Include="launcher.mass-navigation.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="launcher.mass-navigation-total-war.runtime.json">
+    <None Include="launcher.formation-capability-showcase.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="raylib.visual-terrain-editor.launch.graph.json">
@@ -74,16 +74,13 @@
     <None Include="raylib.mass-navigation.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="raylib.mass-navigation-total-war.launch.graph.json">
+    <None Include="raylib.formation-capability-showcase.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="game.moba.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="game.physics2d.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="game.navigation2d.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="game.rts.json">

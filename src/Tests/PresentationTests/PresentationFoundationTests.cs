@@ -22,6 +22,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Hex;
@@ -677,7 +678,7 @@ namespace Ludots.Tests.Presentation
             const int selectionVisibleParam = 701;
 
             int definitionId = definitions.Register(
-                "performer.massflow.agent",
+                "performer.mass_navigation_flow.agent",
                 new PerformerDefinition
                 {
                     Behaviors =
@@ -923,6 +924,68 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudPerformBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                Entity target = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+                Entity hostileAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+                var behavior = new WorldHudPerformBehavior();
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                bool transientTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    ReadOnlySpan<int>.Empty,
+                    out PerformPhaseResult transientTextPhase);
+                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
+                bool attributeTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    requiredAttributes,
+                    out PerformPhaseResult attributeTextPhase);
+
+                Assert.That(transientTextProjected, Is.True);
+                Assert.That(transientTextPhase.IsHostile, Is.True);
+                Assert.That(transientTextPhase.ShouldPresent, Is.True);
+                Assert.That(transientTextPhase.AllowWorldHudProjection, Is.True);
+
+                Assert.That(attributeTextProjected, Is.False);
+                Assert.That(attributeTextPhase.RequiresAttributeProjection, Is.True);
+                Assert.That(attributeTextPhase.AllowWorldHudProjection, Is.False);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
         public void WorldHudPerformBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
         {
             using var world = World.Create();
@@ -1033,6 +1096,53 @@ namespace Ludots.Tests.Presentation
             Assert.That(phase.ShouldPresent, Is.False);
             Assert.That(phase.HasVision, Is.False);
             Assert.That(phase.AllowWorldHudProjection, Is.False);
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_DefaultAudienceRequiresOwnerAttributesForAttributeHud()
+        {
+            using var world = World.Create();
+
+            const int healthAttributeId = 7;
+            Entity ownerWithoutAttributes = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity ownerWithAttributes = world.Create(
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(ownerWithAttributes);
+            attributes.SetCurrent(healthAttributeId, 100f);
+
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>();
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
+
+            bool projectedWithoutAttributes = behavior.TryResolveProjection(
+                world,
+                globals,
+                ownerWithoutAttributes,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PerformPhaseResult missingPhase);
+            bool projectedWithAttributes = behavior.TryResolveProjection(
+                world,
+                globals,
+                ownerWithAttributes,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PerformPhaseResult presentPhase);
+
+            Assert.That(projectedWithoutAttributes, Is.False);
+            Assert.That(missingPhase.ShouldPresent, Is.True);
+            Assert.That(missingPhase.RequiresAttributeProjection, Is.True);
+            Assert.That(missingPhase.HasAttributeProjection, Is.False);
+            Assert.That(missingPhase.AllowWorldHudProjection, Is.False);
+
+            Assert.That(projectedWithAttributes, Is.True);
+            Assert.That(presentPhase.RequiresAttributeProjection, Is.True);
+            Assert.That(presentPhase.HasAttributeProjection, Is.True);
+            Assert.That(presentPhase.AllowWorldHudProjection, Is.True);
         }
 
         [Test]
@@ -2291,4 +2401,3 @@ namespace Ludots.Tests.Presentation
         }
     }
 }
-

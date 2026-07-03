@@ -144,7 +144,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Arcweaver.Guarding"
+      "tag": "State.Arcweaver.Guarding",
+      "sense": "Effective"
     }
   },
   {
@@ -348,7 +349,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Vanguard.IronWall"
+      "tag": "State.Vanguard.IronWall",
+      "sense": "Effective"
     }
   },
   {
@@ -363,7 +365,8 @@
       "kind": "BuiltinSpatial",
       "shape": "Rectangle",
       "halfWidth": 130,
-      "halfHeight": 260
+      "halfHeight": 260,
+      "rotation": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -518,7 +521,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Commander.ShieldNet"
+      "tag": "State.Commander.ShieldNet",
+      "sense": "Effective"
     }
   },
   {
@@ -578,7 +582,14 @@
       "range": 5200,
       "arcHeight": 0,
       "impactEffect": "Effect.Interaction.Stress.FireballHit",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.Interaction.Stress.FireballHit",
+      "presentationEffect": "Effect.Interaction.Stress.FireballHit",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {

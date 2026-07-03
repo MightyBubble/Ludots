@@ -1,0 +1,86 @@
+{
+  "mapId": "road_network_showcase_chunked",
+  "world": {
+    "solverWindowWidthCm": 50000,
+    "solverWindowHeightCm": 50000,
+    "streamingRadiusCm": 32000,
+    "workAreaMaxWidthCm": 50000,
+    "workAreaMaxHeightCm": 50000,
+    "activeHotZoneId": "road_core",
+    "hotZones": [
+      {
+        "id": "road_core",
+        "label": "Road Core",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 50000,
+        "heightCm": 50000
+      }
+    ]
+  },
+  "solver": {
+    "fieldWidthCm": 50000,
+    "fieldHeightCm": 50000,
+    "parallelWorkerCount": 1,
+    "playAreaMaxXCm": 49950,
+    "playAreaMaxYCm": 49950
+  },
+  "presentation": {
+    "blockerTemplateId": "road_network_unused_blocker",
+    "teams": []
+  },
+  "scenario": {
+    "agentsPerTeam": 0,
+    "teams": [
+      {
+        "id": 1,
+        "name": "Blue Road Columns"
+      },
+      {
+        "id": 2,
+        "name": "Red Road Columns"
+      }
+    ]
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": false,
+    "initialSelectionScratchCapacity": 32,
+    "initialSelectedEntityCapacity": 16,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 32,
+      "groupMembershipAgentCapacity": 128,
+      "selectionMemberScratchCapacity": 32,
+      "groupMemberCapacity": 32,
+      "orderIngestionTokenCapacity": 32,
+      "orderIngestionMemberCapacity": 32,
+      "metadataTeamCapacity": 2
+    }
+  },
+  "cadence": {
+    "simulationHz": 30,
+    "targetUpdateHz": 30,
+    "hardResolveHz": 30,
+    "entitySyncHz": 30,
+    "maxStepsPerFixedTick": 2
+  },
+  "agentProfiles": {
+    "defaultProfileId": "Small",
+    "profiles": [
+      {
+        "id": "Small",
+        "heavy": false,
+        "visualScale": 1,
+        "speedCmPerSecond": 1400,
+        "everyNth": 0,
+        "nthOffset": 0
+      }
+    ]
+  },
+  "teamRelationships": {
+    "relationships": []
+  },
+  "streaming": {
+    "retainSeconds": 12,
+    "radiusCm": 32000
+  }
+}

@@ -19,12 +19,12 @@ internal sealed class CefBrowserSchemeHandlerFactory : ISchemeHandlerFactory
 		ArgumentNullException.ThrowIfNull(browser);
 		ArgumentNullException.ThrowIfNull(request);
 
-		if (!_registry.TryGet(browser.Identifier, out CefBrowserSurface? surface))
+		if (!_registry.TryResolveResource(browser.Identifier, request.Url, out IResourceHandler? resourceHandler))
 		{
 			return null;
 		}
 
-		return surface.ResolveResource(request.Url);
+		return resourceHandler;
 	}
 
 	public static IResourceHandler CreateResourceHandler(BrowserResource resource)

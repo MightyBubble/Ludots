@@ -1,0 +1,30 @@
+{
+  "agentTypes": [
+    {
+      "id": "Humanoid",
+      "profileId": "Small",
+      "selection": {
+        "mode": "PreferGraph",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": true,
+        "forbiddenTagsAny": [],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "Transport.Flow.Downstream", "costMul": 1.0, "costAdd": 0.0, "block": false },
+          { "tag": "Transport.Flow.Upstream", "costMul": 2.0, "costAdd": 0.0, "block": false }
+        ]
+      }
+    }
+  ]
+}

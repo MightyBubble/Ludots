@@ -1,0 +1,8 @@
+[
+  {
+    "id": "Profile.UtilityAutocast.Mage",
+    "DecisionIntervalSteps": 1,
+    "MaxCandidates": 32,
+    "DecisionMakers": ["DM.UtilityAutocast.Mage"]
+  }
+]

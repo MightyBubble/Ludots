@@ -32,8 +32,8 @@ namespace GasTests
         {
             Name = "default",
             SpatialType = "Grid",
-            WidthInTiles = 1,
-            HeightInTiles = 1,
+            WidthInMacroTiles = 1,
+            HeightInMacroTiles = 1,
             GridCellSizeCm = 100,
             ChunkSizeCells = 4
         };
@@ -95,7 +95,7 @@ namespace GasTests
             int countBefore = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countBefore, Is.EqualTo(2));
 
-            // Cleanup â€” disposes boards which clears spatial partition
+            // Cleanup â€?disposes boards which clears spatial partition
             session.Cleanup(_world);
 
             // Spatial partition should be empty after board disposal

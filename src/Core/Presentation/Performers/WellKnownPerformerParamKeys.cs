@@ -83,6 +83,25 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Rectangle width (for rectangular overlays).</summary>
         public const int OverlayWidth = 14;
 
+        // ── WorldSpline ──
+
+        /// <summary>Spline start control point. Defaults to performer world position.</summary>
+        public const int SplineP0 = 20;
+        /// <summary>Spline first Bezier control point.</summary>
+        public const int SplineP1 = 21;
+        /// <summary>Spline second Bezier control point.</summary>
+        public const int SplineP2 = 22;
+        /// <summary>Spline end control point.</summary>
+        public const int SplineP3 = 23;
+        /// <summary>Spline ribbon width.</summary>
+        public const int SplineWidth = 24;
+        /// <summary>Spline fill color.</summary>
+        public const int SplineFillColor = 25;
+        /// <summary>Spline border color.</summary>
+        public const int SplineBorderColor = 26;
+        /// <summary>Spline border width.</summary>
+        public const int SplineBorderWidth = 27;
+
         // ── Marker3D ──
 
         /// <summary>Uniform scale. Per-axis uses this value when no axis-specific value is authored.</summary>

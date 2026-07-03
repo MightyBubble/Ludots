@@ -117,13 +117,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return;
                 }
 
+                var dirtyTagMask = default(GameplayTagContainer);
                 bool anyDirty = false;
-                for (int i = 0; i < DirtyFlags.TAG_DIRTY_BYTES; i++)
+                for (int byteIndex = 0; byteIndex < DirtyFlags.TAG_DIRTY_BYTES; byteIndex++)
                 {
-                    if (dirtyFlags.TagDirty[i] != 0)
+                    byte dirtyByte = dirtyFlags.TagDirty[byteIndex];
+                    if (dirtyByte == 0)
                     {
-                        anyDirty = true;
-                        break;
+                        continue;
+                    }
+
+                    anyDirty = true;
+                    while (dirtyByte != 0)
+                    {
+                        int bit = BitOperations.TrailingZeroCount(dirtyByte);
+                        dirtyByte = (byte)(dirtyByte & (dirtyByte - 1));
+                        int tagId = (byteIndex << 3) + bit;
+                        if (tagId == 0)
+                        {
+                            dirtyFlags.ClearTagDirty(tagId);
+                            continue;
+                        }
+                        dirtyTagMask.AddTag(tagId);
                     }
                 }
                 if (!anyDirty)
@@ -158,132 +173,120 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 bool hasEffectiveChanged = hasTags && World.Has<GameplayTagEffectiveChangedBits>(entity);
                 GameplayTagEffectiveChangedBits effChangedLocal = default;
 
-                for (int tagId = 1; tagId < 256; tagId++)
+                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
                 {
-                    if (!dirtyFlags.IsTagDirty(tagId)) continue;
-
-                    if (hasTags)
+                    ulong dirtyBits = dirtyTagMask.Bits[wordIndex];
+                    while (dirtyBits != 0UL)
                     {
-                        ref var tags = ref World.Get<GameplayTagContainer>(entity);
-                        bool isPresent = tags.HasTag(tagId);
-                        if (!hasTagSnapshot)
-                        {
-                            if (isPresent)
-                            {
-                                TriggerQueue.EnqueueTagChanged(new TagChangedTrigger
-                                {
-                                    Target = entity,
-                                    TagId = tagId,
-                                    WasPresent = false,
-                                    IsPresent = true
-                                });
-                            }
-                        }
-                        else
-                        {
-                            ref var snap = ref World.Get<GameplayTagSnapshot>(entity);
-                            int word = tagId >> 6;
-                            int bit = tagId & 63;
-                            ulong mask = 1UL << bit;
-                            ulong value = snap.Bits[word];
-                            bool wasPresent = (value & mask) != 0;
-                            if (wasPresent != isPresent)
-                            {
-                                TriggerQueue.EnqueueTagChanged(new TagChangedTrigger
-                                {
-                                    Target = entity,
-                                    TagId = tagId,
-                                    WasPresent = wasPresent,
-                                    IsPresent = isPresent
-                                });
-                            }
-                            snap.Bits[word] = isPresent ? (value | mask) : (value & ~mask);
-                        }
-                    }
+                        int bit = BitOperations.TrailingZeroCount(dirtyBits);
+                        dirtyBits &= dirtyBits - 1UL;
+                        int tagId = (wordIndex << 6) + bit;
 
-                    if (hasCountsRef)
-                    {
-                        ushort newCount = counts.GetCount(tagId);
-                        if (!hasCountSnapshot)
+                        if (hasTags)
                         {
-                            if (newCount != 0)
+                            ref var tags = ref World.Get<GameplayTagContainer>(entity);
+                            bool isPresent = tags.HasTag(tagId);
+                            if (!hasTagSnapshot)
                             {
-                                TriggerQueue.EnqueueTagCountChanged(new TagCountChangedTrigger
+                                if (isPresent)
                                 {
-                                    Target = entity,
-                                    TagId = tagId,
-                                    OldCount = 0,
-                                    NewCount = newCount
-                                });
+                                    TriggerQueue.EnqueueTagChanged(new TagChangedTrigger
+                                    {
+                                        Target = entity,
+                                        TagId = tagId,
+                                        WasPresent = false,
+                                        IsPresent = true
+                                    });
+                                }
                             }
-                            countSnapLocal.SetCount(tagId, newCount);
-                        }
-                        else
-                        {
-                            ref var snap = ref World.Get<TagCountSnapshot>(entity);
-                            ushort oldCount = snap.GetCount(tagId);
-                            snap.SetCount(tagId, newCount);
-                            if (oldCount != newCount)
+                            else
                             {
-                                TriggerQueue.EnqueueTagCountChanged(new TagCountChangedTrigger
+                                ref var snap = ref World.Get<GameplayTagSnapshot>(entity);
+                                int word = tagId >> 6;
+                                int tagBit = tagId & 63;
+                                ulong mask = 1UL << tagBit;
+                                ulong value = snap.Bits[word];
+                                bool wasPresent = (value & mask) != 0;
+                                if (wasPresent != isPresent)
                                 {
-                                    Target = entity,
-                                    TagId = tagId,
-                                    OldCount = oldCount,
-                                    NewCount = newCount
-                                });
+                                    TriggerQueue.EnqueueTagChanged(new TagChangedTrigger
+                                    {
+                                        Target = entity,
+                                        TagId = tagId,
+                                        WasPresent = wasPresent,
+                                        IsPresent = isPresent
+                                    });
+                                }
+                                snap.Bits[word] = isPresent ? (value | mask) : (value & ~mask);
                             }
                         }
-                    }
 
-                    dirtyFlags.ClearTagDirty(tagId);
+                        if (hasCountsRef)
+                        {
+                            ushort newCount = counts.GetCount(tagId);
+                            if (!hasCountSnapshot)
+                            {
+                                if (newCount != 0)
+                                {
+                                    TriggerQueue.EnqueueTagCountChanged(new TagCountChangedTrigger
+                                    {
+                                        Target = entity,
+                                        TagId = tagId,
+                                        OldCount = 0,
+                                        NewCount = newCount
+                                    });
+                                }
+                                countSnapLocal.SetCount(tagId, newCount);
+                            }
+                            else
+                            {
+                                ref var snap = ref World.Get<TagCountSnapshot>(entity);
+                                ushort oldCount = snap.GetCount(tagId);
+                                snap.SetCount(tagId, newCount);
+                                if (oldCount != newCount)
+                                {
+                                    TriggerQueue.EnqueueTagCountChanged(new TagCountChangedTrigger
+                                    {
+                                        Target = entity,
+                                        TagId = tagId,
+                                        OldCount = oldCount,
+                                        NewCount = newCount
+                                    });
+                                }
+                            }
+                        }
+
+                        dirtyFlags.ClearTagDirty(tagId);
+                    }
                 }
 
                 if (hasTags)
                 {
                     ref var tags = ref World.Get<GameplayTagContainer>(entity);
-                    if (hasEffectiveCache)
+                    var effectiveCandidateMask = dirtyTagMask;
+                    for (int wordIndex = 0; wordIndex < 4; wordIndex++)
                     {
-                        ref var cache = ref World.Get<GameplayTagEffectiveCache>(entity);
-                        for (int tagId = 1; tagId < 256; tagId++)
+                        ulong presentBits = tags.Bits[wordIndex];
+                        while (presentBits != 0UL)
                         {
-                            bool newEff = TagOps.HasTag(ref tags, tagId, TagSense.Effective);
-                            bool oldEff = cache.Has(tagId);
-                            if (oldEff != newEff)
+                            int bit = BitOperations.TrailingZeroCount(presentBits);
+                            presentBits &= presentBits - 1UL;
+                            int tagId = (wordIndex << 6) + bit;
+                            if (!hasEffectiveCache || TagOps.EffectiveMayChangeForDirtyTags(tagId, in dirtyTagMask))
                             {
-                                if (hasEffectiveChanged)
-                                {
-                                    ref var changed = ref World.Get<GameplayTagEffectiveChangedBits>(entity);
-                                    changed.Mark(tagId);
-                                }
-                                else
-                                {
-                                    effChangedLocal.Mark(tagId);
-                                }
-                                cache.Set(tagId, newEff);
+                                effectiveCandidateMask.Bits[wordIndex] |= 1UL << bit;
                             }
                         }
                     }
+
+                    if (hasEffectiveCache)
+                    {
+                        ref var cache = ref World.Get<GameplayTagEffectiveCache>(entity);
+                        ApplyEffectiveCandidateChanges(entity, ref tags, in effectiveCandidateMask, ref cache, hasEffectiveChanged, ref effChangedLocal);
+                    }
                     else
                     {
-                        for (int tagId = 1; tagId < 256; tagId++)
-                        {
-                            bool newEff = TagOps.HasTag(ref tags, tagId, TagSense.Effective);
-                            bool oldEff = effCacheLocal.Has(tagId);
-                            if (oldEff != newEff)
-                            {
-                                if (hasEffectiveChanged)
-                                {
-                                    ref var changed = ref World.Get<GameplayTagEffectiveChangedBits>(entity);
-                                    changed.Mark(tagId);
-                                }
-                                else
-                                {
-                                    effChangedLocal.Mark(tagId);
-                                }
-                                effCacheLocal.Set(tagId, newEff);
-                            }
-                        }
+                        ApplyEffectiveCandidateChanges(entity, ref tags, in effectiveCandidateMask, ref effCacheLocal, hasEffectiveChanged, ref effChangedLocal);
                     }
                 }
 
@@ -313,6 +316,49 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (!dirtyFlags.IsAnyAttributeDirty() && !dirtyFlags.IsAnyTagDirty())
                 {
                     CommandBuffer.Remove<DirtyFlags>(entity);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void ApplyEffectiveCandidateChanges(
+                Entity entity,
+                ref GameplayTagContainer tags,
+                in GameplayTagContainer candidates,
+                ref GameplayTagEffectiveCache cache,
+                bool hasEffectiveChanged,
+                ref GameplayTagEffectiveChangedBits effChangedLocal)
+            {
+                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                {
+                    ulong candidateBits = candidates.Bits[wordIndex];
+                    while (candidateBits != 0UL)
+                    {
+                        int bit = BitOperations.TrailingZeroCount(candidateBits);
+                        candidateBits &= candidateBits - 1UL;
+                        int tagId = (wordIndex << 6) + bit;
+                        if (tagId == 0)
+                        {
+                            continue;
+                        }
+
+                        bool newEff = TagOps.HasTag(ref tags, tagId, TagSense.Effective);
+                        bool oldEff = cache.Has(tagId);
+                        if (oldEff == newEff)
+                        {
+                            continue;
+                        }
+
+                        if (hasEffectiveChanged)
+                        {
+                            ref var changed = ref World.Get<GameplayTagEffectiveChangedBits>(entity);
+                            changed.Mark(tagId);
+                        }
+                        else
+                        {
+                            effChangedLocal.Mark(tagId);
+                        }
+                        cache.Set(tagId, newEff);
+                    }
                 }
             }
         }

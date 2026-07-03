@@ -1,0 +1,16 @@
+[
+  {
+    "id": "trade_gate_credit",
+    "displayName": "Trade Credits",
+    "shape": "trade_gate_shape_1x1",
+    "maxStack": 999,
+    "tags": ["Currency.TradeGate"]
+  },
+  {
+    "id": "trade_gate_goods",
+    "displayName": "Border Goods",
+    "shape": "trade_gate_shape_1x1",
+    "maxStack": 999,
+    "tags": ["Goods.TradeGate"]
+  }
+]

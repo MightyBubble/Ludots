@@ -28,6 +28,8 @@ public sealed record UiStyle
 
 	public UiOverflow Overflow { get; init; } = UiOverflow.Visible;
 
+	public UiPointerEvents PointerEvents { get; init; } = UiPointerEvents.Auto;
+
 	public UiLength Left { get; init; } = UiLength.Auto;
 
 	public UiLength Top { get; init; } = UiLength.Auto;
@@ -151,6 +153,7 @@ public sealed record UiStyle
 		FlexWrap = original.FlexWrap;
 		PositionType = original.PositionType;
 		Overflow = original.Overflow;
+		PointerEvents = original.PointerEvents;
 		Left = original.Left;
 		Top = original.Top;
 		Right = original.Right;

@@ -1,27 +1,33 @@
 using Ludots.Core.UI;
-using Ludots.UI;
+using Ludots.UI.Compose;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
-using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 
 namespace Ludots.Adapter.Raylib.UI
 {
     public sealed class DesktopUiSystem : IUiSystem
     {
-        private readonly UIRoot _root;
-        private readonly UiMarkupLoader _markupLoader = new();
-        private readonly IUiTextMeasurer _textMeasurer = new SkiaTextMeasurer();
-        private readonly IUiImageSizeProvider _imageSizeProvider = new SkiaImageSizeProvider();
+        private const string OwnerId = "Raylib.DesktopUiSystem.Markup";
 
-        public DesktopUiSystem(UIRoot root)
+        private readonly IUiSurfaceHost _surfaceHost;
+        private readonly UiMarkupLoader _markupLoader = new();
+        private readonly UiSurfaceLeaseHandle _lease;
+
+        public DesktopUiSystem(IUiSurfaceHost surfaceHost)
         {
-            _root = root;
+            _surfaceHost = surfaceHost;
+            _lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(OwnerId, UiSurfaceSegment.Main, exclusive: true));
         }
 
         public void SetHtml(string html, string css)
         {
-            var scene = _markupLoader.LoadScene(_textMeasurer, _imageSizeProvider, html, css);
-            _root.MountScene(scene);
+            UiDocument document = _markupLoader.LoadDocument(html, css);
+            _surfaceHost.Publish(
+                _lease,
+                UiSurfaceContribution.FromBuilder(
+                    () => UiElementBuilder.FromElement(document.Root),
+                    styleSheets: document.StyleSheets));
         }
     }
 }

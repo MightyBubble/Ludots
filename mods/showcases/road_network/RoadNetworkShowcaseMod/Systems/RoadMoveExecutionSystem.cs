@@ -1,7 +1,8 @@
 using System;
 using Arch.Core;
 using Arch.System;
-using RoadNetworkShowcaseMod.Gameplay;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Systems
@@ -9,20 +10,21 @@ namespace RoadNetworkShowcaseMod.Systems
     internal sealed class RoadMoveExecutionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<RoadColumnTag, RoadMoveOrderRuntime, RoadMoveExecutionIntent>();
+            .WithAll<RoadColumnTag, MovePlanOrderRuntime, MovePlanExecutionIntent>();
 
-        private readonly RoadRouteWalkStrategy _walk = new();
+        private readonly IMovePlanExecutionSink _sink;
 
-        public RoadMoveExecutionSystem(World world) : base(world)
+        public RoadMoveExecutionSystem(World world, MassNavigationSimulationRuntime simulation) : base(world)
         {
+            _sink = new MassNavigationMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
         }
 
         public override void Update(in float dt)
         {
             foreach (ref var chunk in World.Query(in Query))
             {
-                Span<RoadMoveOrderRuntime> orderStates = chunk.GetSpan<RoadMoveOrderRuntime>();
-                Span<RoadMoveExecutionIntent> intents = chunk.GetSpan<RoadMoveExecutionIntent>();
+                Span<MovePlanOrderRuntime> orderStates = chunk.GetSpan<MovePlanOrderRuntime>();
+                Span<MovePlanExecutionIntent> intents = chunk.GetSpan<MovePlanExecutionIntent>();
                 ref Entity entityFirst = ref chunk.Entity(0);
 
                 foreach (int index in chunk)
@@ -30,20 +32,20 @@ namespace RoadNetworkShowcaseMod.Systems
                     Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                     ref var orderRuntime = ref orderStates[index];
                     ref var intent = ref intents[index];
-                    if (orderRuntime.LifecycleState != RoadMoveLifecycleState.Active || intent.HasTarget == 0)
+                    if (orderRuntime.LifecycleState != MovePlanLifecycleState.Active || intent.HasTarget == 0)
                     {
-                        _walk.Clear(World, entity);
+                        _sink.Clear(World, entity);
                         continue;
                     }
 
-                    if (_walk.TryApply(World, entity, intent.Target, intent.SpeedCmPerSec, intent.StopRadiusCm))
+                    if (_sink.TryApply(World, entity, in intent))
                     {
                         continue;
                     }
 
-                    orderRuntime.LifecycleState = RoadMoveLifecycleState.Failed;
-                    orderRuntime.FailureReason = RoadMoveFailureReason.ExecutionUnavailable;
-                    _walk.Clear(World, entity);
+                    orderRuntime.LifecycleState = MovePlanLifecycleState.Failed;
+                    orderRuntime.FailureReason = MovePlanFailureReason.ExecutionUnavailable;
+                    _sink.Clear(World, entity);
                 }
             }
         }

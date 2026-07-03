@@ -143,6 +143,7 @@ public sealed class LauncherConfigService
         config.Bindings ??= new List<LauncherBinding>();
         config.Adapters ??= new LauncherAdapterDefaults();
         config.ProjectHints ??= new List<LauncherProjectHint>();
+        config.BrowserRuntimeProviders ??= new List<LauncherBrowserRuntimeProvider>();
 
         if (injectDefaults && !config.ScanRoots.Any(root => string.Equals(root.Id, "repo_mods", StringComparison.OrdinalIgnoreCase)))
         {
@@ -198,6 +199,14 @@ public sealed class LauncherConfigService
                      BuildProjectHintKey))
         {
             merged.ProjectHints.Add(hint);
+        }
+
+        foreach (var provider in MergeByKey(
+                     repoConfig.BrowserRuntimeProviders,
+                     userOverlay.BrowserRuntimeProviders,
+                     provider => provider.Id))
+        {
+            merged.BrowserRuntimeProviders.Add(provider);
         }
 
         return merged;

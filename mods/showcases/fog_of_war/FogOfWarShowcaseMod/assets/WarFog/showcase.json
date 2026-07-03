@@ -1,0 +1,12 @@
+{
+  "capability": "FOG-10",
+  "includes": [
+    "FOG-2",
+    "FOG-3",
+    "FOG-4",
+    "FOG-5",
+    "FOG-6",
+    "FOG-7",
+    "FOG-8"
+  ]
+}

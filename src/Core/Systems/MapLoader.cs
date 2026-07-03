@@ -43,10 +43,12 @@ namespace Ludots.Core.Systems
         private readonly CullState[] _ownerBatchCulls = new CullState[TemplateBatchScratchCapacity];
         private readonly ParamDefault[][] _ownerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
         private readonly ParamDefault[][] _performerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
+        private ComponentAuthoringContext _authoringContext = ComponentAuthoringContext.Empty;
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
         public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
+        private readonly Dictionary<string, string> _templateSources = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public MapLoader(World world, WorldMap worldMap, ConfigPipeline pipeline)
         {
@@ -60,6 +62,11 @@ namespace Ludots.Core.Systems
         public void SetEffectRequestQueue(EffectRequestQueue effectRequests)
         {
             _effectRequests = effectRequests;
+        }
+
+        public void SetComponentAuthoringContext(ComponentAuthoringContext authoringContext)
+        {
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
         }
 
         public void SetPresentationRuntime(
@@ -88,9 +95,14 @@ namespace Ludots.Core.Systems
             // Merging them with priority
             TemplateRegistry.Load("Entities/templates.json", catalog, report);
             EntityTemplateKeys.Clear();
+            _templateSources.Clear();
             foreach (var template in TemplateRegistry.GetAll())
             {
                 EntityTemplateKeys.Register(template.Id);
+                if (report != null && report.TryGetWinner("Entities/templates.json", template.Id, out string sourceUri))
+                {
+                    _templateSources[template.Id] = sourceUri;
+                }
             }
         }
 
@@ -123,7 +135,7 @@ namespace Ludots.Core.Systems
                 templates[t.Id] = t;
             }
 
-            var builder = new EntityBuilder(_world, templates);
+            var builder = new EntityBuilder(_world, templates, _templateSources, _authoringContext);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
             var entityIndex = new MapLoadEntityIndex();
             var pendingBatchRequests = new List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest>(_templateBatchSpawner.ScratchCapacity);
@@ -141,6 +153,7 @@ namespace Ludots.Core.Systems
                 }
 
                 int templateKeyId = ResolveTemplateKeyId(activeBatchTemplateId);
+                EntityTemplate activeBatchTemplate = templates[activeBatchTemplateId];
                 bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
                 bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
 
@@ -157,6 +170,10 @@ namespace Ludots.Core.Systems
                 if (hasDirectBootstrap)
                 {
                     features |= TemplateBatchSpawnFeatures.PerformerRootBootstrapHandled;
+                    if (TemplateBatchOwnerPayloadPreseedPolicy.CanPreseedOwnerPayloadMarker(_performerBootstrap, activeBatchTemplate, templateKeyId))
+                    {
+                        features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+                    }
                 }
 
                 int batchCount = pendingBatchRequests.Count;
@@ -178,7 +195,7 @@ namespace Ludots.Core.Systems
 
                 if (!_templateBatchSpawner.TryCreateBatch(
                     activeBatchTemplateId,
-                    templates[activeBatchTemplateId],
+                    activeBatchTemplate,
                     CollectionsMarshal.AsSpan(pendingBatchRequests),
                     features,
                     out var created,
@@ -267,7 +284,9 @@ namespace Ludots.Core.Systems
 
                 FlushPendingTemplateBatch();
 
-                builder.UseTemplate(entityData.Template);
+                builder
+                    .UseTemplate(entityData.Template)
+                    .WithEntityContext($"Map '{mapConfig.Id}' entity '{ResolveMapEntityContextId(entityData)}'");
                 
                 if (entityData.Overrides != null)
                 {
@@ -340,6 +359,13 @@ namespace Ludots.Core.Systems
                 hasMapEntity: true,
                 performerParamOverrides: ParsePerformerParamOverrides(mapId, entityData));
             return true;
+        }
+
+        private static string ResolveMapEntityContextId(EntitySpawnData entityData)
+        {
+            return string.IsNullOrWhiteSpace(entityData.InstanceId)
+                ? $"template:{entityData.Template}"
+                : entityData.InstanceId;
         }
 
         private static bool BatchContainsPerformerParamOverrides(List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest> requests)

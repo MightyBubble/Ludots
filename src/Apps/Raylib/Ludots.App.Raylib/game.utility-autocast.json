@@ -1,0 +1,12 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine - Utility Autocast Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/AIInspectorMod",
+    "../../../../../../../mods/showcases/utility_autocast/UtilityAutocastShowcaseMod"
+  ]
+}

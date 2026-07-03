@@ -1,6 +1,6 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
@@ -42,24 +42,52 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             _cachedFields.Clear();
-            World.Query(in _dampingFieldQuery, (ref Position2D position, ref DampingField field) =>
-            {
-                if (field.Radius > Fix64.Zero && field.DampingValue > Fix64.Zero && field.DampingValue <= Fix64.OneValue)
-                {
-                    _cachedFields.Add(new CachedField(position.Value, field.Radius, field.DampingValue));
-                }
-            });
+            var collectJob = new CollectFieldsJob { CachedFields = _cachedFields };
+            World.InlineQuery<CollectFieldsJob, Position2D, DampingField>(in _dampingFieldQuery, ref collectJob);
 
             if (_cachedFields.Count == 0)
             {
-                World.Query(in _dynamicEntitiesWithDampingQuery, (ref AppliedDamping damping) =>
-                {
-                    damping.TotalFieldDamping = Fix64.OneValue;
-                });
+                var resetJob = new ResetDampingJob();
+                World.InlineQuery<ResetDampingJob, AppliedDamping>(in _dynamicEntitiesWithDampingQuery, ref resetJob);
                 return;
             }
 
-            World.Query(in _dynamicEntitiesWithDampingQuery, (ref Position2D position, ref Mass2D mass, ref AppliedDamping damping) =>
+            var applyJob = new ApplyDampingJob { CachedFields = _cachedFields };
+            World.InlineQuery<ApplyDampingJob, Position2D, Mass2D, AppliedDamping>(in _dynamicEntitiesWithDampingQuery, ref applyJob);
+
+            var addJob = new AddDampingJob { World = World, CachedFields = _cachedFields };
+            World.InlineEntityQuery<AddDampingJob, Position2D, Mass2D>(in _dynamicEntitiesWithoutDampingQuery, ref addJob);
+        }
+
+        private struct CollectFieldsJob : IForEach<Position2D, DampingField>
+        {
+            public List<CachedField> CachedFields;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref Position2D position, ref DampingField field)
+            {
+                if (field.Radius > Fix64.Zero && field.DampingValue > Fix64.Zero && field.DampingValue <= Fix64.OneValue)
+                {
+                    CachedFields.Add(new CachedField(position.Value, field.Radius, field.DampingValue));
+                }
+            }
+        }
+
+        private struct ResetDampingJob : IForEach<AppliedDamping>
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref AppliedDamping damping)
+            {
+                damping.TotalFieldDamping = Fix64.OneValue;
+            }
+        }
+
+        private struct ApplyDampingJob : IForEach<Position2D, Mass2D, AppliedDamping>
+        {
+            public List<CachedField> CachedFields;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref Position2D position, ref Mass2D mass, ref AppliedDamping damping)
             {
                 if (mass.IsStatic)
                 {
@@ -68,27 +96,34 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 damping.TotalFieldDamping = Fix64.OneValue;
-                for (int i = 0; i < _cachedFields.Count; i++)
+                for (int i = 0; i < CachedFields.Count; i++)
                 {
-                    var field = _cachedFields[i];
+                    var field = CachedFields[i];
                     Fix64 distanceSq = Fix64Vec2.DistanceSquared(position.Value, field.Position);
                     if (distanceSq <= field.RadiusSq)
                     {
                         damping.TotalFieldDamping = damping.TotalFieldDamping * field.DampingValue;
                     }
                 }
-            });
+            }
+        }
 
-            World.Query(in _dynamicEntitiesWithoutDampingQuery, (Entity entity, ref Position2D position, ref Mass2D mass) =>
+        private struct AddDampingJob : IForEachWithEntity<Position2D, Mass2D>
+        {
+            public World World;
+            public List<CachedField> CachedFields;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Position2D position, ref Mass2D mass)
             {
                 if (mass.IsStatic) return;
 
                 Fix64 totalFieldDamping = Fix64.OneValue;
                 bool inAnyField = false;
 
-                for (int i = 0; i < _cachedFields.Count; i++)
+                for (int i = 0; i < CachedFields.Count; i++)
                 {
-                    var field = _cachedFields[i];
+                    var field = CachedFields[i];
                     Fix64 distanceSq = Fix64Vec2.DistanceSquared(position.Value, field.Position);
                     if (distanceSq <= field.RadiusSq)
                     {
@@ -101,7 +136,7 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     World.Add(entity, new AppliedDamping { TotalFieldDamping = totalFieldDamping });
                 }
-            });
+            }
         }
     }
 }

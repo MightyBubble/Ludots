@@ -1,0 +1,70 @@
+[
+  {
+    "id": "item_showcase.buy_ap_ammo",
+    "inputs": [
+      { "kind": "ItemStack", "actor": "Source", "item": "itm_credit_chip", "quantity": 20 }
+    ],
+    "outputs": [
+      {
+        "kind": "MoveItem",
+        "fromActor": "Target",
+        "fromPurpose": "Vendor",
+        "actor": "Source",
+        "purpose": "Stash",
+        "item": "itm_ammo_556_ap"
+      }
+    ]
+  },
+  {
+    "id": "item_showcase.sell_artifact",
+    "inputs": [],
+    "outputs": [
+      {
+        "kind": "MoveItem",
+        "fromActor": "Source",
+        "actor": "Target",
+        "purpose": "Vendor",
+        "item": "itm_extraction_artifact"
+      },
+      {
+        "kind": "CreateItem",
+        "actor": "Source",
+        "purpose": "Stash",
+        "item": "itm_credit_chip",
+        "quantity": 45
+      }
+    ]
+  },
+  {
+    "id": "item_showcase.forge_crimson_gem",
+    "inputs": [
+      { "kind": "ItemStack", "actor": "Source", "item": "itm_extraction_artifact", "quantity": 1 },
+      { "kind": "ItemStack", "actor": "Source", "item": "itm_credit_chip", "quantity": 20 }
+    ],
+    "outputs": [
+      {
+        "kind": "CreateItem",
+        "actor": "Source",
+        "purpose": "Stash",
+        "item": "itm_gem_crimson",
+        "quantity": 1
+      }
+    ]
+  },
+  {
+    "id": "item_showcase.forge_azure_gem",
+    "inputs": [
+      { "kind": "ItemStack", "actor": "Source", "item": "itm_ammo_556", "quantity": 30 },
+      { "kind": "ItemStack", "actor": "Source", "item": "itm_credit_chip", "quantity": 10 }
+    ],
+    "outputs": [
+      {
+        "kind": "CreateItem",
+        "actor": "Source",
+        "purpose": "Stash",
+        "item": "itm_gem_azure",
+        "quantity": 1
+      }
+    ]
+  }
+]

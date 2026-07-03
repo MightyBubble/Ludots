@@ -13,6 +13,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace EntityCommandPanelMod.UI
 {
@@ -28,6 +29,7 @@ namespace EntityCommandPanelMod.UI
         private uint _lastRevision;
         private uint _lastToolbarRevision;
         private bool _lastToolbarVisible;
+        private UiSurfaceLeaseHandle _lease;
 
         public EntityCommandPanelController(GameEngine engine, EntityCommandPanelRuntime runtime)
         {
@@ -47,6 +49,11 @@ namespace EntityCommandPanelMod.UI
 
         public void Sync(UIRoot root)
         {
+            if (_engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+            {
+                return;
+            }
+
             IEntityCommandPanelToolbarProvider? toolbar = ResolveToolbarProvider();
             bool toolbarVisible = toolbar?.IsVisible == true;
             uint toolbarRevision = toolbarVisible ? toolbar!.Revision : 0u;
@@ -65,21 +72,22 @@ namespace EntityCommandPanelMod.UI
                 _lastToolbarRevision = toolbarRevision;
                 _lastToolbarVisible = toolbarVisible;
                 _page.SetState(_ => new HostState(_lastRevision));
-                root.IsDirty = true;
             }
 
-            if (!ReferenceEquals(root.Scene, _page.Scene))
-            {
-                root.MountScene(_page.Scene);
-                root.IsDirty = true;
-            }
+            surfaceHost.Publish(
+                surfaceHost.EnsureLease(
+                    ref _lease,
+                    new UiSurfaceLeaseRequest("EntityCommandPanel.Host", UiSurfaceSegment.Overlay, priority: 80)),
+                UiSurfaceContribution.FromReactivePage(_page));
         }
 
         public void ClearIfOwned(UIRoot root)
         {
-            if (ReferenceEquals(root.Scene, _page.Scene))
+            if (_lease.IsValid &&
+                _engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
             {
-                root.ClearScene();
+                surfaceHost.Release(_lease);
+                _lease = default;
             }
         }
 
@@ -953,6 +961,7 @@ namespace EntityCommandPanelMod.UI
             in RtsHudTheme theme)
         {
             bool blocked = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked);
+            bool pendingTarget = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.PendingTarget);
             bool active = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active);
             bool interactive = !blocked && EntityCommandPanelSourceDispatch.CanActivate(source);
             string interactionModeKey = ResolveInteractionModeKey();
@@ -978,9 +987,9 @@ namespace EntityCommandPanelMod.UI
                             Ui.Column(
                                     BuildActionPill(slot.SlotIndex, actionKey, isInteractiveGroup: true),
                                     BuildTagPill(
-                                        blocked ? "LOCKED" : active ? "LIVE" : "READY",
-                                        blocked ? "#D9777F" : active ? theme.AccentColorHex : "#7E8EA4",
-                                        blocked ? "#2B0F14" : active ? "#08111A" : "#132232"))
+                                        blocked ? "LOCKED" : pendingTarget ? "TARGET" : active ? "LIVE" : "READY",
+                                        blocked ? "#D9777F" : pendingTarget ? "#8FB8FF" : active ? theme.AccentColorHex : "#7E8EA4",
+                                        blocked ? "#2B0F14" : pendingTarget ? "#0E1F35" : active ? "#08111A" : "#132232"))
                                 .Gap(8f)
                                 .Align(UiAlignItems.End))
                         .Gap(10f)
@@ -1280,6 +1289,7 @@ namespace EntityCommandPanelMod.UI
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.GrantedOverride), "UNLOCK", "#193521", "#B4F0C2");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.TemplateBacked), "SPAWNS", "#2A2040", "#D7C5FF");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), "LOCKED", "#4A1D21", "#FFB8B8");
+            AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.PendingTarget), "TARGET", "#172F4D", "#C8DCFF");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active), "ACTIVE", "#173B2D", "#B8FFD8");
 
             UiElementBuilder flagRow = flags.Count == 0
@@ -1963,4 +1973,3 @@ namespace EntityCommandPanelMod.UI
         }
     }
 }
-

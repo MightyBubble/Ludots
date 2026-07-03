@@ -118,6 +118,22 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void MergeArrayByIdToEntries_MissingId_IsRejectedWithSource()
+        {
+            var frags = new List<ConfigFragment>
+            {
+                MakeFrag(@"[{""id"":""A"",""v"":1}, {""v"":2}]", "ModA:test.json")
+            };
+            var entry = new ConfigCatalogEntry("GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
+
+            var ex = Throws<InvalidOperationException>(() => ConfigMerger.MergeArrayByIdToEntries(frags, in entry));
+
+            That(ex!.Message, Does.Contain("GAS/abilities.json"));
+            That(ex.Message, Does.Contain("ModA:test.json"));
+            That(ex.Message, Does.Contain("id"));
+        }
+
+        [Test]
         public void MergeArrayByIdToEntries_EmptyFragments_ReturnsEmpty()
         {
             var frags = new List<ConfigFragment>();
@@ -144,30 +160,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void MergeArrayByIdToEntries_NonObjectNodes_Skipped()
+        public void MergeArrayByIdToEntries_NonObjectNodes_AreRejected()
         {
             var frags = new List<ConfigFragment>
             {
                 MakeFrag(@"[{""id"":""A"",""v"":1}, 42, ""str"", null]")
             };
             var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
-            var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
-            That(result.Count, Is.EqualTo(1));
-            That(result[0].Id, Is.EqualTo("A"));
+            var ex = Throws<InvalidOperationException>(() => ConfigMerger.MergeArrayByIdToEntries(frags, in entry));
+
+            That(ex!.Message, Does.Contain("test.json"));
+            That(ex.Message, Does.Contain("JSON object"));
         }
 
         [Test]
-        public void MergeArrayByIdToEntries_NonArrayFragment_Skipped()
+        public void MergeArrayByIdToEntries_NonArrayFragment_IsRejected()
         {
             var frags = new List<ConfigFragment>
             {
                 MakeFrag(@"{""id"":""A"",""v"":1}")
             };
             var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
-            var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
-            That(result.Count, Is.EqualTo(0), "Non-array fragments are skipped");
+            var ex = Throws<InvalidOperationException>(() => ConfigMerger.MergeArrayByIdToEntries(frags, in entry));
+
+            That(ex!.Message, Does.Contain("test.json"));
+            That(ex.Message, Does.Contain("JSON array"));
         }
     }
 }

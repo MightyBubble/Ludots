@@ -79,6 +79,16 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            lock (Sync)
+            {
+                return RegistryMappingSnapshot.Merge(
+                    RegistryMappingSnapshot.FromNameToId(WellKnown),
+                    _custom.SnapshotMappings());
+            }
+        }
+
         public static void ClearCustomKeysForTests()
         {
             lock (Sync)
@@ -134,6 +144,14 @@ namespace Ludots.Core.Presentation.Performers
                 ["groundOverlay.border.width"] = WellKnownPerformerParamKeys.OverlayBorderWidth,
                 ["groundOverlay.length"] = WellKnownPerformerParamKeys.OverlayLength,
                 ["groundOverlay.width"] = WellKnownPerformerParamKeys.OverlayWidth,
+                ["worldSpline.p0"] = WellKnownPerformerParamKeys.SplineP0,
+                ["worldSpline.p1"] = WellKnownPerformerParamKeys.SplineP1,
+                ["worldSpline.p2"] = WellKnownPerformerParamKeys.SplineP2,
+                ["worldSpline.p3"] = WellKnownPerformerParamKeys.SplineP3,
+                ["worldSpline.width"] = WellKnownPerformerParamKeys.SplineWidth,
+                ["worldSpline.fill"] = WellKnownPerformerParamKeys.SplineFillColor,
+                ["worldSpline.border"] = WellKnownPerformerParamKeys.SplineBorderColor,
+                ["worldSpline.border.width"] = WellKnownPerformerParamKeys.SplineBorderWidth,
                 ["marker3d.scale"] = WellKnownPerformerParamKeys.MarkerScale,
                 ["marker3d.scale.x"] = WellKnownPerformerParamKeys.MarkerScaleX,
                 ["marker3d.scale.y"] = WellKnownPerformerParamKeys.MarkerScaleY,

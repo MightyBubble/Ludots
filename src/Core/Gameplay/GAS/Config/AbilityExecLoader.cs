@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
@@ -20,6 +21,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly AbilityDefinitionRegistry _registry;
+        private const int MaxToggleActiveEffects = 4;
+        private static readonly string[] RemovedAimVisualFieldNames =
+        {
+            "aimVisual",
+            "areaPerformerId",
+            "rangeCirclePerformerId",
+            "previewPerformerId",
+            "performerId",
+        };
 
         public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
         {
@@ -111,6 +121,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.OnActivateEffects = onActivate;
             }
 
+            if (obj["cooldown"] is JsonObject cooldownObj)
+            {
+                def.Cooldown = CompileCooldown(cooldownObj, id, path);
+                def.HasCooldown = def.Cooldown.CooldownValueAttributeId > 0 || def.Cooldown.CooldownTagId > 0;
+            }
+
             // ── blockTags ──
             if (obj["blockTags"] is JsonObject blockObj)
             {
@@ -148,11 +164,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasToggleSpec = def.ToggleSpec.ToggleTagId > 0;
             }
 
-            // ── indicator ──
-            if (obj["indicator"] is JsonObject indicatorObj)
+            // ── targeting ──
+            if (obj["indicator"] != null)
             {
-                def.Indicator = CompileIndicator(indicatorObj, id, path);
-                def.HasIndicator = true;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+            }
+
+            RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
+
+            if (obj["targeting"] is JsonObject targetingObj)
+            {
+                def.Targeting = CompileTargeting(targetingObj, id, path);
+                def.HasTargeting = true;
             }
 
             if (obj["presentation"] is JsonObject presentationObj)
@@ -167,7 +191,30 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasInputBindingOverride = true;
             }
 
+            def.UseProgressionRequirementId = ResolveProgressionRequirement(obj, "useRequirement", id, path);
+            def.HasUseProgressionRequirement = def.UseProgressionRequirementId > 0;
+            def.ShowProgressionRequirementId = ResolveProgressionRequirement(obj, "showRequirement", id, path);
+            def.HasShowProgressionRequirement = def.ShowProgressionRequirementId > 0;
+
             return def;
+        }
+
+        private static int ResolveProgressionRequirement(JsonObject obj, string fieldName, string id, string path)
+        {
+            string requirementName = obj[fieldName]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(requirementName))
+            {
+                return 0;
+            }
+
+            int requirementId = ProgressionRequirementIdRegistry.GetId(requirementName);
+            if (requirementId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldName}' references unknown progression requirement '{requirementName}'.");
+            }
+
+            return requirementId;
         }
 
         // ──────────────── ExecSpec ────────────────
@@ -226,6 +273,42 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 ValidationGraphId = graphId
             };
+        }
+
+        private static AbilityCooldown CompileCooldown(JsonObject cooldownObj, string id, string path)
+        {
+            var cooldown = new AbilityCooldown();
+
+            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>()
+                           ?? cooldownObj["cooldownValueAttribute"]?.GetValue<string>()
+                           ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(attrName))
+            {
+                int attrId = AttributeRegistry.GetId(attrName);
+                if (attrId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' cooldown.valueAttribute references unknown attribute '{attrName}'.");
+                }
+
+                cooldown.CooldownValueAttributeId = attrId;
+            }
+
+            string tagName = cooldownObj["tag"]?.GetValue<string>()
+                          ?? cooldownObj["cooldownTag"]?.GetValue<string>()
+                          ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(tagName))
+            {
+                cooldown.CooldownTagId = TagRegistry.Register(tagName);
+            }
+
+            if (cooldown.CooldownValueAttributeId <= 0 && cooldown.CooldownTagId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' cooldown must declare valueAttribute or tag.");
+            }
+
+            return cooldown;
         }
 
         private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)
@@ -338,7 +421,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        // ──────────────── Toggle / Indicator ────────────────
+        // ──────────────── Toggle / Targeting ────────────────
 
         private static AbilityToggleSpec CompileToggleSpec(JsonObject toggleObj, string id, string path)
         {
@@ -357,14 +440,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (toggleObj["activeEffects"] is JsonArray activeEffects)
             {
+                if (activeEffects.Count > MaxToggleActiveEffects)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' field 'toggleSpec.activeEffects' in '{path}' contains {activeEffects.Count} effects, max {MaxToggleActiveEffects}.");
+                }
+
                 int activeCount = 0;
                 foreach (var effectNode in activeEffects)
                 {
-                    if (activeCount >= 4)
-                    {
-                        break;
-                    }
-
                     string effectId = effectNode?.GetValue<string>() ?? string.Empty;
                     if (string.IsNullOrWhiteSpace(effectId))
                     {
@@ -397,40 +481,86 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return toggleSpec;
         }
 
-        private static AbilityIndicatorConfig CompileIndicator(JsonObject indicatorObj, string id, string path)
+        private static AbilityTargetingConfig CompileTargeting(JsonObject targetingObj, string id, string path)
         {
-            string shapeValue = indicatorObj["shape"]?.GetValue<string>() ?? "Circle";
-            var indicator = new AbilityIndicatorConfig
+            if (targetingObj["range"] != null)
             {
-                Shape = ParseTargetShape(shapeValue, id, path),
-                Range = indicatorObj["range"]?.GetValue<float>() ?? 0f,
-                Radius = indicatorObj["radius"]?.GetValue<float>() ?? 0f,
-                InnerRadius = indicatorObj["innerRadius"]?.GetValue<float>() ?? 0f,
-                Angle = indicatorObj["angle"]?.GetValue<float>() ?? 0f,
-                ValidColor = ParseColor(indicatorObj["validColor"], new System.Numerics.Vector4(0.20f, 0.85f, 0.45f, 0.35f)),
-                InvalidColor = ParseColor(indicatorObj["invalidColor"], new System.Numerics.Vector4(0.95f, 0.30f, 0.25f, 0.35f)),
-                RangeCircleColor = ParseColor(indicatorObj["rangeCircleColor"], new System.Numerics.Vector4(0.25f, 0.55f, 0.95f, 0.18f)),
-                ShowRangeCircle = indicatorObj["showRangeCircle"]?.GetValue<bool>() ?? false
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.range' is deprecated; use 'targeting.castRangeCm'.");
+            }
+
+            if (targetingObj["castRangeCm"] == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.castRangeCm' is required when 'targeting' is present.");
+            }
+
+            if (targetingObj["impactEffect"] == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' is required when 'targeting' is present.");
+            }
+
+            string impactEffect = targetingObj["impactEffect"]!.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(impactEffect))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' must be a non-empty effect template id.");
+            }
+
+            int impactEffectTemplateId = EffectTemplateIdRegistry.GetId(impactEffect);
+            if (impactEffectTemplateId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.impactEffect' references unknown effect template '{impactEffect}'.");
+            }
+
+            var targeting = new AbilityTargetingConfig
+            {
+                CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
+                ImpactEffectTemplateId = impactEffectTemplateId
             };
 
-            if (indicatorObj["preview"] is JsonObject previewObj)
+            if (targeting.CastRangeCm < 0f)
             {
-                indicator.Preview = new AbilityIndicatorPreviewConfig
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'targeting.castRangeCm' must be non-negative.");
+            }
+
+            return targeting;
+        }
+
+        private static void RejectRemovedAimVisualFields(JsonNode? node, string id, string path, string currentPath)
+        {
+            if (node is JsonObject obj)
+            {
+                foreach ((string key, JsonNode? child) in obj)
                 {
-                    PerformerId = previewObj["performerId"]?.GetValue<string>() ?? string.Empty,
-                    ScaleX = previewObj["scaleX"]?.GetValue<float>() ?? 0f,
-                    ScaleY = previewObj["scaleY"]?.GetValue<float>() ?? 0f,
-                    ScaleZ = previewObj["scaleZ"]?.GetValue<float>() ?? 0f,
-                    OffsetY = previewObj["offsetY"]?.GetValue<float>() ?? 0f,
-                };
+                    string fieldPath = string.IsNullOrEmpty(currentPath) ? key : $"{currentPath}.{key}";
+                    for (int i = 0; i < RemovedAimVisualFieldNames.Length; i++)
+                    {
+                        if (string.Equals(key, RemovedAimVisualFieldNames[i], StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Performer event-condition-action rules.");
+                        }
+                    }
+
+                    RejectRemovedAimVisualFields(child, id, path, fieldPath);
+                }
+
+                return;
             }
 
-            if (indicatorObj["angleDeg"] is JsonNode angleDegNode)
+            if (node is not JsonArray arr)
             {
-                indicator.Angle = MathF.PI * angleDegNode.GetValue<float>() / 180f;
+                return;
             }
 
-            return indicator;
+            for (int i = 0; i < arr.Count; i++)
+            {
+                RejectRemovedAimVisualFields(arr[i], id, path, $"{currentPath}[{i}]");
+            }
         }
 
         private static AbilityPresentationConfig? CompilePresentation(JsonObject presentationObj)
@@ -571,64 +701,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return result;
         }
 
-        private static TargetShape ParseTargetShape(string value, string id, string path)
-        {
-            return value switch
-            {
-                "Self" => TargetShape.Self,
-                "Single" => TargetShape.Single,
-                "Circle" => TargetShape.Circle,
-                "Cone" => TargetShape.Cone,
-                "Line" => TargetShape.Line,
-                "Ring" => TargetShape.Ring,
-                "Rectangle" => TargetShape.Rectangle,
-                _ => throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' indicator uses unsupported shape '{value}'.")
-            };
-        }
-
-        private static System.Numerics.Vector4 ParseColor(JsonNode? node, System.Numerics.Vector4 fallback)
-        {
-            if (node is JsonArray arr)
-            {
-                float r = arr.Count > 0 ? arr[0]?.GetValue<float>() ?? fallback.X : fallback.X;
-                float g = arr.Count > 1 ? arr[1]?.GetValue<float>() ?? fallback.Y : fallback.Y;
-                float b = arr.Count > 2 ? arr[2]?.GetValue<float>() ?? fallback.Z : fallback.Z;
-                float a = arr.Count > 3 ? arr[3]?.GetValue<float>() ?? fallback.W : fallback.W;
-                return new System.Numerics.Vector4(r, g, b, a);
-            }
-
-            string? hex = node?.GetValue<string>();
-            if (string.IsNullOrWhiteSpace(hex))
-            {
-                return fallback;
-            }
-
-            hex = hex.Trim();
-            if (hex.StartsWith('#'))
-            {
-                hex = hex[1..];
-            }
-
-            if (hex.Length != 6 && hex.Length != 8)
-            {
-                return fallback;
-            }
-
-            byte rByte = byte.Parse(hex.Substring(0, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            byte gByte = byte.Parse(hex.Substring(2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            byte bByte = byte.Parse(hex.Substring(4, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-            byte aByte = hex.Length == 8
-                ? byte.Parse(hex.Substring(6, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture)
-                : (byte)255;
-
-            return new System.Numerics.Vector4(
-                rByte / 255f,
-                gByte / 255f,
-                bByte / 255f,
-                aByte / 255f);
-        }
-
         // ──────────────── Parsing helpers ────────────────
 
         private static GasClockId ParseClockId(string str)
@@ -663,4 +735,3 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
     }
 }
-

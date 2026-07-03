@@ -1,0 +1,33 @@
+{
+  "startupMapId": "capability_standard_physics2d",
+  "windowTitle": "Ludots Engine - Capability Standard Physics2D",
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "physics2D": {
+    "enabled": true
+  },
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 256,
+    "runtimeEntitySpawnReceiptQueueCapacity": 256,
+    "performerInstanceCapacity": 256,
+    "presentationEventStreamCapacity": 512,
+    "presentationOwnerChangeCapacity": 512,
+    "performerCommandCapacity": 512,
+    "primitiveDrawBufferCapacity": 512,
+    "visualSnapshotBufferCapacity": 512,
+    "visualProxyBufferCapacity": 512,
+    "presentationRequestCapacity": 512,
+    "groundOverlayCapacity": 128,
+    "worldHudCapacity": 512,
+    "screenHudCapacity": 512,
+    "skinnedVisualBatchCapacity": 512,
+    "minimapMarkerCapacity": 256,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000,
+      "mediumLodDistanceCm": 12000,
+      "lowLodDistanceCm": 24000
+    }
+  }
+}

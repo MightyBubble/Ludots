@@ -4,16 +4,20 @@
 
 当前参考实现：
 
-`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/`
+`mods/showcases/formation_capability/FormationCapabilityShowcaseMod/`
 
-通用基建：
+Core runtime 基建：
+
+`src/Core/MassNavigation/`
+
+MassNavigation 能力 Mod：
 
 `mods/capabilities/navigation/MassNavigationMod/`
 
 启动文件：
 
-- `src/Apps/Raylib/Ludots.App.Raylib/launcher.mass-navigation-total-war.runtime.json`
-- `src/Apps/Raylib/Ludots.App.Raylib/raylib.mass-navigation-total-war.launch.graph.json`
+- `src/Apps/Raylib/Ludots.App.Raylib/launcher.formation-capability-showcase.runtime.json`
+- `src/Apps/Raylib/Ludots.App.Raylib/raylib.formation-capability-showcase.launch.graph.json`
 
 launch graph 当前包含：
 
@@ -21,15 +25,15 @@ launch graph 当前包含：
 - `CoreInputMod`
 - `CameraProfilesMod`
 - `MassNavigationMod`
-- `MassNavigationTotalWarEntryMod`
+- `FormationCapabilityShowcaseMod`
 
 ## 职责边界
 
 | 层 | 拥有什么 | 不应该拥有什么 |
 | --- | --- | --- |
-| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、SelectionRuntime、OrderBuffer、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Total War 方阵、士兵归属、Shu/Wei 业务命名。 |
-| MassNavigationMod | agent profiles、order ingestion、MassFlow simulation、MassNavigation runtime facade、ECS writeback、selection metadata sync、authoring contract。 | 方阵拥有士兵、士兵 slot 排列、showcase 轮廓颜色。 |
-| MassNavigationTotalWarEntryMod | 方阵/士兵场景配置、方阵生成士兵、士兵 slot target sync、障碍 overlay、方阵轮廓表现。 | 私有 selection runtime、私有 order runtime、私有 performer runtime、私有 config loader。 |
+| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、RuntimeEntitySpawnSystem、SystemGroup.RuntimeEntityBinding、MassNavigation authored component binding、MassNavigationFlow simulation、order ingestion、ECS writeback、SelectionRuntime、OrderBuffer、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Formation Capability 方阵、士兵归属、Shu/Wei 业务命名、showcase 轮廓颜色。 |
+| MassNavigationMod | MassNavigation asset/config package、optional tuning panel UI adapter、launch-graph dependency surface。 | MassNavigation agent binding、MassNavigationFlow runtime、order ingestion、formation/follower runtime、post-spawn agent binding。 |
+| FormationCapabilityShowcaseMod | 方阵/士兵业务配置、spawn 请求参数、可选 sidecar 场景绑定、障碍 overlay、方阵轮廓表现。 | 私有 selection runtime、私有 order runtime、私有 performer runtime、私有 config loader、私有 MassNavigation binding runtime。 |
 
 ## 端到端链路
 
@@ -37,28 +41,32 @@ launch graph 当前包含：
 flowchart TD
     Launch["Raylib launch graph"] --> Config["ConfigPipeline"]
     Config --> GameJson["game.json"]
-    Config --> Map["mass_navigation_total_war.json"]
+    Config --> Map["formation_capability_showcase.json"]
     Config --> NavConfig["MassNavigationConfig.json"]
-    Config --> TwConfig["TotalWarShowcaseConfig.json"]
+    Config --> TwConfig["FormationCapabilityShowcaseConfig.json"]
     Config --> Templates["Entities/templates.json"]
     Config --> Performers["Presentation/performers.json"]
 
-    TwConfig --> Runtime["TotalWarShowcaseRuntime"]
+    TwConfig --> Runtime["FormationCapabilityShowcaseRuntime"]
     Templates --> SpawnQueue["RuntimeEntitySpawnQueue"]
     Runtime --> SpawnQueue
-    SpawnQueue --> Receipts["RuntimeEntitySpawnReceiptQueue"]
-    Receipts --> MassBinding["MassNavigationSpawnReceiptBindingSystem"]
-    Receipts --> TwBinding["TotalWarSpawnReceiptBindingSystem"]
+    SpawnQueue --> SpawnSystem["RuntimeEntitySpawnSystem"]
+    SpawnSystem --> World["Authored ECS entities"]
+    World --> BindingGroup["SystemGroup.RuntimeEntityBinding"]
+    BindingGroup --> AgentBinding["MassNavigationAuthoredAgentBindingSystem"]
+    BindingGroup --> EnvBinding["MassNavigationEnvironmentBindingSystem"]
+    BindingGroup --> TwBinding["FormationCapabilityScenarioBindingSystem"]
 
-    MassBinding --> Agents["MassNavigation agents"]
-    TwBinding --> Formations["Formation ownership state"]
-    Formations --> SoldierTargets["Soldier target sync"]
+    AgentBinding --> Agents["MassNavigation agents"]
+    EnvBinding --> Obstacles["MassNavigation blockers / hotspots"]
+    TwBinding --> Formations["Optional showcase sidecar state"]
+    Agents --> FollowerSync["MassNavigationFormationFollowerSystem"]
 
     Selection["SelectionRuntime"] --> Orders["OrderBuffer(massNavigationMove)"]
     Orders --> Ingestion["MassNavigationOrderIngestionSystem"]
     Ingestion --> Groups["MassNavigationGroupRuntime"]
-    Groups --> Solver["MassFlowSimulationState"]
-    SoldierTargets --> Solver
+    Groups --> Solver["MassNavigationFlowSolverState"]
+    FollowerSync --> Solver
     Solver --> EcsState["WorldPositionCm / FacingDirection"]
     EcsState --> PerformerSync["Performer transform sync"]
     Performers --> PerformerRules["PerformerRuleSystem"]
@@ -91,7 +99,7 @@ Local input
   -> OrderBuffer(massNavigationMove)
   -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime
-  -> MassFlowSimulationState
+  -> MassNavigationFlowSolverState
   -> ECS position/facing handoff
   -> performer sync
 ```
@@ -100,29 +108,46 @@ order authoring 使用语义字符串。数字 id 是 runtime 实现细节。
 
 ## Spawn 链路
 
-Total War showcase 走共享 runtime spawn path：
+Formation Capability showcase 走共享 runtime spawn path，但不再用 MassNavigation 专属 post-spawn channel 绑定：
 
 ```text
-TotalWarShowcaseRuntime
+FormationCapabilityShowcaseRuntime
   -> RuntimeEntitySpawnQueue
-  -> RuntimeEntitySpawnReceiptQueue(channel = massNavigation.totalWar.runtimeSpawnReceipts)
-  -> MassNavigationSpawnReceiptBindingSystem
-  -> TotalWarSpawnReceiptBindingSystem
+  -> RuntimeEntitySpawnSystem
+  -> authored ECS components
+  -> SystemGroup.RuntimeEntityBinding
+  -> MassNavigationAuthoredAgentBindingSystem
+  -> MassNavigationEnvironmentBindingSystem
+  -> FormationCapabilityScenarioBindingSystem (optional showcase sidecar)
 ```
 
-`TotalWarSpawnReceiptBindingSystem` 不是新旧兼容 bridge。它存在的原因是“这个 spawn 出来的士兵属于哪个方阵 slot”是业务绑定，必须留在 showcase 或游戏 Mod。
+MassNavigation membership is authored by components:
+
+- `MassNavigationAgent` means the entity participates in the core MassNavigation runtime.
+- `OrderBuffer` means the entity is controllable/orderable.
+- `ManifestationObstacleIntent2D` / `CompoundObstacle2D` means the entity authors obstacle geometry.
+- `MassNavigationFlowObstacleProjection` means the bridge has projected authored obstacle geometry into the MassNavigationFlow runtime sink.
+- `MassNavigationBlockerProfile` is the runtime binding summary attached after `MassNavigationEnvironmentBindingSystem` runs.
+- `MassNavigationFormationAnchor` enables optional formation anchor behavior.
+- `MassNavigationFormationFollower` enables optional follower behavior.
+
+Formation is optional. Do not author a disabled formation component; absence of the component means absence of the feature.
+
+`MassNavigationConfig.world.obstacles[]` is obsolete. Obstacle authoring belongs to map/template ECS components. The shared spawn path materializes those components, `ManifestationObstacleBridge2DSystem` produces `MassNavigationFlowObstacleProjection`, and `MassNavigationEnvironmentBindingSystem` rebuilds solver obstacles from `MassNavigationFlowObstacleProjection + WorldPositionCm`.
+
+Showcase sidecar binding may attach `FormationCapabilityFormationAgent` / `FormationCapabilityFormationSoldier` / overlay components after core MassNavigation binding exists. That sidecar must not create a second MassNavigation runtime or bind agents through a post-spawn channel.
 
 ## 配置文件链路
 
 | 文件 | 链路职责 |
 | --- | --- |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json` | 启动 map、capacity、presentation culling、selection preview order keys。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json` | map id 和 visual heightmap 绑定。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 导航世界、solver、profiles、obstacles、cadence、arrival、avoidance、camera profiles、view residency。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` | 方阵场景、士兵 template/profile、slot layout、outline、obstacle overlay、initial selection。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` | 可 spawn 的 entity templates。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json` | performer definitions 和 lifecycle rules。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Configs/config_catalog.json` | showcase config catalog。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/game.json` | 启动 map、capacity、presentation culling、selection preview order keys。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Maps/formation_capability_showcase.json` | map id 和 visual heightmap 绑定。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/MassNavigationConfig.json` | 导航世界、solver、profiles、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/FormationCapabilityShowcaseConfig.json` | 方阵场景、士兵 template/profile、slot layout、outline、obstacle overlay、initial selection。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Entities/templates.json` | 可 spawn 的 entity templates。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Presentation/performers.json` | performer definitions 和 lifecycle rules。 |
+| `mods/showcases/formation_capability/FormationCapabilityShowcaseMod/assets/Configs/config_catalog.json` | showcase config catalog。 |
 
 ## 严格 authoring 规则
 
@@ -132,7 +157,7 @@ TotalWarShowcaseRuntime
 - 缺 visual heightmap service 失败。
 - 缺 order key 失败。
 - 缺 selection event key 失败。
-- spawn receipt capacity 不足失败。
+- runtime spawn queue capacity 不足失败。
 - authoring 使用语义字符串；runtime 可以编译成 int。
 
 ## 禁止的捷径
@@ -146,16 +171,18 @@ TotalWarShowcaseRuntime
 - 不要每帧扫描 selection 来创建 marker。
 - 不要给 showcase JSON 私建 loader。
 - 不要把移动和朝向偷偷耦合。
+- 不要在 MassNavigationMod 或 showcase Mod 里做 MassNavigation agent post-spawn channel binding。
+- 不要 author 一个“不启用”的 optional formation component；不需要 feature 就不配组件。
 
 ## 测试对齐
 
 主要 contract test：
 
-`src/Tests/PresentationTests/MassNavigationTotalWarShowcaseContractTests.cs`
+`src/Tests/PresentationTests/FormationCapabilityShowcaseContractTests.cs`
 
 它应该覆盖：
 
-- launch graph 包含 Total War entry mod。
+- launch graph 包含 Formation Capability entry mod。
 - showcase config 可加载。
 - 方阵 template id 和士兵 template id 存在。
 - 方阵可选中、可接订单。
@@ -165,7 +192,8 @@ TotalWarShowcaseRuntime
 - obstacle overlay 配置存在。
 - visual heightmap 归 map 持有。
 - 士兵速度 profile 大于方阵速度 profile。
-- spawn receipt binding 正确绑定方阵和士兵。
+- core MassNavigation runtime binding 正确绑定方阵和士兵。
+- optional sidecar scenario binding 只绑定 showcase 业务组件。
 
 ## 当前验证提示
 

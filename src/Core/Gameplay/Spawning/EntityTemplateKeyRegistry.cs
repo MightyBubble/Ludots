@@ -27,6 +27,8 @@ namespace Ludots.Core.Gameplay.Spawning
 
         public string GetName(int templateKeyId) => _keys.GetName(templateKeyId);
 
+        public RegistryMapping[] SnapshotMappings() => _keys.SnapshotMappings();
+
         public void Freeze() => _keys.Freeze();
 
         private static StringIntRegistry CreateRegistry(int capacity)

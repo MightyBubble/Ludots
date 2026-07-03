@@ -10,7 +10,7 @@ Deliver a minimal playable champion skill sandbox mod that:
 - lets the player select multiple Ezreal, Garen, and Jayce instances
 - shows different command panel content based on selected entity and current form/state
 - supports three global cast modes through one shared toolbar
-- uses the existing GAS / selection / command panel / indicator pipelines
+- uses the existing GAS / selection / command panel / aim presentation pipelines
 - gives every skill a clear visible effect expression through the performer system
 - supports camera reset, free camera, follow selected entity, and weighted selected-group follow
 
@@ -32,7 +32,7 @@ Concrete code entry points already confirmed:
 - Ability form slot routing: `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`
 - Ability form config loading: `src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`
 - Selection runtime: `src/Core/Input/Selection/`
-- Indicator bridge: `mods/CoreInputMod/Systems/AbilityAimOverlayPresentationSystem.cs`
+- Aim presentation projection: `mods/CoreInputMod/Systems/AbilityAimPresentationProjectionSystem.cs` + `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs`
 - Performer runtime:
   - `src/Core/Presentation/Systems/PerformerRuleSystem.cs`
   - `src/Core/Presentation/Systems/PerformerRuntimeSystem.cs`

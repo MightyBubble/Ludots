@@ -18,6 +18,7 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -58,6 +59,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
+        private readonly PerformPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
         private Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
@@ -789,10 +791,10 @@ namespace Ludots.Core.Presentation.Systems
                 switch (value.Source)
                 {
                     case ValueSourceKind.EntityColor:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveEntityColorChannel(owner, value.SourceId), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveEntityColorChannel(entity, owner, value.SourceId), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.EntityColorVector:
-                        SetParam(entity, binding.ParamKey, ParamLane.Vector, 0f, 0, ResolveEntityColor(owner));
+                        SetParam(entity, binding.ParamKey, ParamLane.Vector, 0f, 0, ResolveEntityColor(entity, owner));
                         break;
                     case ValueSourceKind.FacingRadians:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner), 0, Vector4.Zero);
@@ -2215,15 +2217,60 @@ namespace Ludots.Core.Presentation.Systems
             return max <= 0f ? 0f : Math.Clamp(current / max, 0f, 1f);
         }
 
-        private float ResolveEntityColorChannel(Entity owner, int channelIndex)
+        private float ResolveEntityColorChannel(Entity performer, Entity owner, int channelIndex)
         {
-            Vector4 color = ResolveEntityColor(owner);
+            Vector4 color = ResolveEntityColor(performer, owner);
             return channelIndex switch { 0 => color.X, 1 => color.Y, 2 => color.Z, 3 => color.W, _ => 0f };
         }
 
-        private Vector4 ResolveEntityColor(Entity owner)
+        private Vector4 ResolveEntityColor(Entity performer, Entity owner)
         {
+            if (TryResolveViewerRelationshipColor(performer, owner, out Vector4 relationshipColor))
+            {
+                return relationshipColor;
+            }
+
             return World.IsAlive(owner) ? TeamColorResolver.Resolve(World, owner) : TeamColorResolver.DefaultColor;
+        }
+
+        private bool TryResolveViewerRelationshipColor(Entity performer, Entity owner, out Vector4 color)
+        {
+            color = default;
+            if (!World.IsAlive(performer) ||
+                !World.Has<PerformerRelationContext>(performer) ||
+                !World.IsAlive(owner))
+            {
+                return false;
+            }
+
+            Entity viewer = World.Get<PerformerRelationContext>(performer).Viewer;
+            if (!World.IsAlive(viewer))
+            {
+                return false;
+            }
+
+            PerformAudienceContext audience = _phaseResolver.CreateAudienceContext(World, viewer);
+            if (!audience.HasViewerTeam && !audience.HasViewerOwner)
+            {
+                return false;
+            }
+
+            PerformPhaseInput input = _phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
+            if (!input.HasTeamRelationship && !input.IsOwnedByAudience)
+            {
+                return false;
+            }
+
+            PerformPhaseResult result = _phaseResolver.Resolve(in input);
+            color = result.IsOwnedByAudience
+                ? TeamColorResolver.Team1Color
+                : result.TeamRelationship switch
+            {
+                TeamRelationship.Friendly => TeamColorResolver.Team1Color,
+                TeamRelationship.Hostile => TeamColorResolver.Team2Color,
+                _ => TeamColorResolver.DefaultColor,
+            };
+            return true;
         }
 
         private float ResolveFacingRadians(Entity owner)

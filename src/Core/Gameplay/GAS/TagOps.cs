@@ -66,6 +66,27 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
 
+        public bool EffectiveMayChangeForDirtyTags(int tagId, in GameplayTagContainer dirtyTags)
+        {
+            if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
+            {
+                return false;
+            }
+
+            if (dirtyTags.HasTag(tagId))
+            {
+                return true;
+            }
+
+            if (!_rules.HasRule(tagId))
+            {
+                return false;
+            }
+
+            ref readonly var compiled = ref _rules.Get(tagId);
+            return compiled.DisabledIfAny != 0 && dirtyTags.Intersects(in compiled.DisabledIfMask);
+        }
+
         // ── Public API: without DirtyFlags ──
 
         public unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)

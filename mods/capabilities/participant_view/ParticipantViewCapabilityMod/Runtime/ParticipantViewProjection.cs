@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
@@ -149,14 +150,21 @@ public static class ParticipantViewProjection
             return ParticipantKnowledgeSnapshot.Unknown(target);
         }
 
-        Span<Entity> scopes = stackalloc Entity[1] { viewer };
+        Span<Entity> scopeMembers = stackalloc Entity[1];
         Span<Entity> relationSources = stackalloc Entity[32];
         Span<Entity> relationTargets = stackalloc Entity[64];
+        ScopeKey viewerScope = ScopeKey.Self;
+        var roleContext = new RoleResolverContext(
+            actor: viewer,
+            subject: viewer,
+            viewer: viewer);
         if (!resolver.TryResolveWithRelationGrants(
                 viewer,
                 target,
                 currentTick,
-                scopes,
+                in viewerScope,
+                in roleContext,
+                scopeMembers,
                 relationSources,
                 relationTargets,
                 out KnowledgeProjection projection))

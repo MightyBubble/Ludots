@@ -16,10 +16,10 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 	private readonly object _sync = new();
 	private readonly Dictionary<string, IWebUiTopicProducer> _topics = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, WebUiDataPlaneSession> _sessions = new(StringComparer.Ordinal);
-	private readonly WebUiCommandRouter? _commandRouter;
+	private readonly IWebUiCommandDispatcher? _commandRouter;
 	private bool _disposed;
 
-	public WebUiDataPlaneRuntime(WebUiCommandRouter? commandRouter = null)
+	public WebUiDataPlaneRuntime(IWebUiCommandDispatcher? commandRouter = null)
 	{
 		_commandRouter = commandRouter;
 	}
@@ -121,6 +121,54 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		}
 	}
 
+	public async ValueTask<int> PublishTopicAsync(
+		string topic,
+		JsonElement parameters = default,
+		long requestId = 0,
+		CancellationToken cancellationToken = default)
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			throw new ArgumentException("Topic is required.", nameof(topic));
+		}
+
+		topic = topic.Trim();
+		IWebUiTopicProducer? producer;
+		WebUiDataPlaneSession[] sessions;
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			if (!_topics.TryGetValue(topic, out producer))
+			{
+				throw new InvalidOperationException($"Unknown WebUI topic '{topic}'.");
+			}
+
+			sessions = _sessions.Values.ToArray();
+		}
+
+		int published = 0;
+		foreach (WebUiDataPlaneSession session in sessions)
+		{
+			if (!session.IsSubscribed(topic))
+			{
+				continue;
+			}
+
+			var context = new WebUiTopicContext(session.SessionId, topic, requestId, parameters);
+			if (!producer.TryCreateSnapshot(in context, out WebUiOutboundPacket packet))
+			{
+				continue;
+			}
+
+			session.Enqueue(packet with { SessionId = session.SessionId, RequestId = requestId });
+			await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+			published++;
+		}
+
+		return published;
+	}
+
 	private async ValueTask HandlePacketAsync(
 		WebUiDataPlaneSession session,
 		WebUiInboundPacket packet,
@@ -152,18 +200,7 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		switch (envelope.Kind)
 		{
 			case "handshake":
-				session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
-					session.SessionId,
-					envelope.RequestId,
-					"handshakeAck",
-					envelope.Topic,
-					new
-					{
-						session.SessionId,
-						capabilities = session.Transport.Capabilities,
-						protocol = WebUiDataPlaneProtocol.CurrentSchemaVersion
-					}));
-				await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+				await HandleHandshakeAsync(session, envelope, cancellationToken).ConfigureAwait(false);
 				break;
 			case "subscribe":
 				await SubscribeAsync(session, envelope, cancellationToken).ConfigureAwait(false);
@@ -190,6 +227,74 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 				await HandleCommandAsync(session, commandPacket, cancellationToken).ConfigureAwait(false);
 				break;
 		}
+	}
+
+	private static async ValueTask HandleHandshakeAsync(
+		WebUiDataPlaneSession session,
+		WebUiControlEnvelope envelope,
+		CancellationToken cancellationToken)
+	{
+		string[] missing = GetMissingRequiredCapabilities(envelope.Payload, session.Transport.Capabilities);
+		if (missing.Length > 0)
+		{
+			session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
+				session.SessionId,
+				envelope.RequestId,
+				"error",
+				envelope.Topic,
+				new
+				{
+					code = "transport_capability_mismatch",
+					message = "The requested WebUI DataPlane transport capabilities are not available.",
+					requiredCapabilities = missing,
+					capabilities = session.Transport.Capabilities
+				}));
+			await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+			return;
+		}
+
+		session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
+			session.SessionId,
+			envelope.RequestId,
+			"handshakeAck",
+			envelope.Topic,
+			new
+			{
+				session.SessionId,
+				transportMode = session.Transport.Capabilities.ModeName,
+				capabilities = session.Transport.Capabilities,
+				protocol = WebUiDataPlaneProtocol.CurrentSchemaVersion
+			}));
+		await session.FlushAsync(cancellationToken).ConfigureAwait(false);
+	}
+
+	private static string[] GetMissingRequiredCapabilities(
+		JsonElement payload,
+		WebUiTransportCapabilities capabilities)
+	{
+		if (payload.ValueKind != JsonValueKind.Object ||
+			!payload.TryGetProperty("requiredCapabilities", out JsonElement required) ||
+			required.ValueKind != JsonValueKind.Array)
+		{
+			return Array.Empty<string>();
+		}
+
+		var missing = new List<string>();
+		foreach (JsonElement item in required.EnumerateArray())
+		{
+			if (item.ValueKind != JsonValueKind.String)
+			{
+				continue;
+			}
+
+			string? capability = item.GetString();
+			if (!string.IsNullOrWhiteSpace(capability) && !capabilities.Satisfies(capability))
+			{
+				missing.Add(capability.Trim());
+			}
+		}
+
+		return missing.ToArray();
 	}
 
 	private async ValueTask SubscribeAsync(
@@ -388,7 +493,21 @@ public sealed class WebUiDataPlaneSession : IDisposable, IAsyncDisposable
 			return;
 		}
 
-		_ = _packetHandler(this, packet with { SessionId = SessionId }, CancellationToken.None);
+		_ = HandlePacketReceivedAsync(packet with { SessionId = SessionId });
+	}
+
+	private async Task HandlePacketReceivedAsync(WebUiInboundPacket packet)
+	{
+		try
+		{
+			await _packetHandler(this, packet, CancellationToken.None).ConfigureAwait(false);
+		}
+		catch (ObjectDisposedException)
+		{
+		}
+		catch (OperationCanceledException)
+		{
+		}
 	}
 
 	public void Dispose()

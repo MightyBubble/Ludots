@@ -1,5 +1,8 @@
 using System.Threading.Tasks;
+using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.AI.Components;
+using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 
@@ -34,7 +37,51 @@ namespace AIInspectorMod.Triggers
             _modContext.Log($"[AIInspectorMod] HtnTasks: {compiled.HtnDomain.Tasks.Length}");
             _modContext.Log($"[AIInspectorMod] HtnMethods: {compiled.HtnDomain.Methods.Length}");
             _modContext.Log($"[AIInspectorMod] HtnSubtasks: {compiled.HtnDomain.Subtasks.Length}");
+            LogUtilityRuntime(compiled.UtilityRuntime);
+            LogUtilityTraces(engine.World);
             return Task.CompletedTask;
+        }
+
+        private void LogUtilityRuntime(in UtilityAiCompiledRuntime runtime)
+        {
+            _modContext.Log($"[AIInspectorMod] Utility.Enabled: {runtime.IsEnabled}");
+            _modContext.Log($"[AIInspectorMod] Utility.Profiles: {runtime.Profiles.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.DecisionMakers: {runtime.DecisionMakers.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Decisions: {runtime.Decisions.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Considerations: {runtime.Considerations.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.TargetFilters: {runtime.TargetFilters.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.TargetFilterOps: {runtime.TargetFilterOps.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Inputs: {runtime.Inputs.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Normalizations: {runtime.Normalizations.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Curves: {runtime.Curves.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Tasks: {runtime.Tasks.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Stances: {runtime.Stances.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Actuators: {runtime.Actuators.Length}");
+        }
+
+        private void LogUtilityTraces(World world)
+        {
+            if (world == null)
+            {
+                _modContext.Log("[AIInspectorMod] Utility.TraceEntities: 0");
+                return;
+            }
+
+            var query = new QueryDescription().WithAll<UtilityAiDecisionTrace>();
+            int count = 0;
+            foreach (ref var chunk in world.Query(in query))
+            {
+                var traces = chunk.GetSpan<UtilityAiDecisionTrace>();
+                foreach (var index in chunk)
+                {
+                    ref readonly var trace = ref traces[index];
+                    _modContext.Log(
+                        $"[AIInspectorMod] Utility.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
+                    count++;
+                }
+            }
+
+            _modContext.Log($"[AIInspectorMod] Utility.TraceEntities: {count}");
         }
     }
 }

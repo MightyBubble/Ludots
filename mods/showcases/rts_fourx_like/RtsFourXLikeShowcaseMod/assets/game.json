@@ -1,0 +1,8 @@
+{
+  "startupMapId": "rts_fourx_like",
+  "windowTitle": "Ludots Engine - RTS 4X Like Production Showcase",
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60
+}

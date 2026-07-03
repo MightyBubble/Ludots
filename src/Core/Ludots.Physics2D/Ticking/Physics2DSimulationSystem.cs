@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 
@@ -25,47 +26,59 @@ namespace Ludots.Core.Physics2D.Ticking
         private readonly World _world;
         private readonly IClock _clock;
         private readonly Physics2DTickPolicy _tickPolicy;
+        private readonly Physics2DBroadphasePolicy _broadphasePolicy;
         private Entity _statsEntity;
         private Entity _runtimeStateEntity;
         private QueryDescription _activePairsQuery;
         private QueryDescription _awakeDynamicBodiesQuery;
         private readonly Stopwatch _stopwatch = new Stopwatch();
 
-        private readonly NarrowPhaseSystem2D _narrowPhase;
-        private readonly SolverSystem2D _solver;
-        private readonly ApplyImpulsesSystem2D _applyImpulses;
-        private readonly PositionCorrectionSystem2D _positionCorrection;
-        private readonly FieldDetectorSystem _fieldDetector;
-        private readonly IntegrationSystem2D _integration;
-        private readonly UpdateMotionSystem _updateMotion;
-        private readonly BuildIslandsSystem _buildIslands;
-        private readonly SleepingSystem _sleeping;
-        private readonly CleanupSystem2D _cleanup;
+        private readonly Physics2DPipelineDefinition _pipeline;
 
         private int _cachedPolicyVersion;
         private int _fixedHz;
         private int _physicsHz;
         private DiscreteRateTickDistributor? _distributor;
 
-        public Physics2DSimulationSystem(World world, IClock clock, Physics2DTickPolicy tickPolicy)
+        public Physics2DSimulationSystem(
+            World world,
+            IClock clock,
+            Physics2DTickPolicy tickPolicy,
+            Physics2DSolverConfig solverConfig,
+            ShapeDataStorage2D shapeStorage)
+            : this(
+                world,
+                clock,
+                tickPolicy,
+                solverConfig,
+                shapeStorage,
+                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()))
+        {
+        }
+
+        public Physics2DSimulationSystem(
+            World world,
+            IClock clock,
+            Physics2DTickPolicy tickPolicy,
+            Physics2DSolverConfig solverConfig,
+            ShapeDataStorage2D shapeStorage,
+            Physics2DBroadphasePolicy broadphasePolicy)
         {
             _world = world;
             _clock = clock;
             _tickPolicy = tickPolicy;
 
-            Build = new BuildPhysicsWorldSystem2D(world);
-            Spatial = new AdaptiveSpatialSystem2D(world, Build);
-            _narrowPhase = new NarrowPhaseSystem2D(world);
-            _solver = new SolverSystem2D(world);
-            _applyImpulses = new ApplyImpulsesSystem2D(world);
-            _positionCorrection = new PositionCorrectionSystem2D(world);
-            _fieldDetector = new FieldDetectorSystem(world);
-            _integration = new IntegrationSystem2D(world);
-            _updateMotion = new UpdateMotionSystem(world);
-            _buildIslands = new BuildIslandsSystem(world);
-            _sleeping = new SleepingSystem(world);
-            _cleanup = new CleanupSystem2D(world);
+            ArgumentNullException.ThrowIfNull(solverConfig);
+            ArgumentNullException.ThrowIfNull(shapeStorage);
+            ArgumentNullException.ThrowIfNull(broadphasePolicy);
+
+            _broadphasePolicy = broadphasePolicy;
+            _pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, shapeStorage);
+            Build = _pipeline.Build;
+            Spatial = _pipeline.Spatial;
         }
+
+        public ReadOnlySpan<string> PipelineStepNames => _pipeline.StepNames;
 
         public void Initialize()
         {
@@ -74,18 +87,11 @@ namespace Ludots.Core.Physics2D.Ticking
             _runtimeStateEntity = _world.Create(new Physics2DRuntimeState());
             _awakeDynamicBodiesQuery = new QueryDescription().WithAll<Mass2D>().WithNone<SleepingTag>();
 
-            Build.Initialize();
-            Spatial.Initialize();
-            _narrowPhase.Initialize();
-            _solver.Initialize();
-            _applyImpulses.Initialize();
-            _positionCorrection.Initialize();
-            _fieldDetector.Initialize();
-            _integration.Initialize();
-            _updateMotion.Initialize();
-            _buildIslands.Initialize();
-            _sleeping.Initialize();
-            _cleanup.Initialize();
+            ReadOnlySpan<ISystem<float>> systems = _pipeline.Systems;
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Initialize();
+            }
         }
 
         public void BeforeUpdate(in float t)
@@ -125,10 +131,24 @@ namespace Ludots.Core.Physics2D.Ticking
             }
 
             bool anyAwakeDynamicBodies = false;
-            _world.Query(in _awakeDynamicBodiesQuery, (ref Mass2D mass) =>
+            var awakeChunks = _world.Query(in _awakeDynamicBodiesQuery);
+            foreach (var chunk in awakeChunks)
             {
-                if (mass.IsDynamic) anyAwakeDynamicBodies = true;
-            });
+                var masses = chunk.GetArray<Mass2D>();
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    if (masses[i].IsDynamic)
+                    {
+                        anyAwakeDynamicBodies = true;
+                        break;
+                    }
+                }
+
+                if (anyAwakeDynamicBodies)
+                {
+                    break;
+                }
+            }
             _world.Set(_runtimeStateEntity, new Physics2DRuntimeState 
             { 
                 AnyAwakeDynamicBodies = anyAwakeDynamicBodies,
@@ -145,7 +165,13 @@ namespace Ludots.Core.Physics2D.Ticking
                 PhysicsStepsLastFixedTick = stepsToRun,
                 PhysicsUpdateMs = _stopwatch.Elapsed.TotalMilliseconds,
                 PotentialPairs = potentialPairs,
-                ContactPairs = contactPairs
+                ContactPairs = contactPairs,
+                DynamicBodies = Build.DynamicRigidBodyDescriptors.Count,
+                StaticBodies = Build.StaticRigidBodyDescriptors.Count,
+                DirtyStaticBodies = Build.DirtyStaticBodyCountLastUpdate,
+                BroadphaseStrategy = (int)Spatial.CurrentStrategyKind,
+                BroadphaseCellSizeCm = Spatial.CurrentCellSizeCm,
+                DroppedPairs = Spatial.DroppedPairsLastUpdate
             };
             _world.Set(_statsEntity, stats);
         }
@@ -160,18 +186,12 @@ namespace Ludots.Core.Physics2D.Ticking
 
         private void StepOnce(float dt)
         {
-            Build.Update(dt);
-            Spatial.Update(dt);
-            _narrowPhase.Update(dt);
-            _solver.Update(dt);
-            _applyImpulses.Update(dt);
-            _positionCorrection.Update(dt);
-            _fieldDetector.Update(dt);
-            _integration.Update(dt);
-            _updateMotion.Update(dt);
-            _buildIslands.Update(dt);
-            _sleeping.Update(dt);
-            _cleanup.Update(dt);
+            Spatial.ApplyBroadphasePolicy(_broadphasePolicy);
+            ReadOnlySpan<ISystem<float>> systems = _pipeline.Systems;
+            for (int i = 0; i < systems.Length; i++)
+            {
+                systems[i].Update(dt);
+            }
         }
 
         private void EnsureSchedulerInitialized(float fixedDeltaTime)

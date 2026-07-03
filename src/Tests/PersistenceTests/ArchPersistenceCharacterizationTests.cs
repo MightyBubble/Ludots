@@ -1,0 +1,366 @@
+using Arch.Core;
+using Arch.Persistence;
+using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Persistence;
+using NUnit.Framework;
+using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
+
+namespace Ludots.Tests.Persistence;
+
+[TestFixture]
+public sealed class ArchPersistenceCharacterizationTests
+{
+    [Test]
+    public void BinaryWorldRoundTripPreservesSimpleBlittableComponents()
+    {
+        using World world = World.Create();
+        world.Create(
+            WorldPositionCm.FromCm(1234, -5678),
+            new FacingDirection { AngleRad = 1.25f });
+
+        using World restored = RoundTrip(world);
+        Entity restoredEntity = FindSingle<WorldPositionCm>(restored);
+
+        ref readonly WorldPositionCm position = ref restored.Get<WorldPositionCm>(restoredEntity);
+        ref readonly FacingDirection facing = ref restored.Get<FacingDirection>(restoredEntity);
+
+        Assert.That(position.ToWorldCmInt2(), Is.EqualTo(new WorldCmInt2(1234, -5678)));
+        Assert.That(facing.AngleRad, Is.EqualTo(1.25f));
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripPreservesEmptyWorldShape()
+    {
+        using World world = World.Create();
+
+        using World restored = RoundTrip(world);
+
+        Assert.That(restored.CountEntities(in QueryDescription.Null), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripPreservesManagedNameString()
+    {
+        using World world = World.Create();
+        world.Create(new Name { Value = "Save-中文-Name" });
+
+        using World restored = RoundTrip(world);
+        Entity restoredEntity = FindSingle<Name>(restored);
+
+        Assert.That(restored.Get<Name>(restoredEntity).Value, Is.EqualTo("Save-中文-Name"));
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripPreservesRestoredEntityAliveMetadata()
+    {
+        using World world = World.Create();
+        world.Create(WorldPositionCm.FromCm(10, 20));
+
+        var serializer = new ArchBinarySerializer();
+
+        byte[] bytes = serializer.Serialize(world);
+        using World restored = serializer.Deserialize(bytes);
+        Entity restoredEntity = FindSingle<WorldPositionCm>(restored);
+
+        Assert.That(restored.IsAlive(restoredEntity), Is.True);
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripPreservesEntityVersionMetadata()
+    {
+        using World world = World.Create();
+        Entity recycled = world.Create(new Name { Value = "old" });
+        int recycledId = recycled.Id;
+        world.Destroy(recycled);
+        Entity current = world.Create(new Name { Value = "new" });
+        Assert.That(current.Id, Is.EqualTo(recycledId));
+        Assert.That(current.Version, Is.GreaterThan(0));
+
+        var serializer = new ArchBinarySerializer();
+
+        byte[] bytes = serializer.Serialize(world);
+        using World restored = serializer.Deserialize(bytes);
+        Entity restoredEntity = FindSingle<Name>(restored);
+
+        Assert.That(restoredEntity.Id, Is.EqualTo(current.Id));
+        Assert.That(restoredEntity.Version, Is.EqualTo(current.Version));
+        Assert.That(restored.IsAlive(restoredEntity), Is.True);
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripCurrentlyFailsOrCorruptsAttributeBufferFixedStorage()
+    {
+        using World world = World.Create();
+        var attributes = new AttributeBuffer();
+        attributes.SetBase(1, 12.5f);
+        attributes.SetCurrent(1, 7.25f);
+        attributes.SetBase(7, 99f);
+        world.Create(attributes);
+
+        World? restored = TryRoundTrip(world, out Exception? error);
+        try
+        {
+            if (error is not null)
+            {
+                Assert.That(error, Is.Not.Null);
+                return;
+            }
+
+            bool preserved = TryFindSingle<AttributeBuffer>(restored!, out Entity restoredEntity) &&
+                restored!.Get<AttributeBuffer>(restoredEntity).HasAttribute(1) &&
+                restored.Get<AttributeBuffer>(restoredEntity).GetBase(1) == 12.5f &&
+                restored.Get<AttributeBuffer>(restoredEntity).GetCurrent(1) == 7.25f &&
+                restored.Get<AttributeBuffer>(restoredEntity).HasAttribute(7) &&
+                restored.Get<AttributeBuffer>(restoredEntity).GetBase(7) == 99f;
+
+            Assert.That(preserved, Is.False);
+        }
+        finally
+        {
+            restored?.Dispose();
+        }
+    }
+
+    [Test]
+    public void CoreBinarySerializerPreservesAttributeBufferFixedStorage()
+    {
+        using World world = World.Create();
+        var attributes = new AttributeBuffer();
+        attributes.SetBase(1, 12.5f);
+        attributes.SetCurrent(1, 7.25f);
+        attributes.SetBase(7, 99f);
+        world.Create(attributes);
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<AttributeBuffer>(restored);
+        ref readonly AttributeBuffer restoredAttributes = ref restored.Get<AttributeBuffer>(restoredEntity);
+
+        Assert.That(restoredAttributes.HasAttribute(1), Is.True);
+        Assert.That(restoredAttributes.GetBase(1), Is.EqualTo(12.5f));
+        Assert.That(restoredAttributes.GetCurrent(1), Is.EqualTo(7.25f));
+        Assert.That(restoredAttributes.HasAttribute(7), Is.True);
+        Assert.That(restoredAttributes.GetBase(7), Is.EqualTo(99f));
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripCurrentlyFailsOrCorruptsGameplayTagContainerFixedStorage()
+    {
+        using World world = World.Create();
+        var tags = new GameplayTagContainer();
+        tags.AddTag(3);
+        tags.AddTag(130);
+        world.Create(tags);
+
+        World? restored = TryRoundTrip(world, out Exception? error);
+        try
+        {
+            if (error is not null)
+            {
+                Assert.That(error, Is.Not.Null);
+                return;
+            }
+
+            bool preserved = TryFindSingle<GameplayTagContainer>(restored!, out Entity restoredEntity) &&
+                restored!.Get<GameplayTagContainer>(restoredEntity).HasTag(3) &&
+                restored.Get<GameplayTagContainer>(restoredEntity).HasTag(130);
+
+            Assert.That(preserved, Is.False);
+        }
+        finally
+        {
+            restored?.Dispose();
+        }
+    }
+
+    [Test]
+    public void CoreBinarySerializerPreservesGameplayTagContainerFixedStorage()
+    {
+        using World world = World.Create();
+        var tags = new GameplayTagContainer();
+        tags.AddTag(3);
+        tags.AddTag(130);
+        world.Create(tags);
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<GameplayTagContainer>(restored);
+        ref readonly GameplayTagContainer restoredTags = ref restored.Get<GameplayTagContainer>(restoredEntity);
+
+        Assert.That(restoredTags.HasTag(3), Is.True);
+        Assert.That(restoredTags.HasTag(130), Is.True);
+    }
+
+    [Test]
+    public void BinaryWorldRoundTripCurrentlyFailsOrCorruptsEntityRefFixedStorage()
+    {
+        using World world = World.Create();
+        Entity firstTarget = world.Create(new Name { Value = "target-a" });
+        Entity secondTarget = world.Create(new Name { Value = "target-b" });
+        var refs = new BlackboardEntityBuffer();
+        refs.Set(42, firstTarget);
+        refs.Set(43, secondTarget);
+        world.Create(refs);
+
+        World? restored = TryRoundTrip(world, out Exception? error);
+        try
+        {
+            if (error is not null)
+            {
+                Assert.That(error, Is.Not.Null);
+                return;
+            }
+
+            bool preserved = TryFindSingle<BlackboardEntityBuffer>(restored!, out Entity restoredEntity) &&
+                restored!.Get<BlackboardEntityBuffer>(restoredEntity).TryGet(42, out Entity firstRestoredRef) &&
+                restored.Get<BlackboardEntityBuffer>(restoredEntity).TryGet(43, out Entity secondRestoredRef) &&
+                firstRestoredRef.Id == firstTarget.Id &&
+                firstRestoredRef.Version == firstTarget.Version &&
+                secondRestoredRef.Id == secondTarget.Id &&
+                secondRestoredRef.Version == secondTarget.Version;
+
+            Assert.That(preserved, Is.False);
+        }
+        finally
+        {
+            restored?.Dispose();
+        }
+    }
+
+    [Test]
+    public void CoreBinarySerializerPreservesEntityRefFixedStorage()
+    {
+        using World world = World.Create();
+        Entity firstTarget = world.Create(new Name { Value = "target-a" });
+        Entity secondTarget = world.Create(new Name { Value = "target-b" });
+        var refs = new BlackboardEntityBuffer();
+        refs.Set(42, firstTarget);
+        refs.Set(43, secondTarget);
+        world.Create(refs);
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<BlackboardEntityBuffer>(restored);
+        ref readonly BlackboardEntityBuffer restoredRefs = ref restored.Get<BlackboardEntityBuffer>(restoredEntity);
+
+        Assert.That(restoredRefs.TryGet(42, out Entity firstRestoredRef), Is.True);
+        Assert.That(restoredRefs.TryGet(43, out Entity secondRestoredRef), Is.True);
+        Assert.That(firstRestoredRef.Id, Is.EqualTo(firstTarget.Id));
+        Assert.That(firstRestoredRef.Version, Is.EqualTo(firstTarget.Version));
+        Assert.That(secondRestoredRef.Id, Is.EqualTo(secondTarget.Id));
+        Assert.That(secondRestoredRef.Version, Is.EqualTo(secondTarget.Version));
+    }
+
+    [Test]
+    public void CorePersistenceFormatterRegistryCoversComponentRegistryTypes()
+    {
+        IReadOnlySet<Type> formatterTypes = LudotsCorePersistenceFormatters.GetFormatterComponentTypes();
+        string[] missing = CoreComponentRegistry.GetRegisteredComponentTypes()
+            .Values
+            .Select(componentType => componentType.Type)
+            .Where(type => !formatterTypes.Contains(type))
+            .Select(type => type.FullName ?? type.Name)
+            .OrderBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+
+        Assert.That(missing, Is.Empty);
+    }
+
+    [Test]
+    public void CoreBinarySerializerRejectsPersistedComponentsWithoutLudotsFormatter()
+    {
+        using World world = World.Create();
+        world.Create(new UnsupportedManagedComponent("contractless-is-not-a-save-format"));
+
+        var error = Assert.Throws<SaveContextException>(() => CoreRoundTrip(world));
+
+        Assert.That(error!.Message, Does.Contain(nameof(UnsupportedManagedComponent)));
+        Assert.That(error.Message, Does.Contain("without Ludots persistence formatters"));
+    }
+
+    [Test]
+    public void CorePersistenceFormattersAreScannedOnceForRepeatedSerializes()
+    {
+        LudotsCorePersistenceFormatters.ResetCacheForTests();
+        using World world = World.Create();
+        world.Create(new Name { Value = "scan-once" }, WorldPositionCm.FromCm(1, 2));
+        var serializer = new LudotsBinaryWorldSerializer();
+
+        serializer.Serialize(world);
+        serializer.Serialize(world);
+
+        Assert.That(LudotsCorePersistenceFormatters.FormatterCacheBuildCountForTests, Is.EqualTo(1));
+    }
+
+    private static World RoundTrip(World world)
+    {
+        var serializer = new ArchBinarySerializer();
+        byte[] bytes = serializer.Serialize(world);
+        return serializer.Deserialize(bytes);
+    }
+
+    private static World CoreRoundTrip(World world)
+    {
+        var serializer = new LudotsBinaryWorldSerializer();
+        byte[] bytes = serializer.Serialize(world);
+        return serializer.Deserialize(bytes);
+    }
+
+    private static World? TryRoundTrip(World world, out Exception? error)
+    {
+        try
+        {
+            error = null;
+            return RoundTrip(world);
+        }
+        catch (Exception ex)
+        {
+            error = ex;
+            return null;
+        }
+    }
+
+    private static Entity FindSingle<T>(World world)
+    {
+        bool found = TryFindSingle<T>(world, out Entity result, out int count);
+        Assert.That(found, Is.True);
+        Assert.That(count, Is.EqualTo(1));
+        return result;
+    }
+
+    private static bool TryFindSingle<T>(World world, out Entity result)
+    {
+        return TryFindSingle<T>(world, out result, out _);
+    }
+
+    private static bool TryFindSingle<T>(World world, out Entity result, out int count)
+    {
+        var query = new QueryDescription().WithAll<T>();
+        Entity found = Entity.Null;
+        int matches = 0;
+
+        world.Query(in query, entity =>
+        {
+            found = entity;
+            matches++;
+        });
+
+        result = found;
+        count = matches;
+        return count == 1;
+    }
+
+    private sealed class UnsupportedManagedPayload
+    {
+        public string Value { get; set; } = string.Empty;
+    }
+
+    private readonly struct UnsupportedManagedComponent
+    {
+        public UnsupportedManagedComponent(string value)
+        {
+            Payload = new UnsupportedManagedPayload { Value = value };
+        }
+
+        public UnsupportedManagedPayload Payload { get; }
+    }
+}

@@ -49,6 +49,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        public static bool IsBuiltinKey(string key)
+        {
+            return TryRequireCanonicalKey(key, out string canonicalKey) &&
+                   BuiltinIdsByKey.ContainsKey(canonicalKey);
+        }
+
         public static string GetKey(int id)
         {
             if (BuiltinKeysById.TryGetValue(id, out string? builtinKey))
@@ -59,6 +65,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             lock (Sync)
             {
                 return _custom.GetName(id);
+            }
+        }
+
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            lock (Sync)
+            {
+                return RegistryMappingSnapshot.Merge(
+                    RegistryMappingSnapshot.FromNameToId(BuiltinIdsByKey),
+                    _custom.SnapshotMappings());
             }
         }
 

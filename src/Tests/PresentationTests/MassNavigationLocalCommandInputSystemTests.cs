@@ -10,13 +10,14 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Layers;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
-using MassNavigationMod;
-using MassNavigationMod.Runtime;
-using MassNavigationMod.Systems;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -38,7 +39,7 @@ namespace Ludots.Tests.Presentation
             using TestContextScope context = CreateContext();
             Vector2 target = new(1200f, 1400f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
@@ -56,7 +57,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.HasActive, Is.True);
@@ -79,7 +80,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, BlockingOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.HasActive, Is.True);
@@ -97,7 +98,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, MoveOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
@@ -115,7 +116,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, MoveOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
@@ -129,7 +130,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.EnemyAgent);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
@@ -146,7 +147,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
             Vector2 target = new(1600f, 1800f);
 
-            context.LocalCommandInput.SubmitMoveCommandForTests(target);
+            context.SubmitMoveCommand(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
@@ -161,7 +162,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.LocalCommandInput.SubmitMoveCommandForTests(new Vector2(1600f, 1800f)))!;
+                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
 
             Assert.That(ex.Message, Does.Contain(MassNavigationOrderKeys.Move));
             Assert.That(ex.Message, Does.Not.Contain(RejectedMoveToOrderKey));
@@ -176,7 +177,7 @@ namespace Ludots.Tests.Presentation
             context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.LocalCommandInput.SubmitMoveCommandForTests(new Vector2(1600f, 1800f)))!;
+                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
 
             Assert.That(ex.Message, Does.Contain("current selection container"));
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
@@ -223,17 +224,6 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
                 () => simulation.SetSelection(new[] { Entity.Null, Entity.Null }, revision: 1))!;
             Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
-
-            string source = File.ReadAllText(Path.Combine(
-                FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "Runtime",
-                "MassNavigationSimulationRuntime.cs"));
-            Assert.That(source, Does.Not.Contain("Array.Resize(ref _selectionScratch"));
-            Assert.That(source, Does.Not.Contain("Array.Resize(ref _selectedEntities"));
         }
 
         private static TestContextScope CreateContext(
@@ -252,14 +242,12 @@ namespace Ludots.Tests.Presentation
             World world = engine.World;
             Entity localPlayer = world.Create(new PlayerOwner { PlayerId = LocalPlayerId });
             Entity agent = world.Create(
-                default(MassNavigationAgentTag),
-                new MassNavigationAgentIndex { Value = 0 },
+                new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("light") },
                 new Team { Id = LocalTeamId },
                 new PlayerOwner { PlayerId = LocalPlayerId },
                 OrderBuffer.CreateEmpty());
             Entity enemyAgent = world.Create(
-                default(MassNavigationAgentTag),
-                new MassNavigationAgentIndex { Value = 1 },
+                new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.GetId("light") },
                 new Team { Id = EnemyTeamId },
                 OrderBuffer.CreateEmpty());
 
@@ -268,15 +256,33 @@ namespace Ludots.Tests.Presentation
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
             int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
             var agentLayer = new MassNavigationAgentLayer(1u << layerIndex, 1u << layerIndex);
-            simulation.MassFlow.Reset(
-                new[] { LocalTeamId, EnemyTeamId },
-                unitsPerTeam: 1,
-                config.World!.Obstacles,
-                config.AgentProfiles,
-                agentLayer,
-                config.Scenario.SpawnLayout);
-            simulation.AgentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
-            simulation.AgentState.RegisterAgentAtIndex(enemyAgent, agentIndex: 1, controllable: true);
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { agent, enemyAgent },
+                new[]
+                {
+                    new MassNavigationAgentSeed(
+                        teamId: LocalTeamId,
+                        localPositionXCm: 100f,
+                        localPositionYCm: 100f,
+                        heavy: false,
+                        navMass: 1f,
+                        visualScale: 1f,
+                        bodyRadiusCm: 20f,
+                        speedCmPerSecond: 800f,
+                        agentLayer),
+                    new MassNavigationAgentSeed(
+                        teamId: EnemyTeamId,
+                        localPositionXCm: 300f,
+                        localPositionYCm: 100f,
+                        heavy: false,
+                        navMass: 1f,
+                        visualScale: 1f,
+                        bodyRadiusCm: 20f,
+                        speedCmPerSecond: 800f,
+                        agentLayer),
+                },
+                new[] { true, true });
 
             var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
             var selection = new SelectionRuntime(
@@ -339,8 +345,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
             MassNavigationSelectionSync.SyncIfChanged(world, engine.GlobalContext, selection, simulation);
-            var localCommandInput = new MassNavigationLocalCommandInputSystem(engine, simulation);
-            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, localCommandInput);
+            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderBuffer, orderTypes);
         }
 
         private static unsafe void RegisterMoveBlockedByBlockingOrder(OrderRuleRegistry orderRules)
@@ -372,7 +377,8 @@ namespace Ludots.Tests.Presentation
 
         internal static MassNavigationConfig CreateConfigForTests()
         {
-            MassFlowSolverConfig solver = CreateTestSolverConfig();
+            MassNavigationConfig baseConfig = LoadBaseMassNavigationConfig();
+            MassNavigationFlowSolverConfig solver = CreateTestSolverConfig();
             var config = new MassNavigationConfig
             {
                 MapId = "mass_navigation",
@@ -383,7 +389,6 @@ namespace Ludots.Tests.Presentation
                     SolverWindowHeightCm = solver.FieldHeightCm,
                     StreamingChunkSizeCm = 500,
                     StreamingRadiusCm = 1000,
-                    CameraFocusShiftThresholdCm = 100,
                     CommandFocusHoldTicks = 3,
                     WorkAreaPaddingCm = 100,
                     WorkAreaMaxWidthCm = solver.FieldWidthCm,
@@ -401,16 +406,11 @@ namespace Ludots.Tests.Presentation
                             HeightCm = 1000,
                         },
                     },
-                    Obstacles = new[]
-                    {
-                        new MassNavigationObstacleConfig
-                        {
-                            Id = "blocker",
-                            LocalXCm = 5000f,
-                            LocalYCm = 5000f,
-                            RadiusCm = 100f,
-                        },
-                    },
+                },
+                Streaming = new MassNavigationStreamingConfig
+                {
+                    RetainSeconds = 6f,
+                    RadiusCm = 1000,
                 },
                 Scenario = new MassNavigationScenarioConfig
                 {
@@ -432,10 +432,6 @@ namespace Ludots.Tests.Presentation
                     AutoSpawnConfiguredScenario = true,
                     InitialSelectionScratchCapacity = 8,
                     InitialSelectedEntityCapacity = 8,
-                    Panel = new MassNavigationPanelConfig
-                    {
-                        Mode = "Owned",
-                    },
                     RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
                     {
                         NavigationGroupCapacity = 8,
@@ -444,34 +440,8 @@ namespace Ludots.Tests.Presentation
                         GroupMemberCapacity = 8,
                         OrderIngestionTokenCapacity = 8,
                         OrderIngestionMemberCapacity = 8,
-                        LoadedChunkCapacity = 16,
+                        LoadedChunkCapacity = 32,
                         MetadataTeamCapacity = 2,
-                    },
-                    PanelControls = new MassNavigationPanelControlsConfig
-                    {
-                        MaxAgentsPerTeam = 8,
-                        TotalAgentStep = 2,
-                        TotalAgentPresets = new[] { 2, 4, 8 },
-                        PanelRefreshIntervalSeconds = 0.25f,
-                        ViewResidencyRetainSecondsStep = 2f,
-                        SimulationBudgetStepMs = 1,
-                        SimulationBudgetMinMs = 1,
-                        SimulationBudgetMaxMs = 64,
-                        SimulationSliceStep = 30,
-                        SimulationSliceMin = 1,
-                        SimulationSliceMax = 2048,
-                        EnginePolicyHzStep = 5,
-                        EnginePolicyHzMin = 0,
-                        EnginePolicyHzMax = 240,
-                        EnginePolicyMaxStepsStep = 1,
-                        EnginePolicyMaxStepsMin = 1,
-                        EnginePolicyMaxStepsMax = 32,
-                        ArrivalTimeoutStepMs = 250,
-                        ArrivalProgressStepCm = 10,
-                        ArrivalWakePushStepCm = 10,
-                        ArrivalRetryStep = 1,
-                        FlowIterationStep = 512,
-                        FlowCadenceHzStep = 1,
                     },
                 },
                 AgentProfiles = new MassNavigationAgentProfileSetConfig
@@ -483,49 +453,64 @@ namespace Ludots.Tests.Presentation
                         {
                             Id = "light",
                             Heavy = false,
-                            NavMass = 1f,
                             VisualScale = 0.22f,
-                            BodyRadiusCm = 20f,
                             SpeedCmPerSecond = 800f,
                             EveryNth = 0,
                             NthOffset = 0,
                         },
                     },
                 },
-                CameraProfiles = new MassNavigationCameraProfilesConfig
-                {
-                    TacticalProfileId = "Camera.Profile.TestTactical",
-                    StrategicProfileId = "Camera.Profile.TestStrategic",
-                    RequestPolicy = new MassNavigationCameraRequestPolicyConfig
-                    {
-                        BlendDurationSeconds = 0f,
-                        ResetRuntimeState = true,
-                        SnapToFollowTargetWhenAvailable = false,
-                        StrategicTargetXCm = 0f,
-                        StrategicTargetYCm = 0f,
-                    },
-                },
-                Minimap = new MassNavigationMinimapConfig
-                {
-                    Visible = true,
-                    InitialPreset = "RtsFullMap",
-                    FollowCameraHalfExtentCm = 7000f,
-                    RotateWithCamera = true,
-                },
+                Cadence = baseConfig.Cadence,
+                Presentation = baseConfig.Presentation,
+                TeamRelationships = baseConfig.TeamRelationships,
+                Flow = baseConfig.Flow,
+                Arrival = baseConfig.Arrival,
+                Avoidance = baseConfig.Avoidance,
+                Semantics = baseConfig.Semantics,
             };
             config.Solver.Validate();
             config.World.Validate(config.Solver);
+            config.Streaming.Validate();
             config.ScenarioRuntime.Validate();
             config.Scenario.Validate(config.ScenarioRuntime);
             config.AgentProfiles.Validate();
-            config.CameraProfiles.Validate();
-            config.Minimap.Validate();
+            config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
             return config;
         }
 
-        private static MassFlowSolverConfig CreateTestSolverConfig()
+        private static MassNavigationConfig LoadBaseMassNavigationConfig()
         {
-            return new MassFlowSolverConfig
+            string path = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "assets",
+                "MassNavigationConfig.json");
+            using FileStream stream = File.OpenRead(path);
+            return MassNavigationConfig.Load(stream);
+        }
+
+        private static AgentProfileRegistry CreateAgentProfilesForTests()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "light",
+                    RadiusCm = 20,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+        }
+
+        private static MassNavigationFlowSolverConfig CreateTestSolverConfig()
+        {
+            return new MassNavigationFlowSolverConfig
             {
                 FieldWidthCm = 10_000,
                 FieldHeightCm = 10_000,
@@ -553,7 +538,8 @@ namespace Ludots.Tests.Presentation
                 Entity enemyAgent,
                 SelectionRuntime selection,
                 MassNavigationSimulationRuntime simulation,
-                MassNavigationLocalCommandInputSystem localCommandInput)
+                OrderBufferSystem orderBufferSystem,
+                OrderTypeRegistry orderTypeRegistry)
             {
                 Engine = engine;
                 World = world;
@@ -562,7 +548,8 @@ namespace Ludots.Tests.Presentation
                 EnemyAgent = enemyAgent;
                 Selection = selection;
                 Simulation = simulation;
-                LocalCommandInput = localCommandInput;
+                OrderBufferSystem = orderBufferSystem;
+                OrderTypeRegistry = orderTypeRegistry;
             }
 
             public GameEngine Engine { get; }
@@ -572,7 +559,19 @@ namespace Ludots.Tests.Presentation
             public Entity EnemyAgent { get; }
             public SelectionRuntime Selection { get; }
             public MassNavigationSimulationRuntime Simulation { get; }
-            public MassNavigationLocalCommandInputSystem LocalCommandInput { get; }
+            public OrderBufferSystem OrderBufferSystem { get; }
+            public OrderTypeRegistry OrderTypeRegistry { get; }
+
+            public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
+            {
+                return Simulation.SubmitMoveCommand(
+                    World,
+                    Engine.GlobalContext,
+                    OrderBufferSystem,
+                    OrderTypeRegistry,
+                    centerCm,
+                    LocalPlayerId);
+            }
 
             public void Select(Entity entity)
             {

@@ -1,0 +1,33 @@
+{
+  "startupMapId": "capability_standard_physics2d_stress",
+  "windowTitle": "Ludots Engine - Capability Standard Physics2D Stress",
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "physics2D": {
+    "enabled": true
+  },
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 512,
+    "runtimeEntitySpawnReceiptQueueCapacity": 512,
+    "performerInstanceCapacity": 512,
+    "presentationEventStreamCapacity": 512,
+    "presentationOwnerChangeCapacity": 512,
+    "performerCommandCapacity": 512,
+    "primitiveDrawBufferCapacity": 512,
+    "visualSnapshotBufferCapacity": 512,
+    "visualProxyBufferCapacity": 512,
+    "presentationRequestCapacity": 512,
+    "groundOverlayCapacity": 128,
+    "worldHudCapacity": 512,
+    "screenHudCapacity": 512,
+    "skinnedVisualBatchCapacity": 512,
+    "minimapMarkerCapacity": 512,
+    "cameraCulling": {
+      "highLodDistanceCm": 6000,
+      "mediumLodDistanceCm": 14000,
+      "lowLodDistanceCm": 28000
+    }
+  }
+}

@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Association;
 
 namespace Ludots.Core.Knowledge
 {
@@ -64,18 +65,35 @@ namespace Ludots.Core.Knowledge
     {
         private readonly KnowledgeProjectionStore _store;
         private readonly KnowledgeRelationCollectionProjector? _relationProjector;
+        private readonly ScopeResolver? _scopeResolver;
 
         public KnowledgeProjectionResolver(KnowledgeProjectionStore store)
-            : this(store, relationProjector: null)
+            : this(store, relationProjector: null, scopeResolver: null)
+        {
+        }
+
+        public KnowledgeProjectionResolver(
+            KnowledgeProjectionStore store,
+            ScopeResolver scopeResolver)
+            : this(store, relationProjector: null, scopeResolver)
         {
         }
 
         public KnowledgeProjectionResolver(
             KnowledgeProjectionStore store,
             KnowledgeRelationCollectionProjector? relationProjector)
+            : this(store, relationProjector, scopeResolver: null)
+        {
+        }
+
+        public KnowledgeProjectionResolver(
+            KnowledgeProjectionStore store,
+            KnowledgeRelationCollectionProjector? relationProjector,
+            ScopeResolver? scopeResolver)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _relationProjector = relationProjector;
+            _scopeResolver = scopeResolver;
         }
 
         public bool CanKnowEntity(Entity viewer, Entity target, int currentTick)
@@ -118,27 +136,58 @@ namespace Ludots.Core.Knowledge
             int currentTick,
             out KnowledgeProjection projection)
         {
-            Span<Entity> scopes = stackalloc Entity[1] { viewer };
-            return TryResolve(viewer, target, currentTick, scopes, out projection);
+            Span<Entity> scopeMembers = stackalloc Entity[1];
+            var context = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
+            ScopeKey scope = ScopeKey.Self;
+            return TryResolve(
+                viewer,
+                target,
+                currentTick,
+                in scope,
+                in context,
+                scopeMembers,
+                out projection);
         }
 
         public bool TryResolve(
             Entity viewer,
             Entity target,
             int currentTick,
-            ReadOnlySpan<Entity> viewerScopes,
+            in ScopeKey viewerScope,
+            in RoleResolverContext context,
+            Span<Entity> scopeMemberBuffer,
             out KnowledgeProjection projection)
         {
             projection = default;
-            if (viewer == Entity.Null || target == Entity.Null || viewerScopes.IsEmpty)
+            if (viewer == Entity.Null || target == Entity.Null)
             {
                 return false;
             }
 
-            ProjectionAccumulator accumulator = default;
-            for (int i = 0; i < viewerScopes.Length; i++)
+            int scopeMemberCount = ResolveScopeMembers(viewer, in viewerScope, in context, scopeMemberBuffer);
+            if (scopeMemberCount <= 0)
             {
-                Entity scope = viewerScopes[i];
+                return false;
+            }
+
+            ReadOnlySpan<Entity> resolvedScopes = scopeMemberBuffer.Slice(0, scopeMemberCount);
+            return TryResolveResolvedScopes(viewer, target, currentTick, resolvedScopes, out projection);
+        }
+
+        private bool TryResolveResolvedScopes(
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            ReadOnlySpan<Entity> resolvedScopes,
+            out KnowledgeProjection projection)
+        {
+            ProjectionAccumulator accumulator = default;
+            for (int i = 0; i < resolvedScopes.Length; i++)
+            {
+                Entity scope = resolvedScopes[i];
                 if (scope == Entity.Null)
                 {
                     continue;
@@ -157,7 +206,9 @@ namespace Ludots.Core.Knowledge
             Entity viewer,
             Entity target,
             int currentTick,
-            ReadOnlySpan<Entity> viewerScopes,
+            in ScopeKey viewerScope,
+            in RoleResolverContext context,
+            Span<Entity> scopeMemberBuffer,
             int relationGrantTypeId,
             Span<Entity> relationSourceBuffer,
             Span<Entity> relationTargetBuffer,
@@ -176,19 +227,35 @@ namespace Ludots.Core.Knowledge
                     relationTargetBuffer);
             }
 
-            return TryResolve(viewer, target, currentTick, viewerScopes, out projection);
+            return TryResolve(
+                viewer,
+                target,
+                currentTick,
+                in viewerScope,
+                in context,
+                scopeMemberBuffer,
+                out projection);
         }
 
         public bool TryResolveWithRelationGrants(
             Entity viewer,
             Entity target,
             int currentTick,
-            ReadOnlySpan<Entity> viewerScopes,
+            in ScopeKey viewerScope,
+            in RoleResolverContext context,
+            Span<Entity> scopeMemberBuffer,
             Span<Entity> relationSourceBuffer,
             Span<Entity> relationTargetBuffer,
             out KnowledgeProjection projection)
         {
-            if (TryResolve(viewer, target, currentTick, viewerScopes, out projection))
+            if (TryResolve(
+                    viewer,
+                    target,
+                    currentTick,
+                    in viewerScope,
+                    in context,
+                    scopeMemberBuffer,
+                    out projection))
             {
                 return true;
             }
@@ -204,7 +271,39 @@ namespace Ludots.Core.Knowledge
                     relationTargetBuffer);
             }
 
-            return TryResolve(viewer, target, currentTick, viewerScopes, out projection);
+            return TryResolve(
+                viewer,
+                target,
+                currentTick,
+                in viewerScope,
+                in context,
+                scopeMemberBuffer,
+                out projection);
+        }
+
+        private int ResolveScopeMembers(
+            Entity viewer,
+            in ScopeKey viewerScope,
+            in RoleResolverContext context,
+            Span<Entity> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (viewerScope.Kind == ScopeKind.Self)
+            {
+                destination[0] = viewer;
+                return 1;
+            }
+
+            if (_scopeResolver == null)
+            {
+                throw new InvalidOperationException("KnowledgeProjectionResolver requires ScopeResolver for non-self ScopeKey resolution.");
+            }
+
+            return _scopeResolver.ResolveMembers(in viewerScope, in context, destination);
         }
 
         private struct ProjectionAccumulator

@@ -5,6 +5,7 @@ using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
+using Ludots.UI.Surface;
 
 namespace ReactiveTestMod
 {
@@ -35,9 +36,9 @@ namespace ReactiveTestMod
         {
             _modContext.Log("[ReactiveTestMod] Setting up Reactive UI...");
 
-            if (context.Get(CoreServiceKeys.UIRoot) is not UIRoot uiRoot)
+            if (context.Get(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
-                _modContext.Log("[ReactiveTestMod] UIRoot not found in ScriptContext.");
+                _modContext.Log("[ReactiveTestMod] UiSurfaceHost not found in ScriptContext.");
                 return Task.CompletedTask;
             }
 
@@ -48,8 +49,12 @@ namespace ReactiveTestMod
                 imageSizeProvider,
                 new CounterState(0),
                 BuildCounterScene);
-            uiRoot.MountScene(page.Scene);
-            uiRoot.IsDirty = true;
+            UiSurfaceLeaseHandle lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                "ReactiveTest.Counter",
+                UiSurfaceSegment.Main,
+                priority: 10,
+                exclusive: true));
+            surfaceHost.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
             return Task.CompletedTask;
         }
 

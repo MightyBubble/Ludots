@@ -3,6 +3,22 @@ using Ludots.Core.Registry;
 
 namespace Ludots.Core.Engine.TimeFlow
 {
+    public sealed record TimeFlowDomainSnapshot(
+        string Name,
+        string ParentName,
+        int BaseScalePermille);
+
+    public sealed record TimeFlowTokenSnapshot(
+        string DomainName,
+        string Kind,
+        int ScalePermille,
+        string Owner,
+        string Reason);
+
+    public sealed record TimeFlowSnapshot(
+        IReadOnlyList<TimeFlowDomainSnapshot> Domains,
+        IReadOnlyList<TimeFlowTokenSnapshot> ActiveTokens);
+
     public sealed class TimeFlowService
     {
         public const int DefaultScalePermille = 1000;
@@ -19,7 +35,6 @@ namespace Ludots.Core.Engine.TimeFlow
             EnsureDomain(TimeFlowDomainIds.Simulation, parentName: null, baseScalePermille: DefaultScalePermille);
             EnsureDomain(TimeFlowDomainIds.Gas, TimeFlowDomainIds.Simulation, DefaultScalePermille);
             EnsureDomain(TimeFlowDomainIds.Physics2D, TimeFlowDomainIds.Simulation, DefaultScalePermille);
-            EnsureDomain(TimeFlowDomainIds.Navigation2D, TimeFlowDomainIds.Simulation, DefaultScalePermille);
         }
 
         public int EnsureDomain(string name, string? parentName = null, int baseScalePermille = DefaultScalePermille)
@@ -136,6 +151,81 @@ namespace Ludots.Core.Engine.TimeFlow
         {
             int domainId = EnsureDomain(domainName);
             return _domains[domainId].Paused;
+        }
+
+        public TimeFlowSnapshot CaptureSnapshot()
+        {
+            var domains = new List<TimeFlowDomainSnapshot>();
+            for (int domainId = 1; domainId < _domains.Count; domainId++)
+            {
+                DomainState domain = _domains[domainId];
+                if (string.IsNullOrWhiteSpace(domain.Name))
+                {
+                    continue;
+                }
+
+                domains.Add(new TimeFlowDomainSnapshot(
+                    domain.Name,
+                    GetDomainName(domain.ParentDomainId),
+                    domain.BaseScalePermille));
+            }
+
+            var tokens = new List<TimeFlowTokenSnapshot>();
+            for (int tokenId = 1; tokenId < _tokens.Count; tokenId++)
+            {
+                TokenState token = _tokens[tokenId];
+                if (!token.Active)
+                {
+                    continue;
+                }
+
+                tokens.Add(new TimeFlowTokenSnapshot(
+                    GetDomainName(token.DomainId),
+                    token.Kind.ToString(),
+                    token.ScalePermille,
+                    token.Owner,
+                    token.Reason));
+            }
+
+            return new TimeFlowSnapshot(domains, tokens);
+        }
+
+        public void RestoreSnapshot(TimeFlowSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+            _domainIds.Clear();
+            _domains.Clear();
+            _domains.Add(new DomainState());
+            _tokens.Clear();
+            _tokens.Add(new TokenState());
+
+            for (int i = 0; i < snapshot.Domains.Count; i++)
+            {
+                TimeFlowDomainSnapshot domain = snapshot.Domains[i];
+                EnsureDomain(domain.Name, domain.ParentName, domain.BaseScalePermille);
+            }
+
+            for (int i = 0; i < snapshot.ActiveTokens.Count; i++)
+            {
+                TimeFlowTokenSnapshot token = snapshot.ActiveTokens[i];
+                if (!Enum.TryParse(token.Kind, ignoreCase: false, out TokenKind kind) ||
+                    !string.Equals(kind.ToString(), token.Kind, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"TimeFlow snapshot token kind '{token.Kind}' is invalid.");
+                }
+
+                if (kind == TokenKind.Pause)
+                {
+                    AcquirePauseToken(token.DomainName, token.Owner, token.Reason);
+                }
+                else
+                {
+                    AcquireScaleToken(token.DomainName, token.ScalePermille, token.Owner, token.Reason);
+                }
+            }
+
+            RecalculateAllDomains();
         }
 
         private bool TryGetActiveToken(TimeFlowToken token, out int tokenIndex)

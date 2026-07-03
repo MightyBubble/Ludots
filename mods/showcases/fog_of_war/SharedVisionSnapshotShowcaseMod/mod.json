@@ -1,0 +1,12 @@
+{
+  "name": "SharedVisionSnapshotShowcaseMod",
+  "version": "1.0.0",
+  "description": "Fog snapshot and shared explored-map showcase root.",
+  "main": "bin/net8.0/SharedVisionSnapshotShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "vision", "snapshot", "sharing"]
+}

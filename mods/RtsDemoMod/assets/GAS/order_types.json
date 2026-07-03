@@ -1,0 +1,37 @@
+{
+  "orderBlackboardKeys": {
+    "Rts.SpawnTarget.Kind": true,
+    "Rts.SpawnTarget.Position": true,
+    "Rts.SpawnTarget.Entity": true,
+    "Rts.SpawnTarget.HexQ": true,
+    "Rts.SpawnTarget.HexR": true
+  },
+  "orderTypes": {
+    "setSpawnTarget": {
+      "orderTypeId": 106,
+      "label": "Set Spawn Target",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 40,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": true,
+      "persistentStoredTarget": {
+        "targetKindKey": "Rts.SpawnTarget.Kind",
+        "targetPositionKey": "Rts.SpawnTarget.Position",
+        "targetEntityKey": "Rts.SpawnTarget.Entity",
+        "hexQKey": "Rts.SpawnTarget.HexQ",
+        "hexRKey": "Rts.SpawnTarget.HexR"
+      }
+    }
+  }
+}

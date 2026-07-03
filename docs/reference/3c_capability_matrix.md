@@ -34,7 +34,7 @@
 - [x] `WorldPositionCm` 作为唯一位置真相源
 - [x] `PreviousWorldPositionCm` → `VisualTransform` 插值链
 - [x] Physics2D → WorldPositionCm 直赋同步
-- [x] Navigation2D 路径跟随
+- [x] MassNavigationFlow 路径执行
 - [x] GAS `ForceInput2D` Sink 桥接物理
 - [x] `CullState` 驱动表现层可见性
 - [x] Team / PlayerOwner 身份标识
@@ -65,7 +65,7 @@
 ### 未实现
 
 - [ ] 手柄 / Gamepad 支持
-- [ ] HoveredEntity 悬停检测
+- [ ] collection-backed hover 悬停检测
 - [ ] 输入录制 / 回放
 - [ ] 触屏适配
 

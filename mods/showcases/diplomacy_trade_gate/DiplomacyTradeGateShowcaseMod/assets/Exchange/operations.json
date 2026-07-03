@@ -1,0 +1,22 @@
+[
+  {
+    "id": "trade_gate.exchange_border_goods",
+    "relationshipRequirements": [
+      {
+        "source": "Source",
+        "target": "Target",
+        "type": "Diplomacy",
+        "metric": "Trust",
+        "minimumMetric": 50,
+        "flag": "Embargo",
+        "flagValue": false
+      }
+    ],
+    "inputs": [
+      { "kind": "ItemStack", "actor": "Source", "item": "trade_gate_credit", "quantity": 5 }
+    ],
+    "outputs": [
+      { "kind": "CreateItem", "actor": "Target", "purpose": "Stash", "item": "trade_gate_goods", "quantity": 1 }
+    ]
+  }
+]

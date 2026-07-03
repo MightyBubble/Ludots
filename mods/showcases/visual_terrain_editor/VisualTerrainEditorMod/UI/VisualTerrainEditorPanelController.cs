@@ -6,6 +6,7 @@ using Ludots.UI.Compose;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Actions;
+using Ludots.UI.Surface;
 using VisualTerrainEditorMod.Runtime;
 
 namespace VisualTerrainEditorMod.UI;
@@ -22,6 +23,8 @@ internal sealed class VisualTerrainEditorPanelController
     private readonly VisualTerrainEditorRuntime _runtime;
     private readonly VisualTerrainEditorDocument _document;
     private ReactivePage<VisualTerrainEditorPanelState>? _page;
+    private GameEngine? _engine;
+    private UiSurfaceLeaseHandle _lease;
 
     public VisualTerrainEditorPanelController(VisualTerrainEditorRuntime runtime, VisualTerrainEditorDocument document)
     {
@@ -31,6 +34,12 @@ internal sealed class VisualTerrainEditorPanelController
 
     public void MountOrRefresh(UIRoot root, GameEngine engine, VisualTerrainEditorPanelState state)
     {
+        if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
+        {
+            return;
+        }
+
+        _engine = engine;
         if (_page == null)
         {
             var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
@@ -42,17 +51,29 @@ internal sealed class VisualTerrainEditorPanelController
             _page.SetState(_ => state);
         }
 
-        if (!ReferenceEquals(root.Scene, _page.Scene))
-        {
-            root.MountScene(_page.Scene);
-        }
+        surfaceHost.PublishReactivePage(
+            ref _lease,
+            new UiSurfaceLeaseRequest("Showcase.VisualTerrainEditor.Panel", UiSurfaceSegment.Overlay, priority: 40),
+            _page);
     }
 
     public void ClearIfOwned(UIRoot root)
     {
-        if (_page != null && ReferenceEquals(root.Scene, _page.Scene))
+        if (_lease.IsValid &&
+            _engine?.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
         {
-            root.ClearScene();
+            surfaceHost.ReleaseLease(ref _lease);
+        }
+
+        _engine = null;
+    }
+
+    public void InvalidateIfMounted(GameEngine engine)
+    {
+        if (_lease.IsValid &&
+            engine.GetService(CoreServiceKeys.UiSurfaceHost) is IUiSurfaceHost surfaceHost)
+        {
+            surfaceHost.InvalidateLease(_lease);
         }
     }
 

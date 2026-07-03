@@ -196,6 +196,29 @@
                                           ]
                    },
                    {
+                       "name":  "ludots-gas-composition-gate",
+                       "description":  "Mandatory self-review before GAS entity lifecycle, effect preset, or graph op work; blocks profile DSL expansion.",
+                       "layer":  "governance",
+                       "path":  "skills/governance/ludots-gas-composition-gate",
+                       "install_name":  "ludots-gas-composition-gate",
+                       "agents":  {
+                                      "openai":  "skills/governance/ludots-gas-composition-gate/agents/openai.yaml",
+                                      "claude":  "skills/governance/ludots-gas-composition-gate/agents/claude.md"
+                                  },
+                       "references":  [
+                                          "skills/governance/ludots-gas-composition-gate/references/composition-judgment-standard.md",
+                                          "skills/governance/ludots-gas-composition-gate/references/self-review-checklist.md",
+                                          "skills/governance/ludots-gas-composition-gate/references/layer-model.md",
+                                          "gitbook/architecture/entity-lifecycle-atomic-ops.md"
+                                      ],
+                       "consumes_hooks":  [
+
+                                          ],
+                       "produces_hooks":  [
+
+                                          ]
+                   },
+                   {
                        "name":  "ludots-feature-delivery",
                        "description":  "Deliver features with infrastructure reuse, headless evidence, showcase UI acceptance, and linked artifacts.",
                        "layer":  "delivery",

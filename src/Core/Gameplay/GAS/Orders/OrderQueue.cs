@@ -47,6 +47,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public bool TryEnqueueAssigned(ref Order order)
         {
+            ValidateOrderTypeId(order.OrderTypeId);
             if (_count >= _items.Length) return false;
             EnsureOrderId(ref order);
 
@@ -61,6 +62,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (order.OrderId == 0)
             {
                 order.OrderId = _nextOrderId++;
+            }
+        }
+
+        private static void ValidateOrderTypeId(int orderTypeId)
+        {
+            if (orderTypeId <= 0 || orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
+            {
+                throw new System.InvalidOperationException(
+                    $"OrderQueue requires a positive order type id below {OrderTypeRegistry.MaxOrderTypes}; got {orderTypeId}.");
             }
         }
 

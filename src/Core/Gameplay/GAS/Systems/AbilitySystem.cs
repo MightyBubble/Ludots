@@ -1,8 +1,10 @@
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Core.Extensions;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -15,20 +17,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps _tagOps;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
         public AbilitySystem(
             World world,
-            EffectRequestQueue effectRequests = null,
+            EffectRequestQueue effectRequests,
             AbilityDefinitionRegistry abilityDefinitions = null,
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
-            IGraphRuntimeApi graphApi = null) : base(world)
+            IGraphRuntimeApi graphApi = null,
+            ProgressionRequirementEvaluator progressionRequirements = null) : base(world)
         {
-            _effectRequests = effectRequests;
+            _effectRequests = effectRequests ?? throw new InvalidOperationException(
+                "LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED: AbilitySystem requires EffectRequestQueue to publish activation effects.");
             _abilityDefinitions = abilityDefinitions;
             _tagOps = tagOps ?? new TagOps();
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _progressionRequirements = progressionRequirements;
         }
 
         public override void Update(in float dt) { }
@@ -114,7 +120,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                if (_effectRequests == null) return true;
+                if (!EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in def))
+                {
+                    return false;
+                }
+
                 if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
 
                 var effects = def.OnActivateEffects;
@@ -180,7 +190,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            if (_effectRequests == null) return true;
+            ref var progressionRequirementsEntity = ref World.TryGetRef<AbilityProgressionRequirements>(templateEntity, out bool hasProgressionRequirementsEntity);
+            if (hasProgressionRequirementsEntity &&
+                !EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in progressionRequirementsEntity))
+            {
+                return false;
+            }
 
             ref var effectsEntity = ref World.TryGetRef<AbilityOnActivateEffects>(templateEntity, out bool hasOnActivateEntity);
             if (hasOnActivateEntity)
@@ -245,6 +260,44 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return default;
+        }
+
+        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasUseProgressionRequirement)
+            {
+                return true;
+            }
+
+            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, definition.UseProgressionRequirementId);
+        }
+
+        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityProgressionRequirements requirements)
+        {
+            if (requirements.UseRequirementId <= 0)
+            {
+                return true;
+            }
+
+            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, requirements.UseRequirementId);
+        }
+
+        private bool EvaluateProgressionRequirement(Entity caster, Entity subject, Entity explicitScopeHost, int requirementId)
+        {
+            if (_progressionRequirements == null)
+            {
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
+            }
+
+            Entity resolvedSubject = World.IsAlive(subject) ? subject : caster;
+            Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
+                ? explicitScopeHost
+                : default;
+            var context = new RoleResolverContext(
+                actor: caster,
+                subject: resolvedSubject,
+                explicitScopeHost: resolvedExplicitScopeHost);
+            return _progressionRequirements.Evaluate(requirementId, in context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

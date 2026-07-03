@@ -1,7 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
+using Ludots.Core.Association;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -25,6 +27,14 @@ namespace Ludots.Core.Gameplay.GAS
         Displacement = 11,
         /// <summary>Entity relation effect: garrison, detach, or link parent-child state.</summary>
         Relation = 12,
+        /// <summary>Rule-constrained settlement through the Exchange runtime.</summary>
+        Exchange = 13,
+        /// <summary>Completes an entity-scoped progression through the Progression runtime.</summary>
+        CompleteProgression = 14,
+        /// <summary>Reads configured blackboard stored target keys and submits orders to a spawned unit.</summary>
+        SubmitOrderFromBlackboard = 15,
+        /// <summary>Atomic entity template replacement with inheritance profile.</summary>
+        DeployConsumeSource = 16,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -288,6 +298,20 @@ namespace Ludots.Core.Gameplay.GAS
         public bool SnapSubjectToParentPosition;
     }
 
+    /// <summary>
+    /// Parameters for on-spawn order dispatch from configured blackboard stored target keys.
+    /// </summary>
+    public struct SubmitOrderFromBlackboardDescriptor
+    {
+        public RelationEntitySlot SourceSlot;
+        public RelationEntitySlot TargetSlot;
+        public BlackboardStoredTargetKeys StoredTargetKeys;
+        public string PointMoveOrderTypeKey;
+        public string EntityOrderTypeKey;
+        public int EntityOrderIntArg0;
+        public OrderSubmitMode SubmitMode;
+    }
+
     // ── EffectTemplateData ──
 
     public struct EffectTemplateData
@@ -315,6 +339,10 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public SubmitOrderFromBlackboardDescriptor SubmitOrderFromBlackboard;
+        public ScopeKey ProgressionScope;
+        public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
+        public int ProgressionId;
 
         // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;

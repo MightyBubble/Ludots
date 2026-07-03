@@ -3,6 +3,8 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.Gameplay.Narrative
 {
+    public sealed record NarrativeVariableSnapshot(string VariableId, NarrativeValue Value);
+
     public readonly struct NarrativeValue
     {
         public NarrativeValue(NarrativeValueKind kind, int intValue, float floatValue, bool boolValue, string stringValue)
@@ -97,6 +99,37 @@ namespace Ludots.Core.Gameplay.Narrative
                 default:
                     Set(variableId, NarrativeValue.FromInt(current.IntValue + value.IntValue));
                     break;
+            }
+        }
+
+        public IReadOnlyDictionary<string, NarrativeValue> CaptureSnapshot()
+        {
+            var snapshot = new Dictionary<string, NarrativeValue>(StringComparer.OrdinalIgnoreCase);
+            foreach (NarrativeVariableDefinition variable in _definitions.Variables)
+            {
+                snapshot[variable.Id] = Get(variable.Id);
+            }
+
+            foreach (Registry.RegistryMapping mapping in _definitions.VariableIds.SnapshotMappings())
+            {
+                if (_values.TryGetValue(mapping.Id, out NarrativeValue value))
+                {
+                    snapshot[mapping.Name] = value;
+                }
+            }
+
+            return snapshot;
+        }
+
+        public void RestoreSnapshot(IReadOnlyDictionary<string, NarrativeValue> snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+            _values.Clear();
+            foreach (KeyValuePair<string, NarrativeValue> pair in snapshot)
+            {
+                int variableKey = _definitions.VariableIds.Register(pair.Key);
+                _values[variableKey] = pair.Value;
             }
         }
     }

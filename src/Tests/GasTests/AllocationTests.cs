@@ -57,7 +57,12 @@ namespace Ludots.Tests.GAS
                 attr.SetCurrent(0, 1000f);
 
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
-                var proposalSystem = new EffectProposalProcessingSystem(world, requests, budget: null, templates: templates);
+                var proposalSystem = new EffectProposalProcessingSystem(
+                    world,
+                    requests,
+                    budget: null,
+                    templates: templates,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
 
                 var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
 
@@ -127,7 +132,14 @@ namespace Ludots.Tests.GAS
 
             var requests = new EffectRequestQueue();
             var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue();
-            var proposal = new EffectProposalProcessingSystem(world, requests, budget: null, templates: templates, inputRequests: null, chainOrders: chainOrders);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                budget: null,
+                templates: templates,
+                inputRequests: null,
+                chainOrders: chainOrders,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);
@@ -171,4 +183,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

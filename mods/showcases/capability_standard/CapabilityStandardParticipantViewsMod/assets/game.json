@@ -1,5 +1,6 @@
 {
   "startupMapId": "capability_standard_participant_views",
+  "startupSelectedPlayerId": 1,
   "windowTitle": "Ludots Engine - Capability Standard Participant Views",
   "targetFps": 0,
   "windowWidth": 1440,
@@ -45,8 +46,5 @@
       "minZoomExplicitHalfExtentCm": 750.0,
       "maxZoomExplicitHalfExtentCm": 0.0
     }
-  },
-  "navigation2D": {
-    "enabled": false
   }
 }

@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Relationships.Config;
 
 namespace Ludots.Core.Gameplay.Relationships
@@ -11,7 +12,8 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
             RelationshipBandRegistry bands,
-            RelationshipReasonRegistry reasons)
+            RelationshipReasonRegistry reasons,
+            EntityCollectionStore collections)
         {
             ArgumentNullException.ThrowIfNull(catalog);
             ArgumentNullException.ThrowIfNull(types);
@@ -19,9 +21,10 @@ namespace Ludots.Core.Gameplay.Relationships
             ArgumentNullException.ThrowIfNull(flags);
             ArgumentNullException.ThrowIfNull(bands);
             ArgumentNullException.ThrowIfNull(reasons);
+            ArgumentNullException.ThrowIfNull(collections);
 
             RegisterCatalog(catalog, types, metrics, flags, bands, reasons);
-            return RelationshipCatalogRuntime.Compile(catalog, types, metrics);
+            return RelationshipCatalogRuntime.Compile(catalog, types, metrics, collections);
         }
 
         public static void RegisterCatalog(

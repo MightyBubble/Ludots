@@ -26,13 +26,31 @@ namespace Ludots.Tests.Gas
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Configs", "Maps"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "terrain"));
 
+            string repoRoot = FindRepoRoot();
+            CopyDirectory(Path.Combine(repoRoot, "assets", "Configs"), Path.Combine(_coreRoot, "Configs"));
+
             File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
             {
               "startupMapId": "outer_map",
-              "worldWidthInTiles": 16,
-              "worldHeightInTiles": 16,
+              "worldWidthInMacroTiles": 16,
+              "worldHeightInMacroTiles": 16,
               "gridCellSizeCm": 100
             }
+            """);
+
+            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "agent_profiles.json"), """
+            [
+              {
+                "id": "Small",
+                "radiusCm": 30,
+                "heightCm": 180,
+                "clearanceCm": 40,
+                "draftCm": 0,
+                "beamCm": 0,
+                "mass": 1,
+                "layer": 0
+              }
+            ]
             """);
 
             File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "pathing.json"), """
@@ -41,7 +59,6 @@ namespace Ludots.Tests.Gas
                 {
                   "id": "Humanoid",
                   "profileId": "Small",
-                  "layer": 0,
                   "selection": {
                     "mode": "AutoCheapest",
                     "graphBias": 0.0,
@@ -56,6 +73,7 @@ namespace Ludots.Tests.Gas
                   },
                   "nodeGraph": {
                     "projectionMaxRadiusCm": 200000,
+                    "useDynamicOverlay": false,
                     "forbiddenTagsAny": [],
                     "requiredTagsAll": [],
                     "tagCostRules": []
@@ -301,6 +319,22 @@ namespace Ludots.Tests.Gas
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root containing mods/LudotsCoreMod and mods/CoreInputMod.");
+        }
+
+        private static void CopyDirectory(string sourceDirectory, string destinationDirectory)
+        {
+            Directory.CreateDirectory(destinationDirectory);
+            foreach (string sourceFile in Directory.EnumerateFiles(sourceDirectory))
+            {
+                string destinationFile = Path.Combine(destinationDirectory, Path.GetFileName(sourceFile));
+                File.Copy(sourceFile, destinationFile, overwrite: true);
+            }
+
+            foreach (string sourceChildDirectory in Directory.EnumerateDirectories(sourceDirectory))
+            {
+                string destinationChildDirectory = Path.Combine(destinationDirectory, Path.GetFileName(sourceChildDirectory));
+                CopyDirectory(sourceChildDirectory, destinationChildDirectory);
+            }
         }
     }
 }

@@ -15,11 +15,13 @@ public sealed class UiSkinShowcaseModEntry : IMod
         {
             var textMeasurer = (IUiTextMeasurer)scriptContext.Get(CoreServiceKeys.UiTextMeasurer);
             var imageSizeProvider = (IUiImageSizeProvider)scriptContext.Get(CoreServiceKeys.UiImageSizeProvider);
-            UiShowcaseMounting.MountScene(scriptContext, UiShowcaseFactory.CreateSkinShowcaseScene(textMeasurer, imageSizeProvider));
+            UiShowcaseMounting.PublishContribution(
+                scriptContext,
+                "UiShowcase.Skin",
+                UiShowcaseFactory.CreateSkinShowcaseContribution(textMeasurer, imageSizeProvider));
             return Task.CompletedTask;
         });
     }
 
     public void OnUnload() { }
 }
-

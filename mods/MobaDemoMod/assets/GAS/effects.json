@@ -216,7 +216,14 @@
       "range": 2000,
       "arcHeight": 0,
       "impactEffect": "Effect.Moba.Damage.R",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.Moba.Damage.R",
+      "presentationEffect": "Effect.Moba.Damage.R",
+      "travelMode": "TrackTarget",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 80,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -230,7 +237,11 @@
     "unitCreation": {
       "unitType": "Unit.Skeleton",
       "count": 1,
-      "offsetRadius": 200
+      "placementPattern": "Circle",
+      "facingPattern": "RadialOutward",
+      "placementRadiusCm": 200,
+      "placementStartAngleDeg": 0,
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -256,9 +267,9 @@
     "phaseListeners": [
       {
         "listenTag": "Effect.Moba.Damage",
-        "phase": "onHit",
-        "scope": "target",
-        "action": "graph",
+        "phase": "OnHit",
+        "scope": "Target",
+        "action": "Graph",
         "graphProgram": "Graph.Shield.Absorb",
         "priority": 100
       }
@@ -393,7 +404,6 @@
     "participatesInResponse": true,
     "displacement": {
       "directionMode": "AwayFromSource",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 350,
       "totalDurationTicks": 12,
       "overrideNavigation": true

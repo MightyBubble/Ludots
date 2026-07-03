@@ -8,17 +8,35 @@ namespace Ludots.Core.Config
     {
         private readonly World _world;
         private readonly Dictionary<string, EntityTemplate> _templates;
+        private readonly IReadOnlyDictionary<string, string> _templateSources;
+        private readonly ComponentAuthoringContext _authoringContext;
         
         // Temporary storage for components to apply
         private EntityTemplate _activeTemplate;
+        private string _activeTemplateId;
+        private string _activeEntityContext;
         private Dictionary<string, JsonNode> _overrides = new Dictionary<string, JsonNode>();
 
         public EntityBuilder(
             World world,
-            Dictionary<string, EntityTemplate> templates)
+            Dictionary<string, EntityTemplate> templates,
+            IReadOnlyDictionary<string, string> templateSources = null,
+            ComponentAuthoringContext authoringContext = null)
         {
             _world = world;
             _templates = templates;
+            _templateSources = templateSources;
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
+        }
+
+        public EntityBuilder(
+            World world,
+            Dictionary<string, EntityTemplate> templates,
+            ComponentAuthoringContext authoringContext)
+        {
+            _world = world;
+            _templates = templates;
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
         }
 
         public EntityBuilder UseTemplate(string templateId)
@@ -31,10 +49,17 @@ namespace Ludots.Core.Config
             if (_templates.TryGetValue(templateId, out var template))
             {
                 _activeTemplate = template;
+                _activeTemplateId = templateId;
                 return this;
             }
 
             throw new System.InvalidOperationException($"Unknown entity template '{templateId}'.");
+        }
+
+        public EntityBuilder WithEntityContext(string context)
+        {
+            _activeEntityContext = context;
+            return this;
         }
 
         public EntityBuilder WithOverride(string componentName, JsonNode data)
@@ -65,7 +90,7 @@ namespace Ludots.Core.Config
                     // Check if overridden
                     if (!_overrides.ContainsKey(kvp.Key))
                     {
-                        ApplyComponent(entity, kvp.Key, kvp.Value);
+                        ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: false);
                     }
                 }
             }
@@ -73,17 +98,19 @@ namespace Ludots.Core.Config
             // 2. Apply Overrides
             foreach (var kvp in _overrides)
             {
-                ApplyComponent(entity, kvp.Key, kvp.Value);
+                ApplyComponent(entity, kvp.Key, kvp.Value, isOverride: true);
             }
 
             // Reset for next use
             _activeTemplate = null;
+            _activeTemplateId = null;
+            _activeEntityContext = null;
             _overrides.Clear();
 
             return entity;
         }
 
-        private void ApplyComponent(Entity entity, string componentName, JsonNode data)
+        private void ApplyComponent(Entity entity, string componentName, JsonNode data, bool isOverride)
         {
             if (string.Equals(componentName, "Presentation", System.StringComparison.Ordinal))
             {
@@ -91,7 +118,30 @@ namespace Ludots.Core.Config
                     "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/performers.json keyed lifecycle rules.");
             }
 
-            ComponentRegistry.Apply(entity, componentName, data);
+            ComponentRegistry.Apply(
+                entity,
+                componentName,
+                data,
+                _authoringContext,
+                BuildComponentContext(componentName, isOverride));
+        }
+
+        private string BuildComponentContext(string componentName, bool isOverride)
+        {
+            string templateId = string.IsNullOrWhiteSpace(_activeTemplateId) ? "<no-template>" : _activeTemplateId;
+            string context = string.IsNullOrWhiteSpace(_activeEntityContext)
+                ? $"EntityBuilder template '{templateId}'"
+                : _activeEntityContext;
+
+            if (isOverride)
+            {
+                return $"{context} override component '{componentName}'";
+            }
+
+            string source = _templateSources != null && _templateSources.TryGetValue(templateId, out string sourceUri)
+                ? sourceUri
+                : "Entities/templates.json";
+            return $"{context} template '{templateId}' source '{source}' component '{componentName}'";
         }
     }
 }

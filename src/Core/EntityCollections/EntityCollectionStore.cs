@@ -1,21 +1,17 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.EntityCollections
 {
     public sealed class EntityCollectionStore
     {
-        private const float LoadFactor = 0.72f;
-
         private readonly StringIntRegistry _keyRegistry;
+        private readonly EntityKeyedSoaTable<EntityCollectionPayload> _collections;
 
         private bool[] _active;
         private Entity[] _owners;
-        private int[] _ownerIds;
-        private int[] _ownerWorldIds;
-        private int[] _ownerVersions;
-        private int[] _keyIds;
         private EntityCollectionSourceKind[] _sourceKinds;
         private EntityCollectionRoleKind[] _roles;
         private Entity[] _contextEntities;
@@ -33,16 +29,6 @@ namespace Ludots.Core.EntityCollections
         private int[] _rowRoleIds;
         private EntityCollectionRowFlags[] _rowFlags;
 
-        private int[] _bucketHeads;
-        private int[] _entryNext;
-        private int[] _entryOwnerIds;
-        private int[] _entryOwnerWorldIds;
-        private int[] _entryOwnerVersions;
-        private int[] _entryKeyIds;
-        private int[] _entrySlots;
-
-        private int _slotCount;
-        private int _entryCount;
         private int _rowCursor;
 
         public EntityCollectionStore(
@@ -51,6 +37,7 @@ namespace Ludots.Core.EntityCollections
             int initialRowCapacity = 1024)
         {
             _keyRegistry = keyRegistry ?? throw new ArgumentNullException(nameof(keyRegistry));
+            _collections = new EntityKeyedSoaTable<EntityCollectionPayload>(initialCollectionCapacity);
             if (initialCollectionCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(initialCollectionCapacity));
@@ -63,10 +50,6 @@ namespace Ludots.Core.EntityCollections
 
             _active = new bool[initialCollectionCapacity];
             _owners = new Entity[initialCollectionCapacity];
-            _ownerIds = new int[initialCollectionCapacity];
-            _ownerWorldIds = new int[initialCollectionCapacity];
-            _ownerVersions = new int[initialCollectionCapacity];
-            _keyIds = new int[initialCollectionCapacity];
             _sourceKinds = new EntityCollectionSourceKind[initialCollectionCapacity];
             _roles = new EntityCollectionRoleKind[initialCollectionCapacity];
             _contextEntities = new Entity[initialCollectionCapacity];
@@ -83,21 +66,32 @@ namespace Ludots.Core.EntityCollections
             _rowOrdinals = new int[initialRowCapacity];
             _rowRoleIds = new int[initialRowCapacity];
             _rowFlags = new EntityCollectionRowFlags[initialRowCapacity];
-
-            int bucketCount = NextPowerOfTwo(Math.Max(16, initialCollectionCapacity * 2));
-            _bucketHeads = new int[bucketCount];
-            Array.Fill(_bucketHeads, -1);
-            _entryNext = new int[initialCollectionCapacity];
-            _entryOwnerIds = new int[initialCollectionCapacity];
-            _entryOwnerWorldIds = new int[initialCollectionCapacity];
-            _entryOwnerVersions = new int[initialCollectionCapacity];
-            _entryKeyIds = new int[initialCollectionCapacity];
-            _entrySlots = new int[initialCollectionCapacity];
         }
 
         public StringIntRegistry KeyRegistry => _keyRegistry;
-        public int CollectionCount => _slotCount;
+        public int CollectionCount => _collections.ActiveCount;
         public int RowCapacity => _rowEntities.Length;
+
+        public int CopyActiveHandles(Span<EntityCollectionHandle> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int slot = 0; slot < _active.Length && written < destination.Length; slot++)
+            {
+                if (!_active[slot])
+                {
+                    continue;
+                }
+
+                destination[written++] = new EntityCollectionHandle(slot, _revisions[slot]);
+            }
+
+            return written;
+        }
 
         public EntityCollectionHandle Replace(
             Entity owner,
@@ -135,7 +129,9 @@ namespace Ludots.Core.EntityCollections
             }
 
             int keyId = _keyRegistry.Register(descriptor.Key);
-            int slot = GetOrCreateSlot(owner, keyId);
+            EntityKeyedSoaKey tableKey = EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId);
+            int slot = _collections.EnsureSlot(tableKey);
+            EnsureSlotCapacity(slot + 1);
             ulong nextSignature = ComputeSignature(in descriptor, entities, rowRoleIds, rowFlags);
 
             bool changed = !_active[slot] ||
@@ -182,10 +178,6 @@ namespace Ludots.Core.EntityCollections
 
             _active[slot] = true;
             _owners[slot] = owner;
-            _ownerIds[slot] = owner.Id;
-            _ownerWorldIds[slot] = owner.WorldId;
-            _ownerVersions[slot] = owner.Version;
-            _keyIds[slot] = keyId;
             _sourceKinds[slot] = descriptor.SourceKind;
             _roles[slot] = descriptor.Role;
             _contextEntities[slot] = descriptor.ContextEntity;
@@ -197,15 +189,21 @@ namespace Ludots.Core.EntityCollections
 
             if (changed)
             {
-                _revisions[slot]++;
-                if (_revisions[slot] == 0)
-                {
-                    _revisions[slot] = 1;
-                }
+                _revisions[slot] = _collections.Upsert(
+                    tableKey,
+                    new EntityCollectionPayload(keyId),
+                    expiryTick: 0,
+                    payloadChanged: true,
+                    out _);
             }
             else if (_revisions[slot] == 0)
             {
-                _revisions[slot] = 1;
+                _revisions[slot] = _collections.Upsert(
+                    tableKey,
+                    new EntityCollectionPayload(keyId),
+                    expiryTick: 0,
+                    payloadChanged: false,
+                    out _);
             }
 
             return new EntityCollectionHandle(slot, _revisions[slot]);
@@ -223,14 +221,12 @@ namespace Ludots.Core.EntityCollections
             }
 
             _active[slot] = false;
+            _owners[slot] = Entity.Null;
             _rowCounts[slot] = 0;
             _titles[slot] = string.Empty;
             _summaries[slot] = string.Empty;
-            _revisions[slot]++;
-            if (_revisions[slot] == 0)
-            {
-                _revisions[slot] = 1;
-            }
+            _collections.Remove(EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId));
+            _revisions[slot] = 1;
 
             return true;
         }
@@ -287,7 +283,12 @@ namespace Ludots.Core.EntityCollections
             }
 
             int slot = handle.Slot;
-            int keyId = _keyIds[slot];
+            if (!_collections.TryGetSlot(slot, out _, out EntityCollectionPayload payload, out _))
+            {
+                return false;
+            }
+
+            int keyId = payload.KeyId;
             view = new EntityCollectionView(
                 _owners[slot],
                 keyId,
@@ -430,55 +431,19 @@ namespace Ludots.Core.EntityCollections
             return written;
         }
 
-        private int GetOrCreateSlot(Entity owner, int keyId)
-        {
-            if (TryFindSlot(owner, keyId, out int existing))
-            {
-                return existing;
-            }
-
-            EnsureSlotCapacity(_slotCount + 1);
-            EnsureEntryCapacity(_entryCount + 1);
-            if ((_entryCount + 1) > (int)(_bucketHeads.Length * LoadFactor))
-            {
-                Rehash(_bucketHeads.Length * 2);
-            }
-
-            int slot = _slotCount++;
-            int entry = _entryCount++;
-            _entryOwnerIds[entry] = owner.Id;
-            _entryOwnerWorldIds[entry] = owner.WorldId;
-            _entryOwnerVersions[entry] = owner.Version;
-            _entryKeyIds[entry] = keyId;
-            _entrySlots[entry] = slot;
-            int bucket = BucketIndex(owner.Id, owner.WorldId, owner.Version, keyId, _bucketHeads.Length);
-            _entryNext[entry] = _bucketHeads[bucket];
-            _bucketHeads[bucket] = entry;
-            return slot;
-        }
-
         private bool TryFindSlot(Entity owner, int keyId, out int slot)
         {
-            int bucket = BucketIndex(owner.Id, owner.WorldId, owner.Version, keyId, _bucketHeads.Length);
-            for (int entry = _bucketHeads[bucket]; entry >= 0; entry = _entryNext[entry])
-            {
-                if (_entryOwnerIds[entry] == owner.Id &&
-                    _entryOwnerWorldIds[entry] == owner.WorldId &&
-                    _entryOwnerVersions[entry] == owner.Version &&
-                    _entryKeyIds[entry] == keyId)
-                {
-                    slot = _entrySlots[entry];
-                    return true;
-                }
-            }
-
-            slot = -1;
-            return false;
+            return _collections.TryGet(
+                EntityKeyedSoaKey.ForEntityAndDiscriminator(owner, keyId),
+                currentTick: 0,
+                out _,
+                out _,
+                out slot);
         }
 
         private bool TryValidateSlot(int slot)
         {
-            return (uint)slot < (uint)_slotCount && _active[slot];
+            return (uint)slot < (uint)_active.Length && _active[slot];
         }
 
         private void EnsureSlotCapacity(int required)
@@ -496,10 +461,6 @@ namespace Ludots.Core.EntityCollections
 
             Array.Resize(ref _active, next);
             Array.Resize(ref _owners, next);
-            Array.Resize(ref _ownerIds, next);
-            Array.Resize(ref _ownerWorldIds, next);
-            Array.Resize(ref _ownerVersions, next);
-            Array.Resize(ref _keyIds, next);
             Array.Resize(ref _sourceKinds, next);
             Array.Resize(ref _roles, next);
             Array.Resize(ref _contextEntities, next);
@@ -511,27 +472,6 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _rowCapacities, next);
             Array.Resize(ref _titles, next);
             Array.Resize(ref _summaries, next);
-        }
-
-        private void EnsureEntryCapacity(int required)
-        {
-            if (required <= _entryNext.Length)
-            {
-                return;
-            }
-
-            int next = _entryNext.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _entryNext, next);
-            Array.Resize(ref _entryOwnerIds, next);
-            Array.Resize(ref _entryOwnerWorldIds, next);
-            Array.Resize(ref _entryOwnerVersions, next);
-            Array.Resize(ref _entryKeyIds, next);
-            Array.Resize(ref _entrySlots, next);
         }
 
         private void EnsureSlotRowCapacity(int slot, int required)
@@ -580,24 +520,6 @@ namespace Ludots.Core.EntityCollections
             Array.Resize(ref _rowOrdinals, next);
             Array.Resize(ref _rowRoleIds, next);
             Array.Resize(ref _rowFlags, next);
-        }
-
-        private void Rehash(int bucketCount)
-        {
-            int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
-            Array.Resize(ref _bucketHeads, nextBucketCount);
-            Array.Fill(_bucketHeads, -1);
-            for (int entry = 0; entry < _entryCount; entry++)
-            {
-                int bucket = BucketIndex(
-                    _entryOwnerIds[entry],
-                    _entryOwnerWorldIds[entry],
-                    _entryOwnerVersions[entry],
-                    _entryKeyIds[entry],
-                    _bucketHeads.Length);
-                _entryNext[entry] = _bucketHeads[bucket];
-                _bucketHeads[bucket] = entry;
-            }
         }
 
         private static ulong ComputeSignature(
@@ -652,28 +574,14 @@ namespace Ludots.Core.EntityCollections
             }
         }
 
-        private static int BucketIndex(int ownerId, int ownerWorldId, int ownerVersion, int keyId, int bucketCount)
+        private readonly struct EntityCollectionPayload
         {
-            unchecked
+            public EntityCollectionPayload(int keyId)
             {
-                uint hash = 2166136261u;
-                hash = (hash ^ (uint)ownerId) * 16777619u;
-                hash = (hash ^ (uint)ownerWorldId) * 16777619u;
-                hash = (hash ^ (uint)ownerVersion) * 16777619u;
-                hash = (hash ^ (uint)keyId) * 16777619u;
-                return (int)(hash & (uint)(bucketCount - 1));
-            }
-        }
-
-        private static int NextPowerOfTwo(int value)
-        {
-            int result = 1;
-            while (result < value)
-            {
-                result <<= 1;
+                KeyId = keyId;
             }
 
-            return result;
+            public readonly int KeyId;
         }
     }
 }

@@ -91,11 +91,12 @@ namespace Ludots.Core.Gameplay.Relationships
             EnsureTagState(entity);
             ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref _world.Get<DirtyFlags>(entity);
             for (int i = 0; i < tagIds.Length; i++)
             {
                 if (tagIds[i] > 0)
                 {
-                    _tagOps.AddTag(ref tags, ref counts, tagIds[i]);
+                    _tagOps.AddTag(ref tags, ref counts, tagIds[i], ref dirty);
                 }
             }
         }
@@ -110,11 +111,12 @@ namespace Ludots.Core.Gameplay.Relationships
             EnsureTagState(entity);
             ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+            ref DirtyFlags dirty = ref _world.Get<DirtyFlags>(entity);
             for (int i = 0; i < tagIds.Length; i++)
             {
                 if (tagIds[i] > 0)
                 {
-                    _tagOps.RemoveTag(ref tags, ref counts, tagIds[i]);
+                    _tagOps.RemoveTag(ref tags, ref counts, tagIds[i], ref dirty);
                 }
             }
         }
@@ -147,6 +149,11 @@ namespace Ludots.Core.Gameplay.Relationships
             if (!_world.Has<TagCountContainer>(entity))
             {
                 entity.Add(new TagCountContainer());
+            }
+
+            if (!_world.Has<DirtyFlags>(entity))
+            {
+                entity.Add(new DirtyFlags());
             }
         }
 

@@ -8,5 +8,11 @@ namespace Ludots.Core.Physics2D.Components
         public double PhysicsUpdateMs;
         public int PotentialPairs;
         public int ContactPairs;
+        public int DynamicBodies;
+        public int StaticBodies;
+        public int DirtyStaticBodies;
+        public int BroadphaseStrategy;
+        public int BroadphaseCellSizeCm;
+        public int DroppedPairs;
     }
 }

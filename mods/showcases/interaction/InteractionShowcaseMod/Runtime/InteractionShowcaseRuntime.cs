@@ -1,14 +1,19 @@
 using System;
 using System.Threading.Tasks;
-using CoreInputMod;
+using Arch.Core;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using CoreInputMod.ViewMode;
 using InteractionShowcaseMod.Input;
 using InteractionShowcaseMod.UI;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 
@@ -16,6 +21,10 @@ namespace InteractionShowcaseMod.Runtime
 {
     internal sealed class InteractionShowcaseRuntime
     {
+        private const int ShowcaseLocalPlayerId = 1;
+        private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription().WithAll<Name, PlayerOwner, MapEntity, AbilityStateBuffer>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
 
@@ -34,13 +43,14 @@ namespace InteractionShowcaseMod.Runtime
 
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             bool showcaseActive = InteractionShowcaseIds.IsShowcaseMap(activeMapId);
-            var viewModeManager = ResolveViewModeManager(engine);
             var input = context.Get(CoreServiceKeys.InputHandler);
 
             if (showcaseActive)
             {
                 ActivateInputContext(input);
-                EnsureDefaultShowcaseMode(viewModeManager);
+                EnsureDefaultShowcaseMode(engine);
+                EnsureShowcaseLocalPlayer(engine, activeMapId!);
+                PublishShowcaseKnowledge(engine, activeMapId!);
                 EnsureShowcaseSelectionView(engine);
                 EnsureEntityInfoPanels(context, engine);
                 RefreshPanel(engine);
@@ -48,7 +58,7 @@ namespace InteractionShowcaseMod.Runtime
             else
             {
                 CloseEntityInfoPanels(context);
-                ClearShowcaseModeIfOwned(viewModeManager);
+                ClearShowcaseModeIfOwned(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
             }
@@ -70,7 +80,7 @@ namespace InteractionShowcaseMod.Runtime
                 return Task.CompletedTask;
             }
 
-            ClearShowcaseModeIfOwned(ResolveViewModeManager(engine));
+            ClearShowcaseModeIfOwned(engine);
             CloseEntityInfoPanels(context);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
@@ -99,7 +109,7 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
-            _panelController.MountOrRefresh(root, engine, activeMapId!, ResolveViewModeManager(engine));
+            _panelController.MountOrRefresh(root, engine, activeMapId!);
         }
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
@@ -354,31 +364,21 @@ namespace InteractionShowcaseMod.Runtime
             }.ExecuteAsync(context).GetAwaiter().GetResult();
         }
 
-        private static ViewModeManager? ResolveViewModeManager(GameEngine engine)
+        private static void EnsureDefaultShowcaseMode(GameEngine engine)
         {
-            return CoreInputRuntimeServices.GetViewModeManager(engine);
-        }
-
-        private static void EnsureDefaultShowcaseMode(ViewModeManager? viewModeManager)
-        {
-            if (viewModeManager == null)
-            {
-                return;
-            }
-
-            string? activeModeId = viewModeManager.ActiveMode?.Id;
+            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
             if (!InteractionShowcaseIds.IsShowcaseMode(activeModeId))
             {
-                viewModeManager.SwitchTo(InteractionShowcaseIds.LolModeId);
+                ViewModeRuntime.TrySwitchTo(engine.GlobalContext, InteractionShowcaseIds.LolModeId);
             }
         }
 
-        private static void ClearShowcaseModeIfOwned(ViewModeManager? viewModeManager)
+        private static void ClearShowcaseModeIfOwned(GameEngine engine)
         {
-            if (viewModeManager != null &&
-                InteractionShowcaseIds.IsShowcaseMode(viewModeManager.ActiveMode?.Id))
+            if (ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId) &&
+                InteractionShowcaseIds.IsShowcaseMode(activeModeId))
             {
-                viewModeManager.ClearActiveMode();
+                ViewModeRuntime.TryClearActiveMode(engine.GlobalContext);
             }
         }
 
@@ -442,6 +442,132 @@ namespace InteractionShowcaseMod.Runtime
             selection = runtime;
             viewer = localViewer;
             return true;
+        }
+
+        private static void EnsureShowcaseLocalPlayer(GameEngine engine, string activeMapId)
+        {
+            if (TryResolveExistingLocalPlayer(engine, activeMapId, out _))
+            {
+                return;
+            }
+
+            Entity firstCandidate = Entity.Null;
+            Entity preferredCandidate = Entity.Null;
+            int firstPlayerId = 0;
+            int preferredPlayerId = 0;
+
+            engine.World.Query(in LocalPlayerCandidateQuery, (Entity entity, ref Name name, ref PlayerOwner owner, ref MapEntity mapEntity, ref AbilityStateBuffer _) =>
+            {
+                if (!IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
+                {
+                    return;
+                }
+
+                if (firstCandidate == Entity.Null)
+                {
+                    firstCandidate = entity;
+                    firstPlayerId = owner.PlayerId;
+                }
+
+                if (string.Equals(name.Value, InteractionShowcaseIds.ArcweaverName, StringComparison.OrdinalIgnoreCase))
+                {
+                    preferredCandidate = entity;
+                    preferredPlayerId = owner.PlayerId;
+                }
+            });
+
+            Entity resolved = preferredCandidate != Entity.Null ? preferredCandidate : firstCandidate;
+            int resolvedPlayerId = preferredCandidate != Entity.Null ? preferredPlayerId : firstPlayerId;
+            if (resolved == Entity.Null)
+            {
+                return;
+            }
+
+            PublishShowcaseLocalPlayer(engine, resolved, resolvedPlayerId);
+        }
+
+        private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
+        {
+            localPlayer = Entity.Null;
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
+                !engine.World.IsAlive(existing) ||
+                !engine.World.TryGet(existing, out PlayerOwner owner) ||
+                !engine.World.TryGet(existing, out MapEntity mapEntity) ||
+                !IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
+            {
+                return false;
+            }
+
+            localPlayer = existing;
+            PublishShowcaseLocalPlayer(engine, existing, owner.PlayerId);
+            return true;
+        }
+
+        private static void PublishShowcaseLocalPlayer(GameEngine engine, Entity localPlayer, int playerId)
+        {
+            if (playerId <= 0)
+            {
+                return;
+            }
+
+            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
+                lookup == null ||
+                (lookup.TryGet(playerId, out Entity existing) && existing != localPlayer))
+            {
+                lookup = new PlayerEntityLookup();
+                engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
+            }
+
+            if (!lookup.TryGet(playerId, out _))
+            {
+                lookup.Register(playerId, localPlayer);
+            }
+
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+        }
+
+        private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
+            var empty = KnowledgeIdMask256.Empty;
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            {
+                if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                knowledge.Upsert(
+                    viewer,
+                    entity,
+                    new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        empty,
+                        empty,
+                        empty,
+                        viewer,
+                        observedTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0));
+            });
+        }
+
+        private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
+        {
+            return owner.PlayerId == ShowcaseLocalPlayerId &&
+                   string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
         }
 
         private void EnsureShowcaseSelectionView(GameEngine engine)

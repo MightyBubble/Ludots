@@ -1,7 +1,7 @@
 # Order Continuation And Composite Planning
 
 > SSOT scope: `CoreInputMod` raw order submit seam之后，通用的“复合命令规划 + 完成后续接”基建。  
-> 本文只覆盖 `move-then-cast` 这类组合命令如何进入现有 GAS order 体系，不覆盖后续 `Navigation2D` move runtime、路径可视化 performer、或 UI queue 面板。
+> 本文只覆盖 `move-then-cast` 这类组合命令如何进入现有 GAS order 体系，不覆盖 MassNavigationFlow move runtime、路径可视化 performer、或 UI queue 面板。
 
 ## 1. 现状缺口
 
@@ -18,7 +18,7 @@
 - `src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs`
   - 负责按照 order type config 把 order 写入 buffer / blackboard。
 - `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs`
-  - 已经提供 indicator range，可用于通用施法几何规划。
+  - 已经提供 `targeting.castRangeCm`，可用于通用施法几何规划。
 
 但缺了一个通用层，把“玩家意图”翻译成“多个 order 的安全组合”：
 
@@ -35,7 +35,7 @@
 - Mod seam: `LocalOrderSourceHelper`
   - 作为 raw submit handler 的唯一接缝。
 - Registry: `AbilityDefinitionRegistry`
-  - 读取 `indicator.range` 作为通用 cast 几何。
+  - 读取 `targeting.castRangeCm` 作为通用 cast 几何。
 - Queue / Buffer: `OrderQueue`、`OrderBuffer`、`OrderSubmitter`
   - 不新增平行队列，不重写 order runtime。
 - Phase: `SystemGroup.AbilityActivation`
@@ -84,7 +84,7 @@
 - 若不是可规划的 cast，直接透传到 `OrderQueue`
 - 若是超距 cast：
   - 解析 actor 当前或 projected 起点
-  - 读取 ability indicator range
+  - 读取 ability targeting cast range
   - 计算最近合法施法点
   - 生成前置 `moveTo`
   - 注册 follow-up `castAbility`
@@ -143,7 +143,7 @@
 
 本切片不覆盖：
 
-- `Navigation2D` 驱动的真正移动执行
+- MassNavigationFlow 驱动的真正移动执行
 - queued path / hover path 的 performer 可视化
 - 多段 continuation 链的专用 UI 展示
 - “目标移动后重新规划 cast 点”的 runtime replanning
@@ -164,6 +164,6 @@
 下一切片直接在这条基建上推进：
 
 - `move-runtime-navigation`
-  - 让 `moveTo` 不再直接 step `WorldPositionCm`，而是改由 `Navigation2D` 执行。
+  - 让 `moveTo` 不再直接 step `WorldPositionCm`，而是改由 MassNavigationFlow 执行。
 - `order-indicator-and-acceptance`
   - 把移动路径、队列路径、接受范围等统一并入 indicator performer。

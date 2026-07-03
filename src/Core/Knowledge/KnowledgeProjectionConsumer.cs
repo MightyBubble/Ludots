@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Scripting;
@@ -31,14 +32,21 @@ namespace Ludots.Core.Knowledge
                 return false;
             }
 
-            Span<Entity> scopes = stackalloc Entity[1] { viewer };
+            Span<Entity> scopeMembers = stackalloc Entity[1];
             Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
             Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
             return resolver.TryResolveWithRelationGrants(
                 viewer,
                 target,
                 ResolveCurrentTick(globals),
-                scopes,
+                in viewerScope,
+                in roleContext,
+                scopeMembers,
                 relationSources,
                 relationTargets,
                 out projection);
@@ -53,6 +61,53 @@ namespace Ludots.Core.Knowledge
             out KnowledgeProjection projection)
         {
             return TryResolve(world, globals, fallbackViewer, target, out projection) &&
+                   projection.CanReadPosition(requiredPosition);
+        }
+
+        public static bool TryResolveForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            out KnowledgeProjection projection)
+        {
+            projection = default;
+            if (viewer == Entity.Null ||
+                !world.IsAlive(viewer) ||
+                !TryGetResolver(globals, out KnowledgeProjectionResolver resolver))
+            {
+                return false;
+            }
+
+            Span<Entity> scopeMembers = stackalloc Entity[1];
+            Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
+            Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
+            return resolver.TryResolveWithRelationGrants(
+                viewer,
+                target,
+                ResolveCurrentTick(globals),
+                in viewerScope,
+                in roleContext,
+                scopeMembers,
+                relationSources,
+                relationTargets,
+                out projection);
+        }
+
+        public static bool CanReadPositionForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            KnowledgePositionAccess requiredPosition,
+            out KnowledgeProjection projection)
+        {
+            return TryResolveForViewer(world, globals, viewer, target, out projection) &&
                    projection.CanReadPosition(requiredPosition);
         }
 

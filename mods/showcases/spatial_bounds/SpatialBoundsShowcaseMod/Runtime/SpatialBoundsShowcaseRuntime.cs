@@ -414,8 +414,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static Entity ResolveHoveredEntity(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out var hoveredObj) &&
-                   hoveredObj is Entity hovered &&
+            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
                 ? hovered

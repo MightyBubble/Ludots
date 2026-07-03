@@ -14,8 +14,21 @@ namespace Ludots.Core.Gameplay.AI.Planning
             ref BlackboardIntBuffer ints,
             ref BlackboardEntityBuffer entities,
             int submitStep,
-            OrderQueue queue)
+            OrderQueue queue,
+            OrderTypeRegistry? orderTypeRegistry = null)
         {
+            if (spec.OrderTypeId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"AI plan attempted to submit invalid order type id {spec.OrderTypeId}.");
+            }
+
+            if (orderTypeRegistry != null && !orderTypeRegistry.IsRegistered(spec.OrderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"AI plan attempted to submit unregistered order type id {spec.OrderTypeId}.");
+            }
+
             var order = new Order
             {
                 OrderTypeId = spec.OrderTypeId,

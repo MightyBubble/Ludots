@@ -22,6 +22,7 @@ namespace Ludots.Core.Presentation.Performers
         public bool HasVision;
         public bool RequiresAttributeProjection;
         public bool HasAttributeProjection;
+        public bool AllowVisibleTransientWorldText;
         public bool HasRelationshipLink;
         public bool HasTeamRelationship;
         public bool IsOwnedByAudience;

@@ -66,7 +66,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         scene.Layout(uiRoot.Width, uiRoot.Height);
         string initialText = ExtractUiSceneText(scene);
         Assert.That(initialText, Does.Contain("Genre Info Panel Showcase"));
-        Assert.That(initialText, Does.Contain("Total War unit cards"));
+        Assert.That(initialText, Does.Contain("Formation Capability unit cards"));
         Assert.That(ReadSelectedEntityName(engine), Is.EqualTo("Marine 01"));
         Assert.That(scene.TryGetVirtualWindow(GenreInfoShowcaseIds.SelectionGridHostId, out UiVirtualWindow initialWindow), Is.True);
         Assert.That(initialWindow.TotalCount, Is.GreaterThan(initialWindow.VisibleCount));
@@ -86,7 +86,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
 
         int scrolledStart = ScrollElement(uiRoot, GenreInfoShowcaseIds.SelectionGridHostId, 420f);
         Assert.That(scrolledStart, Is.GreaterThan(initialWindow.StartIndex));
-        timeline.Add("[T+002] Scrolled the Total War unit-card grid and advanced the virtual window without remounting the scene.");
+        timeline.Add("[T+002] Scrolled the Formation Capability unit-card grid and advanced the virtual window without remounting the scene.");
         trace.Add(new
         {
             step = "rts_virtualized_scroll",
@@ -350,7 +350,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
         builder.AppendLine();
         builder.AppendLine("## Outcome");
         builder.AppendLine("- success: yes");
-        builder.AppendLine("- verdict: one insight runtime now covers portrait blend, SC2/War3-style single-select portrait focus, Total War-style unit cards, localized copy, and control-group driven selection recall.");
+        builder.AppendLine("- verdict: one insight runtime now covers portrait blend, SC2/War3-style single-select portrait focus, Formation Capability-style unit cards, localized copy, and control-group driven selection recall.");
         builder.AppendLine("- screenshots:");
         builder.AppendLine("  - `screens/01-rts-squad-en.png`");
         builder.AppendLine("  - `screens/02-moba-hero-en.png`");

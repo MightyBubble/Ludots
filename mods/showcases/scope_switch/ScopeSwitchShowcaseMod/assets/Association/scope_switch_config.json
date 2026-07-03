@@ -1,0 +1,54 @@
+{
+  "MapId": "scope_switch_showcase",
+  "Header": "Scope Switch Showcase",
+  "Summary": "Switch one viewer through self, squad, team, and city scopes. The visible entity list is resolved through ScopeKey, RoleSlot, ScopeResolver, and KnowledgeProjectionResolver.",
+  "Controls": "1 self | 2 squad | 3 team | 4 city",
+  "ViewerEntity": "hero",
+  "Entities": [
+    { "Id": "hero", "Label": "Hero Scout", "Category": "unit" },
+    { "Id": "squad_medic", "Label": "Squad Medic", "Category": "unit" },
+    { "Id": "squad_engineer", "Label": "Squad Engineer", "Category": "unit" },
+    { "Id": "team_captain", "Label": "Team Captain", "Category": "unit" },
+    { "Id": "team_archer", "Label": "Team Archer", "Category": "unit" },
+    { "Id": "city_watch", "Label": "City Watch", "Category": "city" },
+    { "Id": "city_market", "Label": "City Market", "Category": "city" }
+  ],
+  "Scopes": [
+    {
+      "Id": "self",
+      "Label": "Self",
+      "Kind": "Self",
+      "ActionId": "ScopeSwitch.Self",
+      "Host": "hero",
+      "Members": ["hero"],
+      "Visible": ["hero"]
+    },
+    {
+      "Id": "squad",
+      "Label": "Squad",
+      "Kind": "Named",
+      "ActionId": "ScopeSwitch.Squad",
+      "Host": "squad_medic",
+      "Members": ["hero", "squad_medic", "squad_engineer"],
+      "Visible": ["hero", "squad_medic", "squad_engineer"]
+    },
+    {
+      "Id": "team",
+      "Label": "Team",
+      "Kind": "Named",
+      "ActionId": "ScopeSwitch.Team",
+      "Host": "team_captain",
+      "Members": ["hero", "squad_medic", "squad_engineer", "team_captain", "team_archer"],
+      "Visible": ["hero", "squad_medic", "squad_engineer", "team_captain", "team_archer"]
+    },
+    {
+      "Id": "city",
+      "Label": "City",
+      "Kind": "Named",
+      "ActionId": "ScopeSwitch.City",
+      "Host": "city_watch",
+      "Members": ["hero", "squad_medic", "squad_engineer", "team_captain", "team_archer", "city_watch", "city_market"],
+      "Visible": ["hero", "squad_medic", "squad_engineer", "team_captain", "team_archer", "city_watch", "city_market"]
+    }
+  ]
+}

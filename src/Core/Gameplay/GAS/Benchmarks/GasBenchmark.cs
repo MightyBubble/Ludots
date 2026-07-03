@@ -12,6 +12,13 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
 {
     public class GasBenchmark
     {
+        private static readonly ResponseChainOrderTypes BenchmarkResponseChainOrderTypes = new ResponseChainOrderTypes
+        {
+            ChainPass = 1,
+            ChainNegate = 2,
+            ChainActivateEffect = 3
+        };
+
         public static void Run()
         {
             Console.WriteLine("Initializing GAS Benchmark (Abilities & Hooks)...");
@@ -51,7 +58,12 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var durSystem = new EffectLifetimeSystem(world, clock, conditions, effectRequests);
             var aggSystem = new AttributeAggregatorSystem(world);
 
-            var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, null, effectTemplates);
+            var proposalSystem = new EffectProposalProcessingSystem(
+                world,
+                effectRequests,
+                null,
+                effectTemplates,
+                responseChainOrderTypes: BenchmarkResponseChainOrderTypes);
             var abilitySystem = new AbilitySystem(world, effectRequests);
             var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
             

@@ -1224,7 +1224,10 @@ public sealed class UiScene
 		{
 			return null;
 		}
-
+		if (renderStyle.PointerEvents == UiPointerEvents.None)
+		{
+			return null;
+		}
 		return node.CanvasContent is IUiCanvasHitTestSink hitTestSink &&
 			!hitTestSink.HitTest(node, localPoint.X, localPoint.Y)
 				? null

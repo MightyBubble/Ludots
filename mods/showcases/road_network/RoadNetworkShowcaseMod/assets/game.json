@@ -1,17 +1,10 @@
 {
   "startupMapId": "road_network_showcase_chunked",
+  "startupSelectedPlayerId": 1,
   "startupInputContexts": ["Default_Gameplay", "RoadNetwork_Showcase"],
   "constants": {
     "orderTypeIds": {
       "roadMoveFollow": 171
-    }
-  },
-  "navigation2D": {
-    "enabled": true,
-    "steering": {
-      "smartStop": {
-        "enabled": false
-      }
     }
   },
   "selection": {

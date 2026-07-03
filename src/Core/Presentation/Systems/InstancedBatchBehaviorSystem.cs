@@ -190,6 +190,7 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsGasPresentationEvent(PresentationEventKind kind)
         {
             return kind is PresentationEventKind.EffectApplied
+                or PresentationEventKind.EffectActivated
                 or PresentationEventKind.CastCommitted
                 or PresentationEventKind.CastFailed;
         }

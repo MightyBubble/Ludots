@@ -101,7 +101,13 @@ namespace CoreInputMod.Systems
                     return registryOrderTypeId;
                 }
 
-                return _orderTypeIds.TryGetValue(key, out int configOrderTypeId) ? configOrderTypeId : 0;
+                if (_orderTypeIds.TryGetValue(key, out int configOrderTypeId) && configOrderTypeId > 0)
+                {
+                    return configOrderTypeId;
+                }
+
+                throw new InvalidOperationException(
+                    $"[{ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
             });
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -153,6 +159,19 @@ namespace CoreInputMod.Systems
             if (TryCreateSkillMappingOverrideProvider(out var mappingOverrideProvider))
             {
                 mapping.SetSkillMappingOverrideProvider(mappingOverrideProvider.TryResolve);
+            }
+
+            if (RequiresActorOrderRouting(config))
+            {
+                if (!_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) ||
+                    tagOpsObj is not TagOps tagOps)
+                {
+                    throw new InvalidOperationException(
+                        $"[{ctx.ModId}] input_order_mappings.json defines actorOrderRouting but TagOps is not registered.");
+                }
+
+                mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
+                    ActorOrderRoutingMatcher.TryResolveCandidate(_world, tagOps, actor, routing.Candidates, out matchedCandidate));
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
@@ -240,7 +259,7 @@ namespace CoreInputMod.Systems
         private bool TryResolveHoveredCommandTarget(out Entity entity)
         {
             entity = Entity.Null;
-            if (!_context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out Entity candidate))
+            if (!_context.TryGetHoveredEntity(out Entity candidate))
             {
                 return false;
             }
@@ -480,6 +499,20 @@ namespace CoreInputMod.Systems
 
                 return target != Entity.Null;
             }
+        }
+
+        private static bool RequiresActorOrderRouting(InputOrderMappingConfig config)
+        {
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                InputOrderMapping mapping = config.Mappings[i];
+                if (mapping?.ActorOrderRouting is { Candidates.Count: > 0 })
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
     }

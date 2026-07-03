@@ -7,11 +7,11 @@
       "profileId": "road_surface",
       "geometrySource": {
         "controlPointSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "road_network_chunk_segments"
         },
         "widthSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "road_network_chunk_width"
         },
         "segmentationPolicy": "Bezier12"
@@ -33,5 +33,906 @@
       },
       "boundsPolicy": "Auto"
     }
+  },
+  {
+    "id": "road_network.route_preview.amber",
+    "defaultColor": [
+      1,
+      0.92,
+      0.58,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.98,
+          0.78,
+          0.28,
+          0.24
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          0.92,
+          0.58,
+          0.98
+        ]
+      },
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.76
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.76,
+            0.76,
+            0.76
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.cyan",
+    "defaultColor": [
+      0.48,
+      0.9,
+      1,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.18,
+          0.72,
+          0.96,
+          0.22
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          0.48,
+          0.9,
+          1,
+          0.98
+        ]
+      },
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.72,
+            0.72,
+            0.72
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.crimson",
+    "defaultColor": [
+      1,
+      0.64,
+      0.64,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.94,
+          0.28,
+          0.28,
+          0.22
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          0.64,
+          0.64,
+          0.98
+        ]
+      },
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.05
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.72,
+            0.72,
+            0.72
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.endpoint.amber",
+    "defaultColor": [
+      1,
+      0.92,
+      0.58,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.98
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.78
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.92
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.58
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.98
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.3,
+            0,
+            0.04
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.endpoint.cyan",
+    "defaultColor": [
+      0.48,
+      0.9,
+      1,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.96
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.48
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.9
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.98
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.3,
+            0,
+            0.04
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.endpoint.crimson",
+    "defaultColor": [
+      1,
+      0.64,
+      0.64,
+      0.98
+    ],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.94
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.64
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.64
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.98
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            0.3,
+            0,
+            0.04
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p0",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventPositionX",
+          "vectorYSource": "EventPositionY",
+          "vectorZSource": "EventPositionZ",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p3",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventFloatA",
+          "vectorYSource": "EventFloatB",
+          "vectorZSource": "EventFloatC",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineEnded",
+          "key": "road_network.route_preview.amber"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.amber",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p0",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventPositionX",
+          "vectorYSource": "EventPositionY",
+          "vectorZSource": "EventPositionZ",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p3",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventFloatA",
+          "vectorYSource": "EventFloatB",
+          "vectorZSource": "EventFloatC",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineEnded",
+          "key": "road_network.route_preview.cyan"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.cyan",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p0",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventPositionX",
+          "vectorYSource": "EventPositionY",
+          "vectorZSource": "EventPositionZ",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p3",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventFloatA",
+          "vectorYSource": "EventFloatB",
+          "vectorZSource": "EventFloatC",
+          "vectorWSource": "Fixed"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldSplineEnded",
+          "key": "road_network.route_preview.crimson"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.crimson",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "road_network.route_preview.endpoint.rules",
+    "rules": [
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.amber"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.endpoint.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.amber"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.amber",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "road_network.route_preview.endpoint.amber"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.endpoint.amber",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.cyan"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.endpoint.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.cyan"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.cyan",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "road_network.route_preview.endpoint.cyan"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.endpoint.cyan",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.crimson"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "road_network.route_preview.endpoint.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "road_network.route_preview.endpoint.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "road_network.route_preview.endpoint.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
+      },
+      {
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "road_network.route_preview.endpoint.crimson"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "road_network.route_preview.endpoint.crimson",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
   }
 ]

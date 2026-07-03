@@ -1,0 +1,11 @@
+{
+  "types": [
+    { "id": "Owns", "isSymmetric": false }
+  ],
+  "metrics": [],
+  "flags": [],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

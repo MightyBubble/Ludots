@@ -1,4 +1,4 @@
-﻿# GAS 战斗体系基建与 MOBA 实践指南
+# GAS 战斗体系基建与 MOBA 实践指南
 
 本篇讲清楚两件事：
 
@@ -299,7 +299,7 @@ Graph 程序通过 `LoadSelfAttribute` / `WriteSelfAttribute` 读写当前实体
 
 `Displacement` is now created by `BuiltinHandlers.HandleApplyDisplacement()` and driven in fixed-step by `DisplacementRuntimeSystem`:
 
-*   **Navigation override**: active displacement clears `NavGoal2D`, `NavDesiredVelocity2D`, and `ForceInput2D`, then restores captured navigation state on completion
+*   **Navigation override**: active displacement clears MassNavigationFlow target state and `ForceInput2D`, then restores captured movement state on completion
 *   **Tick-driven motion**: total distance and duration are executed in deterministic `Fix64` / `Fix64Vec2`
 *   **Direction modes**: `ToTarget` resolves from `TargetContext` or `AbilityExecInstance.TargetPosCm`; `AwayFromSource`, `TowardSource`, and `Fixed` continue through the same runtime
 *   **Runtime boundary**: displacement stays inside the GAS fixed-step pipeline instead of relying on presentation / render-side helpers
@@ -348,8 +348,8 @@ References:
 当前做法是：
 
 * Core authoring 用 `ManifestationObstacleIntent2D` 声明“这是一个阻挡型具现体”。
-* `Ludots.Physics2D` 用 `ManifestationObstacleBridge2DSystem` 把该意图下沉为 `Collider2D`、`NavObstacle2D`、`NavKinematics2D`。
-* `Navigation2DSteeringSystem2D` 与 `CrowdSurface2D` 负责真实的 flow obstacle stamping。
+* `Ludots.Physics2D` 用 `ManifestationObstacleBridge2DSystem` 把该意图下沉为 `Collider2D` 与 MassNavigationFlow obstacle projection。
+* MassNavigationFlow 执行层负责真实的 obstacle stamping。
 
 因此：
 
@@ -371,5 +371,5 @@ References:
 * `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs`
 * `src/Core/Gameplay/Spawning/ManifestationObstacleIntent2D.cs`
 * `src/Core/Ludots.Physics2D/Systems/ManifestationObstacleBridge2DSystem.cs`
-* `src/Core/Navigation2D/Components/NavObstacle2D.cs`
+* `src/Core/MassNavigation/Runtime/MassNavigationComponents.cs`
 

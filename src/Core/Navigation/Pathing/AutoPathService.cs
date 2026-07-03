@@ -5,6 +5,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.Pathing.Config;
 
@@ -17,7 +18,9 @@ namespace Ludots.Core.Navigation.Pathing
         private readonly LoadedGraphRuntime _graphRuntime;
         private readonly NavQueryServiceRegistry? _navRegistry;
         private readonly NavMeshProfileRegistry? _navProfiles;
+        private readonly AgentProfileRegistry _agentProfiles;
         private readonly PathStore _store;
+        private readonly GraphEdgeCostOverlay? _edgeOverlay;
         private readonly bool _navMeshAvailable;
 
         private readonly Dictionary<string, CompiledAgentType> _agents;
@@ -28,14 +31,16 @@ namespace Ludots.Core.Navigation.Pathing
         private int[] _xScratch = Array.Empty<int>();
         private int[] _yScratch = Array.Empty<int>();
 
-        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, PathStore store, PathingConfig config)
+        public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
             _graphRuntime = null;
             _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
             _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
@@ -54,14 +59,16 @@ namespace Ludots.Core.Navigation.Pathing
             if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, PathStore store, PathingConfig config)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
             _graphIndex = null;
             _navRegistry = navRegistry ?? throw new ArgumentNullException(nameof(navRegistry));
             _navProfiles = navProfiles ?? throw new ArgumentNullException(nameof(navProfiles));
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = edgeOverlay;
             _navMeshAvailable = true;
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
@@ -80,14 +87,16 @@ namespace Ludots.Core.Navigation.Pathing
             if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
         }
 
-        public AutoPathService(NodeGraph graph, PathStore store, PathingConfig config)
+        public AutoPathService(NodeGraph graph, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
         {
             _graph = graph ?? throw new ArgumentNullException(nameof(graph));
             _graphIndex = LoadedGraphRuntime.CreateSpatialIndex(_graph, preferredCellSizeCm: 0);
             _graphRuntime = null;
             _navRegistry = null;
             _navProfiles = null;
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
@@ -106,14 +115,16 @@ namespace Ludots.Core.Navigation.Pathing
             if (_defaultAgent.Id == null) throw new InvalidOperationException("PathingConfig.agentTypes has no valid entries.");
         }
 
-        public AutoPathService(LoadedGraphRuntime graphRuntime, PathStore store, PathingConfig config)
+        public AutoPathService(LoadedGraphRuntime graphRuntime, AgentProfileRegistry agentProfiles, PathStore store, PathingConfig config, GraphEdgeCostOverlay? edgeOverlay = null)
         {
             _graphRuntime = graphRuntime ?? throw new ArgumentNullException(nameof(graphRuntime));
             _graph = null;
             _graphIndex = null;
             _navRegistry = null;
             _navProfiles = null;
+            _agentProfiles = agentProfiles ?? throw new ArgumentNullException(nameof(agentProfiles));
             _store = store ?? throw new ArgumentNullException(nameof(store));
+            _edgeOverlay = edgeOverlay;
             _navMeshAvailable = false;
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.AgentTypes == null || config.AgentTypes.Count == 0) throw new InvalidOperationException("PathingConfig.agentTypes is empty.");
@@ -196,6 +207,17 @@ namespace Ludots.Core.Navigation.Pathing
             NodeGraph graph = ResolveGraph();
             INodeGraphSpatialIndex graphIndex = ResolveGraphIndex();
             TagRuleTraversalPolicy policy = agent.CreateGraphPolicy(graph);
+            if (agent.UseDynamicOverlay)
+            {
+                if (_edgeOverlay == null)
+                {
+                    throw new InvalidOperationException($"Pathing agent '{agent.Id}' enables nodeGraph.useDynamicOverlay but GraphEdgeCostOverlay is not registered.");
+                }
+
+                _edgeOverlay.EnsureCapacity(graph.EdgeCount);
+                policy.Overlay = _edgeOverlay;
+                policy.UseOverlay = true;
+            }
 
             int startNodeId;
             int goalNodeId;
@@ -280,7 +302,14 @@ namespace Ludots.Core.Navigation.Pathing
 
             _store.TryWrite(in handle, _xScratch, _yScratch, count);
             travelCost = r.TravelCost;
-            result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, r.Expanded, errorCode: 0);
+            result = new PathResult(
+                request.RequestId,
+                request.Actor,
+                PathStatus.Found,
+                handle,
+                r.Expanded,
+                errorCode: 0,
+                resolvedDomain: PathDomain.NodeGraph);
             return true;
         }
 
@@ -332,7 +361,14 @@ namespace Ludots.Core.Navigation.Pathing
 
             _store.TryWrite(in handle, r.PathXcm, r.PathZcm, count);
             travelCost = r.TravelCost.ToFloat();
-            result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, expanded: 0, errorCode: 0);
+            result = new PathResult(
+                request.RequestId,
+                request.Actor,
+                PathStatus.Found,
+                handle,
+                expanded: 0,
+                errorCode: 0,
+                resolvedDomain: PathDomain.NavMesh);
             return true;
         }
 
@@ -355,6 +391,7 @@ namespace Ludots.Core.Navigation.Pathing
 
         private CompiledAgentType CompileAgent(PathingAgentTypeConfig cfg)
         {
+            AgentProfileConfig agentProfile = _agentProfiles.Require(cfg.ProfileId, $"PathingConfig.agentTypes[{cfg.Id}]");
             int profileIndex = -1;
             if (_navMeshAvailable && (_navProfiles == null || !_navProfiles.TryGetIndex(cfg.ProfileId, out profileIndex)))
             {
@@ -371,13 +408,16 @@ namespace Ludots.Core.Navigation.Pathing
 
             return new CompiledAgentType(
                 id: cfg.Id,
-                navLayer: cfg.Layer,
+                navLayer: agentProfile.Layer,
                 navProfileIndex: profileIndex,
                 navAreaCosts: areaCosts,
                 useGraphEdgeFilter: useEdgeFilter,
                 graphEdgeFilter: edgeFilter,
                 graphEdgeRules: edgeRules,
                 graphProjectionMaxRadiusCm: projection,
+                useDynamicOverlay: cfg.NodeGraph?.UseDynamicOverlay ?? false,
+                agentDraftCm: agentProfile.DraftCm,
+                agentBeamCm: agentProfile.BeamCm,
                 selection: cfg.Selection ?? new PathingSelectionConfig());
         }
 
@@ -427,6 +467,9 @@ namespace Ludots.Core.Navigation.Pathing
             public readonly TagFilter256 GraphEdgeFilter;
             public readonly TagRuleTraversalPolicy.TagRule[] GraphEdgeRules;
             public readonly int GraphProjectionMaxRadiusCm;
+            public readonly bool UseDynamicOverlay;
+            public readonly float AgentDraftCm;
+            public readonly float AgentBeamCm;
             public readonly PathingSelectionConfig Selection;
 
             public CompiledAgentType(
@@ -438,6 +481,9 @@ namespace Ludots.Core.Navigation.Pathing
                 TagFilter256 graphEdgeFilter,
                 TagRuleTraversalPolicy.TagRule[] graphEdgeRules,
                 int graphProjectionMaxRadiusCm,
+                bool useDynamicOverlay,
+                float agentDraftCm,
+                float agentBeamCm,
                 PathingSelectionConfig selection)
             {
                 Id = id;
@@ -448,6 +494,9 @@ namespace Ludots.Core.Navigation.Pathing
                 GraphEdgeFilter = graphEdgeFilter;
                 GraphEdgeRules = graphEdgeRules;
                 GraphProjectionMaxRadiusCm = graphProjectionMaxRadiusCm;
+                UseDynamicOverlay = useDynamicOverlay;
+                AgentDraftCm = agentDraftCm;
+                AgentBeamCm = agentBeamCm;
                 Selection = selection;
             }
 
@@ -457,7 +506,9 @@ namespace Ludots.Core.Navigation.Pathing
                 {
                     UseEdgeFilter = UseGraphEdgeFilter,
                     EdgeFilter = GraphEdgeFilter,
-                    EdgeRules = GraphEdgeRules
+                    EdgeRules = GraphEdgeRules,
+                    AgentDraftCm = AgentDraftCm,
+                    AgentBeamCm = AgentBeamCm
                 };
             }
         }

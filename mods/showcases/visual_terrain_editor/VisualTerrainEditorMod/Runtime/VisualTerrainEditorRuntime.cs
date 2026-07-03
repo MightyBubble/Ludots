@@ -12,9 +12,9 @@ using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -27,6 +27,9 @@ internal sealed class VisualTerrainEditorRuntime
 {
     private const string ChunkMeshAssetParamKey = "visual_terrain_editor.chunkMesh.asset";
     private const string ChunkMaterialParamKey = "visual_terrain_editor.chunkMesh.material";
+    private const string BrushRaiseOverlayKey = "visual_terrain_editor.brush.raise";
+    private const string BrushLowerOverlayKey = "visual_terrain_editor.brush.lower";
+    private static readonly int BrushOverlayScope = PresentationWorldFactPublisher.ComposeScope("visual_terrain_editor.brush", 1);
     private const string TerrainMeshAssetKeyPrefix = "visual_terrain_editor.runtime_terrain";
     private const string TerrainChunkPerformerKeyPrefix = "visual_terrain_editor.runtime_chunk";
     private static readonly int DefaultChunkMaterialAssetId = 1;
@@ -71,6 +74,7 @@ internal sealed class VisualTerrainEditorRuntime
     private float _lastViewportWidth = -1f;
     private float _lastViewportHeight = -1f;
     private int _chunkMeshPerformerDefinitionId;
+    private string _activeBrushOverlayKey = string.Empty;
 
     public VisualTerrainEditorRuntime()
     {
@@ -170,7 +174,7 @@ internal sealed class VisualTerrainEditorRuntime
 
         bool terrainChanged = _document.Update();
         SyncRenderedChunks(engine);
-        EmitBrushOverlay(engine);
+        PublishBrushWorldFact(engine);
 
         if (_panelDirty)
         {
@@ -178,10 +182,9 @@ internal sealed class VisualTerrainEditorRuntime
             return;
         }
 
-        if ((viewportChanged || chunkWindowChanged || pointerChanged) &&
-            engine.GetService(CoreServiceKeys.UIRoot) is UIRoot dynamicRoot)
+        if (viewportChanged || chunkWindowChanged || pointerChanged)
         {
-            dynamicRoot.IsDirty = true;
+            _panelController.InvalidateIfMounted(engine);
         }
     }
 
@@ -338,7 +341,6 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         _panelController.MountOrRefresh(root, engine, BuildPanelState(root.Width, root.Height));
-        root.IsDirty = true;
         _panelDirty = false;
     }
 
@@ -351,6 +353,7 @@ internal sealed class VisualTerrainEditorRuntime
 
         _active = false;
         _cameraPrimed = false;
+        EndBrushOverlay(engine);
         ClearRenderedChunks(engine);
         RestoreVisualHeightmap(engine);
         RestoreRenderDebug(engine);
@@ -694,34 +697,50 @@ internal sealed class VisualTerrainEditorRuntime
         _renderedChunks.Clear();
     }
 
-    private void EmitBrushOverlay(GameEngine engine)
+    private void PublishBrushWorldFact(GameEngine engine)
     {
         if (!_pointerWorldValid ||
-            !engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) ||
+            !PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out PresentationWorldFactPublisher facts) ||
             !_document.HeightmapRuntime.TrySampleHeightCm(_pointerWorldCm.X, _pointerWorldCm.Y, out float heightCm))
         {
+            EndBrushOverlay(engine);
             return;
         }
 
-        Vector4 borderColor = _document.LowerBrush
-            ? new Vector4(1.00f, 0.44f, 0.28f, 0.95f)
-            : new Vector4(0.18f, 0.88f, 0.95f, 0.95f);
-
         float outerRadius = MathF.Max(1f, _document.BrushRadiusMeters);
         float innerRadius = MathF.Max(0.2f, outerRadius - Math.Clamp(outerRadius * 0.08f, 0.20f, 1.20f));
-        overlays.TryAdd(new GroundOverlayItem
+        string key = _document.LowerBrush ? BrushLowerOverlayKey : BrushRaiseOverlayKey;
+        if (!string.IsNullOrEmpty(_activeBrushOverlayKey) &&
+            !string.Equals(_activeBrushOverlayKey, key, StringComparison.Ordinal))
         {
-            Shape = GroundOverlayShape.Ring,
-            Center = new Vector3(
+            facts.PublishWorldOverlayEnded(_activeBrushOverlayKey, Entity.Null, BrushOverlayScope);
+        }
+
+        _activeBrushOverlayKey = key;
+        facts.PublishWorldOverlayUpdated(
+            key,
+            Entity.Null,
+            BrushOverlayScope,
+            new Vector3(
                 _pointerWorldCm.X * 0.01f,
                 (heightCm * 0.01f) + 0.06f,
                 _pointerWorldCm.Y * 0.01f),
-            Radius = outerRadius,
-            InnerRadius = innerRadius,
-            FillColor = new Vector4(borderColor.X, borderColor.Y, borderColor.Z, 0.18f),
-            BorderColor = borderColor,
-            BorderWidth = 0.05f,
-        });
+            outerRadius,
+            innerRadius,
+            borderWidth: 0.05f);
+    }
+
+    private void EndBrushOverlay(GameEngine engine)
+    {
+        if (string.IsNullOrEmpty(_activeBrushOverlayKey) ||
+            !PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out PresentationWorldFactPublisher facts))
+        {
+            _activeBrushOverlayKey = string.Empty;
+            return;
+        }
+
+        facts.PublishWorldOverlayEnded(_activeBrushOverlayKey, Entity.Null, BrushOverlayScope);
+        _activeBrushOverlayKey = string.Empty;
     }
 
     private void HandleWorldPainting(GameEngine engine)

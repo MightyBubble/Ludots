@@ -47,7 +47,8 @@ namespace Ludots.Core.Input.Config
                 var fragmentConfig = obj.Deserialize<InputConfigRoot>(_options);
                 if (fragmentConfig == null) continue;
 
-                MergeActions(fragmentConfig.Actions, actions, actionOrder);
+                Validate(fragmentConfig, fragments[i].SourceUri);
+                MergeActions(fragmentConfig.Actions, actions, actionOrder, fragments[i].SourceUri);
                 MergeContexts(fragmentConfig.Contexts, contexts, contextOrder);
             }
 
@@ -67,14 +68,54 @@ namespace Ludots.Core.Input.Config
             return result;
         }
 
-        private static void MergeActions(List<InputActionDef> incoming, Dictionary<string, InputActionDef> byId, List<string> order)
+        public static void Validate(InputConfigRoot config, string source)
         {
-            if (incoming == null) return;
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.Actions == null)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ACTIONS_REQUIRED: input config '{source}' must explicitly define actions.");
+            }
+
+            var actionIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < config.Actions.Count; i++)
+            {
+                InputActionDef action = config.Actions[i] ??
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_REQUIRED: input config '{source}' actions[{i}] must be an object.");
+
+                string path = $"input config '{source}' actions[{i}]";
+                if (string.IsNullOrWhiteSpace(action.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_ID_REQUIRED: {path}.id must be a non-empty string.");
+                }
+
+                if (!string.Equals(action.Id, action.Id.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_ID_REQUIRED: {path}.id must not contain leading or trailing whitespace.");
+                }
+
+                if (!actionIds.Add(action.Id))
+                {
+                    throw new InvalidOperationException(
+                        $"LUDOTS_INPUT_ACTION_ID_DUPLICATE: {path}.id duplicates input action '{action.Id}'.");
+                }
+            }
+        }
+
+        private static void MergeActions(List<InputActionDef> incoming, Dictionary<string, InputActionDef> byId, List<string> order, string source)
+        {
+            if (incoming == null)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ACTIONS_REQUIRED: input config '{source}' must explicitly define actions.");
+            }
+
             for (int i = 0; i < incoming.Count; i++)
             {
                 var a = incoming[i];
-                if (a == null) continue;
-                if (string.IsNullOrWhiteSpace(a.Id)) continue;
 
                 if (!byId.ContainsKey(a.Id)) order.Add(a.Id);
                 byId[a.Id] = a;

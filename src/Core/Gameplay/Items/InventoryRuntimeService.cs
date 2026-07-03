@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Items
@@ -15,17 +16,27 @@ namespace Ludots.Core.Gameplay.Items
         private readonly ItemShapeRegistry _shapes;
         private readonly ItemLayoutRegistry _layouts;
         private readonly ItemDefinitionRegistry _definitions;
+        private readonly OwnershipResolver _ownership;
+        private readonly List<Entity> _ownedContainerScratch = new(32);
+        private readonly List<Entity> _ownedItemScratch = new(128);
+        private readonly List<Entity> _destroyItemScratch = new(64);
+        private readonly List<Entity> _destroyContainerScratch = new(32);
+        private readonly List<Entity> _grantContainerScratch = new(16);
+        private readonly List<Entity> _grantItemScratch = new(32);
+        private readonly List<Entity> _grantMountedContainerScratch = new(8);
 
         public InventoryRuntimeService(
             World world,
             ItemShapeRegistry shapes,
             ItemLayoutRegistry layouts,
-            ItemDefinitionRegistry definitions)
+            ItemDefinitionRegistry definitions,
+            OwnershipResolver ownership)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _shapes = shapes ?? throw new ArgumentNullException(nameof(shapes));
             _layouts = layouts ?? throw new ArgumentNullException(nameof(layouts));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
         }
 
         public bool TryGetDefinition(int definitionId, out ItemDefinition definition)
@@ -35,10 +46,14 @@ namespace Ludots.Core.Gameplay.Items
 
         public Entity CreateContainer(
             Entity owner,
-            ItemContainerOwnerKind ownerKind,
             int layoutId,
             ItemContainerPurpose purpose = ItemContainerPurpose.None)
         {
+            if (owner == Entity.Null || !_world.IsAlive(owner))
+            {
+                throw new InvalidOperationException("Item container owner must be a live entity.");
+            }
+
             if (!_layouts.TryGet(layoutId, out ItemLayoutDefinition layout))
             {
                 throw new InvalidOperationException($"Missing item layout id {layoutId}.");
@@ -49,18 +64,18 @@ namespace Ludots.Core.Gameplay.Items
                 purpose = layout.Purpose;
             }
 
-            return _world.Create(new ItemContainerCm
+            Entity container = _world.Create(new ItemContainerCm
             {
                 LayoutId = layoutId,
-                Owner = owner,
-                OwnerKind = ownerKind,
                 Purpose = purpose
             });
+            _ownership.EnsureOwnership(owner, container);
+            return container;
         }
 
         public Entity CreateMountedContainer(Entity item, int mountIndex, int layoutId, ItemContainerPurpose purpose)
         {
-            Entity container = CreateContainer(item, ItemContainerOwnerKind.Item, layoutId, purpose);
+            Entity container = CreateContainer(item, layoutId, purpose);
             _world.Add(container, new ItemMountedContainerCm
             {
                 ParentItem = item,
@@ -217,6 +232,86 @@ namespace Ludots.Core.Gameplay.Items
             return TryAutoPlaceItem(item, destinationContainer);
         }
 
+        public bool CanAutoPlaceItem(Entity item, Entity container)
+        {
+            if (!TryGetItemAndContainer(item, container, out ItemInstanceCm itemInstance, out ItemContainerCm containerComponent))
+            {
+                return false;
+            }
+
+            if (!_definitions.TryGet(itemInstance.DefinitionId, out _) ||
+                !_layouts.TryGet(containerComponent.LayoutId, out _))
+            {
+                return false;
+            }
+
+            return TryPlanAutoPlacement(container, itemInstance.DefinitionId, item, out _);
+        }
+
+        public bool CanAutoPlaceItem(
+            Entity item,
+            Entity container,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            reservation = default;
+            if (!TryGetItemAndContainer(item, container, out ItemInstanceCm itemInstance, out ItemContainerCm containerComponent))
+            {
+                return false;
+            }
+
+            if (!_definitions.TryGet(itemInstance.DefinitionId, out _) ||
+                !_layouts.TryGet(containerComponent.LayoutId, out _))
+            {
+                return false;
+            }
+
+            return TryPlanAutoPlacement(container, itemInstance.DefinitionId, item, reservations, out reservation);
+        }
+
+        public bool CanAutoPlaceItemDefinition(Entity container, int definitionId)
+        {
+            return TryPlanAutoPlacement(container, definitionId, Entity.Null, out _);
+        }
+
+        public bool CanAutoPlaceItemDefinition(
+            Entity container,
+            int definitionId,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            return TryPlanAutoPlacement(container, definitionId, Entity.Null, reservations, out reservation);
+        }
+
+        public bool TryCreateAndPlaceItem(
+            Entity container,
+            int definitionId,
+            int stackCount,
+            int charges,
+            int durability,
+            out Entity item)
+        {
+            item = Entity.Null;
+            if (!TryPlanAutoPlacement(container, definitionId, Entity.Null, out _))
+            {
+                return false;
+            }
+
+            item = CreateItem(definitionId, stackCount, charges, durability);
+            if (TryAutoPlaceItem(item, container))
+            {
+                return true;
+            }
+
+            if (_world.IsAlive(item))
+            {
+                DestroyItemEntity(item);
+            }
+
+            item = Entity.Null;
+            return false;
+        }
+
         public bool TrySplitStack(Entity item, int splitCount, out Entity splitItem)
         {
             splitItem = Entity.Null;
@@ -239,7 +334,7 @@ namespace Ludots.Core.Gameplay.Items
             {
                 if (!TryAutoPlaceItem(splitItem, location.Container))
                 {
-                    _world.Destroy(splitItem);
+                    DestroyItemEntity(splitItem);
                     splitItem = Entity.Null;
                     instance.StackCount += splitCount;
                     return false;
@@ -249,7 +344,7 @@ namespace Ludots.Core.Gameplay.Items
             {
                 if (!TryAutoPlaceItem(splitItem, location.Container))
                 {
-                    _world.Destroy(splitItem);
+                    DestroyItemEntity(splitItem);
                     splitItem = Entity.Null;
                     instance.StackCount += splitCount;
                     return false;
@@ -302,12 +397,12 @@ namespace Ludots.Core.Gameplay.Items
 
         public int CountStackUnits(Entity owner, int definitionId)
         {
-            var containers = new List<Entity>(16);
-            CollectOwnedContainers(owner, containers);
+            _ownedContainerScratch.Clear();
+            CollectOwnedContainers(owner, _ownedContainerScratch);
             int total = 0;
-            for (int i = 0; i < containers.Count; i++)
+            for (int i = 0; i < _ownedContainerScratch.Count; i++)
             {
-                total += CountStackUnitsInContainer(containers[i], definitionId);
+                total += CountStackUnitsInContainer(_ownedContainerScratch[i], definitionId);
             }
 
             return total;
@@ -320,19 +415,19 @@ namespace Ludots.Core.Gameplay.Items
                 return true;
             }
 
-            var items = new List<Entity>(64);
-            var containers = new List<Entity>(16);
-            CollectOwnedContainers(owner, containers);
-            for (int i = 0; i < containers.Count; i++)
+            _ownedItemScratch.Clear();
+            _ownedContainerScratch.Clear();
+            CollectOwnedContainers(owner, _ownedContainerScratch);
+            for (int i = 0; i < _ownedContainerScratch.Count; i++)
             {
-                CollectItemsInContainer(containers[i], items);
+                CollectItemsInContainer(_ownedContainerScratch[i], _ownedItemScratch);
             }
 
-            items.Sort((a, b) => a.Id.CompareTo(b.Id));
+            _ownedItemScratch.Sort(CompareEntityId);
             int remaining = amount;
-            for (int i = 0; i < items.Count && remaining > 0; i++)
+            for (int i = 0; i < _ownedItemScratch.Count && remaining > 0; i++)
             {
-                Entity item = items[i];
+                Entity item = _ownedItemScratch[i];
                 if (!_world.IsAlive(item) || !_world.Has<ItemInstanceCm>(item))
                 {
                     continue;
@@ -350,7 +445,7 @@ namespace Ludots.Core.Gameplay.Items
                 if (instance.StackCount <= 0)
                 {
                     Entity container = _world.Has<ItemLocationCm>(item) ? _world.Get<ItemLocationCm>(item).Container : Entity.Null;
-                    _world.Destroy(item);
+                    DestroyItemEntity(item);
                     if (container != Entity.Null)
                     {
                         MarkEquipmentDirtyFromContainer(container);
@@ -359,6 +454,237 @@ namespace Ludots.Core.Gameplay.Items
             }
 
             return remaining == 0;
+        }
+
+        public bool ConsumeStackUnits(Entity owner, int definitionId, int amount, List<ItemConsumptionRecord> consumedRecords)
+        {
+            if (consumedRecords == null)
+            {
+                throw new ArgumentNullException(nameof(consumedRecords));
+            }
+
+            if (amount <= 0)
+            {
+                return true;
+            }
+
+            int startCount = consumedRecords.Count;
+            _ownedItemScratch.Clear();
+            _ownedContainerScratch.Clear();
+            CollectOwnedContainers(owner, _ownedContainerScratch);
+            for (int i = 0; i < _ownedContainerScratch.Count; i++)
+            {
+                CollectItemsInContainer(_ownedContainerScratch[i], _ownedItemScratch);
+            }
+
+            _ownedItemScratch.Sort(CompareEntityId);
+            int remaining = amount;
+            for (int i = 0; i < _ownedItemScratch.Count && remaining > 0; i++)
+            {
+                Entity item = _ownedItemScratch[i];
+                if (!_world.IsAlive(item) || !_world.Has<ItemInstanceCm>(item))
+                {
+                    continue;
+                }
+
+                ref ItemInstanceCm instance = ref _world.Get<ItemInstanceCm>(item);
+                if (instance.DefinitionId != definitionId || instance.StackCount <= 0)
+                {
+                    continue;
+                }
+
+                int consumed = Math.Min(instance.StackCount, remaining);
+                bool hadLocation = _world.Has<ItemLocationCm>(item);
+                ItemLocationCm location = hadLocation ? _world.Get<ItemLocationCm>(item) : default;
+                Entity container = hadLocation ? location.Container : Entity.Null;
+                consumedRecords.Add(new ItemConsumptionRecord
+                {
+                    Item = item,
+                    DefinitionId = instance.DefinitionId,
+                    Amount = consumed,
+                    Charges = instance.Charges,
+                    Durability = instance.Durability,
+                    HadLocation = hadLocation,
+                    Location = location
+                });
+
+                instance.StackCount -= consumed;
+                remaining -= consumed;
+                if (instance.StackCount <= 0)
+                {
+                    DestroyItemEntity(item);
+                    if (container != Entity.Null)
+                    {
+                        MarkEquipmentDirtyFromContainer(container);
+                    }
+                }
+            }
+
+            if (remaining == 0)
+            {
+                return true;
+            }
+
+            RestoreConsumedUnits(consumedRecords, startCount);
+            consumedRecords.RemoveRange(startCount, consumedRecords.Count - startCount);
+            return false;
+        }
+
+        public void RestoreConsumedUnits(List<ItemConsumptionRecord> consumedRecords)
+        {
+            if (consumedRecords == null)
+            {
+                throw new ArgumentNullException(nameof(consumedRecords));
+            }
+
+            RestoreConsumedUnits(consumedRecords, 0);
+        }
+
+        private void RestoreConsumedUnits(List<ItemConsumptionRecord> consumedRecords, int startIndex)
+        {
+            for (int i = consumedRecords.Count - 1; i >= 0; i--)
+            {
+                if (i < startIndex)
+                {
+                    break;
+                }
+
+                RestoreConsumedItem(consumedRecords[i]);
+            }
+        }
+
+        public bool TryFindOwnedItem(Entity owner, int definitionId, ItemContainerPurpose purpose, out Entity item)
+        {
+            item = Entity.Null;
+            _ownedContainerScratch.Clear();
+            _ownedItemScratch.Clear();
+            CollectOwnedContainers(owner, _ownedContainerScratch);
+            for (int i = 0; i < _ownedContainerScratch.Count; i++)
+            {
+                Entity container = _ownedContainerScratch[i];
+                if (purpose != ItemContainerPurpose.None)
+                {
+                    if (!_world.IsAlive(container) || !_world.Has<ItemContainerCm>(container))
+                    {
+                        continue;
+                    }
+
+                    if (_world.Get<ItemContainerCm>(container).Purpose != purpose)
+                    {
+                        continue;
+                    }
+                }
+
+                CollectItemsInContainer(container, _ownedItemScratch);
+            }
+
+            _ownedItemScratch.Sort(CompareEntityId);
+            for (int i = 0; i < _ownedItemScratch.Count; i++)
+            {
+                Entity candidate = _ownedItemScratch[i];
+                if (_world.IsAlive(candidate) &&
+                    _world.Has<ItemInstanceCm>(candidate) &&
+                    _world.Get<ItemInstanceCm>(candidate).DefinitionId == definitionId)
+                {
+                    item = candidate;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public void RestoreItemLocation(Entity item, bool hadLocation, in ItemLocationCm location)
+        {
+            if (!_world.IsAlive(item))
+            {
+                return;
+            }
+
+            Entity previousContainer = _world.Has<ItemLocationCm>(item)
+                ? _world.Get<ItemLocationCm>(item).Container
+                : Entity.Null;
+
+            if (hadLocation)
+            {
+                SetItemLocation(item, location);
+            }
+            else if (_world.Has<ItemLocationCm>(item))
+            {
+                _world.Remove<ItemLocationCm>(item);
+                _ownership.ClearOwnership(item);
+            }
+
+            if (previousContainer != Entity.Null)
+            {
+                MarkEquipmentDirtyFromContainer(previousContainer);
+            }
+
+            if (hadLocation && location.Container != Entity.Null)
+            {
+                MarkEquipmentDirtyFromContainer(location.Container);
+            }
+        }
+
+        public void DestroyItemTree(Entity item)
+        {
+            if (!_world.IsAlive(item))
+            {
+                return;
+            }
+
+            _destroyItemScratch.Clear();
+            _destroyContainerScratch.Clear();
+            _destroyItemScratch.Add(item);
+
+            int containerCursor = 0;
+            for (int itemCursor = 0; itemCursor < _destroyItemScratch.Count; itemCursor++)
+            {
+                Entity currentItem = _destroyItemScratch[itemCursor];
+                if (!_world.IsAlive(currentItem))
+                {
+                    continue;
+                }
+
+                CollectMountedContainers(currentItem, _destroyContainerScratch);
+                while (containerCursor < _destroyContainerScratch.Count)
+                {
+                    Entity container = _destroyContainerScratch[containerCursor++];
+                    if (_world.IsAlive(container))
+                    {
+                        CollectItemsInContainer(container, _destroyItemScratch);
+                    }
+                }
+            }
+
+            for (int i = _destroyItemScratch.Count - 1; i >= 0; i--)
+            {
+                Entity currentItem = _destroyItemScratch[i];
+                if (!_world.IsAlive(currentItem))
+                {
+                    continue;
+                }
+
+                Entity container = _world.Has<ItemLocationCm>(currentItem) ? _world.Get<ItemLocationCm>(currentItem).Container : Entity.Null;
+                DestroyItemEntity(currentItem);
+                if (container != Entity.Null)
+                {
+                    MarkEquipmentDirtyFromContainer(container);
+                }
+            }
+
+            for (int i = _destroyContainerScratch.Count - 1; i >= 0; i--)
+            {
+                Entity container = _destroyContainerScratch[i];
+                if (_world.IsAlive(container))
+                {
+                    _ownership.ClearOwnership(container);
+                    _world.Destroy(container);
+                }
+            }
+
+            _destroyItemScratch.Clear();
+            _destroyContainerScratch.Clear();
         }
 
         public bool TryFindOwnedContainer(Entity owner, ItemContainerPurpose purpose, out Entity container)
@@ -371,7 +697,8 @@ namespace Ludots.Core.Gameplay.Items
                     return;
                 }
 
-                if (data.Owner == owner && data.OwnerKind == ItemContainerOwnerKind.Actor && data.Purpose == purpose)
+                if (data.Purpose == purpose &&
+                    _ownership.IsOwnedBy(owner, entity))
                 {
                     found = entity;
                 }
@@ -467,14 +794,19 @@ namespace Ludots.Core.Gameplay.Items
                 throw new ArgumentNullException(nameof(output));
             }
 
-            var containers = new List<Entity>(8);
-            CollectOwnedContainers(actor, containers);
-            for (int i = 0; i < containers.Count; i++)
+            _grantContainerScratch.Clear();
+            _world.Query(in ContainerQuery, (Entity entity, ref ItemContainerCm data) =>
             {
-                CollectGrantItemsRecursive(containers[i], output);
-            }
+                if (_ownership.IsOwnedBy(actor, entity) &&
+                    data.Purpose == ItemContainerPurpose.Equipment)
+                {
+                    _grantContainerScratch.Add(entity);
+                }
+            });
 
-            output.Sort((a, b) => a.Id.CompareTo(b.Id));
+            _grantContainerScratch.Sort(CompareEntityId);
+            CollectGrantItems(output);
+            output.Sort(CompareEntityId);
         }
 
         public bool TryResolveOwningActorFromItem(Entity item, out Entity actor)
@@ -497,19 +829,9 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            ItemContainerCm data = _world.Get<ItemContainerCm>(container);
-            if (data.OwnerKind == ItemContainerOwnerKind.Actor)
-            {
-                actor = data.Owner;
-                return actor != Entity.Null && _world.IsAlive(actor);
-            }
-
-            if (data.OwnerKind == ItemContainerOwnerKind.Item)
-            {
-                return TryResolveOwningActorFromItem(data.Owner, out actor);
-            }
-
-            return false;
+            return _ownership.TryResolveRootOwner(container, out actor) &&
+                   actor != Entity.Null &&
+                   _world.IsAlive(actor);
         }
 
         private void CollectOwnedContainers(Entity owner, List<Entity> output)
@@ -536,39 +858,180 @@ namespace Ludots.Core.Gameplay.Items
             return total;
         }
 
-        private void CollectGrantItemsRecursive(Entity container, List<Entity> output)
+        private bool TryPlanAutoPlacement(Entity container, int definitionId, Entity ignoreItem, out ItemPlacementPlan plan)
         {
+            return TryPlanAutoPlacement(container, definitionId, ignoreItem, null, out plan);
+        }
+
+        private bool TryPlanAutoPlacement(
+            Entity container,
+            int definitionId,
+            Entity ignoreItem,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementPlan plan)
+        {
+            plan = default;
             if (!_world.IsAlive(container) || !_world.Has<ItemContainerCm>(container))
             {
-                return;
+                return false;
             }
 
-            ItemContainerCm containerData = _world.Get<ItemContainerCm>(container);
-            if (!_layouts.TryGet(containerData.LayoutId, out ItemLayoutDefinition layout))
+            if (!_definitions.TryGet(definitionId, out ItemDefinition definition))
             {
-                return;
+                return false;
             }
 
-            if (!layout.GrantsEquipmentBonuses)
+            ItemContainerCm containerComponent = _world.Get<ItemContainerCm>(container);
+            if (!_layouts.TryGet(containerComponent.LayoutId, out ItemLayoutDefinition layout))
             {
-                return;
+                return false;
             }
 
-            var items = new List<Entity>(16);
-            CollectItemsInContainer(container, items);
-            items.Sort((a, b) => a.Id.CompareTo(b.Id));
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < layout.NamedSlots.Length; i++)
             {
-                Entity item = items[i];
-                output.Add(item);
-
-                var mountedContainers = new List<Entity>(4);
-                CollectMountedContainers(item, mountedContainers);
-                for (int j = 0; j < mountedContainers.Count; j++)
+                string slotId = layout.NamedSlots[i].Id;
+                if (definition.AllowsNamedSlot(slotId) && CanPlaceInNamedSlot(ignoreItem, definition, container, layout, i, reservations))
                 {
-                    CollectGrantItemsRecursive(mountedContainers[j], output);
+                    plan = new ItemPlacementPlan
+                    {
+                        Container = container,
+                        Kind = ItemPlacementKind.NamedSlot,
+                        NamedSlotIndex = (short)i
+                    };
+                    return true;
                 }
             }
+
+            if (!layout.HasGrid)
+            {
+                return false;
+            }
+
+            if (!_shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
+            {
+                return false;
+            }
+
+            for (int rotation = 0; rotation < shape.Rotations.Length; rotation++)
+            {
+                ItemShapeRotation rotated = shape.GetRotation(rotation);
+                for (int y = 0; y <= layout.Height - rotated.Height; y++)
+                {
+                    for (int x = 0; x <= layout.Width - rotated.Width; x++)
+                    {
+                        if (CanPlaceInGrid(ignoreItem, definition, container, layout, x, y, rotation, reservations))
+                        {
+                            plan = new ItemPlacementPlan
+                            {
+                                Container = container,
+                                Kind = ItemPlacementKind.Grid,
+                                GridX = (short)x,
+                                GridY = (short)y,
+                                RotationQuarterTurns = (byte)rotation
+                            };
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool TryPlanAutoPlacement(
+            Entity container,
+            int definitionId,
+            Entity ignoreItem,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            reservation = default;
+            if (!TryPlanAutoPlacement(container, definitionId, ignoreItem, reservations, out ItemPlacementPlan plan))
+            {
+                return false;
+            }
+
+            reservation = plan.ToReservation(definitionId);
+            return true;
+        }
+
+        private void CollectGrantItems(List<Entity> output)
+        {
+            int cursor = 0;
+            while (cursor < _grantContainerScratch.Count)
+            {
+                Entity currentContainer = _grantContainerScratch[cursor++];
+                if (!_world.IsAlive(currentContainer) || !_world.Has<ItemContainerCm>(currentContainer))
+                {
+                    continue;
+                }
+
+                ItemContainerCm containerData = _world.Get<ItemContainerCm>(currentContainer);
+                if (!_layouts.TryGet(containerData.LayoutId, out ItemLayoutDefinition layout) ||
+                    !layout.GrantsEquipmentBonuses)
+                {
+                    continue;
+                }
+
+                _grantItemScratch.Clear();
+                CollectItemsInContainer(currentContainer, _grantItemScratch);
+                _grantItemScratch.Sort(CompareEntityId);
+                for (int i = 0; i < _grantItemScratch.Count; i++)
+                {
+                    Entity item = _grantItemScratch[i];
+                    output.Add(item);
+
+                    _grantMountedContainerScratch.Clear();
+                    CollectMountedContainers(item, _grantMountedContainerScratch);
+                    _grantMountedContainerScratch.Sort(CompareEntityId);
+                    for (int j = 0; j < _grantMountedContainerScratch.Count; j++)
+                    {
+                        _grantContainerScratch.Add(_grantMountedContainerScratch[j]);
+                    }
+                }
+            }
+        }
+
+        private static int CompareEntityId(Entity left, Entity right)
+        {
+            return left.Id.CompareTo(right.Id);
+        }
+
+        private void RestoreConsumedItem(in ItemConsumptionRecord record)
+        {
+            if (record.Amount <= 0)
+            {
+                return;
+            }
+
+            if (_world.IsAlive(record.Item) && _world.Has<ItemInstanceCm>(record.Item))
+            {
+                ref ItemInstanceCm instance = ref _world.Get<ItemInstanceCm>(record.Item);
+                instance.StackCount += record.Amount;
+                if (_world.Has<ItemLocationCm>(record.Item))
+                {
+                    MarkEquipmentDirtyFromContainer(_world.Get<ItemLocationCm>(record.Item).Container);
+                }
+                return;
+            }
+
+            Entity restored = CreateItem(record.DefinitionId, record.Amount, record.Charges, record.Durability);
+            if (record.HadLocation)
+            {
+                SetItemLocation(restored, record.Location);
+                MarkEquipmentDirtyFromContainer(record.Location.Container);
+            }
+        }
+
+        private void DestroyItemEntity(Entity item)
+        {
+            if (!_world.IsAlive(item))
+            {
+                return;
+            }
+
+            _ownership.ClearOwnership(item);
+            _world.Destroy(item);
         }
 
         private bool TryGetItemAndContainer(Entity item, Entity container, out ItemInstanceCm itemInstance, out ItemContainerCm containerComponent)
@@ -592,6 +1055,17 @@ namespace Ludots.Core.Gameplay.Items
             ItemLayoutDefinition layout,
             int slotIndex)
         {
+            return CanPlaceInNamedSlot(item, definition, container, layout, slotIndex, null);
+        }
+
+        private bool CanPlaceInNamedSlot(
+            Entity item,
+            ItemDefinition definition,
+            Entity container,
+            ItemLayoutDefinition layout,
+            int slotIndex,
+            List<ItemPlacementReservation> reservations)
+        {
             ItemNamedSlotDefinition? slot = layout.GetNamedSlot(slotIndex);
             if (slot == null)
             {
@@ -608,7 +1082,7 @@ namespace Ludots.Core.Gameplay.Items
             }
 
             Entity occupant = FindNamedSlotOccupant(container, slotIndex, item);
-            return occupant == Entity.Null;
+            return occupant == Entity.Null && !ReservationOccupiesNamedSlot(container, slotIndex, reservations);
         }
 
         private bool CanPlaceInGrid(
@@ -619,6 +1093,19 @@ namespace Ludots.Core.Gameplay.Items
             int x,
             int y,
             int rotationQuarterTurns)
+        {
+            return CanPlaceInGrid(item, definition, container, layout, x, y, rotationQuarterTurns, null);
+        }
+
+        private bool CanPlaceInGrid(
+            Entity item,
+            ItemDefinition definition,
+            Entity container,
+            ItemLayoutDefinition layout,
+            int x,
+            int y,
+            int rotationQuarterTurns,
+            List<ItemPlacementReservation> reservations)
         {
             if (!layout.HasGrid || !_shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
             {
@@ -651,10 +1138,97 @@ namespace Ludots.Core.Gameplay.Items
                     {
                         return false;
                     }
+
+                    if (ReservationOccupiesGridCell(container, tx, ty, reservations))
+                    {
+                        return false;
+                    }
                 }
             }
 
             return true;
+        }
+
+        private struct ItemPlacementPlan
+        {
+            public Entity Container;
+            public ItemPlacementKind Kind;
+            public short GridX;
+            public short GridY;
+            public short NamedSlotIndex;
+            public byte RotationQuarterTurns;
+
+            public readonly ItemPlacementReservation ToReservation(int definitionId)
+            {
+                return new ItemPlacementReservation(
+                    Container,
+                    definitionId,
+                    Kind,
+                    GridX,
+                    GridY,
+                    NamedSlotIndex,
+                    RotationQuarterTurns);
+            }
+        }
+
+        private bool ReservationOccupiesNamedSlot(Entity container, int slotIndex, List<ItemPlacementReservation> reservations)
+        {
+            if (reservations == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                ItemPlacementReservation reservation = reservations[i];
+                if (reservation.Container == container &&
+                    reservation.Kind == ItemPlacementKind.NamedSlot &&
+                    reservation.NamedSlotIndex == slotIndex)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ReservationOccupiesGridCell(Entity container, int gridX, int gridY, List<ItemPlacementReservation> reservations)
+        {
+            if (reservations == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                ItemPlacementReservation reservation = reservations[i];
+                if (reservation.Container != container ||
+                    reservation.Kind != ItemPlacementKind.Grid ||
+                    !_definitions.TryGet(reservation.DefinitionId, out ItemDefinition definition) ||
+                    !_shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
+                {
+                    continue;
+                }
+
+                ItemShapeRotation rotation = shape.GetRotation(reservation.RotationQuarterTurns);
+                for (int sy = 0; sy < rotation.Height; sy++)
+                {
+                    for (int sx = 0; sx < rotation.Width; sx++)
+                    {
+                        if (!rotation.IsOccupied(sx, sy))
+                        {
+                            continue;
+                        }
+
+                        if (reservation.GridX + sx == gridX && reservation.GridY + sy == gridY)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private bool TryFindGridOccupant(Entity container, int gridX, int gridY, Entity ignoreItem, out Entity occupant)
@@ -732,10 +1306,14 @@ namespace Ludots.Core.Gameplay.Items
                 _world.Add(item, nextLocation);
             }
 
+            _ownership.EnsureOwnership(nextLocation.Container, item);
+
             if (previousContainer != Entity.Null)
             {
                 MarkEquipmentDirtyFromContainer(previousContainer);
             }
+
+            MarkEquipmentDirtyFromContainer(nextLocation.Container);
         }
 
         private bool WouldCreateOwnershipCycle(Entity item, Entity container)
@@ -745,45 +1323,7 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            ItemContainerCm containerData = _world.Get<ItemContainerCm>(container);
-            if (containerData.OwnerKind != ItemContainerOwnerKind.Item)
-            {
-                return false;
-            }
-
-            if (containerData.Owner == item)
-            {
-                return true;
-            }
-
-            return TryIsContainedWithin(containerData.Owner, item);
-        }
-
-        private bool TryIsContainedWithin(Entity item, Entity possibleAncestor)
-        {
-            if (!_world.IsAlive(item) || !_world.Has<ItemLocationCm>(item))
-            {
-                return false;
-            }
-
-            ItemLocationCm location = _world.Get<ItemLocationCm>(item);
-            if (!_world.IsAlive(location.Container) || !_world.Has<ItemContainerCm>(location.Container))
-            {
-                return false;
-            }
-
-            ItemContainerCm container = _world.Get<ItemContainerCm>(location.Container);
-            if (container.OwnerKind != ItemContainerOwnerKind.Item)
-            {
-                return false;
-            }
-
-            if (container.Owner == possibleAncestor)
-            {
-                return true;
-            }
-
-            return TryIsContainedWithin(container.Owner, possibleAncestor);
+            return _ownership.IsOwnedBy(item, container);
         }
 
         private void MarkEquipmentDirtyFromContainer(Entity container)
@@ -798,5 +1338,16 @@ namespace Ludots.Core.Gameplay.Items
                 _world.Add(actor, new InventoryEquipmentDirtyTag());
             }
         }
+    }
+
+    public struct ItemConsumptionRecord
+    {
+        public Entity Item;
+        public int DefinitionId;
+        public int Amount;
+        public int Charges;
+        public int Durability;
+        public bool HadLocation;
+        public ItemLocationCm Location;
     }
 }

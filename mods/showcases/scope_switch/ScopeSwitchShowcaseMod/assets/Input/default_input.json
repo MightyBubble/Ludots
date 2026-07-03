@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "ScopeSwitch.Self", "name": "ScopeSwitch_Self", "type": "Button" },
+    { "id": "ScopeSwitch.Squad", "name": "ScopeSwitch_Squad", "type": "Button" },
+    { "id": "ScopeSwitch.Team", "name": "ScopeSwitch_Team", "type": "Button" },
+    { "id": "ScopeSwitch.City", "name": "ScopeSwitch_City", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "ScopeSwitchShowcase.Controls",
+      "name": "Scope Switch Showcase Controls",
+      "priority": 86,
+      "bindings": [
+        { "actionId": "ScopeSwitch.Self", "path": "<Keyboard>/1" },
+        { "actionId": "ScopeSwitch.Squad", "path": "<Keyboard>/2" },
+        { "actionId": "ScopeSwitch.Team", "path": "<Keyboard>/3" },
+        { "actionId": "ScopeSwitch.City", "path": "<Keyboard>/4" }
+      ]
+    }
+  ]
+}

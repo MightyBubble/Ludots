@@ -1,0 +1,53 @@
+[
+  {
+    "id": "Effect.UtilityAutocast.AttackHit",
+    "tags": ["Effect.UtilityAutocast.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -12 }
+    ]
+  },
+  {
+    "id": "Effect.UtilityAutocast.CurseHit",
+    "tags": ["Effect.UtilityAutocast.Damage"],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": -8 }
+    ]
+  },
+  {
+    "id": "Effect.UtilityAutocast.HealBurst",
+    "tags": ["Effect.UtilityAutocast.Heal"],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 450
+    },
+    "targetFilter": {
+      "relationFilter": "Friendly",
+      "excludeSource": true,
+      "maxTargets": 4
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.UtilityAutocast.HealBurstTick",
+      "preset": "SourceToResolved"
+    }
+  },
+  {
+    "id": "Effect.UtilityAutocast.HealBurstTick",
+    "tags": ["Effect.UtilityAutocast.Heal"],
+    "presetType": "Heal",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      { "attribute": "Health", "op": "Add", "value": 18 }
+    ]
+  }
+]

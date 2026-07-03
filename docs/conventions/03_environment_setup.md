@@ -40,7 +40,7 @@ dotnet build src/Tools/Ludots.Editor.Bridge/Ludots.Editor.Bridge.csproj -c Relea
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance_hotpath --adapter raylib
 
 # Launch multiple root mods on web
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 
 # Launch the currently selected preset
 .\scripts\run-mod-launcher.cmd cli launch --adapter web
@@ -62,7 +62,6 @@ Rules:
 dotnet test src/Tests/GasTests/GasTests.csproj
 dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj
 dotnet test src/Tests/PresentationTests/PresentationTests.csproj
-dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj
 ```
 

@@ -42,7 +42,7 @@ namespace Ludots.Core.Gameplay.Teams
         }
 
         public TeamRelationship DefaultRelationship { get; }
-        internal IReadOnlyDictionary<long, TeamRelationship> Relationships { get; }
+        public IReadOnlyDictionary<long, TeamRelationship> Relationships { get; }
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Ludots.Core.Config;
 
 namespace Ludots.Launcher.Backend;
 
@@ -18,6 +19,9 @@ public sealed class LauncherConfig
 
     [JsonPropertyName("projectHints")]
     public List<LauncherProjectHint> ProjectHints { get; set; } = new();
+
+    [JsonPropertyName("browserRuntimeProviders")]
+    public List<LauncherBrowserRuntimeProvider> BrowserRuntimeProviders { get; set; } = new();
 }
 
 public sealed class LauncherScanRoot
@@ -68,6 +72,18 @@ public sealed class LauncherProjectHint
     public string ProjectPath { get; set; } = string.Empty;
 }
 
+public sealed class LauncherBrowserRuntimeProvider
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = string.Empty;
+
+    [JsonPropertyName("projectPath")]
+    public string ProjectPath { get; set; } = string.Empty;
+
+    [JsonPropertyName("assemblyPath")]
+    public string AssemblyPath { get; set; } = string.Empty;
+}
+
 public sealed class LauncherAdapterDefaults
 {
     [JsonPropertyName("default")]
@@ -99,6 +115,9 @@ public sealed class LauncherPresetDefinition
 
     [JsonPropertyName("buildMode")]
     public string BuildMode { get; set; } = LauncherBuildMode.Auto.ToString().ToLowerInvariant();
+
+    [JsonPropertyName("browserRuntime")]
+    public BrowserRuntimeConfig? BrowserRuntime { get; set; }
 }
 
 public sealed class LauncherPreferences

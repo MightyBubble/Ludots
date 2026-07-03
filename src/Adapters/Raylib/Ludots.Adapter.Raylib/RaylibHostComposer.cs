@@ -12,13 +12,20 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
+using Ludots.UI.Browser;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
+using Ludots.UI.Surface;
 
 namespace Ludots.Adapter.Raylib
 {
-    internal sealed record RaylibHostSetup(GameEngine Engine, GameConfig Config, UIRoot UiRoot, SkiaUiRenderer Renderer);
+    internal sealed record RaylibHostSetup(
+        GameEngine Engine,
+        GameConfig Config,
+        UIRoot UiRoot,
+        SkiaUiRenderer Renderer,
+        IBrowserRuntime? BrowserRuntime);
 
     internal static class RaylibHostComposer
     {
@@ -34,6 +41,7 @@ namespace Ludots.Adapter.Raylib
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
             var engine = result.Engine;
             var config = result.Config;
+            IBrowserRuntime? browserRuntime = RaylibBrowserRuntimeInstaller.InstallIfConfigured(engine, config, baseDir);
             if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshAssets))
             {
                 throw new InvalidOperationException("Raylib host requires PresentationMeshAssetRegistry before host asset binding.");
@@ -62,10 +70,12 @@ namespace Ludots.Adapter.Raylib
             IUiTextMeasurer textMeasurer = new SkiaTextMeasurer();
             IUiImageSizeProvider imageSizeProvider = new SkiaImageSizeProvider();
             var uiRoot = new UIRoot(renderer);
+            var uiSurfaceHost = new UiSurfaceHost(uiRoot, textMeasurer, imageSizeProvider);
             engine.SetService(CoreServiceKeys.UIRoot, (object)uiRoot);
+            engine.SetService(CoreServiceKeys.UiSurfaceHost, (object)uiSurfaceHost);
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
-            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
+            engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
@@ -85,12 +95,13 @@ namespace Ludots.Adapter.Raylib
 
             ValidateRequiredContextBeforeStart(engine);
 
-            return new RaylibHostSetup(engine, config, uiRoot, renderer);
+            return new RaylibHostSetup(engine, config, uiRoot, renderer, browserRuntime);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)
         {
             ValidateKey(engine, CoreServiceKeys.UIRoot);
+            ValidateKey(engine, CoreServiceKeys.UiSurfaceHost);
             ValidateKey(engine, CoreServiceKeys.UISystem);
             ValidateKey(engine, CoreServiceKeys.InputHandler);
             ValidateKey(engine, CoreServiceKeys.InputBackend);

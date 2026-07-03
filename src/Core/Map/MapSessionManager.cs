@@ -6,6 +6,15 @@ using Ludots.Core.Diagnostics;
 
 namespace Ludots.Core.Map
 {
+    public sealed record MapSessionEntrySnapshot(
+        string MapId,
+        MapSessionState State,
+        MapLaunchContext? LaunchContext = null);
+
+    public sealed record MapSessionManagerSnapshot(
+        IReadOnlyList<MapSessionEntrySnapshot> Sessions,
+        IReadOnlyList<string> FocusStack);
+
     /// <summary>
     /// Manages concurrent MapSessions with a focus stack for nested map support.
     /// </summary>
@@ -129,6 +138,56 @@ namespace Ludots.Core.Map
         public MapSession GetSession(MapId mapId)
         {
             return _sessions.TryGetValue(mapId, out var session) ? session : null;
+        }
+
+        public MapSessionManagerSnapshot CaptureSnapshot()
+        {
+            var sessions = new List<MapSessionEntrySnapshot>(_sessions.Count);
+            foreach (var pair in _sessions)
+            {
+                sessions.Add(new MapSessionEntrySnapshot(pair.Key.Value, pair.Value.State, pair.Value.LaunchContext));
+            }
+
+            var focusTopFirst = _focusStack.ToArray();
+            var focusBottomFirst = new string[focusTopFirst.Length];
+            for (int i = 0; i < focusTopFirst.Length; i++)
+            {
+                focusBottomFirst[i] = focusTopFirst[focusTopFirst.Length - 1 - i].Value;
+            }
+
+            return new MapSessionManagerSnapshot(sessions, focusBottomFirst);
+        }
+
+        public void RestoreSnapshot(MapSessionManagerSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+            _focusStack.Clear();
+            for (int i = 0; i < snapshot.Sessions.Count; i++)
+            {
+                MapSessionEntrySnapshot sessionSnapshot = snapshot.Sessions[i];
+                var mapId = new MapId(sessionSnapshot.MapId);
+                if (!_sessions.TryGetValue(mapId, out MapSession session))
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot restore map session '{sessionSnapshot.MapId}' because it has not been loaded.");
+                }
+
+                session.State = sessionSnapshot.State;
+                session.LaunchContext = sessionSnapshot.LaunchContext;
+            }
+
+            for (int i = 0; i < snapshot.FocusStack.Count; i++)
+            {
+                var mapId = new MapId(snapshot.FocusStack[i]);
+                if (!_sessions.ContainsKey(mapId))
+                {
+                    throw new InvalidOperationException(
+                        $"Cannot restore focused map '{snapshot.FocusStack[i]}' because it has not been loaded.");
+                }
+
+                _focusStack.Push(mapId);
+            }
         }
     }
 }

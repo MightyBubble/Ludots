@@ -35,7 +35,6 @@ public sealed class CapabilityStandardParticipantViewsModEntry : IMod
             if (engine != null)
             {
                 engine.RemoveService(CoreServiceKeys.KnowledgeProjectionStore);
-                engine.RemoveService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore);
                 engine.RemoveService(CoreServiceKeys.KnowledgeRelationCollectionProjector);
                 engine.RemoveService(CoreServiceKeys.KnowledgeProjectionResolver);
             }

@@ -43,12 +43,12 @@ namespace Ludots.Tests.GAS
                         "id": "test.projectile.performer",
                         "behaviors": [
                           {
-                            "slot": 0,
+                            "slot": "body",
                             "kind": "AssetBinding",
                             "activeByDefault": true,
                             "assetBinding": {
                               "assetKind": "Mesh",
-                              "assetId": 1,
+                              "assetId": "test.mesh",
                               "renderPath": "StaticMesh",
                               "mobility": "Movable",
                               "localScale": [1, 1, 1]
@@ -69,7 +69,8 @@ namespace Ludots.Tests.GAS
                           },
                           {
                             "event": {
-                              "kind": "EntityDestroyed"
+                              "kind": "EntityDestroyed",
+                              "key": "*"
                             },
                             "command": {
                               "kind": "DestroyPerformerScope",
@@ -95,7 +96,8 @@ namespace Ludots.Tests.GAS
                 var loader = new PerformerDefinitionConfigLoader(
                     pipeline,
                     performers,
-                    resolveEffectTemplateId: EffectTemplateIdRegistry.GetId);
+                    resolveEffectTemplateId: EffectTemplateIdRegistry.GetId,
+                    resolveBehaviorAssetId: (kind, key) => kind == AssetKind.Mesh && key == "test.mesh" ? 1 : 0);
 
                 loader.Load(catalog);
 

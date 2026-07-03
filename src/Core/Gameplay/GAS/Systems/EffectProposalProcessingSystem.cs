@@ -10,7 +10,9 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -22,13 +24,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int ChainPass;
         public int ChainNegate;
         public int ChainActivateEffect;
-        
-        public static ResponseChainOrderTypes Default => new ResponseChainOrderTypes
+
+        public static ResponseChainOrderTypes RequireConfigured(ResponseChainOrderTypes? value, string consumerName)
         {
-            ChainPass = 1,
-            ChainNegate = 2,
-            ChainActivateEffect = 3
-        };
+            if (value == null)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_REQUIRED: {consumerName} requires response-chain order type ids injected from GameConfig.Constants.ResponseChainOrderTypeIds.");
+            }
+
+            var configured = value.Value;
+            if (configured.ChainPass <= 0 ||
+                configured.ChainNegate <= 0 ||
+                configured.ChainActivateEffect <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_GAS_RESPONSE_CHAIN_ORDER_TYPES_INVALID: {consumerName} requires positive response-chain order type ids for chainPass, chainNegate, and chainActivateEffect.");
+            }
+
+            return configured;
+        }
     }
 
     public sealed class EffectProposalProcessingSystem : BaseSystem<World, float>, ITimeSlicedSystem
@@ -44,7 +59,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GasPresentationEventBuffer _presentationEvents;
         private readonly TagOps _tagOps;
 
-        // 鈹€鈹€ Phase Graph execution (optional) 鈹€鈹€
+        // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
@@ -245,7 +260,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _chainOrders = chainOrders;
             _telemetry = telemetry;
             _orderRequests = orderRequests;
-            _responseChainOrderTypes = responseChainOrderTypes ?? ResponseChainOrderTypes.Default;
+            _responseChainOrderTypes = ResponseChainOrderTypes.RequireConfigured(
+                responseChainOrderTypes,
+                nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
             _tagOps = tagOps ?? new TagOps();
             _phaseExecutor = phaseExecutor;
@@ -374,8 +391,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         });
                     }
 
-                    // 鈹€鈹€ Execute OnPropose Phase Graphs (before ResponseChain) 鈹€鈹€
-                    ExecuteOnProposePhase(in root, in rootTpl);
+                    // Execute OnPropose Phase Graphs (before ResponseChain)
+                    if (!ExecuteOnProposePhase(in root, in rootTpl))
+                    {
+                        root.Cancelled = true;
+                        _window[_window.Count - 1] = root;
+                    }
 
                     if (rootTpl.ParticipatesInResponse)
                     {
@@ -798,7 +819,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
-                        // 鈹€鈹€ Execute OnCalculate Phase Graphs (after ResponseChain resolves) 鈹€鈹€
+                        // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
                         if (IsPureInstantTemplate(in tpl))
@@ -829,7 +850,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                             // Dispatch OnApply Phase Listeners even for pure-instant effects.
                             // Modifiers are applied inline above (equivalent to Main handler),
-                            // but Listeners must still fire for observability 鈥?e.g. "whenever
+                            // but Listeners must still fire for observability, e.g. "whenever
                             // damage is dealt, draw a card" or "thorns: reflect damage on hit".
                             if (_phaseExecutor != null && _graphApi != null)
                             {
@@ -921,7 +942,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int consumed = _rootCursor;
             if (_phase == WindowPhase.Collect || _phase == WindowPhase.WaitInput)
             {
-                // Current root hasn't been resolved yet 鈥?safe to re-process it.
+                // Current root hasn't been resolved yet; safe to re-process it.
                 consumed = _rootCursor > 0 ? _rootCursor - 1 : 0;
             }
             if (consumed > 0 && _queue != null)
@@ -1042,7 +1063,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
         {
-            // 鈹€鈹€ Stack merge: if template has stack policy and an existing effect exists on target, merge 鈹€鈹€
+            // Stack merge: if template has stack policy and an existing effect exists on target, merge.
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
             {
@@ -1166,20 +1187,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>
         /// Execute OnPropose phase graphs for a proposal.
         /// Called after EffectProposal is created, before ResponseChain window.
+        /// Returns false when the phase graph sets B[0]=0 (placement/validation rejection).
         /// </summary>
-        private void ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
+        private bool ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
         {
-            if (_phaseExecutor == null || _graphApi == null) return;
+            if (_phaseExecutor == null || _graphApi == null) return true;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
             if (_graphApiHost != null && mergedConfig.Count > 0)
             {
                 _graphApiHost.SetConfigContext(in mergedConfig);
             }
-            _phaseExecutor.ExecutePhase(
+
+            var context = new EffectContext
+            {
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+            bool accepted = _phaseExecutor.ExecutePhaseWithValidationResult(
                 World, _graphApi,
                 proposal.Source, proposal.Target, proposal.TargetContext,
-                default, // targetPos: not needed for Propose
+                targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
@@ -1187,6 +1217,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 proposal.TemplateId,
                 in mergedConfig);
             ClearConfigContext();
+            return accepted;
         }
 
         /// <summary>
@@ -1202,10 +1233,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 _graphApiHost.SetConfigContext(in mergedConfig);
             }
+
+            var context = new EffectContext
+            {
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
                 proposal.Source, proposal.Target, proposal.TargetContext,
-                default,
+                targetPos,
                 EffectPhaseId.OnCalculate,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
@@ -1274,4 +1313,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
     }
 }
-

@@ -1,0 +1,122 @@
+name: solution-verify
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/solution-verify.yml'
+      - '.gitattributes'
+      - 'assets/**'
+      - 'global.json'
+      - 'launcher.config.json'
+      - 'launcher.presets.json'
+      - 'mods/**'
+      - 'NuGet.config'
+      - 'src/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/solution-verify.yml'
+      - '.gitattributes'
+      - 'assets/**'
+      - 'global.json'
+      - 'launcher.config.json'
+      - 'launcher.presets.json'
+      - 'mods/**'
+      - 'NuGet.config'
+      - 'src/**'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Pin solution verify SDK
+        shell: pwsh
+        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
+
+      - name: Build maintained test project graphs
+        shell: pwsh
+        run: |
+          $projects = Get-ChildItem src/Tests -Recurse -Filter *.csproj | Sort-Object FullName
+
+          foreach ($project in $projects) {
+            Write-Host "Building $($project.FullName)..."
+            dotnet build $project.FullName -c Debug -v minimal
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+
+      - name: Run architecture guard tests
+        shell: pwsh
+        run: |
+          $guardFilter = @(
+            'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
+          ) -join '|'
+
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $guardFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Full GasTests and full PresentationTests are already red on origin/main.
+      # Keep this workflow honest by gating the AAC slice that currently passes on main.
+      - name: Run association core GasTests slice
+        shell: pwsh
+        run: |
+          $associationFilter = @(
+            'FullyQualifiedName~EntityKeyedSoaTableTests',
+            'FullyQualifiedName~EntityCollectionStoreTests',
+            'FullyQualifiedName~KnowledgeProjectionStoreTests',
+            'FullyQualifiedName~KnowledgeProjectionResolverTests',
+            'FullyQualifiedName~KnowledgeProjectionRelationGrantTests',
+            'FullyQualifiedName~KnowledgeProjectionAspectMaskTests',
+            'FullyQualifiedName~ScopeResolverTests',
+            'FullyQualifiedName~OwnershipRelationTests',
+            'FullyQualifiedName~ExchangeRuntimeTests',
+            'FullyQualifiedName~ProgressionRequirementTests',
+            'FullyQualifiedName~ParticipantViewProjectionTests',
+            'FullyQualifiedName~SelectionKnowledgeProjectionTests',
+            'FullyQualifiedName~AssociationStressShowcaseAcceptanceTests',
+            'FullyQualifiedName~FogVisionDecayShowcaseAcceptanceTests',
+            'FullyQualifiedName~FogOfWarShowcaseAcceptanceTests',
+            'FullyQualifiedName~VisionResolverTests',
+            'FullyQualifiedName~FogFieldTests',
+            'FullyQualifiedName~FogKnowledgeAndSnapshotTests',
+            'FullyQualifiedName~FogBenchmarkTests',
+            'FullyQualifiedName~OwnershipCascadeShowcaseAcceptanceTests',
+            'FullyQualifiedName~DiplomacyTradeGateShowcaseAcceptanceTests',
+            'FullyQualifiedName~GoldMarketShowcaseAcceptanceTests',
+            'FullyQualifiedName~ScopeSwitchShowcaseAcceptanceTests',
+            'FullyQualifiedName~TeamResearchShowcaseAcceptanceTests',
+            'FullyQualifiedName~ProgressionScopeShowcaseAcceptanceTests',
+            'FullyQualifiedName~ParticipantViewKnowledgeShowcaseAcceptanceTests',
+            'FullyQualifiedName~FourXAssociationShowcaseAcceptanceTests'
+          ) -join '|'
+
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $associationFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Run Raylib field rendering tests
+        shell: pwsh
+        run: |
+          dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj -c Debug --no-build --filter 'FullyQualifiedName~RaylibFieldRenderPerformerTests' -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }

@@ -21,6 +21,10 @@ public sealed class WebUiDataPlaneContractTests
 		Assert.That(ContainsAscii(bytes, "Unreal"), Is.False);
 		Assert.That(ContainsAscii(bytes, "UE5"), Is.False);
 		Assert.That(ContainsAscii(bytes, "BLUI"), Is.False);
+		Assert.That(ContainsAscii(bytes, "V8"), Is.False);
+		Assert.That(ContainsAscii(bytes, "Chromium"), Is.False);
+		Assert.That(ContainsAscii(bytes, "providerName"), Is.False);
+		Assert.That(ContainsAscii(bytes, "cefsharp"), Is.False);
 	}
 
 	[Test]
@@ -96,6 +100,30 @@ public sealed class WebUiDataPlaneContractTests
 
 		Assert.That(command.Delivery, Is.EqualTo(WebUiDeliverySemantics.ReliableOrdered));
 		Assert.That(delta.Delivery, Is.EqualTo(WebUiDeliverySemantics.LatestWins));
+	}
+
+	[Test]
+	public void SharedMemoryContract_IsCapabilityAndDescriptorBased_NotProviderNamed()
+	{
+		var descriptor = new WebUiSharedBufferDescriptor(
+			"buffer.entity.0",
+			"webui.entityCollection",
+			WebUiColumnarPacketSchemaRegistry.EntityCollectionSchemaId,
+			WebUiSharedBufferDescriptor.RingBufferLayout,
+			CapacityBytes: 4096,
+			HeaderBytes: WebUiSharedBufferRing.DefaultHeaderBytes,
+			ByteOffset: 0,
+			ByteLength: 0,
+			Sequence: 0,
+			Tick: 0,
+			DroppedPackets: 0,
+			CoalescedPackets: 0);
+		WebUiTransportCapabilities capabilities = WebUiTransportCapabilities.SharedMemory(
+			sharedBuffers: new[] { descriptor });
+
+		Assert.That(capabilities.Satisfies("shared-memory"), Is.True);
+		Assert.That(capabilities.Satisfies("shared-buffer-descriptor"), Is.True);
+		Assert.That(capabilities.SharedBuffers.Single().BufferId, Is.EqualTo("buffer.entity.0"));
 	}
 
 	private static bool ContainsAscii(byte[] haystack, string needle)

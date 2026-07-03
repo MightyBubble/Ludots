@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "DiplomacyTradeGate.TryTrade", "name": "DiplomacyTradeGate_TryTrade", "type": "Button" },
+    { "id": "DiplomacyTradeGate.SignPact", "name": "DiplomacyTradeGate_SignPact", "type": "Button" },
+    { "id": "DiplomacyTradeGate.Embargo", "name": "DiplomacyTradeGate_Embargo", "type": "Button" },
+    { "id": "DiplomacyTradeGate.ClearEmbargo", "name": "DiplomacyTradeGate_ClearEmbargo", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "DiplomacyTradeGate.Controls",
+      "name": "Diplomacy Trade Gate Controls",
+      "priority": 87,
+      "bindings": [
+        { "actionId": "DiplomacyTradeGate.TryTrade", "path": "<Keyboard>/t" },
+        { "actionId": "DiplomacyTradeGate.SignPact", "path": "<Keyboard>/p" },
+        { "actionId": "DiplomacyTradeGate.Embargo", "path": "<Keyboard>/e" },
+        { "actionId": "DiplomacyTradeGate.ClearEmbargo", "path": "<Keyboard>/c" }
+      ]
+    }
+  ]
+}

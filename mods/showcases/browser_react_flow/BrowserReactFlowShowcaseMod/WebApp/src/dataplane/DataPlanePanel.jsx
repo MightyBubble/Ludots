@@ -207,7 +207,7 @@ export function DataPlanePanel() {
           <strong>{connection.phase}</strong>
         </div>
         <span className={`dataplane-status dataplane-status-${resolveStatusTone(connection)}`}>
-          {connection.subscribed ? 'streaming' : connection.installedFake ? 'fake transport' : 'host'}
+          {connection.subscribed ? 'streaming' : connection.installedFake ? 'mock transport' : 'host'}
         </span>
       </header>
 
@@ -324,6 +324,7 @@ function DiagnosticRail({ diagnostics }) {
 }
 
 function applyDataPlaneEvent(current, event) {
+  const binaryChunks = Array.isArray(event.binaryChunks) ? event.binaryChunks : [];
   if (event.kind === 'snapshot') {
     return {
       tick: event.payload.tick ?? current.tick,
@@ -331,7 +332,7 @@ function applyDataPlaneEvent(current, event) {
       entities: Array.isArray(event.payload.entities) ? event.payload.entities : current.entities,
       metrics: event.payload.metrics ?? current.metrics,
       lastEnvelopeKind: 'snapshot',
-      lastBinaryChunks: event.binaryChunks
+      lastBinaryChunks: binaryChunks
     };
   }
 
@@ -349,7 +350,7 @@ function applyDataPlaneEvent(current, event) {
       entities,
       metrics: event.payload.metrics ?? current.metrics,
       lastEnvelopeKind: 'delta',
-      lastBinaryChunks: event.binaryChunks
+      lastBinaryChunks: binaryChunks
     };
   }
 
@@ -357,8 +358,9 @@ function applyDataPlaneEvent(current, event) {
 }
 
 function formatDataPlaneEvent(event) {
-  const binaryText = event.binaryChunks.length > 0
-    ? ` · ${event.binaryChunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)} bytes`
+  const binaryChunks = Array.isArray(event.binaryChunks) ? event.binaryChunks : [];
+  const binaryText = binaryChunks.length > 0
+    ? ` · ${binaryChunks.reduce((sum, chunk) => sum + chunk.byteLength, 0)} bytes`
     : '';
 
   return {

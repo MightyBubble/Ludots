@@ -53,11 +53,19 @@ namespace Ludots.Core.Modding
                 return processShared;
             }
 
+            bool isHostSharedAssembly = IsHostSharedAssembly(assemblyName.Name);
+
             var alreadyLoaded = Assemblies.FirstOrDefault(a =>
                 string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
             if (alreadyLoaded != null)
             {
                 return alreadyLoaded;
+            }
+
+            if (isHostSharedAssembly &&
+                TryFindHostAssembly(assemblyName, requireReferenceMatch: false, out var hostShared))
+            {
+                return hostShared;
             }
 
             var shared = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(a =>
@@ -68,15 +76,16 @@ namespace Ludots.Core.Modding
                 return shared;
             }
 
-            var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
-            if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
+            if (isHostSharedAssembly &&
+                TryLoadDefaultAssembly(assemblyName, out var defaultAssembly))
             {
-                var hostShared = hostAlc.Assemblies.FirstOrDefault(a =>
-                    string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
-                if (hostShared != null)
-                {
-                    return hostShared;
-                }
+                return defaultAssembly;
+            }
+
+            if (!isHostSharedAssembly &&
+                TryFindHostAssembly(assemblyName, requireReferenceMatch: false, out var hostAssembly))
+            {
+                return hostAssembly;
             }
 
             var sharedModAssembly = _sharedAssemblyResolver?.Invoke(assemblyName);
@@ -106,6 +115,13 @@ namespace Ludots.Core.Modding
                 return false;
             }
 
+            bool isHostSharedAssembly = IsHostSharedAssembly(assemblyName.Name);
+            if (isHostSharedAssembly &&
+                TryFindHostAssembly(assemblyName, requireReferenceMatch: false, out assembly))
+            {
+                return true;
+            }
+
             assembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
                 AssemblyName.ReferenceMatchesDefinition(assemblyName, candidate.GetName()));
             if (assembly != null)
@@ -113,15 +129,10 @@ namespace Ludots.Core.Modding
                 return true;
             }
 
-            var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
-            if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
+            if (!isHostSharedAssembly &&
+                TryFindHostAssembly(assemblyName, requireReferenceMatch: true, out assembly))
             {
-                assembly = hostAlc.Assemblies.FirstOrDefault(candidate =>
-                    AssemblyName.ReferenceMatchesDefinition(assemblyName, candidate.GetName()));
-                if (assembly != null)
-                {
-                    return true;
-                }
+                return true;
             }
 
             var sharedModAssembly = _sharedAssemblyResolver?.Invoke(assemblyName);
@@ -141,6 +152,59 @@ namespace Ludots.Core.Modding
                 }
             }
 
+            return false;
+        }
+
+        private static bool IsHostSharedAssembly(string? assemblyName)
+        {
+            return !string.IsNullOrWhiteSpace(assemblyName) &&
+                (assemblyName.StartsWith("Ludots.", StringComparison.Ordinal) ||
+                 string.Equals(assemblyName, "Arch", StringComparison.Ordinal) ||
+                 string.Equals(assemblyName, "Arch.System", StringComparison.Ordinal));
+        }
+
+        private static bool TryFindHostAssembly(
+            AssemblyName assemblyName,
+            bool requireReferenceMatch,
+            out Assembly assembly)
+        {
+            var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
+            if (hostAlc == null || hostAlc == AssemblyLoadContext.Default)
+            {
+                assembly = null!;
+                return false;
+            }
+
+            assembly = hostAlc.Assemblies.FirstOrDefault(candidate =>
+                AssemblyMatches(assemblyName, candidate.GetName(), requireReferenceMatch));
+            return assembly != null;
+        }
+
+        private static bool AssemblyMatches(
+            AssemblyName requested,
+            AssemblyName candidate,
+            bool requireReferenceMatch)
+        {
+            return requireReferenceMatch
+                ? AssemblyName.ReferenceMatchesDefinition(requested, candidate)
+                : string.Equals(candidate.Name, requested.Name, StringComparison.Ordinal);
+        }
+
+        private static bool TryLoadDefaultAssembly(AssemblyName assemblyName, out Assembly assembly)
+        {
+            try
+            {
+                assembly = AssemblyLoadContext.Default.LoadFromAssemblyName(assemblyName);
+                return assembly != null;
+            }
+            catch (FileNotFoundException)
+            {
+            }
+            catch (FileLoadException)
+            {
+            }
+
+            assembly = null!;
             return false;
         }
 

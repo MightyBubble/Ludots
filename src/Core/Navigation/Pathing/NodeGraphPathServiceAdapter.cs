@@ -82,7 +82,14 @@ namespace Ludots.Core.Navigation.Pathing
                 }
 
                 _store.TryWrite(in handle, _xScratch, _yScratch, count);
-                result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, r.Expanded, errorCode: 0);
+                result = new PathResult(
+                    request.RequestId,
+                    request.Actor,
+                    PathStatus.Found,
+                    handle,
+                    r.Expanded,
+                    errorCode: 0,
+                    resolvedDomain: PathDomain.NodeGraph);
                 return true;
             }
 

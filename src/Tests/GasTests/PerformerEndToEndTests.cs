@@ -261,11 +261,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void EffectApplied_ProducesFloatingCombatText_InWorldHud()
         {
+            var attacker = CreatePresentableEntity(new Vector3(1f, 0f, 1f));
             var target = CreatePresentableEntity(new Vector3(5f, 0f, 5f));
             _gasEvents.Publish(new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.EffectApplied,
-                Actor = target,
+                Actor = attacker,
                 Target = target,
                 Delta = -30f,
                 AttributeId = _healthAttrId,
@@ -281,6 +282,8 @@ namespace Ludots.Tests.Presentation
                 if (span[i].Kind == WorldHudItemKind.Text)
                 {
                     foundText = true;
+                    Assert.That(span[i].Owner, Is.EqualTo(target));
+                    Assert.That(span[i].Value0, Is.EqualTo(-30f).Within(0.001f));
                     break;
                 }
             }

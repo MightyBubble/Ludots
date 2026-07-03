@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots Mod 地图尺度入门</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8fb;
+      --panel: #ffffff;
+      --ink: #172033;
+      --muted: #627287;
+      --line: #d7dfeb;
+      --blue: #2867d8;
+      --green: #0f7a57;
+      --amber: #946200;
+      --red: #b93838;
+      --violet: #6742bd;
+      --shadow: 0 18px 48px rgba(24, 37, 60, 0.10);
+      font-family:
+        "Inter", "Segoe UI", "Microsoft YaHei", "PingFang SC",
+        "Noto Sans CJK SC", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #f8fbff 0%, #f2f5fa 48%, #f7f8fb 100%);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .page {
+      width: min(1440px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 24px 0 38px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.12;
+      font-weight: 760;
+    }
+
+    .lead {
+      max-width: 880px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .doc-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .doc-links a,
+    .preset-tabs button,
+    .copy-button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 7px 11px;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .doc-links a:hover,
+    .preset-tabs button:hover,
+    .copy-button:hover {
+      border-color: #8fa4c2;
+      text-decoration: none;
+    }
+
+    .preset-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .preset-tabs button {
+      display: grid;
+      gap: 5px;
+      min-height: 74px;
+      padding: 12px;
+      text-align: left;
+      line-height: 1.35;
+    }
+
+    .preset-tabs button.active {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(40, 103, 216, 0.14);
+    }
+
+    .preset-tabs strong {
+      display: block;
+      font-size: 14px;
+    }
+
+    .preset-tabs span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+    }
+
+    .config-panel {
+      position: sticky;
+      top: 16px;
+      padding: 16px;
+    }
+
+    .panel h2 {
+      margin: 0 0 12px;
+      font-size: 17px;
+      font-weight: 760;
+    }
+
+    .field-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 730;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--blue);
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(40, 103, 216, 0.16);
+    }
+
+    .field input[readonly] {
+      background: #eef2f7;
+      color: #536176;
+    }
+
+    .surface {
+      display: grid;
+      gap: 16px;
+    }
+
+    .subhead {
+      margin-top: 18px;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 16px;
+    }
+
+    .metric {
+      min-height: 82px;
+      border: 1px solid #e4eaf4;
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 11px;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 760;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 19px;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+    }
+
+    .map-panel {
+      padding: 16px;
+    }
+
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .map-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .map-svg {
+      width: 100%;
+      min-height: 520px;
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f9fbff;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .status {
+      border: 1px solid #bfe7d5;
+      border-radius: 8px;
+      background: #eaf8f2;
+      color: #086543;
+      padding: 10px 11px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status.bad {
+      border-color: #f1c5c5;
+      background: #fff0f0;
+      color: #9a2828;
+    }
+
+    .status.warn {
+      border-color: #ecd28c;
+      background: #fff8e7;
+      color: #7a4e00;
+    }
+
+    .bake-status-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .guide-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .guide-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcff;
+      padding: 13px;
+    }
+
+    .guide-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    .guide-card ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .code-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      padding: 16px;
+    }
+
+    .code-card {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #111827;
+      color: #dbeafe;
+    }
+
+    .code-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .code-head h3 {
+      margin: 0;
+      font-size: 13px;
+      color: #f8fafc;
+    }
+
+    .copy-button {
+      min-height: 28px;
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
+      color: #f8fafc;
+      padding: 6px 9px;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      font-size: 12px;
+      line-height: 1.55;
+      tab-size: 2;
+    }
+
+    .footnote {
+      padding: 0 16px 16px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 1160px) {
+      .layout,
+      .code-grid,
+      .guide-grid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      .config-panel {
+        position: static;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        width: min(100vw - 20px, 720px);
+        padding-top: 14px;
+      }
+
+      .topbar,
+      .preset-tabs,
+      .status-grid,
+      .bake-status-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .doc-links {
+        justify-content: start;
+      }
+
+      .map-svg {
+        min-height: 430px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <h1>Mod 地图尺度入门</h1>
+        <p class="lead">
+          给 Mod 作者用的起点计算器：选 RTS、大战略或开放大世界，调 board、MassNavigationFlow 和 nav bake 参数，马上看到世界尺寸、分区数量、运行窗口精度、烘焙预算和配置片段。
+        </p>
+      </div>
+      <nav class="doc-links" aria-label="文档入口">
+        <a href="map-scale-authoring-guide.md">文字指南</a>
+        <a href="nav-bake-budget-and-estimation.md">烘焙预算</a>
+        <a href="navmesh-authoring-bake-toolchain.md">工具链</a>
+        <a href="spatial-scale-explorer.html">尺度关系图</a>
+        <a href="spatial-scale-configuration.md">查表</a>
+      </nav>
+    </header>
+
+    <section class="preset-tabs" aria-label="游戏类型 preset">
+      <button type="button" data-preset="rts" class="active">
+        <strong>RTS / 战场</strong>
+        <span>大世界，多单位，局部高精度 FlowWindow。</span>
+      </button>
+      <button type="button" data-preset="grand">
+        <strong>大战略 / 4X</strong>
+        <span>大范围，少量实体，图/区域路径优先。</span>
+      </button>
+      <button type="button" data-preset="open">
+        <strong>开放大世界</strong>
+        <span>流式加载，局部活动，结构变化可增量 rebuild。</span>
+      </button>
+    </section>
+
+    <section class="layout">
+      <aside class="panel config-panel" aria-label="参数输入">
+        <h2>参数</h2>
+        <div class="field-grid">
+          <div class="field">
+            <label for="spatialType">SpatialType</label>
+            <input id="spatialType" value="Grid">
+          </div>
+          <div class="field">
+            <label for="desiredWidthMeters">目标宽度 m</label>
+            <input id="desiredWidthMeters" type="number" min="1" step="1" value="64000">
+          </div>
+          <div class="field">
+            <label for="desiredHeightMeters">目标高度 m</label>
+            <input id="desiredHeightMeters" type="number" min="1" step="1" value="64000">
+          </div>
+          <div class="field">
+            <label for="cellCm">GridCellSizeCm / CellCm</label>
+            <input id="cellCm" type="number" min="1" step="1" value="100">
+          </div>
+          <div class="field">
+            <label for="widthMacro">WidthInMacroTiles（派生）</label>
+            <input id="widthMacro" type="number" value="250" readonly>
+          </div>
+          <div class="field">
+            <label for="heightMacro">HeightInMacroTiles（派生）</label>
+            <input id="heightMacro" type="number" value="250" readonly>
+          </div>
+          <div class="field">
+            <label for="macroTileCells">MacroTileCells</label>
+            <input id="macroTileCells" type="number" value="256" readonly>
+          </div>
+          <div class="field">
+            <label for="partitionChunkCells">ChunkSizeCells / PartitionChunk</label>
+            <input id="partitionChunkCells" type="number" min="1" step="1" value="64">
+          </div>
+          <div class="field">
+            <label for="flowWindowCm">FlowWindow width/height cm</label>
+            <input id="flowWindowCm" type="number" min="1" step="1" value="10000">
+          </div>
+          <div class="field">
+            <label for="flowCellCm">flowCellSizeCm</label>
+            <input id="flowCellCm" type="number" min="1" step="1" value="100">
+          </div>
+          <div class="field">
+            <label for="separationHashCm">separationHashCellSizeCm</label>
+            <input id="separationHashCm" type="number" min="1" step="1" value="100">
+          </div>
+          <div class="field">
+            <label for="hardHashCm">hardResolveHashCellSizeCm</label>
+            <input id="hardHashCm" type="number" min="1" step="1" value="50">
+          </div>
+          <div class="field">
+            <label for="agentRadiusCm">agent radiusCm</label>
+            <input id="agentRadiusCm" type="number" min="1" step="1" value="48">
+          </div>
+          <div class="field">
+            <label for="clearanceCm">agent clearanceCm</label>
+            <input id="clearanceCm" type="number" min="0" step="1" value="12">
+          </div>
+          <div class="field">
+            <label for="visibleAgents">预估可见/常驻 agents</label>
+            <input id="visibleAgents" type="number" min="0" step="100" value="10000">
+          </div>
+
+          <h2 class="subhead">Nav Bake 预算</h2>
+          <div class="field">
+            <label for="bakeMode">target mode</label>
+            <select id="bakeMode">
+              <option value="full">full</option>
+              <option value="window">window</option>
+              <option value="dirty">dirty</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="windowTilesX">window target width tiles</label>
+            <input id="windowTilesX" type="number" min="1" step="1" value="32">
+          </div>
+          <div class="field">
+            <label for="windowTilesY">window target height tiles</label>
+            <input id="windowTilesY" type="number" min="1" step="1" value="32">
+          </div>
+          <div class="field">
+            <label for="dirtyTiles">dirty target tiles</label>
+            <input id="dirtyTiles" type="number" min="0" step="1" value="9">
+          </div>
+          <div class="field">
+            <label for="navLayers">nav layer count</label>
+            <input id="navLayers" type="number" min="1" step="1" value="1">
+          </div>
+          <div class="field">
+            <label for="navProfiles">nav profile count</label>
+            <input id="navProfiles" type="number" min="1" step="1" value="1">
+          </div>
+          <div class="field">
+            <label for="agentHeightCm">agent heightCm</label>
+            <input id="agentHeightCm" type="number" min="1" step="1" value="180">
+          </div>
+          <div class="field">
+            <label for="maxClimbCm">maxClimbCm</label>
+            <input id="maxClimbCm" type="number" min="0" step="1" value="50">
+          </div>
+          <div class="field">
+            <label for="maxSlopeDeg">maxSlopeDeg</label>
+            <input id="maxSlopeDeg" type="number" min="0" max="89" step="1" value="45">
+          </div>
+          <div class="field">
+            <label for="areaCount">terrain areaId count</label>
+            <input id="areaCount" type="number" min="1" step="1" value="4">
+          </div>
+          <div class="field">
+            <label for="blockedAreaId">blocked areaId for heavy</label>
+            <input id="blockedAreaId" type="number" min="0" step="1" value="3">
+          </div>
+          <div class="field">
+            <label for="msLow">ms / operation low</label>
+            <input id="msLow" type="number" min="1" step="1" value="50">
+          </div>
+          <div class="field">
+            <label for="msHigh">ms / operation high</label>
+            <input id="msHigh" type="number" min="1" step="1" value="200">
+          </div>
+          <div class="field">
+            <label for="effectiveWorkers">effective workers</label>
+            <input id="effectiveWorkers" type="number" min="1" step="1" value="8">
+          </div>
+          <div class="field">
+            <label for="tileBudgetPerTick">tileBudgetPerFixedTick</label>
+            <input id="tileBudgetPerTick" type="number" min="1" step="1" value="1">
+          </div>
+        </div>
+      </aside>
+
+      <section class="surface">
+        <section class="panel metrics" aria-label="计算结果">
+          <div class="metric"><span>世界范围</span><strong id="worldSize">-</strong></div>
+          <div class="metric"><span>世界 cells</span><strong id="worldCells">-</strong></div>
+          <div class="metric"><span>Partition chunks</span><strong id="chunkCount">-</strong></div>
+          <div class="metric"><span>Flow grid</span><strong id="flowGrid">-</strong></div>
+        </section>
+
+        <section class="panel metrics" aria-label="Nav bake 预算">
+          <div class="metric"><span>Full nav tiles</span><strong id="fullNavTiles">-</strong></div>
+          <div class="metric"><span>Target tiles</span><strong id="targetNavTiles">-</strong></div>
+          <div class="metric"><span>Operations</span><strong id="bakeOperations">-</strong></div>
+          <div class="metric"><span>Estimated time</span><strong id="bakeTime">-</strong></div>
+          <div class="metric"><span>Recast voxel</span><strong id="recastVoxel">-</strong></div>
+          <div class="metric"><span>Voxel columns/tile</span><strong id="recastColumns">-</strong></div>
+          <div class="metric"><span>Runtime ticks</span><strong id="runtimeTicks">-</strong></div>
+          <div class="metric"><span>Logic cells</span><strong id="logicCells">-</strong></div>
+          <div class="metric"><span>Walkable slope</span><strong id="slopeMetric">-</strong></div>
+          <div class="metric"><span>Area matrix</span><strong id="areaMetric">-</strong></div>
+        </section>
+
+        <section class="panel map-panel" aria-label="尺度示意图">
+          <div class="map-head">
+            <div>
+              <h2>板子示意</h2>
+              <p id="presetSummary">-</p>
+            </div>
+          </div>
+          <svg class="map-svg" viewBox="0 0 900 520" role="img" aria-label="地图尺度示意">
+            <defs>
+              <pattern id="macroGrid" width="80" height="80" patternUnits="userSpaceOnUse">
+                <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#127a58" stroke-width="1.4" opacity="0.55"/>
+              </pattern>
+              <pattern id="chunkGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#946200" stroke-width="0.9" opacity="0.38"/>
+              </pattern>
+              <pattern id="flowGridPattern" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#6742bd" stroke-width="0.9" opacity="0.58"/>
+              </pattern>
+            </defs>
+            <rect x="0" y="0" width="900" height="520" fill="#f8fbff"/>
+            <text x="36" y="38" fill="#172033" font-size="15" font-weight="760">WorldExtent</text>
+            <text id="mapWorldLabel" x="36" y="59" fill="#627287" font-size="12">-</text>
+            <rect x="36" y="78" width="480" height="360" rx="4" fill="#ffffff" stroke="#127a58" stroke-width="3"/>
+            <rect x="36" y="78" width="480" height="360" fill="url(#macroGrid)"/>
+            <rect x="36" y="78" width="480" height="360" fill="url(#chunkGrid)"/>
+            <rect id="flowWindowRect" x="0" y="0" width="140" height="140" rx="4" fill="rgba(103, 66, 189, 0.12)" stroke="#6742bd" stroke-width="3"/>
+            <rect id="flowWindowGrid" x="0" y="0" width="140" height="140" fill="url(#flowGridPattern)"/>
+            <text id="flowWindowLabel" x="0" y="0" fill="#4f2e9c" font-size="12" font-weight="760">FlowWindow</text>
+            <circle id="agentDot" cx="590" cy="136" r="16" fill="rgba(40, 103, 216, 0.16)" stroke="#2867d8" stroke-width="3"/>
+            <text x="622" y="132" fill="#172033" font-size="13" font-weight="760">AgentProfile</text>
+            <text id="agentLabel" x="622" y="151" fill="#627287" font-size="12">-</text>
+            <rect x="590" y="210" width="220" height="136" rx="4" fill="#ffffff" stroke="#d7dfeb"/>
+            <text x="606" y="238" fill="#172033" font-size="13" font-weight="760">表现容量</text>
+            <text id="capacityLabel" x="606" y="260" fill="#627287" font-size="12">-</text>
+            <text x="606" y="286" fill="#172033" font-size="13" font-weight="760">路径策略</text>
+            <text id="routingLabel" x="606" y="308" fill="#627287" font-size="12">-</text>
+            <text x="606" y="326" fill="#172033" font-size="13" font-weight="760">Area cost</text>
+            <text id="areaLabel" x="606" y="346" fill="#627287" font-size="12">-</text>
+            <rect x="590" y="380" width="220" height="70" rx="4" fill="#fffaf0" stroke="#f0d899"/>
+            <text x="606" y="407" fill="#7a4e00" font-size="13" font-weight="760">注意</text>
+            <text id="warningLabel" x="606" y="429" fill="#7a4e00" font-size="12">-</text>
+          </svg>
+          <div class="status-grid">
+            <div class="status" id="worldStatus">-</div>
+            <div class="status" id="flowStatus">-</div>
+          </div>
+          <div class="status-grid bake-status-grid">
+            <div class="status" id="bakeStatus">-</div>
+            <div class="status" id="targetStatus">-</div>
+            <div class="status" id="recastStatus">-</div>
+          </div>
+        </section>
+
+        <section class="panel guide-grid" aria-label="取舍说明">
+          <article class="guide-card">
+            <h3>世界大小</h3>
+            <ul id="worldAdvice"></ul>
+          </article>
+          <article class="guide-card">
+            <h3>导航精度</h3>
+            <ul id="navAdvice"></ul>
+          </article>
+          <article class="guide-card">
+            <h3>表现/性能</h3>
+            <ul id="perfAdvice"></ul>
+          </article>
+        </section>
+
+        <section class="panel code-grid" aria-label="配置片段">
+          <article class="code-card">
+            <div class="code-head">
+              <h3>Maps/&lt;map&gt;.json Boards[]</h3>
+              <button type="button" class="copy-button" data-copy="mapSnippet">复制</button>
+            </div>
+            <pre id="mapSnippet"></pre>
+          </article>
+          <article class="code-card">
+            <div class="code-head">
+              <h3>MassNavigationConfig.json 起点</h3>
+              <button type="button" class="copy-button" data-copy="massSnippet">复制</button>
+            </div>
+            <pre id="massSnippet"></pre>
+          </article>
+          <article class="code-card">
+            <div class="code-head">
+              <h3>Navigation/navmesh.json 起点</h3>
+              <button type="button" class="copy-button" data-copy="navSnippet">复制</button>
+            </div>
+            <pre id="navSnippet"></pre>
+          </article>
+        </section>
+
+        <p class="footnote">
+          这页只生成入门片段。正式 Mod 仍要把 config catalog、agent profile、navmesh/pathing、entity template、performer 和业务 runtime 接完整。
+          大小写保持严格，缺字段不加 fallback。
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const presets = {
+      rts: {
+        summary: "RTS / 战场：世界可以很大，但每次只在局部战区做高频 MassNavigationFlow 和避障。",
+        spatialType: "Grid",
+        desiredWidthMeters: 64000,
+        desiredHeightMeters: 64000,
+        cellCm: 100,
+        partitionChunkCells: 64,
+        flowWindowCm: 10000,
+        flowCellCm: 100,
+        separationHashCm: 100,
+        hardHashCm: 50,
+        agentRadiusCm: 48,
+        clearanceCm: 12,
+        visibleAgents: 10000,
+        bakeMode: "window",
+        windowTilesX: 32,
+        windowTilesY: 32,
+        dirtyTiles: 9,
+        navLayers: 1,
+        navProfiles: 1,
+        agentHeightCm: 180,
+        maxClimbCm: 50,
+        maxSlopeDeg: 45,
+        areaCount: 4,
+        blockedAreaId: 3,
+        msLow: 50,
+        msHigh: 200,
+        effectiveWorkers: 8,
+        tileBudgetPerTick: 1,
+        routing: "大军 MassNavigationFlow；小队可按 profile PreferMesh/PreferGraph",
+        advice: {
+          world: ["目标 64km x 64km；配置会派生 250 x 250 MacroTiles。", "不要让 FlowWindow 覆盖全图。", "用 hot zone / view residency 管局部活动。"],
+          nav: ["FlowCell 100cm 适合 1m 级单位。", "hard resolve 50cm 可处理更细拥挤。", "门洞/道路小队用 pathing profile 精确路由。"],
+          perf: ["表现容量按常驻 agents 和 marker 估算。", "camera culling LOD 距离要小于全图尺度。", "minimap 可用 RTS full-map preset。"]
+        }
+      },
+      grand: {
+        summary: "大战略 / 4X：世界范围重要，局部避障通常不需要每米级全图模拟。",
+        spatialType: "NodeGraph",
+        desiredWidthMeters: 16384,
+        desiredHeightMeters: 16384,
+        cellCm: 100,
+        partitionChunkCells: 64,
+        flowWindowCm: 6400,
+        flowCellCm: 200,
+        separationHashCm: 200,
+        hardHashCm: 100,
+        agentRadiusCm: 120,
+        clearanceCm: 30,
+        visibleAgents: 2000,
+        bakeMode: "full",
+        windowTilesX: 8,
+        windowTilesY: 8,
+        dirtyTiles: 0,
+        navLayers: 1,
+        navProfiles: 1,
+        agentHeightCm: 260,
+        maxClimbCm: 80,
+        maxSlopeDeg: 35,
+        areaCount: 5,
+        blockedAreaId: 4,
+        msLow: 20,
+        msHigh: 80,
+        effectiveWorkers: 8,
+        tileBudgetPerTick: 1,
+        routing: "商队/军队 PreferGraph 或 AutoCheapest；局部战斗再进 MassNavigationFlow",
+        advice: {
+          world: ["目标 16.4km x 16.4km；配置会派生 64 x 64 MacroTiles。", "玩法格/省份不必等于 engine Cell。", "NodeGraph 适合道路、航线和区域连接。"],
+          nav: ["大地图优先 route domain，而不是全图 FlowCell。", "agent radius 表达通行能力，不表达军团规模。", "区域战斗可切局部 MassNavigationFlow 窗口。"],
+          perf: ["小地图 full-map 更重要。", "城市/军团 marker 数决定 minimap 容量。", "表现对象数量通常低于 RTS。"]
+        }
+      },
+      open: {
+        summary: "开放大世界：先控 loaded window，再控局部导航；结构变化用 runtime-incremental。",
+        spatialType: "Grid",
+        desiredWidthMeters: 64000,
+        desiredHeightMeters: 64000,
+        cellCm: 100,
+        partitionChunkCells: 64,
+        flowWindowCm: 12800,
+        flowCellCm: 100,
+        separationHashCm: 100,
+        hardHashCm: 50,
+        agentRadiusCm: 60,
+        clearanceCm: 15,
+        visibleAgents: 5000,
+        bakeMode: "dirty",
+        windowTilesX: 16,
+        windowTilesY: 16,
+        dirtyTiles: 9,
+        navLayers: 1,
+        navProfiles: 2,
+        agentHeightCm: 190,
+        maxClimbCm: 60,
+        maxSlopeDeg: 45,
+        areaCount: 6,
+        blockedAreaId: 5,
+        msLow: 80,
+        msHigh: 250,
+        effectiveWorkers: 8,
+        tileBudgetPerTick: 1,
+        routing: "玩家附近用 Mesh/Auto；远区用 streaming 与驻留策略",
+        advice: {
+          world: ["大世界可以沿用 64km 级 board。", "StreamingChunk 可从 64 cells * CellCm 起步。", "相机/玩家活动半径决定 loaded window。"],
+          nav: ["动态门/桥/建筑用 runtime-incremental + cdt。", "临时拥堵仍归 MassNavigationFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
+          perf: ["不要让远区 performer 常驻。", "view residency 控制保留时间和半径。", "minimap 与相机跳转要验证 marker 不丢。"]
+        }
+      }
+    };
+
+    const fieldIds = [
+      "spatialType",
+      "desiredWidthMeters",
+      "desiredHeightMeters",
+      "cellCm",
+      "widthMacro",
+      "heightMacro",
+      "partitionChunkCells",
+      "flowWindowCm",
+      "flowCellCm",
+      "separationHashCm",
+      "hardHashCm",
+      "agentRadiusCm",
+      "clearanceCm",
+      "visibleAgents",
+      "bakeMode",
+      "windowTilesX",
+      "windowTilesY",
+      "dirtyTiles",
+      "navLayers",
+      "navProfiles",
+      "agentHeightCm",
+      "maxClimbCm",
+      "maxSlopeDeg",
+      "areaCount",
+      "blockedAreaId",
+      "msLow",
+      "msHigh",
+      "effectiveWorkers",
+      "tileBudgetPerTick"
+    ];
+    const macroTileCells = 256;
+    const terrainChunkCells = 64;
+    let activePreset = "rts";
+
+    function number(id) {
+      return Number(document.getElementById(id).value);
+    }
+
+    function text(id) {
+      return document.getElementById(id).value.trim();
+    }
+
+    function fmt(value, digits = 0) {
+      return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: digits }).format(value);
+    }
+
+    function fmtDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0) {
+        return "< 1 s";
+      }
+      if (seconds < 60) {
+        return `${fmt(seconds, seconds < 10 ? 1 : 0)} s`;
+      }
+      const minutes = seconds / 60;
+      if (minutes < 90) {
+        return `${fmt(minutes, minutes < 10 ? 1 : 0)} min`;
+      }
+      const hours = minutes / 60;
+      if (hours < 48) {
+        return `${fmt(hours, hours < 10 ? 1 : 0)} h`;
+      }
+      return `${fmt(hours / 24, 1)} d`;
+    }
+
+    function isPowerOfTwo(value) {
+      return Number.isInteger(value) && value > 0 && (value & (value - 1)) === 0;
+    }
+
+    function deriveMacroTilesFromMeters(widthMeters, heightMeters, cellCm) {
+      const safeCellCm = Math.max(1, Math.floor(cellCm || 1));
+      const widthCells = Math.max(1, Math.ceil((Math.max(1, widthMeters) * 100) / safeCellCm));
+      const heightCells = Math.max(1, Math.ceil((Math.max(1, heightMeters) * 100) / safeCellCm));
+      const widthMacro = Math.max(1, Math.ceil(widthCells / macroTileCells));
+      const heightMacro = Math.max(1, Math.ceil(heightCells / macroTileCells));
+      return {
+        widthMacro,
+        heightMacro,
+        requestedWidthCells: widthCells,
+        requestedHeightCells: heightCells,
+        allocatedWidthCells: widthMacro * macroTileCells,
+        allocatedHeightCells: heightMacro * macroTileCells
+      };
+    }
+
+    function setPreset(id) {
+      activePreset = id;
+      const preset = presets[id];
+      Object.entries(preset).forEach(([key, value]) => {
+        const input = document.getElementById(key);
+        if (input) {
+          input.value = value;
+        }
+      });
+      document.querySelectorAll("[data-preset]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.preset === id);
+      });
+      update();
+    }
+
+    function status(id, level, message) {
+      const element = document.getElementById(id);
+      const normalized = level === true ? "ok" : level === false ? "bad" : level;
+      element.classList.toggle("bad", normalized === "bad");
+      element.classList.toggle("warn", normalized === "warn");
+      element.textContent = message;
+    }
+
+    function renderList(id, lines) {
+      document.getElementById(id).innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
+    }
+
+    function updateMapDrawing(worldWidthCm, worldHeightCm, flowWindowCm, agentRadiusCm) {
+      const worldBox = { x: 36, y: 78, width: 480, height: 360 };
+      const worldMax = Math.max(worldWidthCm, worldHeightCm);
+      const flowRatio = Math.min(1, flowWindowCm / worldMax);
+      const flowSize = Math.max(28, Math.min(190, worldBox.width * flowRatio));
+      const flowX = worldBox.x + worldBox.width * 0.52 - flowSize * 0.5;
+      const flowY = worldBox.y + worldBox.height * 0.50 - flowSize * 0.5;
+      const flowRect = document.getElementById("flowWindowRect");
+      const flowGrid = document.getElementById("flowWindowGrid");
+      [flowRect, flowGrid].forEach((rect) => {
+        rect.setAttribute("x", flowX);
+        rect.setAttribute("y", flowY);
+        rect.setAttribute("width", flowSize);
+        rect.setAttribute("height", flowSize);
+      });
+      document.getElementById("flowWindowLabel").setAttribute("x", flowX + 8);
+      document.getElementById("flowWindowLabel").setAttribute("y", flowY + 22);
+      const agentDot = document.getElementById("agentDot");
+      agentDot.setAttribute("r", Math.max(8, Math.min(28, agentRadiusCm / 4)));
+      document.getElementById("mapWorldLabel").textContent =
+        `${fmt(worldWidthCm / 100000, 2)}km x ${fmt(worldHeightCm / 100000, 2)}km`;
+    }
+
+    function buildMapSnippet() {
+      return JSON.stringify({
+        Boards: [
+          {
+            Name: "default",
+            SpatialType: text("spatialType"),
+            WidthInMacroTiles: number("widthMacro"),
+            HeightInMacroTiles: number("heightMacro"),
+            GridCellSizeCm: number("cellCm"),
+            ChunkSizeCells: number("partitionChunkCells"),
+            NavigationEnabled: activePreset !== "grand"
+          }
+        ]
+      }, null, 2);
+    }
+
+    function buildMassSnippet() {
+      const flow = number("flowWindowCm");
+      return JSON.stringify({
+        world: {
+          solverWindowWidthCm: flow,
+          solverWindowHeightCm: flow,
+          streamingChunkSizeCm: number("partitionChunkCells") * number("cellCm"),
+          streamingRadiusCm: flow * 2,
+          workAreaPaddingCm: Math.round(flow * 0.4),
+          workAreaMaxWidthCm: flow * 4,
+          workAreaMaxHeightCm: flow * 4
+        },
+        solver: {
+          fieldWidthCm: flow,
+          fieldHeightCm: flow,
+          flowCellSizeCm: number("flowCellCm"),
+          separationHashCellSizeCm: number("separationHashCm"),
+          hardResolveHashCellSizeCm: number("hardHashCm")
+        }
+      }, null, 2);
+    }
+
+    function buildNavSnippet() {
+      const maxSlopeDeg = number("maxSlopeDeg");
+      return JSON.stringify({
+        mode: text("bakeMode") === "dirty" ? "runtime-incremental" : "offline",
+        algorithm: text("bakeMode") === "dirty" ? "cdt" : "recast",
+        profiles: Array.from({ length: Math.max(1, number("navProfiles")) }, (_, i) => ({
+          id: i === 0 ? "light" : `profile_${i + 1}`,
+          maxClimbCm: number("maxClimbCm"),
+          maxSlopeDeg
+        })),
+        layers: Array.from({ length: Math.max(1, number("navLayers")) }, (_, i) => ({
+          id: i === 0 ? "ground" : `layer_${i + 1}`,
+          layer: i
+        })),
+        areas: [],
+        runtimeIncremental: {
+          tileBudgetPerFixedTick: number("tileBudgetPerTick"),
+          includeNeighborTiles: true,
+          heightScaleMeters: 1.0,
+          minWalkableUpDot: 0.6,
+          cliffHeightThreshold: 1
+        }
+      }, null, 2);
+    }
+
+    function calculateBakeBudget(worldWidthCells, worldHeightCells, cellCm) {
+      const spatial = text("spatialType").toLowerCase();
+      const fullTilesX = Math.ceil(worldWidthCells / terrainChunkCells);
+      const fullTilesY = Math.ceil(worldHeightCells / terrainChunkCells);
+      const fullTiles = fullTilesX * fullTilesY;
+      const mode = text("bakeMode");
+      const windowTiles = Math.min(
+        fullTiles,
+        Math.max(0, Math.ceil(number("windowTilesX"))) * Math.max(0, Math.ceil(number("windowTilesY"))));
+      const dirtyTiles = Math.min(fullTiles, Math.max(0, Math.ceil(number("dirtyTiles"))));
+      let targetTiles = fullTiles;
+      if (mode === "window") {
+        targetTiles = windowTiles;
+      } else if (mode === "dirty") {
+        targetTiles = dirtyTiles;
+      }
+      if (spatial === "nodegraph") {
+        targetTiles = 0;
+      }
+
+      const layers = Math.max(1, Math.ceil(number("navLayers")));
+      const profiles = Math.max(1, Math.ceil(number("navProfiles")));
+      const operations = targetTiles * layers * profiles;
+      const workers = Math.max(1, number("effectiveWorkers"));
+      const msLow = Math.max(1, number("msLow"));
+      const msHigh = Math.max(msLow, number("msHigh"));
+      const secondsLow = operations * msLow / 1000 / workers;
+      const secondsHigh = operations * msHigh / 1000 / workers;
+      const recastCellSizeCm = Math.max(5, Math.min(50, number("agentRadiusCm") / 3));
+      const recastCellHeightCm = recastCellSizeCm * 0.5;
+      const tileWidthCm = terrainChunkCells * cellCm;
+      const columnsAxis = Math.ceil(tileWidthCm / recastCellSizeCm);
+      const columns = columnsAxis * columnsAxis;
+      const walkableHeightVoxels = Math.ceil(number("agentHeightCm") / recastCellHeightCm);
+      const walkableClimbVoxels = Math.floor(number("maxClimbCm") / recastCellHeightCm);
+      const maxSlopeDeg = Math.max(0, Math.min(89, number("maxSlopeDeg")));
+      const minWalkableUpDot = Math.cos(maxSlopeDeg * Math.PI / 180);
+      const runtimeTicks = Math.ceil(targetTiles / Math.max(1, number("tileBudgetPerTick")));
+
+      return {
+        fullTilesX,
+        fullTilesY,
+        fullTiles,
+        targetTiles,
+        operations,
+        secondsLow,
+        secondsHigh,
+        recastCellSizeCm,
+        recastCellHeightCm,
+        columnsAxis,
+        columns,
+        walkableHeightVoxels,
+        walkableClimbVoxels,
+        maxSlopeDeg,
+        minWalkableUpDot,
+        runtimeTicks,
+        spatial,
+        mode,
+        layers,
+        profiles
+      };
+    }
+
+    function update() {
+      const preset = presets[activePreset];
+      const cellCm = number("cellCm");
+      const allocation = deriveMacroTilesFromMeters(
+        number("desiredWidthMeters"),
+        number("desiredHeightMeters"),
+        cellCm
+      );
+      document.getElementById("widthMacro").value = allocation.widthMacro;
+      document.getElementById("heightMacro").value = allocation.heightMacro;
+      const widthMacro = allocation.widthMacro;
+      const heightMacro = allocation.heightMacro;
+      const partitionChunk = number("partitionChunkCells");
+      const flowWindow = number("flowWindowCm");
+      const flowCell = number("flowCellCm");
+      const sepHash = number("separationHashCm");
+      const hardHash = number("hardHashCm");
+      const agentRadius = number("agentRadiusCm");
+      const clearance = number("clearanceCm");
+      const visibleAgents = number("visibleAgents");
+      const areaCount = Math.max(1, Math.ceil(number("areaCount")));
+      const blockedAreaId = Math.max(0, Math.ceil(number("blockedAreaId")));
+      const bake = calculateBakeBudget(widthMacro * macroTileCells, heightMacro * macroTileCells, cellCm);
+
+      const worldWidthCells = widthMacro * macroTileCells;
+      const worldHeightCells = heightMacro * macroTileCells;
+      const worldWidthCm = worldWidthCells * cellCm;
+      const worldHeightCm = worldHeightCells * cellCm;
+      const chunkX = worldWidthCells / partitionChunk;
+      const chunkY = worldHeightCells / partitionChunk;
+      const flowGrid = flowWindow / flowCell;
+
+      document.getElementById("presetSummary").textContent = preset.summary;
+      document.getElementById("worldSize").textContent =
+        `${fmt(worldWidthCm / 100000, 2)} x ${fmt(worldHeightCm / 100000, 2)} km`;
+      document.getElementById("worldCells").textContent =
+        `${fmt(worldWidthCells)} x ${fmt(worldHeightCells)}`;
+      document.getElementById("chunkCount").textContent =
+        `${fmt(chunkX, 2)} x ${fmt(chunkY, 2)}`;
+      document.getElementById("flowGrid").textContent =
+        `${fmt(flowGrid, 2)} x ${fmt(flowWindow / flowCell, 2)}`;
+      document.getElementById("fullNavTiles").textContent =
+        `${fmt(bake.fullTiles)} (${fmt(bake.fullTilesX)} x ${fmt(bake.fullTilesY)})`;
+      document.getElementById("targetNavTiles").textContent =
+        `${fmt(bake.targetTiles)} ${bake.mode}`;
+      document.getElementById("bakeOperations").textContent =
+        `${fmt(bake.operations)} = tiles x ${fmt(bake.layers)} x ${fmt(bake.profiles)}`;
+      document.getElementById("bakeTime").textContent =
+        `${fmtDuration(bake.secondsLow)} - ${fmtDuration(bake.secondsHigh)}`;
+      document.getElementById("recastVoxel").textContent =
+        `${fmt(bake.recastCellSizeCm, 1)}cm / ${fmt(bake.recastCellHeightCm, 1)}cm`;
+      document.getElementById("recastColumns").textContent =
+        `${fmt(bake.columns)} (${fmt(bake.columnsAxis)} x ${fmt(bake.columnsAxis)})`;
+      document.getElementById("runtimeTicks").textContent =
+        bake.mode === "dirty" ? `${fmt(bake.runtimeTicks)} fixed ticks` : "offline";
+      document.getElementById("logicCells").textContent =
+        `${fmt(terrainChunkCells * terrainChunkCells)} / tile`;
+      document.getElementById("slopeMetric").textContent =
+        `${fmt(bake.maxSlopeDeg)} deg / upDot ${fmt(bake.minWalkableUpDot, 3)}`;
+      document.getElementById("areaMetric").textContent =
+        `${fmt(areaCount)} areas x ${fmt(bake.profiles)} profiles`;
+      document.getElementById("agentLabel").textContent =
+        `radius ${fmt(agentRadius)}cm；clearance ${fmt(clearance)}cm；height ${fmt(number("agentHeightCm"))}cm`;
+      document.getElementById("capacityLabel").textContent =
+        `visible agents ${fmt(visibleAgents)}；capacity 需按 performer/marker/overlay 另配`;
+      document.getElementById("routingLabel").textContent = preset.routing;
+      document.getElementById("areaLabel").textContent =
+        `areaId ${fmt(blockedAreaId)} 可对 heavy 标记为 blocked`;
+      document.getElementById("warningLabel").textContent =
+        activePreset === "grand" ? "玩法格不等于 CellCm" : "FlowWindow 不等于全图";
+
+      const worldOk =
+        widthMacro > 0 &&
+        heightMacro > 0 &&
+        cellCm > 0 &&
+        partitionChunk > 0 &&
+        isPowerOfTwo(partitionChunk) &&
+        worldWidthCells % partitionChunk === 0 &&
+        worldHeightCells % partitionChunk === 0;
+      status(
+        "worldStatus",
+        worldOk ? "ok" : "bad",
+        worldOk
+          ? "OK：作者输入目标米数；配置字段由 MacroTileCells 和 CellCm 派生，PartitionChunk 只影响查询分区。"
+          : "Fail-fast：目标米数、CellCm 必须 > 0；PartitionChunk 必须为 2 的幂并整除世界 cells。"
+      );
+
+      const flowOk =
+        flowWindow > 0 &&
+        flowCell > 0 &&
+        sepHash > 0 &&
+        hardHash > 0 &&
+        flowWindow % flowCell === 0 &&
+        flowWindow % sepHash === 0 &&
+        flowWindow % hardHash === 0;
+      status(
+        "flowStatus",
+        flowOk ? "ok" : "bad",
+        flowOk
+          ? "OK：FlowWindow 可被 FlowCell、separation hash 和 hard resolve hash 整除。"
+          : "Fail-fast：FlowWindow 必须被 flow/hash cell 整除，不能靠 fallback 修正。"
+      );
+
+      let bakeLevel = "ok";
+      let bakeMessage = "OK：预算在普通交互范围内。";
+      if (bake.spatial === "nodegraph") {
+        bakeMessage = "OK：NodeGraph 走短链，不烤 navmesh；如需局部战斗，另开 Grid/HexGrid tactical board。";
+      } else if (bake.operations > 250000) {
+        bakeLevel = "bad";
+        bakeMessage = "Reject：超过 250,000 operations；应使用 bake farm/profiled mode，或改成 dirty/window bake。";
+      } else if (bake.operations > 10000) {
+        bakeLevel = "warn";
+        bakeMessage = "Large：超过 10,000 operations；CLI/Bridge 应要求显式 large-bake 动作。";
+      }
+      status("bakeStatus", bakeLevel, bakeMessage);
+
+      const targetOk = bake.spatial === "nodegraph" ||
+        (bake.mode === "full" && bake.targetTiles === bake.fullTiles) ||
+        (bake.mode === "window" && bake.targetTiles > 0 && bake.targetTiles <= bake.fullTiles) ||
+        (bake.mode === "dirty" && bake.targetTiles >= 0 && bake.targetTiles <= bake.fullTiles);
+      status(
+        "targetStatus",
+        targetOk ? "ok" : "bad",
+        targetOk
+          ? `OK：target=${bake.mode}，target tiles=${fmt(bake.targetTiles)}，full tiles=${fmt(bake.fullTiles)}。`
+          : "Fail-fast：target mode 的 tile 数必须在世界范围内。"
+      );
+
+      const recastLevel = bake.columns > 250000 ? "warn" : "ok";
+      status(
+        "recastStatus",
+        recastLevel,
+        `Recast：height=${fmt(bake.walkableHeightVoxels)} voxels，climb=${fmt(bake.walkableClimbVoxels)} voxels，maxSlope=${fmt(bake.maxSlopeDeg)}deg；小 radius 会显著增大 voxel 数。`
+      );
+
+      renderList("worldAdvice", preset.advice.world);
+      renderList("navAdvice", preset.advice.nav);
+      renderList("perfAdvice", preset.advice.perf);
+      updateMapDrawing(worldWidthCm, worldHeightCm, flowWindow, agentRadius);
+      document.getElementById("mapSnippet").textContent = buildMapSnippet();
+      document.getElementById("massSnippet").textContent = buildMassSnippet();
+      document.getElementById("navSnippet").textContent = buildNavSnippet();
+    }
+
+    document.querySelectorAll("[data-preset]").forEach((button) => {
+      button.addEventListener("click", () => setPreset(button.dataset.preset));
+    });
+    fieldIds.forEach((id) => {
+      document.getElementById(id).addEventListener("input", update);
+    });
+    document.querySelectorAll("[data-copy]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const text = document.getElementById(button.dataset.copy).textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          button.textContent = "已复制";
+          setTimeout(() => { button.textContent = "复制"; }, 900);
+        } catch {
+          button.textContent = "复制失败";
+          setTimeout(() => { button.textContent = "复制"; }, 1200);
+        }
+      });
+    });
+
+    setPreset("rts");
+  </script>
+</body>
+</html>

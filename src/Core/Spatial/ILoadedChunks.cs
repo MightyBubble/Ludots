@@ -30,4 +30,13 @@ namespace Ludots.Core.Spatial
         /// </summary>
         event Action<long> ChunkUnloaded;
     }
+
+    /// <summary>
+    /// Resolves the loaded-chunk key for a world-space point.
+    /// Implemented by loaded-chunk sources whose keys are derived from world centimeters.
+    /// </summary>
+    public interface IWorldChunkKeyResolver
+    {
+        long GetChunkKeyForWorldCm(float worldXCm, float worldYCm);
+    }
 }

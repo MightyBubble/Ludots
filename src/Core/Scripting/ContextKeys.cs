@@ -93,7 +93,6 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
-        public const string HoveredEntity = "HoveredEntity";
         public const string TabTargetEntity = "TabTargetEntity";
         public const string SelectionViewViewerEntity = "SelectionViewViewerEntity";
         public const string SelectionViewKey = "SelectionViewKey";
@@ -101,15 +100,13 @@ namespace Ludots.Core.Scripting
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
         public const string TransientMarkerBuffer = "TransientMarkerBuffer";
-        // WorldHudConfig removed �?unified into Performer entity-scoped definitions
+        // WorldHudConfig removed; unified into Performer entity-scoped definitions
         public const string GasPresentationEventBuffer = "GasPresentationEventBuffer";
         public const string GroundOverlayBuffer = "GroundOverlayBuffer";
         public const string RoadSplineBuffer = "RoadSplineBuffer";
-        // IndicatorRequestBuffer removed �?unified into Performer direct API
+        // IndicatorRequestBuffer removed; unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerEntityRuntime = "PerformerEntityRuntime";
-        public const string Navigation2DRuntime = "Navigation2DRuntime";
-        public const string Navigation2DTickPolicy = "Navigation2DTickPolicy";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";
         public const string NavMeshProfiles = "NavMeshProfiles";
         public const string NavQueryServices = "NavQueryServices";

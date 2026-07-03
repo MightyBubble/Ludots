@@ -1,0 +1,5 @@
+[
+  { "Path": "CapabilityStandardPhysics2DShowcaseConfig.json", "Policy": "Replace" },
+  { "Path": "Physics2D/clock.json", "Policy": "DeepObject" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }
+]

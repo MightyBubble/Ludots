@@ -141,7 +141,18 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinB).SetCurrent(attrHealth, 100f);
 
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
-                var processing = new EffectProcessingLoopSystem(world, requests, clock, conditions, budget, templates, null, null, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
+                var processing = new EffectProcessingLoopSystem(
+                    world,
+                    requests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    null,
+                    null,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = 2048
                 };
@@ -302,7 +313,18 @@ namespace Ludots.Tests.GAS
                 abilities.AddAbility(7001);
 
                 var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
-                var processing = new EffectProcessingLoopSystem(world, requests, clock, conditions, budget, templates, null, null, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
+                var processing = new EffectProcessingLoopSystem(
+                    world,
+                    requests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    null,
+                    null,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

@@ -12,6 +12,10 @@ namespace Ludots.Core.Gameplay.GAS.Components
         EffectTemplateId = 2,
         /// <summary>Attribute name resolved to AttributeId at load time. Stored as int.</summary>
         AttributeId = 3,
+        /// <summary>Entity template name resolved to template key id at load time. Stored as int.</summary>
+        EntityTemplateKeyId = 4,
+        /// <summary>Lifecycle attribute value source enum. Stored as int.</summary>
+        LifecycleAttributeValueSource = 5,
     }
 
     /// <summary>
@@ -102,6 +106,23 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
+        /// <summary>Get an attribute ID only when the stored config entry is typed as AttributeId.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetAttributeIdStrict(int keyId, out int attributeId)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (Keys[i] == keyId && Types[i] == (byte)ConfigParamType.AttributeId)
+                {
+                    attributeId = Values[i];
+                    return true;
+                }
+            }
+
+            attributeId = 0;
+            return false;
+        }
+
         /// <summary>Add an attribute ID parameter (resolved from attribute name at load time). Returns false if capacity exceeded.</summary>
         public bool TryAddAttributeId(int keyId, int attributeId)
         {
@@ -122,6 +143,45 @@ namespace Ludots.Core.Gameplay.GAS.Components
             Values[Count] = templateId;
             Count++;
             return true;
+        }
+
+        /// <summary>Add an entity template key id parameter. Returns false if capacity exceeded.</summary>
+        public bool TryAddEntityTemplateKeyId(int keyId, int templateKeyId)
+        {
+            if (Count >= MAX_PARAMS) return false;
+            Keys[Count] = keyId;
+            Types[Count] = (byte)ConfigParamType.EntityTemplateKeyId;
+            Values[Count] = templateKeyId;
+            Count++;
+            return true;
+        }
+
+        /// <summary>Add a lifecycle attribute value source enum value. Returns false if capacity exceeded.</summary>
+        public bool TryAddLifecycleAttributeValueSource(int keyId, int valueSource)
+        {
+            if (Count >= MAX_PARAMS) return false;
+            Keys[Count] = keyId;
+            Types[Count] = (byte)ConfigParamType.LifecycleAttributeValueSource;
+            Values[Count] = valueSource;
+            Count++;
+            return true;
+        }
+
+        /// <summary>Get a lifecycle attribute value source only when the stored config entry has the dedicated type.</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetLifecycleAttributeValueSource(int keyId, out int valueSource)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (Keys[i] == keyId && Types[i] == (byte)ConfigParamType.LifecycleAttributeValueSource)
+                {
+                    valueSource = Values[i];
+                    return true;
+                }
+            }
+
+            valueSource = 0;
+            return false;
         }
 
         /// <summary>

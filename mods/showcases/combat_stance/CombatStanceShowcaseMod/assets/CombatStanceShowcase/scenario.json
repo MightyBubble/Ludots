@@ -1,0 +1,32 @@
+{
+  "mapId": "combat_stance_showcase",
+  "initialOrders": [
+    {
+      "actor": "Combat Stance Vanguard",
+      "orderTypeKey": "setCombatStance",
+      "stance": "Defend",
+      "leashRadiusCm": 900,
+      "retaliationTtlSteps": 180
+    },
+    {
+      "actor": "Combat Stance Vanguard",
+      "orderTypeKey": "attackMove",
+      "destination": { "xCm": 2200, "yCm": 1000 },
+      "leashRadiusCm": 900
+    },
+    {
+      "actor": "Combat Stance Guardian",
+      "orderTypeKey": "setCombatStance",
+      "stance": "Defend",
+      "leashRadiusCm": 900,
+      "retaliationTtlSteps": 180
+    },
+    {
+      "actor": "Combat Stance Guardian",
+      "orderTypeKey": "guard",
+      "target": "Combat Stance Ward",
+      "radiusCm": 150,
+      "leashRadiusCm": 900
+    }
+  ]
+}

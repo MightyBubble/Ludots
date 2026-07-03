@@ -14,7 +14,17 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public void Add(int graphProgramId)
         {
-            if (Count >= MAX_BINDINGS) return;
+            if (graphProgramId <= 0)
+            {
+                throw new System.InvalidOperationException("AttributeDerivedGraphBinding graphProgramId must be > 0.");
+            }
+
+            if (Count >= MAX_BINDINGS)
+            {
+                throw new System.InvalidOperationException(
+                    $"AttributeDerivedGraphBinding supports at most {MAX_BINDINGS} graph bindings.");
+            }
+
             GraphProgramIds[Count] = graphProgramId;
             Count++;
         }

@@ -95,9 +95,29 @@ namespace Ludots.Core.Presentation.Systems
                         break;
 
                     case PerformerCommandKind.SetParam:
-                        if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity))
+                        Entity paramTarget = cmd.PerformerEntity;
+                        if ((paramTarget == Entity.Null || !World.IsAlive(paramTarget)) &&
+                            cmd.PerformerDefinitionId > 0 &&
+                            cmd.ScopeTag > 0)
                         {
-                            _runtime.SetParamAndPropagateToAffectedChildren(cmd.PerformerEntity, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
+                            _runtime.TryGetActiveScopedInstance(
+                                cmd.PerformerDefinitionId,
+                                cmd.Source,
+                                cmd.ScopeTag,
+                                cmd.AnchorKind,
+                                cmd.Position,
+                                out paramTarget);
+                        }
+
+                        if (World.IsAlive(paramTarget) && World.Has<PerformerState>(paramTarget))
+                        {
+                            if (cmd.UseEventPosition)
+                            {
+                                _runtime.UpdateWorldPosition(paramTarget, cmd.Position);
+                                ApplyRelationContext(paramTarget, in cmd);
+                            }
+
+                            _runtime.SetParamAndPropagateToAffectedChildren(paramTarget, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
                         }
                         break;
 
@@ -216,18 +236,26 @@ namespace Ludots.Core.Presentation.Systems
                     $"DestroyScopedPerformer requires a positive scopeTag, got {cmd.ScopeTag}.");
             }
 
-            if (!World.IsAlive(cmd.Source))
+            if (cmd.Source != Entity.Null && !World.IsAlive(cmd.Source))
             {
                 return;
             }
 
-            if (_runtime.TryGetActiveScopedInstance(
+            bool found = cmd.UseEventPosition
+                ? _runtime.TryGetActiveScopedInstance(
                     cmd.PerformerDefinitionId,
                     cmd.Source,
                     cmd.ScopeTag,
-                    PresentationAnchorKind.Entity,
-                    default,
-                    out Entity performer))
+                    cmd.AnchorKind,
+                    cmd.Position,
+                    out Entity performer)
+                : _runtime.TryGetUniqueActiveScopedInstanceByScope(
+                    cmd.PerformerDefinitionId,
+                    cmd.Source,
+                    cmd.ScopeTag,
+                    out performer);
+
+            if (found)
             {
                 _runtime.Destroy(performer, EmitDestroyedEvent);
             }
@@ -254,6 +282,21 @@ namespace Ludots.Core.Presentation.Systems
 
             if (ShouldSkipDuplicatePersistentScopedCreate(in cmd, definition, parentEntity))
             {
+                if (cmd.ScopeTag > 0 &&
+                    _runtime.TryGetActiveScopedInstance(
+                        cmd.PerformerDefinitionId,
+                        cmd.Source,
+                        cmd.ScopeTag,
+                        cmd.AnchorKind,
+                        cmd.Position,
+                        out Entity existing))
+                {
+                    _runtime.UpdateWorldPosition(existing, cmd.Position);
+                    ApplyRelationContext(existing, in cmd);
+                    ApplyCreateParamPayload(existing, in cmd);
+                    MarkHierarchyForBootstrapIfNeeded(existing);
+                }
+
                 return;
             }
 
@@ -269,10 +312,73 @@ namespace Ludots.Core.Presentation.Systems
                 definition,
                 _stableIds.Allocate);
 
+            ApplyRelationContext(entity, in cmd);
+            ApplyCreateParamPayload(entity, in cmd);
             ref PerformerState state = ref World.Get<PerformerState>(entity);
             state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
             MarkHierarchyForBootstrapIfNeeded(entity);
             EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
+        }
+
+        private void ApplyCreateParamPayload(Entity performer, in PerformerCommand cmd)
+        {
+            if (!cmd.HasParamPayload)
+            {
+                return;
+            }
+
+            _runtime.SetParamAndPropagateToAffectedChildren(
+                performer,
+                cmd.ParamKey,
+                cmd.ParamLane,
+                cmd.ParamValue,
+                cmd.IntValue,
+                cmd.VectorValue);
+        }
+
+        private void ApplyRelationContext(Entity root, in PerformerCommand cmd)
+        {
+            Entity viewer = cmd.Viewer;
+            Entity target = cmd.Target;
+            if (viewer == Entity.Null && target == Entity.Null)
+            {
+                return;
+            }
+
+            var context = new PerformerRelationContext
+            {
+                Viewer = viewer,
+                Target = target,
+            };
+            ApplyRelationContextRecursive(root, in context);
+        }
+
+        private void ApplyRelationContextRecursive(Entity performer, in PerformerRelationContext context)
+        {
+            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
+            {
+                return;
+            }
+
+            if (World.Has<PerformerRelationContext>(performer))
+            {
+                World.Set(performer, context);
+            }
+            else
+            {
+                World.Add(performer, context);
+            }
+
+            if (!World.Has<PerformerChildren>(performer))
+            {
+                return;
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(performer);
+            for (int i = 0; i < children.Count; i++)
+            {
+                ApplyRelationContextRecursive(children.Get(i), in context);
+            }
         }
 
         private static Entity NormalizeOptionalEntity(Entity entity)

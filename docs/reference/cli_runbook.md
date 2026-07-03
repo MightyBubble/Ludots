@@ -28,16 +28,16 @@ If you only need to run mods, use these product commands:
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 
 # Multi-mod on raylib
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 
 # Multi-mod on web
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 If you want a reusable launch target:
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-web camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-web camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli preset select preset_camera-nav-web
 .\scripts\run-mod-launcher.cmd cli launch --adapter web
 ```
@@ -135,8 +135,8 @@ A single `resolve` or `launch` command may accept multiple selectors.
 ```powershell
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance_hotpath --adapter raylib
-.\scripts\run-mod-launcher.cmd cli resolve camera_acceptance nav_playground --adapter web
-.\scripts\run-mod-launcher.cmd cli resolve --mod CameraAcceptanceMod --mod Navigation2DPlaygroundMod --adapter raylib --json
+.\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter web
+.\scripts\run-mod-launcher.cmd cli resolve --mod CameraAcceptanceMod --mod CapabilityStandardMassNavigationLargeWorld10kMod --adapter raylib --json
 ```
 
 `resolve` surfaces:
@@ -154,8 +154,8 @@ If multiple root mods define `startupMapId`, only one startup map is selected at
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance_hotpath --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
-.\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 Launch behavior:
@@ -168,8 +168,8 @@ Launch behavior:
 ### 3.3 Multi-Mod Launch
 
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch camera_acceptance nav_playground --adapter web
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch camera_acceptance --adapter web
 ```
 
 Rules:
@@ -188,7 +188,7 @@ Rules:
 .\scripts\run-mod-launcher.cmd cli binding list
 .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod --project CameraAcceptanceMod.csproj
 .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance_hotpath --path mods/fixtures/camera/CameraAcceptanceHotpathEntryMod --project CameraAcceptanceHotpathEntryMod.csproj
-.\scripts\run-mod-launcher.cmd cli binding set nav_playground --path mods/Navigation2DPlaygroundMod --project Navigation2DPlaygroundMod.csproj
+.\scripts\run-mod-launcher.cmd cli binding set mass_navigation --path mods/showcases/capability_standard_mass_navigation_large_world_10k/CapabilityStandardMassNavigationLargeWorld10kMod --project CapabilityStandardMassNavigationLargeWorld10kMod.csproj
 ```
 
 Notes:
@@ -205,7 +205,7 @@ Notes:
 .\scripts\run-mod-launcher.cmd cli preset list
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-web camera_acceptance --adapter web
 .\scripts\run-mod-launcher.cmd cli preset save --name camera-hotpath-raylib camera_acceptance_hotpath --adapter raylib
-.\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-raylib camera_acceptance nav_playground --adapter raylib
+.\scripts\run-mod-launcher.cmd cli preset save --name camera-nav-raylib camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli preset select preset_camera-nav-raylib
 .\scripts\run-mod-launcher.cmd cli launch --adapter raylib
 ```

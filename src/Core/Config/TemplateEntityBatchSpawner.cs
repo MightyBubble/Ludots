@@ -236,10 +236,10 @@ namespace Ludots.Core.Config
                     ? chunk.GetSpan<VisualHeightmapSampleState>()
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
-                Span<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
-                Span<AttributeLastSnapshot> attributeSnapshots = chunk.GetSpan<AttributeLastSnapshot>();
-                Span<GameplayTagContainer> gameplayTags = chunk.GetSpan<GameplayTagContainer>();
-                Span<TagCountContainer> tagCounts = chunk.GetSpan<TagCountContainer>();
+                Span<AttributeBuffer> attributes = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeBuffer>() : default;
+                Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
+                Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
+                Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<SelectionSelectableState> selectionStates = descriptor.HasSelectionSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
@@ -280,11 +280,22 @@ namespace Ludots.Core.Config
                     }
 
                     culls[componentIndex] = cull;
-                    AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
-                    attributes[componentIndex] = attributeBuffer;
-                    attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
-                    gameplayTags[componentIndex] = descriptor.GameplayTags;
-                    tagCounts[componentIndex] = descriptor.TagCounts;
+                    if (descriptor.HasAttributeBuffer)
+                    {
+                        AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
+                        attributes[componentIndex] = attributeBuffer;
+                        attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
+                    }
+
+                    if (descriptor.HasGameplayTagContainer)
+                    {
+                        gameplayTags[componentIndex] = descriptor.GameplayTags;
+                    }
+
+                    if (descriptor.HasTagCountContainer)
+                    {
+                        tagCounts[componentIndex] = descriptor.TagCounts;
+                    }
                     templateKeys[componentIndex] = descriptor.TemplateKey;
                     if (descriptor.HasOrderBuffer)
                     {
@@ -465,6 +476,9 @@ namespace Ludots.Core.Config
             public readonly FacingDirection Facing;
             public readonly VisualTransform VisualTransform;
             public readonly CullState CullState;
+            public readonly bool HasAttributeBuffer;
+            public readonly bool HasGameplayTagContainer;
+            public readonly bool HasTagCountContainer;
             public readonly GameplayTagContainer GameplayTags;
             public readonly TagCountContainer TagCounts;
             public readonly EntityTemplateKeyRef TemplateKey;
@@ -491,6 +505,9 @@ namespace Ludots.Core.Config
                 FacingDirection facing,
                 VisualTransform visualTransform,
                 CullState cullState,
+                bool hasAttributeBuffer,
+                bool hasGameplayTagContainer,
+                bool hasTagCountContainer,
                 GameplayTagContainer gameplayTags,
                 TagCountContainer tagCounts,
                 EntityTemplateKeyRef templateKey,
@@ -516,6 +533,9 @@ namespace Ludots.Core.Config
                 Facing = facing;
                 VisualTransform = visualTransform;
                 CullState = cullState;
+                HasAttributeBuffer = hasAttributeBuffer;
+                HasGameplayTagContainer = hasGameplayTagContainer;
+                HasTagCountContainer = hasTagCountContainer;
                 GameplayTags = gameplayTags;
                 TagCounts = tagCounts;
                 TemplateKey = templateKey;
@@ -592,64 +612,15 @@ namespace Ludots.Core.Config
 
                 if (!IsBatchCandidate(template.Components))
                 {
-                    return new TemplateSpawnDescriptor(
-                        isCompatible: false,
-                        default,
-                        false,
-                        false,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        onSpawnEffectTemplateId,
-                        Array.Empty<ComponentType>(),
-                        Array.Empty<AttributeSeed>());
+                    return Incompatible(onSpawnEffectTemplateId);
                 }
 
                 if (!TryValidateSupportedComponents(template.Components))
                 {
-                    return new TemplateSpawnDescriptor(
-                        isCompatible: false,
-                        default,
-                        false,
-                        false,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        onSpawnEffectTemplateId,
-                        Array.Empty<ComponentType>(),
-                        Array.Empty<AttributeSeed>());
+                    return Incompatible(onSpawnEffectTemplateId);
                 }
 
                 Name name = ParseName(templateId, template.Components);
-                AttributeSeed[] attributeSeeds = ParseAttributeSeeds(templateId, template.Components);
                 ComponentType[] tagComponentTypes = CollectTagComponentTypes(templateId, template.Components);
 
                 var defaultWorldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
@@ -674,6 +645,9 @@ namespace Ludots.Core.Config
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
                 bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
+                bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
+                bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
+                bool hasTagCountContainer = template.Components.ContainsKey("TagCountContainer");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
                 bool hasSelectionSelectableState = template.Components.ContainsKey("SelectionSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
@@ -687,9 +661,20 @@ namespace Ludots.Core.Config
                     : default;
                 Team team = hasTeam ? ParseTeam(templateId, template.Components["Team"]) : default;
                 PlayerOwner playerOwner = hasPlayerOwner ? ParsePlayerOwner(templateId, template.Components["PlayerOwner"]) : default;
+                AttributeSeed[] attributeSeeds = hasAttributeBuffer
+                    ? ParseAttributeSeeds(templateId, template.Components)
+                    : Array.Empty<AttributeSeed>();
 
-                RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
-                RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                if (hasGameplayTagContainer)
+                {
+                    RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
+                }
+
+                if (hasTagCountContainer)
+                {
+                    RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                }
+
                 if (hasOrderBuffer)
                 {
                     RequireEmptyObject(templateId, template.Components, "OrderBuffer");
@@ -722,11 +707,23 @@ namespace Ludots.Core.Config
                     Component<FacingDirection>.Signature +
                     Component<VisualTransform>.Signature +
                     Component<CullState>.Signature +
-                    Component<AttributeBuffer>.Signature +
-                    Component<AttributeLastSnapshot>.Signature +
-                    Component<GameplayTagContainer>.Signature +
-                    Component<TagCountContainer>.Signature +
                     Component<EntityTemplateKeyRef>.Signature;
+
+                if (hasAttributeBuffer)
+                {
+                    signature += Component<AttributeBuffer>.Signature;
+                    signature += Component<AttributeLastSnapshot>.Signature;
+                }
+
+                if (hasGameplayTagContainer)
+                {
+                    signature += Component<GameplayTagContainer>.Signature;
+                }
+
+                if (hasTagCountContainer)
+                {
+                    signature += Component<TagCountContainer>.Signature;
+                }
 
                 if (hasDynamicHeightSampling)
                 {
@@ -790,6 +787,9 @@ namespace Ludots.Core.Config
                     new FacingDirection { AngleRad = facingAngle },
                     VisualTransform.Default,
                     new CullState { IsVisible = false, LOD = LODLevel.Low },
+                    hasAttributeBuffer,
+                    hasGameplayTagContainer,
+                    hasTagCountContainer,
                     default,
                     default,
                     new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
@@ -807,14 +807,43 @@ namespace Ludots.Core.Config
                     attributeSeeds);
             }
 
+            private static TemplateSpawnDescriptor Incompatible(int onSpawnEffectTemplateId)
+            {
+                return new TemplateSpawnDescriptor(
+                    isCompatible: false,
+                    default,
+                    false,
+                    false,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    false,
+                    false,
+                    false,
+                    default,
+                    default,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    onSpawnEffectTemplateId,
+                    Array.Empty<ComponentType>(),
+                    Array.Empty<AttributeSeed>());
+            }
+
             private static bool IsBatchCandidate(IReadOnlyDictionary<string, JsonNode> components)
             {
                 return components.ContainsKey("Name") &&
                        components.ContainsKey("WorldPositionCm") &&
-                       components.ContainsKey("FacingDirection") &&
-                       components.ContainsKey("AttributeBuffer") &&
-                       components.ContainsKey("GameplayTagContainer") &&
-                       components.ContainsKey("TagCountContainer");
+                       components.ContainsKey("FacingDirection");
             }
 
             private static bool TryValidateSupportedComponents(IReadOnlyDictionary<string, JsonNode> components)
@@ -841,8 +870,9 @@ namespace Ludots.Core.Config
                         continue;
                     }
 
-                    if (!IsEmptyJsonObject(components[componentName]) ||
-                        !ComponentRegistry.TryGetComponentType(componentName, out _))
+                    if (!IsEmptyTagComponent(components[componentName]) ||
+                        !ComponentRegistry.TryGetComponentType(componentName, out ComponentType componentType) ||
+                        componentType.ByteSize != 0)
                     {
                         return false;
                     }
@@ -863,8 +893,9 @@ namespace Ludots.Core.Config
                         continue;
                     }
 
-                    if (!IsEmptyJsonObject(node) ||
-                        !ComponentRegistry.TryGetComponentType(componentName, out ComponentType componentType))
+                    if (!IsEmptyTagComponent(node) ||
+                        !ComponentRegistry.TryGetComponentType(componentName, out ComponentType componentType) ||
+                        componentType.ByteSize != 0)
                     {
                         throw new InvalidOperationException(
                             $"Entity template '{templateId}' component '{componentName}' is not supported by the template batch path.");
@@ -899,7 +930,7 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "SpatialPartitionExcluded", StringComparison.Ordinal);
             }
 
-            private static bool IsEmptyJsonObject(JsonNode node)
+            private static bool IsEmptyTagComponent(JsonNode node)
             {
                 return node is JsonObject obj && obj.Count == 0;
             }

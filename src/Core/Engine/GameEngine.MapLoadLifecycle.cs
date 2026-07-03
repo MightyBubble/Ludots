@@ -7,6 +7,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Engine
@@ -58,6 +59,27 @@ namespace Ludots.Core.Engine
             BoardIdRegistry = new BoardIdRegistry();
             SetService(CoreServiceKeys.MapSessions, MapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
+            EnsureSaveParticipantRegistry();
+        }
+
+        private void EnsureSaveParticipantRegistry()
+        {
+            if (GetService(CoreServiceKeys.SaveParticipants) != null)
+            {
+                return;
+            }
+
+            if (GameSession == null ||
+                MapSessions == null ||
+                GetService(CoreServiceKeys.TimeFlow) == null ||
+                GetService(CoreServiceKeys.NarrativeDirector) == null)
+            {
+                return;
+            }
+
+            var registry = new SaveParticipantRegistry();
+            CoreSaveParticipants.RegisterCore(this, registry);
+            SetService(CoreServiceKeys.SaveParticipants, registry);
         }
 
         private void SetCurrentMapSession(MapSession session)
@@ -69,6 +91,7 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
+                RemoveService(CoreServiceKeys.MapLaunchContext);
                 RemoveService(CoreServiceKeys.VisualHeightmap);
                 ParticipantBindingResolver.ClearFocused(GlobalContext);
                 PublishFocusedMapLoadState();
@@ -79,6 +102,14 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.MapSession, session);
             SetService(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             SetService(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            if (session.LaunchContext != null && !session.LaunchContext.IsEmpty)
+            {
+                SetService(CoreServiceKeys.MapLaunchContext, session.LaunchContext);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.MapLaunchContext);
+            }
             if (session.VisualHeightmap != null)
             {
                 SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
@@ -89,6 +120,11 @@ namespace Ludots.Core.Engine
             }
             PublishSessionParticipants(session);
             PublishFocusedMapLoadState();
+        }
+
+        internal void SetCurrentMapSessionForTests(MapSession session)
+        {
+            SetCurrentMapSession(session);
         }
 
         private MapLoadStatus GetMapLoadStatus(MapId mapId)
@@ -137,6 +173,11 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.MapTags, session.MapConfig?.Tags ?? new List<string>());
             ctx.Set(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             ctx.Set(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));
+            if (session.LaunchContext != null && !session.LaunchContext.IsEmpty)
+            {
+                ctx.Set(CoreServiceKeys.MapLaunchContext, session.LaunchContext);
+            }
+
             return ctx;
         }
 
@@ -333,6 +374,7 @@ namespace Ludots.Core.Engine
             {
                 SetMapEntitiesSuspended(session.MapId, false);
                 ApplyDefaultCamera(mapConfig);
+                _massNavigationRuntime.HandleMapFocused(this, session.MapId);
             }
             else
             {
@@ -433,6 +475,7 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            _massNavigationRuntime.HandleMapFocused(this, session.MapId);
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
             CaptureFocusedParticipantOverrides(session);

@@ -12,6 +12,9 @@
     "visualProxyBufferCapacity": 131072,
     "skinnedVisualBatchCapacity": 65536,
     "presentationRequestCapacity": 262144,
+    "globalFieldVisualRecordCapacity": 256,
+    "globalFieldVisualCellCapacity": 262144,
+    "globalFieldVisualDirtyRectCapacity": 4096,
     "groundOverlayCapacity": 65536,
     "roadSplineCapacity": 65536,
     "worldHudCapacity": 131072,
@@ -19,6 +22,8 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "runtimeEntityLifecycleQueueCapacity": 131072,
+    "runtimeEntityLifecycleReceiptQueueCapacity": 131072,
     "cameraCulling": {
       "highLodDistanceCm": 4000.0,
       "mediumLodDistanceCm": 10000.0,

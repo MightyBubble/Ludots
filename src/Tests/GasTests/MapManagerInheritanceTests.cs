@@ -26,8 +26,8 @@ namespace GasTests
                     {
                       "name": "default",
                       "spatialType": "Hex",
-                      "widthInTiles": 128,
-                      "heightInTiles": 64,
+                      "widthInMacroTiles": 128,
+                      "heightInMacroTiles": 64,
                       "gridCellSizeCm": 200,
                       "hexEdgeLengthCm": 900,
                       "chunkSizeCells": 32
@@ -51,7 +51,7 @@ namespace GasTests
                 Assert.That(cfg.Boards.Count, Is.EqualTo(1));
                 var board = cfg.Boards[0];
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
-                Assert.That(board.WidthInTiles, Is.EqualTo(128));
+                Assert.That(board.WidthInMacroTiles, Is.EqualTo(128));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
             }
             finally
@@ -83,6 +83,37 @@ namespace GasTests
                 var manager = CreateMapManager(tempRoot);
                 var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("a"));
                 Assert.That(ex!.Message, Does.Contain("Cyclic map inheritance detected"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardUsesLegacyTileExtentKey_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "legacy", """
+                {
+                  "id": "legacy",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "widthInTiles": 2,
+                      "heightInMacroTiles": 2
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy"));
+
+                Assert.That(ex!.Message, Does.Contain("legacy key 'widthInTiles'"));
+                Assert.That(ex.Message, Does.Contain("widthInMacroTiles"));
             }
             finally
             {

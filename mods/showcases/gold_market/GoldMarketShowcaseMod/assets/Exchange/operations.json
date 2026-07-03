@@ -1,0 +1,30 @@
+[
+  {
+    "id": "gold_market.buy_relic",
+    "inputs": [
+      { "kind": "AttributeCost", "actor": "Source", "attribute": "Gold", "quantity": 5 }
+    ],
+    "outputs": [
+      { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "gold_market_relic", "quantity": 1 }
+    ]
+  },
+  {
+    "id": "gold_market.buy_expensive_bundle",
+    "inputs": [
+      { "kind": "AttributeCost", "actor": "Source", "attribute": "Gold", "quantity": 20 }
+    ],
+    "outputs": [
+      { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "gold_market_relic", "quantity": 1 }
+    ]
+  },
+  {
+    "id": "gold_market.buy_overloaded_bundle",
+    "inputs": [
+      { "kind": "AttributeCost", "actor": "Source", "attribute": "Gold", "quantity": 7 }
+    ],
+    "outputs": [
+      { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "gold_market_relic", "quantity": 1 },
+      { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "gold_market_bonus", "quantity": 1 }
+    ]
+  }
+]

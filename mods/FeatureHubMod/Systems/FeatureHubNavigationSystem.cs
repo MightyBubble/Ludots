@@ -17,15 +17,15 @@ namespace FeatureHubMod.Systems
 
         private static readonly (string key, string mapId, string label)[] Entries =
         {
-            ("<Keyboard>/1", "entry",             "[1] MOBA Demo       — Skills, Selection, Movement, Camera"),
-            ("<Keyboard>/2", "rts_entry",          "[2] RTS Demo        — Units, Buildings, Production, Aura"),
-            ("<Keyboard>/3", "sc2_highlands",      "[3] RTS Showcase    — SC2/RA2/War3 Maps, HexGrid"),
-            ("<Keyboard>/4", "arpg_entry",         "[4] ARPG Demo       — Projectile, Summon, DoT/HoT, Tags"),
-            ("<Keyboard>/5", "tcg_modify",         "[5] TCG Demo        — Response Chain, Modify/Hook"),
-            ("<Keyboard>/6", "fourx_entry",        "[6] 4X Demo         — Build, Colonize, Tag Gating"),
-            ("<Keyboard>/7", "audit_outer",        "[7] Map Lifecycle   — Push/Pop/Reload (I/O/P keys)"),
-            ("<Keyboard>/8", "nav2d_playground",   "[8] Navigation 2D   — FlowField, ORCA Avoidance"),
-            ("<Keyboard>/9", "visual_benchmark",   "[9] Performance     — 100K Entities, Health Bars"),
+            ("<Keyboard>/1", "entry",             "[1] MOBA Demo       - Skills, Selection, Movement, Camera"),
+            ("<Keyboard>/2", "rts_entry",          "[2] RTS Demo        - Units, Buildings, Production, Aura"),
+            ("<Keyboard>/3", "sc2_highlands",      "[3] RTS Showcase    - SC2/RA2/War3 Maps, HexGrid"),
+            ("<Keyboard>/4", "arpg_entry",         "[4] ARPG Demo       - Projectile, Summon, DoT/HoT, Tags"),
+            ("<Keyboard>/5", "tcg_modify",         "[5] TCG Demo        - Response Chain, Modify/Hook"),
+            ("<Keyboard>/6", "fourx_entry",        "[6] 4X Demo         - Build, Colonize, Tag Gating"),
+            ("<Keyboard>/7", "audit_outer",        "[7] Map Lifecycle   - Push/Pop/Reload (I/O/P keys)"),
+            ("<Keyboard>/8", "mass_navigation",   "[8] Mass Navigation - MassNavigationFlow, ORCA Avoidance"),
+            ("<Keyboard>/9", "visual_benchmark",   "[9] Performance     - 100K Entities, Health Bars"),
             ("<Keyboard>/0", "feature_hub",        "[0] << Back to Hub"),
         };
 

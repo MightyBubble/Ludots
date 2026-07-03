@@ -1,0 +1,32 @@
+{
+  "Id": "progression_scope_showcase",
+  "Tags": ["progression_scope_showcase"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ProgressionScope.Camera.Tactical",
+    "TargetXCm": 5800,
+    "TargetYCm": 6000,
+    "Yaw": 180,
+    "Pitch": 48,
+    "DistanceCm": 9000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 32,
+      "HeightInMacroTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    { "Template": "progression_scope_city_host" },
+    { "Template": "progression_scope_faction_host" },
+    { "Template": "progression_scope_region_host" },
+    { "Template": "progression_scope_province_host" },
+    { "Template": "progression_scope_barracks" },
+    { "Template": "progression_scope_hero" }
+  ]
+}

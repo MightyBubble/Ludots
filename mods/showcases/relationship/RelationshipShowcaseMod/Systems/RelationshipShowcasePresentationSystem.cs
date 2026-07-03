@@ -9,8 +9,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Scripting;
 using NarrativeFrontendMod;
 using NarrativeFrontendMod.Runtime;
@@ -20,9 +19,17 @@ namespace RelationshipShowcaseMod.Systems
 {
     internal sealed class RelationshipShowcasePresentationSystem : ISystem<float>
     {
+        private const string SelectedHeroHighlightKey = "relationship.highlight.selected_hero";
+        private const string EnemyFocusHighlightKey = "relationship.highlight.enemy_focus";
+
         private readonly GameEngine _engine;
         private readonly World _world;
         private readonly RelationshipShowcaseScenarioState _state;
+        private readonly PresentationWorldFactPublisher _facts;
+        private Entity _activeSelectedHero = Entity.Null;
+        private Entity _activeEnemyFocus = Entity.Null;
+        private int _activeSelectedHeroScope;
+        private int _activeEnemyFocusScope;
 
         private RelationshipShowcaseConfig Config => _state.Config;
         private RelationshipShowcaseFrontendConfig Frontend => _state.FrontendConfig;
@@ -33,6 +40,10 @@ namespace RelationshipShowcaseMod.Systems
             _engine = engine;
             _world = engine.World;
             _state = state;
+            if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+            {
+                throw new InvalidOperationException("Relationship showcase presentation requires PresentationEventStream.");
+            }
         }
 
         public void Initialize()
@@ -48,17 +59,13 @@ namespace RelationshipShowcaseMod.Systems
             if (!IsShowcaseMap() || ScenarioContext == null)
             {
                 ClearFrontend();
-                return;
-            }
-
-            if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not GroundOverlayBuffer ground)
-            {
+                EndWorldHighlights();
                 return;
             }
 
             RefreshDerivedState();
             PublishFrontend();
-            DrawWorldHighlights(ground);
+            PublishWorldHighlights();
         }
 
         public void AfterUpdate(in float dt)
@@ -330,22 +337,37 @@ namespace RelationshipShowcaseMod.Systems
             }
         }
 
-        private void DrawWorldHighlights(GroundOverlayBuffer ground)
+        private void PublishWorldHighlights()
         {
             if (ScenarioContext == null)
             {
                 return;
             }
 
-            AddRing(ground, GetSelectedHero(), new Vector4(0.28f, 0.82f, 1f, 0.16f), new Vector4(0.28f, 0.82f, 1f, 0.94f), 2.6f, 2.05f);
+            PublishRing(
+                SelectedHeroHighlightKey,
+                GetSelectedHero(),
+                ref _activeSelectedHero,
+                ref _activeSelectedHeroScope,
+                radius: 2.6f,
+                innerRadius: 2.05f);
             if (!string.IsNullOrWhiteSpace(_state.EnemyFocusName))
             {
                 Entity focus = ScenarioContext.GetEntityByName(_state.EnemyFocusName);
                 if (focus != Entity.Null)
                 {
-                    AddRing(ground, focus, new Vector4(1f, 0.4f, 0.25f, 0.14f), new Vector4(1f, 0.55f, 0.35f, 0.96f), 2.8f, 2.2f);
+                    PublishRing(
+                        EnemyFocusHighlightKey,
+                        focus,
+                        ref _activeEnemyFocus,
+                        ref _activeEnemyFocusScope,
+                        radius: 2.8f,
+                        innerRadius: 2.2f);
+                    return;
                 }
             }
+
+            EndActiveHighlight(EnemyFocusHighlightKey, ref _activeEnemyFocus, ref _activeEnemyFocusScope);
         }
 
         private Entity GetSelectedHero()
@@ -378,25 +400,54 @@ namespace RelationshipShowcaseMod.Systems
             return runtime.GetMetric(source, target, typeId, metricId);
         }
 
-        private void AddRing(GroundOverlayBuffer ground, Entity entity, Vector4 fill, Vector4 border, float radius, float innerRadius)
+        private void PublishRing(
+            string key,
+            Entity entity,
+            ref Entity activeOwner,
+            ref int activeScope,
+            float radius,
+            float innerRadius)
         {
             if (entity == Entity.Null || !_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
             {
+                EndActiveHighlight(key, ref activeOwner, ref activeScope);
                 return;
+            }
+
+            if (activeScope > 0 && activeOwner != entity)
+            {
+                EndActiveHighlight(key, ref activeOwner, ref activeScope);
             }
 
             Vector3 center = _world.Get<VisualTransform>(entity).Position;
             center.Y = 0.08f;
-            ground.TryAdd(new GroundOverlayItem
+            activeOwner = entity;
+            activeScope = PresentationWorldFactPublisher.ComposeScope(key, entity);
+            _facts.PublishWorldOverlayUpdated(
+                key,
+                entity,
+                activeScope,
+                center,
+                radius,
+                innerRadius,
+                borderWidth: 0.06f);
+        }
+
+        private void EndWorldHighlights()
+        {
+            EndActiveHighlight(SelectedHeroHighlightKey, ref _activeSelectedHero, ref _activeSelectedHeroScope);
+            EndActiveHighlight(EnemyFocusHighlightKey, ref _activeEnemyFocus, ref _activeEnemyFocusScope);
+        }
+
+        private void EndActiveHighlight(string key, ref Entity activeOwner, ref int activeScope)
+        {
+            if (activeScope > 0 && activeOwner != Entity.Null)
             {
-                Shape = GroundOverlayShape.Ring,
-                Center = center,
-                Radius = radius,
-                InnerRadius = innerRadius,
-                FillColor = fill,
-                BorderColor = border,
-                BorderWidth = 0.06f,
-            });
+                _facts.PublishWorldOverlayEnded(key, activeOwner, activeScope);
+            }
+
+            activeOwner = Entity.Null;
+            activeScope = 0;
         }
 
         private bool EntityHasTag(Entity entity, int tagId)

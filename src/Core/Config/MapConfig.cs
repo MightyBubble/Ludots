@@ -88,7 +88,6 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string RepresentativeInstanceId { get; set; }
-        public bool IsLocal { get; set; }
     }
 
     public class ParticipantRelationshipConfig

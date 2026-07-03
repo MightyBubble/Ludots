@@ -109,10 +109,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TagContribution_GraphProgram_ReturnsZero()
+        public void TagContribution_GraphProgram_ThrowsUntilEvaluatorIsWired()
         {
             var tc = new TagContribution { Formula = TagContributionFormula.GraphProgram, Amount = 99 };
-            That(tc.Compute(5), Is.EqualTo(0)); // Graph handled externally
+            var ex = Throws<System.InvalidOperationException>(() => tc.Compute(5));
+            That(ex!.Message, Does.Contain("GraphProgram"));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -289,7 +290,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void BuiltinHandlers_RegisterAll_RegistersAllNine()
+        public void BuiltinHandlers_RegisterAll_RegistersAllBuiltinHandlers()
         {
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -301,8 +302,16 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.ReResolveAndDispatch), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateProjectile), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.MaterializeTemplate), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.CopyIdentityComponents), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.CopyAttributeSlice), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ClearActiveEffects), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.TransferStableId), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.RewireSelection), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ConsumeEntity), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ExecuteExchange), Is.True);
         }
 
         [Test]
@@ -315,14 +324,14 @@ namespace Ludots.Tests.GAS
             var ctx = new EffectContext { Source = effect, Target = target };
             var tpl = new EffectTemplateData();
             tpl.Modifiers = new EffectModifiers();
-            // Use attrId 1 for testing
-            tpl.Modifiers.Add(1, ModifierOp.Add, 42f);
+            int attributeId = AttributeRegistry.Register($"Test.Builtin.ApplyModifiers.{Guid.NewGuid():N}");
+            tpl.Modifiers.Add(attributeId, ModifierOp.Add, 42f);
 
             var mergedParams = new EffectConfigParams();
             BuiltinHandlers.HandleApplyModifiers(world, effect, ref ctx, in mergedParams, in tpl);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
-            That(attrBuf.GetCurrent(1), Is.EqualTo(42f));
+            That(attrBuf.GetCurrent(attributeId), Is.EqualTo(42f));
         }
 
         [Test]
@@ -1298,8 +1307,8 @@ namespace Ludots.Tests.GAS
                     ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
                     ""participatesInResponse"": true,
                     ""grantedTags"": [
-                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6, ""base"": 0 },
-                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1, ""base"": 0 }
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
                     ]
                 }");
 
@@ -1319,6 +1328,37 @@ namespace Ludots.Tests.GAS
             var second = tpl.GrantedTags.Get(1);
             That(second.Formula, Is.EqualTo(TagContributionFormula.Fixed));
             That(second.Amount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GrantedTags_Loader_AllowsBaseOnlyForLinearPlusBase()
+        {
+            var conditions = new GasConditionRegistry();
+            var templates = new EffectTemplateRegistry();
+            var pipeline = CreateMinimalPipeline(
+                @"{
+                    ""id"": ""test_tags_without_base"",
+                    ""tags"": [""Test.Tags""],
+                    ""presetType"": ""None"",
+                    ""lifetime"": ""After"",
+                    ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
+                    ""grantedTags"": [
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
+                    ]
+                }");
+
+            var loader = new EffectTemplateLoader(pipeline, templates, conditions);
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
+
+            int tplId = EffectTemplateIdRegistry.GetId("test_tags_without_base");
+            That(tplId, Is.GreaterThan(0));
+            That(templates.TryGetRef(tplId, out int idx), Is.True);
+            ref readonly var tpl = ref templates.GetRef(idx);
+            That(tpl.GrantedTags.Count, Is.EqualTo(2));
+            That(tpl.GrantedTags.Get(0).Base, Is.EqualTo(0));
+            That(tpl.GrantedTags.Get(1).Base, Is.EqualTo(0));
         }
 
         // ════════════════════════════════════════════════════════════════════

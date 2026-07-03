@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Hex
 {
@@ -10,7 +11,7 @@ namespace Ludots.Core.Map.Hex
     /// </summary>
     public class VertexChunk
     {
-        public const int ChunkSize = 64;
+        public const int ChunkSize = SpatialScaleDefaults.TerrainChunkCells;
         public const int ChunkSizeMask = 63;
         public const int ChunkSizeShift = 6;
         public const int TotalCells = ChunkSize * ChunkSize;
@@ -72,14 +73,14 @@ namespace Ludots.Core.Map.Hex
 
         public void SetHeight(int localX, int localY, byte height)
         {
-            if (height > 15) height = 15;
+            if (height > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) height = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
             // Clear low nibble (height) and OR in new height
             _packedData[index] = (byte)((_packedData[index] & 0xF0) | (height & 0x0F));
         }
 
         /// <summary>
-        /// Gets the Biome type (0-15).
+        /// Gets the Biome type.
         /// </summary>
         public byte GetBiome(int localX, int localY)
         {
@@ -89,7 +90,7 @@ namespace Ludots.Core.Map.Hex
 
         public void SetBiome(int localX, int localY, byte biome)
         {
-            if (biome > 15) biome = 15;
+            if (biome > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) biome = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
             // Clear high nibble (biome) and OR in new biome
             _packedData[index] = (byte)((_packedData[index] & 0x0F) | (biome << 4));
@@ -105,7 +106,7 @@ namespace Ludots.Core.Map.Hex
 
         public void SetWaterHeight(int localX, int localY, byte height)
         {
-            if (height > 15) height = 15;
+            if (height > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) height = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
             _layer2[index] = (byte)((_layer2[index] & 0xF0) | (height & 0x0F));
         }
@@ -118,7 +119,7 @@ namespace Ludots.Core.Map.Hex
 
         public void SetVegetation(int localX, int localY, byte veg)
         {
-            if (veg > 15) veg = 15;
+            if (veg > SpatialScaleDefaults.LogicTerrainMaxHeightLevel) veg = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
             int index = GetIndex(localX, localY);
             _layer2[index] = (byte)((_layer2[index] & 0x0F) | (veg << 4));
         }

@@ -1,0 +1,151 @@
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "attackMove": {
+      "orderTypeId": "attackMove",
+      "label": "Attack Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 80,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 400,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    },
+    "assaultMove": {
+      "orderTypeId": "assaultMove",
+      "label": "Assault Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 80,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 400,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    },
+    "guard": {
+      "orderTypeId": "guard",
+      "label": "Guard",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 85,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 400,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "Generic.TargetEntity",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    },
+    "setCombatStance": {
+      "orderTypeId": "setCombatStance",
+      "label": "Set Combat Stance",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 180,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": false,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    },
+    "scatter": {
+      "orderTypeId": "scatter",
+      "label": "Scatter",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 140,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none",
+      "instantComplete": false
+    }
+  },
+  "orderRules": {
+    "attackMove": {
+      "orderTypeKey": "attackMove",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget"
+      ]
+    },
+    "assaultMove": {
+      "orderTypeKey": "assaultMove",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove"
+      ]
+    },
+    "guard": {
+      "orderTypeKey": "guard",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove"
+      ]
+    },
+    "setCombatStance": {
+      "orderTypeKey": "setCombatStance",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove",
+        "guard"
+      ]
+    },
+    "scatter": {
+      "orderTypeKey": "scatter",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo",
+        "attackTarget",
+        "attackMove",
+        "assaultMove",
+        "guard"
+      ]
+    }
+  }
+}

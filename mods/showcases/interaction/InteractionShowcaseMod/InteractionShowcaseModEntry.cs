@@ -15,8 +15,7 @@ namespace InteractionShowcaseMod
 
             var runtime = new InteractionShowcaseRuntime();
             var stressTelemetry = new InteractionShowcaseStressTelemetry();
-            context.OnEvent(GameEvents.GameStart, new InstallInteractionShowcaseOnGameStartTrigger(context, runtime, stressTelemetry).ExecuteAsync);
-            context.OnEvent(GameEvents.GameStart, ctx =>
+            Task RegisterViewModesAsync(ScriptContext ctx)
             {
                 var engine = ctx.GetEngine();
                 if (engine == null)
@@ -31,7 +30,12 @@ namespace InteractionShowcaseMod
                     sourceModId: context.ModId,
                     activateWhenUnset: false);
                 return Task.CompletedTask;
-            });
+            }
+
+            context.OnEvent(GameEvents.GameStart, new InstallInteractionShowcaseOnGameStartTrigger(context, runtime, stressTelemetry).ExecuteAsync);
+            context.OnEvent(GameEvents.GameStart, RegisterViewModesAsync);
+            context.OnEvent(GameEvents.MapLoaded, RegisterViewModesAsync);
+            context.OnEvent(GameEvents.MapResumed, RegisterViewModesAsync);
             context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
             context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);

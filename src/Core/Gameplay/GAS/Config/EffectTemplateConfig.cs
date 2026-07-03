@@ -45,6 +45,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
         public RelationConfig? Relation { get; set; }
+        /// <summary>On-spawn order dispatch from configured blackboard stored target keys.</summary>
+        public SubmitOrderFromBlackboardConfig? SubmitOrderFromBlackboard { get; set; }
+        /// <summary>Entity-scoped progression completion parameters.</summary>
+        public ProgressionCompletionConfig? Progression { get; set; }
 
         // ── Capability blocks ──
 
@@ -218,6 +222,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Subject { get; set; }
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
+    }
+
+    public sealed class StoredTargetKeysConfig
+    {
+        public string? TargetKindKey { get; set; }
+        public string? TargetPositionKey { get; set; }
+        public string? TargetEntityKey { get; set; }
+        public string? HexQKey { get; set; }
+        public string? HexRKey { get; set; }
+    }
+
+    public sealed class SubmitOrderFromBlackboardConfig
+    {
+        public string? Source { get; set; }
+        public string? Target { get; set; }
+        public StoredTargetKeysConfig? StoredTarget { get; set; }
+        public string? PointMoveOrderTypeKey { get; set; }
+        public string? EntityOrderTypeKey { get; set; }
+        public int? EntityOrderIntArg0 { get; set; }
+        public string? SubmitMode { get; set; }
+    }
+
+    public sealed class ProgressionCompletionConfig
+    {
+        public string? Id { get; set; }
+        public string? Scope { get; set; }
+        public int? Level { get; set; }
+        public int? Delta { get; set; }
     }
 
     /// <summary>

@@ -29,6 +29,8 @@ namespace Ludots.Tests.Presentation
             PerformerParamKeyRegistry.ClearCustomKeysForTests();
             PerformerScopeTagRegistry.Clear();
             TagRegistry.Clear();
+            AbilityIdRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
         }
 
         [TearDown]
@@ -37,6 +39,8 @@ namespace Ludots.Tests.Presentation
             PerformerParamKeyRegistry.ClearCustomKeysForTests();
             PerformerScopeTagRegistry.Clear();
             TagRegistry.Clear();
+            AbilityIdRegistry.Clear();
+            EffectTemplateIdRegistry.Clear();
 
             try
             {
@@ -242,6 +246,55 @@ namespace Ludots.Tests.Presentation
             Assert.That(definition.Behaviors[0].AssetBinding.MaterialParamKey, Is.EqualTo(semanticKey));
             Assert.That(definition.Behaviors[1].SlotIndex, Is.EqualTo(2));
             Assert.That(definition.Behaviors[1].MinimapMarker.VisibilityParamKey, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void Load_ResolvesGasSemanticEventKeysIntoPerformerRules()
+        {
+            WriteCatalog();
+            int castAbilityId = AbilityIdRegistry.Register("Ability.Test.Cast");
+            int hitEffectId = EffectTemplateIdRegistry.Register("Effect.Test.Hit");
+            int persistentEffectId = EffectTemplateIdRegistry.Register("Effect.Test.Persistent");
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "semantic_event_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "CastCommitted", "key": "Ability.Test.Cast" },
+                        "command": { "kind": "CreatePerformer", "definitionId": "semantic_event_actor", "scopeSource": "Fixed" }
+                      },
+                      {
+                        "event": { "kind": "EffectApplied", "key": "Effect.Test.Hit" },
+                        "command": { "kind": "CreatePerformer", "definitionId": "semantic_event_actor", "scopeSource": "Fixed" }
+                      },
+                      {
+                        "event": { "kind": "EffectActivated", "key": "Effect.Test.Persistent" },
+                        "command": { "kind": "CreatePerformer", "definitionId": "semantic_event_actor", "scopeSource": "Fixed" }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEffectTemplateId: EffectTemplateIdRegistry.GetId);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("semantic_event_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(3));
+            Assert.That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.CastCommitted));
+            Assert.That(definition.Rules[0].Event.KeyId, Is.EqualTo(castAbilityId));
+            Assert.That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EffectApplied));
+            Assert.That(definition.Rules[1].Event.KeyId, Is.EqualTo(hitEffectId));
+            Assert.That(definition.Rules[2].Event.Kind, Is.EqualTo(PresentationEventKind.EffectActivated));
+            Assert.That(definition.Rules[2].Event.KeyId, Is.EqualTo(persistentEffectId));
         }
 
         [TestCase(
@@ -959,6 +1012,103 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(registry.TryGet(registry.GetId("explicit_wildcard_actor"), out var definition), Is.True);
             Assert.That(definition.Rules[0].Event.KeyId, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void Load_ResolvesEntityCollectionEventsThroughCollectionKeyResolver()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  { "id": "collection_highlight" },
+                  {
+                    "id": "collection_rules",
+                    "rules": [
+                      {
+                        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ability.aim.affected" },
+                        "command": {
+                          "kind": "CreatePerformer",
+                          "definitionId": "collection_highlight",
+                          "scopeSource": "EventPayloadA",
+                          "ownerSource": "EventSource"
+                        }
+                      },
+                      {
+                        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ability.aim.affected" },
+                        "command": {
+                          "kind": "DestroyScopedPerformer",
+                          "definitionId": "collection_highlight",
+                          "scopeSource": "EventPayloadA",
+                          "ownerSource": "EventSource"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveEntityCollectionKeyId: key => string.Equals(key, "collection.ability.aim.affected", StringComparison.Ordinal)
+                    ? 322
+                    : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("collection_rules"), out var definition), Is.True);
+            Assert.That(definition.Rules.Length, Is.EqualTo(2));
+            Assert.That(definition.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.EntityCollectionMemberAdded));
+            Assert.That(definition.Rules[0].Event.KeyId, Is.EqualTo(322));
+            Assert.That(definition.Rules[0].Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+            Assert.That(definition.Rules[1].Event.Kind, Is.EqualTo(PresentationEventKind.EntityCollectionMemberRemoved));
+            Assert.That(definition.Rules[1].Event.KeyId, Is.EqualTo(322));
+            Assert.That(definition.Rules[1].Command.OwnerSource, Is.EqualTo(PerformerCommandEntitySource.EventSource));
+        }
+
+        [Test]
+        public void Load_CreatePerformerCommand_CanCarryInitialParamPayload()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  { "id": "floating_text" },
+                  {
+                    "id": "combat_text_rules",
+                    "rules": [
+                      {
+                        "event": { "kind": "EffectApplied", "key": "*" },
+                        "command": {
+                          "kind": "CreatePerformer",
+                          "definitionId": "floating_text",
+                          "scopeSource": "Fixed",
+                          "paramKey": "worldText.value0",
+                          "paramLane": "Float",
+                          "valueSource": "EventMagnitude"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("combat_text_rules"), out var definition), Is.True);
+            PerformerCommand command = definition.Rules[0].Command;
+            Assert.That(command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
+            Assert.That(command.HasParamPayload, Is.True);
+            Assert.That(command.ParamKey, Is.EqualTo(WellKnownPerformerParamKeys.TextValue0));
+            Assert.That(command.ParamLane, Is.EqualTo(ParamLane.Float));
+            Assert.That(command.ValueSource, Is.EqualTo(PerformerCommandValueSource.EventMagnitude));
         }
 
         [Test]

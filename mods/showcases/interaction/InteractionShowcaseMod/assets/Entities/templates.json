@@ -101,6 +101,9 @@
         "Id": 1
       },
       "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": false
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 0,
