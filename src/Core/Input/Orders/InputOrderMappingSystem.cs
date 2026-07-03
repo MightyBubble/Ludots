@@ -55,8 +55,8 @@ namespace Ludots.Core.Input.Orders
         Entity actor,
         ActorOrderRoutingSettings routing,
         out ActorOrderRoutingCandidate matchedCandidate);
-    
-    
+
+
     /// <summary>
     /// Delegate for checking if a modifier key is held.
     /// </summary>

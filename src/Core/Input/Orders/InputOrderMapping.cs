@@ -51,12 +51,12 @@ namespace Ludots.Core.Input.Orders
         /// Trigger when the action is pressed this frame.
         /// </summary>
         PressedThisFrame = 0,
-        
+
         /// <summary>
         /// Trigger when the action is released this frame.
         /// </summary>
         ReleasedThisFrame = 1,
-        
+
         /// <summary>
         /// Trigger while the action is held down.
         /// </summary>
@@ -415,5 +415,4 @@ namespace Ludots.Core.Input.Orders
         public UserOverrideSettings UserOverrides { get; set; } = new();
     }
 }
-
 
