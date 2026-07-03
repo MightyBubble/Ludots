@@ -762,7 +762,6 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         MarkStructuralChange();
-        MarkAuthoredRuntimeBindingChanged();
     }
 
     private void RestoreSelectionAfterAuthoredRebuild(

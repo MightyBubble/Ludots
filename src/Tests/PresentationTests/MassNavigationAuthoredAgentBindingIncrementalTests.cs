@@ -96,6 +96,39 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AppendAuthoredAgents_DoesNotBumpAuthoredRuntimeBindingRevision()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime simulation = CreateSimulation(
+                world,
+                out _,
+                out _,
+                out MassNavigationAgentLayer layer);
+            int revisionBeforeAppend = simulation.AuthoredRuntimeBindingRevision;
+
+            Entity newAgent = CreateAuthoredAgentEntity(world, localX: 1500f, localY: 1500f, layer);
+            var newSeed = CreateSeed(localX: 1500f, localY: 1500f, layer);
+            simulation.AppendAuthoredAgents(world, new[] { newAgent }, new[] { newSeed }, new[] { true });
+
+            Assert.That(simulation.AuthoredRuntimeBindingRevision, Is.EqualTo(revisionBeforeAppend));
+            Assert.That(simulation.StructuralChangeRevision, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void AuthoredAgentBindingSystem_IncrementalInsert_DoesNotBumpAuthoredRuntimeBindingRevision()
+        {
+            using BindingHarness harness = CreateBindingHarness(membershipCapacity: 8);
+            harness.BindingSystem.Update(0f);
+            int revisionBeforeInsert = harness.Simulation.AuthoredRuntimeBindingRevision;
+
+            CreateAuthoredAgentEntity(harness.Engine.World, localX: 1500f, localY: 1500f, harness.Layer);
+            harness.BindingSystem.Update(0f);
+
+            Assert.That(harness.Simulation.AuthoredRuntimeBindingRevision, Is.EqualTo(revisionBeforeInsert));
+            Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(3));
+        }
+
+        [Test]
         public void AppendAuthoredAgents_ExceedsMembershipCapacity_Throws()
         {
             using var world = World.Create();
