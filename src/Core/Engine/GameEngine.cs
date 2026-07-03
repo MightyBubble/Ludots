@@ -224,6 +224,7 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
         private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
+        private GasGraphRuntimeApi _gasGraphRuntimeApi;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
         private Ludots.Core.Presentation.Hud.WorldHudBatchBuffer _worldHudBuffer;
@@ -804,6 +805,7 @@ namespace Ludots.Core.Engine
                 targetDispatchPresetRegistry,
                 entityCollectionStore,
                 entitySetQueryRuntime);
+            _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -2136,10 +2138,12 @@ namespace Ludots.Core.Engine
             if (board is INodeGraphBoard nodeGraphBoard)
             {
                 SetService(CoreServiceKeys.LoadedGraphRuntime, nodeGraphBoard.GraphRuntime);
+                _gasGraphRuntimeApi?.BindLoadedGraphRuntime(nodeGraphBoard.GraphRuntime);
             }
             else
             {
                 RemoveService(CoreServiceKeys.LoadedGraphRuntime);
+                _gasGraphRuntimeApi?.BindLoadedGraphRuntime(null);
             }
 
             // Update GlobalContext with rebuilt services

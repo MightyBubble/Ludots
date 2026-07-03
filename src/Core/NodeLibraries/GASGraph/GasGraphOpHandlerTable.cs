@@ -199,6 +199,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.ClampTargetToRange] = HandleClampTargetToRange;
             h[(ushort)GraphNodeOp.IsPointInCircle] = HandleIsPointInCircle;
             h[(ushort)GraphNodeOp.SnapToNearestInCollection] = HandleSnapToNearestInCollection;
+            h[(ushort)GraphNodeOp.SnapToNearestGraphEdge] = HandleSnapToNearestGraphEdge;
 
             return h;
         }
@@ -1012,6 +1013,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 s.B[ins.Flags] = (byte)(found ? 1 : 0);
             }
+        }
+
+        private static void HandleSnapToNearestGraphEdge(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            bool found = s.Api.TrySnapTargetToNearestGraphEdge(
+                ref s.TargetPos,
+                s.F[ins.A],
+                out _);
+            s.B[ins.Dst] = (byte)(found ? 1 : 0);
         }
     }
 }

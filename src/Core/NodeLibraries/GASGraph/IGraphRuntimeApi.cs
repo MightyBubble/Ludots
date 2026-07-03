@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphQuery;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -285,6 +286,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             out Entity snappedEntity)
         {
             snappedEntity = Entity.Null;
+            return false;
+        }
+
+        bool TrySnapTargetToNearestGraphEdge(
+            ref IntVector2 targetPosCm,
+            float searchRadiusCm,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
             return false;
         }
     }

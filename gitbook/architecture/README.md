@@ -22,6 +22,7 @@
 - [Global Field Rendering](global-field-rendering.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
 - [Transport Network SSOT](transport-network-ssot.md)
+- [Placement Validation SSOT](placement-validation-ssot.md)
 - [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
 - [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)

@@ -137,6 +137,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ClampTargetToRange = 404,
         IsPointInCircle = 405,
         SnapToNearestInCollection = 406,
+        SnapToNearestGraphEdge = 407,
     }
 
     public static class GraphNodeOpParser

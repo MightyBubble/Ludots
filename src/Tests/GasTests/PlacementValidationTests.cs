@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -7,6 +8,9 @@ using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphQuery;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
@@ -171,6 +175,86 @@ namespace Ludots.Tests.GAS
 
             That(passedNear, Is.True);
             That(passedFar, Is.False);
+        }
+
+        [Test]
+        public void TrySnapToNearestGraphEdge_ProjectsOntoNearestSegment()
+        {
+            var builder = new NodeGraphBuilder(3, 2);
+            builder.AddNode(0, 0);
+            builder.AddNode(100, 0);
+            builder.AddNode(200, 0);
+            builder.AddEdge(0, 1, 100f);
+            builder.AddEdge(1, 2, 100f);
+            NodeGraph graph = builder.Build();
+            INodeGraphSpatialIndex index = LoadedGraphRuntime.CreateSpatialIndex(graph, preferredCellSizeCm: 100);
+            Span<int> scratch = stackalloc int[8];
+            Fix64Vec2 point = Fix64Vec2.FromInt(50, 25);
+
+            bool found = PlacementValidation.TrySnapToNearestGraphEdge(
+                graph,
+                index,
+                ref point,
+                Fix64.FromInt(100),
+                scratch,
+                out GraphEdgeProjection projection);
+
+            That(found, Is.True);
+            That(point, Is.EqualTo(Fix64Vec2.FromInt(50, 0)));
+            That(projection.FromNodeId, Is.EqualTo(0));
+            That(projection.ToNodeId, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GraphOps_SnapToNearestGraphEdge_UpdatesTargetPos()
+        {
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var store = new ChunkedNodeGraphStore();
+            store.SubscribeToLoadedChunks(loadedChunks);
+            long chunkKey = GraphChunkKey.Pack(0, 0);
+            var graphBuilder = new NodeGraphBuilder(3, 2);
+            graphBuilder.AddNode(0, 0);
+            graphBuilder.AddNode(100, 0);
+            graphBuilder.AddNode(200, 0);
+            graphBuilder.AddEdge(0, 1, 100f);
+            graphBuilder.AddEdge(1, 2, 100f);
+            store.AddOrReplace(chunkKey, new GraphChunkData(graphBuilder.Build(), Array.Empty<GraphCrossEdge>()));
+            loadedChunks.SetLoaded(chunkKey, loaded: true);
+
+            using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: 100);
+            using var world = World.Create();
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            api.BindLoadedGraphRuntime(runtime);
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 100f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.SnapToNearestGraphEdge, A = 1, Dst = 0 },
+            };
+
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            f[1] = 100f;
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = Entity.Null,
+                ExplicitTarget = Entity.Null,
+                TargetPos = new IntVector2(50, 25),
+                Api = api,
+                F = f,
+                I = i,
+                B = b,
+                E = e,
+                Targets = targets,
+                TargetList = new GraphTargetList(targets),
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            That(state.B[0], Is.EqualTo(1));
+            That(state.TargetPos, Is.EqualTo(new IntVector2(50, 0)));
         }
     }
 }

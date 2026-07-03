@@ -16,6 +16,8 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.GraphQuery;
+using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -31,6 +33,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private LoadedGraphRuntime? _loadedGraphRuntime;
+        private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
@@ -145,6 +149,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _currentConfigParams = default;
             _hasConfigContext = false;
+        }
+
+        public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
+        {
+            _loadedGraphRuntime = runtime;
         }
 
         public bool TryGetGridPos(Entity entity, out IntVector2 gridPos)
@@ -621,6 +630,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return found;
+        }
+
+        public bool TrySnapTargetToNearestGraphEdge(
+            ref IntVector2 targetPosCm,
+            float searchRadiusCm,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
+            LoadedGraphRuntime? runtime = _loadedGraphRuntime;
+            if (runtime == null || !runtime.HasLoadedGraph || searchRadiusCm <= 0f)
+            {
+                return false;
+            }
+
+            EnsureGraphProjectionCandidateCapacity(runtime.CurrentGraph.NodeCount);
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
+            bool found = PlacementValidation.TrySnapToNearestGraphEdge(
+                runtime.CurrentGraph,
+                runtime.CurrentSpatialIndex,
+                ref pointCm,
+                Fix64.FromFloat(searchRadiusCm),
+                _graphProjectionCandidateScratch,
+                out projection);
+            if (found)
+            {
+                var rounded = pointCm.RoundToInt();
+                targetPosCm = new IntVector2(rounded.x, rounded.y);
+            }
+
+            return found;
+        }
+
+        private void EnsureGraphProjectionCandidateCapacity(int required)
+        {
+            if (_graphProjectionCandidateScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _graphProjectionCandidateScratch.Length == 0 ? 64 : _graphProjectionCandidateScratch.Length * 2;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _graphProjectionCandidateScratch, next);
         }
     }
 }

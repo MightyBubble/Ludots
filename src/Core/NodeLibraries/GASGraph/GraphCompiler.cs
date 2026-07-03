@@ -470,6 +470,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.CollectionKey, "collectionKey", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
+                    case GraphNodeOp.SnapToNearestGraphEdge:
+                        ins.A = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        break;
                 }
 
                 instructions.Add(ins);
@@ -547,6 +550,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ClampTargetToRange => (GraphValueType.Bool, null),
                 GraphNodeOp.IsPointInCircle => (GraphValueType.Bool, null),
                 GraphNodeOp.SnapToNearestInCollection => (GraphValueType.Entity, null),
+                GraphNodeOp.SnapToNearestGraphEdge => (GraphValueType.Bool, null),
                 _ => (GraphValueType.Void, null)
             };
         }

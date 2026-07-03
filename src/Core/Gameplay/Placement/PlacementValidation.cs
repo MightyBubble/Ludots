@@ -2,7 +2,10 @@ using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.GraphCore;
+using Ludots.Core.Navigation.GraphQuery;
 
 namespace Ludots.Core.Gameplay.Placement
 {
@@ -109,6 +112,47 @@ namespace Ludots.Core.Gameplay.Placement
             }
 
             positionCm = world.Get<WorldPositionCm>(entity).Value;
+            return true;
+        }
+
+        /// <summary>
+        /// Projects <paramref name="pointCm"/> onto the nearest outgoing graph edge within
+        /// <paramref name="searchRadiusCm"/>. Reuses <see cref="GraphEdgeProjectionQuery"/>.
+        /// </summary>
+        public static bool TrySnapToNearestGraphEdge(
+            NodeGraph graph,
+            INodeGraphSpatialIndex index,
+            ref Fix64Vec2 pointCm,
+            Fix64 searchRadiusCm,
+            Span<int> candidateScratch,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
+            if (graph == null || index == null || searchRadiusCm <= Fix64.Zero || candidateScratch.Length == 0)
+            {
+                return false;
+            }
+
+            var rounded = pointCm.RoundToInt();
+            var position = new WorldCmInt2(rounded.x, rounded.y);
+            int radiusCm = searchRadiusCm.RoundToInt();
+            if (radiusCm <= 0)
+            {
+                return false;
+            }
+
+            if (!GraphEdgeProjectionQuery.TryProjectNearestEdge(
+                    graph,
+                    index,
+                    position,
+                    radiusCm,
+                    candidateScratch,
+                    out projection))
+            {
+                return false;
+            }
+
+            pointCm = Fix64Vec2.FromInt(projection.ProjectedXcm, projection.ProjectedYcm);
             return true;
         }
     }

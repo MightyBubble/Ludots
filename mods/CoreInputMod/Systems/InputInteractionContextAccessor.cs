@@ -11,6 +11,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
@@ -223,6 +224,11 @@ namespace CoreInputMod.Systems
                     eventBus: null,
                     effectRequests: null,
                     _globals);
+                if (_globals.TryGetValue(CoreServiceKeys.LoadedGraphRuntime.Name, out var graphRuntimeObj) &&
+                    graphRuntimeObj is LoadedGraphRuntime graphRuntime)
+                {
+                    graphApi.BindLoadedGraphRuntime(graphRuntime);
+                }
             }
 
             runtime = new AbilityAimPresentationRuntime(
