@@ -21,7 +21,7 @@ const categories = [
     id: 'engine',
     code: 'ENG',
     name: 'Engine & Architecture',
-    color: '#c45c3e',
+    color: '#6f7d8a',
     diagrams: [
       ['engine-architecture.svg', '整体引擎架构', '以 GameEngine 为核心，放射状展示 8 大子系统与平台适配器'],
       ['systemgroup-pipeline.svg', 'SystemGroup 流水线', '10 个 Phase 的完整执行顺序，每个 Phase 展开注册的实际系统'],
@@ -35,7 +35,7 @@ const categories = [
     id: 'gas',
     code: 'GAS',
     name: 'GAS & Combat',
-    color: '#5f8a63',
+    color: '#607f78',
     diagrams: [
       ['gas-component-relation.svg', 'GAS 组件关系', 'Ability / Effect / Attribute / Tag / Cue 围绕 GasRuntimeState 的协调关系'],
       ['ability-activation-flow.svg', 'Ability 激活流程', 'Input → Order → 校验 → 时间线执行 → Effect → Attribute → Cue'],
@@ -48,7 +48,7 @@ const categories = [
     id: 'ecs',
     code: 'ECS',
     name: 'ECS & Data Model',
-    color: '#4f7690',
+    color: '#61798f',
     diagrams: [
       ['ecs-datamodel-ecs-hierarchy.svg', 'ECS 层级结构', 'World → Entity → Component → System → Archetype 的完整层级'],
       ['ecs-datamodel-chunk-storage.svg', 'Chunk SoA 存储', 'Chunk Header + ComponentArray 的内存布局细节'],
@@ -61,7 +61,7 @@ const categories = [
     id: 'navigation',
     code: 'NAV',
     name: 'Navigation & Movement',
-    color: '#456f8c',
+    color: '#56758c',
     diagrams: [
       ['nav-navigation-stack.svg', '导航技术栈', 'CDT → NavMesh → HPA → MassNav → ORCA/Sonar 五层架构'],
       ['nav-navmesh-baking.svg', 'NavMesh 烘焙', 'Geometry → CDT → Polygon → Graph 的完整烘焙管线'],
@@ -77,7 +77,7 @@ const categories = [
     id: 'presentation',
     code: 'PRS',
     name: 'Presentation & Rendering',
-    color: '#8c6356',
+    color: '#817671',
     diagrams: [
       ['performer-lifecycle.svg', 'Performer 生命周期', 'Definition → Compile → Bootstrap → Create → Update → Destroy'],
       ['performer-command-flow.svg', 'PerformerCommand 流', 'Event → CommandBuffer → EmitSystem → EntityRuntime 的完整流'],
@@ -91,7 +91,7 @@ const categories = [
     id: 'modding',
     code: 'MOD',
     name: 'Modding & Configuration',
-    color: '#8a7650',
+    color: '#7c7768',
     diagrams: [
       ['mod-loading-flow.svg', 'Mod 加载流程', 'Discover → Resolve → Sort → Load → OnLoad 四阶段'],
       ['alc-isolation.svg', 'ALC 隔离', 'Host App → ALC → 三层解析 → Mod Assembly Types'],
@@ -104,7 +104,7 @@ const categories = [
     id: 'graph',
     code: 'VM',
     name: 'GraphRuntime & Scripting',
-    color: '#7c658d',
+    color: '#756f86',
     diagrams: [
       ['graph-vm-structure.svg', 'GraphVM 结构', 'Instruction → Executor → Handler Table → Register 的 VM 架构'],
       ['graph-compiler-flow.svg', 'GraphCompiler 编译', 'JSON → Validator → Compiler → Bytecode → Program 的完整流程'],
@@ -116,7 +116,7 @@ const categories = [
     id: 'input',
     code: 'IN',
     name: 'Input & Interaction',
-    color: '#6e648c',
+    color: '#6c728a',
     diagrams: [
       ['input-order-flow.svg', 'Input → Order → Command', 'Raw Input → Adapter → Order → Command → GAS 的完整链路'],
       ['selection-state-machine.svg', 'Selection 状态机', 'Empty/Single/Multi/Group/View/Formation 六状态与转换边'],
@@ -128,7 +128,7 @@ const categories = [
     id: 'adapter',
     code: 'ADP',
     name: 'Adapter & Platform',
-    color: '#4e8282',
+    color: '#5d7f82',
     diagrams: [
       ['adapter-comparison.svg', '三平台对比', 'Raylib / Web / UE5 的架构对比与 IAdapter 接口层'],
       ['web-streaming.svg', 'Web 串流', 'Server → FrameProtocol → DeltaCompressor → WebSocket → Client'],
@@ -139,7 +139,7 @@ const categories = [
     id: 'business',
     code: 'BIZ',
     name: 'Business Process',
-    color: '#5c698f',
+    color: '#657187',
     diagrams: [
       ['business-map-load-flow.svg', '地图加载', 'Launcher → Bootstrap → Mod → Map → Entity 的加载流程'],
       ['business-save-restore-flow.svg', '存档/读档', 'Save 与 Restore 的双流程对比与 .ldsave 格式'],
@@ -150,7 +150,7 @@ const categories = [
     id: 'registry',
     code: 'REG',
     name: 'Registry & Dependencies',
-    color: '#5f6d92',
+    color: '#687281',
     diagrams: [
       ['registry-dependency.svg', 'Registry 依赖网络', '30+ 个注册表按 8 大子系统分类的依赖关系图'],
       ['registry-extension.svg', 'Registry 扩展时序', 'ModLoader → ALC → IMod → Registry → GameEngine 的时序'],
@@ -163,7 +163,7 @@ const categories = [
     id: 'vision',
     code: 'VIS',
     name: 'Spatial & Vision',
-    color: '#577a8b',
+    color: '#607d89',
     diagrams: [
       ['vision-fog-flow.svg', '视野与迷雾', 'VisionEmitter → ChunkedField → FogLayer → Visual 的 6 阶段计算']
     ]
@@ -172,7 +172,7 @@ const categories = [
     id: 'showcase',
     code: 'UAT',
     name: 'Capability & Showcase',
-    color: '#c45c3e',
+    color: '#75808a',
     diagrams: [
       ['capability-matrix.svg', 'Capability 矩阵', '8 模块 × 4 成熟度等级的热力图'],
       ['showcase-topology.svg', 'Showcase 拓扑', '5 个演示套件与底层引擎能力的映射关系']
