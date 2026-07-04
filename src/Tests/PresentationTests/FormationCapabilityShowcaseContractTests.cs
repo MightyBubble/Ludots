@@ -1988,7 +1988,7 @@ namespace Ludots.Tests.Presentation
                       simulation.CommandRejectsTotal == rejectsBeforeMove &&
                       CountActiveMoveOrders(engine, simulation) > 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationLocalCommandInputSystem, and OrderBuffer.");
+                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationMoveOrderSourceSystem, OrderQueue, and OrderBuffer.");
 
             Assert.That(simulation.HasCommandFocus, Is.True);
             Assert.That(simulation.CommandFocusXCm, Is.EqualTo(expectedMoveTarget.X).Within(1f));

@@ -3,6 +3,7 @@ using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
@@ -93,9 +94,10 @@ public sealed class MassNavigationRuntime
         var simulation = new MassNavigationSimulationRuntime(config);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.InsertSystemBeforeRequired<MassNavigationMoveOrderSourceSystem>(
+            new MassNavigationSelectionSyncSystem(engine, simulation),
+            SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationLocalCommandInputSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationFormationFollowerSystem(engine, simulation),
