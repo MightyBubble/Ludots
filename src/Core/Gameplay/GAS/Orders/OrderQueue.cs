@@ -57,11 +57,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return true;
         }
 
+        public int AllocateOrderId()
+        {
+            int next = _nextOrderId++;
+            if (next > 0)
+            {
+                return next;
+            }
+
+            _nextOrderId = 2;
+            return 1;
+        }
+
         public void EnsureOrderId(ref Order order)
         {
             if (order.OrderId == 0)
             {
-                order.OrderId = _nextOrderId++;
+                order.OrderId = AllocateOrderId();
             }
         }
 

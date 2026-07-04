@@ -374,6 +374,7 @@ namespace Ludots.Core.Input.Selection
 
             if (!acquisition.CommitToFormalSelection)
             {
+                WriteCommandSource(owner, hits, EntityCollectionSourceKind.UiAcquisition, "Command source", $"{mode} | {hits.Length} entities");
                 return;
             }
 
@@ -381,14 +382,14 @@ namespace Ludots.Core.Input.Selection
             {
                 case SelectionAcquisitionMode.Replace:
                     _selection.ReplaceSelection(owner, formalSetKey, hits);
-                    return;
+                    break;
 
                 case SelectionAcquisitionMode.Additive:
                     for (int i = 0; i < hits.Length; i++)
                     {
                         _selection.AddToSelection(owner, formalSetKey, hits[i]);
                     }
-                    return;
+                    break;
 
                 case SelectionAcquisitionMode.Toggle:
                     for (int i = 0; i < hits.Length; i++)
@@ -403,11 +404,44 @@ namespace Ludots.Core.Input.Selection
                             _selection.AddToSelection(owner, formalSetKey, target);
                         }
                     }
-                    return;
+                    break;
 
                 default:
                     throw new InvalidOperationException($"Unsupported selection acquisition mode '{mode}'.");
             }
+
+            WriteCommandSourceFromFormalSelection(owner, formalSetKey, mode);
+        }
+
+        private void WriteCommandSourceFromFormalSelection(Entity owner, string formalSetKey, SelectionAcquisitionMode mode)
+        {
+            int count = _selection.GetSelectionCount(owner, formalSetKey);
+            EnsureSelectionScratchCapacity(count);
+            int written = count > 0
+                ? _selection.CopySelection(owner, formalSetKey, _selectionScratch)
+                : 0;
+            WriteCommandSource(
+                owner,
+                _selectionScratch.AsSpan(0, written),
+                EntityCollectionSourceKind.SelectionView,
+                "Command source",
+                $"{mode} | {written} entities");
+        }
+
+        private void WriteCommandSource(
+            Entity owner,
+            ReadOnlySpan<Entity> entities,
+            EntityCollectionSourceKind sourceKind,
+            string title,
+            string summary)
+        {
+            CommandSourceCollectionRuntime.Replace(
+                _entityCollections,
+                owner,
+                entities,
+                sourceKind,
+                title,
+                summary);
         }
 
         private bool SelectionContains(Entity owner, Entity target)

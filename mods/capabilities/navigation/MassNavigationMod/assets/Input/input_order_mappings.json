@@ -1,0 +1,24 @@
+{
+  "interactionMode": "TargetFirst",
+  "mappings": [
+    {
+      "actionId": "Command",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "massNavigationMove",
+      "requireSelection": true,
+      "selectionSetKey": "selection.live.primary",
+      "selectionType": "Position",
+      "modifierBehavior": "AlwaysImmediate",
+      "isSkillMapping": false
+    }
+  ],
+  "groupMoveFormation": {
+    "mode": "None",
+    "spacingCm": 120,
+    "orderTypeKeys": []
+  },
+  "userOverrides": {
+    "enabled": false,
+    "persistPath": ""
+  }
+}

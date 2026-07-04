@@ -9,5 +9,8 @@
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj">
       <Private>false</Private>
     </ProjectReference>
+    <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj">
+      <Private>false</Private>
+    </ProjectReference>
   </ItemGroup>
 </Project>

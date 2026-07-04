@@ -49,6 +49,11 @@ namespace Ludots.Core.Input.Orders
     public delegate void OrderSubmitHandler(in Order order);
 
     /// <summary>
+    /// Delegate for allocating a shared order id before fan-out.
+    /// </summary>
+    public delegate int SharedOrderIdProvider();
+
+    /// <summary>
     /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
     /// </summary>
     public delegate bool ActorOrderRoutingResolver(
@@ -181,6 +186,7 @@ namespace Ludots.Core.Input.Orders
         private SelectedEntityListProvider? _selectedEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
+        private SharedOrderIdProvider? _sharedOrderIdProvider;
         private ModifierKeyProvider? _queueModifierProvider;
         private AimingStateChangedHandler? _aimingStateChangedHandler;
         private AimingUpdateHandler? _aimingUpdateHandler;
@@ -341,6 +347,7 @@ namespace Ludots.Core.Input.Orders
         public void SetSelectedEntityListProvider(SelectedEntityListProvider provider) => _selectedEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
+        public void SetSharedOrderIdProvider(SharedOrderIdProvider provider) => _sharedOrderIdProvider = provider;
         public void SetQueueModifierProvider(ModifierKeyProvider provider) => _queueModifierProvider = provider;
         public void SetAimingStateChangedHandler(AimingStateChangedHandler handler) => _aimingStateChangedHandler = handler;
         public void SetAimingUpdateHandler(AimingUpdateHandler handler) => _aimingUpdateHandler = handler;
@@ -1375,12 +1382,28 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            if (!TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch) || _selectedActorsScratch.Count <= 1)
+            bool hasSelectedActors = TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch);
+            if (!hasSelectedActors)
+            {
+                if (mapping.RequireSelection &&
+                    (mapping.SelectionType == OrderSelectionType.Position ||
+                     mapping.SelectionType == OrderSelectionType.Direction ||
+                     mapping.SelectionType == OrderSelectionType.HoveredEntityOrPosition))
+                {
+                    return;
+                }
+
+                _orderSubmitHandler!(in order);
+                return;
+            }
+
+            if (_selectedActorsScratch.Count <= 1)
             {
                 _orderSubmitHandler!(in order);
                 return;
             }
 
+            int sharedOrderId = _sharedOrderIdProvider?.Invoke() ?? 0;
             for (int i = 0; i < _selectedActorsScratch.Count; i++)
             {
                 Entity actor = _selectedActorsScratch[i];
@@ -1391,6 +1414,11 @@ namespace Ludots.Core.Input.Orders
 
                 var cloned = order;
                 cloned.Actor = actor;
+                if (sharedOrderId > 0)
+                {
+                    cloned.OrderId = sharedOrderId;
+                }
+
                 ApplyGroupMoveFormation(mapping, mapping.OrderTypeKey, _selectedActorsScratch.Count, i, ref cloned);
                 _orderSubmitHandler!(in cloned);
             }

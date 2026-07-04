@@ -51,7 +51,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     {
         public Entity Container;
 
-        public readonly bool HasContainer => Container != Entity.Null;
+        public readonly bool HasContainer => Container != Entity.Null && Container != default;
     }
  
     public struct OrderArgs

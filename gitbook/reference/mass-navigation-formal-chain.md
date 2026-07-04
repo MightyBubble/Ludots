@@ -31,7 +31,7 @@ launch graph 当前包含：
 
 | 层 | 拥有什么 | 不应该拥有什么 |
 | --- | --- | --- |
-| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、RuntimeEntitySpawnSystem、SystemGroup.RuntimeEntityBinding、MassNavigation authored component binding、MassNavigationFlow simulation、order ingestion、ECS writeback、SelectionRuntime、OrderBuffer、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Formation Capability 方阵、士兵归属、Shu/Wei 业务命名、showcase 轮廓颜色。 |
+| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、RuntimeEntitySpawnSystem、SystemGroup.RuntimeEntityBinding、MassNavigation authored component binding、MassNavigationFlow simulation、EntityCollectionStore.CommandSource、OrderQueue、OrderBuffer、order ingestion、ECS writeback、SelectionRuntime、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Formation Capability 方阵、士兵归属、Shu/Wei 业务命名、showcase 轮廓颜色。 |
 | MassNavigationMod | MassNavigation asset/config package、optional tuning panel UI adapter、launch-graph dependency surface。 | MassNavigation agent binding、MassNavigationFlow runtime、order ingestion、formation/follower runtime、post-spawn agent binding。 |
 | FormationCapabilityShowcaseMod | 方阵/士兵业务配置、spawn 请求参数、可选 sidecar 场景绑定、障碍 overlay、方阵轮廓表现。 | 私有 selection runtime、私有 order runtime、私有 performer runtime、私有 config loader、私有 MassNavigation binding runtime。 |
 
@@ -62,7 +62,8 @@ flowchart TD
     TwBinding --> Formations["Optional showcase sidecar state"]
     Agents --> FollowerSync["MassNavigationFormationFollowerSystem"]
 
-    Selection["SelectionRuntime"] --> Orders["OrderBuffer(massNavigationMove)"]
+    CommandSource["EntityCollectionStore.CommandSource"] --> OrderQueue["OrderQueue(massNavigationMove)"]
+    OrderQueue --> Orders["OrderBuffer(massNavigationMove)"]
     Orders --> Ingestion["MassNavigationOrderIngestionSystem"]
     Ingestion --> Groups["MassNavigationGroupRuntime"]
     Groups --> Solver["MassNavigationFlowSolverState"]
@@ -95,7 +96,8 @@ flowchart LR
 
 ```text
 Local input
-  -> SelectionRuntime
+  -> EntityCollectionStore.CommandSource
+  -> OrderQueue(massNavigationMove)
   -> OrderBuffer(massNavigationMove)
   -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime

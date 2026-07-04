@@ -4,18 +4,17 @@ using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Layers;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
-using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
@@ -23,7 +22,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
-    public sealed class MassNavigationLocalCommandInputSystemTests
+    public sealed class MassNavigationCommandSourceOrderTests
     {
         private const int LocalPlayerId = 1;
         private const int LocalTeamId = 1;
@@ -66,14 +65,14 @@ namespace Ludots.Tests.Presentation
             Assert.That(orders.ActiveOrder.Order.PlayerId, Is.EqualTo(1));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(target.X));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z, Is.EqualTo(target.Y));
-            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.Not.EqualTo(Entity.Null));
+            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
             Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
         }
 
         [Test]
-        public void RightClickMove_OrderSubmitBlocked_DoesNotCountAsAcceptedCommand()
+        public void RightClickMove_OrderSubmitBlocked_DoesNotBypassOrderBufferRules()
         {
             using TestContextScope context = CreateContext(blockMoveOrderWithActiveOrder: true);
             context.Select(context.Agent);
@@ -85,13 +84,13 @@ namespace Ludots.Tests.Presentation
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.HasActive, Is.True);
             Assert.That(orders.ActiveOrder.Order.OrderTypeId, Is.EqualTo(BlockingOrderTypeId));
-            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
-            Assert.That(context.Simulation.HasCommandFocus, Is.False);
+            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
+            Assert.That(context.Simulation.HasCommandFocus, Is.True);
         }
 
         [Test]
-        public void RightClickMove_OrderSubmitIgnored_DoesNotCountAsAcceptedCommand()
+        public void RightClickMove_OrderSubmitIgnored_DoesNotBypassOrderBufferRules()
         {
             using TestContextScope context = CreateContext(moveSameTypePolicy: SameTypePolicy.Ignore);
             context.Select(context.Agent);
@@ -100,13 +99,14 @@ namespace Ludots.Tests.Presentation
 
             context.SubmitMoveCommand(target);
 
-            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
-            Assert.That(context.Simulation.HasCommandFocus, Is.False);
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).ActiveOrder.Order.OrderId, Is.EqualTo(9001));
+            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
+            Assert.That(context.Simulation.HasCommandFocus, Is.True);
         }
 
         [Test]
-        public void RightClickMove_OrderSubmitQueueFull_DoesNotCountAsAcceptedCommand()
+        public void RightClickMove_OrderSubmitQueueFull_DoesNotBypassOrderBufferRules()
         {
             using TestContextScope context = CreateContext(
                 moveSameTypePolicy: SameTypePolicy.Queue,
@@ -118,9 +118,12 @@ namespace Ludots.Tests.Presentation
 
             context.SubmitMoveCommand(target);
 
-            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
-            Assert.That(context.Simulation.HasCommandFocus, Is.False);
+            ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
+            Assert.That(orders.ActiveOrder.Order.OrderId, Is.EqualTo(9001));
+            Assert.That(orders.QueuedCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
+            Assert.That(context.Simulation.HasCommandFocus, Is.True);
         }
 
         [Test]
@@ -170,17 +173,35 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RightClickMove_WithSelectionRequiresCurrentSelectionContainer()
+        public void RightClickMove_CommandSourceDoesNotRequireSelectionViewContainer()
         {
             using TestContextScope context = CreateContext();
             context.Select(context.Agent);
             context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
+            MassNavigationMoveCommandResult result = context.SubmitMoveCommand(new Vector2(1600f, 1800f));
 
-            Assert.That(ex.Message, Does.Contain("current selection container"));
-            Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
+            Assert.That(result, Is.EqualTo(MassNavigationMoveCommandResult.Submitted));
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.True);
+        }
+
+        [Test]
+        public void CommandSourceSync_RemovedCommandSourceClearsMassNavigationSelection()
+        {
+            using TestContextScope context = CreateContext();
+            context.Select(context.Agent);
+            Assert.That(context.Simulation.SelectedCount, Is.EqualTo(1));
+
+            context.Collections.Remove(context.LocalPlayer, EntityCollectionKeys.CommandSource);
+
+            bool changed = MassNavigationCommandSourceSync.SyncIfChanged(
+                context.World,
+                context.Engine.GlobalContext,
+                context.Collections,
+                context.Simulation);
+
+            Assert.That(changed, Is.True);
+            Assert.That(context.Simulation.SelectedCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -284,19 +305,10 @@ namespace Ludots.Tests.Presentation
                 },
                 new[] { true, true });
 
-            var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
-            var selection = new SelectionRuntime(
-                world,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                selectionRegistry);
-            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.SelectionRuntime, selection);
-            engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.SelectionViewKey, SelectionViewKeys.Primary);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, LocalPlayerId);
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
 
             var orderTypes = new OrderTypeRegistry();
             if (registerFormalMoveOrder)
@@ -339,13 +351,15 @@ namespace Ludots.Tests.Presentation
             {
                 RegisterMoveBlockedByBlockingOrder(orderRules);
             }
-            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules);
+            var orderQueue = new OrderQueue();
+            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules, orderQueue);
             engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
+            engine.SetService(CoreServiceKeys.OrderQueue, orderQueue);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
-            MassNavigationSelectionSync.SyncIfChanged(world, engine.GlobalContext, selection, simulation);
-            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderBuffer, orderTypes);
+            MassNavigationCommandSourceSync.SyncIfChanged(world, engine.GlobalContext, collections, simulation);
+            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, collections, simulation, orderQueue, orderBuffer, orderTypes);
         }
 
         private static unsafe void RegisterMoveBlockedByBlockingOrder(OrderRuleRegistry orderRules)
@@ -536,8 +550,9 @@ namespace Ludots.Tests.Presentation
                 Entity localPlayer,
                 Entity agent,
                 Entity enemyAgent,
-                SelectionRuntime selection,
+                EntityCollectionStore collections,
                 MassNavigationSimulationRuntime simulation,
+                OrderQueue orderQueue,
                 OrderBufferSystem orderBufferSystem,
                 OrderTypeRegistry orderTypeRegistry)
             {
@@ -546,8 +561,9 @@ namespace Ludots.Tests.Presentation
                 LocalPlayer = localPlayer;
                 Agent = agent;
                 EnemyAgent = enemyAgent;
-                Selection = selection;
+                Collections = collections;
                 Simulation = simulation;
+                OrderQueue = orderQueue;
                 OrderBufferSystem = orderBufferSystem;
                 OrderTypeRegistry = orderTypeRegistry;
             }
@@ -557,30 +573,36 @@ namespace Ludots.Tests.Presentation
             public Entity LocalPlayer { get; }
             public Entity Agent { get; }
             public Entity EnemyAgent { get; }
-            public SelectionRuntime Selection { get; }
+            public EntityCollectionStore Collections { get; }
             public MassNavigationSimulationRuntime Simulation { get; }
+            public OrderQueue OrderQueue { get; }
             public OrderBufferSystem OrderBufferSystem { get; }
             public OrderTypeRegistry OrderTypeRegistry { get; }
 
             public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
             {
-                return Simulation.SubmitMoveCommand(
+                MassNavigationMoveCommandResult result = Simulation.SubmitMoveCommand(
                     World,
-                    Engine.GlobalContext,
-                    OrderBufferSystem,
+                    OrderQueue,
                     OrderTypeRegistry,
                     centerCm,
                     LocalPlayerId);
+                OrderBufferSystem.Update(0f);
+                return result;
             }
 
             public void Select(Entity entity)
             {
-                if (!Selection.ReplaceSelection(LocalPlayer, SelectionSetKeys.LivePrimary, new[] { entity }))
-                {
-                    throw new InvalidOperationException("Failed to write test selection.");
-                }
-
-                MassNavigationSelectionSync.SyncIfChanged(World, Engine.GlobalContext, Selection, Simulation);
+                Span<Entity> selected = stackalloc Entity[1];
+                selected[0] = entity;
+                CommandSourceCollectionRuntime.Replace(
+                    Collections,
+                    LocalPlayer,
+                    selected,
+                    EntityCollectionSourceKind.Debug,
+                    "Test command source",
+                    "1 command entity");
+                MassNavigationCommandSourceSync.SyncIfChanged(World, Engine.GlobalContext, Collections, Simulation);
             }
 
             public void SetActiveOrder(Entity entity, int orderTypeId)

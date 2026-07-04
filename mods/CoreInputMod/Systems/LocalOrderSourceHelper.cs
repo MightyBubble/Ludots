@@ -133,6 +133,7 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
+            mapping.SetSharedOrderIdProvider(_orders.AllocateOrderId);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
             mapping.CancelActionId = bindings.CancelActionId;

@@ -7,8 +7,6 @@ using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
@@ -108,7 +106,6 @@ public sealed class MassNavigationSimulationRuntime
     private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
-    private int _nextSharedOrderId = 1;
     private readonly WorldGridLoadedChunks _loadedChunks;
     private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
     private readonly List<long> _loadedChunksToEvict;
@@ -628,18 +625,6 @@ public sealed class MassNavigationSimulationRuntime
 
             SelectedTeamId = _initialSelectedTeamId;
         }
-    }
-
-    public int AllocateSharedOrderId()
-    {
-        int next = _nextSharedOrderId++;
-        if (next <= 0)
-        {
-            _nextSharedOrderId = 1;
-            next = _nextSharedOrderId++;
-        }
-
-        return next;
     }
 
     public void CycleSelectedTeam()
@@ -1201,15 +1186,13 @@ public sealed class MassNavigationSimulationRuntime
 
     public MassNavigationMoveCommandResult SubmitMoveCommand(
         World world,
-        Dictionary<string, object> globals,
-        OrderBufferSystem orderBufferSystem,
+        OrderQueue orderQueue,
         OrderTypeRegistry orderTypeRegistry,
         Vector2 centerCm,
         int playerId)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ArgumentNullException.ThrowIfNull(globals);
-        ArgumentNullException.ThrowIfNull(orderBufferSystem);
+        ArgumentNullException.ThrowIfNull(orderQueue);
         ArgumentNullException.ThrowIfNull(orderTypeRegistry);
 
         if (!ContainsWorldPoint(centerCm.X, centerCm.Y))
@@ -1231,17 +1214,12 @@ public sealed class MassNavigationSimulationRuntime
             return MassNavigationMoveCommandResult.UnauthorizedSelection;
         }
 
-        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
-        {
-            throw new InvalidOperationException("MassNavigation runtime requires a current selection container before submitting move orders.");
-        }
-
         if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
         {
             throw new InvalidOperationException($"MassNavigation runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
         }
 
-        int sharedOrderId = AllocateSharedOrderId();
+        int sharedOrderId = orderQueue.AllocateOrderId();
         int submitted = 0;
         float rotationRadians = NavGroupRuntime.SelectedRotationRadians;
         for (int i = 0; i < selected.Length; i++)
@@ -1262,12 +1240,10 @@ public sealed class MassNavigationSimulationRuntime
                 Args = MassNavigationMoveOrderArgs.Encode(
                     centerCm,
                     FormationMode,
-                    rotationRadians,
-                    selectionContainer)
+                    rotationRadians)
             };
 
-            OrderSubmitResult result = orderBufferSystem.SubmitOrder(actor, in order);
-            if (IsAcceptedOrderSubmit(result))
+            if (orderQueue.TryEnqueueAssigned(ref order))
             {
                 submitted++;
             }
@@ -1556,12 +1532,6 @@ public sealed class MassNavigationSimulationRuntime
     {
         return world.TryGet(actor, out PlayerOwner owner) &&
                owner.PlayerId == localPlayerId;
-    }
-
-    private static bool IsAcceptedOrderSubmit(OrderSubmitResult result)
-    {
-        return result == OrderSubmitResult.Activated ||
-               result == OrderSubmitResult.Queued;
     }
 
     private void ClampWorkArea(ref float minX, ref float maxX, ref float minY, ref float maxY)

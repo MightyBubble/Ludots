@@ -246,14 +246,14 @@ flowchart TB
   subgraph fixed [Fixed Step · InputCollection]
     AIS[AuthoritativeInputSnapshotSystem] --> FROZEN[CoreServiceKeys.AuthoritativeInput]
     CAS[CurrentSelectionApplySystem] --> SEL[SelectionRuntime LivePrimary]
-    MSS[MassNavigationSelectionSyncSystem] --> MSEL[MassNav SelectedEntities]
+    MSS[MassNavigationCommandSourceSyncSystem] --> MSEL[MassNav SelectedEntities]
     FROZEN --> CAS
     SEL --> MSS
   end
 
   subgraph orderA [Path A · MassNavigation 右键]
-    MLCMD[MassNavigationLocalCommandInputSystem] --> SUB[SubmitMoveCommand]
-    SUB --> OBS[OrderBufferSystem]
+    MLCMD[MassNavigationLocalOrderSourceSystem] --> OQMN[OrderQueue]
+    OQMN --> OBS[OrderBufferSystem]
     OBS --> ING[MassNavigationOrderIngestionSystem]
     ING --> NAV[NavGroupRuntime / Formation / Locomotion]
   end
@@ -281,7 +281,7 @@ flowchart TB
       <div class="grid2" style="margin-top:1rem">
         <div class="path-card a">
           <strong>Path A — MassNavigation（Formation / HAN / 10k）</strong>
-          <p class="muted" style="margin:0.5rem 0 0">右键 <code>Command</code> → <code>MassNavigationLocalCommandInputSystem</code> → 每个选中 actor 一条 <code>MassNavigationMoveOrderArgs</code> → NavGroup 编队执行。</p>
+          <p class="muted" style="margin:0.5rem 0 0">右键 <code>Command</code> → <code>MassNavigationLocalOrderSourceSystem</code> → <code>OrderQueue</code> → <code>MassNavigationOrderIngestionSystem</code> → NavGroup 编队执行。</p>
         </div>
         <div class="path-card b">
           <strong>Path B — RtsDemoMod / 通用 GAS</strong>
@@ -337,8 +337,8 @@ flowchart TB
           <div class="title">MassNav 额外绑定（地图 focus 时）</div>
           <div class="meta">Mod runtime · MassNavigation map</div>
           <div class="kv">
-            <span class="k">系统</span><span><code>MassNavigationRuntime.BindLocalSelectionOwner()</code></span>
-            <span class="k">写入</span><span>本地玩家实体上的 <code>SelectionDragState</code>；Primary view → <code>LivePrimary</code></span>
+            <span class="k">系统</span><span><code>MassNavigationRuntime.BindLocalPlayerOwner()</code></span>
+            <span class="k">校验</span><span><code>LocalPlayerEntity</code> alive 且带 <code>PlayerOwner</code>；命令目标由 <code>EntityCollectionStore.CommandSource</code> 维护</span>
             <span class="k">文件</span><span><code>src/Core/MassNavigation/Runtime/MassNavigationRuntime.cs</code></span>
           </div>
         </div>
@@ -403,8 +403,8 @@ sequenceDiagram
           <div class="title">MassNav 镜像选中集</div>
           <div class="meta">Phase: <span style="color:var(--phase1)">InputCollection</span> · revision 驱动</div>
           <div class="kv">
-            <span class="k">系统</span><span><code>MassNavigationSelectionSyncSystem</code></span>
-            <span class="k">输入</span><span>Current view container revision + member entities</span>
+            <span class="k">系统</span><span><code>MassNavigationCommandSourceSyncSystem</code></span>
+            <span class="k">输入</span><span><code>EntityCollectionStore.CommandSource</code> revision + member entities</span>
             <span class="k">输出</span><span><code>MassNavigationSimulationRuntime.SetSelection(entities, revision)</code></span>
             <span class="k">下游</span><span>右键 move 读 <code>SelectedEntities</code> span</span>
           </div>
@@ -425,7 +425,8 @@ flowchart LR
   LMB[左键 Confirm/Select] --> DRAG[SelectionDragState]
   DRAG --> BOX[屏幕矩形 Hit Test]
   BOX --> SR[SelectionRuntime LivePrimary]
-  SR --> SYNC[MassNavigationSelectionSyncSystem]
+  SR --> CS[EntityCollectionStore.CommandSource]
+  CS --> SYNC[MassNavigationCommandSourceSyncSystem]
   SYNC --> SE[MassNav SelectedEntities]
   DRAG --> OV[SelectionBoxOverlaySystem HUD]
         </pre>
@@ -442,22 +443,22 @@ flowchart LR
       <h3>Path A — MassNavigation（当前 HAN / Formation showcase 主路径）</h3>
       <div class="timeline">
         <div class="step">
-          <div class="title">MassNavigationLocalCommandInputSystem</div>
+          <div class="title">MassNavigationLocalOrderSourceSystem</div>
           <div class="meta">Phase: <span style="color:var(--phase1)">InputCollection</span></div>
           <div class="kv">
             <span class="k">触发</span><span><code>PressedThisFrame("Command")</code> + ground point</span>
             <span class="k">选中</span><span><code>MassNavigationSimulationRuntime.SelectedEntities</code></span>
             <span class="k">玩家</span><span><code>ResolveLocalPlayerId()</code> from LocalPlayerEntity / PlayerOwner</span>
-            <span class="k">文件</span><span><code>MassNavigationLocalCommandInputSystem.cs:35-70</code></span>
+            <span class="k">文件</span><span><code>MassNavigationLocalOrderSourceSystem.cs</code></span>
           </div>
         </div>
         <div class="step">
-          <div class="title">SubmitMoveCommand — 每 actor 一条 Order</div>
+          <div class="title">InputOrderMappingSystem fan-out — 每 actor 一条 Order</div>
           <div class="meta"><code>MassNavigationSimulationRuntime</code></div>
           <div class="kv">
-            <span class="k">Payload</span><span><code>MassNavigationMoveOrderArgs</code>: destination, formationMode, rotation, selectionContainer token</span>
+            <span class="k">Payload</span><span><code>MassNavigationMoveOrderArgs</code>: destination, formationMode, rotation</span>
             <span class="k">OrderId</span><span>同一次右键共享 token（编队/group 关联）</span>
-            <span class="k">提交</span><span><code>OrderBufferSystem.SubmitOrder(actor, order)</code> × N</span>
+            <span class="k">提交</span><span><code>OrderQueue.TryEnqueueAssigned(order)</code> × N</span>
           </div>
         </div>
         <div class="step">
@@ -508,7 +509,7 @@ flowchart LR
       </div>
 
       <div class="alert warn">
-        <strong>已知基建债 #503：</strong>MassNav 的 <code>MassNavigationLocalCommandInputSystem</code> 与瞄准态的 <code>InputOrderMappingSystem</code> 都直接读 raw <code>Command</code>，缺少 context-scoped semantic intent 层；瞄准时右键可能同时 cancel 和 submit move。
+        <strong>已知基建债 #503：</strong><code>Command</code> 已统一进入 local order source / <code>InputOrderMappingSystem</code> 链路；后续 context-scoped semantic intent 层仍应继续收敛瞄准态 cancel 与 move command 的语义冲突。
       </div>
     </section>
 
@@ -525,8 +526,8 @@ flowchart LR
           <tr><td>1a</td><td>InputCollection</td><td><code>AuthoritativeInputSnapshotSystem</code></td><td>冻结 <code>AuthoritativeInput</code></td></tr>
           <tr><td>1b</td><td>InputCollection</td><td><code>LocalPlayerEntityResolverSystem</code></td><td>刷新 <code>LocalPlayerEntity</code></td></tr>
           <tr><td>1c</td><td>InputCollection</td><td><code>CurrentSelectionApplySystem</code></td><td><code>SelectionRuntime</code> · drag state</td></tr>
-          <tr><td>1d</td><td>InputCollection</td><td><code>MassNavigationSelectionSyncSystem</code></td><td><code>SelectedEntities</code></td></tr>
-          <tr><td>1e</td><td>InputCollection</td><td><code>MassNavigationLocalCommandInputSystem</code> <em>或</em> <code>InputOrderMappingSystem</code></td><td>Submit orders</td></tr>
+          <tr><td>1d</td><td>InputCollection</td><td><code>MassNavigationCommandSourceSyncSystem</code></td><td><code>SelectedEntities</code></td></tr>
+          <tr><td>1e</td><td>InputCollection</td><td><code>MassNavigationLocalOrderSourceSystem</code> / <code>InputOrderMappingSystem</code></td><td><code>OrderQueue</code> orders</td></tr>
           <tr><td>1.5</td><td>PostMovement</td><td><code>MassNavigationOrderIngestionSystem</code></td><td>NavGroup move commands</td></tr>
           <tr><td>2</td><td>AbilityActivation</td><td><code>OrderBufferSystem</code></td><td>Active orders on actors</td></tr>
           <tr><td>…</td><td>Effect / Attribute / Presentation</td><td>移动执行 · performer sync · HUD</td><td>世界状态 + 视觉</td></tr>
@@ -544,7 +545,7 @@ gantt
   Authoritative snapshot     :a1, 0, 1
   Local player resolve       :a2, 1, 2
   Box selection apply        :a3, 2, 4
-  MassNav selection sync     :a4, 4, 5
+  MassNav command-source sync :a4, 4, 5
   Right-click command        :a5, 5, 6
 
   section Orders
@@ -566,7 +567,7 @@ gantt
           <tr><td>左键框选 action</td><td><code>ConfirmActionId</code> → "Select"</td><td><code>InteractionActionBindings.cs</code></td></tr>
           <tr><td>右键命令 action</td><td><code>CommandActionId</code> → "Command"</td><td><code>default_input.json</code></td></tr>
           <tr><td>正式选中集</td><td><code>SelectionSetKeys.LivePrimary</code></td><td><code>SelectionRuntime.cs</code></td></tr>
-          <tr><td>MassNav 命令选中</td><td><code>SelectedEntities</code></td><td><code>MassNavigationSimulationRuntime.cs</code></td></tr>
+          <tr><td>MassNav 命令选中</td><td><code>EntityCollectionStore.CommandSource</code> → <code>SelectedEntities</code></td><td><code>MassNavigationCommandSourceSync.cs</code></td></tr>
           <tr><td>Move order payload</td><td><code>MassNavigationMoveOrderArgs</code></td><td><code>MassNavigationMoveOrderArgs.cs</code></td></tr>
           <tr><td>移动线 overlay</td><td><code>MovePathBegun/Updated</code></td><td><code>SelectedMovePathPresentationSystem.cs</code></td></tr>
         </tbody>

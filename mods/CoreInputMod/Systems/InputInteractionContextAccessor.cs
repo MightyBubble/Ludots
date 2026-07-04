@@ -25,6 +25,7 @@ namespace CoreInputMod.Systems
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
+        private readonly EntityCollectionStore _entityCollections;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
@@ -35,6 +36,11 @@ namespace CoreInputMod.Systems
                 ? selection
                 : throw new InvalidOperationException(
                     $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
+            _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                                 collectionsObj is EntityCollectionStore collections
+                ? collections
+                : throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
         }
 
         public bool TryGetEntity(string key, out Entity entity)
@@ -121,41 +127,73 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
-            if (!TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner) ||
+                !CommandSourceCollectionRuntime.TryGetPrimary(_entityCollections, owner, out Entity commandEntity) ||
+                !_world.IsAlive(commandEntity))
             {
                 return false;
             }
 
-            return _selection.TryGetPrimary(owner, setKey, out entity);
+            entity = commandEntity;
+            return true;
         }
 
         public bool TryGetSelectedContainer(string setKey, out Entity container)
         {
             container = default;
-            if (!TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner) ||
+                !CommandSourceCollectionRuntime.TryGet(_entityCollections, owner, out _, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
                 return false;
             }
 
-            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+            var entities = new Entity[view.Count];
+            int written = CommandSourceCollectionRuntime.CopyEntities(_entityCollections, owner, entities);
+            if (written <= 0)
+            {
+                return false;
+            }
+
+            Entity leaseOwner = _world.Create(default(SelectionLeaseOwnerTag));
+            if (!_selection.TryGetOrCreateContainer(leaseOwner, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out container))
+            {
+                if (_world.IsAlive(leaseOwner))
+                {
+                    _world.Destroy(leaseOwner);
+                }
+
+                container = default;
+                return false;
+            }
+
+            if (!_selection.ReplaceSelection(container, entities.AsSpan(0, written)))
+            {
+                if (_world.IsAlive(leaseOwner))
+                {
+                    _world.Destroy(leaseOwner);
+                }
+
+                container = default;
+                return false;
+            }
+
+            _world.Add(leaseOwner, new SelectionLeaseContainer { Value = container });
+            return true;
         }
 
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
-            if (!TryGetSelectionOwner(out var owner))
+            if (!TryGetSelectionOwner(out var owner) ||
+                !CommandSourceCollectionRuntime.TryGet(_entityCollections, owner, out _, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
                 return false;
             }
 
-            int selectionCount = _selection.GetSelectionCount(owner, setKey);
-            if (selectionCount <= 0)
-            {
-                return false;
-            }
-
-            Entity[] selected = new Entity[selectionCount];
-            int count = _selection.CopySelection(owner, setKey, selected);
+            Entity[] selected = new Entity[view.Count];
+            int count = CommandSourceCollectionRuntime.CopyEntities(_entityCollections, owner, selected);
             for (int i = 0; i < count; i++)
             {
                 Entity entity = selected[i];

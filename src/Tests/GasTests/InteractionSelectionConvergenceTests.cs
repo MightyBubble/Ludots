@@ -661,6 +661,107 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputOrderMapping_PositionCommand_FanOutUsesSharedOrderId()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var local = world.Create();
+            var first = world.Create();
+            var second = world.Create();
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetLocalPlayer(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
+            mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
+            {
+                worldCm = new Vector3(320f, 0f, 640f);
+                return true;
+            });
+            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
+            {
+                entities.Clear();
+                entities.Add(first);
+                entities.Add(second);
+                return true;
+            });
+            mapping.SetSharedOrderIdProvider(() => 7007);
+
+            var orders = new List<Order>();
+            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            input.InjectButtonPress("Command");
+            input.Update();
+            mapping.Update(0f);
+
+            That(orders.Count, Is.EqualTo(2));
+            That(orders[0].OrderId, Is.EqualTo(7007));
+            That(orders[1].OrderId, Is.EqualTo(7007));
+        }
+
+        [Test]
+        public void InputOrderMapping_PositionCommand_RequireSelectionDoesNotSubmitWithoutSelectedActors()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.TargetFirst,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            var local = world.Create();
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetLocalPlayer(local, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
+            mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
+            {
+                worldCm = new Vector3(320f, 0f, 640f);
+                return true;
+            });
+            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
+            {
+                entities.Clear();
+                return false;
+            });
+
+            var orders = new List<Order>();
+            mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            input.InjectButtonPress("Command");
+            input.Update();
+            mapping.Update(0f);
+
+            That(orders, Is.Empty);
+        }
+
+        [Test]
         public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossLivePrimarySelection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());

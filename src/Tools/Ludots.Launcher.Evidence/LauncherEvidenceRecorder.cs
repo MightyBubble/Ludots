@@ -10,6 +10,7 @@ using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -2024,14 +2025,14 @@ public static class LauncherEvidenceRecorder
 
     private static Entity[] SelectFirstOrderableMassNavigationAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
-
         Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
         if (owner == Entity.Null || !engine.World.IsAlive(owner))
         {
             throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity.");
         }
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
 
         int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgentSlotCount);
         if (count <= 0)
@@ -2045,10 +2046,14 @@ public static class LauncherEvidenceRecorder
             selected[i] = simulation.AgentState.ControllableAgentSlots[i];
         }
 
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected))
-        {
-            throw new InvalidOperationException("MassNavigation UAT failed to write SelectionRuntime LivePrimary selection.");
-        }
+        CommandSourceCollectionRuntime.Replace(
+            collections,
+            owner,
+            selected,
+            EntityCollectionSourceKind.Debug,
+            "MassNavigation UAT command source",
+            $"{count} command entities");
+        MassNavigationCommandSourceSync.SyncIfChanged(engine.World, engine.GlobalContext, collections, simulation);
 
         return selected;
     }
@@ -2065,69 +2070,35 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException($"MassNavigation UAT target is outside configured world bounds: {FormatPoint(targetCm)}.");
         }
 
-        if (engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
+        if (engine.GetService(CoreServiceKeys.OrderQueue) is not OrderQueue orderQueue)
         {
-            throw new InvalidOperationException("MassNavigation UAT requires OrderBufferSystem.");
+            throw new InvalidOperationException("MassNavigation UAT requires OrderQueue.");
         }
 
         if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry ||
-            !registry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+            !registry.TryGetId(MassNavigationOrderKeys.Move, out _))
         {
             throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
         }
 
-        SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
-        if (selectionContainer == Entity.Null)
+        Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (localPlayer == Entity.Null ||
+            !engine.World.IsAlive(localPlayer) ||
+            !engine.World.TryGet(localPlayer, out PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigation UAT requires a current SelectionRuntime container.");
+            throw new InvalidOperationException("MassNavigation UAT requires LocalPlayerEntity to author PlayerOwner.");
         }
 
-        int sharedOrderId = simulation.AllocateSharedOrderId();
-        int submitted = 0;
-        for (int i = 0; i < selected.Length; i++)
+        MassNavigationMoveCommandResult result = simulation.SubmitMoveCommand(
+            engine.World,
+            orderQueue,
+            registry,
+            targetCm,
+            owner.PlayerId);
+        if (result != MassNavigationMoveCommandResult.Submitted)
         {
-            Entity entity = selected[i];
-            if (!engine.World.IsAlive(entity))
-            {
-                continue;
-            }
-
-            var order = new Order
-            {
-                OrderId = sharedOrderId,
-                OrderTypeId = moveOrderTypeId,
-                PlayerId = 1,
-                Actor = entity,
-                SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
-                {
-                    I0 = (int)MassNavigationFormationMode.Square,
-                    F0 = 0f,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetCm.X, 0f, targetCm.Y),
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selectionContainer
-                    }
-                }
-            };
-
-            if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.InvalidEntity)
-            {
-                submitted++;
-            }
+            throw new InvalidOperationException($"MassNavigation UAT failed to enqueue massNavigationMove orders: {result}.");
         }
-
-        if (submitted <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation UAT failed to submit any massNavigationMove orders.");
-        }
-
-        simulation.FocusCommandTarget(targetCm, selected);
     }
 
     private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
@@ -2317,7 +2288,7 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(string.Equals(boot.MinimapPreset, MinimapPreset.RtsFullMap.ToString(), StringComparison.Ordinal), $"Expected core minimap RtsFullMap preset, got {boot.MinimapPreset}.", failures);
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
-        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "SelectionRuntime LivePrimary selection was not observed by MassNavigation.", failures);
+        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "CommandSource collection was not observed by MassNavigation.", failures);
         AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavigationMove order did not create an active NavGroup.", failures);
         AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNavigation rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
@@ -2367,7 +2338,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Intent");
         sb.AppendLine("- Player goal: verify MassNavigation is the MassNavigationFlow SSOT and runs through performer + core minimap on a 64km RTS map.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, EntityCollectionStore.CommandSource, OrderQueue, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
@@ -2377,7 +2348,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
+        sb.AppendLine("2. Write the command-source collection and enqueue a `massNavigationMove` order through OrderQueue.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
@@ -2409,7 +2380,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
+        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `EntityCollectionStore`, `OrderQueue`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
     }
 

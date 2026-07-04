@@ -1,11 +1,12 @@
 {
   "name": "MassNavigationMod",
   "version": "1.0.0",
-  "description": "Data-only MassNavigation sample assets, config, maps, entity templates, GAS orders, and performers.",
+  "description": "MassNavigation assets, config, maps, entity templates, GAS orders, performers, and local input bridge.",
   "main": "bin/net8.0/MassNavigationMod.dll",
   "priority": 0,
   "dependencies": {
-    "LudotsCoreMod": "^1.0.0"
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
   },
   "author": "OpenAI Codex",
   "tags": ["navigation", "mass-navigation", "mass-flow", "large-world"]

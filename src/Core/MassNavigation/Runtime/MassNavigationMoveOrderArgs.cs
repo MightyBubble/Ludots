@@ -10,31 +10,23 @@ public readonly struct MassNavigationMoveOrderArgs
     private MassNavigationMoveOrderArgs(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians,
-        Entity selectionContainer)
+        float rotationRadians)
     {
         DestinationCm = destinationCm;
         FormationMode = formationMode;
         RotationRadians = rotationRadians;
-        SelectionContainer = selectionContainer;
     }
 
     public Vector2 DestinationCm { get; }
     public MassNavigationFormationMode FormationMode { get; }
     public float RotationRadians { get; }
-    public Entity SelectionContainer { get; }
 
     public static OrderArgs Encode(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
-        float rotationRadians,
-        Entity selectionContainer)
+        float rotationRadians)
     {
         ValidateFormationMode(formationMode, nameof(formationMode));
-        if (selectionContainer == Entity.Null)
-        {
-            throw new InvalidOperationException("MassNavigation move orders require an explicit selection container.");
-        }
 
         return new OrderArgs
         {
@@ -48,7 +40,7 @@ public readonly struct MassNavigationMoveOrderArgs
             },
             Selection = new OrderSelectionReference
             {
-                Container = selectionContainer
+                Container = Entity.Null
             }
         };
     }
@@ -66,8 +58,7 @@ public readonly struct MassNavigationMoveOrderArgs
         return new MassNavigationMoveOrderArgs(
             new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z),
             formationMode,
-            order.Args.F0,
-            order.Args.Selection.Container);
+            order.Args.F0);
     }
 
     private static MassNavigationFormationMode DecodeFormationMode(int rawValue, int orderToken)

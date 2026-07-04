@@ -128,7 +128,7 @@ namespace Ludots.Tests.Presentation
             routed = world.Create(new MassNavigationAgent { ProfileId = routedProfile }, OrderBuffer.CreateEmpty());
             direct = world.Create(new MassNavigationAgent { ProfileId = directProfile }, OrderBuffer.CreateEmpty());
 
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationCommandSourceOrderTests.CreateConfigForTests();
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100));
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);

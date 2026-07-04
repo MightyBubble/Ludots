@@ -1025,9 +1025,8 @@ namespace Ludots.Tests.Presentation
                 simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 1;
                 RegisterMoveOrderType(engine);
 
-                Entity selectionContainer = engine.World.Create();
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0, selectionContainer);
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1, selectionContainer);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
 
                 var system = new MassNavigationOrderIngestionSystem(engine, simulation);
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -1988,7 +1987,7 @@ namespace Ludots.Tests.Presentation
                       simulation.CommandRejectsTotal == rejectsBeforeMove &&
                       CountActiveMoveOrders(engine, simulation) > 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationLocalCommandInputSystem, and OrderBuffer.");
+                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationMod local order source, and OrderQueue.");
 
             Assert.That(simulation.HasCommandFocus, Is.True);
             Assert.That(simulation.CommandFocusXCm, Is.EqualTo(expectedMoveTarget.X).Within(1f));
@@ -2692,12 +2691,10 @@ namespace Ludots.Tests.Presentation
             var orderWorld = World.Create();
             try
             {
-                Entity selectionContainer = orderWorld.Create();
                 var args = MassNavigationMoveOrderArgs.Encode(
                     new Vector2(1500f, 2500f),
                     MassNavigationFormationMode.Line,
-                    rotationRadians: 0.5f,
-                    selectionContainer: selectionContainer);
+                    rotationRadians: 0.5f);
                 var order = new Order
                 {
                     OrderId = 55,
@@ -2878,7 +2875,7 @@ namespace Ludots.Tests.Presentation
                 new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
                 Path.Combine(FindRepoRoot(), "assets"));
 
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationCommandSourceOrderTests.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
             simulation.SetWorldOperationsReady(true);
@@ -3037,8 +3034,7 @@ namespace Ludots.Tests.Presentation
         private static Entity CreateActiveMassNavigationMoveOrderEntity(
             GameEngine engine,
             int token,
-            int agentIndex,
-            Entity selectionContainer)
+            int agentIndex)
         {
             var order = new Order
             {
@@ -3047,8 +3043,7 @@ namespace Ludots.Tests.Presentation
                 Args = MassNavigationMoveOrderArgs.Encode(
                     new Vector2(2000f + (agentIndex * 100f), 2500f),
                     MassNavigationFormationMode.Line,
-                    rotationRadians: 0f,
-                    selectionContainer: selectionContainer),
+                    rotationRadians: 0f),
             };
             OrderBuffer orders = OrderBuffer.CreateEmpty();
             orders.SetActiveDirect(in order, priority: 100);

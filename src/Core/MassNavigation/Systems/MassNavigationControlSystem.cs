@@ -1,11 +1,9 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
-using Ludots.Core.MassNavigation.Input;
 using Ludots.Core.MassNavigation.Runtime;
 
 namespace Ludots.Core.MassNavigation.Systems;
@@ -34,30 +32,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
 
         _simulation.ObserveControlTick();
-
-        if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
-        {
-            if (input.PressedThisFrame(MassNavigationInputActions.ResetScene))
-            {
-                _simulation.RequestSceneReset();
-            }
-
-            float deltaRadians = 0f;
-            if (input.IsDown(MassNavigationInputActions.RotateLeft))
-            {
-                deltaRadians -= _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
-            }
-
-            if (input.IsDown(MassNavigationInputActions.RotateRight))
-            {
-                deltaRadians += _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
-            }
-
-            if (MathF.Abs(deltaRadians) > _simulation.Config.Semantics.Group.FormationRotationEpsilonRadians)
-            {
-                _simulation.RotateSelectedFormation(_engine.World, deltaRadians, ResolveLocalPlayerId());
-            }
-        }
 
         if (_simulation.ConsumeSceneResetRequest())
         {
@@ -110,7 +84,8 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
     private void ClearSelection()
     {
-        if (!SelectionContextRuntime.TryGetRuntime(_engine.GlobalContext, out SelectionRuntime selection))
+        EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
+        if (collections == null)
         {
             return;
         }
@@ -122,26 +97,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             return;
         }
 
-        selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
-        selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
-        selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
-        selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
-    }
-
-    private int ResolveLocalPlayerId()
-    {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Arch.Core.Entity local ||
-            !_engine.World.IsAlive(local))
-        {
-            throw new InvalidOperationException("MassNavigation runtime requires LocalPlayerEntity before rotating formations.");
-        }
-
-        if (!_engine.World.TryGet(local, out Ludots.Core.Gameplay.Components.PlayerOwner owner))
-        {
-            throw new InvalidOperationException("MassNavigation runtime LocalPlayerEntity must author PlayerOwner before rotating formations.");
-        }
-
-        return owner.PlayerId;
+        collections.Remove(owner, EntityCollectionKeys.CommandSource);
     }
 }

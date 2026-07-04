@@ -2,18 +2,19 @@ using System.Diagnostics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
-internal sealed class MassNavigationSelectionSyncSystem : ISystem<float>
+internal sealed class MassNavigationCommandSourceSyncSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly World _world;
     private readonly MassNavigationSimulationRuntime _simulation;
 
-    public MassNavigationSelectionSyncSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationCommandSourceSyncSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
         _world = engine.World;
@@ -35,14 +36,13 @@ internal sealed class MassNavigationSelectionSyncSystem : ISystem<float>
         _simulation.BeginFrame(dt);
         _simulation.ObserveSelectionSyncTick();
 
-        if (!SelectionContextRuntime.TryGetRuntime(_engine.GlobalContext, out SelectionRuntime selection) ||
-            !SelectionContextRuntime.TryDescribeCurrentView(_world, _engine.GlobalContext, out _))
+        if (_engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
         {
             return;
         }
         
         long start = Stopwatch.GetTimestamp();
-        MassNavigationSelectionSync.SyncIfChanged(_world, _engine.GlobalContext, selection, _simulation);
+        MassNavigationCommandSourceSync.SyncIfChanged(_world, _engine.GlobalContext, collections, _simulation);
         _simulation.ObserveSelectionSync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 }
