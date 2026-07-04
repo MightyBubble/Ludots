@@ -1,0 +1,124 @@
+# Browser Runtime Provider Adapter Guide
+
+This page is the adapter-facing checklist for hosts that need Ludots Browser UI through a provider assembly such as `Ludots.UI.Browser.Cef.dll`.
+
+Use it for Raylib-like hosts, external UE5 bridge hosts, Unity/Godot hosts, and any custom desktop host that consumes `browserRuntime.providerAssemblyPath`.
+
+## Decision
+
+Browser engine providers are host bootstrap infrastructure, not Mods.
+
+An adapter must load provider implementations through `Ludots.UI.Browser.BrowserRuntimeProviderLoader`. The adapter must not directly load the provider DLL from a source `bin/` directory, must not load the provider into `AssemblyLoadContext.Default`, and must not resolve CefSharp or other provider-private dependencies through the Mod load plan.
+
+## Reuse List
+
+Adapters reuse:
+
+- `IBrowserRuntime` as the host-visible browser runtime contract.
+- `IBrowserRuntimeHostLifecycle` as the terminal host-exit lifecycle hook.
+- `BrowserRuntimeServiceNames.BrowserRuntime` and `BrowserRuntimeServiceNames.HostLifecycle` in the host service dictionary.
+- `BrowserRuntimeProviderLoader` and `BrowserRuntimeProviderLoadOptions` for shadow-copy loading and collectible ALC ownership.
+- `browserRuntime.providerAssemblyPath`, `browserRuntime.runtimeRootPath`, and `browserRuntime.cacheRootPath` from the resolved launcher/runtime config.
+- `BrowserSurfaceCanvasContent` / `UIRoot` for browser input, focus, resize, and alpha hit-test routing.
+
+Adapters do not add a parallel provider registry, a second browser runtime service name, or a Mod-owned CEF bootstrap path.
+
+## Required Bootstrap Shape
+
+1. Resolve `browserRuntime` from the host's already-resolved app/runtime config.
+2. If `enabled=false` and `required=true`, fail fast.
+3. If `enabled=true`, require a known provider id. Today the built-in compatibility provider id is `cef`.
+4. Resolve `providerAssemblyPath` relative to the host base directory when it is not rooted.
+5. Verify the provider assembly exists. Missing provider assemblies fail fast.
+6. Call `BrowserRuntimeProviderLoader.Install(...)` from the host composition root before gameplay/session code consumes browser services.
+7. Keep `Ludots.UI.Browser` contracts in the host ALC. The provider ALC must share those contract assemblies so `handle.Runtime is IBrowserRuntime` is true in the host.
+8. Store the returned `IBrowserRuntime` in the host/global service dictionary through the loader-owned path.
+9. Store or preserve the loader-provided `IBrowserRuntimeHostLifecycle` service for terminal host exit.
+
+Minimal shape:
+
+```csharp
+BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+    new BrowserRuntimeProviderLoadOptions(
+        services,
+        providerAssemblyPath,
+        "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost")
+    {
+        ProviderId = "cef",
+        RuntimeRootPath = runtimeRootPath,
+        BrowserCacheRootPath = cacheRootPath,
+        ShadowCopyRootPath = optionalAdapterCacheRoot,
+        Log = message => adapterLog.Info(message)
+    });
+
+IBrowserRuntime runtime = handle.Runtime;
+```
+
+## Lifecycle Rules
+
+Provider loading has two lifetimes:
+
+- Session lifetime: surfaces and game/session references.
+- Host-process lifetime: browser engine process state, provider ALC, native process hooks, and terminal shutdown.
+
+On ordinary editor play-session teardown, dispose session-owned surfaces/runtime facades that will not be reused, but do not call terminal CEF shutdown if the host process may create another browser runtime later. CEF cannot be reinitialized after `Cef.Shutdown()` in the same process.
+
+On terminal host process exit, call the service registered under `BrowserRuntimeServiceNames.HostLifecycle`:
+
+```csharp
+if (services.TryGetValue(BrowserRuntimeServiceNames.HostLifecycle, out object? lifecycle) &&
+    lifecycle is IBrowserRuntimeHostLifecycle browserLifecycle)
+{
+    browserLifecycle.ShutdownProcessForHostExit();
+}
+```
+
+The loader lifecycle disposes the provider runtime, calls the provider terminal lifecycle, restores/removes loader-owned services, unloads the collectible ALC, runs collection, and logs whether the ALC was collected.
+
+Long-lived editor hosts should install the provider once per host process or own an explicit process-level provider handle. Do not create a fresh CEF provider for every play session and then call terminal shutdown on each session end.
+
+## Rendering And Input
+
+Adapters may render browser pixels through the Skia path or a native direct texture path.
+
+Direct texture upload is allowed only for pixels. It must not become a second interaction system:
+
+- Browser pointer, wheel, keyboard, focus, resize, and alpha hit-test must still route through `BrowserSurfaceCanvasContent` / `UIRoot`.
+- Web app assets must use Ludots facades such as `window.ludotsBrowser` and `window.ludotsDataplane`.
+- Provider-private globals such as CefSharp, CEF V8 bindings, BLUI objects, or engine widget objects are adapter-private.
+
+## Forbidden Adapter Patterns
+
+Do not:
+
+- Call `AssemblyLoadContext.Default.LoadFromAssemblyPath(providerAssemblyPath)` from an adapter installer.
+- Call `Assembly.LoadFrom(providerAssemblyPath)` or equivalent direct load APIs on the source build output.
+- Load `Ludots.UI.Browser.Cef.dll` from `src/Libraries/.../bin/...` without shadow-copy isolation.
+- Resolve CefSharp, CEF native files, or provider-private dependencies from the Mod load plan.
+- Package CEF as a Mod or make Mod load/unload own CEF initialization.
+- Hardcode CefSharp assembly names in host adapters.
+- Add a fallback provider when the requested provider is missing.
+- Call `Cef.Shutdown()` from `IBrowserRuntime.DisposeAsync`, surface disposal, Mod unload, or ordinary editor play-session teardown.
+- Let web app or Mod source call provider-private globals directly.
+
+## Validation Checklist
+
+Before an adapter change is accepted:
+
+- Missing provider assembly fails fast with no fallback.
+- The returned runtime is assignable to the host `IBrowserRuntime`.
+- Provider private dependencies resolve from the shadow-copied provider package.
+- Changing a provider-private DLL/native file creates a new shadow-copy cache entry.
+- The source provider DLL can be overwritten or deleted while the host process remains alive.
+- Terminal host exit logs `collectible ALC collected=...`.
+- Adapter installer source does not contain direct Default ALC provider loads.
+- Browser input still flows through `UIRoot`; direct texture rendering does not bypass hit-test or focus ownership.
+- Web app source uses Ludots facades only.
+
+Recommended regression tests:
+
+```text
+dotnet test src\Tests\RaylibAdapterTests\RaylibAdapterTests.csproj --filter BrowserRuntimeProviderLoaderTests
+dotnet test src\Tests\BrowserCefTests\BrowserCefTests.csproj --filter "CefBrowserRuntimeHostTests|CefBrowserRuntimeArchitectureTests|CefBrowserRuntimeAssemblyResolutionTests"
+dotnet test src\Tests\GasTests\GasTests.csproj --filter "RaylibHost_OwnsTerminalBrowserRuntimeShutdown|RaylibBrowserRuntimeInstaller_ResolvesProviderDependenciesThroughProviderPackage"
+```

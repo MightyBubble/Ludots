@@ -102,6 +102,100 @@ public sealed class BrowserRuntimeProviderLoaderTests
     }
 
     [Test]
+    public void Install_RefreshesShadowCopyWhenProviderPrivateDependencyChanges()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+        string privateDependencyPath = Path.Combine(sourceRoot, "FakeProvider.PrivateDependency.dll");
+        BrowserRuntimeProviderLoadHandle? firstHandle = null;
+        BrowserRuntimeProviderLoadHandle? secondHandle = null;
+
+        try
+        {
+            File.WriteAllText(privateDependencyPath, "version-one");
+            firstHandle = BrowserRuntimeProviderLoader.Install(
+                new BrowserRuntimeProviderLoadOptions(
+                    new Dictionary<string, object>(StringComparer.Ordinal),
+                    sourceAssemblyPath,
+                    typeof(FakeProviderHost).FullName!)
+                {
+                    ProviderId = "fixture",
+                    ShadowCopyRootPath = shadowRoot
+                });
+            string firstShadowDependencyPath = Path.Combine(
+                firstHandle.ShadowCopyDirectory,
+                Path.GetFileName(privateDependencyPath));
+            Assert.That(File.ReadAllText(firstShadowDependencyPath), Is.EqualTo("version-one"));
+            firstHandle.ShutdownProcessForHostExit();
+
+            File.WriteAllText(privateDependencyPath, "version-two-with-new-length");
+            secondHandle = BrowserRuntimeProviderLoader.Install(
+                new BrowserRuntimeProviderLoadOptions(
+                    new Dictionary<string, object>(StringComparer.Ordinal),
+                    sourceAssemblyPath,
+                    typeof(FakeProviderHost).FullName!)
+                {
+                    ProviderId = "fixture",
+                    ShadowCopyRootPath = shadowRoot
+                });
+
+            string secondShadowDependencyPath = Path.Combine(
+                secondHandle.ShadowCopyDirectory,
+                Path.GetFileName(privateDependencyPath));
+            Assert.That(secondHandle.ShadowCopyDirectory, Is.Not.EqualTo(firstHandle.ShadowCopyDirectory));
+            Assert.That(File.ReadAllText(secondShadowDependencyPath), Is.EqualTo("version-two-with-new-length"));
+        }
+        finally
+        {
+            secondHandle?.ShutdownProcessForHostExit();
+            firstHandle?.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
+    public void Install_FailedProviderInstallRestoresHostServices()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+        var existingService = new object();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["ExistingService"] = existingService
+        };
+
+        try
+        {
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                BrowserRuntimeProviderLoader.Install(
+                    new BrowserRuntimeProviderLoadOptions(
+                        services,
+                        sourceAssemblyPath,
+                        typeof(MismatchedRuntimeProviderHost).FullName!)
+                    {
+                        ProviderId = "fixture",
+                        ShadowCopyRootPath = shadowRoot
+                    }));
+
+            Assert.That(ex!.Message, Does.Contain("does not match the provider return value"));
+            Assert.That(services.Keys, Is.EquivalentTo(new[] { "ExistingService" }));
+            Assert.That(services["ExistingService"], Is.SameAs(existingService));
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
     public void Loader_UsesCollectibleAlcShadowCopyAndDependencyResolver()
     {
         string repoRoot = FindRepoRoot();
@@ -210,6 +304,32 @@ public sealed class BrowserRuntimeProviderLoaderTests
             services["FakeProviderCacheRootPath"] = cacheRootPath ?? string.Empty;
             services["FakeProviderContractLoadContext"] = AssemblyLoadContext.GetLoadContext(typeof(IBrowserRuntime).Assembly)!;
             return runtime;
+        }
+    }
+
+    public static class MismatchedRuntimeProviderHost
+    {
+        public static IBrowserRuntime InstallFromAssemblyLocation(
+            IDictionary<string, object> services,
+            string? cacheRootPath = null)
+        {
+            string assemblyLocation = typeof(MismatchedRuntimeProviderHost).Assembly.Location;
+            string runtimeRootPath = Path.GetDirectoryName(assemblyLocation)
+                ?? throw new DirectoryNotFoundException("Could not resolve fake provider runtime root.");
+            return Install(services, runtimeRootPath, cacheRootPath);
+        }
+
+        public static IBrowserRuntime Install(
+            IDictionary<string, object> services,
+            string runtimeRootPath,
+            string? cacheRootPath = null)
+        {
+            var registeredRuntime = new FakeBrowserRuntime(services);
+            var returnedRuntime = new FakeBrowserRuntime(services);
+            services[BrowserRuntimeServiceNames.BrowserRuntime] = registeredRuntime;
+            services[BrowserRuntimeServiceNames.HostLifecycle] = new FakeHostLifecycle(services);
+            services["MismatchedProviderTouchedServices"] = true;
+            return returnedRuntime;
         }
     }
 

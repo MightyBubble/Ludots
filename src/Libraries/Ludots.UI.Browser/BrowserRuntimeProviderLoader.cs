@@ -204,6 +204,9 @@ public static class BrowserRuntimeProviderLoader
 	{
 		ArgumentNullException.ThrowIfNull(options);
 
+		KeyValuePair<string, object>[] serviceSnapshot = options.Services.ToArray();
+		IBrowserRuntime? installedRuntime = null;
+		IBrowserRuntimeHostLifecycle? providerLifecycle = null;
 		BrowserRuntimeProviderShadowCopy shadowCopy = BrowserRuntimeProviderShadowCopy.Create(
 			options.ProviderAssemblyPath,
 			options.ShadowCopyRootPath,
@@ -234,7 +237,8 @@ public static class BrowserRuntimeProviderLoader
 				throw new InvalidOperationException("Browser runtime provider Install did not return an IBrowserRuntime.");
 			}
 
-			IBrowserRuntimeHostLifecycle? providerLifecycle = ResolveProviderLifecycle(options.Services);
+			installedRuntime = runtime;
+			providerLifecycle = ResolveProviderLifecycle(options.Services);
 			EnsureBrowserRuntimeServiceMatches(options.Services, runtime);
 
 			var handle = new BrowserRuntimeProviderLoadHandle(
@@ -248,9 +252,19 @@ public static class BrowserRuntimeProviderLoader
 			options.Services[BrowserRuntimeServiceNames.HostLifecycle] = handle;
 			return handle;
 		}
-		catch
+		catch (Exception ex)
 		{
-			loadContext.Unload();
+			Exception? cleanupFailure = CleanupFailedInstall(
+				options.Services,
+				serviceSnapshot,
+				installedRuntime,
+				providerLifecycle,
+				loadContext);
+			if (cleanupFailure != null)
+			{
+				throw new AggregateException(ex, cleanupFailure);
+			}
+
 			throw;
 		}
 	}
@@ -319,6 +333,95 @@ public static class BrowserRuntimeProviderLoader
 
 		services[BrowserRuntimeServiceNames.BrowserRuntime] = runtime;
 	}
+
+	private static Exception? CleanupFailedInstall(
+		IDictionary<string, object> services,
+		IReadOnlyCollection<KeyValuePair<string, object>> serviceSnapshot,
+		IBrowserRuntime? installedRuntime,
+		IBrowserRuntimeHostLifecycle? providerLifecycle,
+		BrowserRuntimeProviderAssemblyLoadContext loadContext)
+	{
+		object? previousRuntime = FindSnapshotValue(serviceSnapshot, BrowserRuntimeServiceNames.BrowserRuntime);
+		object? previousLifecycle = FindSnapshotValue(serviceSnapshot, BrowserRuntimeServiceNames.HostLifecycle);
+		services.TryGetValue(BrowserRuntimeServiceNames.BrowserRuntime, out object? currentRuntime);
+		services.TryGetValue(BrowserRuntimeServiceNames.HostLifecycle, out object? currentLifecycle);
+
+		Exception? cleanupFailure = null;
+		CaptureCleanupFailure(ref cleanupFailure, () =>
+		{
+			if (installedRuntime != null && !ReferenceEquals(installedRuntime, previousRuntime))
+			{
+				installedRuntime.DisposeAsync().AsTask().GetAwaiter().GetResult();
+			}
+		});
+		CaptureCleanupFailure(ref cleanupFailure, () =>
+		{
+			if (currentRuntime is IBrowserRuntime runtime &&
+				!ReferenceEquals(runtime, installedRuntime) &&
+				!ReferenceEquals(runtime, previousRuntime))
+			{
+				runtime.DisposeAsync().AsTask().GetAwaiter().GetResult();
+			}
+		});
+		CaptureCleanupFailure(ref cleanupFailure, () =>
+		{
+			if (providerLifecycle != null && !ReferenceEquals(providerLifecycle, previousLifecycle))
+			{
+				providerLifecycle.ShutdownProcessForHostExit();
+			}
+		});
+		CaptureCleanupFailure(ref cleanupFailure, () =>
+		{
+			if (currentLifecycle is IBrowserRuntimeHostLifecycle lifecycle &&
+				!ReferenceEquals(lifecycle, providerLifecycle) &&
+				!ReferenceEquals(lifecycle, previousLifecycle))
+			{
+				lifecycle.ShutdownProcessForHostExit();
+			}
+		});
+
+		RestoreServices(services, serviceSnapshot);
+		CaptureCleanupFailure(ref cleanupFailure, loadContext.Unload);
+		return cleanupFailure;
+	}
+
+	private static void CaptureCleanupFailure(ref Exception? cleanupFailure, Action action)
+	{
+		try
+		{
+			action();
+		}
+		catch (Exception ex)
+		{
+			cleanupFailure = cleanupFailure == null ? ex : new AggregateException(cleanupFailure, ex);
+		}
+	}
+
+	private static object? FindSnapshotValue(
+		IReadOnlyCollection<KeyValuePair<string, object>> serviceSnapshot,
+		string key)
+	{
+		foreach (KeyValuePair<string, object> entry in serviceSnapshot)
+		{
+			if (string.Equals(entry.Key, key, StringComparison.Ordinal))
+			{
+				return entry.Value;
+			}
+		}
+
+		return null;
+	}
+
+	private static void RestoreServices(
+		IDictionary<string, object> services,
+		IEnumerable<KeyValuePair<string, object>> serviceSnapshot)
+	{
+		services.Clear();
+		foreach (KeyValuePair<string, object> entry in serviceSnapshot)
+		{
+			services[entry.Key] = entry.Value;
+		}
+	}
 }
 
 internal sealed class BrowserRuntimeProviderShadowCopy
@@ -357,7 +460,7 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 		string sourceDirectoryPath = Path.GetDirectoryName(sourceAssemblyPath)
 			?? throw new DirectoryNotFoundException(
 				$"Browser runtime provider directory could not be resolved from '{sourceAssemblyPath}'.");
-		string fingerprint = ComputeFingerprint(sourceAssemblyPath);
+		string fingerprint = ComputeFingerprint(sourceAssemblyPath, sourceDirectoryPath);
 		string shadowRootPath = string.IsNullOrWhiteSpace(shadowCopyRootPath)
 			? ResolveDefaultShadowCopyRootPath()
 			: Path.GetFullPath(shadowCopyRootPath);
@@ -455,7 +558,7 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 		File.SetLastWriteTimeUtc(targetFile, File.GetLastWriteTimeUtc(sourceFile));
 	}
 
-	private static string ComputeFingerprint(string sourceAssemblyPath)
+	private static string ComputeFingerprint(string sourceAssemblyPath, string sourceDirectoryPath)
 	{
 		using SHA256 hash = SHA256.Create();
 		AppendPathAndFile(hash, sourceAssemblyPath);
@@ -467,14 +570,28 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			AppendPathAndFile(hash, depsPath);
 		}
 
+		AppendDirectoryManifest(hash, sourceDirectoryPath);
 		hash.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 		return Convert.ToHexString(hash.Hash!).ToLowerInvariant();
 	}
 
+	private static void AppendDirectoryManifest(HashAlgorithm hash, string sourceDirectoryPath)
+	{
+		foreach (string sourceFile in Directory
+			.EnumerateFiles(sourceDirectoryPath, "*", SearchOption.AllDirectories)
+			.OrderBy(file => Path.GetRelativePath(sourceDirectoryPath, file), StringComparer.OrdinalIgnoreCase))
+		{
+			var info = new FileInfo(sourceFile);
+			string relativePath = Path.GetRelativePath(sourceDirectoryPath, sourceFile);
+			AppendString(hash, relativePath);
+			AppendString(hash, info.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			AppendString(hash, info.LastWriteTimeUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		}
+	}
+
 	private static void AppendPathAndFile(HashAlgorithm hash, string filePath)
 	{
-		byte[] nameBytes = Encoding.UTF8.GetBytes(Path.GetFileName(filePath));
-		hash.TransformBlock(nameBytes, 0, nameBytes.Length, null, 0);
+		AppendString(hash, Path.GetFileName(filePath));
 
 		var buffer = new byte[81920];
 		using var stream = new FileStream(
@@ -487,6 +604,14 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 		{
 			hash.TransformBlock(buffer, 0, read, null, 0);
 		}
+	}
+
+	private static void AppendString(HashAlgorithm hash, string value)
+	{
+		byte[] bytes = Encoding.UTF8.GetBytes(value);
+		hash.TransformBlock(bytes, 0, bytes.Length, null, 0);
+		byte[] separator = { 0 };
+		hash.TransformBlock(separator, 0, separator.Length, null, 0);
 	}
 
 	private static string ResolveDefaultShadowCopyRootPath()
