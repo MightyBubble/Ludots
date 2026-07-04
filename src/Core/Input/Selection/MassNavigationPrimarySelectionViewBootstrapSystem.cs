@@ -26,7 +26,13 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
 
     public void Update(in float dt)
     {
-        if (_bootstrapped || !Ludots.Core.MassNavigation.MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        if (!Ludots.Core.MassNavigation.MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine))
+        {
+            _bootstrapped = false;
+            return;
+        }
+
+        if (_bootstrapped)
         {
             return;
         }
