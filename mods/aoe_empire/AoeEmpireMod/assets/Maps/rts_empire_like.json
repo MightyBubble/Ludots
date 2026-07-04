@@ -1,0 +1,781 @@
+{
+  "Id": "rts_empire_like",
+  "Tags": [
+    "rts",
+    "rts_showcase",
+    "rts_production",
+    "empire_like",
+    "aoe"
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 14000,
+    "TargetYCm": 9000,
+    "Yaw": 180,
+    "Pitch": 54,
+    "DistanceCm": 16000,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "widthInMacroTiles": 80,
+      "heightInMacroTiles": 60,
+      "GridCellSizeCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "aoe_frankia_team_anchor",
+      "InstanceId": "frankia_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 14800
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          },
+          "current": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_player_anchor",
+      "InstanceId": "frankia_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8200,
+            "Y": 15000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_town_center",
+      "InstanceId": "frankia_town_center",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 14000
+          }
+        },
+        "Name": {
+          "Value": "Frank Town Center"
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
+        "AbilityFormSetRef": {
+          "formSetId": "aoe_frankia_town_center_forms"
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_villager",
+      "InstanceId": "frankia_villager_a",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7400,
+            "Y": 13600
+          }
+        },
+        "Name": {
+          "Value": "Frank Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_villager",
+      "InstanceId": "frankia_villager_b",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8600,
+            "Y": 13600
+          }
+        },
+        "Name": {
+          "Value": "Frank Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_militia",
+      "InstanceId": "frankia_militia",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 14600
+          }
+        },
+        "Name": {
+          "Value": "Frank Militia"
+        }
+      }
+    },
+    {
+      "Template": "aoe_frankia_archer",
+      "InstanceId": "frankia_archer",
+      "Overrides": {
+        "Team": {
+          "Id": 1
+        },
+        "PlayerOwner": {
+          "PlayerId": 1
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8400,
+            "Y": 14600
+          }
+        },
+        "Name": {
+          "Value": "Frank Archer"
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_team_anchor",
+      "InstanceId": "andalus_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20000,
+            "Y": 14800
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          },
+          "current": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_player_anchor",
+      "InstanceId": "andalus_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {
+          "PlayerId": 2
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20200,
+            "Y": 15000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_town_center",
+      "InstanceId": "andalus_town_center",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20000,
+            "Y": 14000
+          }
+        },
+        "Name": {
+          "Value": "Saracen Town Center"
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
+        "AbilityFormSetRef": {
+          "formSetId": "aoe_andalus_town_center_forms"
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_villager",
+      "InstanceId": "andalus_villager_a",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19400,
+            "Y": 13600
+          }
+        },
+        "Name": {
+          "Value": "Saracen Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_villager",
+      "InstanceId": "andalus_villager_b",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20600,
+            "Y": 13600
+          }
+        },
+        "Name": {
+          "Value": "Saracen Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_militia",
+      "InstanceId": "andalus_militia",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19600,
+            "Y": 14600
+          }
+        },
+        "Name": {
+          "Value": "Saracen Militia"
+        }
+      }
+    },
+    {
+      "Template": "aoe_andalus_archer",
+      "InstanceId": "andalus_archer",
+      "Overrides": {
+        "Team": {
+          "Id": 2
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20400,
+            "Y": 14600
+          }
+        },
+        "Name": {
+          "Value": "Saracen Archer"
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_team_anchor",
+      "InstanceId": "khanate_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 4800
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          },
+          "current": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_player_anchor",
+      "InstanceId": "khanate_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {
+          "PlayerId": 3
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8200,
+            "Y": 5000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_town_center",
+      "InstanceId": "khanate_town_center",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8000,
+            "Y": 4000
+          }
+        },
+        "Name": {
+          "Value": "Mongol Town Center"
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
+        "AbilityFormSetRef": {
+          "formSetId": "aoe_khanate_town_center_forms"
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_villager",
+      "InstanceId": "khanate_villager_a",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7400,
+            "Y": 3600
+          }
+        },
+        "Name": {
+          "Value": "Mongol Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_villager",
+      "InstanceId": "khanate_villager_b",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8600,
+            "Y": 3600
+          }
+        },
+        "Name": {
+          "Value": "Mongol Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_militia",
+      "InstanceId": "khanate_militia",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 7600,
+            "Y": 4600
+          }
+        },
+        "Name": {
+          "Value": "Mongol Militia"
+        }
+      }
+    },
+    {
+      "Template": "aoe_khanate_archer",
+      "InstanceId": "khanate_archer",
+      "Overrides": {
+        "Team": {
+          "Id": 3
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 8400,
+            "Y": 4600
+          }
+        },
+        "Name": {
+          "Value": "Mongol Archer"
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_team_anchor",
+      "InstanceId": "dynasty_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20000,
+            "Y": 4800
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          },
+          "current": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_player_anchor",
+      "InstanceId": "dynasty_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {
+          "PlayerId": 4
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20200,
+            "Y": 5000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_town_center",
+      "InstanceId": "dynasty_town_center",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20000,
+            "Y": 4000
+          }
+        },
+        "Name": {
+          "Value": "Chinese Town Center"
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
+        "AbilityFormSetRef": {
+          "formSetId": "aoe_dynasty_town_center_forms"
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_villager",
+      "InstanceId": "dynasty_villager_a",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19400,
+            "Y": 3600
+          }
+        },
+        "Name": {
+          "Value": "Chinese Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_villager",
+      "InstanceId": "dynasty_villager_b",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20600,
+            "Y": 3600
+          }
+        },
+        "Name": {
+          "Value": "Chinese Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_militia",
+      "InstanceId": "dynasty_militia",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 19600,
+            "Y": 4600
+          }
+        },
+        "Name": {
+          "Value": "Chinese Militia"
+        }
+      }
+    },
+    {
+      "Template": "aoe_dynasty_archer",
+      "InstanceId": "dynasty_archer",
+      "Overrides": {
+        "Team": {
+          "Id": 4
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 20400,
+            "Y": 4600
+          }
+        },
+        "Name": {
+          "Value": "Chinese Archer"
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_team_anchor",
+      "InstanceId": "nordheim_team_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14000,
+            "Y": 9800
+          }
+        },
+        "AttributeBuffer": {
+          "base": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          },
+          "current": {
+            "Food": 200,
+            "Wood": 200,
+            "Gold": 100,
+            "Stone": 100
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_player_anchor",
+      "InstanceId": "nordheim_player_anchor",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {
+          "PlayerId": 5
+        },
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14200,
+            "Y": 10000
+          }
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_town_center",
+      "InstanceId": "nordheim_town_center",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14000,
+            "Y": 9000
+          }
+        },
+        "Name": {
+          "Value": "Viking Town Center"
+        },
+        "FacingDirection": {
+          "AngleRad": 0.0
+        },
+        "AbilityFormSetRef": {
+          "formSetId": "aoe_nordheim_town_center_forms"
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_villager",
+      "InstanceId": "nordheim_villager_a",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13400,
+            "Y": 8600
+          }
+        },
+        "Name": {
+          "Value": "Viking Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_villager",
+      "InstanceId": "nordheim_villager_b",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14600,
+            "Y": 8600
+          }
+        },
+        "Name": {
+          "Value": "Viking Villager"
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_militia",
+      "InstanceId": "nordheim_militia",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 13600,
+            "Y": 9600
+          }
+        },
+        "Name": {
+          "Value": "Viking Militia"
+        }
+      }
+    },
+    {
+      "Template": "aoe_nordheim_archer",
+      "InstanceId": "nordheim_archer",
+      "Overrides": {
+        "Team": {
+          "Id": 5
+        },
+        "PlayerOwner": {},
+        "WorldPositionCm": {
+          "Value": {
+            "X": 14400,
+            "Y": 9600
+          }
+        },
+        "Name": {
+          "Value": "Viking Archer"
+        }
+      }
+    }
+  ]
+}

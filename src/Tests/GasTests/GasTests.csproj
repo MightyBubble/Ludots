@@ -52,6 +52,8 @@
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\ArpgDemoMod\ArpgDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\aoe_empire\AoeEmpireMod\AoeEmpireMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\aoe_empire\AoeEmpireShowcaseMod\AoeEmpireShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />

@@ -1,0 +1,9 @@
+{
+  "startupMapId": "rts_empire_like",
+  "startupSelectedPlayerId": 1,
+  "windowTitle": "Ludots Engine - AoE Empire Showcase",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "targetFps": 60
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Graph.Aoe.Autocast.TargetHealth",
+    "kind": "Score",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget",
+        "next": "health"
+      },
+      {
+        "id": "health",
+        "op": "LoadAttribute",
+        "attribute": "Health",
+        "inputs": [
+          "target"
+        ]
+      }
+    ]
+  }
+]

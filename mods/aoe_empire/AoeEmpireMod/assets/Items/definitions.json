@@ -1,0 +1,107 @@
+[
+  {
+    "id": "itm_aoe_relic_frankia",
+    "displayName": "Frankia Relic",
+    "shape": "shape_relic_1x1",
+    "tags": [
+      "Equip.Slot.Relic",
+      "Item.Aoe.frankia"
+    ],
+    "allowedNamedSlots": [
+      "relic"
+    ],
+    "equipEffects": [
+      "Effect.Aoe.Item.Relic.Frankia"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 3,
+        "ability": "Ability.Aoe.Attack.Special"
+      }
+    ]
+  },
+  {
+    "id": "itm_aoe_relic_andalus",
+    "displayName": "Al-Andalus Relic",
+    "shape": "shape_relic_1x1",
+    "tags": [
+      "Equip.Slot.Relic",
+      "Item.Aoe.andalus"
+    ],
+    "allowedNamedSlots": [
+      "relic"
+    ],
+    "equipEffects": [
+      "Effect.Aoe.Item.Relic.Andalus"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 3,
+        "ability": "Ability.Aoe.Attack.Special"
+      }
+    ]
+  },
+  {
+    "id": "itm_aoe_relic_khanate",
+    "displayName": "Khanate Relic",
+    "shape": "shape_relic_1x1",
+    "tags": [
+      "Equip.Slot.Relic",
+      "Item.Aoe.khanate"
+    ],
+    "allowedNamedSlots": [
+      "relic"
+    ],
+    "equipEffects": [
+      "Effect.Aoe.Item.Relic.Khanate"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 3,
+        "ability": "Ability.Aoe.Attack.Special"
+      }
+    ]
+  },
+  {
+    "id": "itm_aoe_relic_dynasty",
+    "displayName": "Dynasty Relic",
+    "shape": "shape_relic_1x1",
+    "tags": [
+      "Equip.Slot.Relic",
+      "Item.Aoe.dynasty"
+    ],
+    "allowedNamedSlots": [
+      "relic"
+    ],
+    "equipEffects": [
+      "Effect.Aoe.Item.Relic.Dynasty"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 3,
+        "ability": "Ability.Aoe.Attack.Special"
+      }
+    ]
+  },
+  {
+    "id": "itm_aoe_relic_nordheim",
+    "displayName": "Nordheim Relic",
+    "shape": "shape_relic_1x1",
+    "tags": [
+      "Equip.Slot.Relic",
+      "Item.Aoe.nordheim"
+    ],
+    "allowedNamedSlots": [
+      "relic"
+    ],
+    "equipEffects": [
+      "Effect.Aoe.Item.Relic.Nordheim"
+    ],
+    "abilityGrants": [
+      {
+        "slotIndex": 3,
+        "ability": "Ability.Aoe.Attack.Special"
+      }
+    ]
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "aoe.town.base.raylib",
+    "assetKind": "Mesh",
+    "assetId": "aoe.town.base",
+    "backendId": "raylib",
+    "sourceUris": ["AoeEmpireMod:assets/Models/building_blacksmith_blue.gltf"]
+  },
+  {
+    "id": "aoe.town.tower.raylib",
+    "assetKind": "Mesh",
+    "assetId": "aoe.town.tower",
+    "backendId": "raylib",
+    "sourceUris": ["AoeEmpireMod:assets/Models/building_scaffolding.gltf"]
+  },
+  {
+    "id": "aoe.unit.villager.raylib",
+    "assetKind": "Mesh",
+    "assetId": "aoe.unit.villager",
+    "backendId": "raylib",
+    "sourceUris": ["AoeEmpireMod:assets/Models/building_mine_blue.gltf"]
+  },
+  {
+    "id": "aoe.unit.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "aoe.unit.soldier",
+    "backendId": "raylib",
+    "sourceUris": ["AoeEmpireMod:assets/Models/building_blacksmith_red.gltf"]
+  }
+]

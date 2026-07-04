@@ -1,0 +1,292 @@
+[
+  {
+    "id": "aoe_frankia_town_center_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Frankia.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Aoe.Frankia.Place.House"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Frankia.Ready.Barracks"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Aoe.Frankia.Place.Barracks"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Frankia.Ready.LumberCamp"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Frankia.Place.LumberCamp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_frankia_villager_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Frankia.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Frankia.Place.House"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_andalus_town_center_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Andalus.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Aoe.Andalus.Place.House"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Andalus.Ready.Barracks"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Aoe.Andalus.Place.Barracks"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Andalus.Ready.LumberCamp"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Andalus.Place.LumberCamp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_andalus_villager_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Andalus.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Andalus.Place.House"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_khanate_town_center_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Khanate.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Aoe.Khanate.Place.House"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Khanate.Ready.Barracks"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Aoe.Khanate.Place.Barracks"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Khanate.Ready.LumberCamp"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Khanate.Place.LumberCamp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_khanate_villager_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Khanate.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Khanate.Place.House"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_dynasty_town_center_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Dynasty.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Aoe.Dynasty.Place.House"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Dynasty.Ready.Barracks"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Aoe.Dynasty.Place.Barracks"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Dynasty.Ready.LumberCamp"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Dynasty.Place.LumberCamp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_dynasty_villager_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Dynasty.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Dynasty.Place.House"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_nordheim_town_center_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Nordheim.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 0,
+            "abilityId": "Ability.Aoe.Nordheim.Place.House"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Nordheim.Ready.Barracks"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 1,
+            "abilityId": "Ability.Aoe.Nordheim.Place.Barracks"
+          }
+        ]
+      },
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Nordheim.Ready.LumberCamp"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Nordheim.Place.LumberCamp"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "aoe_nordheim_villager_forms",
+    "routes": [
+      {
+        "priority": 100,
+        "requiredAll": [
+          "State.Aoe.Nordheim.Ready.House"
+        ],
+        "slotOverrides": [
+          {
+            "slotIndex": 2,
+            "abilityId": "Ability.Aoe.Nordheim.Place.House"
+          }
+        ]
+      }
+    ]
+  }
+]

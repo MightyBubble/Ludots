@@ -1,0 +1,15 @@
+{
+  "name": "AoeEmpireMod",
+  "version": "1.0.0",
+  "description": "Age-of-Empires-like RTS gameplay mod: 5 nations, 100 unit types, GAS production/combat, entity-scoped progression, items, and graphs.",
+  "main": "bin/net8.0/AoeEmpireMod.dll",
+  "priority": 50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "RtsDemoMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["rts", "aoe", "empire", "gameplay"]
+}

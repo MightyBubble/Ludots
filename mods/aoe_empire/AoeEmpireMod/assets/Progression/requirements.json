@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Req.Aoe.FeudalAge",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.Aoe.FeudalAge",
+      "scope": "faction",
+      "entitySource": "ScopeHost"
+    }
+  },
+  {
+    "id": "Req.Aoe.CastleAge",
+    "root": {
+      "kind": "ProgressionCompleted",
+      "progression": "Progression.Aoe.CastleAge",
+      "scope": "faction",
+      "entitySource": "ScopeHost"
+    }
+  }
+]

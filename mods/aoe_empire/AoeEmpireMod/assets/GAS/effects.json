@@ -1,0 +1,3320 @@
+[
+  {
+    "id": "Effect.Aoe.Construction",
+    "tags": [
+      "Effect.Aoe.Construction"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 45,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "State.Aoe.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Age.Feudal.Cost",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -500
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -200
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Age.Feudal.Grant",
+    "tags": [
+      "Effect.Aoe.Progression"
+    ],
+    "presetType": "CompleteProgression",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "progression": {
+      "id": "Progression.Aoe.FeudalAge",
+      "scope": "explicit",
+      "level": 1
+    }
+  },
+  {
+    "id": "Effect.Aoe.Gather.Wood",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": 10
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Gather.Gold",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": 8
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Attack.Melee",
+    "tags": [
+      "Effect.Aoe.Combat"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 140
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 4
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Aoe.Damage.Melee"
+    }
+  },
+  {
+    "id": "Effect.Aoe.Damage.Melee",
+    "tags": [
+      "Effect.Aoe.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -18
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Attack.Ranged",
+    "tags": [
+      "Effect.Aoe.Combat"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 700
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Aoe.Damage.Ranged"
+    }
+  },
+  {
+    "id": "Effect.Aoe.Damage.Ranged",
+    "tags": [
+      "Effect.Aoe.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Attack.Siege",
+    "tags": [
+      "Effect.Aoe.Combat"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 180
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 2
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Aoe.Damage.Siege"
+    }
+  },
+  {
+    "id": "Effect.Aoe.Damage.Siege",
+    "tags": [
+      "Effect.Aoe.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -45
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Attack.Tower",
+    "tags": [
+      "Effect.Aoe.Combat"
+    ],
+    "presetType": "PeriodicSearch",
+    "lifetime": "After",
+    "participatesInResponse": true,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 30,
+      "clockId": "FixedFrame"
+    },
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 900
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 1
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Aoe.Damage.Ranged"
+    }
+  },
+  {
+    "id": "Effect.Aoe.Attack.Special",
+    "tags": [
+      "Effect.Aoe.Combat"
+    ],
+    "presetType": "Search",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Cone",
+      "radius": 600,
+      "halfAngle": 35
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 6
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Aoe.Damage.Special"
+    }
+  },
+  {
+    "id": "Effect.Aoe.Damage.Special",
+    "tags": [
+      "Effect.Aoe.Damage"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": true,
+    "modifiers": [
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -28
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.HouseStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -6.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.House",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_house",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.BarracksStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -12.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.Barracks",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.LumberCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -4.17
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.LumberCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_lumber_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.MiningCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -5.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.MiningCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_mining_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.FarmStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.33
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.Farm",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_farm",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.ArcheryRangeStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.ArcheryRange",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_archery_range",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.StableStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -11.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.Stable",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_stable",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.SiegeWorkshopStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -13.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.SiegeWorkshop",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_siege_workshop",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.WatchTowerStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Stone",
+        "op": "Add",
+        "value": -8.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Place.WatchTower",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_watch_tower",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainMilitiaStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.67
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Militia",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_militia",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainSpearmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -3.57
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.57
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Spearman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_spearman",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainArcherStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.0
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Archer",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainScoutStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -5.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Scout",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_cavalry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainKnightStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Knight",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_knight",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainRamStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -8.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Ram",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainCatapultStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Catapult",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Cost.TrainCrossbowmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.5
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Frankia.Train.Crossbowman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_frankia_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.HouseStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -6.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.House",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_house",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.BarracksStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -12.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.Barracks",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.LumberCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -4.17
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.LumberCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_lumber_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.MiningCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -5.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.MiningCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_mining_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.FarmStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.33
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.Farm",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_farm",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.ArcheryRangeStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.ArcheryRange",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_archery_range",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.StableStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -11.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.Stable",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_stable",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.SiegeWorkshopStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -13.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.SiegeWorkshop",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_siege_workshop",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.WatchTowerStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Stone",
+        "op": "Add",
+        "value": -8.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Place.WatchTower",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_watch_tower",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainMilitiaStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.67
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Militia",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_militia",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainSpearmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -3.57
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.57
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Spearman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_spearman",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainArcherStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.0
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Archer",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainScoutStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -5.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Scout",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_cavalry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainKnightStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Knight",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_knight",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainRamStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -8.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Ram",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainCatapultStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Catapult",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Cost.TrainCrossbowmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.5
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Andalus.Train.Crossbowman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_andalus_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.HouseStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -6.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.House",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_house",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.BarracksStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -12.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.Barracks",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.LumberCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -4.17
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.LumberCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_lumber_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.MiningCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -5.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.MiningCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_mining_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.FarmStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.33
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.Farm",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_farm",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.ArcheryRangeStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.ArcheryRange",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_archery_range",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.StableStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -11.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.Stable",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_stable",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.SiegeWorkshopStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -13.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.SiegeWorkshop",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_siege_workshop",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.WatchTowerStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Stone",
+        "op": "Add",
+        "value": -8.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Place.WatchTower",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_watch_tower",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainMilitiaStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.67
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Militia",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_militia",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainSpearmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -3.57
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.57
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Spearman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_spearman",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainArcherStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.0
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Archer",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainScoutStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -5.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Scout",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_cavalry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainKnightStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Knight",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_knight",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainRamStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -8.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Ram",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainCatapultStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Catapult",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Cost.TrainCrossbowmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.5
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Khanate.Train.Crossbowman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_khanate_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.HouseStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -6.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.House",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_house",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.BarracksStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -12.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.Barracks",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.LumberCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -4.17
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.LumberCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_lumber_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.MiningCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -5.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.MiningCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_mining_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.FarmStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.33
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.Farm",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_farm",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.ArcheryRangeStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.ArcheryRange",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_archery_range",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.StableStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -11.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.Stable",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_stable",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.SiegeWorkshopStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -13.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.SiegeWorkshop",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_siege_workshop",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.WatchTowerStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Stone",
+        "op": "Add",
+        "value": -8.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Place.WatchTower",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_watch_tower",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainMilitiaStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.67
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Militia",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_militia",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainSpearmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -3.57
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.57
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Spearman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_spearman",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainArcherStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.0
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Archer",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainScoutStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -5.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Scout",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_cavalry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainKnightStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Knight",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_knight",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainRamStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -8.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Ram",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainCatapultStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Catapult",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Cost.TrainCrossbowmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.5
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Dynasty.Train.Crossbowman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_dynasty_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.HouseStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -6.25
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.House",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_house",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.BarracksStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -12.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.Barracks",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_barracks",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.LumberCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -4.17
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.LumberCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_lumber_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.MiningCampStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -5.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.MiningCamp",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_mining_camp",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.FarmStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.33
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.Farm",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_farm",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.ArcheryRangeStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.ArcheryRange",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_archery_range",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.StableStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -11.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.Stable",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_stable",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.SiegeWorkshopStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -13.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.SiegeWorkshop",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_siege_workshop",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.WatchTowerStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Stone",
+        "op": "Add",
+        "value": -8.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Place.WatchTower",
+    "tags": [
+      "Effect.Aoe.Build"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_watch_tower",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "onSpawnEffect": "Effect.Aoe.Construction",
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainMilitiaStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.67
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Militia",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_militia",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainSpearmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -3.57
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.57
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Spearman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_spearman",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainArcherStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.0
+      },
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -3.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Archer",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainScoutStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -5.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Scout",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_cavalry",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainKnightStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -6.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Knight",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_knight",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainRamStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -8.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Ram",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainCatapultStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Wood",
+        "op": "Add",
+        "value": -10.0
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -4.0
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Catapult",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_ram",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Cost.TrainCrossbowmanStep",
+    "tags": [
+      "Effect.Aoe.Cost"
+    ],
+    "presetType": "InstantDamage",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Food",
+        "op": "Add",
+        "value": -4.5
+      },
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": -2.5
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Nordheim.Train.Crossbowman",
+    "tags": [
+      "Effect.Aoe.Train"
+    ],
+    "presetType": "CreateUnit",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "unitCreation": {
+      "templateId": "aoe_nordheim_archer",
+      "placementPattern": "Scatter",
+      "count": 1,
+      "offsetRadius": 320,
+      "copySourcePlayerOwner": true
+    }
+  },
+  {
+    "id": "Effect.Aoe.Item.Relic.Frankia",
+    "tags": [
+      "Effect.Aoe.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 3
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Item.Relic.Andalus",
+    "tags": [
+      "Effect.Aoe.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 3
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Item.Relic.Khanate",
+    "tags": [
+      "Effect.Aoe.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 3
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Item.Relic.Dynasty",
+    "tags": [
+      "Effect.Aoe.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 3
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  },
+  {
+    "id": "Effect.Aoe.Item.Relic.Nordheim",
+    "tags": [
+      "Effect.Aoe.Item"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 3
+      },
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 50
+      }
+    ]
+  }
+]

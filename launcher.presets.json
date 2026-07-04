@@ -226,6 +226,29 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "aoe_empire_raylib",
+      "name": "AoE Empire Raylib",
+      "selectors": [
+        "$aoe_empire"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "aoe_empire_web",
+      "name": "AoE Empire Web",
+      "selectors": [
+        "$aoe_empire"
+      ],
+      "adapterId": "web",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
     }
   ]
 }

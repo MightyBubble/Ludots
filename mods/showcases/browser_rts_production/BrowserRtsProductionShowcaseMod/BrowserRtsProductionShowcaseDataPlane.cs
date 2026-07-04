@@ -109,8 +109,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             commands,
             buildables,
             production,
-            BrowserRtsProductionTechTreeView.Empty,
-            BrowserRtsProductionDiplomacyView.Empty,
+            BuildTechTree(flavor),
+            BuildDiplomacy(flavor, factions),
             diagnostics);
     }
 
@@ -121,6 +121,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             .Select(static entity => EntityKey(entity))
             .ToHashSet(StringComparer.Ordinal);
         var entities = new List<BrowserRtsProductionEntityView>(64);
+        string flavor = ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty);
         var query = new QueryDescription().WithAll<Name>();
         _engine.World.Query(in query, (Entity entity, ref Name name) =>
         {
@@ -148,8 +149,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                 name.Value,
                 kind,
                 teamId,
-                TeamName(teamId),
-                TeamColor(teamId),
+                TeamName(teamId, flavor),
+                TeamColor(teamId, flavor),
                 MathF.Round(position.Value.X.ToFloat() / 100f, 2),
                 MathF.Round(position.Value.Y.ToFloat() / 100f, 2),
                 MathF.Round(health, 1),
@@ -183,16 +184,17 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             _activeFactionId = $"team-{teamIds[0]}";
         }
 
+        string flavor = ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty);
         return teamIds
             .Select(teamId => new BrowserRtsProductionFactionView(
                 $"team-{teamId}",
-                TeamName(teamId),
+                TeamName(teamId, flavor),
                 teamId,
-                TeamColor(teamId),
+                TeamColor(teamId, flavor),
                 teamId == 1 ? "player" : "ai",
                 string.Equals($"team-{teamId}", _activeFactionId, StringComparison.Ordinal),
                 entities.Count(entity => entity.TeamId == teamId),
-                teamId == ResolveActiveTeamId() ? "Friendly" : "Neutral"))
+                teamId == ResolveActiveTeamId() ? "Friendly" : "War"))
             .ToArray();
     }
 
@@ -861,8 +863,31 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return "structure";
         }
 
-        if (lower.Contains("drone") || lower.Contains("probe") || lower.Contains("peasant") ||
-            lower.Contains("villager") || lower.Contains("settler"))
+        if (lower.Contains("villager") || lower.Contains("frank") || lower.Contains("saracen") ||
+            lower.Contains("mongol") || lower.Contains("chinese") || lower.Contains("viking"))
+        {
+            return "worker";
+        }
+
+        if (lower.Contains("militia") || lower.Contains("spearman") || lower.Contains("archer") ||
+            lower.Contains("knight") || lower.Contains("cavalry") || lower.Contains("paladin") ||
+            lower.Contains("mameluke") || lower.Contains("keshik") || lower.Contains("berserker"))
+        {
+            return "unit";
+        }
+
+        if (lower.Contains("ram") || lower.Contains("catapult") || lower.Contains("siege"))
+        {
+            return "siege";
+        }
+
+        if (lower.Contains("town") || lower.Contains("barracks") || lower.Contains("stable") ||
+            lower.Contains("farm") || lower.Contains("tower") || lower.Contains("workshop"))
+        {
+            return "structure";
+        }
+
+        if (lower.Contains("drone") || lower.Contains("probe") || lower.Contains("peasant"))
         {
             return "worker";
         }
@@ -874,6 +899,121 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         }
 
         return "unit";
+    }
+
+    private BrowserRtsProductionTechTreeView BuildTechTree(string flavor)
+    {
+        if (!string.Equals(flavor, "empire-like", StringComparison.Ordinal))
+        {
+            return BrowserRtsProductionTechTreeView.Empty;
+        }
+
+        if (_engine.GlobalContext.TryGetValue("AoeEmpireMod.TechTreeProjection", out object? projectionObj) &&
+            projectionObj != null)
+        {
+            var projectionType = projectionObj.GetType();
+            var nodesProp = projectionType.GetProperty("Nodes");
+            if (nodesProp?.GetValue(projectionObj) is System.Collections.IEnumerable projectedNodes)
+            {
+                var mapped = new List<BrowserRtsProductionTechNodeView>();
+                foreach (object? node in projectedNodes)
+                {
+                    if (node == null)
+                    {
+                        continue;
+                    }
+
+                    var nodeType = node.GetType();
+                    string id = nodeType.GetProperty("Id")?.GetValue(node)?.ToString() ?? string.Empty;
+                    string label = nodeType.GetProperty("Label")?.GetValue(node)?.ToString() ?? id;
+                    bool completed = nodeType.GetProperty("Completed")?.GetValue(node) is bool b && b;
+                    int tier = nodeType.GetProperty("Tier")?.GetValue(node) is int t ? t : 0;
+                    string state = completed ? "completed" : tier <= 1 ? "available" : "locked";
+                    mapped.Add(new BrowserRtsProductionTechNodeView(id, label, state, tier, 0, label));
+                }
+
+                if (mapped.Count > 0)
+                {
+                    var edges = new List<BrowserRtsProductionTechEdgeView>();
+                    for (int i = 0; i < mapped.Count - 1; i++)
+                    {
+                        edges.Add(new BrowserRtsProductionTechEdgeView(mapped[i].Id, mapped[i + 1].Id));
+                    }
+
+                    return new BrowserRtsProductionTechTreeView(mapped.ToArray(), edges.ToArray());
+                }
+            }
+        }
+
+        BrowserRtsProductionTechNodeView[] nodes =
+        [
+            new("dark-age", "Dark Age", "completed", 0, 0, "Starting age"),
+            new("feudal-age", "Feudal Age", "available", 1, 0, "500 Food, 200 Gold"),
+            new("castle-age", "Castle Age", "locked", 2, 0, "Requires Feudal Age"),
+            new("imperial-age", "Imperial Age", "locked", 3, 0, "Requires Castle Age"),
+        ];
+        BrowserRtsProductionTechEdgeView[] edges =
+        [
+            new("dark-age", "feudal-age"),
+            new("feudal-age", "castle-age"),
+            new("castle-age", "imperial-age"),
+        ];
+        return new BrowserRtsProductionTechTreeView(nodes, edges);
+    }
+
+    private BrowserRtsProductionDiplomacyView BuildDiplomacy(string flavor, BrowserRtsProductionFactionView[] factions)
+    {
+        if (!string.Equals(flavor, "empire-like", StringComparison.Ordinal))
+        {
+            return BrowserRtsProductionDiplomacyView.Empty;
+        }
+
+        var rows = factions
+            .Select(faction => new BrowserRtsProductionDiplomacyRowView(
+                faction.Id,
+                faction.Name,
+                faction.TeamId == 1 ? "Self" : "War",
+                faction.TeamId == 1 ? 100 : 0,
+                faction.TeamId == 1 ? ["Alliance"] : Array.Empty<string>(),
+                faction.TeamId == 1 ? "Open" : "Hostile"))
+            .ToArray();
+        return new BrowserRtsProductionDiplomacyView(rows, Array.Empty<BrowserRtsProductionProposalView>());
+    }
+
+    private static string TeamName(int teamId, string flavor)
+    {
+        if (string.Equals(flavor, "empire-like", StringComparison.Ordinal))
+        {
+            return teamId switch
+            {
+                1 => "Frankia",
+                2 => "Al-Andalus",
+                3 => "Khanate",
+                4 => "Dynasty",
+                5 => "Nordheim",
+                _ => $"Team {teamId}"
+            };
+        }
+
+        return TeamName(teamId);
+    }
+
+    private static string TeamColor(int teamId, string flavor)
+    {
+        if (string.Equals(flavor, "empire-like", StringComparison.Ordinal))
+        {
+            return teamId switch
+            {
+                1 => "#2563EB",
+                2 => "#16A34A",
+                3 => "#DC2626",
+                4 => "#CA8A04",
+                5 => "#7C3AED",
+                _ => "#8DB596"
+            };
+        }
+
+        return TeamColor(teamId);
     }
 
     private static string TeamName(int teamId)

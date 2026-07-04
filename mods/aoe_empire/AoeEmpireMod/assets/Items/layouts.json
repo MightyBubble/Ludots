@@ -1,0 +1,16 @@
+[
+  {
+    "id": "layout_relic_socket",
+    "purpose": "Equipment",
+    "grantsEquipmentBonuses": true,
+    "namedSlots": [
+      {
+        "id": "relic",
+        "label": "Relic",
+        "requiredAll": [
+          "Equip.Slot.Relic"
+        ]
+      }
+    ]
+  }
+]

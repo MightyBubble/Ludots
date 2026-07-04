@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Progression.Aoe.FeudalAge",
+    "scope": "faction"
+  },
+  {
+    "id": "Progression.Aoe.CastleAge",
+    "scope": "faction"
+  },
+  {
+    "id": "Progression.Aoe.ImperialAge",
+    "scope": "faction"
+  }
+]

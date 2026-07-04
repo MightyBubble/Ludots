@@ -1,0 +1,6 @@
+[
+  { "id": "aoe.town.base", "type": "Model" },
+  { "id": "aoe.town.tower", "type": "Model" },
+  { "id": "aoe.unit.villager", "type": "Model" },
+  { "id": "aoe.unit.soldier", "type": "Model" }
+]

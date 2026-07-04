@@ -1,0 +1,6 @@
+{
+  "actorOrderRouting": {
+    "defaultOrderTypeKey": "moveTo",
+    "rules": []
+  }
+}

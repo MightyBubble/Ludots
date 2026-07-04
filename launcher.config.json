@@ -200,6 +200,14 @@
         "value": "mods/showcases/capability_standard/CapabilityStandardTransportNetworkMod",
         "projectPath": "CapabilityStandardTransportNetworkMod.csproj"
       }
+    },
+    {
+      "name": "aoe_empire",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/aoe_empire/AoeEmpireShowcaseMod",
+        "projectPath": "AoeEmpireShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

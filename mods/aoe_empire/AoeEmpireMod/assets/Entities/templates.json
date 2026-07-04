@@ -1,0 +1,4879 @@
+[
+  {
+    "id": "aoe_frankia_team_anchor",
+    "components": {
+      "Name": {
+        "Value": "Team Anchor"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_frankia_player_anchor",
+    "components": {
+      "Name": {
+        "Value": "Player Anchor"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_town_center",
+    "components": {
+      "Name": {
+        "Value": "Frank Town Center"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        },
+        "current": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Frankia.Build.House",
+          "Ability.Aoe.Frankia.Build.Barracks",
+          "Ability.Aoe.Frankia.Build.LumberCamp",
+          "Ability.Aoe.Age.Feudal"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_frankia_town_center_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_house",
+    "components": {
+      "Name": {
+        "Value": "Frank House"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Food": 5
+        },
+        "current": {
+          "Health": 900,
+          "Food": 5
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_barracks",
+    "components": {
+      "Name": {
+        "Value": "Frank Barracks"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Frankia.Train.Militia",
+          "Ability.Aoe.Frankia.Train.Spearman",
+          "Ability.Aoe.Frankia.Train.Archer",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_archery_range",
+    "components": {
+      "Name": {
+        "Value": "Frank Archery Range"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100
+        },
+        "current": {
+          "Health": 1100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Archer",
+          "Ability.Aoe.Train.Crossbowman",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_stable",
+    "components": {
+      "Name": {
+        "Value": "Frank Stable"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Scout",
+          "Ability.Aoe.Train.Knight",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_siege_workshop",
+    "components": {
+      "Name": {
+        "Value": "Frank Siege Workshop"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300
+        },
+        "current": {
+          "Health": 1300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Ram",
+          "Ability.Aoe.Train.Catapult",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_lumber_camp",
+    "components": {
+      "Name": {
+        "Value": "Frank Lumber Camp"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Wood": 100
+        },
+        "current": {
+          "Health": 800,
+          "Wood": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_mining_camp",
+    "components": {
+      "Name": {
+        "Value": "Frank Mining Camp"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        },
+        "current": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_farm",
+    "components": {
+      "Name": {
+        "Value": "Frank Farm"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Food": 50
+        },
+        "current": {
+          "Health": 600,
+          "Food": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_watch_tower",
+    "components": {
+      "Name": {
+        "Value": "Frank Watch Tower"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        },
+        "current": {
+          "Health": 1000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Tower",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_villager",
+    "components": {
+      "Name": {
+        "Value": "Frank Villager"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Health": 250,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Gather.Wood",
+          "Ability.Aoe.Gather.Gold",
+          "Ability.Aoe.Frankia.Build.House",
+          "Ability.Aoe.Attack.Melee"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_frankia_villager_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_militia",
+    "components": {
+      "Name": {
+        "Value": "Frank Militia"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        },
+        "current": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_spearman",
+    "components": {
+      "Name": {
+        "Value": "Frank Spearman"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        },
+        "current": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_archer",
+    "components": {
+      "Name": {
+        "Value": "Frank Archer"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        },
+        "current": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Ranged",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_cavalry",
+    "components": {
+      "Name": {
+        "Value": "Frank Scout Cavalry"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_knight",
+    "components": {
+      "Name": {
+        "Value": "Frank Knight"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        },
+        "current": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_ram",
+    "components": {
+      "Name": {
+        "Value": "Frank Battering Ram"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        },
+        "current": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Siege",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_frankia_elite",
+    "components": {
+      "Name": {
+        "Value": "Frank Paladin"
+      },
+      "Team": {
+        "Id": 1
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        },
+        "current": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Attack.Special",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_team_anchor",
+    "components": {
+      "Name": {
+        "Value": "Team Anchor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_player_anchor",
+    "components": {
+      "Name": {
+        "Value": "Player Anchor"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_town_center",
+    "components": {
+      "Name": {
+        "Value": "Saracen Town Center"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        },
+        "current": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Andalus.Build.House",
+          "Ability.Aoe.Andalus.Build.Barracks",
+          "Ability.Aoe.Andalus.Build.LumberCamp",
+          "Ability.Aoe.Age.Feudal"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_andalus_town_center_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_house",
+    "components": {
+      "Name": {
+        "Value": "Saracen House"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Food": 5
+        },
+        "current": {
+          "Health": 900,
+          "Food": 5
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_barracks",
+    "components": {
+      "Name": {
+        "Value": "Saracen Barracks"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Andalus.Train.Militia",
+          "Ability.Aoe.Andalus.Train.Spearman",
+          "Ability.Aoe.Andalus.Train.Archer",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_archery_range",
+    "components": {
+      "Name": {
+        "Value": "Saracen Archery Range"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100
+        },
+        "current": {
+          "Health": 1100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Archer",
+          "Ability.Aoe.Train.Crossbowman",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_stable",
+    "components": {
+      "Name": {
+        "Value": "Saracen Stable"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Scout",
+          "Ability.Aoe.Train.Knight",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_siege_workshop",
+    "components": {
+      "Name": {
+        "Value": "Saracen Siege Workshop"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300
+        },
+        "current": {
+          "Health": 1300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Ram",
+          "Ability.Aoe.Train.Catapult",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_lumber_camp",
+    "components": {
+      "Name": {
+        "Value": "Saracen Lumber Camp"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Wood": 100
+        },
+        "current": {
+          "Health": 800,
+          "Wood": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_mining_camp",
+    "components": {
+      "Name": {
+        "Value": "Saracen Mining Camp"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        },
+        "current": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_farm",
+    "components": {
+      "Name": {
+        "Value": "Saracen Farm"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Food": 50
+        },
+        "current": {
+          "Health": 600,
+          "Food": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_andalus_watch_tower",
+    "components": {
+      "Name": {
+        "Value": "Saracen Watch Tower"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        },
+        "current": {
+          "Health": 1000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Tower",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_villager",
+    "components": {
+      "Name": {
+        "Value": "Saracen Villager"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Health": 250,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Gather.Wood",
+          "Ability.Aoe.Gather.Gold",
+          "Ability.Aoe.Andalus.Build.House",
+          "Ability.Aoe.Attack.Melee"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_andalus_villager_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_militia",
+    "components": {
+      "Name": {
+        "Value": "Saracen Militia"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        },
+        "current": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_spearman",
+    "components": {
+      "Name": {
+        "Value": "Saracen Spearman"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        },
+        "current": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_archer",
+    "components": {
+      "Name": {
+        "Value": "Saracen Archer"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        },
+        "current": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Ranged",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_cavalry",
+    "components": {
+      "Name": {
+        "Value": "Saracen Scout Cavalry"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_knight",
+    "components": {
+      "Name": {
+        "Value": "Saracen Knight"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        },
+        "current": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_ram",
+    "components": {
+      "Name": {
+        "Value": "Saracen Battering Ram"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        },
+        "current": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Siege",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_andalus_elite",
+    "components": {
+      "Name": {
+        "Value": "Saracen Mameluke"
+      },
+      "Team": {
+        "Id": 2
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        },
+        "current": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Attack.Special",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_team_anchor",
+    "components": {
+      "Name": {
+        "Value": "Team Anchor"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_player_anchor",
+    "components": {
+      "Name": {
+        "Value": "Player Anchor"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_town_center",
+    "components": {
+      "Name": {
+        "Value": "Mongol Town Center"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        },
+        "current": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Khanate.Build.House",
+          "Ability.Aoe.Khanate.Build.Barracks",
+          "Ability.Aoe.Khanate.Build.LumberCamp",
+          "Ability.Aoe.Age.Feudal"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_khanate_town_center_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_house",
+    "components": {
+      "Name": {
+        "Value": "Mongol House"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Food": 5
+        },
+        "current": {
+          "Health": 900,
+          "Food": 5
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_barracks",
+    "components": {
+      "Name": {
+        "Value": "Mongol Barracks"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Khanate.Train.Militia",
+          "Ability.Aoe.Khanate.Train.Spearman",
+          "Ability.Aoe.Khanate.Train.Archer",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_archery_range",
+    "components": {
+      "Name": {
+        "Value": "Mongol Archery Range"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100
+        },
+        "current": {
+          "Health": 1100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Archer",
+          "Ability.Aoe.Train.Crossbowman",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_stable",
+    "components": {
+      "Name": {
+        "Value": "Mongol Stable"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Scout",
+          "Ability.Aoe.Train.Knight",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_siege_workshop",
+    "components": {
+      "Name": {
+        "Value": "Mongol Siege Workshop"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300
+        },
+        "current": {
+          "Health": 1300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Ram",
+          "Ability.Aoe.Train.Catapult",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_lumber_camp",
+    "components": {
+      "Name": {
+        "Value": "Mongol Lumber Camp"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Wood": 100
+        },
+        "current": {
+          "Health": 800,
+          "Wood": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_mining_camp",
+    "components": {
+      "Name": {
+        "Value": "Mongol Mining Camp"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        },
+        "current": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_farm",
+    "components": {
+      "Name": {
+        "Value": "Mongol Farm"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Food": 50
+        },
+        "current": {
+          "Health": 600,
+          "Food": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_khanate_watch_tower",
+    "components": {
+      "Name": {
+        "Value": "Mongol Watch Tower"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        },
+        "current": {
+          "Health": 1000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Tower",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_villager",
+    "components": {
+      "Name": {
+        "Value": "Mongol Villager"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Health": 250,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Gather.Wood",
+          "Ability.Aoe.Gather.Gold",
+          "Ability.Aoe.Khanate.Build.House",
+          "Ability.Aoe.Attack.Melee"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_khanate_villager_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_militia",
+    "components": {
+      "Name": {
+        "Value": "Mongol Militia"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        },
+        "current": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_spearman",
+    "components": {
+      "Name": {
+        "Value": "Mongol Spearman"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        },
+        "current": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_archer",
+    "components": {
+      "Name": {
+        "Value": "Mongol Archer"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        },
+        "current": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Ranged",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_cavalry",
+    "components": {
+      "Name": {
+        "Value": "Mongol Scout Cavalry"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_knight",
+    "components": {
+      "Name": {
+        "Value": "Mongol Knight"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        },
+        "current": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_ram",
+    "components": {
+      "Name": {
+        "Value": "Mongol Battering Ram"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        },
+        "current": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Siege",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_khanate_elite",
+    "components": {
+      "Name": {
+        "Value": "Mongol Keshik"
+      },
+      "Team": {
+        "Id": 3
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        },
+        "current": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Attack.Special",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_team_anchor",
+    "components": {
+      "Name": {
+        "Value": "Team Anchor"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_player_anchor",
+    "components": {
+      "Name": {
+        "Value": "Player Anchor"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_town_center",
+    "components": {
+      "Name": {
+        "Value": "Chinese Town Center"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        },
+        "current": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Dynasty.Build.House",
+          "Ability.Aoe.Dynasty.Build.Barracks",
+          "Ability.Aoe.Dynasty.Build.LumberCamp",
+          "Ability.Aoe.Age.Feudal"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_dynasty_town_center_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_house",
+    "components": {
+      "Name": {
+        "Value": "Chinese House"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Food": 5
+        },
+        "current": {
+          "Health": 900,
+          "Food": 5
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_barracks",
+    "components": {
+      "Name": {
+        "Value": "Chinese Barracks"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Dynasty.Train.Militia",
+          "Ability.Aoe.Dynasty.Train.Spearman",
+          "Ability.Aoe.Dynasty.Train.Archer",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_archery_range",
+    "components": {
+      "Name": {
+        "Value": "Chinese Archery Range"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100
+        },
+        "current": {
+          "Health": 1100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Archer",
+          "Ability.Aoe.Train.Crossbowman",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_stable",
+    "components": {
+      "Name": {
+        "Value": "Chinese Stable"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Scout",
+          "Ability.Aoe.Train.Knight",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_siege_workshop",
+    "components": {
+      "Name": {
+        "Value": "Chinese Siege Workshop"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300
+        },
+        "current": {
+          "Health": 1300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Ram",
+          "Ability.Aoe.Train.Catapult",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_lumber_camp",
+    "components": {
+      "Name": {
+        "Value": "Chinese Lumber Camp"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Wood": 100
+        },
+        "current": {
+          "Health": 800,
+          "Wood": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_mining_camp",
+    "components": {
+      "Name": {
+        "Value": "Chinese Mining Camp"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        },
+        "current": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_farm",
+    "components": {
+      "Name": {
+        "Value": "Chinese Farm"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Food": 50
+        },
+        "current": {
+          "Health": 600,
+          "Food": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_dynasty_watch_tower",
+    "components": {
+      "Name": {
+        "Value": "Chinese Watch Tower"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        },
+        "current": {
+          "Health": 1000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Tower",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_villager",
+    "components": {
+      "Name": {
+        "Value": "Chinese Villager"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Health": 250,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Gather.Wood",
+          "Ability.Aoe.Gather.Gold",
+          "Ability.Aoe.Dynasty.Build.House",
+          "Ability.Aoe.Attack.Melee"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_dynasty_villager_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_militia",
+    "components": {
+      "Name": {
+        "Value": "Chinese Militia"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        },
+        "current": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_spearman",
+    "components": {
+      "Name": {
+        "Value": "Chinese Spearman"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        },
+        "current": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_archer",
+    "components": {
+      "Name": {
+        "Value": "Chinese Archer"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        },
+        "current": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Ranged",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_cavalry",
+    "components": {
+      "Name": {
+        "Value": "Chinese Scout Cavalry"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_knight",
+    "components": {
+      "Name": {
+        "Value": "Chinese Knight"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        },
+        "current": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_ram",
+    "components": {
+      "Name": {
+        "Value": "Chinese Battering Ram"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        },
+        "current": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Siege",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_dynasty_elite",
+    "components": {
+      "Name": {
+        "Value": "Chinese Chu Ko Nu"
+      },
+      "Team": {
+        "Id": 4
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        },
+        "current": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Attack.Special",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_team_anchor",
+    "components": {
+      "Name": {
+        "Value": "Team Anchor"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_player_anchor",
+    "components": {
+      "Name": {
+        "Value": "Player Anchor"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        },
+        "current": {
+          "Food": 0,
+          "Wood": 0,
+          "Gold": 0,
+          "Stone": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_town_center",
+    "components": {
+      "Name": {
+        "Value": "Viking Town Center"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        },
+        "current": {
+          "Health": 2400,
+          "Food": 200,
+          "Wood": 200,
+          "Gold": 100,
+          "Stone": 150
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Nordheim.Build.House",
+          "Ability.Aoe.Nordheim.Build.Barracks",
+          "Ability.Aoe.Nordheim.Build.LumberCamp",
+          "Ability.Aoe.Age.Feudal"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_nordheim_town_center_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_house",
+    "components": {
+      "Name": {
+        "Value": "Viking House"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 900,
+          "Food": 5
+        },
+        "current": {
+          "Health": 900,
+          "Food": 5
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_barracks",
+    "components": {
+      "Name": {
+        "Value": "Viking Barracks"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Nordheim.Train.Militia",
+          "Ability.Aoe.Nordheim.Train.Spearman",
+          "Ability.Aoe.Nordheim.Train.Archer",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_archery_range",
+    "components": {
+      "Name": {
+        "Value": "Viking Archery Range"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1100
+        },
+        "current": {
+          "Health": 1100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Archer",
+          "Ability.Aoe.Train.Crossbowman",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_stable",
+    "components": {
+      "Name": {
+        "Value": "Viking Stable"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1200
+        },
+        "current": {
+          "Health": 1200
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Scout",
+          "Ability.Aoe.Train.Knight",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_siege_workshop",
+    "components": {
+      "Name": {
+        "Value": "Viking Siege Workshop"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1300
+        },
+        "current": {
+          "Health": 1300
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Train.Ram",
+          "Ability.Aoe.Train.Catapult",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_lumber_camp",
+    "components": {
+      "Name": {
+        "Value": "Viking Lumber Camp"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "Wood": 100
+        },
+        "current": {
+          "Health": 800,
+          "Wood": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_mining_camp",
+    "components": {
+      "Name": {
+        "Value": "Viking Mining Camp"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        },
+        "current": {
+          "Health": 850,
+          "Stone": 100,
+          "Gold": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_farm",
+    "components": {
+      "Name": {
+        "Value": "Viking Farm"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 600,
+          "Food": 50
+        },
+        "current": {
+          "Health": 600,
+          "Food": 50
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "aoe_nordheim_watch_tower",
+    "components": {
+      "Name": {
+        "Value": "Viking Watch Tower"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 1000
+        },
+        "current": {
+          "Health": 1000
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Tower",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_villager",
+    "components": {
+      "Name": {
+        "Value": "Viking Villager"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 250,
+          "MoveSpeed": 550
+        },
+        "current": {
+          "Health": 250,
+          "MoveSpeed": 550
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Gather.Wood",
+          "Ability.Aoe.Gather.Gold",
+          "Ability.Aoe.Nordheim.Build.House",
+          "Ability.Aoe.Attack.Melee"
+        ]
+      },
+      "AbilityFormSetRef": {
+        "formSetId": "aoe_nordheim_villager_forms"
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_militia",
+    "components": {
+      "Name": {
+        "Value": "Viking Militia"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        },
+        "current": {
+          "Health": 400,
+          "MoveSpeed": 600,
+          "Attack": 6
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_spearman",
+    "components": {
+      "Name": {
+        "Value": "Viking Spearman"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        },
+        "current": {
+          "Health": 450,
+          "MoveSpeed": 580,
+          "Attack": 8
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_archer",
+    "components": {
+      "Name": {
+        "Value": "Viking Archer"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        },
+        "current": {
+          "Health": 300,
+          "MoveSpeed": 560,
+          "Attack": 5,
+          "Range": 500
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Ranged",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_cavalry",
+    "components": {
+      "Name": {
+        "Value": "Viking Scout Cavalry"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        },
+        "current": {
+          "Health": 500,
+          "MoveSpeed": 900,
+          "Attack": 7
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_knight",
+    "components": {
+      "Name": {
+        "Value": "Viking Knight"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        },
+        "current": {
+          "Health": 700,
+          "MoveSpeed": 750,
+          "Attack": 12
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_ram",
+    "components": {
+      "Name": {
+        "Value": "Viking Battering Ram"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        },
+        "current": {
+          "Health": 800,
+          "MoveSpeed": 400,
+          "Attack": 20
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Siege",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  },
+  {
+    "id": "aoe_nordheim_elite",
+    "components": {
+      "Name": {
+        "Value": "Viking Berserker"
+      },
+      "Team": {
+        "Id": 5
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        },
+        "current": {
+          "Health": 850,
+          "MoveSpeed": 700,
+          "Attack": 14
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": {
+        "IsEnabled": true
+      },
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "PresentationStaticTransform": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Aoe.Attack.Melee",
+          "Ability.Aoe.Attack.Special",
+          "Ability.Aoe.Shared.Hold",
+          "Ability.Aoe.Shared.Hold"
+        ]
+      }
+    }
+  }
+]
