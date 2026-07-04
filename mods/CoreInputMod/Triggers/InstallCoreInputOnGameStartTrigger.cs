@@ -62,6 +62,7 @@ namespace CoreInputMod.Triggers
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
+            engine.RegisterSystem(new CommandInteractionSemanticSystem(engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
             engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 

@@ -45,16 +45,12 @@ public sealed class MassNavigationMoveOrderSourceSystem : ISystem<float>
         simulation.ObserveCommandTick();
 
         if (_engine.GetService(CoreServiceKeys.UiCaptured) ||
-            _engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader input)
+            _engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader)
         {
             return;
         }
 
-        InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
-            _engine.GlobalContext,
-            nameof(MassNavigationMoveOrderSourceSystem));
-        if (!input.PressedThisFrame(bindings.CommandActionId) ||
-            !AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 worldCm))
+        if (!CommandInteractionSemanticRuntime.TryConsumeGroundMoveCommand(_engine.GlobalContext, out WorldCmInt2 worldCm))
         {
             return;
         }
