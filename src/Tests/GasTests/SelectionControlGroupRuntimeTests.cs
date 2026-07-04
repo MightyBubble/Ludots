@@ -30,8 +30,8 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.SelectionRuntime.Name] = selection,
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-                [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+                [CoreServiceKeys.EntityViewViewerEntity.Name] = viewer,
+                [CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary,
             };
 
             Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { first, second }), Is.True);
@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
             Assert.That(selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary), Is.EqualTo(2));
             Assert.That(selection.TryGetSelectionAt(viewer, SelectionSetKeys.LivePrimary, 0, out Entity recalledPrimary), Is.True);
             Assert.That(recalledPrimary, Is.EqualTo(first));
-            Assert.That(globals[CoreServiceKeys.SelectionViewKey.Name], Is.EqualTo(SelectionViewKeys.Primary));
+            Assert.That(globals[CoreServiceKeys.EntityViewKey.Name], Is.EqualTo(SelectionViewKeys.Primary));
             Assert.That(selection.TryDescribeSelection(viewer, SelectionSetKeys.FormationPrimary, out formationDescriptor), Is.True);
             Assert.That(formationDescriptor.MemberCount, Is.EqualTo(2));
         }

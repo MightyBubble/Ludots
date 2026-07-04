@@ -1187,24 +1187,6 @@ public sealed class MassNavigationSimulationRuntime
         return PerformerParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
     }
 
-    public MassNavigationMoveCommandResult SubmitMoveCommand(
-        World world,
-        Dictionary<string, object> globals,
-        OrderQueue orderQueue,
-        OrderTypeRegistry orderTypeRegistry,
-        Vector2 centerCm,
-        int playerId)
-    {
-        return MassNavigationMoveOrderSubmitter.SubmitViaOrderQueue(
-            this,
-            world,
-            globals,
-            orderQueue,
-            orderTypeRegistry,
-            centerCm,
-            playerId);
-    }
-
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
         WorldAabbCm bounds = RequireBoardWorldSize().Bounds;

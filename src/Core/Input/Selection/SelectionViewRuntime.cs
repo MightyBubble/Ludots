@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Selection
@@ -23,24 +24,12 @@ namespace Ludots.Core.Input.Selection
             viewKey = string.Empty;
             container = default;
 
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewObj) &&
-                viewObj is Entity viewed &&
-                world.IsAlive(viewed))
-            {
-                viewer = viewed;
-            }
-            else
+            if (!EntityViewRuntime.TryGetCurrentViewer(world, globals, out viewer))
             {
                 return false;
             }
 
-            if (globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var viewKeyObj) &&
-                viewKeyObj is string configuredViewKey &&
-                !string.IsNullOrWhiteSpace(configuredViewKey))
-            {
-                viewKey = configuredViewKey;
-            }
-            else
+            if (!EntityViewRuntime.TryGetCurrentViewKey(globals, out viewKey))
             {
                 return false;
             }

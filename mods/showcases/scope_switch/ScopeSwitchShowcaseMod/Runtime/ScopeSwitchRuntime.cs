@@ -197,7 +197,7 @@ public sealed class ScopeSwitchRuntime
         }
 
         engine.SetService(CoreServiceKeys.LocalPlayerEntity, _viewer);
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = _viewer;
+        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = _viewer;
     }
 
     private void BuildScopes(GameEngine engine)

@@ -63,8 +63,8 @@ namespace Ludots.Core.Input.Selection
             }
 
             selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            globals[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
 
             if (!mirrorToFormation)
             {

@@ -145,8 +145,8 @@ namespace Ludots.Core.Input.Selection
                 }
             }
 
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = viewKey;
+            globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            globals[CoreServiceKeys.EntityViewKey.Name] = viewKey;
             return TryDescribeCurrentView(world, globals, out descriptor);
         }
 

@@ -1217,8 +1217,8 @@ namespace Ludots.Tests.GAS.Production
             next[0] = target;
             selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
             selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private static string ReadName(World world, Entity entity)

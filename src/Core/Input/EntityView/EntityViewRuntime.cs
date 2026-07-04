@@ -37,14 +37,6 @@ public static class EntityViewRuntime
             return true;
         }
 
-        if (globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out object? legacy) &&
-            legacy is string legacyViewKey &&
-            !string.IsNullOrWhiteSpace(legacyViewKey))
-        {
-            viewKey = legacyViewKey;
-            return true;
-        }
-
         return false;
     }
 
@@ -56,14 +48,6 @@ public static class EntityViewRuntime
             world.IsAlive(configuredViewer))
         {
             viewer = configuredViewer;
-            return true;
-        }
-
-        if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out object? legacy) &&
-            legacy is Entity legacyViewer &&
-            world.IsAlive(legacyViewer))
-        {
-            viewer = legacyViewer;
             return true;
         }
 
@@ -106,8 +90,6 @@ public static class EntityViewRuntime
 
         globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
         globals[CoreServiceKeys.EntityViewKey.Name] = viewKey;
-        globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-        globals[CoreServiceKeys.SelectionViewKey.Name] = viewKey;
         _ = profile;
         return true;
     }
@@ -182,6 +164,28 @@ public static class EntityViewRuntime
             "Command source",
             summary);
         return collections.Replace(owner, descriptor, entities);
+    }
+
+    public static void ClearCurrentViewCollections(
+        World world,
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config,
+        EntityCollectionStore collections,
+        string summary)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(globals);
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(collections);
+        if (!TryGetCurrentViewer(world, globals, out Entity viewer) ||
+            !TryResolveCurrentProfile(globals, config, out EntityViewProfileEntry profile))
+        {
+            return;
+        }
+
+        ReadOnlySpan<Entity> empty = ReadOnlySpan<Entity>.Empty;
+        PromoteCommandSource(collections, viewer, in profile, empty, summary);
+        PromoteDisplayCollection(collections, viewer, in profile, empty, summary);
     }
 
     public static EntityCollectionHandle PromoteDisplayCollection(

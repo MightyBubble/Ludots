@@ -133,7 +133,6 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
             mapping.SetSelectedCollectionProvider((string setKey, out Entity owner, out EntityCollectionHandle handle) =>
                 _context.TryGetCommandSourceHandle(out owner, out handle));
-            mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));

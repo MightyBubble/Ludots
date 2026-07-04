@@ -3444,14 +3444,14 @@ namespace Ludots.Tests.Presentation
                     entityViewConfig,
                     selection,
                     owner,
-                    SelectionViewKeys.Primary,
+                    entityViewConfig.DefaultViewKey,
                     owner,
                     SelectionSetKeys.LivePrimary))
             {
                 throw new InvalidOperationException("Could not bind EntityView primary profile for Formation Capability selection.");
             }
 
-            EntityViewProfileEntry profile = entityViewConfig.RequireProfile(SelectionViewKeys.Primary);
+            EntityViewProfileEntry profile = entityViewConfig.RequireProfile(entityViewConfig.DefaultViewKey);
             EntityViewRuntime.PromoteCommandSource(
                 collections,
                 owner,

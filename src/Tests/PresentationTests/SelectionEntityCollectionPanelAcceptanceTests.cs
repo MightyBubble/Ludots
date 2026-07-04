@@ -82,8 +82,8 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
 
         Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, selected), Is.True);
         selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = local;
+        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         Assert.That(
             SelectionControlGroupRuntime.TrySaveViewedSelectionToGroup(
                 engine.World,
@@ -94,7 +94,7 @@ public sealed class SelectionEntityCollectionPanelAcceptanceTests
                 mirrorToFormation: true),
             Is.True);
         engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 1;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Formation;
         Tick(engine, 4);
 
         UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Interaction showcase scene should be mounted.");

@@ -391,8 +391,8 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("SelectionRuntime missing.");
             selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { ezreal, garenAlpha });
             selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
 
             engine.World.Add(ezreal, new CameraFollowWeight { Value = 1f });
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });

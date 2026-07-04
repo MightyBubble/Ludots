@@ -1000,14 +1000,16 @@ internal sealed class FormationCapabilityShowcaseRuntime
             throw new InvalidOperationException("Formation Capability showcase failed to author its configured initial selection.");
         }
 
+        EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig.");
+
         if (!EntityViewRuntime.TrySetCurrentView(
                 engine.World,
                 engine.GlobalContext,
-                engine.GetService(CoreServiceKeys.EntityViewConfig)
-                    ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig."),
+                entityViewConfig,
                 selection,
                 owner,
-                SelectionViewKeys.Primary,
+                entityViewConfig.DefaultViewKey,
                 owner,
                 SelectionSetKeys.LivePrimary))
         {
@@ -1016,9 +1018,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore.");
-        EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
-            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig.");
-        EntityViewProfileEntry profile = entityViewConfig.RequireProfile(SelectionViewKeys.Primary);
+        EntityViewProfileEntry profile = entityViewConfig.RequireProfile(entityViewConfig.DefaultViewKey);
         EntityViewRuntime.PromoteCommandSource(
             collections,
             owner,

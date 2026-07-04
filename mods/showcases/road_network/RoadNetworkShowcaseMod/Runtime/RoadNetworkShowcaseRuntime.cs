@@ -322,8 +322,8 @@ namespace RoadNetworkShowcaseMod.Runtime
 
             selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
             selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            globals[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+            globals[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private void PublishSelectableKnowledge(GameEngine engine)

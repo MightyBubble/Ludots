@@ -1,11 +1,10 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.MassNavigation;
-using Ludots.Core.MassNavigation.Input;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Scripting;
 
@@ -35,34 +34,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
 
         _simulation.ObserveControlTick();
-
-        if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
-        {
-            if (input.PressedThisFrame(MassNavigationInputActions.ResetScene))
-            {
-                _simulation.RequestSceneReset();
-            }
-
-            float deltaRadians = 0f;
-            if (input.IsDown(MassNavigationInputActions.RotateLeft))
-            {
-                deltaRadians -= _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
-            }
-
-            if (input.IsDown(MassNavigationInputActions.RotateRight))
-            {
-                deltaRadians += _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
-            }
-
-            if (MathF.Abs(deltaRadians) > _simulation.Config.Semantics.Group.FormationRotationEpsilonRadians)
-            {
-                _simulation.RotateSelectedFormation(
-                    _engine.World,
-                    _engine.GlobalContext,
-                    deltaRadians,
-                    ResolveLocalPlayerId());
-            }
-        }
 
         if (_simulation.ConsumeSceneResetRequest())
         {
@@ -122,9 +93,23 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
     private void ResetRuntimeState()
     {
-        MassNavigationSelectionCommands.ClearLocalCommandSelectionSets(_engine.World, _engine.GlobalContext);
+        ClearEntityViewCommandCollections();
         RemovePendingScenarioSpawns();
         _simulation.ResetRuntimeState(_engine.World);
+    }
+
+    private void ClearEntityViewCommandCollections()
+    {
+        EntityViewRuntimeConfig config = _engine.GetService(CoreServiceKeys.EntityViewConfig)
+            ?? throw new InvalidOperationException("MassNavigation scene reset requires EntityViewConfig.");
+        EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("MassNavigation scene reset requires EntityCollectionStore.");
+        EntityViewRuntime.ClearCurrentViewCollections(
+            _engine.World,
+            _engine.GlobalContext,
+            config,
+            collections,
+            "MassNavigation scene reset");
     }
 
     private void RemovePendingScenarioSpawns()
@@ -135,11 +120,5 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         {
             spawnQueue.RemoveForMap(_engine.CurrentMapSession.MapId);
         }
-    }
-
-    private int ResolveLocalPlayerId()
-    {
-        Arch.Core.Entity local = MassNavigationPrimarySelectionViewBootstrapSystem.RequireLocalSelectionOwner(_engine);
-        return _engine.World.Get<Ludots.Core.Gameplay.Components.PlayerOwner>(local).PlayerId;
     }
 }

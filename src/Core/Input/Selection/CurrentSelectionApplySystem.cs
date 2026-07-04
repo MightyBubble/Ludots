@@ -382,6 +382,12 @@ namespace Ludots.Core.Input.Selection
                     in profile,
                     hits,
                     $"{mode} | {hits.Length} entities");
+                EntityViewRuntime.PromoteDisplayCollection(
+                    _entityCollections,
+                    owner,
+                    in profile,
+                    hits,
+                    $"{mode} | {hits.Length} entities");
             }
 
             if (!acquisition.CommitToFormalSelection)

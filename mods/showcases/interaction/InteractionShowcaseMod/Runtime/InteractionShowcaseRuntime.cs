@@ -164,8 +164,8 @@ namespace InteractionShowcaseMod.Runtime
             }
 
             selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
             return true;
         }
 
@@ -178,8 +178,8 @@ namespace InteractionShowcaseMod.Runtime
 
             selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
             selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Formation;
             return true;
         }
 
@@ -580,14 +580,14 @@ namespace InteractionShowcaseMod.Runtime
             selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
             selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
             selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewViewerEntity.Name))
+            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.EntityViewViewerEntity.Name))
             {
-                engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+                engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
             }
 
-            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewKey.Name))
+            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.EntityViewKey.Name))
             {
-                engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+                engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
             }
         }
     }

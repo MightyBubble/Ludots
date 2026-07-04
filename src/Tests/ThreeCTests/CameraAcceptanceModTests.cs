@@ -1700,8 +1700,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             selectionRuntime.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities);
             selectionRuntime.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = local;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)

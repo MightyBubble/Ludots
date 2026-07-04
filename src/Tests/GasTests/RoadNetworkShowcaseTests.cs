@@ -666,9 +666,9 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.LoadedNodeCount, Is.GreaterThan(0), "Chunk priming should populate the graph store before the player issues the first road move.");
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out object? viewOwnerObj), Is.True);
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.EntityViewViewerEntity.Name, out object? viewOwnerObj), Is.True);
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out object? viewSetObj), Is.True);
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.EntityViewKey.Name, out object? viewSetObj), Is.True);
             Assert.That(viewSetObj, Is.EqualTo(SelectionViewKeys.Primary));
             var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
             Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity primary), Is.True);

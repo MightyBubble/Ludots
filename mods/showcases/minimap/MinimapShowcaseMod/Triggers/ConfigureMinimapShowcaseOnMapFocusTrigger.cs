@@ -127,8 +127,8 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
         }
 
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerCapital;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = playerCapital;
+        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         selection.ReplaceSelection(playerCapital, SelectionSetKeys.LivePrimary, stackalloc[] { playerCapital });
         selection.TryBindView(playerCapital, SelectionViewKeys.Primary, playerCapital, SelectionSetKeys.LivePrimary);
     }

@@ -240,8 +240,8 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.GameSession.Name] = new GameSession(),
                     [CoreServiceKeys.GameConfig.Name] = new GameConfig { Selection = selectionConfig },
                     [CoreServiceKeys.OrderTypeRegistry.Name] = CreateOrderTypeRegistry(),
-                    [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-                    [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+                    [CoreServiceKeys.EntityViewViewerEntity.Name] = viewer,
+                    [CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary,
                 };
                 var system = new SelectedMovePathPresentationSystem(world, globals, selection);
                 return new SelectedMovePathFixture(

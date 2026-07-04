@@ -23,8 +23,8 @@ namespace RtsDemoMod.Runtime
             }
 
             selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         public static bool TrySelectAndFocus(GameEngine engine, Entity target, bool snapCamera)

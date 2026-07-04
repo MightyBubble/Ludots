@@ -122,8 +122,8 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
 
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = _selectionOwner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = _selectionOwner;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private void DrawOverlay(GameEngine engine)
@@ -450,12 +450,12 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewerObj) &&
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.EntityViewViewerEntity.Name, out var viewerObj) &&
                 viewerObj is Entity viewer &&
                 viewer == _selectionOwner)
             {
-                engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
-                engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
+                engine.GlobalContext.Remove(CoreServiceKeys.EntityViewViewerEntity.Name);
+                engine.GlobalContext.Remove(CoreServiceKeys.EntityViewKey.Name);
             }
 
             _selectionOwner = Entity.Null;

@@ -183,8 +183,8 @@ namespace GenreInfoShowcaseMod.Runtime
             }
 
             selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
             return true;
         }
 
@@ -197,8 +197,8 @@ namespace GenreInfoShowcaseMod.Runtime
 
             selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
             selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Formation;
             return true;
         }
 

@@ -42,14 +42,12 @@ public static class CommandInteractionSemanticRuntime
             return false;
         }
 
-        if (TryRead(globals, out CommandInteractionSemanticSnapshot snapshot))
+        if (!TryRead(globals, out CommandInteractionSemanticSnapshot snapshot))
         {
-            if (snapshot.Kind != CommandInteractionSemanticKind.GroundMove)
-            {
-                return false;
-            }
+            return false;
         }
-        else if (IsCommandShadowedByAim(globals))
+
+        if (snapshot.Kind != CommandInteractionSemanticKind.GroundMove)
         {
             return false;
         }

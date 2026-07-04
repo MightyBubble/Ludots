@@ -311,8 +311,8 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.EntityViewConfig, entityViewConfig);
             engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
             engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = entityViewConfig.DefaultViewKey;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = entityViewConfig.DefaultViewKey;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = entityViewConfig.DefaultViewKey;
             engine.GlobalContext[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             var orderTypes = new OrderTypeRegistry();
@@ -593,7 +593,8 @@ namespace Ludots.Tests.Presentation
 
             public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
             {
-                MassNavigationMoveCommandResult result = Simulation.SubmitMoveCommand(
+                MassNavigationMoveCommandResult result = MassNavigationMoveOrderSubmitter.SubmitViaOrderQueue(
+                    Simulation,
                     World,
                     Engine.GlobalContext,
                     OrderQueue,

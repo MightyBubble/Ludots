@@ -6,7 +6,6 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Orders;
@@ -26,17 +25,12 @@ namespace CoreInputMod.Systems
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime _selection;
+        private Entity[] _commandSourceScratch = new Entity[16];
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : throw new InvalidOperationException(
-                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
         }
 
         public bool TryGetEntity(string key, out Entity entity)
@@ -123,18 +117,15 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
-            if (TryGetCommandSourceEntities(out List<Entity> entities))
-            {
-                entity = entities[0];
-                return true;
-            }
-
-            if (!TryGetSelectionOwner(out var owner))
+            _ = setKey;
+            if (!TryCopyCommandSourceEntities(out int written) || written <= 0)
             {
                 return false;
             }
 
-            return _selection.TryGetPrimary(owner, setKey, out entity);
+            EnsureCommandSourceScratchCapacity(written);
+            entity = _commandSourceScratch[0];
+            return _world.IsAlive(entity);
         }
 
         public bool TryGetCommandSourceHandle(out Entity owner, out EntityCollectionHandle handle)
@@ -153,22 +144,14 @@ namespace CoreInputMod.Systems
         public bool TryGetCommandSourceEntities(out List<Entity> entities)
         {
             entities = new List<Entity>();
-            if (!_globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) ||
-                configObj is not EntityViewRuntimeConfig config ||
-                !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||
-                storeObj is not EntityCollectionStore collections ||
-                !EntityViewRuntime.TryGetCommandSourceHandle(_world, _globals, config, out _, out EntityCollectionHandle handle) ||
-                !collections.TryGetView(handle, out EntityCollectionView view) ||
-                view.Count <= 0)
+            if (!TryCopyCommandSourceEntities(out int written))
             {
                 return false;
             }
 
-            Entity[] scratch = new Entity[view.Count];
-            int written = collections.CopyEntities(handle, 0, scratch);
             for (int i = 0; i < written; i++)
             {
-                Entity candidate = scratch[i];
+                Entity candidate = _commandSourceScratch[i];
                 if (_world.IsAlive(candidate))
                 {
                     entities.Add(candidate);
@@ -181,40 +164,22 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedContainer(string setKey, out Entity container)
         {
             container = default;
-            if (!TryGetSelectionOwner(out var owner))
-            {
-                return false;
-            }
-
-            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+            _ = setKey;
+            return false;
         }
 
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
-            if (TryGetCommandSourceEntities(out List<Entity> commandSourceEntities))
-            {
-                entities.Clear();
-                entities.AddRange(commandSourceEntities);
-                return entities.Count > 0;
-            }
-
+            _ = setKey;
             entities.Clear();
-            if (!TryGetSelectionOwner(out var owner))
+            if (!TryCopyCommandSourceEntities(out int written))
             {
                 return false;
             }
 
-            int selectionCount = _selection.GetSelectionCount(owner, setKey);
-            if (selectionCount <= 0)
+            for (int i = 0; i < written; i++)
             {
-                return false;
-            }
-
-            Entity[] selected = new Entity[selectionCount];
-            int count = _selection.CopySelection(owner, setKey, selected);
-            for (int i = 0; i < count; i++)
-            {
-                Entity entity = selected[i];
+                Entity entity = _commandSourceScratch[i];
                 if (_world.IsAlive(entity))
                 {
                     entities.Add(entity);
@@ -298,6 +263,46 @@ namespace CoreInputMod.Systems
                 graphPrograms,
                 graphApi);
             return true;
+        }
+
+        private bool TryCopyCommandSourceEntities(out int written)
+        {
+            written = 0;
+            if (!_globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) ||
+                configObj is not EntityViewRuntimeConfig config)
+            {
+                return false;
+            }
+
+            int required = EntityViewRuntime.GetCommandSourceCount(_world, _globals, config);
+            if (required <= 0)
+            {
+                return false;
+            }
+
+            EnsureCommandSourceScratchCapacity(required);
+            written = EntityViewRuntime.CopyCommandSourceEntities(
+                _world,
+                _globals,
+                config,
+                _commandSourceScratch.AsSpan(0, required));
+            return written > 0;
+        }
+
+        private void EnsureCommandSourceScratchCapacity(int required)
+        {
+            if (required <= _commandSourceScratch.Length)
+            {
+                return;
+            }
+
+            int nextSize = _commandSourceScratch.Length;
+            while (nextSize < required)
+            {
+                nextSize *= 2;
+            }
+
+            Array.Resize(ref _commandSourceScratch, nextSize);
         }
 
         private bool HasProductionGraphServices()

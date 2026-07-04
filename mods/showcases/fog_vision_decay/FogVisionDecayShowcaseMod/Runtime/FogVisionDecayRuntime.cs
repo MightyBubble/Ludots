@@ -248,7 +248,7 @@ public sealed class FogVisionDecayShowcaseRuntime
         _resolver = new KnowledgeProjectionResolver(_knowledge);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, _knowledge);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, _resolver);
-        engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, _viewer);
+        engine.SetService(CoreServiceKeys.EntityViewViewerEntity, _viewer);
         if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime minimap)
         {
             minimap.Visible = true;

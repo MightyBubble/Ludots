@@ -190,8 +190,8 @@ namespace Ludots.Tests.ThreeC
             Entity selector = world.Create();
             globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
             globals[CoreServiceKeys.SelectionRuntime.Name] = selectionRuntime;
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            globals[CoreServiceKeys.EntityViewViewerEntity.Name] = selector;
+            globals[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });
             Entity heavy = world.Create(

@@ -276,8 +276,8 @@ public sealed class EntityInfoPanelServiceTests
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.SelectionRuntime.Name] = selection,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+            [CoreServiceKeys.EntityViewViewerEntity.Name] = viewer,
+            [CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary,
         };
 
         var service = new EntityInfoPanelService();
@@ -353,8 +353,8 @@ public sealed class EntityInfoPanelServiceTests
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.SelectionRuntime.Name] = selection,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+            [CoreServiceKeys.EntityViewViewerEntity.Name] = viewer,
+            [CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary,
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };

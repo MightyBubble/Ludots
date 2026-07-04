@@ -452,8 +452,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         }
 
         selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        _engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+        _engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         return WebUiCommandResult.Ok();
     }
 
@@ -633,8 +633,8 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         }
 
         selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        _engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+        _engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         return true;
     }
 

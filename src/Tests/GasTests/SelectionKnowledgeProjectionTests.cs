@@ -136,7 +136,7 @@ public sealed class SelectionKnowledgeProjectionTests
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.LocalPlayerEntity.Name] = localViewer,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = diagnosticsViewer,
+            [CoreServiceKeys.EntityViewViewerEntity.Name] = diagnosticsViewer,
         };
         var store = new KnowledgeProjectionStore();
         store.Upsert(localViewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, localViewer));

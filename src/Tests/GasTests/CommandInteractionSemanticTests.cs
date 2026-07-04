@@ -59,7 +59,7 @@ public sealed class CommandInteractionSemanticTests
     }
 
     [Test]
-    public void TryConsumeGroundMoveCommand_WithoutSemanticSystem_FallsBackToAimShadow()
+    public void TryConsumeGroundMoveCommand_WithoutSemanticSystem_RejectsGroundMove()
     {
         var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
         var bindings = new InteractionActionBindings();

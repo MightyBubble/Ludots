@@ -1362,13 +1362,17 @@ namespace Ludots.Core.Input.Orders
         private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)
         {
             selection = default;
-            if (_selectedCollectionProvider != null &&
-                _selectedCollectionProvider(selectionSetKey, out Entity owner, out EntityCollectionHandle handle) &&
-                handle.IsValid)
+            if (_selectedCollectionProvider != null)
             {
-                selection.CollectionOwner = owner;
-                selection.CollectionHandle = handle;
-                return true;
+                if (_selectedCollectionProvider(selectionSetKey, out Entity owner, out EntityCollectionHandle handle) &&
+                    handle.IsValid)
+                {
+                    selection.CollectionOwner = owner;
+                    selection.CollectionHandle = handle;
+                    return true;
+                }
+
+                return false;
             }
 
             return _selectedContainerProvider != null &&

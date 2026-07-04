@@ -312,8 +312,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity local = GetLocalPlayer(engine);
             Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities), Is.True);
             selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = local;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private static void ClearLivePrimarySelection(GameEngine engine)

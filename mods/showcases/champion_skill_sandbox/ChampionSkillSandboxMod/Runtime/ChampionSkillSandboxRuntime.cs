@@ -341,37 +341,37 @@ namespace ChampionSkillSandboxMod.Runtime
             switch (choice)
             {
                 case ChampionSkillSandboxIds.PlayerFormationToolbarButtonId:
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerViewer;
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+                    engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = playerViewer;
+                    engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Formation;
                     break;
 
                 case ChampionSkillSandboxIds.AiTargetToolbarButtonId:
                     if (aiViewer != Entity.Null)
                     {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = aiViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = aiViewer;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
                     }
                     break;
 
                 case ChampionSkillSandboxIds.AiFormationToolbarButtonId:
                     if (aiViewer != Entity.Null)
                     {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = aiViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = aiViewer;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Formation;
                     }
                     break;
 
                 case ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId:
                     if (debugViewer != Entity.Null)
                     {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = debugViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.CommandPreview;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = debugViewer;
+                        engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.CommandPreview;
                     }
                     break;
 
                 default:
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerViewer;
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+                    engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = playerViewer;
+                    engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
                     break;
             }
         }
@@ -434,8 +434,8 @@ namespace ChampionSkillSandboxMod.Runtime
                 engine.World.IsAlive(selected))
             {
                 selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-                engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-                engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+                engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+                engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
                 return true;
             }
 
@@ -448,8 +448,8 @@ namespace ChampionSkillSandboxMod.Runtime
             selectionBuffer[0] = initialSelection;
             selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectionBuffer);
             selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
             return true;
         }
 
@@ -1005,8 +1005,8 @@ namespace ChampionSkillSandboxMod.Runtime
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.ResetCameraRequestKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.CameraFollowModeKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
+            engine.GlobalContext.Remove(CoreServiceKeys.EntityViewViewerEntity.Name);
+            engine.GlobalContext.Remove(CoreServiceKeys.EntityViewKey.Name);
         }
     }
 }
