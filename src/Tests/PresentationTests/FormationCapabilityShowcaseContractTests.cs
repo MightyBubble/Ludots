@@ -11,6 +11,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -18,6 +19,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
@@ -1025,9 +1027,10 @@ namespace Ludots.Tests.Presentation
                 simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 1;
                 RegisterMoveOrderType(engine);
 
-                Entity selectionContainer = engine.World.Create();
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0, selectionContainer);
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1, selectionContainer);
+                Entity collectionOwner = engine.World.Create();
+                EntityCollectionHandle collectionHandle = CreateTestCommandSourceHandle(engine, collectionOwner);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0, collectionOwner, collectionHandle);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1, collectionOwner, collectionHandle);
 
                 var system = new MassNavigationOrderIngestionSystem(engine, simulation);
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -2695,12 +2698,22 @@ namespace Ludots.Tests.Presentation
             var orderWorld = World.Create();
             try
             {
-                Entity selectionContainer = orderWorld.Create();
+                var collectionRegistry = new Ludots.Core.Registry.StringIntRegistry(8, 1, 0, StringComparer.Ordinal);
+                var collections = new EntityCollectionStore(collectionRegistry);
+                Entity owner = orderWorld.Create();
+                EntityCollectionHandle handle = collections.Replace(
+                    owner,
+                    EntityCollectionDescriptor.Create(
+                        EntityCollectionKeys.CommandSource,
+                        EntityCollectionSourceKind.SelectionView,
+                        EntityCollectionRoleKind.CommandSource),
+                    ReadOnlySpan<Entity>.Empty);
                 var args = MassNavigationMoveOrderArgs.Encode(
                     new Vector2(1500f, 2500f),
                     MassNavigationFormationMode.Line,
                     rotationRadians: 0.5f,
-                    selectionContainer: selectionContainer);
+                    owner,
+                    handle);
                 var order = new Order
                 {
                     OrderId = 55,
@@ -3037,11 +3050,25 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
         }
 
+        private static EntityCollectionHandle CreateTestCommandSourceHandle(GameEngine engine, Entity owner)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("Formation capability tests require EntityCollectionStore.");
+            return collections.Replace(
+                owner,
+                EntityCollectionDescriptor.Create(
+                    EntityCollectionKeys.CommandSource,
+                    EntityCollectionSourceKind.SelectionView,
+                    EntityCollectionRoleKind.CommandSource),
+                ReadOnlySpan<Entity>.Empty);
+        }
+
         private static Entity CreateActiveMassNavigationMoveOrderEntity(
             GameEngine engine,
             int token,
             int agentIndex,
-            Entity selectionContainer)
+            Entity collectionOwner,
+            EntityCollectionHandle collectionHandle)
         {
             var order = new Order
             {
@@ -3051,7 +3078,8 @@ namespace Ludots.Tests.Presentation
                     new Vector2(2000f + (agentIndex * 100f), 2500f),
                     MassNavigationFormationMode.Line,
                     rotationRadians: 0f,
-                    selectionContainer: selectionContainer),
+                    collectionOwner,
+                    collectionHandle),
             };
             OrderBuffer orders = OrderBuffer.CreateEmpty();
             orders.SetActiveDirect(in order, priority: 100);
@@ -3404,21 +3432,32 @@ namespace Ludots.Tests.Presentation
         {
             SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
+                ?? throw new InvalidOperationException("EntityViewConfig is missing.");
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity owner = ResolveLocalPlayerEntity(engine);
             Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, formations), Is.True);
-            if (!SelectionContextRuntime.TrySetCurrentView(
+            if (!EntityViewRuntime.TrySetCurrentView(
                     engine.World,
                     engine.GlobalContext,
+                    entityViewConfig,
                     selection,
                     owner,
                     SelectionViewKeys.Primary,
                     owner,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
+                    SelectionSetKeys.LivePrimary))
             {
-                throw new InvalidOperationException("Could not bind LivePrimary as current Formation Capability selection view.");
+                throw new InvalidOperationException("Could not bind EntityView primary profile for Formation Capability selection.");
             }
 
+            EntityViewProfileEntry profile = entityViewConfig.RequireProfile(SelectionViewKeys.Primary);
+            EntityViewRuntime.PromoteCommandSource(
+                collections,
+                owner,
+                in profile,
+                formations,
+                "Formation Capability test selection");
             Tick(engine);
         }
 

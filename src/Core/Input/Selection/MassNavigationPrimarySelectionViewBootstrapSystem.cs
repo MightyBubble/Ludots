@@ -3,6 +3,8 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Input.EntityView;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Selection;
@@ -39,8 +41,10 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
 
         SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new InvalidOperationException("MassNavigation selection bootstrap requires SelectionRuntime.");
+        EntityViewRuntimeConfig entityViewConfig = _engine.GetService(CoreServiceKeys.EntityViewConfig)
+            ?? throw new InvalidOperationException("MassNavigation selection bootstrap requires EntityViewConfig.");
         Entity owner = RequireLocalSelectionOwner(_engine);
-        EnsurePrimarySelectionView(_engine.World, owner, selection, _engine.GlobalContext);
+        EnsurePrimaryEntityView(_engine.World, owner, selection, entityViewConfig, _engine.GlobalContext);
         _bootstrapped = true;
     }
 
@@ -80,10 +84,11 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
         };
     }
 
-    internal static void EnsurePrimarySelectionView(
+    internal static void EnsurePrimaryEntityView(
         World world,
         Entity owner,
         SelectionRuntime selection,
+        EntityViewRuntimeConfig entityViewConfig,
         Dictionary<string, object> globals)
     {
         if (!world.Has<SelectionDragState>(owner))
@@ -91,17 +96,19 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
             throw new InvalidOperationException("MassNavigation selection bootstrap local player template must author SelectionDragState.");
         }
 
-        if (!SelectionContextRuntime.TrySetCurrentView(
+        string viewKey = entityViewConfig.DefaultViewKey;
+        if (!EntityViewRuntime.TrySetCurrentView(
                 world,
                 globals,
+                entityViewConfig,
                 selection,
                 owner,
-                SelectionViewKeys.Primary,
+                viewKey,
                 owner,
-                SelectionSetKeys.LivePrimary,
-                out _))
+                SelectionSetKeys.LivePrimary))
         {
-            throw new InvalidOperationException("MassNavigation selection bootstrap failed to bind LivePrimary as the primary selection view.");
+            throw new InvalidOperationException(
+                $"MassNavigation selection bootstrap failed to bind EntityView profile '{viewKey}' to LivePrimary.");
         }
     }
 }

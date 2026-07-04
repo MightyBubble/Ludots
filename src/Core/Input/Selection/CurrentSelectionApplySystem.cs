@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
@@ -182,28 +183,29 @@ namespace Ludots.Core.Input.Selection
 
         private void EnsureLivePrimarySelectionView(Entity owner)
         {
-            if (_globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewerObj) &&
+            if (_globals.TryGetValue(CoreServiceKeys.EntityViewViewerEntity.Name, out var viewerObj) &&
                 viewerObj is Entity viewer &&
                 _world.IsAlive(viewer) &&
-                _globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var viewKeyObj) &&
+                _globals.TryGetValue(CoreServiceKeys.EntityViewKey.Name, out var viewKeyObj) &&
                 viewKeyObj is string viewKey &&
                 !string.IsNullOrWhiteSpace(viewKey) &&
-                SelectionContextRuntime.TryDescribeCurrentView(_world, _globals, out _))
+                EntityViewRuntime.TryResolveCurrentProfile(_globals, RequireEntityViewConfig(), out _))
             {
                 return;
             }
 
-            if (!SelectionContextRuntime.TrySetCurrentView(
+            EntityViewRuntimeConfig entityViewConfig = RequireEntityViewConfig();
+            if (!EntityViewRuntime.TrySetCurrentView(
                     _world,
                     _globals,
+                    entityViewConfig,
                     _selection,
                     owner,
-                    SelectionViewKeys.Primary,
+                    entityViewConfig.DefaultViewKey,
                     owner,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
+                    SelectionSetKeys.LivePrimary))
             {
-                throw new InvalidOperationException("CurrentSelectionApplySystem failed to bind LivePrimary as the primary selection view.");
+                throw new InvalidOperationException("CurrentSelectionApplySystem failed to bind EntityView primary profile.");
             }
         }
 
@@ -372,6 +374,16 @@ namespace Ludots.Core.Input.Selection
                 $"{mode} | {hits.Length} entities");
             _entityCollections.Replace(owner, descriptor, hits);
 
+            if (EntityViewRuntime.TryResolveCurrentProfile(_globals, RequireEntityViewConfig(), out EntityViewProfileEntry profile))
+            {
+                EntityViewRuntime.PromoteCommandSource(
+                    _entityCollections,
+                    owner,
+                    in profile,
+                    hits,
+                    $"{mode} | {hits.Length} entities");
+            }
+
             if (!acquisition.CommitToFormalSelection)
             {
                 return;
@@ -536,6 +548,18 @@ namespace Ludots.Core.Input.Selection
 
             throw new InvalidOperationException(
                 $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered before construction.");
+        }
+
+        private EntityViewRuntimeConfig RequireEntityViewConfig()
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) &&
+                configObj is EntityViewRuntimeConfig config)
+            {
+                return config;
+            }
+
+            throw new InvalidOperationException(
+                $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.EntityViewConfig.Name} to be registered.");
         }
 
         private static string RequireConfiguredKey(string? value, string path)

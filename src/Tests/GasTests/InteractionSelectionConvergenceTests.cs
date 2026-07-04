@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -877,6 +878,12 @@ namespace Ludots.Tests.GAS
             That(view.Count, Is.EqualTo(1));
             That(collections.TryGetEntityAt(handle, 0, out Entity row), Is.True);
             That(row, Is.EqualTo(acquired));
+            EntityViewRuntimeConfig entityViewConfig = (EntityViewRuntimeConfig)globals[CoreServiceKeys.EntityViewConfig.Name];
+            That(EntityViewRuntime.TryGetCommandSourceHandle(world, globals, entityViewConfig, out _, out EntityCollectionHandle commandHandle), Is.True);
+            That(collections.TryGetView(commandHandle, out EntityCollectionView commandView), Is.True);
+            That(commandView.Count, Is.EqualTo(1));
+            That(collections.TryGetEntityAt(commandHandle, 0, out Entity commandEntity), Is.True);
+            That(commandEntity, Is.EqualTo(acquired));
         }
 
         [Test]
@@ -1537,7 +1544,25 @@ namespace Ludots.Tests.GAS
             globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = registry;
             globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
             globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry;
+            globals[CoreServiceKeys.EntityViewConfig.Name] = CreateDefaultEntityViewConfig();
             return runtime;
+        }
+
+        private static EntityViewRuntimeConfig CreateDefaultEntityViewConfig()
+        {
+            return new EntityViewRuntimeConfig
+            {
+                DefaultViewKey = SelectionViewKeys.Primary,
+                Profiles =
+                {
+                    new EntityViewProfileEntry
+                    {
+                        ViewKey = SelectionViewKeys.Primary,
+                        CommandSourceCollectionKey = EntityCollectionKeys.CommandSource,
+                        DisplayCollectionKey = EntityCollectionKeys.SelectionLivePrimary,
+                    }
+                }
+            };
         }
 
         private static void SeedLivePrimarySelection(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
@@ -1547,6 +1572,16 @@ namespace Ludots.Tests.GAS
                 ? selection
                 : throw new InvalidOperationException("SelectionRuntime missing from globals.");
             runtime.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, targets);
+            if (globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) &&
+                configObj is EntityViewRuntimeConfig entityViewConfig &&
+                globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) &&
+                storeObj is EntityCollectionStore collections &&
+                entityViewConfig.TryGetProfile(SelectionViewKeys.Primary, out EntityViewProfileEntry profile))
+            {
+                globals[CoreServiceKeys.EntityViewViewerEntity.Name] = owner;
+                globals[CoreServiceKeys.EntityViewKey.Name] = SelectionViewKeys.Primary;
+                EntityViewRuntime.PromoteCommandSource(collections, owner, in profile, targets, "test seed");
+            }
         }
 
         private static WorldSizeSpec CreateWorldSizeSpec()

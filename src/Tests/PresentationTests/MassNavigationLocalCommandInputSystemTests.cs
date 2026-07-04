@@ -4,11 +4,13 @@ using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Layers;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
@@ -66,7 +68,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(orders.ActiveOrder.Order.PlayerId, Is.EqualTo(1));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(target.X));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z, Is.EqualTo(target.Y));
-            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.Not.EqualTo(Entity.Null));
+            Assert.That(orders.ActiveOrder.Order.Args.Selection.HasCollection, Is.True);
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
             Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
@@ -170,16 +172,23 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RightClickMove_WithSelectionRequiresCurrentSelectionContainer()
+        public void RightClickMove_WithSelectionRequiresCurrentCommandSourceCollection()
         {
             using TestContextScope context = CreateContext();
             context.Select(context.Agent);
-            context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
+            context.Engine.GlobalContext.Remove(CoreServiceKeys.EntityViewKey.Name);
+            EntityViewProfileEntry profile = context.EntityViewConfig.RequireProfile(context.EntityViewConfig.DefaultViewKey);
+            context.Collections.Replace(
+                context.LocalPlayer,
+                EntityCollectionDescriptor.Create(
+                    profile.CommandSourceCollectionKey,
+                    EntityCollectionSourceKind.SelectionView,
+                    EntityCollectionRoleKind.CommandSource),
+                ReadOnlySpan<Entity>.Empty);
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
+            MassNavigationMoveCommandResult result = context.SubmitMoveCommand(new Vector2(1600f, 1800f));
 
-            Assert.That(ex.Message, Does.Contain("current selection container"));
+            Assert.That(result, Is.EqualTo(MassNavigationMoveCommandResult.EmptySelection));
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
 
@@ -293,10 +302,18 @@ namespace Ludots.Tests.Presentation
                 },
                 selectionRegistry);
             selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
+            EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
+                ?? throw new InvalidOperationException("MassNavigation command tests require EntityViewConfig.");
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("MassNavigation command tests require EntityCollectionStore.");
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
             engine.SetService(CoreServiceKeys.SelectionRuntime, selection);
-            engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.SelectionViewKey, SelectionViewKeys.Primary);
+            engine.SetService(CoreServiceKeys.EntityViewConfig, entityViewConfig);
+            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
+            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = entityViewConfig.DefaultViewKey;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
+            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = entityViewConfig.DefaultViewKey;
+            engine.GlobalContext[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             var orderTypes = new OrderTypeRegistry();
             if (registerFormalMoveOrder)
@@ -348,7 +365,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
             MassNavigationSelectionAccess.RefreshFlowSelectedFlags(world, engine.GlobalContext, simulation);
-            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderQueue, orderBuffer, orderTypes);
+            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderQueue, orderBuffer, orderTypes, entityViewConfig, collections);
         }
 
         private static unsafe void RegisterMoveBlockedByBlockingOrder(OrderRuleRegistry orderRules)
@@ -543,7 +560,9 @@ namespace Ludots.Tests.Presentation
                 MassNavigationSimulationRuntime simulation,
                 OrderQueue orderQueue,
                 OrderBufferSystem orderBufferSystem,
-                OrderTypeRegistry orderTypeRegistry)
+                OrderTypeRegistry orderTypeRegistry,
+                EntityViewRuntimeConfig entityViewConfig,
+                EntityCollectionStore collections)
             {
                 Engine = engine;
                 World = world;
@@ -555,6 +574,8 @@ namespace Ludots.Tests.Presentation
                 OrderQueue = orderQueue;
                 OrderBufferSystem = orderBufferSystem;
                 OrderTypeRegistry = orderTypeRegistry;
+                EntityViewConfig = entityViewConfig;
+                Collections = collections;
             }
 
             public GameEngine Engine { get; }
@@ -567,6 +588,8 @@ namespace Ludots.Tests.Presentation
             public OrderQueue OrderQueue { get; }
             public OrderBufferSystem OrderBufferSystem { get; }
             public OrderTypeRegistry OrderTypeRegistry { get; }
+            public EntityViewRuntimeConfig EntityViewConfig { get; }
+            public EntityCollectionStore Collections { get; }
 
             public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
             {
@@ -589,6 +612,13 @@ namespace Ludots.Tests.Presentation
                     throw new InvalidOperationException("Failed to write test selection.");
                 }
 
+                EntityViewProfileEntry profile = EntityViewConfig.RequireProfile(EntityViewConfig.DefaultViewKey);
+                EntityViewRuntime.PromoteCommandSource(
+                    Collections,
+                    LocalPlayer,
+                    in profile,
+                    new[] { entity },
+                    "test select");
                 MassNavigationSelectionAccess.RefreshFlowSelectedFlags(World, Engine.GlobalContext, Simulation);
             }
 
