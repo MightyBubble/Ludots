@@ -42,11 +42,24 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             if (step.UpdateTargets)
             {
                 long targetStart = Stopwatch.GetTimestamp();
+                int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(_engine.World, _engine.GlobalContext);
+                ReadOnlySpan<Arch.Core.Entity> selected = ReadOnlySpan<Arch.Core.Entity>.Empty;
+                if (selectedCount > 0)
+                {
+                    Span<Arch.Core.Entity> scratch = _simulation.EnsureSelectionScratch(selectedCount);
+                    int written = MassNavigationSelectionAccess.CopyCurrentSelection(
+                        _engine.World,
+                        _engine.GlobalContext,
+                        _simulation,
+                        scratch);
+                    selected = scratch[..written];
+                }
+
                 _simulation.NavGroupRuntime.UpdateTargets(
                     _engine.World,
                     _simulation.MassNavigationFlow,
                     _simulation.AgentState,
-                    _simulation.SelectedEntities,
+                    selected,
                     _simulation.FrameIndex);
                 ApplyRouteExecutionTargets();
                 _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);

@@ -103,9 +103,6 @@ public sealed class MassNavigationSimulationRuntime
     private readonly int _initialSelectedTeamId;
     private int[] _teamIds = Array.Empty<int>();
     private Entity[] _selectionScratch = Array.Empty<Entity>();
-    private Entity[] _selectedEntities = Array.Empty<Entity>();
-    private int _selectedCount;
-    private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
     private int _nextSharedOrderId = 1;
@@ -192,9 +189,6 @@ public sealed class MassNavigationSimulationRuntime
 
     public int NavigationAgentCount => MassNavigationFlow.UnitCount;
     public int NavigationObstacleCount => MassNavigationFlow.ObstacleCount;
-    public int SelectedCount => _selectedCount;
-    public uint SelectionRevision => _selectionRevision;
-    public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities.AsSpan(0, _selectedCount);
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
@@ -247,7 +241,6 @@ public sealed class MassNavigationSimulationRuntime
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
         _selectionScratch = new Entity[config.ScenarioRuntime.InitialSelectionScratchCapacity];
-        _selectedEntities = new Entity[config.ScenarioRuntime.InitialSelectedEntityCapacity];
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
@@ -463,35 +456,6 @@ public sealed class MassNavigationSimulationRuntime
         return _selectionScratch.AsSpan(0, required);
     }
 
-    public void SetSelection(ReadOnlySpan<Entity> entities, uint revision)
-    {
-        if (entities.Length > _selectedEntities.Length)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation selected entity snapshot required {entities.Length} entities, exceeding configured scenarioRuntime.initialSelectedEntityCapacity {_selectedEntities.Length}.");
-        }
-
-        entities.CopyTo(_selectedEntities.AsSpan(0, entities.Length));
-        _selectedCount = entities.Length;
-        _selectionRevision = revision;
-        Telemetry.MarkSelectionSnapshot();
-        MassNavigationFlow.SetSelectedFlags(AgentState, _selectedEntities.AsSpan(0, _selectedCount));
-    }
-
-    public void ClearSelection()
-    {
-        if (_selectedCount == 0)
-        {
-            MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
-            return;
-        }
-
-        _selectedCount = 0;
-        _selectionRevision++;
-        Telemetry.MarkSelectionSnapshot();
-        MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
-    }
-
     public void MarkStructuralChange()
     {
         Telemetry.MarkStructuralChange();
@@ -502,47 +466,34 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkCommandApply();
     }
 
-    public bool RotateSelectedFormation(World world, float deltaRadians, int localPlayerId)
+    public bool RotateSelectedFormation(
+        World world,
+        Dictionary<string, object> globals,
+        float deltaRadians,
+        int localPlayerId)
     {
         ArgumentNullException.ThrowIfNull(world);
-        if (_selectedCount <= 0 ||
+        ArgumentNullException.ThrowIfNull(globals);
+        int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(world, globals);
+        if (selectedCount <= 0 ||
             !(MathF.Abs(deltaRadians) > Config.Semantics.Group.FormationRotationEpsilonRadians))
         {
             return false;
         }
 
-        if (!CanLocalPlayerCommandSelection(world, SelectedEntities, localPlayerId))
+        Span<Entity> scratch = EnsureSelectionScratch(selectedCount);
+        int written = MassNavigationSelectionAccess.CopyCurrentSelection(world, globals, this, scratch);
+        ReadOnlySpan<Entity> selected = scratch[..written];
+        if (written <= 0 ||
+            !MassNavigationMoveOrderSubmitter.CanSubmitSelectionMoveOrders(world, selected, localPlayerId))
         {
             Telemetry.MarkCommandRejected();
             return false;
         }
 
-        NavGroupRuntime.RotateSelected(world, AgentState, SelectedEntities, deltaRadians);
+        NavGroupRuntime.RotateSelected(world, AgentState, selected, deltaRadians);
         MarkCommandApply();
         return true;
-    }
-
-    private static bool CanLocalPlayerCommandSelection(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
-    {
-        int liveCommandableActors = 0;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity actor = selected[i];
-            if (!world.IsAlive(actor))
-            {
-                continue;
-            }
-
-            if (!world.TryGet(actor, out PlayerOwner owner) ||
-                owner.PlayerId != localPlayerId)
-            {
-                return false;
-            }
-
-            liveCommandableActors++;
-        }
-
-        return liveCommandableActors > 0;
     }
 
     public void MarkScenarioSpawned()
@@ -677,7 +628,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ResetRuntimeState(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearSelection();
+        MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
         MarkAuthoredRuntimeBindingChanged();
@@ -692,7 +643,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ClearAuthoredRuntimeBindings(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearSelection();
+        MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
@@ -717,16 +668,6 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
         }
 
-        int previousSelectedCount = _selectedCount;
-        uint previousSelectionRevision = _selectionRevision;
-        Span<Entity> previousSelectedEntities = previousSelectedCount > 0
-            ? EnsureSelectionScratch(previousSelectedCount)
-            : Span<Entity>.Empty;
-        if (previousSelectedCount > 0)
-        {
-            _selectedEntities.AsSpan(0, previousSelectedCount).CopyTo(previousSelectedEntities);
-        }
-
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
         ClearAuthoredRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
@@ -736,7 +677,6 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
-        RestoreSelectionAfterAuthoredRebuild(world, previousSelectedEntities, previousSelectionRevision);
         MarkStructuralChange();
     }
 
@@ -772,35 +712,6 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         MarkStructuralChange();
-    }
-
-    private void RestoreSelectionAfterAuthoredRebuild(
-        World world,
-        ReadOnlySpan<Entity> previousSelectedEntities,
-        uint previousSelectionRevision)
-    {
-        if (previousSelectedEntities.Length <= 0)
-        {
-            return;
-        }
-
-        int restoredCount = 0;
-        Span<Entity> restored = EnsureSelectionScratch(previousSelectedEntities.Length);
-        for (int i = 0; i < previousSelectedEntities.Length; i++)
-        {
-            Entity entity = previousSelectedEntities[i];
-            if (world.IsAlive(entity) && AgentState.TryGetControllableIndex(entity, out _))
-            {
-                restored[restoredCount++] = entity;
-            }
-        }
-
-        if (restoredCount <= 0)
-        {
-            return;
-        }
-
-        SetSelection(restored[..restoredCount], previousSelectionRevision);
     }
 
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)

@@ -1,22 +1,19 @@
 using System.Diagnostics;
-using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
-internal sealed class MassNavigationSelectionSyncSystem : ISystem<float>
+internal sealed class MassNavigationFrameBeginSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly World _world;
     private readonly MassNavigationSimulationRuntime _simulation;
 
-    public MassNavigationSelectionSyncSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationFrameBeginSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
-        _world = engine.World;
         _simulation = simulation;
     }
 
@@ -35,14 +32,8 @@ internal sealed class MassNavigationSelectionSyncSystem : ISystem<float>
         _simulation.BeginFrame(dt);
         _simulation.ObserveSelectionSyncTick();
 
-        if (!SelectionContextRuntime.TryGetRuntime(_engine.GlobalContext, out SelectionRuntime selection) ||
-            !SelectionContextRuntime.TryDescribeCurrentView(_world, _engine.GlobalContext, out _))
-        {
-            return;
-        }
-        
         long start = Stopwatch.GetTimestamp();
-        MassNavigationSelectionSync.SyncIfChanged(_world, _engine.GlobalContext, selection, _simulation);
+        MassNavigationSelectionAccess.RefreshFlowSelectedFlags(_engine.World, _engine.GlobalContext, _simulation);
         _simulation.ObserveSelectionSync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 }

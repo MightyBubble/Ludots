@@ -84,8 +84,22 @@ public static class MassNavigationMoveOrderSubmitter
             return MassNavigationMoveCommandResult.OutsideWorld;
         }
 
-        ReadOnlySpan<Entity> selected = simulation.SelectedEntities;
-        if (selected.Length <= 0)
+        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
+        {
+            throw new InvalidOperationException("MassNavigation runtime requires a current selection container before submitting move orders.");
+        }
+
+        int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(world, globals);
+        if (selectedCount <= 0)
+        {
+            simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.EmptySelection;
+        }
+
+        Span<Entity> selectionScratch = simulation.EnsureSelectionScratch(selectedCount);
+        int written = MassNavigationSelectionAccess.CopyCurrentSelection(world, globals, simulation, selectionScratch);
+        ReadOnlySpan<Entity> selected = selectionScratch[..written];
+        if (written <= 0)
         {
             simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
             return MassNavigationMoveCommandResult.EmptySelection;
@@ -95,11 +109,6 @@ public static class MassNavigationMoveOrderSubmitter
         {
             simulation.RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
             return MassNavigationMoveCommandResult.UnauthorizedSelection;
-        }
-
-        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
-        {
-            throw new InvalidOperationException("MassNavigation runtime requires a current selection container before submitting move orders.");
         }
 
         if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
@@ -160,7 +169,7 @@ public static class MassNavigationMoveOrderSubmitter
         return MassNavigationMoveCommandResult.Submitted;
     }
 
-    private static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
+    internal static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
     {
         int liveCommandableActors = 0;
         for (int i = 0; i < selected.Length; i++)
