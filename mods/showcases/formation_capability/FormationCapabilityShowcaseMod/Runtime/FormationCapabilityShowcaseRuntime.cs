@@ -12,6 +12,8 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
@@ -998,27 +1000,42 @@ internal sealed class FormationCapabilityShowcaseRuntime
             throw new InvalidOperationException("Formation Capability showcase failed to author its configured initial selection.");
         }
 
-        if (!SelectionContextRuntime.TrySetCurrentView(
+        if (!EntityViewRuntime.TrySetCurrentView(
                 engine.World,
                 engine.GlobalContext,
+                engine.GetService(CoreServiceKeys.EntityViewConfig)
+                    ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig."),
                 selection,
                 owner,
                 SelectionViewKeys.Primary,
                 owner,
-                SelectionSetKeys.LivePrimary,
-                out SelectionViewDescriptor viewDescriptor))
+                SelectionSetKeys.LivePrimary))
         {
-            throw new InvalidOperationException("Formation Capability showcase failed to bind LivePrimary as the primary selection view.");
+            throw new InvalidOperationException("Formation Capability showcase failed to bind EntityView primary profile.");
         }
+
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore.");
+        EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig.");
+        EntityViewProfileEntry profile = entityViewConfig.RequireProfile(SelectionViewKeys.Primary);
+        EntityViewRuntime.PromoteCommandSource(
+            collections,
+            owner,
+            in profile,
+            _initialSelectionScratch.AsSpan(0, 1),
+            "Formation Capability initial selection");
 
         if (!selection.TryDescribeSelection(owner, SelectionSetKeys.LivePrimary, out SelectionContainerDescriptor descriptor))
         {
             throw new InvalidOperationException("Formation Capability showcase failed to describe the initial selection it just authored.");
         }
 
-        if (viewDescriptor.Container.Container != descriptor.Container)
+        if (!EntityViewRuntime.TryGetCommandSourceHandle(engine.World, engine.GlobalContext, entityViewConfig, out _, out EntityCollectionHandle commandHandle) ||
+            !collections.TryGetView(commandHandle, out EntityCollectionView commandView) ||
+            commandView.Count != 1)
         {
-            throw new InvalidOperationException("Formation Capability showcase initial selection view does not resolve to LivePrimary.");
+            throw new InvalidOperationException("Formation Capability showcase initial selection did not promote EntityView command source.");
         }
 
         _initialSelectionApplied = true;

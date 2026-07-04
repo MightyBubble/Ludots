@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
@@ -31,9 +31,10 @@ public static class MassNavigationMoveOrderSubmitter
             return MassNavigationMoveCommandResult.OutsideWorld;
         }
 
-        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
+        if (!MassNavigationSelectionAccess.TryGetCurrentCommandSourceHandle(world, globals, out Entity collectionOwner, out EntityCollectionHandle collectionHandle))
         {
-            throw new InvalidOperationException("MassNavigation runtime requires a current selection container before submitting move orders.");
+            simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.EmptySelection;
         }
 
         int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(world, globals);
@@ -85,7 +86,8 @@ public static class MassNavigationMoveOrderSubmitter
                     centerCm,
                     simulation.FormationMode,
                     rotationRadians,
-                    selectionContainer)
+                    collectionOwner,
+                    collectionHandle)
             };
 
             if (orderQueue.TryEnqueue(in order))

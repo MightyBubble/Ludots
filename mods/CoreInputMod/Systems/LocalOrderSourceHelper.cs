@@ -5,6 +5,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -130,6 +131,8 @@ namespace CoreInputMod.Systems
                 return _world.IsAlive(entity);
             });
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
+            mapping.SetSelectedCollectionProvider((string setKey, out Entity owner, out EntityCollectionHandle handle) =>
+                _context.TryGetCommandSourceHandle(out owner, out handle));
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
@@ -32,6 +33,11 @@ namespace Ludots.Core.Input.Orders
     /// Delegate for getting the current selected container snapshot from a named selection set.
     /// </summary>
     public delegate bool SelectedContainerProvider(string selectionSetKey, out Entity container);
+
+    /// <summary>
+    /// Delegate for getting the current EntityView command-source collection handle from a named selection set.
+    /// </summary>
+    public delegate bool SelectedCollectionProvider(string selectionSetKey, out Entity owner, out EntityCollectionHandle handle);
 
     /// <summary>
     /// Delegate for copying the current selected entities into a reusable list.
@@ -178,6 +184,7 @@ namespace Ludots.Core.Input.Orders
         private ActorProvider? _actorProvider;
         private SelectedEntityProvider? _selectedEntityProvider;
         private SelectedContainerProvider? _selectedContainerProvider;
+        private SelectedCollectionProvider? _selectedCollectionProvider;
         private SelectedEntityListProvider? _selectedEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
@@ -338,6 +345,7 @@ namespace Ludots.Core.Input.Orders
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
         public void SetSelectedEntityProvider(SelectedEntityProvider provider) => _selectedEntityProvider = provider;
         public void SetSelectedContainerProvider(SelectedContainerProvider provider) => _selectedContainerProvider = provider;
+        public void SetSelectedCollectionProvider(SelectedCollectionProvider provider) => _selectedCollectionProvider = provider;
         public void SetSelectedEntityListProvider(SelectedEntityListProvider provider) => _selectedEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
@@ -1354,6 +1362,15 @@ namespace Ludots.Core.Input.Orders
         private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)
         {
             selection = default;
+            if (_selectedCollectionProvider != null &&
+                _selectedCollectionProvider(selectionSetKey, out Entity owner, out EntityCollectionHandle handle) &&
+                handle.IsValid)
+            {
+                selection.CollectionOwner = owner;
+                selection.CollectionHandle = handle;
+                return true;
+            }
+
             return _selectedContainerProvider != null &&
                    _selectedContainerProvider(selectionSetKey, out selection.Container) &&
                    selection.HasContainer;

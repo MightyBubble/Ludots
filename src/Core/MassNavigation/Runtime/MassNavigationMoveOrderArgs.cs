@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.MassNavigation.Runtime;
@@ -11,29 +12,33 @@ public readonly struct MassNavigationMoveOrderArgs
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
         float rotationRadians,
-        Entity selectionContainer)
+        Entity collectionOwner,
+        EntityCollectionHandle collectionHandle)
     {
         DestinationCm = destinationCm;
         FormationMode = formationMode;
         RotationRadians = rotationRadians;
-        SelectionContainer = selectionContainer;
+        CollectionOwner = collectionOwner;
+        CollectionHandle = collectionHandle;
     }
 
     public Vector2 DestinationCm { get; }
     public MassNavigationFormationMode FormationMode { get; }
     public float RotationRadians { get; }
-    public Entity SelectionContainer { get; }
+    public Entity CollectionOwner { get; }
+    public EntityCollectionHandle CollectionHandle { get; }
 
     public static OrderArgs Encode(
         Vector2 destinationCm,
         MassNavigationFormationMode formationMode,
         float rotationRadians,
-        Entity selectionContainer)
+        Entity collectionOwner,
+        EntityCollectionHandle collectionHandle)
     {
         ValidateFormationMode(formationMode, nameof(formationMode));
-        if (selectionContainer == Entity.Null)
+        if (collectionOwner == Entity.Null || !collectionHandle.IsValid)
         {
-            throw new InvalidOperationException("MassNavigation move orders require an explicit selection container.");
+            throw new InvalidOperationException("MassNavigation move orders require an explicit command-source collection handle.");
         }
 
         return new OrderArgs
@@ -48,7 +53,8 @@ public readonly struct MassNavigationMoveOrderArgs
             },
             Selection = new OrderSelectionReference
             {
-                Container = selectionContainer
+                CollectionOwner = collectionOwner,
+                CollectionHandle = collectionHandle,
             }
         };
     }
@@ -62,12 +68,19 @@ public readonly struct MassNavigationMoveOrderArgs
                 $"MassNavigation move order {order.OrderId} requires a single WorldCm spatial target.");
         }
 
+        if (!order.Args.Selection.HasCollection)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation move order {order.OrderId} requires a command-source collection handle.");
+        }
+
         MassNavigationFormationMode formationMode = DecodeFormationMode(order.Args.I0, order.OrderId);
         return new MassNavigationMoveOrderArgs(
             new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z),
             formationMode,
             order.Args.F0,
-            order.Args.Selection.Container);
+            order.Args.Selection.CollectionOwner,
+            order.Args.Selection.CollectionHandle);
     }
 
     private static MassNavigationFormationMode DecodeFormationMode(int rawValue, int orderToken)

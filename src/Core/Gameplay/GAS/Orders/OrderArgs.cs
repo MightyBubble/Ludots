@@ -1,5 +1,6 @@
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
  
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
@@ -50,8 +51,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public struct OrderSelectionReference
     {
         public Entity Container;
+        public Entity CollectionOwner;
+        public EntityCollectionHandle CollectionHandle;
 
         public readonly bool HasContainer => Container != Entity.Null;
+        public readonly bool HasCollection => CollectionHandle.IsValid && CollectionOwner != Entity.Null;
     }
  
     public struct OrderArgs

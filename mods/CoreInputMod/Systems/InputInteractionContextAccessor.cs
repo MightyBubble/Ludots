@@ -6,7 +6,9 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
@@ -121,12 +123,59 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
+            if (TryGetCommandSourceEntities(out List<Entity> entities))
+            {
+                entity = entities[0];
+                return true;
+            }
+
             if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
             }
 
             return _selection.TryGetPrimary(owner, setKey, out entity);
+        }
+
+        public bool TryGetCommandSourceHandle(out Entity owner, out EntityCollectionHandle handle)
+        {
+            owner = default;
+            handle = EntityCollectionHandle.Invalid;
+            if (!_globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) ||
+                configObj is not EntityViewRuntimeConfig config)
+            {
+                return false;
+            }
+
+            return EntityViewRuntime.TryGetCommandSourceHandle(_world, _globals, config, out owner, out handle);
+        }
+
+        public bool TryGetCommandSourceEntities(out List<Entity> entities)
+        {
+            entities = new List<Entity>();
+            if (!_globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) ||
+                configObj is not EntityViewRuntimeConfig config ||
+                !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||
+                storeObj is not EntityCollectionStore collections ||
+                !EntityViewRuntime.TryGetCommandSourceHandle(_world, _globals, config, out _, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return false;
+            }
+
+            Entity[] scratch = new Entity[view.Count];
+            int written = collections.CopyEntities(handle, 0, scratch);
+            for (int i = 0; i < written; i++)
+            {
+                Entity candidate = scratch[i];
+                if (_world.IsAlive(candidate))
+                {
+                    entities.Add(candidate);
+                }
+            }
+
+            return entities.Count > 0;
         }
 
         public bool TryGetSelectedContainer(string setKey, out Entity container)
@@ -142,6 +191,13 @@ namespace CoreInputMod.Systems
 
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
+            if (TryGetCommandSourceEntities(out List<Entity> commandSourceEntities))
+            {
+                entities.Clear();
+                entities.AddRange(commandSourceEntities);
+                return entities.Count > 0;
+            }
+
             entities.Clear();
             if (!TryGetSelectionOwner(out var owner))
             {
