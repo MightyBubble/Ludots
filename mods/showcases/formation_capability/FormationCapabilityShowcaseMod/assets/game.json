@@ -7,7 +7,21 @@
   "windowResizable": true,
   "selection": {
     "targetFilter": { "relationFilter": "Friendly" },
+    "acquisition": {
+      "commitToFormalSelection": true,
+      "formalSelectionSetKey": "selection.live.primary"
+    },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+  },
+  "entityViews": {
+    "defaultViewKey": "selection.view.primary",
+    "profiles": [
+      {
+        "viewKey": "selection.view.primary",
+        "commandSourceCollectionKey": "collection.command.source",
+        "displayCollectionKey": "collection.selection.live.primary"
+      }
+    ]
   },
   "presentation": {
     "cameraCulling": {

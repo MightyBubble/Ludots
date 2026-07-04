@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Config
@@ -53,6 +54,8 @@ namespace Ludots.Core.Config
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
         public SelectionRuntimeConfig? Selection { get; set; }
+
+        public EntityViewRuntimeConfig? EntityViews { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 

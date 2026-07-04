@@ -42,6 +42,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Events;
@@ -834,6 +835,9 @@ namespace Ludots.Core.Engine
             var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var selectionConfig = config.Selection
                 ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
+            var entityViewConfig = config.EntityViews
+                ?? throw new InvalidOperationException("game.json entityViews must be explicitly configured.");
+            entityViewConfig.Validate();
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var interactionActionBindings = new InteractionActionBindings();
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
@@ -1192,6 +1196,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionResponseBuffer, selectionResponseBuffer);
             SetService(CoreServiceKeys.SelectionRuntime, selectionRuntime);
             SetService(CoreServiceKeys.SelectionConfig, selectionConfig);
+            SetService(CoreServiceKeys.EntityViewConfig, entityViewConfig);
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);

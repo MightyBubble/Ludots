@@ -33,6 +33,7 @@ using Ludots.Core.Hosting;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.ParticipantVisibility;
@@ -228,6 +229,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
         public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
         public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
+        public static readonly ServiceKey<EntityViewRuntimeConfig> EntityViewConfig = new("EntityViewConfig");
+        public static readonly ServiceKey<Entity> EntityViewViewerEntity = new("EntityViewViewerEntity");
+        public static readonly ServiceKey<string> EntityViewKey = new("EntityViewKey");
         public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
         public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
         public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");

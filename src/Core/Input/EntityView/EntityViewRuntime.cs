@@ -1,0 +1,219 @@
+using System;
+using System.Collections.Generic;
+using Arch.Core;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Scripting;
+
+namespace Ludots.Core.Input.EntityView;
+
+public static class EntityViewRuntime
+{
+    public static bool TryResolveCurrentProfile(
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config,
+        out EntityViewProfileEntry profile)
+    {
+        profile = null!;
+        ArgumentNullException.ThrowIfNull(globals);
+        ArgumentNullException.ThrowIfNull(config);
+
+        if (!TryGetCurrentViewKey(globals, out string viewKey))
+        {
+            return false;
+        }
+
+        return config.TryGetProfile(viewKey, out profile);
+    }
+
+    public static bool TryGetCurrentViewKey(Dictionary<string, object> globals, out string viewKey)
+    {
+        viewKey = string.Empty;
+        if (globals.TryGetValue(CoreServiceKeys.EntityViewKey.Name, out object? configured) &&
+            configured is string configuredViewKey &&
+            !string.IsNullOrWhiteSpace(configuredViewKey))
+        {
+            viewKey = configuredViewKey;
+            return true;
+        }
+
+        if (globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out object? legacy) &&
+            legacy is string legacyViewKey &&
+            !string.IsNullOrWhiteSpace(legacyViewKey))
+        {
+            viewKey = legacyViewKey;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool TryGetCurrentViewer(World world, Dictionary<string, object> globals, out Entity viewer)
+    {
+        viewer = default;
+        if (globals.TryGetValue(CoreServiceKeys.EntityViewViewerEntity.Name, out object? configured) &&
+            configured is Entity configuredViewer &&
+            world.IsAlive(configuredViewer))
+        {
+            viewer = configuredViewer;
+            return true;
+        }
+
+        if (globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out object? legacy) &&
+            legacy is Entity legacyViewer &&
+            world.IsAlive(legacyViewer))
+        {
+            viewer = legacyViewer;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool TrySetCurrentView(
+        World world,
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config,
+        SelectionRuntime selection,
+        Entity viewer,
+        string viewKey,
+        Entity owner,
+        string formalSelectionSetKey)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(globals);
+        ArgumentNullException.ThrowIfNull(config);
+        ArgumentNullException.ThrowIfNull(selection);
+
+        EntityViewProfileEntry profile = config.RequireProfile(viewKey);
+        if (!world.IsAlive(viewer) ||
+            !world.IsAlive(owner) ||
+            string.IsNullOrWhiteSpace(formalSelectionSetKey))
+        {
+            return false;
+        }
+
+        if (!selection.TryGetOrCreateSelectionEntity(owner, formalSelectionSetKey, out _) ||
+            !selection.TryBindView(viewer, viewKey, owner, formalSelectionSetKey))
+        {
+            if (!selection.TryDescribeView(viewer, viewKey, out SelectionViewDescriptor existing) ||
+                existing.Container.Owner != owner ||
+                !string.Equals(existing.Container.SetKey, formalSelectionSetKey, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
+        globals[CoreServiceKeys.EntityViewKey.Name] = viewKey;
+        globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+        globals[CoreServiceKeys.SelectionViewKey.Name] = viewKey;
+        _ = profile;
+        return true;
+    }
+
+    public static bool TryGetCommandSourceHandle(
+        World world,
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config,
+        out Entity owner,
+        out EntityCollectionHandle handle)
+    {
+        owner = default;
+        handle = EntityCollectionHandle.Invalid;
+        if (!TryGetCurrentViewer(world, globals, out Entity viewer) ||
+            !TryResolveCurrentProfile(globals, config, out EntityViewProfileEntry profile) ||
+            !TryGetEntityCollectionStore(globals, out EntityCollectionStore collections))
+        {
+            return false;
+        }
+
+        owner = viewer;
+        return collections.TryGet(viewer, profile.CommandSourceCollectionKey, out handle);
+    }
+
+    public static int GetCommandSourceCount(
+        World world,
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config)
+    {
+        return TryGetCommandSourceHandle(world, globals, config, out _, out EntityCollectionHandle handle) &&
+               TryGetEntityCollectionStore(globals, out EntityCollectionStore collections) &&
+               collections.TryGetView(handle, out EntityCollectionView view)
+            ? view.Count
+            : 0;
+    }
+
+    public static int CopyCommandSourceEntities(
+        World world,
+        Dictionary<string, object> globals,
+        EntityViewRuntimeConfig config,
+        Span<Entity> destination)
+    {
+        if (!TryGetCommandSourceHandle(world, globals, config, out Entity owner, out EntityCollectionHandle handle) ||
+            !TryGetEntityCollectionStore(globals, out EntityCollectionStore collections))
+        {
+            return 0;
+        }
+
+        return collections.CopyEntities(handle, 0, destination);
+    }
+
+    public static EntityCollectionHandle PromoteCommandSource(
+        EntityCollectionStore collections,
+        Entity owner,
+        in EntityViewProfileEntry profile,
+        ReadOnlySpan<Entity> entities,
+        string summary)
+    {
+        ArgumentNullException.ThrowIfNull(collections);
+        if (owner == Entity.Null)
+        {
+            throw new ArgumentException("EntityView command source owner is required.", nameof(owner));
+        }
+
+        profile.Validate("EntityViewProfileEntry");
+        var descriptor = EntityCollectionDescriptor.Create(
+            profile.CommandSourceCollectionKey,
+            EntityCollectionSourceKind.SelectionView,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            entities.Length > 0 ? entities[0] : Entity.Null,
+            "Command source",
+            summary);
+        return collections.Replace(owner, descriptor, entities);
+    }
+
+    public static EntityCollectionHandle PromoteDisplayCollection(
+        EntityCollectionStore collections,
+        Entity owner,
+        in EntityViewProfileEntry profile,
+        ReadOnlySpan<Entity> entities,
+        string summary)
+    {
+        ArgumentNullException.ThrowIfNull(collections);
+        if (owner == Entity.Null)
+        {
+            throw new ArgumentException("EntityView display collection owner is required.", nameof(owner));
+        }
+
+        profile.Validate("EntityViewProfileEntry");
+        var descriptor = EntityCollectionDescriptor.Create(
+            profile.DisplayCollectionKey,
+            EntityCollectionSourceKind.SelectionView,
+            EntityCollectionRoleKind.Display,
+            owner,
+            entities.Length > 0 ? entities[0] : Entity.Null,
+            "Display selection",
+            summary);
+        return collections.Replace(owner, descriptor, entities);
+    }
+
+    public static bool TryGetEntityCollectionStore(Dictionary<string, object> globals, out EntityCollectionStore collections)
+    {
+        collections = default!;
+        return globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) &&
+               storeObj is EntityCollectionStore store &&
+               (collections = store) != null;
+    }
+}

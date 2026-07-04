@@ -63,10 +63,20 @@
     "targetFilter": { "relationFilter": "All" },
     "acquisition": {
       "collectionKey": "collection.ui.selection.acquisition",
-      "commitToFormalSelection": true,
+      "commitToFormalSelection": false,
       "formalSelectionSetKey": "selection.live.primary",
       "title": "UI acquisition"
     },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]
+  },
+  "entityViews": {
+    "defaultViewKey": "selection.view.primary",
+    "profiles": [
+      {
+        "viewKey": "selection.view.primary",
+        "commandSourceCollectionKey": "collection.command.source",
+        "displayCollectionKey": "collection.selection.live.primary"
+      }
+    ]
   }
 }
