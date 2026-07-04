@@ -1,0 +1,31 @@
+name: Close completed issues (2026-07-04 batch)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/close-completed-issues-2026-07-04.yml
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  close-completed-issues:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close placement validation issues completed by PR #516
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue close 509 --repo "${{ github.repository }}" --comment "Completed by merged PR #516 (Placement Validation Core). Closing epic tracker."
+          gh issue close 511 --repo "${{ github.repository }}" --comment "Completed by merged PR #516 — Layer 0 PlacementValidation primitives."
+          gh issue close 512 --repo "${{ github.repository }}" --comment "Completed by merged PR #516 — placement graph ops 402–407."
+          gh issue close 513 --repo "${{ github.repository }}" --comment "Completed by merged PR #516 — authoritative aim snap via AbilityExecAimSync."
+          gh issue close 514 --repo "${{ github.repository }}" --comment "Completed by merged PR #516 — ability activation and OnPropose validation wiring."
+
+      - name: Close entity lifecycle tracking issue completed by PR #491 and #495
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue close 494 --repo "${{ github.repository }}" --comment "Completed by merged PR #491 (atomic ops implementation) and PR #495 (design SSOT + GAS composition gate skill)."
