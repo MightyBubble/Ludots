@@ -1,10 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Runtime.Loader;
 using Ludots.Core.Config;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.UI.Browser;
 
@@ -15,8 +13,6 @@ namespace Ludots.Adapter.Raylib
         private const string CefProviderId = "cef";
         private const string CefProviderHostTypeName = "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost";
         private const string CefProviderAssemblyFileName = "Ludots.UI.Browser.Cef.dll";
-        private static readonly object ProviderResolverSync = new();
-        private static readonly Dictionary<string, RaylibBrowserRuntimeProviderAssemblyResolver> ProviderResolvers = new(StringComparer.OrdinalIgnoreCase);
 
         public static IBrowserRuntime? InstallIfConfigured(GameEngine engine, GameConfig config, string baseDirectory)
         {
@@ -86,67 +82,18 @@ namespace Ludots.Adapter.Raylib
             string? runtimeRootPath,
             string? cacheRootPath)
         {
-            Assembly assembly = LoadProviderAssembly(providerAssemblyPath);
-            Type hostType = assembly.GetType(CefProviderHostTypeName, throwOnError: true)
-                ?? throw new InvalidOperationException($"CEF provider host type '{CefProviderHostTypeName}' was not found.");
-            MethodInfo installMethod = ResolveInstallMethod(hostType, runtimeRootPath != null);
-            object?[] arguments = runtimeRootPath != null
-                ? new object?[] { services, runtimeRootPath, cacheRootPath }
-                : new object?[] { services, cacheRootPath };
-
-            try
-            {
-                object? installed = installMethod.Invoke(null, arguments);
-                return installed as IBrowserRuntime
-                    ?? throw new InvalidOperationException("CEF provider Install did not return an IBrowserRuntime.");
-            }
-            catch (TargetInvocationException ex) when (ex.InnerException != null)
-            {
-                throw ex.InnerException;
-            }
-        }
-
-        private static MethodInfo ResolveInstallMethod(Type hostType, bool hasRuntimeRootPath)
-        {
-            string methodName = hasRuntimeRootPath ? "Install" : "InstallFromAssemblyLocation";
-            Type[] parameterTypes = hasRuntimeRootPath
-                ? new[] { typeof(IDictionary<string, object>), typeof(string), typeof(string) }
-                : new[] { typeof(IDictionary<string, object>), typeof(string) };
-            return hostType.GetMethod(
-                methodName,
-                BindingFlags.Public | BindingFlags.Static,
-                binder: null,
-                types: parameterTypes,
-                modifiers: null)
-                ?? throw new InvalidOperationException(
-                    $"CEF provider host type '{CefProviderHostTypeName}' does not expose the expected {methodName} method.");
-        }
-
-        private static Assembly LoadProviderAssembly(string assemblyPath)
-        {
-            string fullAssemblyPath = Path.GetFullPath(assemblyPath);
-            EnsureProviderAssemblyResolver(fullAssemblyPath);
-
-            AssemblyName requested = AssemblyName.GetAssemblyName(fullAssemblyPath);
-            Assembly? loaded = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
-                AssemblyName.ReferenceMatchesDefinition(requested, candidate.GetName()));
-            return loaded ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(fullAssemblyPath);
-        }
-
-        private static void EnsureProviderAssemblyResolver(string providerAssemblyPath)
-        {
-            lock (ProviderResolverSync)
-            {
-                if (ProviderResolvers.ContainsKey(providerAssemblyPath))
+            BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+                new BrowserRuntimeProviderLoadOptions(
+                    services,
+                    providerAssemblyPath,
+                    CefProviderHostTypeName)
                 {
-                    return;
-                }
-
-                var resolver = new RaylibBrowserRuntimeProviderAssemblyResolver(providerAssemblyPath);
-                AssemblyLoadContext.Default.Resolving += resolver.ResolveManagedAssembly;
-                AssemblyLoadContext.Default.ResolvingUnmanagedDll += resolver.ResolveUnmanagedDll;
-                ProviderResolvers.Add(providerAssemblyPath, resolver);
-            }
+                    ProviderId = CefProviderId,
+                    RuntimeRootPath = runtimeRootPath,
+                    BrowserCacheRootPath = cacheRootPath,
+                    Log = message => Log.Info(in LogChannels.Engine, message)
+                });
+            return handle.Runtime;
         }
     }
 }

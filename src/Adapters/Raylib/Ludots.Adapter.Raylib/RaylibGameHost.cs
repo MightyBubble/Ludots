@@ -25,7 +25,13 @@ namespace Ludots.Adapter.Raylib
             }
             finally
             {
-                ShutdownBrowserRuntimeForHostExit(setup);
+                RaylibHostSetup? setupToShutdown = setup;
+                IBrowserRuntime? browserRuntime = setupToShutdown?.BrowserRuntime;
+                setupToShutdown = setupToShutdown?.BrowserRuntime == null
+                    ? setupToShutdown
+                    : setupToShutdown with { BrowserRuntime = null };
+                setup = null;
+                ShutdownBrowserRuntimeForHostExit(setupToShutdown, browserRuntime);
             }
         }
 
@@ -33,21 +39,27 @@ namespace Ludots.Adapter.Raylib
         {
         }
 
-        private static void ShutdownBrowserRuntimeForHostExit(RaylibHostSetup? setup)
+        private static void ShutdownBrowserRuntimeForHostExit(RaylibHostSetup? setup, IBrowserRuntime? browserRuntime)
         {
-            if (setup?.BrowserRuntime == null)
+            if (setup == null || browserRuntime == null)
             {
                 return;
             }
 
             try
             {
-                setup.BrowserRuntime.DisposeAsync().AsTask().GetAwaiter().GetResult();
+                DisposeBrowserRuntime(browserRuntime);
             }
             finally
             {
+                browserRuntime = null;
                 ShutdownBrowserRuntimeProcessForHostExit(setup);
             }
+        }
+
+        private static void DisposeBrowserRuntime(IBrowserRuntime browserRuntime)
+        {
+            browserRuntime.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
 
         private static void ShutdownBrowserRuntimeProcessForHostExit(RaylibHostSetup setup)

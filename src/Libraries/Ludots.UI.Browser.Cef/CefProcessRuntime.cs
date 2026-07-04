@@ -93,6 +93,8 @@ internal static class CefProcessRuntime
 			{
 				global::CefSharp.Cef.Shutdown();
 			}
+
+			RemoveDefaultAssemblyResolution();
 		}
 	}
 
@@ -118,6 +120,18 @@ internal static class CefProcessRuntime
 		LoadProcessAssemblyIfPresent("CefSharp.Core");
 		LoadProcessAssemblyIfPresent("CefSharp");
 		LoadProcessAssemblyIfPresent("CefSharp.OffScreen");
+	}
+
+	private static void RemoveDefaultAssemblyResolution()
+	{
+		if (!_defaultAssemblyResolverRegistered)
+		{
+			return;
+		}
+
+		AssemblyLoadContext.Default.Resolving -= ResolveCefSharpAssemblyFromRuntimeRoot;
+		_defaultAssemblyResolverRegistered = false;
+		_defaultAssemblyRootPath = null;
 	}
 
 	private static Assembly? ResolveCefSharpAssemblyFromRuntimeRoot(AssemblyLoadContext context, AssemblyName assemblyName)

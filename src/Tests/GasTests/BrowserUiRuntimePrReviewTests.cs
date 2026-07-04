@@ -161,20 +161,30 @@ namespace GasTests
                 "Raylib",
                 "Ludots.Adapter.Raylib",
                 "RaylibBrowserRuntimeInstaller.cs"));
-            string resolverSource = File.ReadAllText(Path.Combine(
+            string loaderSource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "src",
-                "Adapters",
-                "Raylib",
-                "Ludots.Adapter.Raylib",
-                "RaylibBrowserRuntimeProviderAssemblyResolver.cs"));
+                "Libraries",
+                "Ludots.UI.Browser",
+                "BrowserRuntimeProviderLoader.cs"));
+            string loadContextSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "src",
+                "Libraries",
+                "Ludots.UI.Browser",
+                "BrowserRuntimeProviderAssemblyLoadContext.cs"));
 
-            Assert.That(installerSource, Does.Contain("EnsureProviderAssemblyResolver(fullAssemblyPath)"));
-            Assert.That(installerSource, Does.Contain("AssemblyLoadContext.Default.LoadFromAssemblyPath(fullAssemblyPath)"));
-            Assert.That(resolverSource, Does.Contain("AssemblyDependencyResolver"));
-            Assert.That(resolverSource, Does.Not.Contain("BrowserCefRuntimeMod"));
-            Assert.That(resolverSource, Does.Not.Contain("ResolvedModLoadPlan"));
-            Assert.That(resolverSource, Does.Not.Contain("CefSharp"));
+            Assert.That(installerSource, Does.Contain("BrowserRuntimeProviderLoader.Install"));
+            Assert.That(installerSource, Does.Not.Contain("AssemblyLoadContext.Default.LoadFromAssemblyPath"));
+            Assert.That(loaderSource, Does.Contain("ShadowCopy"));
+            Assert.That(loaderSource, Does.Contain("SHA256"));
+            Assert.That(loaderSource, Does.Contain("Unload()"));
+            Assert.That(loadContextSource, Does.Contain("AssemblyDependencyResolver"));
+            Assert.That(loadContextSource, Does.Contain("isCollectible: true"));
+            Assert.That(loaderSource, Does.Not.Contain("BrowserCefRuntimeMod"));
+            Assert.That(loadContextSource, Does.Not.Contain("BrowserCefRuntimeMod"));
+            Assert.That(loadContextSource, Does.Not.Contain("ResolvedModLoadPlan"));
+            Assert.That(loadContextSource, Does.Not.Contain("CefSharp"));
         }
 
         [Test]
