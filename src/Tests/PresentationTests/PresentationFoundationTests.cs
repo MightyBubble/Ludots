@@ -1839,6 +1839,51 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerEntityRuntime_OwnerPayloadRootIgnoresWorldPositionOverlayRoots()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int entityRootDef = definitions.Register("runtime.payload.entity.root", new PerformerDefinition());
+            int overlayRootDef = definitions.Register("runtime.payload.overlay.root", new PerformerDefinition());
+            instances.BindDefinitions(definitions);
+
+            Entity entityRoot = instances.Create(entityRootDef, owner, scopeId: 1);
+            Entity overlayRoot = instances.Create(
+                overlayRootDef,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.WorldPosition,
+                new Vector3(4f, 0f, 6f),
+                stableId: 2002,
+                Entity.Null,
+                definitions.Get(overlayRootDef));
+
+            Assert.That(world.TryGet(owner, out PresentationOwnerHasPerformerPayload payload), Is.True);
+            Assert.That(payload.Count, Is.EqualTo(2));
+            Assert.That(payload.RootCount, Is.EqualTo(1), "World-position overlay roots share owner scope but must not break the entity-root fast path.");
+            Assert.That(payload.SingleRootPerformer, Is.EqualTo(entityRoot));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(1));
+
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(2500, -700).Value;
+            world.Get<VisualTransform>(owner).Position = new Vector3(25f, 0f, -7f);
+
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            sync.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(entityRoot).Value, Is.EqualTo(new Vector3(25f, 0f, -7f)));
+            Assert.That(world.Get<PerformerWorldPosition>(overlayRoot).Value, Is.EqualTo(new Vector3(4f, 0f, 6f)));
+        }
+
+        [Test]
         public void PresentationVisualProxyEmitter_Throws_WhenSnapshotBufferOverflows()
         {
             var drawBuffer = new PrimitiveDrawBuffer();

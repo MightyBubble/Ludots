@@ -3870,7 +3870,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < bucket.Count; i++)
             {
                 Entity performer = bucket.GetAt(i);
-                if (!IsRootPerformer(performer))
+                if (!IsEntityAnchoredRootPerformer(performer))
                 {
                     continue;
                 }
@@ -3892,7 +3892,7 @@ namespace Ludots.Core.Presentation.Performers
             int count = 0;
             for (int i = 0; i < bucket.Count; i++)
             {
-                if (IsRootPerformer(bucket.GetAt(i)))
+                if (IsEntityAnchoredRootPerformer(bucket.GetAt(i)))
                 {
                     count++;
                 }
@@ -3901,10 +3901,12 @@ namespace Ludots.Core.Presentation.Performers
             return count;
         }
 
-        private bool IsRootPerformer(Entity performer)
+        private bool IsEntityAnchoredRootPerformer(Entity performer)
         {
             if (performer == Entity.Null ||
-                !_world.IsAlive(performer))
+                !_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer) ||
+                _world.Get<PerformerState>(performer).AnchorKind != PresentationAnchorKind.Entity)
             {
                 return false;
             }
