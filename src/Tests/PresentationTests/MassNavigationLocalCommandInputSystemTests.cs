@@ -339,13 +339,16 @@ namespace Ludots.Tests.Presentation
             {
                 RegisterMoveBlockedByBlockingOrder(orderRules);
             }
-            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules);
+
+            var orderQueue = new OrderQueue();
+            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules, orderQueue);
+            engine.SetService(CoreServiceKeys.OrderQueue, orderQueue);
             engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
             MassNavigationSelectionAccess.RefreshFlowSelectedFlags(world, engine.GlobalContext, simulation);
-            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderBuffer, orderTypes);
+            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderQueue, orderBuffer, orderTypes);
         }
 
         private static unsafe void RegisterMoveBlockedByBlockingOrder(OrderRuleRegistry orderRules)
@@ -538,6 +541,7 @@ namespace Ludots.Tests.Presentation
                 Entity enemyAgent,
                 SelectionRuntime selection,
                 MassNavigationSimulationRuntime simulation,
+                OrderQueue orderQueue,
                 OrderBufferSystem orderBufferSystem,
                 OrderTypeRegistry orderTypeRegistry)
             {
@@ -548,6 +552,7 @@ namespace Ludots.Tests.Presentation
                 EnemyAgent = enemyAgent;
                 Selection = selection;
                 Simulation = simulation;
+                OrderQueue = orderQueue;
                 OrderBufferSystem = orderBufferSystem;
                 OrderTypeRegistry = orderTypeRegistry;
             }
@@ -559,18 +564,22 @@ namespace Ludots.Tests.Presentation
             public Entity EnemyAgent { get; }
             public SelectionRuntime Selection { get; }
             public MassNavigationSimulationRuntime Simulation { get; }
+            public OrderQueue OrderQueue { get; }
             public OrderBufferSystem OrderBufferSystem { get; }
             public OrderTypeRegistry OrderTypeRegistry { get; }
 
             public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
             {
-                return Simulation.SubmitMoveCommand(
+                MassNavigationMoveCommandResult result = Simulation.SubmitMoveCommand(
                     World,
                     Engine.GlobalContext,
-                    OrderBufferSystem,
+                    OrderQueue,
                     OrderTypeRegistry,
                     centerCm,
                     LocalPlayerId);
+                OrderBufferSystem.Update(0f);
+                Simulation.ReconcilePendingMoveOrderAcceptance(World, OrderTypeRegistry);
+                return result;
             }
 
             public void Select(Entity entity)

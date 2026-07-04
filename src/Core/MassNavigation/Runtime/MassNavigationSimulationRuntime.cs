@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Selection;
@@ -134,6 +135,12 @@ public sealed class MassNavigationSimulationRuntime
     private int _flowWorkAreaRevision;
     private string _flowWorkAreaReason = "initial contact";
     private string _solverWindowDriver = "initial nav area";
+    private bool _hasPendingMoveOrderAcceptance;
+    private float _pendingMoveOrderWorldXCm;
+    private float _pendingMoveOrderWorldYCm;
+    private int _pendingMoveOrderSharedOrderId;
+    private int _pendingMoveOrderTypeId;
+    private int _pendingMoveOrderSelectedCount;
 
     public MassNavigationTelemetry Telemetry { get; } = new();
     public int SelectionSnapshotCountFrame => Telemetry.SelectionSnapshotCountFrame;
@@ -464,6 +471,76 @@ public sealed class MassNavigationSimulationRuntime
     public void MarkCommandApply()
     {
         Telemetry.MarkCommandApply();
+    }
+
+    public void StagePendingMoveOrderAcceptance(
+        Vector2 centerCm,
+        ReadOnlySpan<Entity> selectedEntities,
+        int sharedOrderId,
+        int moveOrderTypeId)
+    {
+        if (selectedEntities.Length > _selectionScratch.Length)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation pending move order acceptance required {selectedEntities.Length} selected entities, exceeding configured scenarioRuntime.initialSelectionScratchCapacity {_selectionScratch.Length}.");
+        }
+
+        selectedEntities.CopyTo(_selectionScratch);
+        _hasPendingMoveOrderAcceptance = true;
+        _pendingMoveOrderWorldXCm = centerCm.X;
+        _pendingMoveOrderWorldYCm = centerCm.Y;
+        _pendingMoveOrderSharedOrderId = sharedOrderId;
+        _pendingMoveOrderTypeId = moveOrderTypeId;
+        _pendingMoveOrderSelectedCount = selectedEntities.Length;
+    }
+
+    public void ReconcilePendingMoveOrderAcceptance(World world, OrderTypeRegistry orderTypeRegistry)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(orderTypeRegistry);
+
+        if (!_hasPendingMoveOrderAcceptance)
+        {
+            return;
+        }
+
+        _hasPendingMoveOrderAcceptance = false;
+        ReadOnlySpan<Entity> selected = _selectionScratch.AsSpan(0, _pendingMoveOrderSelectedCount);
+        int sharedOrderId = _pendingMoveOrderSharedOrderId;
+        int moveOrderTypeId = _pendingMoveOrderTypeId;
+        float worldXCm = _pendingMoveOrderWorldXCm;
+        float worldYCm = _pendingMoveOrderWorldYCm;
+
+        if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int configuredMoveOrderTypeId) ||
+            configuredMoveOrderTypeId != moveOrderTypeId)
+        {
+            throw new InvalidOperationException($"MassNavigation runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+        }
+
+        int accepted = 0;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!world.IsAlive(actor) || !world.Has<OrderBuffer>(actor))
+            {
+                continue;
+            }
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
+            if (ContainsAcceptedMoveOrder(ref buffer, sharedOrderId, moveOrderTypeId))
+            {
+                accepted++;
+            }
+        }
+
+        if (accepted <= 0)
+        {
+            RejectCommandOrderSubmit(worldXCm, worldYCm);
+            return;
+        }
+
+        FocusCommandTarget(new Vector2(worldXCm, worldYCm), selected);
+        MarkCommandApply();
     }
 
     public bool RotateSelectedFormation(
@@ -1113,16 +1190,16 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationMoveCommandResult SubmitMoveCommand(
         World world,
         Dictionary<string, object> globals,
-        OrderBufferSystem orderBufferSystem,
+        OrderQueue orderQueue,
         OrderTypeRegistry orderTypeRegistry,
         Vector2 centerCm,
         int playerId)
     {
-        return MassNavigationMoveOrderSubmitter.SubmitViaOrderBuffer(
+        return MassNavigationMoveOrderSubmitter.SubmitViaOrderQueue(
             this,
             world,
             globals,
-            orderBufferSystem,
+            orderQueue,
             orderTypeRegistry,
             centerCm,
             playerId);
@@ -1547,5 +1624,27 @@ public sealed class MassNavigationSimulationRuntime
         _streamingMinChunkY = int.MinValue;
         _streamingMaxChunkY = int.MinValue;
         _streamingRadiusCm = int.MinValue;
+    }
+
+    private static bool ContainsAcceptedMoveOrder(ref OrderBuffer buffer, int sharedOrderId, int moveOrderTypeId)
+    {
+        if (buffer.HasActive &&
+            buffer.ActiveOrder.Order.OrderId == sharedOrderId &&
+            buffer.ActiveOrder.Order.OrderTypeId == moveOrderTypeId)
+        {
+            return true;
+        }
+
+        for (int i = 0; i < buffer.QueuedCount; i++)
+        {
+            QueuedOrder queued = buffer.GetQueued(i);
+            if (queued.Order.OrderId == sharedOrderId &&
+                queued.Order.OrderTypeId == moveOrderTypeId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

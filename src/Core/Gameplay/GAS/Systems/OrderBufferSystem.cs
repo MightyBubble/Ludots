@@ -148,7 +148,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
+        internal OrderSubmitResult SubmitOrder(Entity entity, in Order order)
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
             return OrderSubmitter.Submit(

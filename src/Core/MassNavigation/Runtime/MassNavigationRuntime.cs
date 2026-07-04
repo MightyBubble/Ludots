@@ -1,6 +1,7 @@
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
@@ -95,6 +96,9 @@ public sealed class MassNavigationRuntime
         engine.RegisterSystem(new MassNavigationPrimarySelectionViewBootstrapSystem(engine), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationMoveOrderSourceSystem(engine, orderQueue), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.InsertSystemBeforeRequired<AbilityEndOrderSystem>(
+            new MassNavigationMoveOrderAcceptanceSystem(engine, simulation),
+            SystemGroup.AbilityActivation);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationFormationFollowerSystem(engine, simulation),

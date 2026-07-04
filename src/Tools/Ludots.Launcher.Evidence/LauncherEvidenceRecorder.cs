@@ -2065,69 +2065,29 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException($"MassNavigation UAT target is outside configured world bounds: {FormatPoint(targetCm)}.");
         }
 
-        if (engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
+        OrderQueue orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires OrderQueue.");
+        OrderTypeRegistry registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires OrderTypeRegistry.");
+        Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (localPlayer == Entity.Null || !engine.World.IsAlive(localPlayer) ||
+            !engine.World.TryGet(localPlayer, out Ludots.Core.Gameplay.Components.PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigation UAT requires OrderBufferSystem.");
+            throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity with PlayerOwner.");
         }
 
-        if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry ||
-            !registry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+        MassNavigationMoveCommandResult result = MassNavigationMoveOrderSubmitter.SubmitViaOrderQueue(
+            simulation,
+            engine.World,
+            engine.GlobalContext,
+            orderQueue,
+            registry,
+            targetCm,
+            owner.PlayerId);
+        if (result != MassNavigationMoveCommandResult.Submitted)
         {
-            throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
+            throw new InvalidOperationException($"MassNavigation UAT failed to submit massNavigationMove orders: {result}.");
         }
-
-        SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
-        if (selectionContainer == Entity.Null)
-        {
-            throw new InvalidOperationException("MassNavigation UAT requires a current SelectionRuntime container.");
-        }
-
-        int sharedOrderId = simulation.AllocateSharedOrderId();
-        int submitted = 0;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity entity = selected[i];
-            if (!engine.World.IsAlive(entity))
-            {
-                continue;
-            }
-
-            var order = new Order
-            {
-                OrderId = sharedOrderId,
-                OrderTypeId = moveOrderTypeId,
-                PlayerId = 1,
-                Actor = entity,
-                SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
-                {
-                    I0 = (int)MassNavigationFormationMode.Square,
-                    F0 = 0f,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetCm.X, 0f, targetCm.Y),
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selectionContainer
-                    }
-                }
-            };
-
-            if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.InvalidEntity)
-            {
-                submitted++;
-            }
-        }
-
-        if (submitted <= 0)
-        {
-            throw new InvalidOperationException("MassNavigation UAT failed to submit any massNavigationMove orders.");
-        }
-
-        simulation.FocusCommandTarget(targetCm, selected);
     }
 
     private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
@@ -2377,7 +2337,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
+        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderQueue.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();

@@ -2022,7 +2022,10 @@ namespace Ludots.Tests.Presentation
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             TickUntil(
                 engine,
-                () => CountActiveMoveOrders(engine, simulation) > 0,
+                () => simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    formationAgentIndex.Value,
+                    out float _,
+                    out float _),
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Right-click move should submit a MassNavigation order before facing verification.");
 
@@ -2284,7 +2287,7 @@ namespace Ludots.Tests.Presentation
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             TickUntil(
                 engine,
-                () => CountActiveMoveOrders(engine, simulation) == formations.Length,
+                () => CountNavGroupMoveOrders(engine, simulation, formations) == formations.Length,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Multi-formation right-click should submit one shared MassNavigation order per selected formation.");
 
@@ -3562,6 +3565,30 @@ namespace Ludots.Tests.Presentation
             int count = 0;
             var query = new QueryDescription().WithAll<PresentationDestroyPending>();
             engine.World.Query(in query, (Entity _) => count++);
+            return count;
+        }
+
+        private static int CountNavGroupMoveOrders(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            ReadOnlySpan<Entity> formations)
+        {
+            int count = 0;
+            for (int i = 0; i < formations.Length; i++)
+            {
+                Entity entity = formations[i];
+                if (!engine.World.IsAlive(entity) ||
+                    !engine.World.TryGet(entity, out MassNavigationAgentIndex agentIndex))
+                {
+                    continue;
+                }
+
+                if (simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agentIndex.Value, out _, out _))
+                {
+                    count++;
+                }
+            }
+
             return count;
         }
 

@@ -4,39 +4,12 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Selection;
 
 namespace Ludots.Core.MassNavigation.Runtime;
 
 public static class MassNavigationMoveOrderSubmitter
 {
-    public static MassNavigationMoveCommandResult SubmitViaOrderBuffer(
-        MassNavigationSimulationRuntime simulation,
-        World world,
-        Dictionary<string, object> globals,
-        OrderBufferSystem orderBufferSystem,
-        OrderTypeRegistry orderTypeRegistry,
-        Vector2 centerCm,
-        int playerId)
-    {
-        ArgumentNullException.ThrowIfNull(simulation);
-        ArgumentNullException.ThrowIfNull(world);
-        ArgumentNullException.ThrowIfNull(globals);
-        ArgumentNullException.ThrowIfNull(orderBufferSystem);
-        ArgumentNullException.ThrowIfNull(orderTypeRegistry);
-
-        return SubmitCore(
-            simulation,
-            world,
-            globals,
-            orderBufferSystem,
-            incomingOrders: null,
-            orderTypeRegistry,
-            centerCm,
-            playerId);
-    }
-
     public static MassNavigationMoveCommandResult SubmitViaOrderQueue(
         MassNavigationSimulationRuntime simulation,
         World world,
@@ -51,32 +24,6 @@ public static class MassNavigationMoveOrderSubmitter
         ArgumentNullException.ThrowIfNull(globals);
         ArgumentNullException.ThrowIfNull(orderQueue);
         ArgumentNullException.ThrowIfNull(orderTypeRegistry);
-
-        return SubmitCore(
-            simulation,
-            world,
-            globals,
-            orderBufferSystem: null,
-            orderQueue,
-            orderTypeRegistry,
-            centerCm,
-            playerId);
-    }
-
-    private static MassNavigationMoveCommandResult SubmitCore(
-        MassNavigationSimulationRuntime simulation,
-        World world,
-        Dictionary<string, object> globals,
-        OrderBufferSystem? orderBufferSystem,
-        OrderQueue? incomingOrders,
-        OrderTypeRegistry orderTypeRegistry,
-        Vector2 centerCm,
-        int playerId)
-    {
-        if (orderBufferSystem == null && incomingOrders == null)
-        {
-            throw new InvalidOperationException("MassNavigation move order submitter requires OrderBufferSystem or OrderQueue.");
-        }
 
         if (!simulation.ContainsWorldPoint(centerCm.X, centerCm.Y))
         {
@@ -141,18 +88,7 @@ public static class MassNavigationMoveOrderSubmitter
                     selectionContainer)
             };
 
-            if (incomingOrders != null)
-            {
-                if (incomingOrders.TryEnqueue(in order))
-                {
-                    submitted++;
-                }
-
-                continue;
-            }
-
-            OrderSubmitResult result = orderBufferSystem!.SubmitOrder(actor, in order);
-            if (IsAcceptedOrderSubmit(result))
+            if (orderQueue.TryEnqueue(in order))
             {
                 submitted++;
             }
@@ -164,8 +100,11 @@ public static class MassNavigationMoveOrderSubmitter
             return MassNavigationMoveCommandResult.OrderSubmitRejected;
         }
 
-        simulation.FocusCommandTarget(centerCm, selected);
-        simulation.MarkCommandApply();
+        simulation.StagePendingMoveOrderAcceptance(
+            centerCm,
+            selected,
+            sharedOrderId,
+            moveOrderTypeId);
         return MassNavigationMoveCommandResult.Submitted;
     }
 
@@ -190,11 +129,5 @@ public static class MassNavigationMoveOrderSubmitter
         }
 
         return liveCommandableActors > 0;
-    }
-
-    private static bool IsAcceptedOrderSubmit(OrderSubmitResult result)
-    {
-        return result == OrderSubmitResult.Activated ||
-               result == OrderSubmitResult.Queued;
     }
 }
