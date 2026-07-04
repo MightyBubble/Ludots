@@ -1,9 +1,7 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.EntityView;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Scripting;
@@ -50,32 +48,10 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
         else
         {
-            RefreshSelectedRotation();
-        }
-    }
-
-    private void RefreshSelectedRotation()
-    {
-        int count = MassNavigationSelectionAccess.GetCurrentCount(_engine.World, _engine.GlobalContext);
-        if (count <= 0)
-        {
-            _simulation.NavGroupRuntime.RefreshSelectedRotation(
+            _simulation.NavGroupRuntime.RefreshSelectedRotationFromActiveGroups(
                 _engine.World,
-                _simulation.AgentState,
-                ReadOnlySpan<Arch.Core.Entity>.Empty);
-            return;
+                _simulation.AgentState);
         }
-
-        Span<Arch.Core.Entity> scratch = _simulation.EnsureSelectionScratch(count);
-        int written = MassNavigationSelectionAccess.CopyCurrentSelection(
-            _engine.World,
-            _engine.GlobalContext,
-            _simulation,
-            scratch);
-        _simulation.NavGroupRuntime.RefreshSelectedRotation(
-            _engine.World,
-            _simulation.AgentState,
-            scratch[..written]);
     }
 
     private void ResetConfiguredScenario()
@@ -93,23 +69,8 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
     private void ResetRuntimeState()
     {
-        ClearEntityViewCommandCollections();
         RemovePendingScenarioSpawns();
         _simulation.ResetRuntimeState(_engine.World);
-    }
-
-    private void ClearEntityViewCommandCollections()
-    {
-        EntityViewRuntimeConfig config = _engine.GetService(CoreServiceKeys.EntityViewConfig)
-            ?? throw new InvalidOperationException("MassNavigation scene reset requires EntityViewConfig.");
-        EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
-            ?? throw new InvalidOperationException("MassNavigation scene reset requires EntityCollectionStore.");
-        EntityViewRuntime.ClearCurrentViewCollections(
-            _engine.World,
-            _engine.GlobalContext,
-            config,
-            collections,
-            "MassNavigation scene reset");
     }
 
     private void RemovePendingScenarioSpawns()

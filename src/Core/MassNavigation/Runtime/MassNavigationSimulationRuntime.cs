@@ -543,36 +543,6 @@ public sealed class MassNavigationSimulationRuntime
         MarkCommandApply();
     }
 
-    public bool RotateSelectedFormation(
-        World world,
-        Dictionary<string, object> globals,
-        float deltaRadians,
-        int localPlayerId)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        ArgumentNullException.ThrowIfNull(globals);
-        int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(world, globals);
-        if (selectedCount <= 0 ||
-            !(MathF.Abs(deltaRadians) > Config.Semantics.Group.FormationRotationEpsilonRadians))
-        {
-            return false;
-        }
-
-        Span<Entity> scratch = EnsureSelectionScratch(selectedCount);
-        int written = MassNavigationSelectionAccess.CopyCurrentSelection(world, globals, this, scratch);
-        ReadOnlySpan<Entity> selected = scratch[..written];
-        if (written <= 0 ||
-            !MassNavigationMoveOrderSubmitter.CanSubmitSelectionMoveOrders(world, selected, localPlayerId))
-        {
-            Telemetry.MarkCommandRejected();
-            return false;
-        }
-
-        NavGroupRuntime.RotateSelected(world, AgentState, selected, deltaRadians);
-        MarkCommandApply();
-        return true;
-    }
-
     public void MarkScenarioSpawned()
     {
         Telemetry.MarkScenarioSpawned();

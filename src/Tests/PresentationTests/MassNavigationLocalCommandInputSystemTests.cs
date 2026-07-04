@@ -13,6 +13,7 @@ using Ludots.Core.Layers;
 using Ludots.Core.Input.EntityView;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation;
+using Ludots.Core.Input.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
@@ -311,8 +312,6 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.EntityViewConfig, entityViewConfig);
             engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
             engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = entityViewConfig.DefaultViewKey;
-            engine.GlobalContext[CoreServiceKeys.EntityViewViewerEntity.Name] = localPlayer;
-            engine.GlobalContext[CoreServiceKeys.EntityViewKey.Name] = entityViewConfig.DefaultViewKey;
             engine.GlobalContext[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             var orderTypes = new OrderTypeRegistry();
@@ -364,7 +363,6 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
-            MassNavigationSelectionAccess.RefreshFlowSelectedFlags(world, engine.GlobalContext, simulation);
             return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderQueue, orderBuffer, orderTypes, entityViewConfig, collections);
         }
 
@@ -620,7 +618,6 @@ namespace Ludots.Tests.Presentation
                     in profile,
                     new[] { entity },
                     "test select");
-                MassNavigationSelectionAccess.RefreshFlowSelectedFlags(World, Engine.GlobalContext, Simulation);
             }
 
             public void SetActiveOrder(Entity entity, int orderTypeId)

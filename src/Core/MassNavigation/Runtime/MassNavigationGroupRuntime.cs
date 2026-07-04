@@ -708,6 +708,23 @@ public sealed class MassNavigationGroupRuntime
         RefreshSelectedRotation(world, agentState, selected);
     }
 
+    public void RefreshSelectedRotationFromActiveGroups(World world, MassNavigationAgentState agentState)
+    {
+        for (int groupId = 0; groupId < _groups.Count; groupId++)
+        {
+            NavGroupState? group = _groups[groupId];
+            if (group == null || group.MemberCount <= 0)
+            {
+                continue;
+            }
+
+            SelectedRotationRadians = group.RotationRadians;
+            return;
+        }
+
+        RefreshSelectedRotation(world, agentState, ReadOnlySpan<Entity>.Empty);
+    }
+
     public void RefreshSelectedRotation(World world, MassNavigationAgentState agentState, ReadOnlySpan<Entity> selected)
     {
         for (int i = 0; i < selected.Length; i++)
@@ -759,7 +776,14 @@ public sealed class MassNavigationGroupRuntime
     {
         if ((frameIndex & 1) == 0)
         {
-            RefreshSelectedRotation(world, agentState, selected);
+            if (selected.Length > 0)
+            {
+                RefreshSelectedRotation(world, agentState, selected);
+            }
+            else
+            {
+                RefreshSelectedRotationFromActiveGroups(world, agentState);
+            }
         }
 
         for (int groupId = 0; groupId < _groups.Count; groupId++)

@@ -26,6 +26,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using FormationCapabilityShowcaseMod.Systems;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -143,6 +144,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
+        engine.RegisterSystem(new FormationCapabilityDebugInputSystem(engine, this), SystemGroup.InputCollection);
         _systemsInstalled = true;
     }
 
@@ -167,6 +169,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _obstacleOverlaySpawnsQueued = false;
             _initialSelectionApplied = false;
             RemovePendingScenarioSpawns(engine, config);
+            ClearSelection(engine);
             DestroyShowcaseOwnedEntities(engine);
             ClearFormationCaches();
         }
@@ -1239,6 +1242,17 @@ internal sealed class FormationCapabilityShowcaseRuntime
         selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
         selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
         selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
+
+        EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig before clearing selection.");
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing selection.");
+        EntityViewRuntime.ClearCurrentViewCollections(
+            engine.World,
+            engine.GlobalContext,
+            entityViewConfig,
+            collections,
+            "Formation Capability showcase reset");
     }
 
     private static Entity ResolveLocalSelectionOwner(GameEngine engine)

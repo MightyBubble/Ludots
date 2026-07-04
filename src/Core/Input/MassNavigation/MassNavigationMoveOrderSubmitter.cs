@@ -2,11 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.EntityView;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Scripting;
 
-namespace Ludots.Core.MassNavigation.Runtime;
+namespace Ludots.Core.Input.MassNavigation;
 
 public static class MassNavigationMoveOrderSubmitter
 {
@@ -31,13 +35,14 @@ public static class MassNavigationMoveOrderSubmitter
             return MassNavigationMoveCommandResult.OutsideWorld;
         }
 
-        if (!MassNavigationSelectionAccess.TryGetCurrentCommandSourceHandle(world, globals, out Entity collectionOwner, out EntityCollectionHandle collectionHandle))
+        EntityViewRuntimeConfig config = RequireEntityViewConfig(globals);
+        if (!EntityViewRuntime.TryGetCommandSourceHandle(world, globals, config, out Entity collectionOwner, out EntityCollectionHandle collectionHandle))
         {
             simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
             return MassNavigationMoveCommandResult.EmptySelection;
         }
 
-        int selectedCount = MassNavigationSelectionAccess.GetCurrentCount(world, globals);
+        int selectedCount = EntityViewRuntime.GetCommandSourceCount(world, globals, config);
         if (selectedCount <= 0)
         {
             simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
@@ -45,7 +50,7 @@ public static class MassNavigationMoveOrderSubmitter
         }
 
         Span<Entity> selectionScratch = simulation.EnsureSelectionScratch(selectedCount);
-        int written = MassNavigationSelectionAccess.CopyCurrentSelection(world, globals, simulation, selectionScratch);
+        int written = EntityViewRuntime.CopyCommandSourceEntities(world, globals, config, selectionScratch);
         ReadOnlySpan<Entity> selected = selectionScratch[..written];
         if (written <= 0)
         {
@@ -110,7 +115,7 @@ public static class MassNavigationMoveOrderSubmitter
         return MassNavigationMoveCommandResult.Submitted;
     }
 
-    internal static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
+    public static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
     {
         int liveCommandableActors = 0;
         for (int i = 0; i < selected.Length; i++)
@@ -131,5 +136,16 @@ public static class MassNavigationMoveOrderSubmitter
         }
 
         return liveCommandableActors > 0;
+    }
+
+    private static EntityViewRuntimeConfig RequireEntityViewConfig(Dictionary<string, object> globals)
+    {
+        if (globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) &&
+            configObj is EntityViewRuntimeConfig config)
+        {
+            return config;
+        }
+
+        throw new InvalidOperationException("MassNavigation move order submit requires EntityViewConfig.");
     }
 }

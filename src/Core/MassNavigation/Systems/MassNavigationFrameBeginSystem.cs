@@ -30,10 +30,5 @@ internal sealed class MassNavigationFrameBeginSystem : ISystem<float>
         }
 
         _simulation.BeginFrame(dt);
-        _simulation.ObserveSelectionSyncTick();
-
-        long start = Stopwatch.GetTimestamp();
-        MassNavigationSelectionAccess.RefreshFlowSelectedFlags(_engine.World, _engine.GlobalContext, _simulation);
-        _simulation.ObserveSelectionSync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 }
