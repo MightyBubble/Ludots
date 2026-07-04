@@ -800,15 +800,15 @@ namespace Ludots.Tests.GAS
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
-            AssertSelection(selectionRuntime, local, first);
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var currentPrimary), Is.True);
+            AssertCommandSource(world, globals, local, first);
+            That(TryGetCommandSourcePrimary(world, globals, local, out Entity currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first));
 
             DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
-            AssertSelection(selectionRuntime, local, first, second, third);
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out currentPrimary), Is.True);
-            That(currentPrimary, Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
+            AssertCommandSource(world, globals, local, first, second, third);
+            That(TryGetCommandSourcePrimary(world, globals, local, out currentPrimary), Is.True);
+            That(currentPrimary, Is.EqualTo(first), "Primary command source entity should stay deterministic after box select.");
         }
 
         [Test]
@@ -837,8 +837,8 @@ namespace Ludots.Tests.GAS
             var system = new CurrentSelectionApplySystem(world, globals);
             Click(system, globals, input, new Vector2(5200f, 4200f));
 
-            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out _), Is.False);
+            That(GetCommandSourceCount(world, globals, local), Is.EqualTo(0));
+            That(TryGetCommandSourcePrimary(world, globals, local, out _), Is.False);
         }
 
         [Test]
@@ -863,7 +863,6 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            selectionRuntime.Config.Acquisition.CommitToFormalSelection = false;
             SeedLivePrimarySelection(world, globals, local, selected);
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
             var system = new CurrentSelectionApplySystem(world, globals);
@@ -985,14 +984,14 @@ namespace Ludots.Tests.GAS
 
                 Click(system, globals, input, new Vector2(1600f, 1200f));
 
-                That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
+                That(GetCommandSourceCount(world, globals, local), Is.EqualTo(0));
                 That(SelectionContextRuntime.TryGetCurrentHovered(world, globals, out Entity hovered), Is.True);
                 That(hovered, Is.EqualTo(formation));
 
                 world.Set(formation, new Team { Id = 1 });
                 Click(system, globals, input, new Vector2(1600f, 1200f));
 
-                AssertSelection(selectionRuntime, local, formation);
+                AssertCommandSource(world, globals, local, formation);
             }
             finally
             {
@@ -1050,7 +1049,7 @@ namespace Ludots.Tests.GAS
 
                 DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
-                AssertSelection(selectionRuntime, local, first, third);
+                AssertCommandSource(world, globals, local, first, third);
             }
             finally
             {
@@ -1089,7 +1088,7 @@ namespace Ludots.Tests.GAS
 
             Click(system, globals, input, new Vector2(1700f, 1200f));
 
-            AssertSelection(selectionRuntime, local, entity);
+            AssertCommandSource(world, globals, local, entity);
         }
 
         [Test]
@@ -1123,7 +1122,7 @@ namespace Ludots.Tests.GAS
 
             DragSelect(system, globals, input, new Vector2(2500f, 1300f), new Vector2(2850f, 1700f));
 
-            AssertSelection(selectionRuntime, local, entity);
+            AssertCommandSource(world, globals, local, entity);
         }
 
         [Test]
@@ -1157,7 +1156,7 @@ namespace Ludots.Tests.GAS
 
             Click(system, globals, input, new Vector2(1700f, 1200f));
 
-            AssertSelection(selectionRuntime, local, entity);
+            AssertCommandSource(world, globals, local, entity);
         }
 
         [Test]
@@ -1196,7 +1195,7 @@ namespace Ludots.Tests.GAS
             input.Update();
             system.Update(0f);
 
-            AssertSelection(selectionRuntime, local, entity);
+            AssertCommandSource(world, globals, local, entity);
         }
 
         [Test]
@@ -1234,7 +1233,7 @@ namespace Ludots.Tests.GAS
             input.Update();
             system.Update(0f);
 
-            AssertSelection(selectionRuntime, local, entity);
+            AssertCommandSource(world, globals, local, entity);
         }
 
         [Test]
@@ -1265,7 +1264,7 @@ namespace Ludots.Tests.GAS
             input.InjectAction(SelectionModifierActionIds.Additive, Vector3.One);
             Click(system, globals, input, new Vector2(2600f, 1600f));
 
-            AssertSelection(selectionRuntime, local, first, second);
+            AssertCommandSource(world, globals, local, first, second);
         }
 
         [Test]
@@ -1296,7 +1295,7 @@ namespace Ludots.Tests.GAS
             input.InjectAction(SelectionModifierActionIds.Toggle, Vector3.One);
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
-            AssertSelection(selectionRuntime, local, second);
+            AssertCommandSource(world, globals, local, second);
         }
 
         [Test]
@@ -1382,7 +1381,7 @@ namespace Ludots.Tests.GAS
             selectionSystem.Update(0f);
             mapping.Update(0f);
 
-            AssertSelection(selectionRuntime, local, actor);
+            AssertCommandSource(world, globals, local, actor);
             That(orders.Count, Is.EqualTo(1));
             That(orders[0].Actor, Is.EqualTo(actor));
             That(orders[0].Target, Is.EqualTo(enemy));
@@ -1528,12 +1527,48 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        private static void AssertCommandSource(World world, Dictionary<string, object> globals, Entity owner, params Entity[] expected)
+        {
+            EntityViewRuntimeConfig config = (EntityViewRuntimeConfig)globals[CoreServiceKeys.EntityViewConfig.Name];
+            EntityCollectionStore collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            That(EntityViewRuntime.TryGetCommandSourceHandle(world, globals, config, out _, out EntityCollectionHandle handle), Is.True);
+            That(collections.TryGetView(handle, out EntityCollectionView view), Is.True);
+            That(view.Count, Is.EqualTo(expected.Length));
+            Entity[] actual = new Entity[expected.Length];
+            int written = collections.CopyEntities(handle, 0, actual);
+            That(written, Is.EqualTo(expected.Length));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                That(actual[i], Is.EqualTo(expected[i]));
+            }
+        }
+
+        private static int GetCommandSourceCount(World world, Dictionary<string, object> globals, Entity owner)
+        {
+            EntityViewRuntimeConfig config = (EntityViewRuntimeConfig)globals[CoreServiceKeys.EntityViewConfig.Name];
+            return EntityViewRuntime.GetCommandSourceCount(world, globals, config);
+        }
+
+        private static bool TryGetCommandSourcePrimary(World world, Dictionary<string, object> globals, Entity owner, out Entity primary)
+        {
+            primary = default;
+            EntityViewRuntimeConfig config = (EntityViewRuntimeConfig)globals[CoreServiceKeys.EntityViewConfig.Name];
+            EntityCollectionStore collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            if (!EntityViewRuntime.TryGetCommandSourceHandle(world, globals, config, out _, out EntityCollectionHandle handle) ||
+                !collections.TryGetEntityAt(handle, 0, out primary))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals, string relationFilter = "All")
         {
             var config = new SelectionRuntimeConfig
             {
                 TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
-                Acquisition = new SelectionAcquisitionConfig { CommitToFormalSelection = true },
+                Acquisition = new SelectionAcquisitionConfig(),
             };
             var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var runtime = new SelectionRuntime(world, config, registry);

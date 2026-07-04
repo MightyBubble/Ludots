@@ -1512,6 +1512,12 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);
             RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
+            RegisterPresentationSystem(new EntityViewDisplaySelectionPresentationEventSystem(
+                World,
+                GlobalContext,
+                entityCollectionStore,
+                presentationEventStream,
+                selectionRuntime));
             RegisterPresentationSystem(new EntityCollectionPresentationEventSystem(World, entityCollectionStore, presentationEventStream, GameSession));
             RegisterPresentationSystem(new InstancedBatchBehaviorSystem(
                 World,

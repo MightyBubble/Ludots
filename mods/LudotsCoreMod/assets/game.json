@@ -63,8 +63,6 @@
     "targetFilter": { "relationFilter": "All" },
     "acquisition": {
       "collectionKey": "collection.ui.selection.acquisition",
-      "commitToFormalSelection": false,
-      "formalSelectionSetKey": "selection.live.primary",
       "title": "UI acquisition"
     },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]

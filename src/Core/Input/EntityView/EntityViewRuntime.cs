@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.EntityView;
@@ -58,39 +57,21 @@ public static class EntityViewRuntime
         World world,
         Dictionary<string, object> globals,
         EntityViewRuntimeConfig config,
-        SelectionRuntime selection,
         Entity viewer,
-        string viewKey,
-        Entity owner,
-        string formalSelectionSetKey)
+        string viewKey)
     {
         ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(globals);
         ArgumentNullException.ThrowIfNull(config);
-        ArgumentNullException.ThrowIfNull(selection);
 
-        EntityViewProfileEntry profile = config.RequireProfile(viewKey);
-        if (!world.IsAlive(viewer) ||
-            !world.IsAlive(owner) ||
-            string.IsNullOrWhiteSpace(formalSelectionSetKey))
+        if (!world.IsAlive(viewer) || string.IsNullOrWhiteSpace(viewKey))
         {
             return false;
         }
 
-        if (!selection.TryGetOrCreateSelectionEntity(owner, formalSelectionSetKey, out _) ||
-            !selection.TryBindView(viewer, viewKey, owner, formalSelectionSetKey))
-        {
-            if (!selection.TryDescribeView(viewer, viewKey, out SelectionViewDescriptor existing) ||
-                existing.Container.Owner != owner ||
-                !string.Equals(existing.Container.SetKey, formalSelectionSetKey, StringComparison.Ordinal))
-            {
-                return false;
-            }
-        }
-
+        _ = config.RequireProfile(viewKey);
         globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
         globals[CoreServiceKeys.EntityViewKey.Name] = viewKey;
-        _ = profile;
         return true;
     }
 

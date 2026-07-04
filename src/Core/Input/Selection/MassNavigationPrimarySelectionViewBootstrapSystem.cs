@@ -39,12 +39,10 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
             return;
         }
 
-        SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavigation selection bootstrap requires SelectionRuntime.");
         EntityViewRuntimeConfig entityViewConfig = _engine.GetService(CoreServiceKeys.EntityViewConfig)
             ?? throw new InvalidOperationException("MassNavigation selection bootstrap requires EntityViewConfig.");
         Entity owner = RequireLocalSelectionOwner(_engine);
-        EnsurePrimaryEntityView(_engine.World, owner, selection, entityViewConfig, _engine.GlobalContext);
+        EnsurePrimaryEntityView(_engine.World, owner, entityViewConfig, _engine.GlobalContext);
         _bootstrapped = true;
     }
 
@@ -87,7 +85,6 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
     internal static void EnsurePrimaryEntityView(
         World world,
         Entity owner,
-        SelectionRuntime selection,
         EntityViewRuntimeConfig entityViewConfig,
         Dictionary<string, object> globals)
     {
@@ -101,14 +98,11 @@ public sealed class MassNavigationPrimarySelectionViewBootstrapSystem : ISystem<
                 world,
                 globals,
                 entityViewConfig,
-                selection,
                 owner,
-                viewKey,
-                owner,
-                SelectionSetKeys.LivePrimary))
+                viewKey))
         {
             throw new InvalidOperationException(
-                $"MassNavigation selection bootstrap failed to bind EntityView profile '{viewKey}' to LivePrimary.");
+                $"MassNavigation selection bootstrap failed to bind EntityView profile '{viewKey}'.");
         }
     }
 }

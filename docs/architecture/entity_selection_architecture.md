@@ -1,6 +1,6 @@
 # Entity Selection Architecture
 
-> **Command-path deprecation (Epic #522):** 正式 gameplay 命令目标集已迁移到 `EntityViewProfile` + `EntityCollectionRoleKind.CommandSource`（见 `RFC-0061`、`EntityViewRuntime`）。`SelectionRuntime` 仍负责 presentation marker、formal selection mirror 与 legacy order snapshot lease；MassNavigation move intake 不再读取 `SelectionContextRuntime`。
+> **Command-path deprecation (Epic #522 / ORD-9):** 正式 gameplay 命令目标集已迁移到 `EntityViewProfile` + `EntityCollectionRoleKind.CommandSource`（见 `RFC-0061`、`EntityViewRuntime`）。UI acquisition 只 promote EntityView collection，不再 dual-write `SelectionRuntime`。`SelectionRuntime` 仍服务 legacy presentation marker、显式 mod 绑定与 order snapshot lease；MassNavigation move intake 不读 `SelectionContextRuntime`。
 
 ## 范围
 
@@ -140,9 +140,9 @@
 - source kind：`UiAcquisition`
 - 配置入口：`SelectionAcquisitionConfig`
 
-`SelectionAcquisitionConfig.CommitToFormalSelection` 决定这次 acquisition 是否继续通过 `SelectionRuntime` 写入正式选择容器。也就是说，UI 框选、hover/query 结果、调试圈选都可以作为 collection 被面板读取，而不必污染正式 selection。
+Acquisition 完成后通过 `EntityViewRuntime.PromoteCommandSource` / `PromoteDisplayCollection` 写入 command source 与 display collection（`EntityViewProfile` SSOT）。**不再** dual-write 到 `SelectionRuntime` 正式容器（Epic #522 ORD-9）。
 
-当单位临时不可选时，已有选择不会被自动剔除；自动维护只移除已经死亡的成员。这样可以保持 AI、调试视图、订单快照等状态稳定，不把隐藏策略重写进维护系统。
+当单位临时不可选时，已有 command source 不会被自动剔除；自动维护只移除已经死亡的成员。
 
 ## 视图选择
 

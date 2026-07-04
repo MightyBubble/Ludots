@@ -177,7 +177,6 @@ namespace Ludots.Core.Input.Selection
                 _world.Add(owner, default(SelectionDragState));
             }
 
-            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
             EnsureLivePrimarySelectionView(owner);
         }
 
@@ -199,11 +198,8 @@ namespace Ludots.Core.Input.Selection
                     _world,
                     _globals,
                     entityViewConfig,
-                    _selection,
                     owner,
-                    entityViewConfig.DefaultViewKey,
-                    owner,
-                    SelectionSetKeys.LivePrimary))
+                    entityViewConfig.DefaultViewKey))
             {
                 throw new InvalidOperationException("CurrentSelectionApplySystem failed to bind EntityView primary profile.");
             }
@@ -363,7 +359,6 @@ namespace Ludots.Core.Input.Selection
             SelectionAcquisitionConfig acquisition = _selection.Config.Acquisition
                 ?? throw new InvalidOperationException("selection.acquisition must be explicitly configured.");
             string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "selection.acquisition.collectionKey");
-            string formalSetKey = RequireConfiguredKey(acquisition.FormalSelectionSetKey, "selection.acquisition.formalSelectionSetKey");
             var descriptor = EntityCollectionDescriptor.Create(
                 collectionKey,
                 EntityCollectionSourceKind.UiAcquisition,
@@ -374,82 +369,106 @@ namespace Ludots.Core.Input.Selection
                 $"{mode} | {hits.Length} entities");
             _entityCollections.Replace(owner, descriptor, hits);
 
-            if (EntityViewRuntime.TryResolveCurrentProfile(_globals, RequireEntityViewConfig(), out EntityViewProfileEntry profile))
-            {
-                EntityViewRuntime.PromoteCommandSource(
-                    _entityCollections,
-                    owner,
-                    in profile,
-                    hits,
-                    $"{mode} | {hits.Length} entities");
-                EntityViewRuntime.PromoteDisplayCollection(
-                    _entityCollections,
-                    owner,
-                    in profile,
-                    hits,
-                    $"{mode} | {hits.Length} entities");
-            }
-
-            if (!acquisition.CommitToFormalSelection)
+            if (!EntityViewRuntime.TryResolveCurrentProfile(_globals, RequireEntityViewConfig(), out EntityViewProfileEntry profile))
             {
                 return;
             }
 
+            int commandCount = ResolveCommandSourceEntities(owner, in profile, hits, mode, out ReadOnlySpan<Entity> commandEntities);
+            string summary = $"{mode} | {commandCount} entities";
+            EntityViewRuntime.PromoteCommandSource(
+                _entityCollections,
+                owner,
+                in profile,
+                commandEntities,
+                summary);
+            EntityViewRuntime.PromoteDisplayCollection(
+                _entityCollections,
+                owner,
+                in profile,
+                commandEntities,
+                summary);
+        }
+
+        private int ResolveCommandSourceEntities(
+            Entity owner,
+            in EntityViewProfileEntry profile,
+            ReadOnlySpan<Entity> hits,
+            SelectionAcquisitionMode mode,
+            out ReadOnlySpan<Entity> commandEntities)
+        {
+            commandEntities = hits;
             switch (mode)
             {
                 case SelectionAcquisitionMode.Replace:
-                    _selection.ReplaceSelection(owner, formalSetKey, hits);
-                    return;
+                    return hits.Length;
 
                 case SelectionAcquisitionMode.Additive:
-                    for (int i = 0; i < hits.Length; i++)
-                    {
-                        _selection.AddToSelection(owner, formalSetKey, hits[i]);
-                    }
-                    return;
-
                 case SelectionAcquisitionMode.Toggle:
+                    int currentCount = _entityCollections.CopyEntities(owner, profile.CommandSourceCollectionKey, _selectionScratch);
+                    int nextCount = currentCount;
                     for (int i = 0; i < hits.Length; i++)
                     {
                         Entity target = hits[i];
-                        if (SelectionContains(owner, target))
+                        if (mode == SelectionAcquisitionMode.Additive)
                         {
-                            _selection.RemoveFromSelection(owner, formalSetKey, target);
+                            if (CommandSourceContains(_selectionScratch.AsSpan(0, currentCount), target))
+                            {
+                                continue;
+                            }
+
+                            EnsureSelectionScratchCapacity(nextCount + 1);
+                            _selectionScratch[nextCount++] = target;
+                            continue;
                         }
-                        else
+
+                        if (CommandSourceContains(_selectionScratch.AsSpan(0, currentCount), target))
                         {
-                            _selection.AddToSelection(owner, formalSetKey, target);
+                            nextCount = RemoveEntity(_selectionScratch, currentCount, target);
+                            currentCount = nextCount;
+                            continue;
                         }
+
+                        EnsureSelectionScratchCapacity(nextCount + 1);
+                        _selectionScratch[nextCount++] = target;
                     }
-                    return;
+
+                    SortByEntityId(_selectionScratch, nextCount);
+                    commandEntities = _selectionScratch.AsSpan(0, nextCount);
+                    return nextCount;
 
                 default:
                     throw new InvalidOperationException($"Unsupported selection acquisition mode '{mode}'.");
             }
         }
 
-        private bool SelectionContains(Entity owner, Entity target)
+        private static bool CommandSourceContains(ReadOnlySpan<Entity> entities, Entity target)
         {
-            string formalSetKey = RequireConfiguredKey(
-                _selection.Config.Acquisition?.FormalSelectionSetKey,
-                "selection.acquisition.formalSelectionSetKey");
-            int count = _selection.GetSelectionCount(owner, formalSetKey);
-            if (count <= 0)
+            for (int i = 0; i < entities.Length; i++)
             {
-                return false;
-            }
-
-            EnsureSelectionScratchCapacity(count);
-            int written = _selection.CopySelection(owner, formalSetKey, _selectionScratch);
-            for (int i = 0; i < written; i++)
-            {
-                if (_selectionScratch[i] == target)
+                if (entities[i] == target)
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private static int RemoveEntity(Entity[] buffer, int count, Entity target)
+        {
+            int write = 0;
+            for (int read = 0; read < count; read++)
+            {
+                if (buffer[read] == target)
+                {
+                    continue;
+                }
+
+                buffer[write++] = buffer[read];
+            }
+
+            return write;
         }
 
         private SelectionAcquisitionMode ResolveAcquisitionMode()

@@ -111,7 +111,7 @@ Cast / screen box
 
 MassNavigation Core 不再读取 `SelectionContextRuntime` 或 `AuthoritativeInput` 来提交 move order。命令目标集 SSOT 是 `EntityViewProfile` 映射的 `EntityCollectionRoleKind.CommandSource` collection（`collection.command.source`），order args 携带 collection handle + revision。
 
-SelectionRuntime 仍负责 presentation marker 与 formal selection mirror；RTS showcase 可通过 `selection.acquisition.commitToFormalSelection=true` 保持即时框选体验。
+UI acquisition（框选/点选）只写入 `EntityCollectionStore` 并 promote 到 EntityView command source / display collection；不再 dual-write 到 `SelectionRuntime`（ORD-9 / RFC-0061）。
 
 order authoring 使用语义字符串。数字 id 是 runtime 实现细节。
 

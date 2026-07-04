@@ -7,10 +7,6 @@
   "windowResizable": true,
   "selection": {
     "targetFilter": { "relationFilter": "Friendly" },
-    "acquisition": {
-      "commitToFormalSelection": true,
-      "formalSelectionSetKey": "selection.live.primary"
-    },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
   "entityViews": {

@@ -247,7 +247,7 @@ public sealed class SelectionKnowledgeProjectionTests
         var config = new SelectionRuntimeConfig
         {
             TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
-            Acquisition = new SelectionAcquisitionConfig { CommitToFormalSelection = true },
+            Acquisition = new SelectionAcquisitionConfig(),
         };
         var selectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
         var selection = new SelectionRuntime(world, config, selectionKeys);

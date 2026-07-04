@@ -1944,7 +1944,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.AgentState.ControllableAgentSlotCount, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalFormations));
             AssertConfiguredObstaclesAreEcsBlockers(engine, simulation);
             AssertFormationAgentsDoNotOverlap(engine, simulation);
-            Assert.That(SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length,
+            Assert.That(SnapshotCurrentCommandSource(engine).Length,
                 Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialSelection));
             AssertInitialSelectionTargetsFormationAgents(engine);
             Assert.That(CountSelectionMarkerPerformers(engine), Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialSelection),
@@ -1954,7 +1954,7 @@ namespace Ludots.Tests.Presentation
             AssertObstacleOverlays(engine, simulation);
             AssertMassNavigationDoesNotOwnCullingProbe(engine);
 
-            Entity[] initialSelection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] initialSelection = SnapshotCurrentCommandSource(engine);
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
             TickUntil(
                 engine,
@@ -1967,7 +1967,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => GetCurrentSelectionCount(engine) == 0 &&
-                      SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length == 0 &&
+                      SnapshotCurrentCommandSource(engine).Length == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Empty ground click should clear LivePrimary selection and destroy scoped marker performers.");
@@ -2013,7 +2013,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned and selected before movement/facing verification.");
 
-            Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
+            Entity formation = SnapshotCurrentCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
             float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
@@ -2171,7 +2171,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Player box selection should include only formations accepted by the configured Friendly relationship filter.");
 
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotCurrentCommandSource(engine);
             Assert.That(selected.Length, Is.EqualTo(CountFriendlyTeamFormations(engine, selectorTeamId)));
             for (int i = 0; i < selected.Length; i++)
             {
@@ -2243,7 +2243,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be ready before solver-window rebase verification.");
 
-            Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
+            Entity formation = SnapshotCurrentCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
@@ -2325,7 +2325,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => simulation.SceneResetCount > 0 &&
                       GetCurrentSelectionCount(engine) == 0 &&
-                      SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length == 0 &&
+                      SnapshotCurrentCommandSource(engine).Length == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0 &&
                       CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
@@ -3138,7 +3138,7 @@ namespace Ludots.Tests.Presentation
 
         private static ScreenRect ProjectCurrentSelectionDragRect(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotCurrentCommandSource(engine);
             Assert.That(selected.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialSelection));
             return ProjectEntitiesDragRect(engine, selected);
         }
@@ -3430,29 +3430,29 @@ namespace Ludots.Tests.Presentation
 
         private static void SelectFormations(GameEngine engine, ReadOnlySpan<Entity> formations)
         {
-            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
                 ?? throw new InvalidOperationException("EntityViewConfig is missing.");
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity owner = ResolveLocalPlayerEntity(engine);
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, formations), Is.True);
             if (!EntityViewRuntime.TrySetCurrentView(
                     engine.World,
                     engine.GlobalContext,
                     entityViewConfig,
-                    selection,
                     owner,
-                    entityViewConfig.DefaultViewKey,
-                    owner,
-                    SelectionSetKeys.LivePrimary))
+                    entityViewConfig.DefaultViewKey))
             {
                 throw new InvalidOperationException("Could not bind EntityView primary profile for Formation Capability selection.");
             }
 
             EntityViewProfileEntry profile = entityViewConfig.RequireProfile(entityViewConfig.DefaultViewKey);
             EntityViewRuntime.PromoteCommandSource(
+                collections,
+                owner,
+                in profile,
+                formations,
+                "Formation Capability test selection");
+            EntityViewRuntime.PromoteDisplayCollection(
                 collections,
                 owner,
                 in profile,
@@ -3635,7 +3635,7 @@ namespace Ludots.Tests.Presentation
         {
             int count = 0;
             int moveOrderTypeId = ResolveMassNavigationMoveOrderTypeId(engine);
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotCurrentCommandSource(engine);
             for (int i = 0; i < selected.Length; i++)
             {
                 Entity entity = selected[i];
@@ -3674,7 +3674,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertInitialSelectionTargetsFormationAgents(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotCurrentCommandSource(engine);
             Assert.That(selected.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialSelection));
             for (int i = 0; i < selected.Length; i++)
             {
@@ -4006,15 +4006,52 @@ namespace Ludots.Tests.Presentation
 
         private static int GetCurrentSelectionCount(GameEngine engine)
         {
-            return SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            EntityViewRuntimeConfig config = engine.GetService(CoreServiceKeys.EntityViewConfig)
+                ?? throw new InvalidOperationException("EntityViewConfig is missing.");
+            return EntityViewRuntime.GetCommandSourceCount(engine.World, engine.GlobalContext, config);
+        }
+
+        private static Entity[] SnapshotCurrentCommandSource(GameEngine engine)
+        {
+            EntityViewRuntimeConfig config = engine.GetService(CoreServiceKeys.EntityViewConfig)
+                ?? throw new InvalidOperationException("EntityViewConfig is missing.");
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
+            int count = EntityViewRuntime.GetCommandSourceCount(engine.World, engine.GlobalContext, config);
+            if (count <= 0)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            var selected = new Entity[count];
+            if (!EntityViewRuntime.TryGetCommandSourceHandle(engine.World, engine.GlobalContext, config, out _, out EntityCollectionHandle handle))
+            {
+                return Array.Empty<Entity>();
+            }
+
+            int written = collections.CopyEntities(handle, 0, selected);
+            if (written != selected.Length)
+            {
+                Array.Resize(ref selected, written);
+            }
+
+            return selected;
         }
 
         private static string BuildSelectionDiagnostics(GameEngine engine)
         {
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            string view = SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor)
-                ? $"viewCount={descriptor.Container.MemberCount} viewRev={descriptor.Container.Revision} viewOwner={descriptor.Container.Owner.Id} viewContainer={descriptor.Container.Container.Id}"
-                : "view=<none>";
+            string view = EntityViewRuntime.TryGetCommandSourceHandle(
+                    engine.World,
+                    engine.GlobalContext,
+                    engine.GetService(CoreServiceKeys.EntityViewConfig)
+                        ?? throw new InvalidOperationException("EntityViewConfig is missing."),
+                    out _,
+                    out EntityCollectionHandle commandHandle) &&
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections &&
+                collections.TryGetView(commandHandle, out EntityCollectionView commandView)
+                ? $"commandSourceCount={commandView.Count} commandSourceRev={commandView.Revision}"
+                : "commandSource=<none>";
             return $"selection={GetCurrentSelectionCount(engine)} {view} markers={CountSelectionMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
         }
 

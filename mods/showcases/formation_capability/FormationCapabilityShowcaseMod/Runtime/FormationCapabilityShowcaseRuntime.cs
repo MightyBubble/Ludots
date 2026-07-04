@@ -998,10 +998,6 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         _initialSelectionScratch[0] = formation;
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, _initialSelectionScratch.AsSpan(0, 1)))
-        {
-            throw new InvalidOperationException("Formation Capability showcase failed to author its configured initial selection.");
-        }
 
         EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityViewConfig.");
@@ -1010,11 +1006,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 engine.World,
                 engine.GlobalContext,
                 entityViewConfig,
-                selection,
                 owner,
-                entityViewConfig.DefaultViewKey,
-                owner,
-                SelectionSetKeys.LivePrimary))
+                entityViewConfig.DefaultViewKey))
         {
             throw new InvalidOperationException("Formation Capability showcase failed to bind EntityView primary profile.");
         }
@@ -1028,11 +1021,12 @@ internal sealed class FormationCapabilityShowcaseRuntime
             in profile,
             _initialSelectionScratch.AsSpan(0, 1),
             "Formation Capability initial selection");
-
-        if (!selection.TryDescribeSelection(owner, SelectionSetKeys.LivePrimary, out SelectionContainerDescriptor descriptor))
-        {
-            throw new InvalidOperationException("Formation Capability showcase failed to describe the initial selection it just authored.");
-        }
+        EntityViewRuntime.PromoteDisplayCollection(
+            collections,
+            owner,
+            in profile,
+            _initialSelectionScratch.AsSpan(0, 1),
+            "Formation Capability initial selection");
 
         if (!EntityViewRuntime.TryGetCommandSourceHandle(engine.World, engine.GlobalContext, entityViewConfig, out _, out EntityCollectionHandle commandHandle) ||
             !collections.TryGetView(commandHandle, out EntityCollectionView commandView) ||
@@ -1235,9 +1229,15 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static void ClearSelection(GameEngine engine)
     {
+        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localPlayerObj) ||
+            localPlayerObj is not Entity owner ||
+            !engine.World.IsAlive(owner))
+        {
+            return;
+        }
+
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new InvalidOperationException("Formation Capability showcase requires SelectionRuntime before clearing selection.");
-        Entity owner = ResolveLocalSelectionOwner(engine);
         selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
         selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
         selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);

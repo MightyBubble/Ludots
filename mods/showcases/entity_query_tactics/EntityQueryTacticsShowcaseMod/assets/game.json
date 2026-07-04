@@ -11,8 +11,6 @@
     },
     "acquisition": {
       "collectionKey": "entityquery.collection.ui.box",
-      "commitToFormalSelection": false,
-      "formalSelectionSetKey": "selection.live.primary",
       "title": "UI box acquisition"
     }
   }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.EntityView;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Selection
@@ -134,6 +135,12 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
+            if (!TryGetEntityViewConfig(globals, out EntityViewRuntimeConfig entityViewConfig) ||
+                !EntityViewRuntime.TrySetCurrentView(world, globals, entityViewConfig, viewer, viewKey))
+            {
+                return false;
+            }
+
             if (!selection.TryGetOrCreateSelectionEntity(owner, setKey, out _) ||
                 !selection.TryBindView(viewer, viewKey, owner, setKey))
             {
@@ -141,13 +148,11 @@ namespace Ludots.Core.Input.Selection
                     existing.Container.Owner != owner ||
                     !string.Equals(existing.Container.SetKey, setKey, StringComparison.Ordinal))
                 {
-                    return false;
+                    return true;
                 }
             }
 
-            globals[CoreServiceKeys.EntityViewViewerEntity.Name] = viewer;
-            globals[CoreServiceKeys.EntityViewKey.Name] = viewKey;
-            return TryDescribeCurrentView(world, globals, out descriptor);
+            return selection.TryDescribeView(viewer, viewKey, out descriptor);
         }
 
         public static bool TryGetRuntime(Dictionary<string, object> globals, out SelectionRuntime selection)
@@ -165,6 +170,14 @@ namespace Ludots.Core.Input.Selection
                    ownerObj is Entity local &&
                    world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
+        }
+
+        private static bool TryGetEntityViewConfig(Dictionary<string, object> globals, out EntityViewRuntimeConfig config)
+        {
+            config = default!;
+            return globals.TryGetValue(CoreServiceKeys.EntityViewConfig.Name, out object? configObj) &&
+                   configObj is EntityViewRuntimeConfig runtimeConfig &&
+                   (config = runtimeConfig) != null;
         }
 
         private static bool TryGetEntityCollectionStore(Dictionary<string, object> globals, out EntityCollectionStore collections)

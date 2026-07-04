@@ -20,8 +20,6 @@ namespace Ludots.Core.Input.Selection
     public sealed class SelectionAcquisitionConfig
     {
         public string CollectionKey { get; set; } = EntityCollectionKeys.UiSelectionAcquisition;
-        public bool CommitToFormalSelection { get; set; } = false;
-        public string FormalSelectionSetKey { get; set; } = SelectionSetKeys.LivePrimary;
         public string Title { get; set; } = "UI acquisition";
     }
 

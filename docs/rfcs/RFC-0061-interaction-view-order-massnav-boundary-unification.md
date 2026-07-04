@@ -84,7 +84,7 @@ CastProfile (ScreenBox / ScreenPoint / …)
 | ORD-8 | [#530](https://github.com/MightyBubble/Ludots/issues/530) | Order/command consumer 迁移到 EntityView + collection |
 | ORD-9 | [#531](https://github.com/MightyBubble/Ludots/issues/531) | 默认 preview-only acquisition；退役 dual-write |
 
-**Exit criteria:** 新 command 路径不读 `SelectionRuntime`；`commitToFormalSelection` 默认 false。
+**Exit criteria:** 新 command 路径不读 `SelectionRuntime`；acquisition 只 promote EntityView collection（无 Selection dual-write）。
 
 ### Phase D — 文档、验收、清理
 
