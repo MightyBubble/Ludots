@@ -222,8 +222,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(scratchEx.Message, Does.Contain("scenarioRuntime.initialSelectionScratchCapacity"));
 
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
-                () => simulation.SetSelection(new[] { Entity.Null, Entity.Null }, revision: 1))!;
-            Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
+                () => simulation.EnsureSelectionScratch(2))!;
+            Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectionScratchCapacity"));
         }
 
         private static TestContextScope CreateContext(
@@ -344,7 +344,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
-            MassNavigationSelectionSync.SyncIfChanged(world, engine.GlobalContext, selection, simulation);
+            MassNavigationSelectionAccess.RefreshFlowSelectedFlags(world, engine.GlobalContext, simulation);
             return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderBuffer, orderTypes);
         }
 
@@ -580,7 +580,7 @@ namespace Ludots.Tests.Presentation
                     throw new InvalidOperationException("Failed to write test selection.");
                 }
 
-                MassNavigationSelectionSync.SyncIfChanged(World, Engine.GlobalContext, Selection, Simulation);
+                MassNavigationSelectionAccess.RefreshFlowSelectedFlags(World, Engine.GlobalContext, Simulation);
             }
 
             public void SetActiveOrder(Entity entity, int orderTypeId)

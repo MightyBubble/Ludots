@@ -2277,7 +2277,7 @@ public static class LauncherEvidenceRecorder
             MinimapCenterCm: new Vector2(minimapSnapshot.CenterXcm, minimapSnapshot.CenterYcm),
             MinimapHalfExtentCm: minimapSnapshot.HalfExtentCm,
             MinimapCameraTargetCm: new Vector2(minimapSnapshot.CameraTargetXcm, minimapSnapshot.CameraTargetYcm),
-            SelectedCount: simulation.SelectedCount,
+            SelectedCount: SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext),
             ActiveGroups: simulation.NavGroupRuntime.ActiveGroupCount,
             ActiveOrderGroups: simulation.NavGroupRuntime.ActiveOrderGroupCount,
             ScenarioSpawnCount: simulation.ScenarioSpawnCount,
