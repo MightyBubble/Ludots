@@ -29,13 +29,13 @@
 * [RFC-0060 通用存档系统](RFC-0060-universal-save-system.md)
   * Epic #292 引用的通用存档 RFC 回写；编号与 AI Utility Autocast 历史文件重叠，正式结论以 `gitbook/architecture/save-system.md` 为准
 * [RFC-0061 Interaction → EntityView → Order → MassNav 职责边界收敛](RFC-0061-interaction-view-order-massnav-boundary-unification.md)
-  * Epic #522 SSOT：OrderQueue 唯一 intake、Selection 退役、EntityView + Collection 命令目标集
+  * [#522](https://github.com/MightyBubble/Ludots/issues/522) SSOT：OrderQueue 唯一 intake、Selection 退役、EntityView + Collection 命令目标集
 * [RFC-0062 Interaction Context Stack — Input 基建](RFC-0062-interaction-context-stack-input-infrastructure.md)
-  * Context 栈决定 active collection key；InputCast geometry 无关；Selection 仅为 default context 俗名
+  * [#536](https://github.com/MightyBubble/Ludots/issues/536)：Context 栈决定 active collection key；InputCast geometry 无关
 * [RFC-0063 Participant Control Plane — Association 归属/代理控制](RFC-0063-participant-control-plane-via-association.md)
-  * 退役 unit 上 PlayerOwner/Team；controls/owns 关系边；掉线代理不迁移 collection
+  * [#537](https://github.com/MightyBubble/Ludots/issues/537)：退役 unit 上 PlayerOwner/Team；掉线代理不迁移 collection
 * [RFC-0064 Collection Provenance & Performer 多观战投影](RFC-0064-collection-provenance-performer-multi-viewer.md)
-  * Row provenance；多控制域 marker；裁判 multi-collection 读
+  * [#538](https://github.com/MightyBubble/Ludots/issues/538)：Row provenance；裁判 multi-collection 读
 
 ## 2 使用规则
 

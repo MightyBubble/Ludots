@@ -1,7 +1,7 @@
 # RFC-0064 Collection Provenance & Performer — 多控制域 Marker 与观战投影
 
 Status: Proposed  
-Epic: （创建后回填 GitHub issue 编号）
+Epic: [#538](https://github.com/MightyBubble/Ludots/issues/538)
 
 ## 1. 问题
 
@@ -115,16 +115,18 @@ Context pop 后 performer 订阅 revision 自动切换样式。
 
 ## 5. Sub-issues（PROV-*）
 
-| ID | 标题 | 要点 |
-|----|------|------|
-| PROV-1 | Collection row provenance schema | rowRoleId 或扩展字段 |
-| PROV-2 | CollectionWrite 填充 provenance | filter 后写入 |
-| PROV-3 | PerformerCatalog selection marker profiles | deep/light green |
-| PROV-4 | Performer rules EntityCollection + provenance | 替代 selection ring hardcode |
-| PROV-5 | Referee knowledge grant 读多 player collection | 无 RefereeSelectionService |
-| PROV-6 | Team palette + phase offset catalog | 红 / 橘 |
-| PROV-7 | Showcase：本地 proxy marker + 裁判视角 | playable + screenshot |
-| PROV-8 | 文档 + ArchitectureTests | provenance 与 association 一致 |
+Parent: [#538](https://github.com/MightyBubble/Ludots/issues/538)
+
+| ID | Issue |
+|----|-------|
+| PROV-1 | [#555](https://github.com/MightyBubble/Ludots/issues/555) provenance schema |
+| PROV-2 | [#557](https://github.com/MightyBubble/Ludots/issues/557) CollectionWrite provenance |
+| PROV-3 | [#559](https://github.com/MightyBubble/Ludots/issues/559) PerformerCatalog markers |
+| PROV-4 | [#561](https://github.com/MightyBubble/Ludots/issues/561) Performer rules |
+| PROV-5 | [#563](https://github.com/MightyBubble/Ludots/issues/563) Referee knowledge grant |
+| PROV-6 | [#564](https://github.com/MightyBubble/Ludots/issues/564) Team palette + phase |
+| PROV-7 | [#565](https://github.com/MightyBubble/Ludots/issues/565) Showcase |
+| PROV-8 | [#566](https://github.com/MightyBubble/Ludots/issues/566) 文档 + tests |
 
 ## 6. 依赖
 

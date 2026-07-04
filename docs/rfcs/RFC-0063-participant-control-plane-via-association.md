@@ -1,7 +1,7 @@
 # RFC-0063 Participant Control Plane — Association 归属/代理控制与 Player Entity Collection 域
 
 Status: Proposed  
-Epic: （创建后回填 GitHub issue 编号）
+Epic: [#537](https://github.com/MightyBubble/Ludots/issues/537)
 
 ## 1. 问题
 
@@ -133,18 +133,20 @@ public sealed class ControlDomainQuery
 
 ## 7. Sub-issues（CTRL-*）
 
-| ID | 标题 | 要点 |
-|----|------|------|
-| CTRL-1 | ControlDomainQuery API | 替代 PlayerOwner 扫描 |
-| CTRL-2 | Map load owns/member_of 边建立 | 替代 unit PlayerOwner authoring |
-| CTRL-3 | 删除 embodied PlayerOwner/Team | breaking + migrate showcases |
-| CTRL-4 | AssociationControlProfile catalog + runtime | offline proxy |
-| CTRL-5 | `#499` publisher relationship 化 | MatchesOwner → ControlDomainQuery |
-| CTRL-6 | Per-playerRep collection namespace 护栏 | 禁止 cross-player merge |
-| CTRL-7 | ParticipantView 停止写 Selection | projection read-only |
-| CTRL-8 | Showcase：offline proxy + reconnect handback | RTS 场景 |
-| CTRL-9 | ArchitectureTests | 禁止 unit PlayerOwner 新增 |
-| CTRL-10 | gitbook map-owned-participant-contract 回写 | 正式规范 |
+Parent: [#537](https://github.com/MightyBubble/Ludots/issues/537)
+
+| ID | Issue |
+|----|-------|
+| CTRL-1 | [#554](https://github.com/MightyBubble/Ludots/issues/554) ControlDomainQuery API |
+| CTRL-2 | [#556](https://github.com/MightyBubble/Ludots/issues/556) Map load owns/member_of |
+| CTRL-3 | [#558](https://github.com/MightyBubble/Ludots/issues/558) 删除 embodied PlayerOwner/Team |
+| CTRL-4 | [#560](https://github.com/MightyBubble/Ludots/issues/560) AssociationControlProfile |
+| CTRL-5 | [#562](https://github.com/MightyBubble/Ludots/issues/562) #499 publisher relationship 化 |
+| CTRL-6 | [#545](https://github.com/MightyBubble/Ludots/issues/545) collection namespace 护栏 |
+| CTRL-7 | [#547](https://github.com/MightyBubble/Ludots/issues/547) ParticipantView 停止写 Selection |
+| CTRL-8 | [#549](https://github.com/MightyBubble/Ludots/issues/549) Showcase offline proxy |
+| CTRL-9 | [#551](https://github.com/MightyBubble/Ludots/issues/551) ArchitectureTests |
+| CTRL-10 | [#553](https://github.com/MightyBubble/Ludots/issues/553) gitbook 回写 |
 
 ## 8. 依赖
 

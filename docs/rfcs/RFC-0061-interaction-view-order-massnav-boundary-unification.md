@@ -87,6 +87,21 @@ CastProfile 描述 **client input cast 的几何与空间**，与 commit 语义�
 
 ## 7. Sub-issues（ORD-*）
 
+Parent: [#522](https://github.com/MightyBubble/Ludots/issues/522)
+
+| ID | Issue | 要点 |
+|----|-------|------|
+| ORD-1 | [#567](https://github.com/MightyBubble/Ludots/issues/567) | MassNav 停止读取 Input / Selection |
+| ORD-2 | [#568](https://github.com/MightyBubble/Ludots/issues/568) | OrderQueue 统一 intake 护栏 |
+| ORD-3 | [#569](https://github.com/MightyBubble/Ludots/issues/569) | EntityView profile registry |
+| ORD-4 | [#570](https://github.com/MightyBubble/Ludots/issues/570) | CommandSource collection → Order fan-out |
+| ORD-5 | [#571](https://github.com/MightyBubble/Ludots/issues/571) | Acquisition → Filter → CommandSource 管线 |
+| ORD-6 | [#572](https://github.com/MightyBubble/Ludots/issues/572) | Retire SelectionRuntime command consumers |
+| ORD-7 | [#573](https://github.com/MightyBubble/Ludots/issues/573) | `#499` publisher 改 relationship query |
+| ORD-8 | [#574](https://github.com/MightyBubble/Ludots/issues/574) | 文档回写 + playable showcase |
+
+<details><summary>原表格（策划摘要）</summary>
+
 | ID | 标题 | 要点 |
 |----|------|------|
 | ORD-1 | MassNav 停止读取 Input / Selection | 删 direct input/selection 依赖 |
@@ -97,6 +112,8 @@ CastProfile 描述 **client input cast 的几何与空间**，与 commit 语义�
 | ORD-6 | Retire SelectionRuntime command consumers | champion sandbox / MassNav / panel |
 | ORD-7 | `#499` publisher 改 relationship query | 见 RFC-0063 |
 | ORD-8 | 文档回写 + playable showcase | entity_query_tactics 或新 capability mod |
+
+</details>
 
 ## 8. 依赖
 

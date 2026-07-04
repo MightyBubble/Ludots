@@ -1,7 +1,7 @@
 # RFC-0062 Interaction Context Stack — Input 基建与 Context-Bound Collection 路由
 
 Status: Proposed  
-Epic: （创建后回填 GitHub issue 编号）
+Epic: [#536](https://github.com/MightyBubble/Ludots/issues/536)
 
 ## 1. 问题
 
@@ -133,18 +133,20 @@ Filter 只读 association graph（RFC-0063），不改 relationship。
 
 ## 7. Sub-issues（CTX-*）
 
-| ID | 标题 | 要点 |
-|----|------|------|
-| CTX-1 | InteractionContextStack Core 契约 | service + tests |
-| CTX-2 | Default frame 与 map load 初始化 | push default |
-| CTX-3 | InputCast → raw collection | geometry / space 无关 |
-| CTX-4 | FilterProfile registry + evaluate | association query |
-| CTX-5 | Context-bound collection write | 替代 selection commit |
-| CTX-6 | AbilityExec lifecycle push/pop | 替代 IsAiming 驱动 context |
-| CTX-7 | CastProfile / InteractionMode 正交拆分 | 禁止 enum 捆绑 |
-| CTX-8 | ClientCastPreference per-slot | global + per-slot SSOT |
-| CTX-9 | Showcase：superweapon 框选 + pop 恢复 | playable acceptance |
-| CTX-10 | ArchitectureTests + 文档回写 | guard 禁止 Selection hub |
+Parent: [#536](https://github.com/MightyBubble/Ludots/issues/536)
+
+| ID | Issue |
+|----|-------|
+| CTX-1 | [#539](https://github.com/MightyBubble/Ludots/issues/539) InteractionContextStack Core |
+| CTX-2 | [#540](https://github.com/MightyBubble/Ludots/issues/540) Default frame 初始化 |
+| CTX-3 | [#541](https://github.com/MightyBubble/Ludots/issues/541) InputCast → raw collection |
+| CTX-4 | [#542](https://github.com/MightyBubble/Ludots/issues/542) FilterProfile registry |
+| CTX-5 | [#543](https://github.com/MightyBubble/Ludots/issues/543) Context-bound collection write |
+| CTX-6 | [#544](https://github.com/MightyBubble/Ludots/issues/544) AbilityExec push/pop |
+| CTX-7 | [#546](https://github.com/MightyBubble/Ludots/issues/546) CastProfile 正交拆分 |
+| CTX-8 | [#548](https://github.com/MightyBubble/Ludots/issues/548) ClientCastPreference per-slot |
+| CTX-9 | [#550](https://github.com/MightyBubble/Ludots/issues/550) Showcase superweapon |
+| CTX-10 | [#552](https://github.com/MightyBubble/Ludots/issues/552) ArchitectureTests + 文档 |
 
 ## 8. 依赖
 
