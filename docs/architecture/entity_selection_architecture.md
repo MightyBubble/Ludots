@@ -1,5 +1,7 @@
 # Entity Selection Architecture
 
+> **Command-path deprecation (Epic #522):** 正式 gameplay 命令目标集已迁移到 `EntityViewProfile` + `EntityCollectionRoleKind.CommandSource`（见 `RFC-0061`、`EntityViewRuntime`）。`SelectionRuntime` 仍负责 presentation marker、formal selection mirror 与 legacy order snapshot lease；MassNavigation move intake 不再读取 `SelectionContextRuntime`。
+
 ## 范围
 
 本文是 Ludots 选择系统的架构 SSOT，覆盖选择存储、视图选择、订单绑定的选择快照，以及相机、面板、覆盖层、调试工具等选择消费方。

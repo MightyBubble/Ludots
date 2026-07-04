@@ -31,7 +31,7 @@ launch graph 当前包含：
 
 | 层 | 拥有什么 | 不应该拥有什么 |
 | --- | --- | --- |
-| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、RuntimeEntitySpawnSystem、SystemGroup.RuntimeEntityBinding、MassNavigation authored component binding、MassNavigationFlow simulation、order ingestion、ECS writeback、SelectionRuntime、OrderBuffer、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Formation Capability 方阵、士兵归属、Shu/Wei 业务命名、showcase 轮廓颜色。 |
+| Core | ConfigPipeline、entity template、RuntimeEntitySpawnQueue、RuntimeEntitySpawnSystem、SystemGroup.RuntimeEntityBinding、MassNavigation authored component binding、MassNavigationFlow simulation、order ingestion、ECS writeback、EntityViewRuntime、EntityCollectionStore、OrderQueue、OrderBuffer、SelectionRuntime（presentation/legacy）、PresentationEvent、PerformerRuntime、MinimapRuntime、VisualHeightmap service。 | Formation Capability 方阵、士兵归属、Shu/Wei 业务命名、showcase 轮廓颜色。 |
 | MassNavigationMod | MassNavigation asset/config package、optional tuning panel UI adapter、launch-graph dependency surface。 | MassNavigation agent binding、MassNavigationFlow runtime、order ingestion、formation/follower runtime、post-spawn agent binding。 |
 | FormationCapabilityShowcaseMod | 方阵/士兵业务配置、spawn 请求参数、可选 sidecar 场景绑定、障碍 overlay、方阵轮廓表现。 | 私有 selection runtime、私有 order runtime、私有 performer runtime、私有 config loader、私有 MassNavigation binding runtime。 |
 
@@ -62,8 +62,9 @@ flowchart TD
     TwBinding --> Formations["Optional showcase sidecar state"]
     Agents --> FollowerSync["MassNavigationFormationFollowerSystem"]
 
-    Selection["SelectionRuntime"] --> Orders["OrderBuffer(massNavigationMove)"]
-    Orders --> Ingestion["MassNavigationOrderIngestionSystem"]
+    Selection["EntityView + CommandSource collection"] --> OrderQueue["OrderQueue"]
+    OrderQueue --> OrderBuffer["OrderBufferSystem"]
+    OrderBuffer --> Ingestion["MassNavigationOrderIngestionSystem"]
     Ingestion --> Groups["MassNavigationGroupRuntime"]
     Groups --> Solver["MassNavigationFlowSolverState"]
     FollowerSync --> Solver
@@ -94,15 +95,23 @@ flowchart LR
 ## Order 链路
 
 ```text
-Local input
-  -> SelectionRuntime
-  -> OrderBuffer(massNavigationMove)
+Cast / screen box
+  -> EntityCollectionStore (acquisition preview)
+  -> EntityView command-source collection
+  -> CommandInteractionSemantic (ground move vs cancel)
+  -> MassNavigationMoveOrderSourceSystem
+  -> OrderQueue
+  -> OrderBufferSystem
   -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime
   -> MassNavigationFlowSolverState
   -> ECS position/facing handoff
   -> performer sync
 ```
+
+MassNavigation Core 不再读取 `SelectionContextRuntime` 或 `AuthoritativeInput` 来提交 move order。命令目标集 SSOT 是 `EntityViewProfile` 映射的 `EntityCollectionRoleKind.CommandSource` collection（`collection.command.source`），order args 携带 collection handle + revision。
+
+SelectionRuntime 仍负责 presentation marker 与 formal selection mirror；RTS showcase 可通过 `selection.acquisition.commitToFormalSelection=true` 保持即时框选体验。
 
 order authoring 使用语义字符串。数字 id 是 runtime 实现细节。
 

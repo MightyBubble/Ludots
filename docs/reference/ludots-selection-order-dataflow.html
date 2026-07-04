@@ -245,31 +245,32 @@ flowchart TB
 
   subgraph fixed [Fixed Step · InputCollection]
     AIS[AuthoritativeInputSnapshotSystem] --> FROZEN[CoreServiceKeys.AuthoritativeInput]
-    CAS[CurrentSelectionApplySystem] --> SEL[SelectionRuntime LivePrimary]
-    MSS[MassNavigationSelectionSyncSystem] --> MSEL[MassNav SelectedEntities]
+    CAS[CurrentSelectionApplySystem] --> ACQ[EntityCollectionStore acquisition preview]
+    CAS --> CMDCOL[EntityView CommandSource collection]
+    CIS[CommandInteractionSemanticSystem] --> SEM[Ground move vs cancel intent]
     FROZEN --> CAS
-    SEL --> MSS
+    FROZEN --> CIS
   end
 
   subgraph orderA [Path A · MassNavigation 右键]
-    MLCMD[MassNavigationLocalCommandInputSystem] --> SUB[SubmitMoveCommand]
-    SUB --> OBS[OrderBufferSystem]
+    MSOS[MassNavigationMoveOrderSourceSystem] --> OQ[OrderQueue]
+    OQ --> OBS[OrderBufferSystem]
     OBS --> ING[MassNavigationOrderIngestionSystem]
     ING --> NAV[NavGroupRuntime / Formation / Locomotion]
   end
 
   subgraph orderB [Path B · RtsDemo / GAS mapping]
     LOS[RtsLocalOrderSourceSystem] --> IOM[InputOrderMappingSystem]
-    IOM --> OQ[OrderQueue]
-    OQ --> OBS2[OrderBufferSystem]
+    IOM --> OQ2[OrderQueue]
+    OQ2 --> OBS2[OrderBufferSystem]
     OBS2 --> GAS[GAS moveTo / standard orders]
   end
 
   GL --> CAS
-  FROZEN --> MLCMD
-  MSEL --> MLCMD
+  CMDCOL --> MSOS
+  SEM --> MSOS
+  CMDCOL --> IOM
   FROZEN --> IOM
-  SEL --> IOM
 
   startup --> visual
   visual --> fixed
@@ -281,7 +282,7 @@ flowchart TB
       <div class="grid2" style="margin-top:1rem">
         <div class="path-card a">
           <strong>Path A — MassNavigation（Formation / HAN / 10k）</strong>
-          <p class="muted" style="margin:0.5rem 0 0">右键 <code>Command</code> → <code>MassNavigationLocalCommandInputSystem</code> → 每个选中 actor 一条 <code>MassNavigationMoveOrderArgs</code> → NavGroup 编队执行。</p>
+          <p class="muted" style="margin:0.5rem 0 0">右键 <code>Command</code> → <code>CommandInteractionSemanticSystem</code> → <code>MassNavigationMoveOrderSourceSystem</code> → <code>OrderQueue</code> → <code>OrderBufferSystem</code> → NavGroup 编队执行。命令目标来自 EntityView <code>collection.command.source</code>。</p>
         </div>
         <div class="path-card b">
           <strong>Path B — RtsDemoMod / 通用 GAS</strong>
@@ -508,7 +509,7 @@ flowchart LR
       </div>
 
       <div class="alert warn">
-        <strong>已知基建债 #503：</strong>MassNav 的 <code>MassNavigationLocalCommandInputSystem</code> 与瞄准态的 <code>InputOrderMappingSystem</code> 都直接读 raw <code>Command</code>，缺少 context-scoped semantic intent 层；瞄准时右键可能同时 cancel 和 submit move。
+        <strong>Epic #522 收敛后：</strong>MassNav 不再读 <code>SelectionContextRuntime</code> 或 raw input；命令 SSOT 为 EntityView command-source collection + OrderQueue 唯一 intake。瞄准态 cancel 语义由 <code>CommandInteractionSemanticSystem</code> 统一裁决。
       </div>
     </section>
 

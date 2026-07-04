@@ -28,6 +28,8 @@
   * 定稿 Intent / Behavior / Deliberation 三层、普攻=autocast、AI Order/GAS 边界与加载期 fail-fast 契约
 * [RFC-0060 通用存档系统](RFC-0060-universal-save-system.md)
   * Epic #292 引用的通用存档 RFC 回写；编号与 AI Utility Autocast 历史文件重叠，正式结论以 `gitbook/architecture/save-system.md` 为准
+* [RFC-0061 Interaction → EntityView → Order → MassNav 职责边界收敛](RFC-0061-interaction-view-order-massnav-boundary-unification.md)
+  * Epic #522 实现 SSOT：Cast → EntityCollection → EntityView → OrderQueue → OrderBuffer → MassNavigation ingestion
 
 ## 2 使用规则
 
