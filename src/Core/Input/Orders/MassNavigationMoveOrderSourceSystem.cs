@@ -1,13 +1,13 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
@@ -17,8 +17,6 @@ namespace Ludots.Core.Input.Orders;
 
 public sealed class MassNavigationMoveOrderSourceSystem : ISystem<float>
 {
-    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
-
     private readonly GameEngine _engine;
     private readonly OrderQueue _orderQueue;
 
@@ -80,37 +78,7 @@ public sealed class MassNavigationMoveOrderSourceSystem : ISystem<float>
 
     private int ResolveLocalPlayerId()
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity local ||
-            !_engine.World.IsAlive(local))
-        {
-            local = ResolveSingleAuthoredPlayerOwner();
-            _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = local;
-        }
-
-        if (!_engine.World.TryGet(local, out PlayerOwner owner))
-        {
-            throw new InvalidOperationException("MassNavigation move order source LocalPlayerEntity must author PlayerOwner.");
-        }
-
-        return owner.PlayerId;
-    }
-
-    private Entity ResolveSingleAuthoredPlayerOwner()
-    {
-        Entity resolved = Entity.Null;
-        int count = 0;
-        _engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
-        {
-            resolved = entity;
-            count++;
-        });
-
-        return count switch
-        {
-            1 => resolved,
-            0 => throw new InvalidOperationException("MassNavigation move order source requires LocalPlayerEntity or exactly one authored PlayerOwner before submitting move orders."),
-            _ => throw new InvalidOperationException("MassNavigation move order source found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
-        };
+        Entity local = MassNavigationPrimarySelectionViewBootstrapSystem.RequireLocalSelectionOwner(_engine);
+        return _engine.World.Get<PlayerOwner>(local).PlayerId;
     }
 }

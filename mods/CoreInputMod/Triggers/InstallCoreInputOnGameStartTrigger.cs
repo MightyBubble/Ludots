@@ -8,7 +8,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -87,14 +86,13 @@ namespace CoreInputMod.Triggers
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
             engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
-            engine.RegisterSystem(new MassNavigationMoveOrderSourceSystem(engine, orderQueue), SystemGroup.InputCollection);
 
             var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             RegisterLoadedModViewModes(engine);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 
-            _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, MassNavigationMoveOrderSource, SkillBar, SelectionBox, AbilityAimPresentation, SelectedMovePathPresentation, TabTarget, ViewMode registered");
+            _ctx.Log("[CoreInputMod] CurrentSelectionApply, GasSelectionResponse, GasInputResponse, SkillBar, SelectionBox, AbilityAimPresentation, SelectedMovePathPresentation, TabTarget, ViewMode registered");
             return Task.CompletedTask;
         }
 
