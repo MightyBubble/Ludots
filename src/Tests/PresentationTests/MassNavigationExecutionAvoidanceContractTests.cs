@@ -190,7 +190,7 @@ namespace Ludots.Tests.Presentation
                 PlayAreaMaxYCm = 9_950f,
             };
 
-            var config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            var config = MassNavigationTestConfigFactory.CreateConfigForTests();
             config.Solver = solver;
             config.World!.SolverWindowWidthCm = solver.FieldWidthCm;
             config.World.SolverWindowHeightCm = solver.FieldHeightCm;

@@ -2894,7 +2894,7 @@ namespace Ludots.Tests.Presentation
                 new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
                 Path.Combine(FindRepoRoot(), "assets"));
 
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
             simulation.SetWorldOperationsReady(true);

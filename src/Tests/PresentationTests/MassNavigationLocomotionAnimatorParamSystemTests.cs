@@ -13,7 +13,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationSimulationRuntime_MovingAndIdleAgents_ResolvesLocomotionSpeed()
         {
             using World world = World.Create();
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
 
@@ -60,7 +60,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationLocomotionAnimatorParamSystem_VisibleOwnedPerformer_WritesNormalizedSpeed()
         {
             using World world = World.Create();
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             var layer = new MassNavigationAgentLayer(1u, 1u);
 

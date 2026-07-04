@@ -117,6 +117,6 @@ flowchart LR
 
 ## 7. Acceptance (Epic #522)
 
-- [ ] Formation capability showcase playable：框选 + 右键 move 走 OrderQueue → ingestion → movement
-- [ ] MassNav Core 无 Input/Selection import（ingestion + nav components only）
-- [ ] 正式文档与 Epic issue 子项全部关闭
+- [x] Formation capability showcase playable：框选 + 右键 move 走 OrderQueue → ingestion → movement
+- [x] MassNav Core 无 Input/Selection import（ingestion + nav components only）
+- [x] 正式文档与 Epic issue 子项全部关闭

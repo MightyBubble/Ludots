@@ -26,7 +26,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     [TestFixture]
-    public sealed class MassNavigationLocalCommandInputSystemTests
+    public sealed class MassNavigationMoveOrderSubmitterTests
     {
         private const int LocalPlayerId = 1;
         private const int LocalTeamId = 1;
@@ -196,7 +196,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void BindBoardWorld_RejectsActiveHotZoneOutsideBoardCenterRange()
         {
-            MassNavigationConfig config = CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             config.World!.HotZones[0].CenterXCm = 1_000;
             var simulation = new MassNavigationSimulationRuntime(config);
 
@@ -211,7 +211,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SetFormationMode_RejectsUndefinedEnumValue()
         {
-            var simulation = new MassNavigationSimulationRuntime(CreateConfigForTests());
+            var simulation = new MassNavigationSimulationRuntime(MassNavigationTestConfigFactory.CreateConfigForTests());
 
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
                 () => simulation.SetFormationMode((MassNavigationFormationMode)999))!;
@@ -222,7 +222,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SelectionScratchAndSnapshot_OverflowFailFastWithoutArrayResize()
         {
-            MassNavigationConfig config = CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             config.ScenarioRuntime.InitialSelectionScratchCapacity = 1;
             config.ScenarioRuntime.InitialSelectedEntityCapacity = 1;
             var simulation = new MassNavigationSimulationRuntime(config);
@@ -261,7 +261,7 @@ namespace Ludots.Tests.Presentation
                 new Team { Id = EnemyTeamId },
                 OrderBuffer.CreateEmpty());
 
-            var config = CreateConfigForTests();
+            var config = MassNavigationTestConfigFactory.CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
             int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
@@ -302,7 +302,6 @@ namespace Ludots.Tests.Presentation
                     TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
                 },
                 selectionRegistry);
-            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
             EntityViewRuntimeConfig entityViewConfig = engine.GetService(CoreServiceKeys.EntityViewConfig)
                 ?? throw new InvalidOperationException("MassNavigation command tests require EntityViewConfig.");
             EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
@@ -393,159 +392,6 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
-        internal static MassNavigationConfig CreateConfigForTests()
-        {
-            MassNavigationConfig baseConfig = LoadBaseMassNavigationConfig();
-            MassNavigationFlowSolverConfig solver = CreateTestSolverConfig();
-            var config = new MassNavigationConfig
-            {
-                MapId = "mass_navigation",
-                Solver = solver,
-                World = new MassNavigationWorldConfig
-                {
-                    SolverWindowWidthCm = solver.FieldWidthCm,
-                    SolverWindowHeightCm = solver.FieldHeightCm,
-                    StreamingChunkSizeCm = 500,
-                    StreamingRadiusCm = 1000,
-                    CommandFocusHoldTicks = 3,
-                    WorkAreaPaddingCm = 100,
-                    WorkAreaMaxWidthCm = solver.FieldWidthCm,
-                    WorkAreaMaxHeightCm = solver.FieldHeightCm,
-                    ActiveHotZoneId = "center",
-                    HotZones = new[]
-                    {
-                        new MassNavigationHotZoneConfig
-                        {
-                            Id = "center",
-                            Label = "Center",
-                            CenterXCm = 5000,
-                            CenterYCm = 5000,
-                            WidthCm = 1000,
-                            HeightCm = 1000,
-                        },
-                    },
-                },
-                Streaming = new MassNavigationStreamingConfig
-                {
-                    RetainSeconds = 6f,
-                    RadiusCm = 1000,
-                },
-                Scenario = new MassNavigationScenarioConfig
-                {
-                    AgentsPerTeam = 1,
-                    InitialSelectedTeamId = LocalTeamId,
-                    Teams = new[]
-                    {
-                        new MassNavigationScenarioTeamConfig { Id = LocalTeamId, Name = "Team 1" },
-                        new MassNavigationScenarioTeamConfig { Id = EnemyTeamId, Name = "Team 2" },
-                    },
-                    SpawnLayout = new MassNavigationScenarioSpawnLayoutConfig
-                    {
-                        Kind = "OrbitOpposedTargets",
-                        OrbitRadiusCm = 3000f,
-                    },
-                },
-                ScenarioRuntime = new MassNavigationScenarioRuntimeConfig
-                {
-                    AutoSpawnConfiguredScenario = true,
-                    InitialSelectionScratchCapacity = 8,
-                    InitialSelectedEntityCapacity = 8,
-                    RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
-                    {
-                        NavigationGroupCapacity = 8,
-                        GroupMembershipAgentCapacity = 16,
-                        SelectionMemberScratchCapacity = 8,
-                        GroupMemberCapacity = 8,
-                        OrderIngestionTokenCapacity = 8,
-                        OrderIngestionMemberCapacity = 8,
-                        LoadedChunkCapacity = 32,
-                        MetadataTeamCapacity = 2,
-                    },
-                },
-                AgentProfiles = new MassNavigationAgentProfileSetConfig
-                {
-                    DefaultProfileId = "light",
-                    Profiles = new[]
-                    {
-                        new MassNavigationAgentProfileConfig
-                        {
-                            Id = "light",
-                            Heavy = false,
-                            VisualScale = 0.22f,
-                            SpeedCmPerSecond = 800f,
-                            EveryNth = 0,
-                            NthOffset = 0,
-                        },
-                    },
-                },
-                Cadence = baseConfig.Cadence,
-                Presentation = baseConfig.Presentation,
-                TeamRelationships = baseConfig.TeamRelationships,
-                Flow = baseConfig.Flow,
-                Arrival = baseConfig.Arrival,
-                Avoidance = baseConfig.Avoidance,
-                Semantics = baseConfig.Semantics,
-            };
-            config.Solver.Validate();
-            config.World.Validate(config.Solver);
-            config.Streaming.Validate();
-            config.ScenarioRuntime.Validate();
-            config.Scenario.Validate(config.ScenarioRuntime);
-            config.AgentProfiles.Validate();
-            config.AgentProfiles.BindAgentProfiles(CreateAgentProfilesForTests());
-            return config;
-        }
-
-        private static MassNavigationConfig LoadBaseMassNavigationConfig()
-        {
-            string path = Path.Combine(
-                FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "assets",
-                "MassNavigationConfig.json");
-            using FileStream stream = File.OpenRead(path);
-            return MassNavigationConfig.Load(stream);
-        }
-
-        private static AgentProfileRegistry CreateAgentProfilesForTests()
-        {
-            return new AgentProfileRegistry(new[]
-            {
-                new AgentProfileConfig
-                {
-                    Id = "light",
-                    RadiusCm = 20,
-                    HeightCm = 180,
-                    ClearanceCm = 40,
-                    Mass = 1,
-                    Layer = 0
-                }
-            });
-        }
-
-        private static MassNavigationFlowSolverConfig CreateTestSolverConfig()
-        {
-            return new MassNavigationFlowSolverConfig
-            {
-                FieldWidthCm = 10_000,
-                FieldHeightCm = 10_000,
-                FlowCellSizeCm = 100,
-                MaxObstacleCount = 64,
-                ParallelWorkerCount = 1,
-                SeparationHashCellSizeCm = 100,
-                SeparationHashMinSearchRadiusCells = 2,
-                HardResolveHashCellSizeCm = 50,
-                HardResolveHashMinSearchRadiusCells = 1,
-                PlayAreaMinXCm = 50f,
-                PlayAreaMaxXCm = 9_950f,
-                PlayAreaMinYCm = 50f,
-                PlayAreaMaxYCm = 9_950f,
-            };
-        }
-
         private sealed class TestContextScope : IDisposable
         {
             public TestContextScope(
@@ -606,13 +452,14 @@ namespace Ludots.Tests.Presentation
 
             public void Select(Entity entity)
             {
-                if (!Selection.ReplaceSelection(LocalPlayer, SelectionSetKeys.LivePrimary, new[] { entity }))
-                {
-                    throw new InvalidOperationException("Failed to write test selection.");
-                }
-
                 EntityViewProfileEntry profile = EntityViewConfig.RequireProfile(EntityViewConfig.DefaultViewKey);
                 EntityViewRuntime.PromoteCommandSource(
+                    Collections,
+                    LocalPlayer,
+                    in profile,
+                    new[] { entity },
+                    "test select");
+                EntityViewRuntime.PromoteDisplayCollection(
                     Collections,
                     LocalPlayer,
                     in profile,

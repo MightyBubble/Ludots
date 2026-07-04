@@ -485,7 +485,7 @@ namespace Ludots.Tests.Presentation
 
         private static MassNavigationConfig CreateTestConfig(int membershipCapacity)
         {
-            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            MassNavigationConfig config = MassNavigationTestConfigFactory.CreateConfigForTests();
             config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.SelectionMemberScratchCapacity = membershipCapacity;
             config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = membershipCapacity;

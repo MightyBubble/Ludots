@@ -7,7 +7,9 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -63,6 +65,8 @@ namespace CoreInputMod.Triggers
                 ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
             engine.RegisterSystem(new CommandInteractionSemanticSystem(engine.GlobalContext), SystemGroup.InputCollection);
+            engine.RegisterSystem(new MassNavigationPrimarySelectionViewBootstrapSystem(engine), SystemGroup.InputCollection);
+            engine.RegisterSystem(new MassNavigationMoveOrderSourceSystem(engine, orderQueue), SystemGroup.InputCollection);
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
             engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 

@@ -340,8 +340,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
-        public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
-        public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

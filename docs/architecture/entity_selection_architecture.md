@@ -149,10 +149,11 @@ Acquisition 完成后通过 `EntityViewRuntime.PromoteCommandSource` / `PromoteD
 viewed selection 与底层存储显式分离。
 
 - 存储真相位于容器与成员关系实体
-- viewer entity 把某个 `view key` 绑定到容器
-- 消费者从以下服务解析当前 viewed selection：
-  - `CoreServiceKeys.SelectionViewViewerEntity`
-  - `CoreServiceKeys.SelectionViewKey`
+- viewer entity 把某个 `view key` 绑定到容器（legacy presentation / 显式 mod 绑定）
+- 命令与 gameplay 消费从 EntityView SSOT 解析：
+  - `CoreServiceKeys.EntityViewViewerEntity`
+  - `CoreServiceKeys.EntityViewKey`
+  - `EntityViewProfile` → `EntityCollectionRoleKind.CommandSource`
 
 `SelectionViewRuntime` 负责解析当前 viewed selection，`SelectionContextRuntime` 在其之上提供消费者友好的辅助 API。
 

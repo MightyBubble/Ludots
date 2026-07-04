@@ -1,10 +1,6 @@
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Input.MassNavigation;
-using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -90,12 +86,8 @@ public sealed class MassNavigationRuntime
 
         var simulation = new MassNavigationSimulationRuntime(config);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
-        OrderQueue orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires OrderQueue.");
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationFrameBeginSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationPrimarySelectionViewBootstrapSystem(engine), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationMoveOrderSourceSystem(engine, orderQueue), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.InsertSystemBeforeRequired<AbilityEndOrderSystem>(
             new MassNavigationMoveOrderAcceptanceSystem(engine, simulation),

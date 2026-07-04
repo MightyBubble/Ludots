@@ -80,9 +80,9 @@ selection marker 生命周期不归 MassNavigation 私有系统所有。
 
 ```mermaid
 flowchart LR
-    Player["玩家框选或取消"] --> Selection["SelectionRuntime"]
-    Selection --> Projection["SelectionPresentationEventSystem"]
-    Projection --> Event["SelectionMemberAdded / SelectionMemberRemoved"]
+    Player["玩家框选或取消"] --> ACQ["EntityCollectionStore + EntityView promote"]
+    ACQ --> Bridge["EntityViewDisplaySelectionPresentationEventSystem"]
+    Bridge --> Event["SelectionMemberAdded / SelectionMemberRemoved"]
     Event --> Rules["PerformerRuleSystem"]
     Rules --> Runtime["PerformerRuntimeSystem"]
     Runtime --> Marker["Scoped selection marker performer"]
