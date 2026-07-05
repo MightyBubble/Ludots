@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
@@ -40,7 +41,8 @@ namespace Ludots.Core.Gameplay.Teams
             World world,
             MapLoadEntityIndex entityIndex,
             RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes)
+            RelationshipTypeRegistry? relationshipTypes,
+            OwnershipResolver? ownership = null)
         {
             ArgumentNullException.ThrowIfNull(session);
             ArgumentNullException.ThrowIfNull(world);
@@ -145,6 +147,7 @@ namespace Ludots.Core.Gameplay.Teams
             }
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes);
+            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
 
             bool hasParticipantBindings = mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0;
             return new ParticipantBindingResult(
@@ -305,6 +308,45 @@ namespace Ludots.Core.Gameplay.Teams
                 int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.PlayerTeams[{i}]", binding.TypeId);
                 EnsureRelationship(relationships!, player, team, typeId, symmetric: binding.Symmetric);
             }
+        }
+
+        /// <summary>
+        /// RFC-0065 CTRL-2: materializes the control-plane topology at participant binding time —
+        /// <c>MemberOf(playerRep → teamRep)</c> for every bound player and <c>Owns(playerRep → unit)</c>
+        /// for every map-owned non-rep entity carrying <see cref="PlayerOwner"/>.
+        /// </summary>
+        private static void BuildControlPlaneEdges(
+            MapSession session,
+            World world,
+            string mapId,
+            MapConfig mapConfig,
+            TeamEntityLookup teams,
+            PlayerEntityLookup players,
+            RelationshipRuntime? relationships,
+            RelationshipTypeRegistry? relationshipTypes,
+            OwnershipResolver? ownership)
+        {
+            if (mapConfig.Players.Count == 0)
+            {
+                return;
+            }
+
+            if (relationships == null || relationshipTypes == null || ownership == null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime/RelationshipTypeRegistry/OwnershipResolver) is unavailable.");
+            }
+
+            int memberOfTypeId = relationshipTypes.GetId("MemberOf");
+            for (int i = 0; i < mapConfig.Players.Count; i++)
+            {
+                PlayerBindingData binding = mapConfig.Players[i]!;
+                Entity playerRep = players.Get(binding.PlayerId);
+                Entity teamRep = teams.Get(binding.TeamId);
+                relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+            }
+
+            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
         }
 
         private static void EnsureRelationship(RelationshipRuntime relationships, Entity source, Entity target, int typeId, bool symmetric)

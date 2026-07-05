@@ -1,0 +1,61 @@
+[
+  {
+    "id": "control_plane_projection_player",
+    "components": {
+      "Name": { "Value": "ControlPlane.Player" },
+      "SelectionDragState": {},
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "control_plane_projection_team",
+    "components": {
+      "Name": { "Value": "ControlPlane.Team" },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "control_plane_projection_p1_unit",
+    "components": {
+      "Name": { "Value": "Azure Unit" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 160
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 85, "halfSizeZCm": 50 }
+    }
+  },
+  {
+    "id": "control_plane_projection_p2_unit",
+    "components": {
+      "Name": { "Value": "Amber Unit" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 2 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 140
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+    }
+  }
+]

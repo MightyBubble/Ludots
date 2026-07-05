@@ -194,6 +194,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
         public static readonly ServiceKey<ControlDomainQuery> ControlDomainQuery = new("ControlDomainQuery");
         public static readonly ServiceKey<DomainStanceQuery> DomainStanceQuery = new("DomainStanceQuery");
+        public static readonly ServiceKey<AssociationControlProfileRuntime> AssociationControlProfileRuntime = new("AssociationControlProfileRuntime");
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
@@ -237,6 +238,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<InteractionContextStack> InteractionContextStack = new("InteractionContextStack");
+        public static readonly ServiceKey<FilterProfileRegistry> FilterProfileRegistry = new("FilterProfileRegistry");
+        public static readonly ServiceKey<ContextBoundCollectionWriter> ContextBoundCollectionWriter = new("ContextBoundCollectionWriter");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");

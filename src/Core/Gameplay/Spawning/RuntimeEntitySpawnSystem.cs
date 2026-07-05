@@ -4,9 +4,12 @@ using System.Diagnostics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -51,6 +54,8 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly WorldSizeSpec _worldSizeSpec;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly ComponentAuthoringContext _authoringContext;
+        private readonly OwnershipResolver? _ownership;
+        private readonly PlayerEntityLookup? _playerLookup;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -66,7 +71,9 @@ namespace Ludots.Core.Gameplay.Spawning
             ISpatialPartitionWorld? spatialPartition = null,
             WorldSizeSpec worldSizeSpec = default,
             PresentationTimingDiagnostics? timingDiagnostics = null,
-            ComponentAuthoringContext? authoringContext = null)
+            ComponentAuthoringContext? authoringContext = null,
+            OwnershipResolver? ownership = null,
+            PlayerEntityLookup? playerLookup = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -91,6 +98,8 @@ namespace Ludots.Core.Gameplay.Spawning
             _performerBootstrap = performerDefinitions?.BootstrapRegistry;
             _presentationEvents = presentationEvents;
             _timingDiagnostics = timingDiagnostics;
+            _ownership = ownership;
+            _playerLookup = playerLookup;
         }
 
         public override void Update(in float dt)
@@ -173,6 +182,7 @@ namespace Ludots.Core.Gameplay.Spawning
             ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            TryLinkOwnershipEdge(entity);
             return entity;
         }
 
@@ -205,6 +215,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyPlayerOwner(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            TryLinkOwnershipEdge(entity);
             TryBootstrapPerformer(entity, request.TemplateId);
             return entity;
         }
@@ -356,6 +367,16 @@ namespace Ludots.Core.Gameplay.Spawning
                 postSpawnMs = ElapsedMs(postSpawnStart);
             }
 
+            if (_ownership != null && _playerLookup != null)
+            {
+                // Template-authored PlayerOwner components bypass the per-request owner work flags,
+                // so ownership edges are linked per created entity regardless of the post-spawn loop.
+                for (int i = 0; i < created.Length; i++)
+                {
+                    OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, created[i]);
+                }
+            }
+
             double performerBatchMs = 0d;
             double performerCreateMs = 0d;
             double performerBootstrapMarkMs = 0d;
@@ -442,6 +463,7 @@ namespace Ludots.Core.Gameplay.Spawning
             ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            TryLinkOwnershipEdge(entity);
             return entity;
         }
 
@@ -611,6 +633,17 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 World.Add(entity, owner);
             }
+        }
+
+        /// <summary>RFC-0065 CTRL-2: runtime spawns join the ownership topology exactly like map-load binding.</summary>
+        private void TryLinkOwnershipEdge(Entity entity)
+        {
+            if (_ownership == null || _playerLookup == null)
+            {
+                return;
+            }
+
+            OwnershipEdgeBuilder.TryLinkSpawnedEntity(World, _ownership, _playerLookup, entity);
         }
 
         private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)

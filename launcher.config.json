@@ -154,6 +154,14 @@
       }
     },
     {
+      "name": "control_plane_projection_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod",
+        "projectPath": "ControlPlaneProjectionShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_ui_showcase",
       "target": {
         "type": "path",

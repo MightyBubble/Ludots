@@ -621,6 +621,7 @@ namespace Ludots.Core.Engine
             registry.Register(EntityCollectionKeys.AbilityAimAffected);
             registry.Register(EntityCollectionKeys.EntityInfoExplicit);
             registry.Register(EntityCollectionKeys.CommandSource);
+            registry.Register(EntityCollectionKeys.UiCastRaw);
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -678,6 +679,16 @@ namespace Ludots.Core.Engine
                 relationshipCatalog.Stance);
             var domainRoutedCollectionWriter = new DomainRoutedCollectionWriter(entityCollectionStore, controlDomainQuery);
             var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
+            // Infrastructure flag marking profile-granted edges (RFC-0065 CTRL-4b); registration is idempotent.
+            int grantedRelationshipFlagId = relationshipFlagRegistry.Register(AssociationControlProfileRuntime.GrantedFlagName);
+            var associationControlProfileCatalog = new AssociationControlProfilePipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var associationControlProfileRuntime = AssociationControlProfileRuntime.Create(
+                World,
+                relationshipRuntime,
+                tagOps,
+                relationshipTypeRegistry,
+                associationControlProfileCatalog,
+                grantedRelationshipFlagId);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
@@ -858,6 +869,18 @@ namespace Ludots.Core.Engine
                 InteractionContextIds.Default,
                 EntityCollectionKeys.CommandSource,
                 EntityViewKeys.ControlPlaneCommand));
+            var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
+            // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
+            filterProfileRegistry.RegisterExpander(
+                FilterAssociationExpandKinds.Controls,
+                controlDomainQuery.CollectControlled,
+                () => controlDomainQuery.Revision);
+            filterProfileRegistry.Install(new FilterProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
+                interactionContextStack,
+                filterProfileRegistry,
+                domainRoutedCollectionWriter,
+                entityCollectionStore);
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
@@ -1081,7 +1104,7 @@ namespace Ludots.Core.Engine
                 },
                 selectionSetKeyRegistry.Register,
                 instancedBatchAssets.GetId,
-                entityCollectionKeyRegistry.GetId).Load(ConfigCatalog, ConfigConflictReport);
+                entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
             performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
@@ -1231,6 +1254,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
+            SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
+            SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleQueue, runtimeEntityLifecycleQueue);
@@ -1268,6 +1293,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
             SetService(CoreServiceKeys.ControlDomainQuery, controlDomainQuery);
             SetService(CoreServiceKeys.DomainStanceQuery, domainStanceQuery);
+            SetService(CoreServiceKeys.AssociationControlProfileRuntime, associationControlProfileRuntime);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.PlayerEntityLookup, playerEntityLookup);
             SetService(CoreServiceKeys.EntitySetQueryRuntime, entitySetQueryRuntime);
@@ -1351,6 +1377,7 @@ namespace Ludots.Core.Engine
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
+            RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
             // Phase 0.5: 保存上一帧位置（插值前置条件，必须在所有移动系统之前）
             RegisterSystem(new SavePreviousWorldPositionSystem(World), SystemGroup.SchemaUpdate);
@@ -1447,7 +1474,9 @@ namespace Ludots.Core.Engine
                 _spatialPartition,
                 WorldSizeSpec,
                 presentationTimingDiagnostics,
-                componentAuthoringContext),
+                componentAuthoringContext,
+                ownership: ownershipResolver,
+                playerLookup: playerEntityLookup),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
@@ -1788,7 +1817,8 @@ namespace Ludots.Core.Engine
                         World,
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
-                        GetService(CoreServiceKeys.RelationshipTypeRegistry)));
+                        GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                        GetService(CoreServiceKeys.OwnershipResolver)));
                 SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
@@ -1941,7 +1971,8 @@ namespace Ludots.Core.Engine
                     World,
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
-                    GetService(CoreServiceKeys.RelationshipTypeRegistry)));
+                    GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                    GetService(CoreServiceKeys.OwnershipResolver)));
             SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)
