@@ -14,6 +14,11 @@ namespace Ludots.Core.EntityCollections
         public const string CommandSource = "collection.command.source";
     }
 
+    public static class EntityViewKeys
+    {
+        public const string ControlPlaneCommand = "view.control_plane.command";
+    }
+
     public enum EntityCollectionSourceKind : byte
     {
         Explicit = 0,

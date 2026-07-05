@@ -188,7 +188,7 @@ namespace Ludots.Tests.GAS
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();
             var relationshipChanges = new RelationshipChangeBuffer();
-            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges);
+            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges, new RelationshipReverseIndex(world));
             int memberTypeId = relationshipTypes.Register("TeamMember");
             scopeKeys.RegisterRelationshipOutgoingMembers("team", memberTypeId);
 

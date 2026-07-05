@@ -23,7 +23,7 @@ namespace Ludots.Tests.GAS
             var flags = new RelationshipFlagRegistry();
             var bands = new RelationshipBandRegistry();
             var changes = new RelationshipChangeBuffer(capacity: 1);
-            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes);
+            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
 
             int socialBondTypeId = types.Register("SocialBond");
             int hostilityTypeId = types.Register("Hostility");
@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
             var flags = new RelationshipFlagRegistry();
             var bands = new RelationshipBandRegistry();
             var changes = new RelationshipChangeBuffer(capacity: 1);
-            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes);
+            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
 
             int socialBondTypeId = types.Register("SocialBond");
             int hostilityTypeId = types.Register("Hostility");

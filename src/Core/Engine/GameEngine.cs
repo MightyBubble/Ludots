@@ -646,7 +646,7 @@ namespace Ludots.Core.Engine
             var relationshipBandRegistry = new RelationshipBandRegistry();
             var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
-            var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer);
+            var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer, new RelationshipReverseIndex(World));
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
@@ -836,6 +836,11 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var interactionActionBindings = new InteractionActionBindings();
+            var interactionContextStack = new InteractionContextStack(entityCollectionKeyRegistry);
+            interactionContextStack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                EntityViewKeys.ControlPlaneCommand));
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
@@ -1206,6 +1211,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
+            SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleQueue, runtimeEntityLifecycleQueue);
