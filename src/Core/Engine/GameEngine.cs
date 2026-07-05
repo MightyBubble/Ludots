@@ -1185,6 +1185,19 @@ namespace Ludots.Core.Engine
             int cfgChainActivateEffect = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainActivateEffect", "constants.responseChainOrderTypeIds");
             int cfgCastAbilityStart = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.Start");
             int cfgCastAbilityEnd = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.End");
+
+            // Pointer command intent routing (RFC-0065 INT-1, DEC-14); installed after order types so
+            // rule routes validate their orderTypeKey at load time.
+            var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var commandIntentProfileRegistry = new CommandIntentProfileRegistry(
+                commandIntentProfileIds,
+                World,
+                tagOps,
+                abilityDefinitions,
+                controlDomainQuery,
+                domainStanceQuery,
+                orderTypeRegistry);
+            commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
             int stepRateHz = engineClockConfig.FixedHz / Math.Max(1, gasClockConfig.StepEveryFixedTicks);
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
@@ -1255,6 +1268,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
+            SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);

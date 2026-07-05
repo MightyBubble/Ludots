@@ -123,6 +123,37 @@ namespace Ludots.Core.Gameplay.Relationships
             return GetStance(a, b) == stanceId;
         }
 
+        /// <summary>
+        /// Load-time, read-only resolution of a catalog stance name to the stance type id
+        /// <see cref="GetStance"/> can return. Returns false for names that are not registered
+        /// relationship types or not part of this query's configured stance space.
+        /// </summary>
+        public bool TryResolveStanceId(string stanceName, out int stanceId)
+        {
+            stanceId = NoStanceId;
+            if (!_relationships.TypeRegistry.TryGetId(stanceName, out int typeId))
+            {
+                return false;
+            }
+
+            if (typeId == _sameDomainStanceId || typeId == _sameTeamStanceId || typeId == _defaultStanceId)
+            {
+                stanceId = typeId;
+                return true;
+            }
+
+            for (int i = 0; i < _stanceTypeIds.Length; i++)
+            {
+                if (_stanceTypeIds[i] == typeId)
+                {
+                    stanceId = typeId;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private int Resolve(Entity domainA, Entity domainB)
         {
             if (domainA == domainB)

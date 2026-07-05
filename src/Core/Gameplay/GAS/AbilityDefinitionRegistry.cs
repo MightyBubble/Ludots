@@ -122,6 +122,15 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasUseProgressionRequirement;
         public int ShowProgressionRequirementId;
         public bool HasShowProgressionRequirement;
+
+        // ── Catalog classification (RFC-0065 DEC-14) ──
+        /// <summary>
+        /// Catalog tags declared on the ability (abilities.json <c>catalogTags</c>).
+        /// Pure classification data for semantic routing (e.g. CommandIntentProfile
+        /// <c>hasAbilityWithTag</c> / <c>byAbilityTag</c>); Core never interprets tag names.
+        /// </summary>
+        public GameplayTagContainer CatalogTags;
+        public bool HasCatalogTags;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -171,6 +180,18 @@ namespace Ludots.Core.Gameplay.GAS
 
             definition = _items[abilityId];
             return true;
+        }
+
+        /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
+        public bool HasCatalogTag(int abilityId, int tagId)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                return false;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
         }
 
         public void RegisterFromEntity(World world, Entity templateEntity, int abilityId)
