@@ -30,13 +30,15 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 ```text
 [L1 Device]      原始设备输入（键鼠/手柄/触屏）
-[L2 Remap]       IMC 输入映射上下文（已有 PlayerInputHandler 压栈）→ InputAction
-[L3 Intent+Ctx]  InteractionContextStack：栈顶 frame 决定 activeCollectionKey/activeViewKey/inputContextId
+[L2 Remap]       ControlScheme（IMC 组合，玩家可热切换/改键）→ InputAction（DEC-15）
+[L3 Intent+Ctx]  InteractionContextStack：栈顶 frame 决定 activeCollectionKey/activeViewKey/
+                 inputContextId/commandIntentId
 [L4 Cast]        InputCastSpec（box/polygon/ray/lasso × screen/world/minimap）→ raw hits collection
 [L5 Filter]      FilterProfile（graph/condition DSL，association query）→ filtered
 [L6 Collection]  CollectionWrite → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
 [L7 View/Panel]  EntityView profile + PanelRouter + AggregationProfile → HUD/面板投影
-[L8 Commit]      CastCommitProfile（激活 ops：pushFrame/popFrame/submitOrder）+ ClientCastPreference
+[L8 Commit]      施法键：CastCommitProfile（激活 ops：pushFrame/popFrame/submitOrder）+ ClientCastPreference
+                 pointer 命令：CommandIntentProfile（actor 谓词 × target 谓词 → route，显式全序，DEC-14）
                  —— 无状态机：client 侧状态 = 栈上 frame，sim 侧状态 = exec 实体 tag（DEC-13）
 [L9 Dispatch]    CastDispatchProfile（selector/scorer/router）→ per-actor Order（shared order id）
 [L10 Order]      OrderQueue（唯一 intake）→ OrderBuffer → AbilityExec / MassNav ingestion
@@ -70,6 +72,8 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | AggregationProfile | 多选时面板聚合规则（byFamily / byTemplate / byAbilityId / flat） | 拟新增 |
 | PanelRouter | input intent（Q/W/E…）→ 当前聚合视图第 N 格 → 逐 entity `(entity, slotIndex)` 绑定集 | 拟新增 |
 | CastCommitProfile | 施法提交绑定：激活时执行的 op 序列（立即提交 / push targeting frame）+ frame 内 action→op 映射；**无 states/transitions**，取代 `InteractionModeType` 捆绑 | 拟新增 |
+| CommandIntentProfile | pointer intent 的 per-actor 路由规则表：actor 谓词 × target 谓词 → route（orderType + slot selector / contextGroup 评分委托）；显式全序胜出 + 显式群体策略 | 拟新增（吸收并退役 `actorOrderRouting`，复用 `ContextScoredOrderResolver` 评分） |
+| ControlScheme | 命名的控制方案 = IMC context 组合 + 默认 preference（sc2 右键指挥 / 红警左键 / 暗黑 WASD），玩家可热切换 | 拟新增 catalog |
 | ClientCastPreference | 玩家施法偏好，scope 链 global → template → formset → slot | 拟新增 |
 | CastDispatchProfile | 复选施法的 selector（谁施法）/ scorer（排序，复用 UtilityAI）/ router（并发/顺序） | 拟新增 |
 | Order | 唯一执行入口 payload；`OrderQueue` 是唯一 intake | 已有 |
@@ -203,6 +207,45 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
    两类共用同一 frame 结构与同一 op 词汇，只是 push 的发起者不同（client op vs exec lifecycle）。
 
 附注：`MovePathBegun/Updated/Ended` 与 `SelectionMemberAdded/Removed` 同属历史专用事件面，前者随 #519 / move-path collection 化清理，后者已在 Selection 退役范围（ORD-6）内；本 Epic 不再新增任何专用 presentation 事件种类。
+
+### DEC-14 Pointer Command Intent：双侧谓词路由 + 显式全序胜出 + 群体策略
+
+需求：同一个 pointer intent（"右键"只是绑定数据），按 **actor 能力 × target 事实** 动态路由到不同 order——点敌方单位 = 路由到普攻 ability（"攻击"不是 Core 概念，普攻只是带 weapon catalog tag 的 ability，对齐 RFC-0060 普攻=autocast 语义）；有驻扎能力的单位点可驻扎建筑 = 进驻；点可破坏道具 = 攻击；目标同时可驻扎又可破坏时必须有**明确配置的唯一胜出者**；混合框选时哪些单位做什么也必须显式配置。
+
+**现状核对**（复用清单）：
+
+- `actorOrderRouting`（`ActorOrderRoutingMatcher` + `input_order_mappings.json` candidates）：**actor 侧**按 priority 路由已落地，混合框选（producer rally vs unit move）有测试——但 match 只看 actor 自身 tag/slot，**不看 target**。
+- `ContextScoredOrderResolver` + `context_groups.json`：graph 评分选 slot 已落地（平局链 score → entity id → slot index）——但只挂技能键的 `ContextScored` 模式，未接 pointer command；且其 spatial 候选查询**无 knowledge 过滤**（INT-4 必须补）。
+- `AutoTargetPolicy.NearestEnemyInRange`：enum 在 Core，`Team` 组件直读发生在 CoreInputMod `LocalOrderSourceHelper` 的 resolver；随 CTRL-3 一并退役，语义并入本决策的 stance 谓词。
+- **hover 目标的 knowledge 门控现状是对的**：`LocalOrderSourceHelper.TryResolveHoveredCommandTarget` 经 `SelectionEligibility.CanTargetCommand(viewer, candidate, KnowledgePositionAccess.Live)` 过滤——本决策必须继承这一语义（见下），禁止"重构即倒退"。
+
+**结论模型——`CommandIntentProfile`**：pointer intent 的 per-actor 规则表，规则 = actor 谓词 × target 事实谓词 → route：
+
+- **谓词是统一 condition DSL 的 shorthand**：§5.11 的 `hasAbilityWithTag` / `allTags` / `stance` 等键在**加载期 lower 到唯一的 condition/graph evaluator**——全系统只有一个谓词求值路径（M9 断言），不存在第二套谓词文法。actor 侧 = 能力事实（带某 catalog tag 的 ability、自身 tag）；target 侧 = tag（`structure.garrisonable`、`destructible` 都是 mod 数据）+ stance + 结构谓词（`hasEntity`）。Core 零 "attack"/"garrison"/"enemy" 字面量。
+- **target 事实必须经 viewer knowledge 门控**：L8 谓词读的是该 client 的 KnowledgeProjection 投影事实，**不是 sim 真值**——fog 下不可见单位不可被路由（复用 `CanTargetCommand` presence/position 门控，现有基建已覆盖）；伪装单位按被投影的 tag/stance 路由，且 **target 的归属域也取 viewer 投影所见的域**（stance 以 (actor 域, 投影 target 域) 求值）。注意：**tag/stance 级的事实投影（mask）是尚不存在的基建**，由 INT-8 认领；未落地前 M11 伪装场景标记为依赖 INT-8 的 deferred UAT，fog 可见性场景不受影响。路由产物只是 order 请求，**合法性由 sim 侧 GAS targeting / requirement 终裁**（点击与执行之间事实可变）。
+- **stance 谓词语义固定**：`GetStance(actor 所属控制域, target 所属控制域) ∈ 集合`（any-of）；方向性/对称性由 relationship catalog 声明；代理控制下按 **actor 所属域**求值（不是指挥者域）。
+- **唯一胜出是显式全序，胜出即终局**：同一 profile 内 rule priority 互不相等，加载期 fail-fast；A∩B 目标由 priority 决定唯一 winner。**胜出 rule 的 route 解析失败（如 `byAbilityTag` 找不到 slot）= 该 actor 本次无 order，不落穿下一条 rule**（禁止 fallback）。需要评分式动态选择时，route 显式委托 `contextGroupId`（复用 ContextScored 评分）——静态全序与评分委托二选一，都在数据里。
+- **route 的 slot 定位是 selector 表达式**（DEC-11 registry）：语义路由一律用 `byAbilityTag:...` / `contextGroup:...`；`bySlotIndex:N` 保留为注册 kind 但**禁止用于语义路由**（"普攻"由 `ability.catalog.weapon` 之类的 catalog tag 定位，不是裸 slot 0——否则形态切换/Granted 覆盖后路由错位，且重蹈 slot=面板=语义的耦合）。
+- **混合框选 = per-actor 解析 + 显式群体策略**：每个 actor 独立跑规则表（有驻扎能力的进驻、没有的攻击）；`groupPolicy` 声明一致性策略：`independent`，或 `bySelector`（复用 DSP 的 selector/scorer registry 选出决策 actor，其胜出 rule 决定全组——不引入未定义的 "leader" 概念）。groupPolicy 为 profile 顶层唯一（一次 pointer intent 一种群体语义，有意约束，不支持 per-rule 覆盖）。
+- **与 frameActions 的仲裁（确定性规则）**：栈顶 frame 先做 `frameActions` 精确匹配拦截；未被拦截的 pointer command action 落入**栈顶 frame 自己的** `commandIntentId`；frame 无 commandIntentId 则该 pointer command 不路由、**不向下层 frame 冒泡**（无 fallback）。解析链：frame 显式 commandIntentId > ControlScheme `defaults.commandIntentId`（仅对 default frame 生效）。
+- **与 Dispatch 的两阶段单向组合**：L8 intent 先把 ControlPlaneView **分区为 route groups**（同一胜出 route 的 actors 一组，groupPolicy 在此阶段生效）→ 每个 route group 携带解析出的 orderType/slot 进入 L9 dispatch（selector/scorer/router 在组内生效）；cycle 等 dispatch 状态以 (frame, routeGroupKey) 为 key。两阶段严格单向，dispatch 不回头改路由。
+- **性能预算**（与 DEC-2 同规格）：rule 表加载期预编译为 tag bitset 匹配；actor 侧谓词结果按 archetype/tag signature 缓存；graph 谓词仅在 shorthand 无法表达时使用（数据里显式标注）；数百 actor × 每次 pointer intent 的求值必须在 bitset 快路径完成。
+- **归属层级**：`CommandIntentProfile` 是 context frame 引用的数据（不同 context 可换 profile——默认指挥 vs 超级武器 context 右键语义不同）；`actorOrderRouting` 是它的 actor 侧子集，迁移后退役该字段。
+
+### DEC-15 设备 → intent 链路分层与运行时重绑定
+
+genre 差异（星际右键指挥 / 红警左键指挥 / 暗黑左键攻击 + WASD 移动 / LOL 鼠标⇄WASD 切换）分四层解决，每层独立数据：
+
+| 层 | 内容 | 载体 | 现状 |
+|----|------|------|------|
+| 物理绑定 | `<Mouse>/rightButton` → action `"Command"` | `default_input.json` bindings（IMC） | ✅ 已数据化；`"Select"/"Command"` 字面量只存在于 `InteractionActionBindings` 默认常量，消费者读可配置 property |
+| 控制方案 | **ControlScheme** = 一组 IMC context + 默认 preference 的命名组合（`scheme.sc2_classic` / `scheme.wasd_move`） | 拟新增 catalog | ❌ 无 |
+| action → op | frame 的 `frameActions`（DEC-13） | InteractionContextProfile | 本 Epic 落地 |
+| intent → order | CommandIntentProfile（DEC-14） | 拟新增 | ❌ 无 target 侧 |
+
+- **运行时重绑定**：现状 `PlayerInputHandler` 构造期编译 context、无 rebind API；`InputOrderMappingSystem.Remap()` / `SaveUserPreferences` 存在但**全仓库零调用方、启动链路未接线**。本 Epic 补：物理键 rebind API + per-player preference 持久化接线 + ControlScheme 热切换（= IMC push/pop 组合，玩家局内可切 WASD⇄鼠标移动）。
+- **WASD 直控移动必须走 OrderQueue**：轴 intent → 按 sim tick 节流的 move order（铁律 1；`CameraAcceptanceMod` 直写 `WorldPositionCm` 是 fixture 专用，禁止进生产路径）；方向类 `OrderSelectionType.Direction` 的 backlog（`s3_direction_key_variant.md`）在此收口。
+- "移动"不是 Core 概念：move 只是 intent profile 里一条 route（`moveTo` order type 或 movement ability slot——MobaDemoMod 右键 = `castAbility slot4 Nav.Move` 的先例已证明两种都行）。
 
 ---
 
@@ -435,6 +478,73 @@ profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push �
 ```
 
 求值 = 对 anchor 经 `domainScope` 可达的每个域取 `(domainRep, collectionKey)` 拼接为只读序列，row 保留其所在域信息。Order fan-out、HUD、PanelRouter 消费该视图；relationship revision 变更触发重算。
+
+### 5.11 CommandIntentProfile（DEC-14）与 ControlScheme（DEC-15）
+
+```json
+{
+  "id": "intent.command.rts_default",
+  "groupPolicy": { "kind": "independent" },
+  "rules": [
+    {
+      "priority": 30,
+      "actor": { "hasAbilityWithTag": "ability.catalog.garrison_enter" },
+      "target": { "allTags": ["structure.garrisonable"], "stance": ["neutral", "friendly"] },
+      "route": { "orderTypeKey": "castAbility", "slot": "byAbilityTag:ability.catalog.garrison_enter" }
+    },
+    {
+      "priority": 20,
+      "actor": { "hasAbilityWithTag": "ability.catalog.weapon" },
+      "target": { "anyTags": ["destructible"], "stance": ["hostile", "neutral"] },
+      "route": { "orderTypeKey": "castAbility", "slot": "byAbilityTag:ability.catalog.weapon" }
+    },
+    {
+      "priority": 10,
+      "target": { "hasEntity": false },
+      "route": { "orderTypeKey": "moveTo" }
+    }
+  ]
+}
+```
+
+- 同 profile 内 `priority` 互不相等，加载期 fail-fast（DEC-14 显式全序）：目标同时命中 garrison（30）与 destructible（20）时，唯一胜出者永远是 30。
+- "右键点敌自动攻击" = priority 20 这条规则数据：普攻由 `ability.catalog.weapon` catalog tag 定位（通常恰好解析到 slot0，但那是 catalog 数据的事实，不是 Core 约定——形态切换 / Granted 覆盖后仍然正确）。语义路由禁止裸 `bySlotIndex`（DEC-14）。
+- 谓词键（`hasAbilityWithTag` / `allTags` / `anyTags` / `stance` / `hasEntity`）是统一 condition DSL 的 **shorthand**，加载期 lower 到唯一 evaluator（M9 断言只有一个谓词求值路径）；pointer 命中分类是结构谓词（`hasEntity`），不是隐藏 enum——minimap / world 命中由 L4 InputCastSpec 归一化为同一 hit 结构。target 事实经 viewer knowledge 投影求值（DEC-14）。
+- `groupPolicy.kind` 为 registry 注册项（DEC-11）：`independent` = 每 actor 独立路由；`bySelector` = `{ "kind": "bySelector", "selector": {...} }` 复用 DSP selector/scorer registry 选出决策 actor，其胜出 rule 决定全组（不引入未定义的 "leader" 概念）。groupPolicy 为 profile 顶层唯一——一次 pointer intent 一种群体语义（有意约束）。
+- 需要动态评分时，`route` 写 `{ "contextGroupId": "..." }` 委托 ContextScored 评分——静态全序与评分委托二选一。
+
+```json
+{
+  "id": "scheme.sc2_classic",
+  "inputContexts": ["imc.pointer.command_on_right"],
+  "defaults": { "commandIntentId": "intent.command.rts_default" }
+}
+{
+  "id": "scheme.ra_like",
+  "inputContexts": ["imc.pointer.command_on_left"],
+  "defaults": { "commandIntentId": "intent.command.rts_default" }
+}
+{
+  "id": "scheme.diablo_like",
+  "inputContexts": ["imc.pointer.command_on_left", "imc.movement.wasd"],
+  "defaults": { "commandIntentId": "intent.command.arpg_default" }
+}
+```
+
+同一局内玩家可在 mod 允许的 scheme 集内热切换（= IMC push/pop 组合 + preference 写入；栈上非 default frame 保留，default frame 的 intent 引用即时改读新 scheme）；WASD 轴 intent 产生按 sim tick 节流的 move order，走 OrderQueue（DEC-15）。
+
+**「右键怎么变成 move intent」端到端数据链**（零 Core 语义参与）：
+
+```text
+<Mouse>/rightButton                        （default_input.json binding，scheme.sc2_classic 的 IMC）
+  → InputAction "Command"                  （action id 本身是数据，InteractionActionBindings 可换）
+    → 栈顶 default frame：frameActions 无精确匹配 → 落入 frame 的 commandIntentId
+      → intent.command.rts_default         （frame 未显式声明时读 scheme default）
+        → per-actor 规则表：命中 priority=10（target.hasEntity=false）
+          → route { orderTypeKey: "moveTo" } → L9 dispatch → OrderQueue
+```
+
+红警化 = 换 binding（`scheme.ra_like`，同一 intent profile）；暗黑化 = binding 换 + intent profile 换（左键点敌命中 weapon rule）；WAR3 式 "M 键强制移动" = 另一个 action 绑一条只含 move rule 的 profile。
 
 ---
 
@@ -676,6 +786,11 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | Performer 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
       | Input 层零施法 FSM：无 states/transitions schema、无 _isAiming 类字段（交互状态只在 InteractionContextStack） |
       | PresentationEventKind 零 aim/cast 专用种类新增；AbilityAimBegun/Updated/Ended/SlotAdvanced 已退役 |
+      | Core intent/route 路径零 "attack"/"garrison"/"move" 语义字面量；同 profile 内 priority 冲突加载期 fail-fast |
+      | intent 谓词求值路径全系统唯一（shorthand 加载期 lower，无第二套谓词 evaluator） |
+      | L8 target 事实求值零 sim 真值直读（必经 viewer KnowledgeProjection） |
+      | 语义路由零裸 bySlotIndex（ability 定位一律 catalog tag / contextGroup） |
+      | 生产路径零轴输入直写 WorldPositionCm（WASD 移动必经 OrderQueue） |
       | InteractionModeType 类型已删除或仅存于迁移 shim 白名单 |
 ```
 
@@ -700,6 +815,90 @@ Feature: M10 确定性与回放
   Scenario: 偏好变更即时生效但不追溯
     Given 对局中玩家把 cast preference 从 aim_confirm 改为 quick
     Then 已提交的 order 不受影响，仅后续 raw input 的翻译改变
+```
+
+```gherkin
+Feature: M11 Pointer Command Intent — 动态 candidate 路由 [showcase]
+  As a mod developer
+  I want 用 CommandIntentProfile 声明"pointer intent × actor 能力 × target 事实 → route"
+  So that 右键点敌自动攻击、点建筑进驻等语义零 Core 代码，且歧义有显式唯一胜出者
+
+  Background:
+    Given intent.command.rts_default 已注册（§5.11：garrison=30 > weapon=20 > ground move=10）
+    And "攻击"/"进驻"都只是 byAbilityTag route 的规则数据——Core 无 attack/garrison 字面量
+
+  Scenario: 点敌方单位 = 路由到普攻 ability（catalog tag 定位，不是裸 slot0）
+    Given 我框选了带 ability.catalog.weapon 技能的部队
+    When pointer intent 落在 stance=hostile 的单位上
+    Then 每个 actor 提交 castAbility order，slot 由 byAbilityTag:ability.catalog.weapon 解析
+    And 某个 actor 形态切换后武器换到别的 slot，路由依然正确
+    And 全程没有名为 "attack" 的 order type 或 Core 分支
+
+  Scenario: 目标同时可驻扎又可破坏 → priority 全序唯一胜出
+    Given 中立建筑同时带 structure.garrisonable 与 destructible tag
+    When 有驻扎能力的单位收到 pointer intent
+    Then 命中 priority=30 的 garrison rule（30 > 20，唯一 winner）
+    And 若 mod 配置两条规则同 priority，加载期 fail-fast 报错（禁止运行时隐式平局）
+
+  Scenario: 胜出即终局，route 解析失败不落穿
+    Given 某 actor 命中 garrison rule 但 byAbilityTag 解析不到 slot（技能刚被移除）
+    Then 该 actor 本次无 order，不落穿到 weapon rule（禁止 fallback）
+
+  Scenario: 混合框选 per-actor 路由 + 显式群体策略
+    Given 框选 = [有驻扎能力的步兵 ×2, 只有武器的坦克 ×1]，groupPolicy.kind=independent
+    When pointer intent 落在"可驻扎+可破坏"建筑上
+    Then 步兵 ×2 → 进驻 order，坦克 → 普攻 order（各自跑规则表）
+    When 换 groupPolicy = { kind: bySelector, selector: ... } 的 profile
+    Then selector 选出的决策 actor 的胜出 rule 决定全组 route（不满足谓词的 actor 不提交）
+
+  Scenario: intent 分区 → dispatch 两阶段单向组合
+    Given 5 个 actor 命中同一 weapon rule，该 route group 的 slot 绑 dispatch.one_by_one
+    When 玩家连续两次 pointer intent
+    Then L8 先分区出 route group，L9 在组内推进 cycle 指针（状态 key = (frame, routeGroupKey)）
+    And dispatch 不回头修改任何 actor 的路由结果
+
+  Scenario: target 事实经 knowledge 投影求值（fog）
+    Given 敌方单位在我的 fog 中不可见
+    Then pointer intent 无法将其作为 entity 命中（继承 CanTargetCommand 门控）
+    And 后续 sim 侧 GAS targeting 终裁一切合法性（点击与执行之间事实可变）
+
+  Scenario: 伪装单位按投影事实路由 [deferred：依赖 INT-8 事实投影]
+    Given 敌方伪装单位向我投影 stance=friendly 的假事实（含伪造归属域）
+    When pointer intent 落在它身上
+    Then 路由按投影事实命中非攻击 rule（不读 sim 真值；stance 以 (actor 域, 投影 target 域) 求值）
+
+  Scenario: 评分委托复用 ContextScored
+    Given 某 rule 的 route = { "contextGroupId": "interaction_arcweaver_action" }
+    Then 胜出后 slot/target 由 context_groups.json 的 graph 评分决定（复用现有平局链）
+    And 评分候选查询同样经 knowledge 过滤（INT-4）
+
+  Scenario: context 切换换 intent profile，无 commandIntentId 则不路由不冒泡
+    Given 超级武器 context frame 引用 intent.command.superweapon
+    When 该 frame 在栈顶
+    Then 同一 pointer intent 按 superweapon profile 路由；pop 后恢复 rts_default
+    Given 某 targeting frame 未声明 commandIntentId
+    Then 未被 frameActions 拦截的 pointer command 不路由、不向下层 frame 冒泡（无 fallback）
+```
+
+```gherkin
+Feature: M12 ControlScheme — genre 键位差异纯数据
+  Scenario Outline: 同一 Core，不同 genre 方案
+    Given mod 声明 <scheme>
+    When 玩家执行 <input>
+    Then 产生 <result>，Core 零 genre 分支
+
+    Examples:
+      | scheme            | input        | result                         |
+      | scheme.sc2_classic | 右键点地面   | moveTo order                   |
+      | scheme.ra_like     | 左键点地面   | moveTo order（Command 绑左键）  |
+      | scheme.diablo_like | 左键点敌人   | 普攻 castAbility order（byAbilityTag 解析） |
+      | scheme.diablo_like | WASD         | 按 sim tick 节流的 move order 流 |
+
+  Scenario: WASD 直控走 OrderQueue（铁律 1）
+    Given scheme.diablo_like 激活
+    When 按住 W 2 秒
+    Then 产生的全部是 OrderQueue 内的 move order，零系统直写 WorldPositionCm
+    And 回放该 order 流位置轨迹 bit 级一致
 ```
 
 ### 6.2 Persona B — 玩家（我改了偏好，应得到什么）
@@ -786,6 +985,25 @@ Feature: P8 观战者视角（玩家即裁判）
     And 我的任何点击不产生 gameplay order
 ```
 
+```gherkin
+Feature: P9 控制方案与改键偏好
+  Scenario: 局内热切换 WASD ⇄ 鼠标移动（LOL 式）
+    Given mod 允许 [scheme.mouse_move, scheme.wasd_move]
+    When 我在设置里从鼠标移动切到 WASD
+    Then 立即生效：WASD 产生 move order，右键语义按新 scheme 的 intent profile 路由
+    And 切回后行为完全恢复，无残留绑定
+
+  Scenario: 物理改键持久化
+    When 我把 Command 从右键改绑到侧键
+    Then 本局立即生效，重开客户端仍生效（per-player preference 持久化）
+    And 改键只动 binding 层，intent/route 配置零变化
+
+  Scenario: mod 锁定方案集
+    Given mod 只允许 scheme.sc2_classic
+    When 我尝试切到 scheme.diablo_like
+    Then 设置界面显示不可用，行为保持 sc2_classic
+```
+
 ---
 
 ## 7. Sub-issue 分解（Workstream 重组）
@@ -826,7 +1044,7 @@ CTRL-1..CTRL-10 按原文；修订：
 | ID | 修订 |
 |----|------|
 | CTRL-1b | `controls` 为查询期视图（DEC-1） |
-| CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PerformPhaseResolver / lifecycle snapshot / #499 publisher） |
+| CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PerformPhaseResolver / lifecycle snapshot / #499 publisher / `SelectionEligibility.CanAcquire` 的 `Team`+`RelationshipFilter` 直读 / CoreInputMod `LocalOrderSourceHelper` 的 NearestEnemyInRange resolver） |
 | CTRL-4b | AssociationControlProfile = 通用「谓词 → 边增删」规则引擎，复用 condition DSL，schema 零业务词汇（DEC-4；无 handback/policy 字段） |
 | CTRL-4c | CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain（DEC-4） |
 | CTRL-4d | ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图（DEC-4，衔接 ORD-4） |
@@ -859,9 +1077,22 @@ PROV-1..PROV-8 按原文；修订：
 |----|------|
 | DSP-1 | CastDispatchProfile schema + registry；selector/scorer/router kind 为 registry 注册项（DEC-11） |
 | DSP-2 | scorer 桥接 UtilityAiRuntimeEvaluator（DEC-9） |
-| DSP-3 | 挂点：command collection → fan-out 之间；shared order id 语义保持 |
+| DSP-3 | 挂点：施法键路径 = command collection → fan-out 之间；pointer 路径 = DEC-14 分区后的 route group → fan-out（两阶段单向组合）；shared order id 语义保持 |
 | DSP-4 | cycle/sequential 状态（advanceOn orderAccepted） |
 | DSP-5 | 玩家 dispatch 偏好（mod 可锁） |
+
+### Phase 6.5 — Command Intent & ControlScheme（新增 INT）
+
+| ID | 内容 |
+|----|------|
+| INT-1 | CommandIntentProfile schema + registry + loader：priority 全序加载期 fail-fast，谓词复用 condition DSL（DEC-14） |
+| INT-2 | target 谓词求值：tag + `DomainStanceQuery` stance + 结构谓词（hasEntity），**必须经 viewer KnowledgeProjection 投影**（复用 `CanTargetCommand` 语义，禁读 sim 真值）；stance 按 actor 所属域求值；退役 `AutoTargetPolicy.NearestEnemyInRange`；谓词 shorthand 加载期 lower 到唯一 condition evaluator，rule 表预编译 tag bitset（DEC-14 性能预算） |
+| INT-3 | per-actor 路由执行 + route group 分区 + groupPolicy registry（independent / bySelector）；胜出即终局不落穿；迁移并退役 `actorOrderRouting` 字段 |
+| INT-4 | route 评分委托：接线 `ContextScoredOrderResolver` 到 pointer command 路径（现状只挂技能键），并为其 spatial 候选查询补 knowledge 过滤（现状裸 QueryRadius） |
+| INT-5 | ControlScheme catalog + 热切换（IMC push/pop 组合）+ per-player 物理键 rebind API 与 preference 持久化接线（现状 `Remap()`/`SaveUserPreferences` 零调用方，DEC-15） |
+| INT-6 | WASD 轴 intent → sim tick 节流 move order（走 OrderQueue；收口 `s3_direction_key_variant.md` backlog） |
+| INT-7 | context frame 引用 commandIntentId + frameActions 仲裁规则（精确匹配拦截 → frame intent → 不冒泡；衔接 CTX-1b） |
+| INT-8 | KnowledgeProjection 事实投影扩展：per-viewer tag/stance mask（伪装/假情报的基建前提；M11 伪装场景依赖本单，未落地前该场景 deferred） |
 
 ### Phase 7 — Showcase & 护栏 & 文档（SHOW/GUARD/DOC）
 
@@ -872,6 +1103,7 @@ PROV-1..PROV-8 按原文；修订：
 | SHOW-3 | [showcase] M5+P8 裁判多控制域投影 |
 | SHOW-4 | [showcase] M6+P3 面板聚合三案例切换 |
 | SHOW-5 | [showcase] M8+P4 追猎 blink 三种 dispatch |
+| SHOW-6 | [showcase] M11+M12+P9 pointer intent 路由（驻扎/破坏歧义胜出、混合框选 per-actor）+ ControlScheme 热切换（右键⇄左键⇄WASD） |
 | GUARD-1 | M9 全部 ArchitectureTests |
 | GUARD-2 | M10 确定性回放 acceptance（headless 双端 hash） |
 | DOC-1 | gitbook 回写（architecture + reference + contributing），退役文档打 deprecation |
@@ -886,8 +1118,9 @@ PROV-1..PROV-8 按原文；修订：
     → Phase 1 (ORD)  ──┐
     → Phase 2 (CTX)  ──┼→ Phase 4 (PROV) → Phase 7 SHOW-2/3
     → Phase 3 (CTRL) ──┘
-    → Phase 5 (PNL) →─┐
-    → Phase 6 (DSP) →─┴→ Phase 7 SHOW-4/5
+    → Phase 5 (PNL) →──┐
+    → Phase 6 (DSP) →──┼→ Phase 7 SHOW-4/5/6
+    → Phase 6.5 (INT) ─┘   （INT-2 依赖 PRE-2 stance；INT-7 依赖 CTX-1b）
 ```
 
 - FilterProfile 契约在 CTX；association provider 由 CTRL 注入（DEC-8）。
