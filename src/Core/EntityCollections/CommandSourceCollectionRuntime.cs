@@ -70,7 +70,7 @@ namespace Ludots.Core.EntityCollections
             return true;
         }
 
-        public static int CopyEntities(EntityCollectionStore collections, Entity owner, Span<Entity> destination)
+        public static int CopyCommandSources(EntityCollectionStore collections, Entity owner, Span<Entity> destination)
         {
             return TryGet(collections, owner, out EntityCollectionHandle handle, out _)
                 ? collections.CopyEntities(handle, 0, destination)

@@ -149,7 +149,7 @@ namespace CoreInputMod.Systems
             }
 
             var entities = new Entity[view.Count];
-            int written = CommandSourceCollectionRuntime.CopyEntities(_entityCollections, owner, entities);
+            int written = CommandSourceCollectionRuntime.CopyCommandSources(_entityCollections, owner, entities);
             if (written <= 0)
             {
                 return false;
@@ -193,7 +193,7 @@ namespace CoreInputMod.Systems
             }
 
             Entity[] selected = new Entity[view.Count];
-            int count = CommandSourceCollectionRuntime.CopyEntities(_entityCollections, owner, selected);
+            int count = CommandSourceCollectionRuntime.CopyCommandSources(_entityCollections, owner, selected);
             for (int i = 0; i < count; i++)
             {
                 Entity entity = selected[i];
