@@ -55,7 +55,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | Embodied entity | 被指挥的单位；**不携带**任何 owner/team 组件 | GAS/空间/标签组件（已有） |
 | Relationship edge | `owns` / `controls` / `member_of` / `ally`，catalog 注册 | `RelationshipRuntime` + catalog.json（已有，需扩 catalog） |
 | ControlDomainQuery | 「controllerRep 能指挥谁 / target 属于谁的控制域」 | 拟新增（基于 `OwnershipResolver` 方向） |
-| HostilityQuery | 敌我/阵营判定的热路径缓存投影（关系图为 SSOT） | 拟新增（替代 unit `Team` 比较） |
+| DomainStanceQuery | 两个控制域之间 stance 的热路径缓存投影（关系图为 SSOT）；stance key（hostile/friendly/neutral…）是 **catalog 数据**（mods 已有 `CombatStance.Hostile` 先例），Core 不识别任何 stance 字面语义 | 拟新增（替代 unit `Team` 比较） |
 | EntityCollection | `(owner entity, key string)` 寻址的实体集合；row 永远住在所属控制域的 rep 上 | `EntityCollectionStore`（已有，rows 需扩 writerDomain） |
 | Provenance | 域归属由 collection 地址承载；viewer 相对语义（owns/controls/spectate）由拓扑现算；写时仅记 `writerDomain` | 拟新增（DEC-4/5） |
 | ControlPlaneView | 「我的当前选中/控制集」= 对 controls 可达域的组合只读视图（EntityView domainScope 扩展） | 拟新增 |
@@ -72,7 +72,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | ClientCastPreference | 玩家施法偏好，scope 链 global → template → formset → slot | 拟新增 |
 | CastDispatchProfile | 复选施法的 selector（谁施法）/ scorer（排序，复用 UtilityAI）/ router（并发/顺序） | 拟新增 |
 | Order | 唯一执行入口 payload；`OrderQueue` 是唯一 intake | 已有 |
-| PerformerCatalog | viewer × controlDomain × relationKind × teamPalette → marker 样式 | `PerformerDefinitionRegistry`（已有，规则条件需扩） |
+| Performer marker rules | `PerformerRule`（event + condition + command）+ palette catalog 表达 marker 样式；viewer 语义由 graph 拓扑谓词现算 | `PerformerDefinitionRegistry` + `performers.json`（已有；condition 上下文需扩，见 DEC-12） |
 | KnowledgeProjection | 裁判/观战 visibility grant | `KnowledgeProjectionStore`（已有） |
 
 ---
@@ -83,7 +83,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 2. **MassNav 只消费 OrderBuffer**：零 Input / Selection 读取。
 3. **Selection 概念退役**：「selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 不得作为 hub；Order payload 不得引用 selection 容器实体，须自包含目标集或引用 `(owner, collectionKey, revision)`。
 4. **Embodied entity 零 `PlayerOwner` / `Team` / `PlayerIdentity`**：归属只存在于 relationship 边。
-5. **控制平面只走 `ControlDomainQuery`**；敌我判定只走 `HostilityQuery`（缓存投影，relationship revision 失效）。
+5. **控制平面只走 `ControlDomainQuery`**；阵营/敌我判定只走 `DomainStanceQuery`（缓存投影，relationship revision 失效；stance key 是 catalog 数据，Core 无 "hostile" 字面语义）。
 6. **代理控制只增删 `controls` 边**：不迁移 collection、不改 `owns`、不写 unit 组件。
 7. **Collection namespace per playerRep entity**：禁止 cross-player merge，禁止 PlayerId 全局表。
 8. **Context Stack 只路由 key，不存实体列表**；frame 按 ownerToken 移除，不依赖裸 LIFO。
@@ -108,9 +108,11 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 现状 `RelationshipRuntime.CollectIncoming` 是全 world 扫描。本 Epic 前置：为 relationship 存储补 **反向邻接索引**（或等价的 per-typeId incoming cache），否则写入域路由（unit → 所属域反查 `TryResolveControlDomain`）在大战场不可用。FilterProfile 求值统一走「anchor 正向展开 → bitset → 与 raw hits 求交」，不做逐 hit 反查。
 
-### DEC-3 HostilityQuery（CTRL-3 的硬前置）
+### DEC-3 DomainStanceQuery（CTRL-3 的硬前置）
 
-删除 unit `Team` 前，先落 `HostilityQuery`：`unit → owns 域 → member_of 队伍 → 队伍间 stance` 的解析结果按 (domainA, domainB) 缓存，relationship revision 失效重建。GAS targeting（`TargetResolverFanOutHelper` 等）改读它。
+删除 unit `Team` 前，先落 `DomainStanceQuery`：`unit → owns 域 → member_of 队伍 → 队伍间 stance` 的解析结果按 (domainA, domainB) 缓存，relationship revision 失效重建。GAS targeting（`TargetResolverFanOutHelper` 等）改读它。
+
+**命名与语义约束**：这是一个通用的「域间关系谓词缓存」，**stance key（hostile / friendly / neutral / cease_fire…）全部是 relationship catalog 数据**（mods 已有 `CombatStance.Hostile` 先例），Core 只提供 `GetStance(domainA, domainB) → stanceId` 与按 stanceId 过滤——不出现 "enemy"/"hostile" 字面分支。早期草案名 `HostilityQuery` 因携带业务语义废弃。
 
 ### DEC-4 控制平面 = 拓扑投影；collection 永不迁移，也没有「归还」概念
 
@@ -121,6 +123,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 - **任何原因**导致 controls 边消失（掉线结束、心控解除、演出归还——association 层一概不知道原因），组合视图即时收缩；对方域内 collection 保持其最新状态，client 重新 bind 即所见即所得。「归还」是拓扑变化的涌现行为，零专用代码路径。
 - 「掉线」「心灵控制」「剧本演出接管」都只是 mod 侧打 tag / 增删边的领域 trigger；**association/collection 基建对这些语义零感知**，schema 里不出现任何场景词汇。
 - 多控制者并发写同一域：row 携带 `writerDomain` 追踪，写入按 authoritative input 顺序定序（确定性不受影响）。
+- **路由策略是 collection profile 的声明字段**，不是全局行为：控制平面语义的 key（如 `collection.command.source`）声明 `writeRouting: byControlDomain`；技能目标语义的 key（如 `collection.ability.*.targets`，选的是目标而非"我维护的域"，可能包含敌方单位）声明 `writeRouting: toContextOwner`，写入 context frame 的 owner 域。两种都是数据，Core 不猜语义。
 
 ### DEC-5 Provenance 由地址承载，viewer 语义拓扑现算
 
@@ -149,7 +152,30 @@ FilterProfile **契约与 registry 属于 Context/Input 域**；association quer
 
 ### DEC-10 面板聚合 = catalog 字段 + profile 规则
 
-ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）；`AggregationProfile` 声明 groupBy 维度与冲突处置；玩家 preference 可在 profile 允许范围内覆盖。`CollectionGasEntityCommandPanelSource` 迁移为消费该 profile，删除代码内聚合规则。
+ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）；`AggregationProfile` 声明 groupBy 维度与冲突处置；玩家 preference 可在 profile 允许范围内覆盖。`CollectionGasEntityCommandPanelSource` 迁移为消费该 profile，删除代码内聚合规则。`groupBy` 是 **key selector 表达式**（对 ability catalog 字段的取值路径，如 `catalog.castFamily` / `template.id` / `ability.id`），不是三值封闭 enum——mod 可按任意 catalog 字段聚合而无需改 Core。
+
+### DEC-11 新 profile 的"动词/种类"一律走注册表，不新增封闭 enum
+
+本 Epic 新引入的所有可扩展点遵循同一模式（对齐 `SystemFactoryRegistry` / graph op 先例）：
+
+- `CastFlowProfile.transitions[].actions[]` 的动作（beginChargeTimer / showIndicator / writeChargeToPayload / submit…）是 **castflow op registry** 注册项（复用 graph op handler 模式），mod 可注册新 op；示例里的动词只是内置 op 的 id，不是 Core enum。
+- `CastDispatchProfile` 的 `selector.kind` / `scorer.kind` / `router.kind` 同理为 registry 注册项；`advanceOn` 是事件 key（registry id），不是硬编码字符串分支。
+- `FilterProfile` / `AssociationControlProfile` 的谓词复用现有 condition/graph DSL，不新造谓词 enum。
+
+护栏：M9 增加断言「新增 profile schema 中零 Core-only 封闭 enum 分派」。
+
+### DEC-12 Performer 基建核对结论与本 Epic 所需的扩展点
+
+对现有 Performer 基建的核查结论：**概念上已是 event → condition → command → behavior 四层**（`PresentationEvent(+Kind/KeyId)` → `ConditionRef(inline|graph)` → `PerformerCommand` → `BehaviorSlot`），规则声明（`performers.json` + `PerformerDefinitionRegistry`）、command 的 scope/valueSource 映射、param binding 数据化程度足够；且 `EntityCollectionMemberAdded/Removed` 事件已携带 collection KeyId / owner / member / roleId / revision / scope hash，**本 Epic 无需新增事件种类**。但四层的执行侧存在封闭点，本 Epic 依赖其中四处，必须随 PROV 阶段修复：
+
+| # | 现状硬点（代码事实） | 本 Epic 需要 | 落点 |
+|---|---------------------|--------------|------|
+| 1 | graph condition 求值只注入 `E[0]=Source, E[1]=Target`，无 viewer、无 event payload 寄存器（`PerformerRuleSystem.EvaluateGraph`） | 拓扑谓词条件（viewer 是否为 row 域本人 / controls 可达 / 仅 knowledge grant）需要 **viewer 实体寄存器 + relationship/knowledge graph ops + payload 寄存器** | PROV-4b |
+| 2 | `PerformerDefinition.VisibilityCondition` 的 graphProgramId 在 Emit 侧未接线（`PerformerEmitSystem` throw） | per-viewer 可见性（裁判 vs 普通玩家）依赖它 | PROV-4c |
+| 3 | `TeamColorResolver` 硬编码 Team1/Team2 色并直读 `Team`/`PlayerOwner`；`PerformAudienceContext` 直读 `Team`/`PlayerOwner` 组件 | palette/相位改 palette catalog + graph 取值（§5.9）；audience 上下文改拓扑求值 | PROV-6b（并入 CTRL-3b 消费者清单） |
+| 4 | `InlineConditionKind.SourceIsLocalPlayer` 写死 GlobalContext LocalPlayerEntity；WorldHud audience 只取单一 local viewer | 多 viewer（裁判为独立 client anchor 时可行；同进程多 viewport 明确列为非目标） | PROV-5 备注 |
+
+**明确不在本 Epic 修的封闭点**（记录为已知边界，避免范围膨胀）：`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` 封闭 enum、`InlineConditionKind` 不可 mod 注册（复杂条件一律走 graph）、event payload 固定槽。这些不阻塞本 Epic 的全部 UAT。
 
 ---
 
@@ -237,6 +263,8 @@ profile 是一个纯粹的谓词→边操作规则：`when`（tag / relationship
 
 `castflow.quick`（press 即 submit）、`castflow.aim_confirm`（press 进瞄准、confirm 提交）、`castflow.two_stage`（加里奥 W 式两段）同为数据；`InteractionModeType` 的六个值全部退役为等价 profile。
 
+`actions[]` 里的动词（`beginChargeTimer` / `showIndicator` / `submit`…）是 **castflow op registry 注册项 id**（复用 graph op handler 模式，DEC-11），mod 可注册新 op——不是 Core 封闭 enum。`payloadRules` 的取值源同理为 registry 注册的 value source。
+
 ### 5.6 ClientCastPreference（scope 链）
 
 ```json
@@ -263,13 +291,15 @@ profile 是一个纯粹的谓词→边操作规则：`when`（tag / relationship
 ```json
 {
   "id": "aggregation.rts.default",
-  "groupBy": "castFamily",            // 案例①
+  "groupBy": "catalog.castFamily",      // 案例①：key selector 表达式，非封闭 enum
   "overflow": "nextPanelSlot",
   "badge": "perSourceTemplateIcon"
 }
-{ "id": "aggregation.by_template", "groupBy": "abilityTemplate" }   // 案例②
-{ "id": "aggregation.by_ability_id", "groupBy": "abilityId" }       // 案例③
+{ "id": "aggregation.by_template",   "groupBy": "template.id" }   // 案例②
+{ "id": "aggregation.by_ability_id", "groupBy": "ability.id" }    // 案例③
 ```
+
+`groupBy` 是对 ability catalog / 定义字段的 **取值路径表达式**（DEC-10）：mod 可按任意 catalog 字段聚合（例如自定义 `catalog.uiCategory`），不需要改 Core；三个案例只是内置字段的取值示例。
 
 ### 5.8 CastDispatchProfile
 
@@ -298,22 +328,45 @@ profile 是一个纯粹的谓词→边操作规则：`when`（tag / relationship
 }
 ```
 
-### 5.9 Performer selection marker catalog
+`selector.kind` / `scorer.kind` / `router.kind` 均为 **registry 注册项**（DEC-11）；`advanceOn` 是事件 key（registry id）；`considerations` 直接引用 AttributeRegistry 注册的属性 id。
+
+### 5.9 Performer selection marker rules（对齐现有 PerformerRule 结构）
+
+现有基建事实：`PerformerRule = EventFilter(kind+key) + ConditionRef(inline | graphProgramId) + PerformerCommand`；`EntityCollectionPresentationEventSystem` 发布的 `EntityCollectionMemberAdded/Removed` 事件 **已携带** collection KeyId、owner（Target）、成员 entity（Source）、roleId、revision（FloatD）、scope hash（PayloadA）——RFC-0064「复用现有事件」成立，marker 规则直接落在这套结构上：
 
 ```json
-{ "id": "performer.selection.marker.owned",
-  "when": { "viewerRole": "localPlayer", "relationKind": "Owns" },
-  "asset": "selection_ring", "tint": "palette.self.deep" },
-{ "id": "performer.selection.marker.proxy",
-  "when": { "viewerRole": "localPlayer", "relationKind": "Controls" },
-  "asset": "selection_ring", "tint": "palette.self.light" },
-{ "id": "performer.selection.marker.referee",
-  "when": { "viewerRole": "knowledgeGrant" },
-  "asset": "selection_ring",
-  "tint": "teamPalette(controlDomain.team) + phaseOffset(controlDomain.indexInTeam)" }
+{
+  "rules": [
+    {
+      "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
+      "condition": { "graphProgramId": "graph.cond.viewer_is_row_domain" },
+      "command": { "kind": "CreatePerformer", "definitionId": "selection.marker",
+                    "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+                    "paramKey": "marker.tint", "paramGraphProgramId": "graph.palette.self_deep" }
+    },
+    {
+      "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
+      "condition": { "graphProgramId": "graph.cond.viewer_controls_row_domain" },
+      "command": { "kind": "CreatePerformer", "definitionId": "selection.marker",
+                    "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+                    "paramKey": "marker.tint", "paramGraphProgramId": "graph.palette.self_light" }
+    },
+    {
+      "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
+      "condition": { "graphProgramId": "graph.cond.viewer_has_knowledge_grant" },
+      "command": { "kind": "CreatePerformer", "definitionId": "selection.marker",
+                    "scopeSource": "EventPayloadA", "ownerSource": "EventSource",
+                    "paramKey": "marker.tint", "paramGraphProgramId": "graph.palette.team_phase" }
+    },
+    {
+      "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
+      "command": { "kind": "DestroyScopedPerformer", "scopeSource": "EventPayloadA" }
+    }
+  ]
+}
 ```
 
-`relationKind` 条件（Owns / Controls）由 Performer 求值时按「viewer anchor → row 所在域」的实时拓扑现算（DEC-5），不是 row 里的静态字段。
+**没有 `viewerRole` 枚举**——"localPlayer / referee / spectator" 是业务角色，禁止进入基建 schema。viewer 与 row 域的关系（本人域 / controls 可达 / 仅 knowledge grant）全部是 **graph condition 拓扑谓词现算**（DEC-5），裁判只是一个恰好持有 knowledge grant、不持 controls 边的 viewer anchor。palette / 相位取值同样走 `paramGraphProgramId` + palette catalog 数据（PROV-6），替代 `TeamColorResolver` 的硬编码 Team1/Team2 色。
 
 ### 5.10 ControlPlaneView（组合只读视图）
 
@@ -547,16 +600,33 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | Core 零 "rts"/"moba" 字面量分支 |
       | association/collection 基建零 "offline"/"mind_control"/"cinematic" 等业务场景字面量 |
       | 零 collection 跨域 copy/move API（不存在"归还"代码路径） |
+      | DomainStanceQuery 零 "hostile"/"enemy" 字面分支（stance key 全部来自 catalog） |
+      | 本 Epic 新增 profile schema 零 Core-only 封闭 enum 分派（castflow op / dispatch kind / groupBy 均 registry 或表达式） |
+      | Performer 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
       | InteractionModeType 类型已删除或仅存于迁移 shim 白名单 |
 ```
 
 ```gherkin
 Feature: M10 确定性与回放
-  Scenario: 本地投影不进 sim
-    Given 两个 client 以相同 authoritative input 流回放同一场景
-    When 其中一个 client 玩家把 aggregation preference 换成 by_template、cast preference 换成 quick
-    Then 两端 sim 世界哈希完全一致（preference/context stack 只影响本地投影与 order 生成时机的输入序列，不隐式进入 sim 状态）
-    And 每条 Order payload 自包含目标集（或 (owner,key,revision) 引用），不引用 client 本地容器实体
+  # 确定性边界：Order 流是 sim 的唯一入口。
+  # 纯视图偏好（聚合/marker/palette）不参与 order 生成；施法偏好（castflow/dispatch）
+  # 参与"raw input → order"的翻译，因此回放 SSOT 是 order 流（或 input+当时偏好快照），
+  # 不是裸设备输入。
+
+  Scenario: 纯视图偏好不影响 sim
+    Given 两个 client 消费同一份已录制的 order 流
+    When 其中一个 client 把 aggregation preference 换成 by_template、marker palette 换成高对比配色
+    Then 两端 sim 世界哈希完全一致（视图偏好只影响本地投影）
+
+  Scenario: 施法偏好参与翻译，但翻译产物自包含
+    Given 玩家以 castflow.quick + dispatch.utility_nearest 录制一局
+    When 以录制的 order 流回放
+    Then sim 逐 tick 一致，且回放不需要读取任何 preference / context stack / 本地容器实体
+    And 每条 Order payload 自包含目标集（或 (owner, collectionKey, revision) 引用）
+
+  Scenario: 偏好变更即时生效但不追溯
+    Given 对局中玩家把 cast preference 从 aim_confirm 改为 quick
+    Then 已提交的 order 不受影响，仅后续 raw input 的翻译改变
 ```
 
 ### 6.2 Persona B — 玩家（我改了偏好，应得到什么）
@@ -654,7 +724,7 @@ Feature: P8 观战者视角（玩家即裁判）
 | ID | 内容 | 备注 |
 |----|------|------|
 | PRE-1 | Relationship 反向邻接索引 / incoming cache | DEC-2 |
-| PRE-2 | HostilityQuery + faction stance 缓存 | DEC-3；CTRL-3 硬前置 |
+| PRE-2 | DomainStanceQuery + stance catalog 缓存 | DEC-3；CTRL-3 硬前置 |
 | PRE-3 | #535 vs #577 仲裁与 ORD 遗留合并 | 单一 canonical PR |
 
 ### Phase 1 — Order/Collection 边界（继承 ORD）
@@ -695,13 +765,16 @@ PROV-1..PROV-8 按原文；修订：
 |----|------|
 | PROV-1b | provenance 简化：controlDomain 由 collection 地址承载，写时仅存 writerDomain；relationKind 不入行（DEC-5） |
 | PROV-2b | relationship revision → ControlPlaneView / Performer 重算钩子；viewer 相对语义拓扑现算（DEC-5，取代"失效/驱逐"方案） |
+| PROV-4b | Performer graph condition 求值上下文扩展：注入 viewer 实体寄存器 + event payload 寄存器 + relationship/knowledge 拓扑谓词 graph ops（DEC-12 #1；现状只有 E[0]=Source, E[1]=Target） |
+| PROV-4c | 接线 `PerformerDefinition.VisibilityCondition` 的 graphProgramId Emit 路径（DEC-12 #2；现状 `PerformerEmitSystem` 直接 throw） |
+| PROV-6b | 退役 `TeamColorResolver` 硬编码 Team1/Team2 色与 `PerformAudienceContext` 的 `Team`/`PlayerOwner` 直读，改 palette catalog + 拓扑求值（DEC-12 #3，并入 CTRL-3b 消费者清单） |
 
 ### Phase 5 — Panel Router & 聚合（新增 PNL）
 
 | ID | 内容 |
 |----|------|
 | PNL-1 | ability catalog 字段（castFamily / alias）schema + loader |
-| PNL-2 | AggregationProfile registry + 三种 groupBy 求值 |
+| PNL-2 | AggregationProfile registry + groupBy key selector 表达式求值（DEC-10；非封闭 enum） |
 | PNL-3 | PanelRouter：intent → 聚合格 → per-entity (entity, slotIndex)；删除 UI 反打 input action 路径 |
 | PNL-4 | `CollectionGasEntityCommandPanelSource` 迁移为消费 profile；FormSet 切换重算 |
 | PNL-5 | 玩家聚合偏好 + 持久化 |
@@ -710,7 +783,7 @@ PROV-1..PROV-8 按原文；修订：
 
 | ID | 内容 |
 |----|------|
-| DSP-1 | CastDispatchProfile schema + registry（selector/scorer/router） |
+| DSP-1 | CastDispatchProfile schema + registry；selector/scorer/router kind 为 registry 注册项（DEC-11） |
 | DSP-2 | scorer 桥接 UtilityAiRuntimeEvaluator（DEC-9） |
 | DSP-3 | 挂点：command collection → fan-out 之间；shared order id 语义保持 |
 | DSP-4 | cycle/sequential 状态（advanceOn orderAccepted） |
@@ -754,6 +827,8 @@ PROV-1..PROV-8 按原文；修订：
 - 不实现 ParticipantView Mode enum、不在 Core 出现 genre 分支。
 - 不在本 Epic 实现联机传输层；只保证确定性契约（M10）。
 - 不为裁判实现 gameplay order 路径。
+- 不在本 Epic 开放 Performer 执行侧封闭 enum 的 mod 注册（`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` / `InlineConditionKind`）：已核查不阻塞本 Epic UAT（DEC-12），列为已知边界，若后续需要另立 RFC。
+- 不做同进程多 viewport 渲染（裁判作为独立 client anchor 已满足 M5/P8）。
 
 ## 10. 与现有 Issue/PR 的关系
 

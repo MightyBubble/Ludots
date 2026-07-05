@@ -32,7 +32,7 @@
 1. OrderQueue 唯一 intake；MassNav 只消费 OrderBuffer。
 2. 「Selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 退役为非 hub；Order payload 自包含目标集或引用 `(owner, collectionKey, revision)`。
 3. Embodied entity 零 `PlayerOwner`/`Team`/`PlayerIdentity`；归属只存在于 `owns`/`controls`/`member_of`/`ally` 边。
-4. 控制平面只走 `ControlDomainQuery`；敌我判定只走 `HostilityQuery`（关系图 SSOT + 热路径缓存）。
+4. 控制平面只走 `ControlDomainQuery`；阵营/敌我判定只走 `DomainStanceQuery`（关系图 SSOT + 热路径缓存；stance key 是 catalog 数据，Core 无 "hostile" 字面语义）。
 5. 代理控制只增删 `controls` 边；collection namespace per playerRep，禁止 cross-player merge 与 PlayerId 全局表。
 6. Context frame 带 ownerToken，按 token 移除；push/pop 联动 IMC（inputContextId）。
 7. InputCast / Filter / Commit / Presentation 四轴正交；`InteractionModeType` 全部退役为 CastFlowProfile 数据。
@@ -46,14 +46,16 @@
 
 - **DEC-1** `controls` = 查询期视图（owns ∪ 显式 grant），只物化代理 grant 边。
 - **DEC-2** Relationship 反向邻接索引先行（现状 `CollectIncoming` 全表扫描不可用于 provenance）。
-- **DEC-3** `HostilityQuery` 是删 unit `Team` 的硬前置（GAS targeting 热路径）。
-- **DEC-4** 控制平面 = 拓扑投影：CollectionWrite 按所属域路由（队友单位写队友域，writerDomain 追踪）；「我的选中」= ControlPlaneView（controls 可达域组合只读视图）；边消失即"归还"，无 handback 概念，无 policy 枚举；掉线/心控/演出只是 mod trigger，association 层零感知。
+- **DEC-3** `DomainStanceQuery` 是删 unit `Team` 的硬前置（GAS targeting 热路径）；stance key（hostile/friendly/…）全部是 relationship catalog 数据，Core 零 "hostile"/"enemy" 字面分支（早期名 HostilityQuery 因携带业务语义废弃）。
+- **DEC-4** 控制平面 = 拓扑投影：CollectionWrite 按所属域路由（队友单位写队友域，writerDomain 追踪）；「我的选中」= ControlPlaneView（controls 可达域组合只读视图）；边消失即"归还"，无 handback 概念，无 policy 枚举；掉线/心控/演出只是 mod trigger，association 层零感知。路由策略（byControlDomain / toContextOwner）是 collection profile 的声明字段——技能目标类 key（选的是目标而非"我维护的域"）写 context owner 域。
 - **DEC-5** Provenance 由地址承载：controlDomain 即 row 所在域；relationKind（owns/controls）由 viewer→域拓扑现算，不写入行——陈旧 marker 问题不存在；写时仅记 writerDomain。
 - **DEC-6** 并发 PendingConfirm exec 各持 frame，Tab 在 frame 间循环。
 - **DEC-7** InteractionContextStack 与 IMC 同事务联动。
 - **DEC-8** FilterProfile 契约归 Context/Input 域，association provider 由 Control Plane 注入（拆循环依赖）。
 - **DEC-9** Dispatch scorer 复用 `UtilityAiRuntimeEvaluator`（RFC-0060），禁止平行 scorer。
-- **DEC-10** 面板聚合 = ability catalog 字段（castFamily/alias）+ AggregationProfile + 玩家偏好覆盖。
+- **DEC-10** 面板聚合 = ability catalog 字段（castFamily/alias）+ AggregationProfile + 玩家偏好覆盖；`groupBy` 是 catalog 字段取值路径表达式（如 `catalog.castFamily`），非封闭 enum。
+- **DEC-11** 新 profile 的"动词/种类"一律走注册表：castflow op、dispatch 的 selector/scorer/router kind、payload value source 全部为 registry 注册项（对齐 graph op / SystemFactoryRegistry 先例），禁止新增 Core-only 封闭 enum 分派。
+- **DEC-12** Performer 基建核对结论：event→condition→command→behavior 四层已成立，`EntityCollectionMemberAdded/Removed` 事件已带 collection key/owner/member/roleId/revision，本 Epic 零新增事件种类；但需修四个执行侧硬点——graph condition 注入 viewer + payload 寄存器与拓扑谓词 ops（PROV-4b）、接线 VisibilityCondition graph Emit 路径（PROV-4c）、退役 `TeamColorResolver`/`PerformAudienceContext` 的 Team/PlayerOwner 硬编码（PROV-6b）；`PresentationEventKind`/`PerformerCommandKind`/`BehaviorKind` 等封闭 enum 列为已知边界，不阻塞本 Epic UAT、不在本 Epic 修。
 
 ## BDD 验收（Gherkin UAT，验收 SSOT）
 
@@ -247,16 +249,33 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | Core 零 "rts"/"moba" 字面量分支 |
       | association/collection 基建零 "offline"/"mind_control"/"cinematic" 等业务场景字面量 |
       | 零 collection 跨域 copy/move API（不存在"归还"代码路径） |
+      | DomainStanceQuery 零 "hostile"/"enemy" 字面分支（stance key 全部来自 catalog） |
+      | 本 Epic 新增 profile schema 零 Core-only 封闭 enum 分派（castflow op / dispatch kind / groupBy 均 registry 或表达式） |
+      | Performer 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
       | InteractionModeType 已删除或仅存于迁移 shim 白名单 |
 ```
 
 ```gherkin
 Feature: M10 确定性与回放
-  Scenario: 本地投影不进 sim
-    Given 两个 client 以相同 authoritative input 流回放同一场景
-    When 其中一个 client 把 aggregation preference 换成 by_template、cast preference 换成 quick
-    Then 两端 sim 世界哈希完全一致
-    And 每条 Order payload 自包含目标集（或 (owner,key,revision) 引用），不引用 client 本地容器实体
+  # 确定性边界：Order 流是 sim 的唯一入口。
+  # 纯视图偏好（聚合/marker/palette）不参与 order 生成；施法偏好（castflow/dispatch）
+  # 参与"raw input → order"的翻译，因此回放 SSOT 是 order 流（或 input+当时偏好快照），
+  # 不是裸设备输入。
+
+  Scenario: 纯视图偏好不影响 sim
+    Given 两个 client 消费同一份已录制的 order 流
+    When 其中一个 client 把 aggregation preference 换成 by_template、marker palette 换成高对比配色
+    Then 两端 sim 世界哈希完全一致（视图偏好只影响本地投影）
+
+  Scenario: 施法偏好参与翻译，但翻译产物自包含
+    Given 玩家以 castflow.quick + dispatch.utility_nearest 录制一局
+    When 以录制的 order 流回放
+    Then sim 逐 tick 一致，且回放不需要读取任何 preference / context stack / 本地容器实体
+    And 每条 Order payload 自包含目标集（或 (owner, collectionKey, revision) 引用）
+
+  Scenario: 偏好变更即时生效但不追溯
+    Given 对局中玩家把 cast preference 从 aim_confirm 改为 quick
+    Then 已提交的 order 不受影响，仅后续 raw input 的翻译改变
 ```
 
 ### Persona B — 玩家：我改了偏好，应得到什么
@@ -350,7 +369,7 @@ Feature: P8 观战者视角（玩家即裁判）
 
 **Phase 0 — 前置基建（阻塞后续全部）**
 - [ ] PRE-1 Relationship 反向邻接索引 / incoming cache（DEC-2）
-- [ ] PRE-2 HostilityQuery + faction stance 缓存（DEC-3，CTRL-3 硬前置）
+- [ ] PRE-2 DomainStanceQuery + stance catalog 缓存（DEC-3，CTRL-3 硬前置）
 - [ ] PRE-3 PR #535 vs PR #577 仲裁，确定单一 canonical，合并 ORD 遗留清单
 
 **Phase 1 — Order/Collection 边界（继承 ORD-1..8）**
@@ -371,16 +390,19 @@ Feature: P8 观战者视角（玩家即裁判）
 **Phase 4 — Provenance & Performer（继承 PROV-1..8）**
 - [ ] PROV-1b provenance 简化：controlDomain 由 collection 地址承载，写时仅存 writerDomain；relationKind 不入行、由 view 层拓扑现算
 - [ ] PROV-2b relationship revision → ControlPlaneView / Performer 重算钩子
+- [ ] PROV-4b Performer graph condition 上下文扩展：viewer 实体寄存器 + event payload 寄存器 + relationship/knowledge 拓扑谓词 graph ops（DEC-12）
+- [ ] PROV-4c 接线 `PerformerDefinition.VisibilityCondition` graphProgramId 的 Emit 路径（现状 throw）
+- [ ] PROV-6b 退役 `TeamColorResolver` 硬编码色与 `PerformAudienceContext` 的 Team/PlayerOwner 直读，改 palette catalog + 拓扑求值
 
 **Phase 5 — Panel Router & 聚合（新增）**
 - [ ] PNL-1 ability catalog 字段（castFamily/alias）schema + loader
-- [ ] PNL-2 AggregationProfile registry + byFamily/byTemplate/byAbilityId 求值
+- [ ] PNL-2 AggregationProfile registry + groupBy key selector 表达式求值（非封闭 enum）
 - [ ] PNL-3 PanelRouter：intent → 聚合格 → per-entity (entity, slotIndex)；删除 UI 反打 input action 路径
 - [ ] PNL-4 CollectionGasEntityCommandPanelSource 迁移为消费 profile；FormSet 切换重算
 - [ ] PNL-5 玩家聚合偏好 + 持久化
 
 **Phase 6 — Cast Dispatch（新增）**
-- [ ] DSP-1 CastDispatchProfile schema + registry（selector/scorer/router）
+- [ ] DSP-1 CastDispatchProfile schema + registry；selector/scorer/router kind 为 registry 注册项（DEC-11）
 - [ ] DSP-2 scorer 桥接 UtilityAiRuntimeEvaluator
 - [ ] DSP-3 挂点：command collection → fan-out 之间；shared order id 语义保持
 - [ ] DSP-4 cycle/sequential 状态（advanceOn orderAccepted）
@@ -418,3 +440,5 @@ Feature: P8 观战者视角（玩家即裁判）
 - 不实现 ParticipantView Mode enum，Core 不出现 genre 分支。
 - 不在本 Epic 实现联机传输层，只保证确定性契约（M10）。
 - 不为裁判实现 gameplay order 路径。
+- 不在本 Epic 开放 Performer 执行侧封闭 enum 的 mod 注册（`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` / `InlineConditionKind`）：已核查不阻塞本 Epic UAT（DEC-12），列为已知边界，若后续需要另立 RFC。
+- 不做同进程多 viewport 渲染（裁判作为独立 client anchor 已满足 M5/P8）。
