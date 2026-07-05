@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ludots · 泛用交互与施法基建 Epic 草案（v0.1）</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --panel2: #212d3d;
+      --border: #2d3a4d;
+      --text: #e8edf4;
+      --muted: #8b9cb3;
+      --accent: #5eb3ff;
+      --accent2: #3dd68c;
+      --warn: #f0b429;
+      --danger: #ff6b6b;
+      --purple: #b794f6;
+      --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+      --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.65; }
+    header {
+      position: sticky; top: 0; z-index: 30;
+      background: rgba(15, 20, 25, 0.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); padding: 1rem 1.5rem;
+    }
+    header h1 { margin: 0 0 0.2rem; font-size: 1.4rem; }
+    header .meta { color: var(--muted); font-size: 0.88rem; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 1.25rem 1.5rem 4rem; }
+    nav.toc {
+      display: flex; flex-wrap: wrap; gap: 0.45rem; margin: 1rem 0 1.5rem;
+    }
+    nav.toc a {
+      color: var(--text); text-decoration: none; font-size: 0.82rem;
+      padding: 0.4rem 0.75rem; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--panel);
+    }
+    nav.toc a:hover { border-color: var(--accent); color: var(--accent); }
+    section {
+      background: var(--panel); border: 1px solid var(--border);
+      border-radius: 12px; padding: 1.25rem 1.4rem; margin-bottom: 1.1rem;
+    }
+    section h2 { margin: 0 0 0.75rem; font-size: 1.2rem; color: var(--accent); }
+    section h3 { margin: 1.1rem 0 0.5rem; font-size: 1.02rem; color: var(--accent2); }
+    section h4 { margin: 0.9rem 0 0.4rem; font-size: 0.95rem; }
+    p, li { font-size: 0.95rem; }
+    .muted { color: var(--muted); }
+    .badge {
+      display: inline-block; font-size: 0.72rem; padding: 0.15rem 0.5rem;
+      border-radius: 4px; font-weight: 600; vertical-align: middle; margin-left: 0.35rem;
+    }
+    .badge-draft { background: rgba(240,180,41,0.2); color: var(--warn); border: 1px solid var(--warn); }
+    .badge-risk { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-ok { background: rgba(61,214,140,0.15); color: var(--accent2); border: 1px solid var(--accent2); }
+    .badge-new { background: rgba(183,148,246,0.15); color: var(--purple); border: 1px solid var(--purple); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.75rem 0; }
+    th, td { border: 1px solid var(--border); padding: 0.5rem 0.65rem; text-align: left; vertical-align: top; }
+    th { background: var(--panel2); color: var(--accent); }
+    tr:nth-child(even) td { background: rgba(0,0,0,0.12); }
+    pre, code { font-family: var(--mono); font-size: 0.84rem; }
+    pre {
+      background: #0a0e14; border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.85rem 1rem; overflow-x: auto; line-height: 1.45;
+    }
+    code { background: rgba(0,0,0,0.25); padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre code { background: transparent; padding: 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+    .callout {
+      border-left: 3px solid var(--accent); background: rgba(94,179,255,0.08);
+      padding: 0.75rem 1rem; border-radius: 0 8px 8px 0; margin: 0.75rem 0;
+    }
+    .callout.warn { border-color: var(--warn); background: rgba(240,180,41,0.08); }
+    .callout.danger { border-color: var(--danger); background: rgba(255,107,107,0.08); }
+    .mermaid { background: var(--panel2); border-radius: 8px; padding: 0.75rem; margin: 0.75rem 0; }
+    .gh { color: var(--accent); }
+    ul.compact li { margin: 0.2rem 0; }
+    .feature-block {
+      border: 1px dashed var(--border); border-radius: 8px;
+      padding: 0.85rem 1rem; margin: 0.6rem 0; background: rgba(0,0,0,0.15);
+    }
+    .feature-block .kw { color: var(--purple); font-weight: 600; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>泛用交互与施法基建 Epic 草案 <span class="badge badge-draft">DRAFT v0.1 · 勿直接开 Issue</span></h1>
+  <p class="meta">
+    基于远端 Epic <span class="gh">#522 #536 #537 #538</span>、PR <span class="gh">#534 #535 #575 #577</span> 与 main 代码基线审计 · 2026-07-05
+  </p>
+</header>
+
+<div class="wrap">
+<nav class="toc">
+  <a href="#summary">摘要</a>
+  <a href="#audit">现状审计</a>
+  <a href="#risks">风险与缺口</a>
+  <a href="#vision">目标愿景</a>
+  <a href="#architecture">统一架构</a>
+  <a href="#domains">领域模型</a>
+  <a href="#layers">分层解耦</a>
+  <a href="#epic">Epic 拆分</a>
+  <a href="#bdd">BDD 验收</a>
+  <a href="#migration">迁移</a>
+  <a href="#open">开放问题</a>
+</nav>
+
+<!-- ========== 1. SUMMARY ========== -->
+<section id="summary">
+  <h2>1. 执行摘要</h2>
+  <p>
+    你的核心诉求可以压缩为一句话：<strong>把一切「选中 / 框选 / 施法 / 面板 / 下单」语义，从 Player 数据袋和硬编码 enum 中剥离，落到 Entity Relationship + EntityCollection + 可配置 Graph/DSL 上；Selection 只是 default context 下某个 collection key 的俗名。</strong>
+  </p>
+  <p>
+    Cursor 初版方案（RFC-0061～0064，Epic #522～#538）在 <em>框选 → 命令集 → 移动下单</em> 这条链路上方向正确，且 PR #535 已在分支上完成大部分 ORD 工作。但它<strong>严重欠覆盖</strong>你后半段描述的施法泛用化需求：Ability Slot / FormSet 与 Panel View 解耦、技能聚合 DSL、施法模式分层偏好、Input Intent / Action Processor、集体施法 vs 个体施法 fan-out、utility 路由等——这些在现有 RFC 中几乎空白。
+  </p>
+  <div class="callout">
+    <strong>建议：</strong>不要继续在 #522～#538 四个平行 Epic 上增量修补。应新开一个<strong>母 Epic（建议编号占位 UICP-0）</strong>，把现有四个 Epic 降级为 Phase A～D 子轨道，并新增 Phase E～G 覆盖施法/面板/下单 fan-out。下文给出完整重写草案与 BDD 验收。
+  </div>
+</section>
+
+<!-- ========== 2. AUDIT ========== -->
+<section id="audit">
+  <h2>2. 远端方案与 PR 现状审计</h2>
+
+  <h3>2.1 已开 Epic 与 RFC 映射</h3>
+  <table>
+    <thead>
+      <tr><th>Epic</th><th>RFC</th><th>范围</th><th>main 落地</th><th>PR</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/issues/522">#522</a></td>
+        <td>RFC-0061</td>
+        <td>Cast → Collection → EntityView → OrderQueue → MassNav；退役 Selection hub</td>
+        <td><span class="badge badge-risk">未合并</span> SelectionRuntime 仍是 SSOT</td>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/pull/535">#535</a> 实现草稿；<a class="gh" href="https://github.com/MightyBubble/Ludots/pull/577">#577</a> 部分 ORD</td>
+      </tr>
+      <tr>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/issues/536">#536</a></td>
+        <td>RFC-0062</td>
+        <td>InteractionContextStack；context-bound collection key；InputCast 正交</td>
+        <td><span class="badge badge-risk">零代码</span></td>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/pull/575">#575</a> 仅 RFC 提案</td>
+      </tr>
+      <tr>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/issues/537">#537</a></td>
+        <td>RFC-0063</td>
+        <td>Association 控制平面；offline proxy；per-playerRep collection 域</td>
+        <td><span class="badge badge-risk">零代码</span> 仍大量 PlayerOwner 组件</td>
+        <td>提案分支 <code>cursor/epic-interaction-architecture-proposals-5eb0</code></td>
+      </tr>
+      <tr>
+        <td><a class="gh" href="https://github.com/MightyBubble/Ludots/issues/538">#538</a></td>
+        <td>RFC-0064</td>
+        <td>Collection provenance；Performer 多 viewer marker</td>
+        <td><span class="badge badge-risk">零代码</span> row 无 controlDomain</td>
+        <td>提案分支</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>2.2 main 分支已有基建（可复用）</h3>
+  <ul class="compact">
+    <li><code>EntityCollectionStore</code> — <code>(owner, key)</code> SoA 存储，role/source 描述符（<code>CommandSource</code>、<code>UiAcquisition</code> 等）</li>
+    <li><code>SelectionRuntime</code> — 容器+成员关系实体，仍是正式 selection SSOT（与 RFC-0061「退役」目标冲突）</li>
+    <li><code>gas.collection-ability-slots</code> — 从 command collection 聚合技能槽，filter/sort 仅覆盖 ready/blocked/slot 等简单维度</li>
+    <li><code>InputOrderMappingSystem</code> — SmartCast / AimCast / ContextScored 与 <code>InteractionModeType</code> 强绑定</li>
+    <li><code>AbilityFormSetRegistry</code> — 形态切换（杰斯近战/远程），但与 Panel Slot 未解耦</li>
+    <li><code>RelationshipRuntime</code> + AAC #239 — association 基座已有，尚未接到控制平面</li>
+    <li><code>PerformerRuleSystem</code> — 已支持 <code>EntityCollectionMemberAdded</code> 事件</li>
+    <li><code>EntityQueryTacticsShowcaseMod</code> — collection/query 生产级 showcase</li>
+  </ul>
+
+  <h3>2.3 PR #535 已完成 vs 遗留（Epic #522 分支）</h3>
+  <p class="muted">来源：PR #535 body + <code>epic-522-interaction-view-order-boundary-tracker.md</code></p>
+  <div class="grid2">
+    <div>
+      <h4><span class="badge badge-ok">已完成</span></h4>
+      <ul class="compact">
+        <li>MassNav 停止直读 Input/Selection</li>
+        <li>OrderQueue 统一 intake</li>
+        <li>EntityViewProfile SSOT + EntityViewRuntime（分支内）</li>
+        <li>Acquisition preview-only，promote 到 CommandSource</li>
+        <li>dataflow HTML + 部分测试迁移</li>
+      </ul>
+    </div>
+    <div>
+      <h4><span class="badge badge-risk">遗留尾巴</span></h4>
+      <ul class="compact">
+        <li><code>SelectedMovePathPresentationSystem</code> 仍读 SelectionRuntime</li>
+        <li><code>MinimapRuntime</code> 仍 <code>SelectionContextRuntime</code></li>
+        <li>双轨 presentation：<code>SelectionPresentationEventSystem</code> vs <code>EntityViewDisplay...</code></li>
+        <li>大量 showcase / GasTests 仍 TryBindView + Selection 断言</li>
+        <li>RFC-0061 未 merge 到 main，文档与代码分叉</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ========== 3. RISKS ========== -->
+<section id="risks">
+  <h2>3. 现有设计问题与风险分析</h2>
+
+  <h3>3.1 架构层</h3>
+  <table>
+    <thead><tr><th>问题</th><th>严重度</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Epic 切碎、缺施法层</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td>#522～#538 覆盖到「命令集 + marker」，但未定义 Ability Slot↔Panel↔Intent↔OrderPayload 全链。你的杰斯 FormSet、陆战队聚合 Q/W、泽拉斯两段 Q 均无挂点。</td>
+      </tr>
+      <tr>
+        <td>Selection 退役与 RFC-0059 冲突</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td>正式文档 <code>entity_selection_architecture.md</code> 仍以 SelectionRuntime 为 SSOT；RFC-0061 要求退役。双轨期若无明确 migration gate，Mod 作者会迷路。</td>
+      </tr>
+      <tr>
+        <td>Context Stack local-only</td>
+        <td><span class="badge badge-warn">中</span></td>
+        <td>RFC-0062 把栈放在 client session service。观战/回放/裁判是否需要同步 context？超级武器施法中途掉线谁 pop？需明确 sim-sync 边界。</td>
+      </tr>
+      <tr>
+        <td>FilterProfile vs GAS Graph</td>
+        <td><span class="badge badge-warn">中</span></td>
+        <td>你要求 graph filter DSL；RFC-0062 的 FilterProfile 是 JSON associationQuery。需统一为<strong>同一 Graph Query SSOT</strong>，避免两套过滤语言。</td>
+      </tr>
+      <tr>
+        <td>Collection 写入 owner 歧义</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td>代理指挥时，本地框选写 <code>(localPlayerRep, key)</code> 还是 <code>(offlineTeammateRep, key)</code>？RFC-0063 说 p2 域冻结、p1 本地写——但「归还」时两边 collection 可能不一致。需定义 <strong>write domain vs read domain</strong> 分离。</td>
+      </tr>
+      <tr>
+        <td>Panel 聚合过于简陋</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td>现有 <code>CollectionGasEntityCommandPanelSource</code> 仅按 slot/ownerCount/label 聚合。无法实现「按技能别名聚合 Q」「按 templateId 平铺 WER」等三种案例。</td>
+      </tr>
+      <tr>
+        <td>InteractionModeType 捆绑</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td><code>InputOrderMappingSystem</code> 把 cast mode、aim phase、order build 捆在一起。无法实现 LOL 式 global/hero/slot 偏好覆盖链。</td>
+      </tr>
+      <tr>
+        <td>无 Order Fan-out 层</td>
+        <td><span class="badge badge-danger">高</span></td>
+        <td>SC2 集体 Blink vs 单个 Blink、按距离/血量选施法者——当前只有 shared order id fan-out，无 utility graph。</td>
+      </tr>
+      <tr>
+        <td>子单编号混乱</td>
+        <td><span class="badge badge-warn">中</span></td>
+        <td>PR #575 创建 issue 时 CTX/CTRL/PROV 编号区间重叠（#545 同时被 CTRL-7 和 CTX 引用）。治理风险。</td>
+      </tr>
+      <tr>
+        <td>main vs 分支文档超前</td>
+        <td><span class="badge badge-warn">中</span></td>
+        <td>RFC-0061～0064 仅在提案分支；main 无 EntityViewRuntime。按 RFC 开发会「幻觉引用」。</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3.2 与你意图的对齐度</h3>
+  <table>
+    <thead><tr><th>你的需求</th><th>RFC 覆盖</th><th>缺口</th></tr></thead>
+    <tbody>
+      <tr><td>player/team 是 Entity，归属是 relationship key</td><td>RFC-0063 ✓</td><td>代码未迁移，PlayerOwner 仍在</td></tr>
+      <tr><td>框选 = InputCast → collection，selection 只是 key 俗名</td><td>RFC-0061/62 ✓</td><td>Context Stack 未实现</td></tr>
+      <tr><td>掉线代理 controls 边，collection 留在队友 playerRep</td><td>RFC-0063 ✓</td><td>write domain 策略需细化</td></tr>
+      <tr><td>marker 按 controlDomain 分色 + 裁判多视角</td><td>RFC-0064 ✓</td><td>provenance schema 未落地</td></tr>
+      <tr><td>施法 context 切换 collection key</td><td>RFC-0062 ✓</td><td>与 AbilityExec 生命周期挂钩未实现</td></tr>
+      <tr><td>Ability Slot ≠ Panel Slot ≠ FormSet</td><td>✗</td><td><span class="badge badge-new">需新 Epic 层</span></td></tr>
+      <tr><td>技能面板聚合 DSL（按别名/按配置/按 ID）</td><td>✗</td><td><span class="badge badge-new">需 PanelRouter + AggregationCatalog</span></td></tr>
+      <tr><td>施法模式偏好链 global→hero→slot</td><td>部分（ViewMode 全局）</td><td><span class="badge badge-new">需 CastPreferenceResolver</span></td></tr>
+      <tr><td>Input Intent / Action Processor 解耦</td><td>✗</td><td><span class="badge badge-new">需新分层</span></td></tr>
+      <tr><td>集体/个体施法 + utility 路由</td><td>✗</td><td><span class="badge badge-new">需 OrderDispatchGraph</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 4. VISION ========== -->
+<section id="vision">
+  <h2>4. 目标愿景（统一表述）</h2>
+  <div class="mermaid">
+flowchart TB
+  subgraph Device["设备层"]
+    KB[Keyboard/Mouse/Gamepad]
+  end
+  subgraph InputPlane["输入平面 — Client Local"]
+    REMAP[InputRemappingProfile]
+    CTX[InteractionContextStack]
+    CAST[InputCastExecutor]
+    RAW[(collection.ui.cast.raw)]
+    FILTER[GraphFilterProfile]
+    WRITE[CollectionWriteService]
+    COLL[(playerRep, collectionKey)]
+  end
+  subgraph ControlPlane["控制平面 — Sim"]
+    AAC[RelationshipGraph owns/controls/member_of]
+    PROXY[AssociationControlProfileRuntime]
+    QUERY[ControlDomainQuery]
+  end
+  subgraph ViewPlane["视图平面 — Client"]
+    EV[EntityViewBinding viewKey→collectionKey+role]
+    PROV[Row Provenance controlDomain+relationKind]
+    PERF[PerformerCatalog → markers]
+    PANEL[PanelRouter → AbilityPanelView]
+  end
+  subgraph CastPlane["施法平面 — Sim"]
+  SLOT[AbilitySlot + FormSet runtime]
+    PREF[CastPreferenceResolver]
+    INTENT[InputIntentResolver]
+    PROC[AbilityActionProcessor]
+    PAYLOAD[OrderPayloadBuilder]
+    DISP[OrderDispatchGraph]
+  end
+  subgraph ExecPlane["执行平面"]
+    OQ[OrderQueue — 唯一 intake]
+    OB[OrderBuffer]
+    GAS[AbilityExec + EffectPipeline]
+    MN[MassNavigation ingestion]
+  end
+
+  KB --> REMAP --> CTX
+  CTX --> CAST --> RAW --> FILTER --> WRITE --> COLL
+  AAC --> FILTER
+  PROXY --> AAC
+  QUERY --> FILTER
+  COLL --> EV --> PROV --> PERF
+  COLL --> PANEL
+  SLOT --> PANEL
+  PREF --> INTENT
+  COLL --> INTENT
+  INTENT --> PROC --> PAYLOAD --> DISP --> OQ --> OB
+  OB --> GAS
+  OB --> MN
+  </div>
+  <p class="muted">上图是母 Epic 的目标终态。每一箭头都应对应可配置 profile，禁止 Core <code>if (rts)</code> 分支。</p>
+</section>
+
+<!-- ========== 5. ARCHITECTURE ========== -->
+<section id="architecture">
+  <h2>5. 统一架构原则</h2>
+  <ol>
+    <li><strong>Entity 是 SSOT，Player/Team 是 participant representative entity</strong>，不是整数 ID 上的全局表。</li>
+    <li><strong>Collection 地址</strong> = <code>(ownerEntity, collectionKey)</code>；owner 永远是某个 domain entity（通常是 playerRep），不是 ClientSession。</li>
+    <li><strong>Selection</strong> = <code>collection.command.source</code> 在 default context 下的俗名；Core 不得存在 <code>SelectionRuntime</code> hub（formation/snapshot 迁移为 keyed collection + lease）。</li>
+    <li><strong>Context Stack</strong> 只路由 <code>activeCollectionKey</code> + <code>activeEntityViewKey</code> + <code>filterProfileId</code>；不存 entity 列表。</li>
+    <li><strong>归属与指挥</strong> = relationship edge：<code>owns</code>（静态）、<code>controls</code>（含代理）、<code>member_of</code>（阵营）。</li>
+    <li><strong>Provenance</strong> 在 CollectionWrite 时写入 row metadata，供 Performer / Panel 零图遍历消费。</li>
+    <li><strong>AbilitySlot</strong>（逻辑槽位）≠ <strong>AbilityFormSet</strong>（形态映射）≠ <strong>PanelSlot</strong>（UI 聚合槽）— 三者通过 catalog 连接。</li>
+    <li><strong>OrderQueue 唯一 intake</strong>；fan-out / utility / 集体施法在 OrderDispatchGraph 完成后再入队。</li>
+    <li><strong>零 fallback</strong>：缺 config / 缺 key / 缺 profile 必须 fail-fast。</li>
+  </ol>
+</section>
+
+<!-- ========== 6. DOMAINS ========== -->
+<section id="domains">
+  <h2>6. 领域模型与配置 SSOT</h2>
+
+  <h3>6.1 实体与关系</h3>
+  <pre><code>playerRepP1 ──member_of──► teamAlphaRep
+playerRepP1 ──owns──► marine1
+playerRepP1 ──controls──► marine1          // 正常时 controls ⊆ owns
+playerRepP2 ──owns──► marine99
+playerRepP1 ──controls──► marine99         // 仅 offline proxy 时新增
+playerRepP1 ──ally──► playerRepP2
+
+// embodied unit 上禁止：PlayerOwner, Team, PlayerIdentity</code></pre>
+
+  <h3>6.2 Collection 命名空间（per playerRep）</h3>
+  <table>
+    <thead><tr><th>Key</th><th>Context</th><th>Role</th><th>语义</th></tr></thead>
+    <tbody>
+      <tr><td><code>collection.command.source</code></td><td>default</td><td>CommandSource</td><td>RTS「框选」俗名 selection</td></tr>
+      <tr><td><code>collection.ui.cast.raw</code></td><td>any</td><td>AcquisitionPreview</td><td>InputCast 原始命中，未过滤</td></tr>
+      <tr><td><code>collection.ability.{abilityId}.targets</code></td><td>ability frame</td><td>CommandSource</td><td>超级武器指定单位等</td></tr>
+      <tr><td><code>collection.ability.{abilityId}.ground</code></td><td>ability frame</td><td>AimAffected</td><td>地面指示器候选</td></tr>
+      <tr><td><code>collection.input.tab.candidates</code></td><td>input</td><td>Display</td><td>Tab 循环目标</td></tr>
+      <tr><td><code>collection.control.group.{n}</code></td><td>default</td><td>CommandSource</td><td>控制组（可选别名）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>6.3 InteractionContextFrame</h3>
+  <pre><code>{
+  "contextId": "ability:superweapon:exec42",
+  "activeCollectionKey": "collection.ability.superweapon.targets",
+  "activeEntityViewKey": "view.ability.superweapon.targets",
+  "filterProfileId": "filter.controllable.superweapon_targets",
+  "performerProfileId": "performer.ability.superweapon.targets",
+  "panelRouterProfileId": "panel.router.ability.superweapon",
+  "contextEntity": "&lt;abilityExecEntity&gt;",
+  "writeDomain": "localOperatorRep",      // NEW: 显式写域策略
+  "readDomain": "mergedControllable"      // NEW: 过滤读域
+}</code></pre>
+
+  <h3>6.4 Write Domain 策略（补齐 RFC-0063 歧义）</h3>
+  <table>
+    <thead><tr><th>策略 ID</th><th>写入 owner</th><th>读取过滤</th><th>场景</th></tr></thead>
+    <tbody>
+      <tr><td><code>localOperatorRep</code></td><td>本地操作者 playerRep</td><td>controls(localOp, ?)</td><td>默认 RTS 框选（含代理单位）</td></tr>
+      <tr><td><code>contextOwnerRep</code></td><td>context 绑定的 playerRep</td><td>owns(contextOwner, ?)</td><td>裁判/观战替他人操作（若允许）</td></tr>
+      <tr><td><code>frozenPeerRep</code></td><td>不写入；只读 peer collection</td><td>knowledge grant</td><td>裁判只看不动</td></tr>
+    </tbody>
+  </table>
+  <p>掉线代理：<strong>marine99 的「指挥状态」体现在 p1 的 command.source 里可以有 proxy 行；p2Rep 上的 collection 保持离线前快照，重连后 p2 client bind p2Rep 继续操作自己的域。</strong></p>
+
+  <h3>6.5 Ability 三层槽位（核心新增）</h3>
+  <div class="grid2">
+    <div class="feature-block">
+      <p><span class="kw">AbilitySlot</span> — 单位逻辑槽位索引</p>
+      <p class="muted">Slot0=普攻, Slot1=兴奋剂, Slot2=蓄力炮。与 UI 无关，是 GAS 激活地址。</p>
+    </div>
+    <div class="feature-block">
+      <p><span class="kw">AbilityFormSet</span> — 形态映射</p>
+      <p class="muted">杰斯切换近战/远程 = 切换 FormSet；改变 Slot→Template 映射，不改变 Slot 数量语义。</p>
+    </div>
+    <div class="feature-block">
+      <p><span class="kw">PanelSlot</span> — UI 聚合显示槽</p>
+      <p class="muted">Q/W/E/R 只是 Panel 布局；通过 AggregationCatalog 把 N 个 AbilitySlot 实例折叠到一个 PanelSlot。</p>
+    </div>
+    <div class="feature-block">
+      <p><span class="kw">PanelRouterProfile</span> — 路由规则</p>
+      <p class="muted">决定当前 context + collection + 玩家偏好 → 用哪套 AggregationCatalog。</p>
+    </div>
+  </div>
+
+  <h3>6.6 AggregationCatalog 示例（你的三个案例）</h3>
+  <pre><code>// 案例①：按技能别名聚合 — 兴奋剂→Q，蓄力炮→W
+{
+  "id": "agg.by_alias.default",
+  "rules": [
+    { "match": { "abilityAlias": "stimpack" }, "panelSlot": "Q" },
+    { "match": { "abilityAlias": "charged_shot" }, "panelSlot": "W" }
+  ],
+  "display": { "mode": "stacked_icons_per_panel_slot" }
+}
+
+// 案例②：按技能配置平铺 — 每个蓄力炮实例占独立 PanelSlot
+{
+  "id": "agg.flat_by_template",
+  "rules": [
+    { "match": { "abilityAlias": "stimpack" }, "panelSlot": "Q", "collapse": "merge_same_alias" },
+    { "match": { "abilityTemplateId": "*" }, "panelSlot": "auto_next", "collapse": "none" }
+  ]
+}
+
+// 案例③：按 ID 聚合 — 车炮→W，强化陆战队炮→E
+{
+  "id": "agg.by_template_id.custom",
+  "rules": [
+    { "match": { "abilityTemplateId": "marine_stimpack" }, "panelSlot": "Q" },
+    { "match": { "abilityTemplateId": "siege_tank_charged" }, "panelSlot": "W" },
+    { "match": { "abilityTemplateId": "marine_elite_charged" }, "panelSlot": "E" }
+  ]
+}</code></pre>
+
+  <h3>6.7 CastPreference 链（LOL 式）</h3>
+  <pre><code>// 解析顺序：slot &gt; hero &gt; global（越具体越高优先级）
+{
+  "global": { "castMode": "SmartCast" },
+  "heroes": {
+    "jayce": { "castMode": "PressReleaseAimCast" },
+    "jayce.slots": { "2": { "castMode": "SmartCastWithIndicator" } }
+  }
+}</code></pre>
+  <p>CastMode 与 InputIntent 正交：CastMode 决定「何时提交」；InputIntent 决定「提交什么参数」。</p>
+
+  <h3>6.8 OrderDispatchGraph（集体 Blink 等）</h3>
+  <pre><code>{
+  "id": "dispatch.blink.multi_select",
+  "strategies": [
+    { "id": "all", "fanOut": "per_entity", "filter": "all_in_command_source" },
+    { "id": "one", "fanOut": "pick_one", "scoring": "graph:utility.nearest_to_cursor" },
+    { "id": "smart_subset", "fanOut": "pick_k", "k": 3, "scoring": "graph:utility.max_energy_then_hp" }
+  ],
+  "default": "all",
+  "playerToggleKey": "input.dispatch_mode_cycle"   // 类似 SC2 集体/单个
+}</code></pre>
+</section>
+
+<!-- ========== 7. LAYERS ========== -->
+<section id="layers">
+  <h2>7. 分层职责表（禁止跨界）</h2>
+  <table>
+    <thead>
+      <tr><th>层</th><th>输入</th><th>输出</th><th>做</th><th>禁止</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>InputRemapping</td><td>设备信号</td><td>InputAction</td><td>设备→语义 action</td><td>读 collection / 改 relationship</td></tr>
+      <tr><td>InteractionContextStack</td><td>push/pop</td><td>active keys</td><td>路由 collection/view/filter/performer/panel profile</td><td>存 entity 列表</td></tr>
+      <tr><td>InputCastExecutor</td><td>CastProfile + geometry</td><td>raw collection</td><td>screen/world/box/polygon 查询</td><td>过滤 controllable / 写 command</td></tr>
+      <tr><td>GraphFilterProfile</td><td>raw rows + anchor</td><td>filtered rows</td><td>association + tag + attribute graph</td><td>写 order / 改 relationship</td></tr>
+      <tr><td>CollectionWriteService</td><td>filtered rows</td><td>(owner,key) + provenance</td><td>Replace collection revision</td><td>跨 player merge / 隐式 fallback</td></tr>
+      <tr><td>ControlDomainQuery</td><td>controllerRep</td><td>controlled entities</td><td>读 controls/owns 边</td><td>扫 PlayerOwner 组件</td></tr>
+      <tr><td>EntityViewBinding</td><td>viewKey</td><td>collectionKey+role</td><td>只读绑定</td><td>复制 row</td></tr>
+      <tr><td>PanelRouter</td><td>collection + agg profile</td><td>PanelSlot views</td><td>聚合 AbilitySlot 实例</td><td>直接激活 GAS</td></tr>
+      <tr><td>CastPreferenceResolver</td><td>prefs + hero + slot</td><td>CastMode</td><td>偏好链解析</td><td>硬编码英雄分支</td></tr>
+      <tr><td>InputIntentResolver</td><td>action + mode + context</td><td>Intent</td><td>press/hold/release/confirm</td><td>构建 OrderPayload</td></tr>
+      <tr><td>AbilityActionProcessor</td><td>Intent + ability def</td><td>partial payload / phase</td><td>多段技能状态机（加里奥 W、泽拉斯 Q）</td><td>写 selection</td></tr>
+      <tr><td>OrderPayloadBuilder</td><td>processor output</td><td>OrderPayload</td><td>目标/方向/位置参数</td><td>fan-out</td></tr>
+      <tr><td>OrderDispatchGraph</td><td>payload + command source</td><td>N × Order</td><td>集体/单个/utility 路由</td><td>旁路 OrderQueue</td></tr>
+      <tr><td>OrderQueue</td><td>Orders</td><td>OrderBuffer</td><td>唯一 intake、排队</td><td>读 SelectionRuntime</td></tr>
+      <tr><td>PerformerRuleSystem</td><td>collection events</td><td>markers</td><td>读 provenance + catalog</td><td>决定 active key</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ========== 8. EPIC ========== -->
+<section id="epic">
+  <h2>8. 建议母 Epic 与子轨道拆分</h2>
+  <p>建议新 Epic 标题（草案）：<strong>[Epic] UICP-0 泛用交互与施法控制平面（Universal Interaction &amp; Casting Plane）</strong></p>
+  <p class="muted">吸收并取代分散的 #522～#538 作为「策划 SSOT」，原 Epic 可改为子里程碑或关闭后链接到 UICP-0。</p>
+
+  <h3>Phase A — 交互数据平面（≈ RFC-0061 + 合并 #522）</h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th><th>依赖</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-A1</td><td>合并 PR #535/#577 到 main；清零 MassNav 越界读取</td><td>—</td></tr>
+      <tr><td>UICP-A2</td><td>EntityViewProfile registry + 全面退役 Selection command consumer</td><td>A1</td></tr>
+      <tr><td>UICP-A3</td><td>Acquisition → GraphFilter → CommandSource 管线</td><td>A2, AAC</td></tr>
+      <tr><td>UICP-A4</td><td>遗留 presentation/minimap/showcase 迁移 + ArchitectureTests</td><td>A2</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase B — Context Stack（≈ RFC-0062 + #536）</h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-B1</td><td><code>InteractionContextStack</code> service + default frame on map load</td></tr>
+      <tr><td>UICP-B2</td><td>InputCastExecutor 与 InteractionMode 正交拆分</td></tr>
+      <tr><td>UICP-B3</td><td>Context-bound collection write + AbilityExec push/pop hook</td></tr>
+      <tr><td>UICP-B4</td><td>Superweapon showcase：施法中独立 key，pop 恢复 default</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase C — Association 控制平面（≈ RFC-0063 + #537）</h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-C1</td><td><code>ControlDomainQuery</code> API；替代 PlayerOwner 扫描</td></tr>
+      <tr><td>UICP-C2</td><td>Map load 建立 owns/member_of；删除 embodied PlayerOwner/Team</td></tr>
+      <tr><td>UICP-C3</td><td><code>AssociationControlProfile</code> offline proxy + write domain 策略</td></tr>
+      <tr><td>UICP-C4</td><td>重连归还 showcase + #499 publisher relationship 化</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase D — Provenance &amp; Performer（≈ RFC-0064 + #538）</h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-D1</td><td>Collection row provenance schema（controlDomain, relationKind）</td></tr>
+      <tr><td>UICP-D2</td><td>PerformerCatalog：owns 深绿 / proxy 浅绿 / 裁判相位色</td></tr>
+      <tr><td>UICP-D3</td><td>Referee knowledge grant 多读 (playerNRep, collection.*)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase E — 施法平面解耦 <span class="badge badge-new">新增</span></h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-E1</td><td>AbilitySlot / FormSet / PanelSlot 概念模型 + schema 护栏</td></tr>
+      <tr><td>UICP-E2</td><td><code>CastPreferenceResolver</code> global→hero→slot 链</td></tr>
+      <tr><td>UICP-E3</td><td><code>InputIntentResolver</code> 与 InputOrderMapping 解耦</td></tr>
+      <tr><td>UICP-E4</td><td><code>AbilityActionProcessor</code> registry（多段/蓄力/切换）</td></tr>
+      <tr><td>UICP-E5</td><td>Context Stack ↔ AbilityExec 生命周期绑定配置</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase F — Panel 聚合路由 <span class="badge badge-new">新增</span></h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-F1</td><td><code>AggregationCatalog</code> + <code>PanelRouterProfile</code> registry</td></tr>
+      <tr><td>UICP-F2</td><td>扩展 <code>gas.collection-ability-slots</code> → <code>PanelRouter</code> pipeline</td></tr>
+      <tr><td>UICP-F3</td><td>玩家偏好 pref：切换聚合模式（案例①②③）</td></tr>
+      <tr><td>UICP-F4</td><td>RTS 多选聚合 showcase（陆战队+炮车混合）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Phase G — Order Dispatch <span class="badge badge-new">新增</span></h3>
+  <table>
+    <thead><tr><th>子单</th><th>交付</th></tr></thead>
+    <tbody>
+      <tr><td>UICP-G1</td><td><code>OrderDispatchGraph</code> registry + fan-out strategies</td></tr>
+      <tr><td>UICP-G2</td><td>Utility scoring graph 节点（distance/hp/mp/role）</td></tr>
+      <tr><td>UICP-G3</td><td>玩家 toggle：集体/单个/智能子集（Blink showcase）</td></tr>
+      <tr><td>UICP-G4</td><td>ArchitectureTests：禁止旁路 OrderQueue</td></tr>
+    </tbody>
+  </table>
+
+  <h3>依赖链</h3>
+  <pre><code>A (数据平面) → B (Context) ─┐
+         ↘ C (控制平面) ────┼→ D (Performer) → E (施法) → F (Panel) → G (Dispatch)
+AAC #239 ──────────────────┘</code></pre>
+</section>
+
+<!-- ========== 9. BDD ========== -->
+<section id="bdd">
+  <h2>9. BDD / Cucumber 验收标准（UAT Showcase）</h2>
+  <p>建议新建 capability mod：<code>UniversalInteractionCastingShowcaseMod</code>，挂载 <code>Features/*.feature</code>，由 headless acceptance 驱动。分 Mod 开发者与玩家两类视角。</p>
+
+  <h3>9.1 Feature: 控制平面与框选（你描述的核心链路）</h3>
+  <pre><code>Feature: Association-based control and collection ownership
+  As a mod developer
+  I want controllable units resolved via relationship edges
+  So that offline proxy and reconnect handback need no ad-hoc selection migration
+
+  Background:
+    Given map "uicp_control_plane" is loaded
+    And player "P1" has representative entity "p1Rep"
+    And player "P2" has representative entity "p2Rep"
+    And team "Alpha" has representative entity "teamAlphaRep"
+    And relationship "member_of" links "p1Rep" and "p2Rep" to "teamAlphaRep"
+    And relationship "owns" links "p1Rep" to units "m07,m12"
+    And relationship "owns" links "p2Rep" to unit "m99"
+
+  Scenario: UAT-CTRL-01 Default box select writes command source on operator rep
+    Given client is bound to "p1Rep"
+    And interaction context stack has default frame
+    When client performs input cast "box_screen" hitting "m07,m12,m99"
+    And graph filter "filter.controllable.default" is active
+    Then collection "collection.command.source" for owner "p1Rep" contains exactly "m07,m12"
+    And collection "collection.command.source" for owner "p2Rep" is empty
+    And no embodied unit has component "PlayerOwner"
+
+  Scenario: UAT-CTRL-02 Offline teammate proxy grants controls without moving collection domain
+    Given control profile "profile.control.offline_teammate_proxy" is registered
+    And "p2Rep" is tagged "participant.offline"
+  When runtime evaluates control profiles
+    Then relationship "controls" links "p1Rep" to "m99"
+    And relationship "owns" still links "p2Rep" to "m99"
+    When client bound to "p1Rep" box-selects "m07,m99"
+    Then collection for "p1Rep" key "collection.command.source" contains "m07,m99"
+    And collection for "p2Rep" key "collection.command.source" remains unchanged
+
+  Scenario: UAT-CTRL-03 Reconnect restores teammate selection domain
+    Given "p2Rep" collection "collection.command.source" was "m99" before offline
+    And "p1Rep" had proxied control of "m99"
+    When "p2Rep" tag "participant.offline" is removed
+    And client binds to "p2Rep"
+    Then relationship "controls" from "p1Rep" to "m99" is revoked
+    And collection for "p2Rep" key "collection.command.source" contains "m99"
+    And client bound to "p2Rep" can box-select without reading "p1Rep" collection</code></pre>
+
+  <h3>9.2 Feature: Context Stack 与施法域 collection</h3>
+  <pre><code>Feature: Interaction context stack routes collection keys
+  Scenario: UAT-CTX-01 Superweapon targeting uses dedicated collection key
+    Given ability "superweapon" definition includes interactionContextProfile "ctx.superweapon.targets"
+    When player activates ability "superweapon" entering phase "PendingConfirmTargets"
+    Then context stack top key is "collection.ability.superweapon.targets"
+    When player performs input cast "box_screen" hitting "m07,m12"
+    Then collection "collection.ability.superweapon.targets" for "p1Rep" contains "m07,m12"
+    And collection "collection.command.source" for "p1Rep" is unchanged
+
+  Scenario: UAT-CTX-02 Pop context restores default selection semantics
+    When ability "superweapon" completes
+    Then context stack pops to default
+    And active collection key is "collection.command.source"
+    When player box-selects "m07"
+    Then collection "collection.command.source" contains "m07"
+    And collection "collection.ability.superweapon.targets" is empty or stale per config</code></pre>
+
+  <h3>9.3 Feature: Provenance 与 Performer 多视角</h3>
+  <pre><code>Feature: Selection markers reflect control domain provenance
+  Scenario: UAT-PROV-01 Local player sees deep vs light green markers
+    Given "p1Rep" controls own units "m07" and proxied "m99"
+    And collection "collection.command.source" for "p1Rep" contains "m07,m99" with provenance
+    When performer profile "performer.selection.marker.local" is active
+    Then marker for "m07" uses style "selection_ring_deep_green"
+    And marker for "m99" uses style "selection_ring_light_green"
+
+  Scenario: UAT-PROV-02 Referee sees multiple player collections with team phase offset
+    Given referee representative "refRep" has knowledge grant to read p1 and p2 command collections
+    And "p1Rep" collection contains "m07" and "p2Rep" collection contains "m99"
+    When performer viewer is "refRep"
+    Then markers for "p1Rep" domain use palette "team_red_phase0"
+    And markers for "p2Rep" domain use palette "team_red_phase1"</code></pre>
+
+  <h3>9.4 Feature: Mod 开发者 — 面板聚合配置</h3>
+  <pre><code>Feature: Panel aggregation catalog drives multi-select ability bar
+  As a mod developer
+  I want to configure how ability instances collapse into panel slots
+  So that RTS multi-select shows meaningful cast buttons without hardcoding unit types
+
+  Background:
+    Given aggregation catalog "agg.by_alias.default" is registered
+    And units "marine1,marine2,marine_elite1,siege1,siege2" are in command source
+    And stimpack alias is present on marines
+    And charged_shot alias is present on marine_elite and siege tanks
+
+  Scenario: UAT-MOD-AGG-01 Alias aggregation stacks icons on Q and W
+    Given panel router profile "panel.router.rts.alias_default" references "agg.by_alias.default"
+    When panel renders for current collection
+    Then panel slot "Q" shows 3 stacked icons for stimpack owners
+    And panel slot "W" shows 3 stacked icons for charged_shot owners
+    And no panel slot is hardcoded to unit type "marine"
+
+  Scenario: UAT-MOD-AGG-02 Flat template mode expands charged shots to separate slots
+    Given aggregation catalog "agg.flat_by_template" is active
+    Then panel slots for charged_shot contain one entry per owning entity
+    And panel slot "Q" still merges stimpack aliases
+
+  Scenario: UAT-MOD-AGG-03 Custom template id routing
+    Given aggregation catalog "agg.by_template_id.custom" is active
+    Then stimpack maps to panel slot "Q"
+    And siege charged_shot maps to "W"
+    And marine elite charged_shot maps to "E"</code></pre>
+
+  <h3>9.5 Feature: Mod 开发者 — 施法模式与 Action Processor</h3>
+  <pre><code>Feature: Cast mode and ability action processing are data-driven
+  Scenario: UAT-MOD-CAST-01 Global smart cast with per-hero override
+  Given cast preferences global mode is "SmartCast"
+    And hero "jayce" preference mode is "PressReleaseAimCast"
+    When player presses ability slot 1 on jayce
+    Then input intent phase becomes "aim_after_key_release"
+    When player presses ability slot 1 on garen
+    Then order is submitted immediately with smart cast targeting
+
+  Scenario: UAT-MOD-CAST-02 Multi-phase ability uses action processor graph
+    Given ability "galio_w" uses actionProcessor "processor.galio_w_two_phase"
+    And cast mode is "SmartCastWithIndicator"
+    When player presses W
+    Then phase 1 shows indicator collection without submitting order
+    When player confirms
+    Then order payload includes phase2 parameters only</code></pre>
+
+  <h3>9.6 Feature: 玩家偏好</h3>
+  <pre><code>Feature: Player preferences change UX without mod republish
+  Scenario: UAT-PLAY-PREF-01 Player switches panel aggregation preference
+    Given player preference "panel.aggregation.mode" is "by_alias"
+    When player changes preference to "flat_by_template"
+    Then ability panel re-renders with per-template flat slots
+    And underlying AbilitySlot indices on units are unchanged
+
+  Scenario: UAT-PLAY-PREF-02 Player switches cast mode scope
+    Given global cast mode is "SmartCast"
+    When player sets hero-specific preference for "xerath" to "PressReleaseAimCast"
+    Then only xerath units use aim-after-release
+    And other selected units still smart cast
+
+  Scenario: UAT-PLAY-PREF-03 Player toggles order dispatch mode for blink
+    Given dispatch graph "dispatch.blink.multi_select" default is "all"
+    When player cycles dispatch toggle to "one"
+    And player casts blink on multi selection
+    Then exactly one order is enqueued for the nearest unit to cursor</code></pre>
+
+  <h3>9.7 Feature: Order 链路完整性</h3>
+  <pre><code>Feature: End-to-end interaction to execution
+  Scenario: UAT-E2E-01 Box select move order reaches MassNav without SelectionRuntime
+    When player box-selects controllable units
+    And right-clicks ground "G1"
+    Then order queue receives move orders for each entity in command source
+    And mass navigation ingestion executes movement
+    And architecture guard confirms zero SelectionRuntime reads on command path
+
+  Scenario: UAT-E2E-02 Multi-select stimpack respects dispatch graph
+    When command source contains 5 marines with stimpack ready
+    And player activates panel slot "Q"
+    And dispatch strategy is "pick_k" with k=3 by max_hp
+    Then exactly 3 stimpack orders are enqueued on the highest hp marines</code></pre>
+
+  <h3>9.8 建议补充 Showcase（我替你补的）</h3>
+  <ul>
+    <li><strong>UAT-MOBA-01</strong>：单英雄无框选，context 由 ability 自身决定，验证 ARPG 路径不污染 RTS collection。</li>
+    <li><strong>UAT-SHIFT-01</strong>：Shift 追加 / Ctrl 反选作为 InputIntent modifier，写入同一 collection key 的 add/remove 操作。</li>
+    <li><strong>UAT-GRAPH-01</strong>：Filter 使用 GAS graph 节点 <code>CollectRelationship</code> + <code>FilterByTag</code>，证明与 association stress showcase 同一 graph VM。</li>
+    <li><strong>UAT-SYNC-01</strong>：多人联机仅同步 sim collection（若采用）；context stack 保持 client-local 的行为在文档中明确。</li>
+    <li><strong>UAT-FORM-01</strong>：杰斯 FormSet 切换后 PanelRouter 同一 PanelSlot 显示不同 template 图标。</li>
+  </ul>
+</section>
+
+<!-- ========== 10. MIGRATION ========== -->
+<section id="migration">
+  <h2>10. 迁移与治理建议</h2>
+  <ol>
+    <li><strong>先合并 #535 + #577 到 main</strong>，作为 Phase A 基线；RFC-0061～0064 从提案分支迁入 main。</li>
+    <li><strong>冻结</strong> SelectionRuntime 新 consumer；ArchitectureTests 已有 Epic #322 guard 可扩展。</li>
+    <li><strong>统一 Graph Filter SSOT</strong>：FilterProfile 改为引用 <code>EntitySetQueryGraph</code>（与 entity_query_tactics 同管线）。</li>
+    <li><strong>关闭/归档</strong> #522～#538 四个 Epic 时，在 body 顶部加 <code>Superseded by UICP-0</code> 链接，避免子单编号继续分裂。</li>
+    <li><strong>PlayerOwner 删除</strong> 作为 breaking change 独立 milestone，依赖 AAC showcase 全绿。</li>
+    <li><strong>文档</strong>：更新 <code>entity_selection_architecture.md</code> 顶部 deprecation 为终态删除日程；gitbook 增「UICP 泛用交互施法」索引页。</li>
+  </ol>
+</section>
+
+<!-- ========== 11. OPEN ========== -->
+<section id="open">
+  <h2>11. 开放问题（开 Issue 前需你拍板）</h2>
+  <table>
+    <thead><tr><th>#</th><th>问题</th><th>选项</th></tr></thead>
+    <tbody>
+      <tr><td>Q1</td><td>Context Stack 是否需 sim 同步？</td><td>A) 纯 client-local（默认） B) ability phase 同步 sim tag，client 推导</td></tr>
+      <tr><td>Q2</td><td>代理指挥时队友 collection 是否允许「镜像追加」到 p2Rep？</td><td>A) 严格冻结 B) 镜像 display-only collection</td></tr>
+      <tr><td>Q3</td><td>Formation / control group 是否保留 SelectionContainer 形态？</td><td>A) 全迁 keyed collection B) 保留 container 仅作 snapshot lease</td></tr>
+      <tr><td>Q4</td><td>Panel 偏好存哪？</td><td>A) participant pref entity B) client local storage C) 混合</td></tr>
+      <tr><td>Q5</td><td>OrderDispatchGraph 与 AI autocast (#224) 是否共用 utility 节点库？</td><td>建议共用，需确认</td></tr>
+      <tr><td>Q6</td><td>母 Epic 命名与编号</td><td>UICP-0 或沿用 #536 扩展？</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn">
+    <strong>下一步：</strong>你审阅本草案后，我可以按你确认的命名与 Q1～Q6 决策，生成正式 GitHub Epic body（含子单模板）并拆 Cucumber feature 文件到 showcase mod。
+  </div>
+</section>
+
+</div>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+</script>
+</body>
+</html>
