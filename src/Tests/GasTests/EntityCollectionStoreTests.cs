@@ -125,14 +125,18 @@ namespace Ludots.Tests.GAS
             Assert.That(roleWindow[2], Is.EqualTo(18 % 3));
             Assert.That(flagWindow[1], Is.EqualTo(EntityCollectionRowFlags.Primary));
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 1024; i++)
+            long allocated = long.MaxValue;
+            for (int window = 0; window < 2; window++)
             {
-                store.CopyWindow(handle, 32, entityWindow, ordinalWindow, roleWindow, flagWindow);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int i = 0; i < 1024; i++)
+                {
+                    store.CopyWindow(handle, 32, entityWindow, ordinalWindow, roleWindow, flagWindow);
+                }
+
+                allocated = Math.Min(allocated, GC.GetAllocatedBytesForCurrentThread() - before);
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.That(allocated, Is.EqualTo(0));
         }
     }

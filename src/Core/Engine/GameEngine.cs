@@ -676,6 +676,8 @@ namespace Ludots.Core.Engine
                 relationshipRuntime,
                 memberOfRelationshipTypeId,
                 relationshipCatalog.Stance);
+            var domainRoutedCollectionWriter = new DomainRoutedCollectionWriter(entityCollectionStore, controlDomainQuery);
+            var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
@@ -1215,6 +1217,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
+            SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
+            SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
             SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);

@@ -13,12 +13,15 @@ namespace Ludots.Core.Gameplay.Relationships
     public sealed class ControlDomainQuery
     {
         private const int MaxOwnershipDepth = 1024;
+        private const int DomainCacheDiscriminator = 1;
 
         private readonly World _world;
         private readonly RelationshipRuntime _relationships;
         private readonly OwnershipResolver _ownership;
         private readonly int _controlsTypeId;
         private readonly List<Entity> _ownedScratch = new(32);
+        private readonly EntityKeyedSoaTable<DomainCacheEntry> _domainCache = new(initialCapacity: 256);
+        private uint _domainCacheRevision;
         private Entity[] _grantScratch = new Entity[8];
 
         public ControlDomainQuery(
@@ -85,6 +88,33 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         /// <summary>
+        /// Collects the domain reps the controller can maintain: the controller rep itself plus every Controls
+        /// grant target that is a domain rep (carries <see cref="PlayerIdentity"/>). Units are never expanded,
+        /// which makes this the lightweight domain-list companion of <see cref="CollectControlled"/>.
+        /// Results are de-duplicated and truncated to the buffer length.
+        /// </summary>
+        public int CollectControlledDomains(Entity controllerRep, Span<Entity> buffer)
+        {
+            if (controllerRep == Entity.Null || buffer.IsEmpty || !_world.IsAlive(controllerRep))
+            {
+                return 0;
+            }
+
+            int written = AppendUnique(buffer, written: 0, controllerRep);
+            int grantCount = CollectGrants(controllerRep);
+            for (int i = 0; i < grantCount && written < buffer.Length; i++)
+            {
+                Entity target = _grantScratch[i];
+                if (_world.IsAlive(target) && _world.Has<PlayerIdentity>(target))
+                {
+                    written = AppendUnique(buffer, written, target);
+                }
+            }
+
+            return written;
+        }
+
+        /// <summary>
         /// Returns true when the target would appear in <see cref="CollectControlled"/> for the controller rep:
         /// it sits in the controller's owns subtree, is a directly granted non-rep entity, or sits in the owns
         /// subtree of a granted domain rep.
@@ -134,6 +164,8 @@ namespace Ludots.Core.Gameplay.Relationships
         /// <summary>
         /// Resolves the control domain rep for a target by walking the owns chain upward to the nearest entity
         /// carrying <see cref="PlayerIdentity"/> (a rep resolves to itself). Returns false when no domain exists.
+        /// Resolutions are cached per target and invalidated by <see cref="Revision"/> (DEC-2: routing must not
+        /// re-walk the graph per write on an unchanged topology).
         /// </summary>
         public bool TryResolveControlDomain(Entity target, out Entity domainRep)
         {
@@ -149,6 +181,24 @@ namespace Ludots.Core.Gameplay.Relationships
                 return true;
             }
 
+            uint revision = Revision;
+            if (revision != _domainCacheRevision)
+            {
+                // Any edge mutation invalidates every cached resolution; sweeping wholesale also
+                // reclaims slots held by destroyed entities.
+                _domainCache.Expire(currentTick: 1);
+                _domainCache.Compact();
+                _domainCacheRevision = revision;
+            }
+
+            EntityKeyedSoaKey cacheKey = EntityKeyedSoaKey.ForEntityAndDiscriminator(target, DomainCacheDiscriminator);
+            if (_domainCache.TryGet(cacheKey, currentTick: 0, out DomainCacheEntry cached, out _, out _))
+            {
+                domainRep = cached.DomainRep;
+                return cached.HasDomain;
+            }
+
+            bool hasDomain = false;
             Entity current = target;
             int guard = 0;
             while (_ownership.TryGetDirectOwner(current, out Entity owner))
@@ -156,7 +206,8 @@ namespace Ludots.Core.Gameplay.Relationships
                 if (_world.Has<PlayerIdentity>(owner))
                 {
                     domainRep = owner;
-                    return true;
+                    hasDomain = true;
+                    break;
                 }
 
                 current = owner;
@@ -167,7 +218,13 @@ namespace Ludots.Core.Gameplay.Relationships
                 }
             }
 
-            return false;
+            _domainCache.Upsert(
+                cacheKey,
+                new DomainCacheEntry { DomainRep = domainRep, HasDomain = hasDomain },
+                expiryTick: 1,
+                payloadChanged: true,
+                out _);
+            return hasDomain;
         }
 
         private int AppendOwnedSubtree(Entity owner, Span<Entity> buffer, int written)
@@ -194,6 +251,12 @@ namespace Ludots.Core.Gameplay.Relationships
 
                 Array.Resize(ref _grantScratch, _grantScratch.Length * 2);
             }
+        }
+
+        private struct DomainCacheEntry
+        {
+            public Entity DomainRep;
+            public bool HasDomain;
         }
 
         private static int AppendUnique(Span<Entity> buffer, int written, Entity candidate)

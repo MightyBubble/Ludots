@@ -233,6 +233,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
         public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
         public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");
+        public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
+        public static readonly ServiceKey<ControlPlaneView> ControlPlaneView = new("ControlPlaneView");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<InteractionContextStack> InteractionContextStack = new("InteractionContextStack");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
