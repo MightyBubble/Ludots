@@ -1,0 +1,477 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
+using Ludots.Core.EntityCollections;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Architecture
+{
+    /// <summary>
+    /// RFC-0065 (unified interaction/casting) §6.1 M9 statically assertable guardrails:
+    /// association/collection infrastructure stays scenario-neutral, collections never migrate
+    /// across control domains, the Interaction input layer carries no casting FSM, command intent
+    /// slot routing stays semantic (DEC-14), and RelationshipRuntime remains the single edge
+    /// mutation entry with a reverse index (no full-world scan fallback).
+    /// </summary>
+    [TestFixture]
+    public sealed class Rfc0065InteractionCastingBoundaryContractTests
+    {
+        private static readonly Regex ForbiddenScenarioWord = new(
+            @"\b(offline|mind_control|cinematic|hostile|enemy|garrison|attack)\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        [Test]
+        public void AssociationAndCollectionInfrastructure_ContainNoBusinessScenarioStringLiterals()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships"),
+                Path.Combine(repoRoot, "src", "Core", "EntityCollections")
+            };
+
+            var violations = new List<string>();
+            int scannedFiles = 0;
+            foreach (string root in roots)
+            {
+                Assert.That(Directory.Exists(root), Is.True, $"Missing RFC-0065 infrastructure directory {root}");
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    scannedFiles++;
+                    foreach ((int lineNumber, string literal) in ExtractStringLiterals(File.ReadAllText(file)))
+                    {
+                        Match match = ForbiddenScenarioWord.Match(literal);
+                        if (match.Success)
+                        {
+                            violations.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineNumber}: \"{match.Value}\" in literal \"{literal}\"");
+                        }
+                    }
+                }
+            }
+
+            Assert.That(scannedFiles, Is.GreaterThan(0), "RFC-0065 scenario-literal contract scanned no source files.");
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065 keeps Relationships/EntityCollections infrastructure scenario-neutral; " +
+                "offline/mind_control/cinematic/hostile/enemy/garrison/attack semantics belong in config/mod layers:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void CollectionControlPlaneTypes_ExposeNoCrossDomainMigrationApi()
+        {
+            Type[] types =
+            {
+                typeof(EntityCollectionStore),
+                typeof(DomainRoutedCollectionWriter),
+                typeof(ControlPlaneView)
+            };
+            string[] forbiddenNameTokens = { "Migrate", "Move", "Transfer", "Handback" };
+
+            var violations = new List<string>();
+            foreach (Type type in types)
+            {
+                MethodInfo[] methods = type.GetMethods(
+                    BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
+                foreach (MethodInfo method in methods)
+                {
+                    foreach (string token in EnumeratePascalCaseTokens(method.Name))
+                    {
+                        if (forbiddenNameTokens.Any(f => string.Equals(f, token, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            violations.Add($"{type.Name}.{method.Name} (token '{token}')");
+                        }
+                    }
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065 DEC-4: collections never migrate/move/transfer/hand back across control domains; " +
+                "each domain keeps its own rows and composite reads go through ControlPlaneView:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void InteractionInputLayer_ContainsNoCastingStateMachine()
+        {
+            string repoRoot = FindRepoRoot();
+            string interactionDir = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction");
+            Assert.That(Directory.Exists(interactionDir), Is.True, $"Missing RFC-0065 interaction directory {interactionDir}");
+
+            string[] forbidden =
+            {
+                "_isAiming",
+                "\"states\"",
+                "\"transitions\""
+            };
+
+            var violations = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(interactionDir, "*.cs", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065 keeps the Interaction input layer FSM-free: no aiming state fields and no " +
+                "states/transitions JSON schema; casting phases live in GAS, not in input code:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void CommandIntentSlotRouting_KeepsSemanticSelectorWhitelist()
+        {
+            string repoRoot = FindRepoRoot();
+            string registryPath = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "CommandIntentProfileRegistry.cs");
+            string unitTestPath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "CommandIntentProfileTests.cs");
+            Assert.That(File.Exists(registryPath), Is.True, $"Missing {registryPath}");
+            Assert.That(File.Exists(unitTestPath), Is.True, $"Missing {unitTestPath}");
+
+            string registry = File.ReadAllText(registryPath);
+            string unitTests = File.ReadAllText(unitTestPath);
+
+            Assert.Multiple(() =>
+            {
+                // DEC-14 whitelist: the only slot selectors the registry compiles are semantic ones.
+                Assert.That(registry, Does.Contain("\"byAbilityTag:\""),
+                    "CommandIntentProfileRegistry must whitelist the byAbilityTag: semantic slot selector.");
+                Assert.That(registry, Does.Contain("\"contextGroup:\""),
+                    "CommandIntentProfileRegistry must whitelist the contextGroup: semantic slot selector.");
+                Assert.That(registry, Does.Contain("is not a semantic selector"),
+                    "CommandIntentProfileRegistry must fail fast on non-semantic slot selectors (bare slot indices).");
+                Assert.That(registry, Does.Not.Contain("\"bySlotIndex"),
+                    "CommandIntentProfileRegistry must not grow a bySlotIndex selector prefix (DEC-14 forbids bare slot indices).");
+
+                // Behavior coverage lives in GasTests; keep the rejection unit test from silently disappearing.
+                Assert.That(unitTests, Does.Contain("bySlotIndex:0"),
+                    "GasTests CommandIntentProfileTests must keep the bySlotIndex:0 rejection case that exercises the DEC-14 throw.");
+            });
+        }
+
+        [Test]
+        public void RelationshipEdgeMutations_OnlyHappenInsideRelationshipRuntime()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods")
+            };
+            string[] explicitGenericMutations =
+            {
+                "AddRelationship<RelationshipEdgeSet>",
+                "SetRelationship<RelationshipEdgeSet>",
+                "RemoveRelationship<RelationshipEdgeSet>"
+            };
+            string[] inferredMutationCalls =
+            {
+                ".AddRelationship(",
+                ".SetRelationship(",
+                ".RemoveRelationship("
+            };
+
+            var violations = new List<string>();
+            foreach (string root in roots)
+            {
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    string relative = ToRepoRelativePath(repoRoot, file);
+                    if (relative.Contains("/obj/", StringComparison.OrdinalIgnoreCase) ||
+                        relative.Contains("/bin/", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    if (relative.Equals("src/Core/Gameplay/Relationships/RelationshipRuntime.cs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    string source = File.ReadAllText(file);
+                    foreach (string token in explicitGenericMutations)
+                    {
+                        if (source.Contains(token, StringComparison.Ordinal))
+                        {
+                            violations.Add($"{relative}: {token}");
+                        }
+                    }
+
+                    // Type inference evasion: touching RelationshipEdgeSet and calling the Arch edge
+                    // mutation extensions in the same file is a bypass of RelationshipRuntime.
+                    if (source.Contains("RelationshipEdgeSet", StringComparison.Ordinal))
+                    {
+                        foreach (string call in inferredMutationCalls)
+                        {
+                            if (source.Contains(call, StringComparison.Ordinal))
+                            {
+                                violations.Add($"{relative}: RelationshipEdgeSet + {call}");
+                            }
+                        }
+                    }
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065: RelationshipRuntime is the single edge mutation entry (it owns the reverse index); " +
+                "no other production code may add/set/remove RelationshipEdgeSet relationships directly:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void RelationshipRuntimeCollectIncoming_UsesReverseIndexWithoutWorldScan()
+        {
+            string repoRoot = FindRepoRoot();
+            string runtimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "RelationshipRuntime.cs");
+            Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
+
+            string source = File.ReadAllText(runtimePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(source, Does.Not.Contain("RelationshipQuery"),
+                    "The removed full-world RelationshipQuery fallback must not return to RelationshipRuntime.");
+                Assert.That(source, Does.Not.Contain("QueryDescription"),
+                    "RelationshipRuntime must not define world queries; incoming edges come from the reverse index.");
+                Assert.That(source, Does.Not.Contain("_world.Query"),
+                    "RelationshipRuntime must not iterate the world to collect incoming edges.");
+                Assert.That(source, Does.Contain("_reverseIndex.CopyIncoming"),
+                    "CollectIncoming must read the reverse adjacency index.");
+            });
+        }
+
+        /// <summary>
+        /// Yields the contents of double-quoted string literals (normal, verbatim, and interpolated)
+        /// with their starting line number, skipping // and /* */ comments and char literals so words
+        /// in comments or identifiers never trip the scenario-literal guard.
+        /// </summary>
+        private static IEnumerable<(int LineNumber, string Literal)> ExtractStringLiterals(string source)
+        {
+            var results = new List<(int, string)>();
+            var current = new StringBuilder();
+            int line = 1;
+            int literalStartLine = 0;
+            bool inLineComment = false;
+            bool inBlockComment = false;
+            bool inNormalString = false;
+            bool inVerbatimString = false;
+            bool inCharLiteral = false;
+
+            for (int i = 0; i < source.Length; i++)
+            {
+                char c = source[i];
+                char next = i + 1 < source.Length ? source[i + 1] : '\0';
+
+                if (c == '\n')
+                {
+                    line++;
+                    inLineComment = false;
+                    if (inNormalString || inCharLiteral)
+                    {
+                        // Unterminated on this line (defensive); reset state.
+                        inNormalString = false;
+                        inCharLiteral = false;
+                        current.Clear();
+                    }
+
+                    continue;
+                }
+
+                if (inLineComment)
+                {
+                    continue;
+                }
+
+                if (inBlockComment)
+                {
+                    if (c == '*' && next == '/')
+                    {
+                        inBlockComment = false;
+                        i++;
+                    }
+
+                    continue;
+                }
+
+                if (inCharLiteral)
+                {
+                    if (c == '\\')
+                    {
+                        i++;
+                    }
+                    else if (c == '\'')
+                    {
+                        inCharLiteral = false;
+                    }
+
+                    continue;
+                }
+
+                if (inNormalString)
+                {
+                    if (c == '\\')
+                    {
+                        current.Append(c);
+                        if (next != '\0')
+                        {
+                            current.Append(next);
+                            i++;
+                        }
+                    }
+                    else if (c == '"')
+                    {
+                        inNormalString = false;
+                        results.Add((literalStartLine, current.ToString()));
+                        current.Clear();
+                    }
+                    else
+                    {
+                        current.Append(c);
+                    }
+
+                    continue;
+                }
+
+                if (inVerbatimString)
+                {
+                    if (c == '"' && next == '"')
+                    {
+                        current.Append('"');
+                        i++;
+                    }
+                    else if (c == '"')
+                    {
+                        inVerbatimString = false;
+                        results.Add((literalStartLine, current.ToString()));
+                        current.Clear();
+                    }
+                    else
+                    {
+                        current.Append(c);
+                    }
+
+                    continue;
+                }
+
+                if (c == '/' && next == '/')
+                {
+                    inLineComment = true;
+                    i++;
+                    continue;
+                }
+
+                if (c == '/' && next == '*')
+                {
+                    inBlockComment = true;
+                    i++;
+                    continue;
+                }
+
+                if (c == '\'')
+                {
+                    inCharLiteral = true;
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    // Consume optional @/$ prefixes already passed; detect verbatim by looking back.
+                    bool verbatim = false;
+                    for (int back = i - 1; back >= 0 && back >= i - 2; back--)
+                    {
+                        char p = source[back];
+                        if (p == '@')
+                        {
+                            verbatim = true;
+                        }
+                        else if (p != '$')
+                        {
+                            break;
+                        }
+                    }
+
+                    literalStartLine = line;
+                    if (verbatim)
+                    {
+                        inVerbatimString = true;
+                    }
+                    else
+                    {
+                        inNormalString = true;
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        private static IEnumerable<string> EnumeratePascalCaseTokens(string name)
+        {
+            int start = 0;
+            for (int i = 1; i <= name.Length; i++)
+            {
+                if (i == name.Length || (char.IsUpper(name[i]) && !char.IsUpper(name[i - 1])))
+                {
+                    yield return name[start..i];
+                    start = i;
+                }
+            }
+        }
+
+        private static void AppendForbiddenSourceTokens(
+            string repoRoot,
+            string file,
+            IReadOnlyList<string> forbidden,
+            List<string> hits)
+        {
+            string[] lines = File.ReadAllLines(file);
+            for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+            {
+                string line = lines[lineIndex];
+                for (int tokenIndex = 0; tokenIndex < forbidden.Count; tokenIndex++)
+                {
+                    if (line.Contains(forbidden[tokenIndex], StringComparison.Ordinal))
+                    {
+                        hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {forbidden[tokenIndex]}: {line.Trim()}");
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static string FindRepoRoot()
+        {
+            var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            while (current != null)
+            {
+                var candidate = Path.Combine(current.FullName, "src", "Core", "Ludots.Core.csproj");
+                if (File.Exists(candidate))
+                {
+                    return current.FullName;
+                }
+
+                current = current.Parent;
+            }
+
+            throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
+        }
+
+        private static string ToRepoRelativePath(string repoRoot, string file)
+        {
+            return Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+        }
+    }
+}
