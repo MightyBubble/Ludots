@@ -36,7 +36,8 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 [L5 Filter]      FilterProfile（graph/condition DSL，association query）→ filtered
 [L6 Collection]  CollectionWrite → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
 [L7 View/Panel]  EntityView profile + PanelRouter + AggregationProfile → HUD/面板投影
-[L8 CastFlow]    CastFlowProfile（idle→charging→aiming→committed 状态机）+ ClientCastPreference
+[L8 Commit]      CastCommitProfile（激活 ops：pushFrame/popFrame/submitOrder）+ ClientCastPreference
+                 —— 无状态机：client 侧状态 = 栈上 frame，sim 侧状态 = exec 实体 tag（DEC-13）
 [L9 Dispatch]    CastDispatchProfile（selector/scorer/router）→ per-actor Order（shared order id）
 [L10 Order]      OrderQueue（唯一 intake）→ OrderBuffer → AbilityExec / MassNav ingestion
 [L∥ Performer]   只读 collection revision + provenance + catalog → marker/相位（本地/队友/裁判）
@@ -68,7 +69,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | Cast Family（alias/catalog） | 「施法方式/语义同类」的跨模板聚合键（炮车蓄力炮 ≈ 强化陆战队蓄力炮） | 拟新增 ability catalog 字段 |
 | AggregationProfile | 多选时面板聚合规则（byFamily / byTemplate / byAbilityId / flat） | 拟新增 |
 | PanelRouter | input intent（Q/W/E…）→ 当前聚合视图第 N 格 → 逐 entity `(entity, slotIndex)` 绑定集 | 拟新增 |
-| CastFlowProfile | 多段施法输入状态机（press/release/confirm/cancel 迁移），取代 `InteractionModeType` 捆绑 | 拟新增 |
+| CastCommitProfile | 施法提交绑定：激活时执行的 op 序列（立即提交 / push targeting frame）+ frame 内 action→op 映射；**无 states/transitions**，取代 `InteractionModeType` 捆绑 | 拟新增 |
 | ClientCastPreference | 玩家施法偏好，scope 链 global → template → formset → slot | 拟新增 |
 | CastDispatchProfile | 复选施法的 selector（谁施法）/ scorer（排序，复用 UtilityAI）/ router（并发/顺序） | 拟新增 |
 | Order | 唯一执行入口 payload；`OrderQueue` 是唯一 intake | 已有 |
@@ -87,7 +88,9 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 6. **代理控制只增删 `controls` 边**：不迁移 collection、不改 `owns`、不写 unit 组件。
 7. **Collection namespace per playerRep entity**：禁止 cross-player merge，禁止 PlayerId 全局表。
 8. **Context Stack 只路由 key，不存实体列表**；frame 按 ownerToken 移除，不依赖裸 LIFO。
-9. **InputCast 与 Filter、Commit、Presentation 正交**：禁止再往 `InteractionModeType` 加值；新施法手感 = 新 CastFlowProfile 数据。
+9. **InputCast 与 Filter、Commit、Presentation 正交**：禁止再往 `InteractionModeType` 加值；新施法手感 = 新 CastCommitProfile 数据。
+9a. **零施法状态机**：Input 层不得持有任何施法 FSM / `_isAiming` 类字段 / states-transitions schema；client 侧唯一交互状态 = InteractionContextStack 上的 frame，sim 侧唯一施法进度 = exec 实体上的 tag + attribute（DEC-13）。
+9b. **Performer 的 casting 表现只消费通用事件**：order 生命周期、ability exec / effect 生命周期、attribute / tag 变化、collection 成员与 revision、entity 生命周期——零 aim/cast 专用事件种类；`AbilityAimBegun/Updated/Ended/SlotAdvanced` 事件退役（DEC-13）。
 10. **Performer 只读**：collection revision + provenance + catalog；不写 collection、不改 association。
 11. **裁判/观战走 KnowledgeProjection grant**：禁止 RefereeSelectionService、禁止复制 collection。
 12. **面板是投影不是控制器**：PanelRouter 单向消费 EntityView/聚合结果；UI 不得反向触发 input action。
@@ -136,7 +139,7 @@ DEC-4 的域路由让 RFC-0064 方案 A 的写时快照大幅简化，且陈旧�
 
 ### DEC-6 Context frame 带 ownerToken，支持并发 exec
 
-frame 字段含 `ownerToken`（ability exec 实例 entity / system token）。移除按 token，不按栈顶；实体死亡 / exec abort 由 lifecycle 钩子强制回收其全部 frame。多个并发 PendingConfirm exec 各持 frame，`activeCollectionKey` 取「最后激活」的 frame，Tab 循环可在并发 frame 间切换（数据驱动，见 P6）。
+frame 字段含 `ownerToken`（ability exec 实例 entity / system token）。移除按 token，不按栈顶；实体死亡 / exec abort 由 lifecycle 钩子强制回收其全部 frame。多个并发等待确认（tag）的 exec 各持 frame，`activeCollectionKey` 取「最后激活」的 frame，Tab 循环可在并发 frame 间切换（数据驱动，见 P6）。
 
 ### DEC-7 InteractionContextStack 与 IMC 联动
 
@@ -158,7 +161,7 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 
 本 Epic 新引入的所有可扩展点遵循同一模式（对齐 `SystemFactoryRegistry` / graph op 先例）：
 
-- `CastFlowProfile.transitions[].actions[]` 的动作（beginChargeTimer / showIndicator / writeChargeToPayload / submit…）是 **castflow op registry** 注册项（复用 graph op handler 模式），mod 可注册新 op；示例里的动词只是内置 op 的 id，不是 Core enum。
+- `CastCommitProfile` 的 op（pushFrame / popFrame / submitOrder / writeCollection…）是 **interaction op registry** 注册项（复用 graph op handler 模式）——注意这些是**基建原语**（栈操作、order 提交），不是施法语义动词；"cancel" 不是 Core 概念，只是 mod 数据里某个 input action 映射到 `popFrame` op。
 - `CastDispatchProfile` 的 `selector.kind` / `scorer.kind` / `router.kind` 同理为 registry 注册项；`advanceOn` 是事件 key（registry id），不是硬编码字符串分支。
 - `FilterProfile` / `AssociationControlProfile` 的谓词复用现有 condition/graph DSL，不新造谓词 enum。
 
@@ -176,6 +179,30 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 | 4 | `InlineConditionKind.SourceIsLocalPlayer` 写死 GlobalContext LocalPlayerEntity；WorldHud audience 只取单一 local viewer | 多 viewer（裁判为独立 client anchor 时可行；同进程多 viewport 明确列为非目标） | PROV-5 备注 |
 
 **明确不在本 Epic 修的封闭点**（记录为已知边界，避免范围膨胀）：`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` 封闭 enum、`InlineConditionKind` 不可 mod 注册（复杂条件一律走 graph）、event payload 固定槽。这些不阻塞本 Epic 的全部 UAT。
+
+### DEC-13 零施法状态机：state = frame（client）+ tag（sim），不引入第三个状态概念
+
+（本决策取代早期草案的 `CastFlowProfile` FSM——states/transitions 是在 Input 层再造一套平行状态机，方向错误。）
+
+**权衡分析**（tag 够不够用）：
+
+| 方案 | 代价 | 结论 |
+|------|------|------|
+| Input 层 FSM（早期草案） | 引入第三个状态概念；必须自建多层叠加、冲突仲裁、打断语义——而这些 GAS 的 tag/effect/exec 体系**已经全部拥有**（tag requirement/immunity、effect 打断、exec abort）；且 client FSM 计时（如蓄力秒数）破坏确定性 | **废弃** |
+| 纯 tag + 现有基建 | 失去显式 transition 表的穷举校验 → 用加载期 fail-fast 校验补（ability 声明 follow-up 输入则必须有 exec lifecycle 契约）；失去 transition guard → guard 本来就该是 graph condition（现有模式） | **采用** |
+
+**结论模型**——所谓"施法状态"拆解后只剩两个已有载体，不需要任何新概念：
+
+1. **Client 侧**：唯一交互状态 = `InteractionContextStack` 上有没有某个 frame。「瞄准中」= targeting frame 在栈上；「取消瞄准」= frame 被 pop。frame 的 IMC 声明哪个 input action 映射到哪个 op（`submitOrder` / `popFrame`）——"confirm"/"cancel" 只是 mod 数据里的 action id，Core 无此语义。**不存在 idle→charging→aiming 的 FSM**；frame 的存在性本身就是全部状态。
+2. **Sim 侧**：施法进度的 SSOT = ability exec 实例实体上的 **tag + attribute/blackboard**（`exec.awaiting_followup`、蓄力量 attribute），由 exec graph / effect 施加与移除。多段（加里奥 W 两段）、打断（眩晕 abort exec）、冲突（互斥 tag）、蓄力（开始/提交两条 order 之间的 sim tick 差）全部落在 **GAS 已有仲裁体系**内，Input 层零参与。
+3. **蓄力确定性红利**：早期草案 `f0=chargeSeconds` 用 client 计时——错。正确：press 提交 begin order，release 提交 commit order，蓄力量由 exec 在 sim 内按 tick 累计（attribute），回放天然一致。
+4. **Performer 事件面收敛**：casting 表现只消费通用事件——order 生命周期、exec / effect 生命周期（现有 `CastCommitted` / `CastFailed` / `EffectApplied` / `EffectActivated`）、`TagEffectiveChanged`、`AttributeValueChanged`、`EntityCollectionMemberAdded/Removed`、entity 生命周期。**`AbilityAimBegun/Updated/Ended/SlotAdvanced` 四个专用事件种类退役**：瞄准指示器 = performer 规则监听 targeting collection（`collection.ability.aim.*` 只是普通 collection key，保留为 mod 数据）与 exec tag 变化；`AbilityAimPresentationRuntime` / `AbilityAimSessionState` 随之退役。
+5. **两类 targeting 会话，统一为 frame**：
+   - **pre-order（client-local）**：LoL 式瞄准预览。press 执行 CastCommitProfile 的 op：push targeting frame（引用 InteractionContextProfile）；后续 pointer cast 写 frame 的 collection（indicator 由 performer 从 collection 渲染）；confirm action → `submitOrder` + `popFrame`。sim 对"瞄准"零感知，取消不产生任何 order。
+   - **post-order（sim-driven）**：超级武器指定单位、二段确认。order 已提交，exec 进入等待，由 CTX-6 的 exec lifecycle push frame（contextEntity = exec 实体），follow-up 输入经 frame 翻译为后续 order；exec abort（任何原因）→ lifecycle pop frame，表现随 tag/collection 事件自动收敛。
+   两类共用同一 frame 结构与同一 op 词汇，只是 push 的发起者不同（client op vs exec lifecycle）。
+
+附注：`MovePathBegun/Updated/Ended` 与 `SelectionMemberAdded/Removed` 同属历史专用事件面，前者随 #519 / move-path collection 化清理，后者已在 Selection 退役范围（ORD-6）内；本 Epic 不再新增任何专用 presentation 事件种类。
 
 ---
 
@@ -246,37 +273,61 @@ profile 是一个纯粹的谓词→边操作规则：`when`（tag / relationship
 
 没有 handback / policy 字段：边消失后的一切行为由 DEC-4 的域路由 + ControlPlaneView 涌现，profile 不需要也不允许描述「之后集合怎么办」。
 
-### 5.5 CastFlowProfile（多段施法状态机）
+### 5.5 CastCommitProfile（施法提交绑定——无状态机，见 DEC-13）
+
+profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push 了 targeting frame，frame 内的 action→op 映射是什么。没有 states、没有 transitions。
 
 ```json
 {
-  "id": "castflow.charge_release",
-  "states": ["idle", "charging", "committed"],
-  "transitions": [
-    { "from": "idle", "on": "press", "to": "charging", "actions": ["beginChargeTimer", "showIndicator"] },
-    { "from": "charging", "on": "release", "to": "committed", "actions": ["writeChargeToPayload", "submit"] },
-    { "from": "charging", "on": "cancel", "to": "idle", "actions": ["hideIndicator"] }
-  ],
-  "payloadRules": { "spatial": "cursorWorld", "f0": "chargeSeconds" }
+  "id": "cast.commit.quick",
+  "onActivate": [ { "op": "submitOrder", "payload": { "spatial": "cursorWorld" } } ]
 }
 ```
 
-`castflow.quick`（press 即 submit）、`castflow.aim_confirm`（press 进瞄准、confirm 提交）、`castflow.two_stage`（加里奥 W 式两段）同为数据；`InteractionModeType` 的六个值全部退役为等价 profile。
+```json
+{
+  "id": "cast.commit.aim_confirm",
+  "onActivate": [ { "op": "pushFrame", "contextProfileId": "ctx.targeting.ground" } ],
+  "frameActions": {
+    "Confirm": [ { "op": "submitOrder", "payload": { "spatial": "framePointer" } }, { "op": "popFrame" } ],
+    "Back":    [ { "op": "popFrame" } ]
+  }
+}
+```
 
-`actions[]` 里的动词（`beginChargeTimer` / `showIndicator` / `submit`…）是 **castflow op registry 注册项 id**（复用 graph op handler 模式，DEC-11），mod 可注册新 op——不是 Core 封闭 enum。`payloadRules` 的取值源同理为 registry 注册的 value source。
+```json
+{
+  "id": "cast.commit.charge_release",
+  "onActivate": [
+    { "op": "submitOrder", "payload": { "i1": "phase.begin" } },
+    { "op": "pushFrame", "contextProfileId": "ctx.targeting.charge" }
+  ],
+  "frameActions": {
+    "Release": [ { "op": "submitOrder", "payload": { "i1": "phase.commit", "spatial": "framePointer" } }, { "op": "popFrame" } ]
+  }
+}
+```
+
+要点：
+
+- `op` 是 **interaction op registry 注册项**（DEC-11）：`pushFrame` / `popFrame` / `submitOrder` / `writeCollection`…——基建原语，不是施法语义。"Confirm"/"Back"/"Release" 是 mod 数据里的 input action id，Core 无 "aim"/"cancel" 概念。
+- **蓄力量不在 client**：begin/commit 两条 order 之间由 exec 在 sim 内按 tick 累计（DEC-13 #3），payload 里没有 `chargeSeconds`。
+- **多段技能不在这里表达**：二段/追加输入属于 sim（exec 等待 + tag + CTX-6 lifecycle push frame），profile 只管"这一次激活如何变成 order"。
+- 指示器、蓄力条等表现全部是 performer 监听 frame collection / exec tag / attribute 的通用事件（DEC-13 #4），profile 里没有任何 show/hide 表现指令。
+- `InteractionModeType` 六个值退役为等价 profile 数据组合。
 
 ### 5.6 ClientCastPreference（scope 链）
 
 ```json
 {
-  "global": { "castFlowId": "castflow.quick" },
-  "perTemplate": { "champion.xerath": { "castFlowId": "castflow.aim_confirm" } },
+  "global": { "castCommitId": "cast.commit.quick" },
+  "perTemplate": { "champion.xerath": { "castCommitId": "cast.commit.aim_confirm" } },
   "perFormSet": { "champion_skill_sandbox_jayce_forms/hammer": {} },
-  "perSlot": { "champion.xerath/2": { "castFlowId": "castflow.quick_with_indicator" } }
+  "perSlot": { "champion.xerath/2": { "castCommitId": "cast.commit.quick_with_indicator" } }
 }
 ```
 
-解析优先级：perSlot > perFormSet > perTemplate > global；mod 可声明某 slot `lockedCastFlowId` 禁止玩家覆盖。
+解析优先级：perSlot > perFormSet > perTemplate > global；mod 可声明某 slot `lockedCastCommitId` 禁止玩家覆盖。
 
 ### 5.7 AggregationProfile + ability catalog 字段
 
@@ -427,7 +478,7 @@ Feature: M2 技能域 context 与恢复 [showcase]
   Scenario: 超级武器进入/退出 confirm targets context
     Given ability "superweapon" 配置 ctx.ability.superweapon.confirm_targets
     And (P1Rep, collection.command.source) = [m01, m02]
-    When 玩家1 激活 superweapon 且 exec 进入 PendingConfirm
+    When 玩家1 激活 superweapon 且 exec 打上等待确认 tag（如 exec.awaiting_targets，mod 数据，DEC-13）
     Then InteractionContextStack 压入 frame(ownerToken = exec 实例)
     And 此时框选 [m05, m06] 写入 (P1Rep, collection.ability.superweapon.targets)
     And (P1Rep, collection.command.source) 仍 = [m01, m02]
@@ -541,21 +592,41 @@ Feature: M6 面板聚合 catalog（陆战队/炮车案例）
 ```
 
 ```gherkin
-Feature: M7 CastFlow 数据化（多段施法零 Core switch）
-  Scenario Outline: 同一 ability 换 castflow 只改数据
-    Given ability "charge_cannon" 绑定 <castflow>
+Feature: M7 施法提交零状态机（frame + tag 承载全部"状态"）
+  Scenario Outline: 同一 ability 换 commit profile 只改数据
+    Given ability "charge_cannon" 绑定 <commitProfile>
     When 玩家执行 <inputs>
-    Then 产生 <payload> 的 Order 且全程无 InteractionModeType 分支参与
+    Then 产生 <orders>，全程无 InteractionModeType 分支、无任何 FSM 结构参与
 
     Examples:
-      | castflow              | inputs            | payload                     |
-      | castflow.quick        | press             | spatial=cursorWorld          |
-      | castflow.charge_release | press,hold 1.2s,release | f0=1.2, spatial=cursorWorld |
-      | castflow.aim_confirm  | press,click(confirm) | spatial=confirmPoint      |
-      | castflow.two_stage    | press,press       | 阶段2 payload（两段各自提交） |
+      | commitProfile              | inputs                  | orders                                   |
+      | cast.commit.quick          | press                   | 1 条（spatial=cursorWorld）               |
+      | cast.commit.aim_confirm    | press, click(Confirm)   | 1 条（spatial=framePointer）              |
+      | cast.commit.charge_release | press, hold, release    | 2 条（phase.begin + phase.commit）        |
+
+  Scenario: 瞄准 = frame 在栈上，取消 = pop，无 "aim"/"cancel" Core 语义
+    Given cast.commit.aim_confirm 已 push targeting frame
+    Then 「瞄准中」没有任何布尔字段/枚举表达——它就是栈上的 frame 本身
+    And indicator 是 performer 监听 frame collection 成员事件渲染的
+    When 玩家触发映射到 popFrame 的 action（mod 数据里叫什么都行）
+    Then frame 弹出、indicator 随 collection 清空消失，sim 从未收到任何 order
+
+  Scenario: 蓄力量在 sim 内累计（确定性）
+    Given cast.commit.charge_release
+    When press 后第 N tick release
+    Then 蓄力量 = exec 从 begin order 到 commit order 的 sim tick 差累计的 attribute
+    And 回放同一 order 流得到 bit 级相同的蓄力量（client 帧率/延迟无关）
+
+  Scenario: 二段与打断全部落在 GAS 已有仲裁，Input 层零参与
+    Given 两段技能：第一条 order 后 exec 打上 exec.awaiting_followup tag 并经 lifecycle push frame
+    When 玩家再次 press（frame 将其翻译为 follow-up order）
+    Then exec 消费 followup、移除 tag、pop frame
+    When 另一场景中 exec 在等待期间被眩晕 effect abort
+    Then exec lifecycle pop frame，tag 移除，指示器随 TagEffectiveChanged / collection 事件自动消失
+    And 打断/冲突规则全部由 effect / tag requirement 表达，Input 层没有仲裁代码
 
   Scenario: 新增施法手感不改 Core
-    When mod 注册新的 castflow.triple_tap profile
+    When mod 注册新的 interaction op 并组合出 cast.commit.triple_tap profile
     Then 无需修改 src/Core/Input/**（ArchitectureTests 冻结该目录的 casting 分支逻辑）
 ```
 
@@ -563,7 +634,7 @@ Feature: M7 CastFlow 数据化（多段施法零 Core switch）
 Feature: M8 复选施法 Dispatch 策略
   Background:
     Given 玩家1 框选 5 个追猎（均有 blink，slot 一致）
-    And 目标点 T 已由 castflow 解析
+    And 目标点 T 已由 commit profile 解析
 
   Scenario: 集体 blink
     Given 该 slot 绑定 dispatch.all_together
@@ -601,15 +672,17 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | association/collection 基建零 "offline"/"mind_control"/"cinematic" 等业务场景字面量 |
       | 零 collection 跨域 copy/move API（不存在"归还"代码路径） |
       | DomainStanceQuery 零 "hostile"/"enemy" 字面分支（stance key 全部来自 catalog） |
-      | 本 Epic 新增 profile schema 零 Core-only 封闭 enum 分派（castflow op / dispatch kind / groupBy 均 registry 或表达式） |
+      | 本 Epic 新增 profile schema 零 Core-only 封闭 enum 分派（interaction op / dispatch kind / groupBy 均 registry 或表达式） |
       | Performer 规则零 viewerRole 业务角色枚举（viewer 语义全部拓扑谓词现算） |
+      | Input 层零施法 FSM：无 states/transitions schema、无 _isAiming 类字段（交互状态只在 InteractionContextStack） |
+      | PresentationEventKind 零 aim/cast 专用种类新增；AbilityAimBegun/Updated/Ended/SlotAdvanced 已退役 |
       | InteractionModeType 类型已删除或仅存于迁移 shim 白名单 |
 ```
 
 ```gherkin
 Feature: M10 确定性与回放
   # 确定性边界：Order 流是 sim 的唯一入口。
-  # 纯视图偏好（聚合/marker/palette）不参与 order 生成；施法偏好（castflow/dispatch）
+  # 纯视图偏好（聚合/marker/palette）不参与 order 生成；施法偏好（cast commit/dispatch）
   # 参与"raw input → order"的翻译，因此回放 SSOT 是 order 流（或 input+当时偏好快照），
   # 不是裸设备输入。
 
@@ -619,7 +692,7 @@ Feature: M10 确定性与回放
     Then 两端 sim 世界哈希完全一致（视图偏好只影响本地投影）
 
   Scenario: 施法偏好参与翻译，但翻译产物自包含
-    Given 玩家以 castflow.quick + dispatch.utility_nearest 录制一局
+    Given 玩家以 cast.commit.quick + dispatch.utility_nearest 录制一局
     When 以录制的 order 流回放
     Then sim 逐 tick 一致，且回放不需要读取任何 preference / context stack / 本地容器实体
     And 每条 Order payload 自包含目标集（或 (owner, collectionKey, revision) 引用）
@@ -634,8 +707,8 @@ Feature: M10 确定性与回放
 ```gherkin
 Feature: P1 全局快捷施法开关
   Scenario: 传统 → 快捷
-    Given 全局偏好 castFlow = castflow.aim_confirm（传统）
-    When 我在设置里改为 castflow.quick
+    Given 全局偏好 castCommit = cast.commit.aim_confirm（传统）
+    When 我在设置里改为 cast.commit.quick
     Then 所有未被更深 scope 覆盖的技能按键 press 即施法
     And 偏好持久化，重开客户端仍生效
 ```
@@ -652,7 +725,7 @@ Feature: P2 偏好 scope 覆盖链（LOL 式）
     Then xerath 的 slot2 快捷施法，其余 slot 传统施法
 
   Scenario: mod 锁定不可覆盖
-    Given mod 对 "superweapon" slot 声明 lockedCastFlowId = aim_confirm
+    Given mod 对 "superweapon" slot 声明 lockedCastCommitId = cast.commit.aim_confirm
     When 我尝试设置该 slot 为 quick
     Then 设置界面显示锁定，实际行为保持 aim_confirm
 ```
@@ -692,7 +765,7 @@ Feature: P6 context 下的选择习惯保留
     And 施法完成
     Then 我的主力部队选择原样还在，可直接右键行军
   Scenario: Tab 在并发待确认 exec 间循环
-    Given 两个单位各有一个 PendingConfirm 的技能 exec（两个 context frame 并存）
+    Given 两个单位的技能 exec 各自带等待确认 tag（两个 context frame 并存）
     When 我按 Tab
     Then activeCollectionKey 在两个技能目标 key 间循环切换，HUD 高亮当前 exec
 ```
@@ -742,7 +815,8 @@ CTX-1..CTX-10 按原文；修订：
 | ID | 修订 |
 |----|------|
 | CTX-1b | frame 增加 `ownerToken` + `inputContextId`；按 token 移除；lifecycle 回收钩子（DEC-6/7） |
-| CTX-7b | 明确产物 = CastFlowProfile registry + loader（§5.5），`InteractionModeType` 退役映射表 |
+| CTX-7b | 明确产物 = CastCommitProfile + interaction op registry + loader（§5.5，DEC-13：无 FSM schema），`InteractionModeType` 退役映射表 |
+| CTX-7c | 退役 `AbilityAimBegun/Updated/Ended/SlotAdvanced` 事件种类与 `AbilityAimPresentationRuntime` / `AbilityAimSessionState`；indicator 迁 performer 通用事件（tag / collection / attribute，DEC-13 #4） |
 | CTX-8b | ClientCastPreference scope 链 schema（§5.6）+ mod lock 语义 |
 
 ### Phase 3 — Control Plane（继承 CTRL，修订）
