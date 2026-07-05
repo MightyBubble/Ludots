@@ -25,6 +25,7 @@
   ],
   "Entities": [
     {
+      "InstanceId": "mass_navigation_local_player",
       "Template": "mass_navigation_local_player"
     },
     {
@@ -132,5 +133,11 @@
         }
       }
     }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "mass_navigation_local_player" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "mass_navigation_local_player" }
   ]
 }

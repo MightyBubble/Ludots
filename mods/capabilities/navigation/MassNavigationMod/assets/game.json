@@ -1,5 +1,6 @@
 {
   "startupMapId": "mass_navigation",
+  "startupSelectedPlayerId": 1,
   "windowTitle": "Ludots Engine - Mass Navigation",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,

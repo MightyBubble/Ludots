@@ -519,6 +519,12 @@ public sealed class MassNavigationSimulationRuntime
         return true;
     }
 
+    public bool CanCommandSourcesForLocalPlayer(World world, int localPlayerId)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        return CanLocalPlayerCommandSources(world, CommandSourceEntities, localPlayerId);
+    }
+
     private static bool CanLocalPlayerCommandSources(World world, ReadOnlySpan<Entity> commandSources, int localPlayerId)
     {
         int liveCommandableActors = 0;

@@ -11,6 +11,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -523,7 +524,7 @@ namespace Ludots.Tests.Presentation
             AssertPublicMethod(typeof(FormationCapabilityShowcaseRuntime), nameof(FormationCapabilityShowcaseRuntime.HandleMapUnloadedAsync));
 
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -544,7 +545,7 @@ namespace Ludots.Tests.Presentation
             AssertPublicMethod(typeof(MassNavigationFormationFollowerSystem), nameof(MassNavigationFormationFollowerSystem.GetSyncStateCountForTests));
 
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -791,7 +792,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilitySoldierBinding_UsesCoreOwnedMassNavigationRuntimeBinding()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -822,7 +823,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityShowcaseObstacleOverlayPlans_AreBuiltAfterMassNavigationLoadsObstacleSsot()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -854,7 +855,7 @@ namespace Ludots.Tests.Presentation
                 "Obstacle overlay values come from FormationCapabilityShowcaseConfig and MassNavigation obstacle radius.");
 
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -871,7 +872,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityShowcaseObstacleOverlayPresentation_UsesConfiguredWidthAndFormalStableId()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -888,7 +889,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityShowcaseFormationOutlines_UseRoadSplinesSampledFromVisualHeightmap()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -949,7 +950,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityOutlinePresentation_IgnoresDestroyPendingFormationAgents()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -982,7 +983,7 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationOrderIngestion_ConsumesOnlyControllableAgents()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -1055,7 +1056,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityMapUnload_DestroysAllTrackedMassNavigationAgents()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -1924,7 +1925,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_PlayerSelectionCancelMarkersAndMoveOutlines_WorkThroughFormalRuntimeChains()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -1998,7 +1999,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_MoveOrdersPreserveFacingAndRotateOrdersDriveSoldierSlots()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2075,7 +2076,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_NonLocalPlayerOwnerFormationSelectionRejectsRightClickMoveOrder()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2143,7 +2144,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_BoxSelectionOnlySelectsLocalCommandableFormations()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2179,7 +2180,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_MixedLocalAndNonLocalSelectionRejectsRotateForWholeSelection()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2225,7 +2226,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_SolverWindowRebaseDoesNotCarrySoldiersAwayFromFormation()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2259,7 +2260,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_MultipleFormationMoveOrdersPreserveRelativeFormationSpacing()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2283,9 +2284,10 @@ namespace Ludots.Tests.Presentation
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             TickUntil(
                 engine,
-                () => CountActiveMoveOrders(engine, simulation) == formations.Length,
+                () => CountActiveMoveOrders(engine, simulation) == formations.Length &&
+                      AllFormationOrderTargetsAssigned(engine, simulation, formations),
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Multi-formation right-click should submit one shared MassNavigation order per selected formation.");
+                failureMessage: "Multi-formation right-click should submit and ingest one shared MassNavigation order per selected formation.");
 
             float orderMinDistanceSq = MinPairDistanceSq(engine, simulation, formations, useOrderTargets: true);
             Assert.That(
@@ -2298,7 +2300,7 @@ namespace Ludots.Tests.Presentation
         public void FormationCapabilityPlayable_ResetClearsSelectedMarkersAndDestroysTrackedAgentsThroughPresentationLifecycle()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
-            engine.LoadMap("formation_capability_showcase");
+            LoadFormationCapabilityMap(engine);
             Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
@@ -2428,7 +2430,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(create.ScopeTag, Is.EqualTo(42));
                 commands.Clear();
 
-                Assert.That(selection.ClearCommandSources(owner, SelectionSetKeys.LivePrimary), Is.True);
+                Assert.That(selection.ClearSelection(owner, SelectionSetKeys.LivePrimary), Is.True);
                 selectionEvents.Update(0.016f);
                 rules.Update(0.016f);
                 Assert.That(commands.Count, Is.EqualTo(1));
@@ -2541,7 +2543,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationModEntry_IsDataOnlyAndDoesNotOwnRuntimeOrPanelLifecycle()
+        public void MassNavigationModEntry_OwnsOnlyLocalInputBridgeOutsideCoreRuntime()
         {
             string modRoot = Path.Combine(FindRepoRoot(), "mods", "capabilities", "navigation", "MassNavigationMod");
             JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
@@ -2549,13 +2551,15 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationMod mod.json must author dependencies.");
             string[] projectReferences = ReadProjectReferenceIncludes(Path.Combine(modRoot, "MassNavigationMod.csproj"));
 
-            Assert.That(RequireString(manifest, "description"), Does.Contain("Data-only"));
+            Assert.That(RequireString(manifest, "description"), Does.Contain("local input bridge"));
             Assert.That(dependencies.ContainsKey("LudotsCoreMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("CoreInputMod"), Is.True);
             Assert.That(dependencies.ContainsKey("CameraProfilesMod"), Is.False);
-            Assert.That(projectReferences, Has.Exactly(1).Contain("Ludots.Core.csproj"));
-            Assert.That(projectReferences.Any(reference => reference.Contains("CoreInputMod", StringComparison.Ordinal)), Is.False);
+            Assert.That(projectReferences.Any(reference => reference.Contains("Ludots.Core.csproj", StringComparison.Ordinal)), Is.True);
+            Assert.That(projectReferences.Any(reference => reference.Contains("CoreInputMod", StringComparison.Ordinal)), Is.True);
             Assert.That(Directory.Exists(Path.Combine(modRoot, "UI")), Is.False);
-            Assert.That(Directory.Exists(Path.Combine(modRoot, "Systems")), Is.False);
+            Assert.That(File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationLocalOrderSourceSystem.cs")), Is.True);
+            Assert.That(File.Exists(Path.Combine(modRoot, "Triggers", "InstallMassNavigationInputOnGameStartTrigger.cs")), Is.True);
         }
 
         [Test]
@@ -2823,6 +2827,11 @@ namespace Ludots.Tests.Presentation
 
             engine.Start();
             return engine;
+        }
+
+        private static void LoadFormationCapabilityMap(GameEngine engine)
+        {
+            engine.LoadEntryMap("formation_capability_showcase");
         }
 
         private static void EnsureFormationCapabilityEntryAssemblyPreloaded()
@@ -3411,6 +3420,16 @@ namespace Ludots.Tests.Presentation
                 throw new InvalidOperationException("Could not bind LivePrimary as current Formation Capability selection view.");
             }
 
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
+            CommandSourceCollectionRuntime.Replace(
+                collections,
+                owner,
+                formations,
+                EntityCollectionSourceKind.Debug,
+                "Formation Capability test command source",
+                $"{formations.Length} command entities");
+
             Tick(engine);
         }
 
@@ -3481,6 +3500,24 @@ namespace Ludots.Tests.Presentation
             }
 
             return simulation.GetAgentWorldPositionCm(agentIndex.Value);
+        }
+
+        private static bool AllFormationOrderTargetsAssigned(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            ReadOnlySpan<Entity> formations)
+        {
+            for (int i = 0; i < formations.Length; i++)
+            {
+                Entity formation = formations[i];
+                if (!engine.World.TryGet(formation, out MassNavigationAgentIndex agentIndex) ||
+                    !simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(agentIndex.Value, out _, out _))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static Vector2 AgentWorldOffset(

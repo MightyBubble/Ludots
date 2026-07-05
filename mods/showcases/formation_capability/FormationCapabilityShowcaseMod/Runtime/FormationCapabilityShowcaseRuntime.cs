@@ -8,6 +8,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -1021,6 +1022,14 @@ internal sealed class FormationCapabilityShowcaseRuntime
             throw new InvalidOperationException("Formation Capability showcase initial selection view does not resolve to LivePrimary.");
         }
 
+        WriteCommandSource(
+            engine,
+            owner,
+            _initialSelectionScratch.AsSpan(0, 1),
+            EntityCollectionSourceKind.SelectionView,
+            "Formation Capability initial command source",
+            $"Initial selection | {config.InitialSelectionFormationId}");
+
         _initialSelectionApplied = true;
     }
 
@@ -1222,6 +1231,13 @@ internal sealed class FormationCapabilityShowcaseRuntime
         selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
         selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
         selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
+        WriteCommandSource(
+            engine,
+            owner,
+            ReadOnlySpan<Entity>.Empty,
+            EntityCollectionSourceKind.SelectionView,
+            "Formation Capability command source",
+            "Selection cleared");
     }
 
     private static Entity ResolveLocalSelectionOwner(GameEngine engine)
@@ -1251,6 +1267,25 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         return owner.PlayerId;
+    }
+
+    private static void WriteCommandSource(
+        GameEngine engine,
+        Entity owner,
+        ReadOnlySpan<Entity> entities,
+        EntityCollectionSourceKind sourceKind,
+        string title,
+        string summary)
+    {
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before mutating command sources.");
+        CommandSourceCollectionRuntime.Replace(
+            collections,
+            owner,
+            entities,
+            sourceKind,
+            title,
+            summary);
     }
 
     private readonly struct FormationCapabilityShowcaseFormationPlan

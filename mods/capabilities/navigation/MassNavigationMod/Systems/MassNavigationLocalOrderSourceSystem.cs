@@ -164,6 +164,13 @@ internal sealed class MassNavigationLocalOrderSourceSystem : ISystem<float>
             return;
         }
 
+        int localPlayerId = ResolveLocalPlayerId();
+        if (!simulation.CanCommandSourcesForLocalPlayer(_engine.World, localPlayerId))
+        {
+            simulation.RejectCommandUnauthorizedCommandSource(worldXCm, worldYCm);
+            return;
+        }
+
         value.Args.I0 = (int)simulation.FormationMode;
         value.Args.F0 = simulation.NavGroupRuntime.CommandSourceRotationRadians;
         value.Args.Selection = new OrderSelectionReference { Container = Entity.Null };
@@ -190,12 +197,12 @@ internal sealed class MassNavigationLocalOrderSourceSystem : ISystem<float>
             localObj is not Entity local ||
             !_engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("MassNavigation local order source requires LocalPlayerEntity before rotating formations.");
+            throw new InvalidOperationException("MassNavigation local order source requires LocalPlayerEntity before commanding formations.");
         }
 
         if (!_engine.World.TryGet(local, out PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigation local order source LocalPlayerEntity must author PlayerOwner before rotating formations.");
+            throw new InvalidOperationException("MassNavigation local order source LocalPlayerEntity must author PlayerOwner before commanding formations.");
         }
 
         return owner.PlayerId;

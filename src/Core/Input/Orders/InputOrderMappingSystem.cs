@@ -1399,7 +1399,14 @@ namespace Ludots.Core.Input.Orders
 
             if (_selectedActorsScratch.Count <= 1)
             {
-                _orderSubmitHandler!(in order);
+                var selectedOrder = order;
+                Entity selectedActor = _selectedActorsScratch[0];
+                if (selectedActor != default)
+                {
+                    selectedOrder.Actor = selectedActor;
+                }
+
+                _orderSubmitHandler!(in selectedOrder);
                 return;
             }
 
