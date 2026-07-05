@@ -48,7 +48,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
         else
         {
-            _simulation.NavGroupRuntime.RefreshSelectedRotation(_engine.World, _simulation.AgentState, _simulation.SelectedEntities);
+            _simulation.NavGroupRuntime.RefreshCommandSourceRotation(_engine.World, _simulation.AgentState, _simulation.CommandSourceEntities);
         }
     }
 
@@ -67,7 +67,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
     private void ResetRuntimeState()
     {
-        ClearSelection();
+        ClearCommandSources();
         RemovePendingScenarioSpawns();
         _simulation.ResetRuntimeState(_engine.World);
     }
@@ -82,7 +82,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
     }
 
-    private void ClearSelection()
+    private void ClearCommandSources()
     {
         EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
         if (collections == null)

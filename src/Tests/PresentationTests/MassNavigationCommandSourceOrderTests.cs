@@ -38,13 +38,13 @@ namespace Ludots.Tests.Presentation
             using TestContextScope context = CreateContext();
             Vector2 target = new(1200f, 1400f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
             Assert.That(context.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
             Assert.That(context.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandSourceCount, Is.EqualTo(0));
 
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
@@ -56,7 +56,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.HasActive, Is.True);
@@ -68,7 +68,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
+            Assert.That(context.Simulation.LastCommandSourceCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, BlockingOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.HasActive, Is.True);
@@ -97,7 +97,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, MoveOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).ActiveOrder.Order.OrderId, Is.EqualTo(9001));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
@@ -116,7 +116,7 @@ namespace Ludots.Tests.Presentation
             context.SetActiveOrder(context.Agent, MoveOrderTypeId);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
             Assert.That(orders.ActiveOrder.Order.OrderId, Is.EqualTo(9001));
@@ -133,11 +133,11 @@ namespace Ludots.Tests.Presentation
             context.Select(context.EnemyAgent);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandSourceCount, Is.EqualTo(0));
             Assert.That(context.World.Get<OrderBuffer>(context.EnemyAgent).HasActive, Is.False);
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
@@ -150,11 +150,11 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
             Vector2 target = new(1600f, 1800f);
 
-            context.SubmitMoveCommand(target);
+            context.SubmitCommandSourceMoveOrder(target);
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandSourceCount, Is.EqualTo(0));
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
 
@@ -165,7 +165,7 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
+                () => context.SubmitCommandSourceMoveOrder(new Vector2(1600f, 1800f)))!;
 
             Assert.That(ex.Message, Does.Contain(MassNavigationOrderKeys.Move));
             Assert.That(ex.Message, Does.Not.Contain(RejectedMoveToOrderKey));
@@ -179,18 +179,18 @@ namespace Ludots.Tests.Presentation
             context.Select(context.Agent);
             context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
 
-            MassNavigationMoveCommandResult result = context.SubmitMoveCommand(new Vector2(1600f, 1800f));
+            MassNavigationMoveCommandResult result = context.SubmitCommandSourceMoveOrder(new Vector2(1600f, 1800f));
 
             Assert.That(result, Is.EqualTo(MassNavigationMoveCommandResult.Submitted));
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.True);
         }
 
         [Test]
-        public void CommandSourceSync_RemovedCommandSourceClearsMassNavigationSelection()
+        public void CommandSourceSync_RemovedCommandSourceClearsMassNavigationCommandSources()
         {
             using TestContextScope context = CreateContext();
             context.Select(context.Agent);
-            Assert.That(context.Simulation.SelectedCount, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandSourceCount, Is.EqualTo(1));
 
             context.Collections.Remove(context.LocalPlayer, EntityCollectionKeys.CommandSource);
 
@@ -201,7 +201,7 @@ namespace Ludots.Tests.Presentation
                 context.Simulation);
 
             Assert.That(changed, Is.True);
-            Assert.That(context.Simulation.SelectedCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.CommandSourceCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -239,11 +239,11 @@ namespace Ludots.Tests.Presentation
             var simulation = new MassNavigationSimulationRuntime(config);
 
             InvalidOperationException scratchEx = Assert.Throws<InvalidOperationException>(
-                () => simulation.EnsureSelectionScratch(2))!;
+                () => simulation.EnsureCommandSourceScratch(2))!;
             Assert.That(scratchEx.Message, Does.Contain("scenarioRuntime.initialSelectionScratchCapacity"));
 
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
-                () => simulation.SetSelection(new[] { Entity.Null, Entity.Null }, revision: 1))!;
+                () => simulation.SetCommandSources(new[] { Entity.Null, Entity.Null }, revision: 1))!;
             Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
         }
 
@@ -579,9 +579,9 @@ namespace Ludots.Tests.Presentation
             public OrderBufferSystem OrderBufferSystem { get; }
             public OrderTypeRegistry OrderTypeRegistry { get; }
 
-            public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
+            public MassNavigationMoveCommandResult SubmitCommandSourceMoveOrder(Vector2 centerCm)
             {
-                MassNavigationMoveCommandResult result = Simulation.SubmitMoveCommand(
+                MassNavigationMoveCommandResult result = Simulation.SubmitCommandSourceMoveOrder(
                     World,
                     OrderQueue,
                     OrderTypeRegistry,

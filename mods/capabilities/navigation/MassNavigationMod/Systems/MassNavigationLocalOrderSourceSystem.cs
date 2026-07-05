@@ -138,7 +138,7 @@ internal sealed class MassNavigationLocalOrderSourceSystem : ISystem<float>
 
         if (MathF.Abs(deltaRadians) > simulation.Config.Semantics.Group.FormationRotationEpsilonRadians)
         {
-            simulation.RotateSelectedFormation(_engine.World, deltaRadians, ResolveLocalPlayerId());
+            simulation.RotateCommandSourcesFormation(_engine.World, deltaRadians, ResolveLocalPlayerId());
         }
     }
 
@@ -165,7 +165,7 @@ internal sealed class MassNavigationLocalOrderSourceSystem : ISystem<float>
         }
 
         value.Args.I0 = (int)simulation.FormationMode;
-        value.Args.F0 = simulation.NavGroupRuntime.SelectedRotationRadians;
+        value.Args.F0 = simulation.NavGroupRuntime.CommandSourceRotationRadians;
         value.Args.Selection = new OrderSelectionReference { Container = Entity.Null };
 
         if (!_orders.TryEnqueueAssigned(ref value))
@@ -178,7 +178,7 @@ internal sealed class MassNavigationLocalOrderSourceSystem : ISystem<float>
         {
             simulation.FocusCommandTarget(
                 new System.Numerics.Vector2(worldXCm, worldYCm),
-                simulation.SelectedEntities);
+                simulation.CommandSourceEntities);
             simulation.MarkCommandApply();
             _lastMarkedOrderId = value.OrderId;
         }

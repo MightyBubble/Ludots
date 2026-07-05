@@ -1931,7 +1931,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should spawn MassNavigation-authored formation and soldier agents, bind showcase-authored sidecars, and seed the authored formation selection.");
 
@@ -1954,7 +1954,7 @@ namespace Ludots.Tests.Presentation
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
+                () => simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
                       CountSelectionMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: BuildSelectionDiagnostics(engine));
@@ -1962,7 +1962,7 @@ namespace Ludots.Tests.Presentation
             LeftClick(engine, GetInputBackend(engine), WorldToScreen(engine, FormationCapabilityAcceptance.EmptyGroundWorldCm));
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == 0 &&
+                () => simulation.CommandSourceCount == 0 &&
                       SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
@@ -1971,7 +1971,7 @@ namespace Ludots.Tests.Presentation
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
+                () => simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
                       CountSelectionMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: BuildSelectionDiagnostics(engine));
@@ -1983,7 +1983,7 @@ namespace Ludots.Tests.Presentation
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
             TickUntil(
                 engine,
-                () => simulation.LastCommandSelectionCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
+                () => simulation.LastCommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
                       simulation.CommandRejectsTotal == rejectsBeforeMove &&
                       CountActiveMoveOrders(engine, simulation) > 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
@@ -2005,7 +2005,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned and selected before movement/facing verification.");
 
@@ -2082,7 +2082,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before non-local formation command verification.");
 
@@ -2101,7 +2101,7 @@ namespace Ludots.Tests.Presentation
             SelectFormations(engine, new[] { enemyFormation });
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == 1,
+                () => simulation.CommandSourceCount == 1,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Test-authored selection should contain the non-local formation agent.");
 
@@ -2150,7 +2150,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before box selection ownership verification.");
 
@@ -2160,7 +2160,7 @@ namespace Ludots.Tests.Presentation
             int selectorTeamId = ResolveSelectionOwnerTeamId(engine);
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == CountFriendlyTeamFormations(engine, selectorTeamId),
+                () => simulation.CommandSourceCount == CountFriendlyTeamFormations(engine, selectorTeamId),
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Player box selection should include only formations accepted by the configured Friendly relationship filter.");
 
@@ -2186,7 +2186,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before mixed selection rotate verification.");
 
@@ -2198,7 +2198,7 @@ namespace Ludots.Tests.Presentation
             SelectFormations(engine, new[] { localFormation, enemyFormation });
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == 2,
+                () => simulation.CommandSourceCount == 2,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Test-authored mixed selection should enter MassNavigation's selected snapshot.");
 
@@ -2232,7 +2232,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be ready before solver-window rebase verification.");
 
@@ -2266,7 +2266,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned before multi-formation order verification.");
 
@@ -2275,7 +2275,7 @@ namespace Ludots.Tests.Presentation
             SelectFormations(engine, formations);
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == formations.Length,
+                () => simulation.CommandSourceCount == formations.Length,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Test-authored selection should contain the chosen formation agents.");
 
@@ -2305,7 +2305,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
-                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
+                      simulation.CommandSourceCount == FormationCapabilityAcceptance.ExpectedInitialSelection &&
                       CountSelectionMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialSelection,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned and selected before reset.");
@@ -2317,7 +2317,7 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => simulation.SceneResetCount > 0 &&
-                      simulation.SelectedCount == 0 &&
+                      simulation.CommandSourceCount == 0 &&
                       SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0 &&
                       CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
@@ -2428,7 +2428,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(create.ScopeTag, Is.EqualTo(42));
                 commands.Clear();
 
-                Assert.That(selection.ClearSelection(owner, SelectionSetKeys.LivePrimary), Is.True);
+                Assert.That(selection.ClearCommandSources(owner, SelectionSetKeys.LivePrimary), Is.True);
                 selectionEvents.Update(0.016f);
                 rules.Update(0.016f);
                 Assert.That(commands.Count, Is.EqualTo(1));
@@ -3564,7 +3564,7 @@ namespace Ludots.Tests.Presentation
         {
             int count = 0;
             int moveOrderTypeId = ResolveMassNavigationMoveOrderTypeId(engine);
-            ReadOnlySpan<Entity> selected = simulation.SelectedEntities;
+            ReadOnlySpan<Entity> selected = simulation.CommandSourceEntities;
             for (int i = 0; i < selected.Length; i++)
             {
                 Entity entity = selected[i];
@@ -3939,7 +3939,7 @@ namespace Ludots.Tests.Presentation
             string view = SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor)
                 ? $"viewCount={descriptor.Container.MemberCount} viewRev={descriptor.Container.Revision} viewOwner={descriptor.Container.Owner.Id} viewContainer={descriptor.Container.Container.Id}"
                 : "view=<none>";
-            return $"selection={simulation.SelectedCount} simRev={simulation.SelectionRevision} {view} markers={CountSelectionMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
+            return $"commandSources={simulation.CommandSourceCount} simRev={simulation.CommandSourceRevision} {view} markers={CountSelectionMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
         }
 
         private static void AssertPositive(JsonObject obj, string propertyName, bool allowZero = false)

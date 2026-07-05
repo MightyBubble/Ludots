@@ -864,7 +864,7 @@ public sealed partial class MassNavigationFlowSolverState
         MarkEntityDirty(index);
     }
 
-    public void SetSelectedFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> selectedEntities)
+    public void SetCommandSourceFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandSourceEntities)
     {
         if (UnitCount <= 0)
         {
@@ -872,9 +872,9 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         Array.Clear(_selectedFlags, 0, UnitCount);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        for (int i = 0; i < commandSourceEntities.Length; i++)
         {
-            if (agentState.TryGetControllableIndex(selectedEntities[i], out int index) &&
+            if (agentState.TryGetControllableIndex(commandSourceEntities[i], out int index) &&
                 (uint)index < (uint)UnitCount)
             {
                 _selectedFlags[index] = 1;

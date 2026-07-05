@@ -36,13 +36,13 @@ namespace Ludots.Tests.Presentation
                 out Entity agent0,
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
-            simulation.SetSelection(new[] { agent0, agent1 }, revision: 1);
+            simulation.SetCommandSources(new[] { agent0, agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = simulation.NavGroupRuntime.IssueSelectionMoveCommand(
+            int movedCount = simulation.NavGroupRuntime.IssueCommandSourceMoveCommand(
                 simulation.MassNavigationFlow,
                 world,
                 simulation.AgentState,
-                simulation.SelectedEntities,
+                simulation.CommandSourceEntities,
                 moveDestination,
                 MassNavigationFormationMode.Square);
             Assert.That(movedCount, Is.EqualTo(2));
@@ -72,13 +72,13 @@ namespace Ludots.Tests.Presentation
             harness.BindingSystem.Update(0f);
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
 
-            harness.Simulation.SetSelection(new[] { harness.Agent0, harness.Agent1 }, revision: 1);
+            harness.Simulation.SetCommandSources(new[] { harness.Agent0, harness.Agent1 }, revision: 1);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = harness.Simulation.NavGroupRuntime.IssueSelectionMoveCommand(
+            int movedCount = harness.Simulation.NavGroupRuntime.IssueCommandSourceMoveCommand(
                 harness.Simulation.MassNavigationFlow,
                 harness.Engine.World,
                 harness.Simulation.AgentState,
-                harness.Simulation.SelectedEntities,
+                harness.Simulation.CommandSourceEntities,
                 moveDestination,
                 MassNavigationFormationMode.Square);
             Assert.That(movedCount, Is.EqualTo(2));
@@ -316,7 +316,7 @@ namespace Ludots.Tests.Presentation
                 out Entity agent2,
                 out _,
                 out MassNavigationAgentSeed[] seeds);
-            simulation.SetSelection(new[] { agent0, agent1, agent2 }, revision: 7);
+            simulation.SetCommandSources(new[] { agent0, agent1, agent2 }, revision: 7);
             int orderToken = 84;
             int[] members = { 0, 1, 2 };
             int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
@@ -340,9 +340,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
             Assert.That(world.TryGet(agent2, out MassNavigationAgentIndex agent2Index), Is.True);
             Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.SelectedEntities.Length, Is.EqualTo(2));
-            Assert.That(simulation.SelectedEntities[0], Is.EqualTo(agent0));
-            Assert.That(simulation.SelectedEntities[1], Is.EqualTo(agent2));
+            Assert.That(simulation.CommandSourceEntities.Length, Is.EqualTo(2));
+            Assert.That(simulation.CommandSourceEntities[0], Is.EqualTo(agent0));
+            Assert.That(simulation.CommandSourceEntities[1], Is.EqualTo(agent2));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(1));
             Assert.That(simulation.NavGroupRuntime.TryGetOrderGroup(orderToken, out _), Is.True);
@@ -362,12 +362,12 @@ namespace Ludots.Tests.Presentation
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
             MassNavigationAgentSeed survivingSeed = CreateSeed(localX: 1000f, localY: 1000f, layer);
-            simulation.SetSelection(new[] { agent0, agent1 }, revision: 9);
-            int movedCount = simulation.NavGroupRuntime.IssueSelectionMoveCommand(
+            simulation.SetCommandSources(new[] { agent0, agent1 }, revision: 9);
+            int movedCount = simulation.NavGroupRuntime.IssueCommandSourceMoveCommand(
                 simulation.MassNavigationFlow,
                 world,
                 simulation.AgentState,
-                simulation.SelectedEntities,
+                simulation.CommandSourceEntities,
                 new Vector2(2400f, 2200f),
                 MassNavigationFormationMode.Square);
             Assert.That(movedCount, Is.EqualTo(2));
@@ -383,8 +383,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(world.TryGet(agent0, out MassNavigationAgentIndex agent0Index), Is.True);
             Assert.That(world.Has<MassNavigationAgentIndex>(agent1), Is.False);
-            Assert.That(simulation.SelectedEntities.Length, Is.EqualTo(1));
-            Assert.That(simulation.SelectedEntities[0], Is.EqualTo(agent0));
+            Assert.That(simulation.CommandSourceEntities.Length, Is.EqualTo(1));
+            Assert.That(simulation.CommandSourceEntities[0], Is.EqualTo(agent0));
             Assert.That(simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
             Assert.That(simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
             Assert.That(simulation.NavGroupRuntime.HasGroup(agent0Index.Value), Is.False);

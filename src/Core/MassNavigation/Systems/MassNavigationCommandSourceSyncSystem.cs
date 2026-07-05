@@ -34,7 +34,7 @@ internal sealed class MassNavigationCommandSourceSyncSystem : ISystem<float>
         }
 
         _simulation.BeginFrame(dt);
-        _simulation.ObserveSelectionSyncTick();
+        _simulation.ObserveCommandSourceSyncTick();
 
         if (_engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
         {
@@ -43,6 +43,6 @@ internal sealed class MassNavigationCommandSourceSyncSystem : ISystem<float>
         
         long start = Stopwatch.GetTimestamp();
         MassNavigationCommandSourceSync.SyncIfChanged(_world, _engine.GlobalContext, collections, _simulation);
-        _simulation.ObserveSelectionSync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+        _simulation.ObserveCommandSourceSync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 }

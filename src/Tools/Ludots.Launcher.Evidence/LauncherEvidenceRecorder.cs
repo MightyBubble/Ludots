@@ -959,10 +959,10 @@ public static class LauncherEvidenceRecorder
         });
 
         var selectedNames = new List<string>();
-        Entity[] selectedEntities = SelectionContextRuntime.SnapshotCurrentSelection(runtime.Engine.World, runtime.Engine.GlobalContext);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        Entity[] commandSourceEntities = SelectionContextRuntime.SnapshotCurrentSelection(runtime.Engine.World, runtime.Engine.GlobalContext);
+        for (int i = 0; i < commandSourceEntities.Length; i++)
         {
-            Entity selected = selectedEntities[i];
+            Entity selected = commandSourceEntities[i];
             if (!runtime.Engine.World.IsAlive(selected) || !runtime.Engine.World.Has<Name>(selected))
             {
                 continue;
@@ -1946,12 +1946,12 @@ public static class LauncherEvidenceRecorder
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
-        Entity[] selected = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
+        Entity[] commandSources = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
         Vector2 commandTarget = new(
             simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
             simulation.FlowWorkAreaCenterYCm + (simulation.SolverWindowHeightCm * 0.18f));
-        SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, commandTarget);
+        SubmitMassNavigationMoveOrder(runtime.Engine, simulation, commandSources, commandTarget);
         Tick(runtime, MassNavigationCommandSettleTicks, frameTimesMs);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_selection_order", captureImage: true);
 
@@ -2040,27 +2040,27 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("MassNavigation UAT found no OrderBuffer-backed MassNavigation agents.");
         }
 
-        var selected = new Entity[count];
+        var commandSources = new Entity[count];
         for (int i = 0; i < count; i++)
         {
-            selected[i] = simulation.AgentState.ControllableAgentSlots[i];
+            commandSources[i] = simulation.AgentState.ControllableAgentSlots[i];
         }
 
         CommandSourceCollectionRuntime.Replace(
             collections,
             owner,
-            selected,
+            commandSources,
             EntityCollectionSourceKind.Debug,
             "MassNavigation UAT command source",
             $"{count} command entities");
         MassNavigationCommandSourceSync.SyncIfChanged(engine.World, engine.GlobalContext, collections, simulation);
 
-        return selected;
+        return commandSources;
     }
 
-    private static void SubmitMassNavigationMoveOrder(GameEngine engine, MassNavigationSimulationRuntime simulation, ReadOnlySpan<Entity> selected, Vector2 targetCm)
+    private static void SubmitMassNavigationMoveOrder(GameEngine engine, MassNavigationSimulationRuntime simulation, ReadOnlySpan<Entity> commandSources, Vector2 targetCm)
     {
-        if (selected.Length <= 0)
+        if (commandSources.Length <= 0)
         {
             throw new InvalidOperationException("MassNavigation UAT requires a non-empty selection before issuing order.");
         }
@@ -2089,7 +2089,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("MassNavigation UAT requires LocalPlayerEntity to author PlayerOwner.");
         }
 
-        MassNavigationMoveCommandResult result = simulation.SubmitMoveCommand(
+        MassNavigationMoveCommandResult result = simulation.SubmitCommandSourceMoveOrder(
             engine.World,
             orderQueue,
             registry,
@@ -2248,7 +2248,7 @@ public static class LauncherEvidenceRecorder
             MinimapCenterCm: new Vector2(minimapSnapshot.CenterXcm, minimapSnapshot.CenterYcm),
             MinimapHalfExtentCm: minimapSnapshot.HalfExtentCm,
             MinimapCameraTargetCm: new Vector2(minimapSnapshot.CameraTargetXcm, minimapSnapshot.CameraTargetYcm),
-            SelectedCount: simulation.SelectedCount,
+            CommandSourceCount: simulation.CommandSourceCount,
             ActiveGroups: simulation.NavGroupRuntime.ActiveGroupCount,
             ActiveOrderGroups: simulation.NavGroupRuntime.ActiveOrderGroupCount,
             ScenarioSpawnCount: simulation.ScenarioSpawnCount,
@@ -2262,7 +2262,7 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavigationMs: simulation.SelectionSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.CommandSourceSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
@@ -2288,7 +2288,7 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(string.Equals(boot.MinimapPreset, MinimapPreset.RtsFullMap.ToString(), StringComparison.Ordinal), $"Expected core minimap RtsFullMap preset, got {boot.MinimapPreset}.", failures);
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
-        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "CommandSource collection was not observed by MassNavigation.", failures);
+        AddAcceptanceCheck(afterOrder.CommandSourceCount > 0, "CommandSource collection was not observed by MassNavigation.", failures);
         AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavigationMove order did not create an active NavGroup.", failures);
         AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNavigation rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
@@ -2355,7 +2355,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (MassNavigationSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
+            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.CommandSourceCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -2403,7 +2403,7 @@ public static class LauncherEvidenceRecorder
                 agents = snapshot.AgentCount,
                 ecs_agents = snapshot.EcsAgentCount,
                 teams = snapshot.TeamCount,
-                selected = snapshot.SelectedCount,
+                selected = snapshot.CommandSourceCount,
                 groups = snapshot.ActiveGroups,
                 order_groups = snapshot.ActiveOrderGroups,
                 blockers = snapshot.BlockerCount,
@@ -2534,7 +2534,7 @@ public static class LauncherEvidenceRecorder
 
         canvas.DrawText($"MassNavigation Large World | {snapshot.Step} | tick={snapshot.Tick}", 36, 38, textPaint);
         canvas.DrawText($"World={snapshot.WorldWidthCm / 100000f:F1}km x {snapshot.WorldHeightCm / 100000f:F1}km  Camera={FormatPoint(snapshot.CameraTargetCm)}", 36, 68, minorTextPaint);
-        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} Selected={snapshot.SelectedCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
+        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} Selected={snapshot.CommandSourceCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
         canvas.DrawText($"Performers={snapshot.PerformerActiveCount} Payloads={snapshot.PerformerPayloadCount} Blockers={snapshot.BlockerCount} Hotspots={snapshot.HotspotMarkerCount}", 830, 160, minorTextPaint);
         canvas.DrawText($"Minimap visible={snapshot.MinimapVisible} preset={snapshot.MinimapPreset} markers={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} buffer={snapshot.MinimapBufferCount} dropped={snapshot.MinimapDroppedTotal}", 830, 190, minorTextPaint);
         canvas.DrawText($"Solver center={FormatPoint(snapshot.SolverWindowCenterCm)} driver={snapshot.SolverWindowDriver}", 830, 220, minorTextPaint);
@@ -3004,7 +3004,7 @@ public static class LauncherEvidenceRecorder
         Vector2 MinimapCenterCm,
         float MinimapHalfExtentCm,
         Vector2 MinimapCameraTargetCm,
-        int SelectedCount,
+        int CommandSourceCount,
         int ActiveGroups,
         int ActiveOrderGroups,
         int ScenarioSpawnCount,

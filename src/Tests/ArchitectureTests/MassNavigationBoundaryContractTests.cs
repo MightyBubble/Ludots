@@ -21,6 +21,14 @@ namespace Ludots.Tests.Architecture
                 "SelectionRuntime",
                 "SelectionContextRuntime",
                 "MassNavigationLocalCommandInputSystem",
+                "SubmitMoveCommand",
+                "SetSelection(",
+                "ClearSelection(",
+                "EnsureSelectionScratch",
+                "SelectedEntities",
+                "SelectedCount",
+                "SelectionRevision",
+                "SelectionSync",
                 "SubmitOrder(",
             };
 

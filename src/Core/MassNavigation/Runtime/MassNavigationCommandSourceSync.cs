@@ -14,11 +14,11 @@ public static class MassNavigationCommandSourceSync
         if (!TryResolveOwner(world, globals, out Entity owner) ||
             !CommandSourceCollectionRuntime.TryGet(collections, owner, out EntityCollectionHandle handle, out EntityCollectionView view))
         {
-            return ClearIfSelected(simulation);
+            return ClearIfCommandSources(simulation);
         }
 
-        if (handle.Revision == simulation.SelectionRevision &&
-            view.Count == simulation.SelectedCount)
+        if (handle.Revision == simulation.CommandSourceRevision &&
+            view.Count == simulation.CommandSourceCount)
         {
             return false;
         }
@@ -26,24 +26,24 @@ public static class MassNavigationCommandSourceSync
         int count = view.Count;
         if (count <= 0)
         {
-            simulation.SetSelection(System.ReadOnlySpan<Entity>.Empty, handle.Revision);
+            simulation.SetCommandSources(System.ReadOnlySpan<Entity>.Empty, handle.Revision);
             return true;
         }
 
-        Span<Entity> scratch = simulation.EnsureSelectionScratch(count);
+        Span<Entity> scratch = simulation.EnsureCommandSourceScratch(count);
         int written = collections.CopyEntities(handle, 0, scratch);
-        simulation.SetSelection(scratch[..written], handle.Revision);
+        simulation.SetCommandSources(scratch[..written], handle.Revision);
         return true;
     }
 
-    private static bool ClearIfSelected(MassNavigationSimulationRuntime simulation)
+    private static bool ClearIfCommandSources(MassNavigationSimulationRuntime simulation)
     {
-        if (simulation.SelectedCount <= 0)
+        if (simulation.CommandSourceCount <= 0)
         {
             return false;
         }
 
-        simulation.ClearSelection();
+        simulation.ClearCommandSources();
         return true;
     }
 
