@@ -50,6 +50,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             var synergyOrder = new List<string>();
             var knowledgeGrants = new Dictionary<string, RelationshipKnowledgeGrantConfig>(StringComparer.OrdinalIgnoreCase);
             var knowledgeGrantOrder = new List<string>();
+            DomainStanceConfig? stance = null;
 
             for (int i = 0; i < fragments.Count; i++)
             {
@@ -67,6 +68,10 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 MergeById(fragment.Callbacks, callbacks, callbackOrder, static item => item.Id);
                 MergeById(fragment.Synergies, synergies, synergyOrder, static item => item.Id);
                 MergeById(fragment.KnowledgeGrants, knowledgeGrants, knowledgeGrantOrder, static item => item.Id);
+                if (fragment.Stance != null)
+                {
+                    stance = fragment.Stance;
+                }
             }
 
             return new RelationshipCatalogConfig
@@ -79,6 +84,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                 Callbacks = Materialize(callbackOrder, callbacks),
                 Synergies = Materialize(synergyOrder, synergies),
                 KnowledgeGrants = Materialize(knowledgeGrantOrder, knowledgeGrants),
+                Stance = stance,
             };
         }
 

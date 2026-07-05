@@ -1,11 +1,20 @@
 {
   "types": [
-    { "id": "Owns", "isSymmetric": false }
+    { "id": "Owns", "isSymmetric": false },
+    { "id": "Controls", "isSymmetric": false },
+    { "id": "MemberOf", "isSymmetric": false },
+    { "id": "Ally", "isSymmetric": true }
   ],
   "metrics": [],
   "flags": [],
   "bands": [],
   "reasons": [],
   "callbacks": [],
-  "synergies": []
+  "synergies": [],
+  "stance": {
+    "stanceTypes": ["Hostile", "Friendly", "Neutral"],
+    "sameDomainStance": "Friendly",
+    "sameTeamStance": "Friendly",
+    "defaultStance": "Neutral"
+  }
 }

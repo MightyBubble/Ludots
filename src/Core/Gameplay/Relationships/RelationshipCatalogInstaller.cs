@@ -48,6 +48,16 @@ namespace Ludots.Core.Gameplay.Relationships
                 types.Register(type.Id, type.IsSymmetric);
             }
 
+            if (catalog.Stance != null)
+            {
+                // Stance keys are relationship types carried on rep→rep / team→team edges (RFC-0065 DEC-3).
+                // An explicit entry in Types wins because Register is first-registration idempotent.
+                for (int i = 0; i < catalog.Stance.StanceTypes.Count; i++)
+                {
+                    types.Register(catalog.Stance.StanceTypes[i]);
+                }
+            }
+
             for (int i = 0; i < catalog.Metrics.Count; i++)
             {
                 RelationshipMetricConfig metric = catalog.Metrics[i];

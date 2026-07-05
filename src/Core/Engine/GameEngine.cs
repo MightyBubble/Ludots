@@ -660,7 +660,22 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 relationshipReasonRegistry,
                 entityCollectionStore);
-            var ownershipResolver = new OwnershipResolver(relationshipRuntime, relationshipTypeRegistry.GetId("Owns"));
+            // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
+            int ownsRelationshipTypeId = relationshipTypeRegistry.GetId("Owns");
+            int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
+            int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
+            _ = relationshipTypeRegistry.GetId("Ally");
+            var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
+            var controlDomainQuery = new ControlDomainQuery(
+                World,
+                relationshipRuntime,
+                ownershipResolver,
+                ownsRelationshipTypeId,
+                controlsRelationshipTypeId);
+            var domainStanceQuery = DomainStanceQuery.Create(
+                relationshipRuntime,
+                memberOfRelationshipTypeId,
+                relationshipCatalog.Stance);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
@@ -1247,6 +1262,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipRuntime, relationshipRuntime);
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
+            SetService(CoreServiceKeys.ControlDomainQuery, controlDomainQuery);
+            SetService(CoreServiceKeys.DomainStanceQuery, domainStanceQuery);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.PlayerEntityLookup, playerEntityLookup);
             SetService(CoreServiceKeys.EntitySetQueryRuntime, entitySetQueryRuntime);
