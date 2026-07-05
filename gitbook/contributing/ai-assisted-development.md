@@ -10,7 +10,7 @@
 
 前三步不得跳过。
 
-**GAS / 实体生命周期 / effect preset / graph op 类任务**：编码前还必须执行共享 skill `ludots-gas-composition-gate`（见 `skills/governance/ludots-gas-composition-gate/`），填写自审清单并产出 `artifacts/gas-composition-gate.md`。核心判断标准：新变体应新增 graph 节点或 effect 步骤，而不是 profile enum 或 preset 开关。
+**GAS / 实体生命周期 / effect preset / graph op 类任务**：编码前还必须执行共享 skill `ludots-gas-composition-gate`（见 `skills/governance/ludots-gas-composition-gate/`），填写自审清单并产出 artifacts/gas-composition-gate.md。核心判断标准：新变体应新增 graph 节点或 effect 步骤，而不是 profile enum 或 preset 开关。
 
 ## 2 防幻觉条款
 
@@ -59,7 +59,7 @@
 
 1. 加载 skill `ludots-gas-composition-gate` 及 `gitbook/architecture/entity-lifecycle-atomic-ops.md`。
 2. 回答判断标准：新变体是 **op 组合** 还是 **新 enum/开关**；后者禁止直接开工。
-3. 填写 `references/self-review-checklist.md` 模板，写入 `artifacts/gas-composition-gate.md`。
+3. 填写 `references/self-review-checklist.md` 模板，写入 artifacts/gas-composition-gate.md。
 4. 实现 PR 须链接该自审产物或等效填写内容。
 
 ## 5 现有能力速查
