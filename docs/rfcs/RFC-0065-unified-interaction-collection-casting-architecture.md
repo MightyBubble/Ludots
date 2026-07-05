@@ -34,7 +34,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 [L3 Intent+Ctx]  InteractionContextStack：栈顶 frame 决定 activeCollectionKey/activeViewKey/inputContextId
 [L4 Cast]        InputCastSpec（box/polygon/ray/lasso × screen/world/minimap）→ raw hits collection
 [L5 Filter]      FilterProfile（graph/condition DSL，association query）→ filtered
-[L6 Collection]  CollectionWrite → (playerRepEntity, activeKey) + provenance rows
+[L6 Collection]  CollectionWrite → 按所属域路由到 (domainRepEntity, activeKey)，row 记 writerDomain
 [L7 View/Panel]  EntityView profile + PanelRouter + AggregationProfile → HUD/面板投影
 [L8 CastFlow]    CastFlowProfile（idle→charging→aiming→committed 状态机）+ ClientCastPreference
 [L9 Dispatch]    CastDispatchProfile（selector/scorer/router）→ per-actor Order（shared order id）
@@ -56,8 +56,9 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 | Relationship edge | `owns` / `controls` / `member_of` / `ally`，catalog 注册 | `RelationshipRuntime` + catalog.json（已有，需扩 catalog） |
 | ControlDomainQuery | 「controllerRep 能指挥谁 / target 属于谁的控制域」 | 拟新增（基于 `OwnershipResolver` 方向） |
 | HostilityQuery | 敌我/阵营判定的热路径缓存投影（关系图为 SSOT） | 拟新增（替代 unit `Team` 比较） |
-| EntityCollection | `(owner entity, key string)` 寻址的实体集合，rows 带 provenance | `EntityCollectionStore`（已有，rows 需扩 provenance） |
-| Provenance | row 级 `controlDomain`（哪个 rep 的指挥域）+ `relationKind`（owns/controls） | 拟新增 row metadata |
+| EntityCollection | `(owner entity, key string)` 寻址的实体集合；row 永远住在所属控制域的 rep 上 | `EntityCollectionStore`（已有，rows 需扩 writerDomain） |
+| Provenance | 域归属由 collection 地址承载；viewer 相对语义（owns/controls/spectate）由拓扑现算；写时仅记 `writerDomain` | 拟新增（DEC-4/5） |
+| ControlPlaneView | 「我的当前选中/控制集」= 对 controls 可达域的组合只读视图（EntityView domainScope 扩展） | 拟新增 |
 | InteractionContextStack | local client 的 context 栈；frame = (contextId, activeCollectionKey, activeViewKey, contextEntity, filterProfile, inputContextId, ownerToken) | 拟新增 |
 | InputCastSpec | 几何×空间的输入采集描述，与 commit 语义正交 | 拟新增 |
 | FilterProfile | 数据驱动过滤（association / tag / 存活 / 类型），复用现有 condition/graph DSL | 拟新增 registry |
@@ -92,6 +93,8 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 12. **面板是投影不是控制器**：PanelRouter 单向消费 EntityView/聚合结果；UI 不得反向触发 input action。
 13. **聚合/排序/路由规则全部 catalog/profile 数据**：Core 无 `if (rts)`、无写死的 Q/W/E 分派。
 14. **确定性**：context stack 与 preference 均为 local 投影；进入 sim 的只有自包含 Order。回放/联机重建只依赖 authoritative input + order 流。
+15. **Association/Collection 层零业务语义**：掉线、心灵控制、演出接管等只是 trigger 数据（tag / 边增删）；基建 schema 与代码不识别任何场景词汇。
+16. **Collection 永不跨域迁移**：写入按所属域路由；跨域指挥一律 = controls 拓扑 + ControlPlaneView 组合视图，禁止 copy / move rows，不存在「归还」操作。
 
 ---
 
@@ -103,25 +106,30 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 ### DEC-2 关系反向索引先行
 
-现状 `RelationshipRuntime.CollectIncoming` 是全 world 扫描。本 Epic 前置：为 relationship 存储补 **反向邻接索引**（或等价的 per-typeId incoming cache），否则 provenance 填充与 `TryResolveControlDomain` 在大战场不可用。FilterProfile 求值统一走「anchor 正向展开 → bitset → 与 raw hits 求交」，不做逐 hit 反查。
+现状 `RelationshipRuntime.CollectIncoming` 是全 world 扫描。本 Epic 前置：为 relationship 存储补 **反向邻接索引**（或等价的 per-typeId incoming cache），否则写入域路由（unit → 所属域反查 `TryResolveControlDomain`）在大战场不可用。FilterProfile 求值统一走「anchor 正向展开 → bitset → 与 raw hits 求交」，不做逐 hit 反查。
 
 ### DEC-3 HostilityQuery（CTRL-3 的硬前置）
 
 删除 unit `Team` 前，先落 `HostilityQuery`：`unit → owns 域 → member_of 队伍 → 队伍间 stance` 的解析结果按 (domainA, domainB) 缓存，relationship revision 失效重建。GAS targeting（`TargetResolverFanOutHelper` 等）改读它。
 
-### DEC-4 Handback 策略数据化
+### DEC-4 控制平面 = 拓扑投影；collection 永不迁移，也没有「归还」概念
 
-`AssociationControlProfile` 增加 `handbackPolicy: freeze | mirror | discard`：
+（本决策取代早期草案中的 `handbackPolicy` 枚举——那是把「归还」误当成 Core 需要认识的操作。）
 
-- `freeze`（RFC-0063 原行为）：p2Rep collection 冻结，重连拿回掉线前状态；
-- `mirror`：代理期间我对 p2 单位的写入按 provenance（controlDomain==p2Rep 的 rows）镜像回 `(p2Rep, activeKey)`，重连即所见即所得；
-- `discard`：重连清空。
+- **CollectionWrite 按域路由**：写入永远落在被指挥单位所属控制域的 rep entity 上。我框选 `[m01(自有), m99(代理)]`，物理写入是 `(P1Rep, key)=[m01]` 与 `(P2Rep, key)=[m99]`——我此刻对 P2 域 controls 可达，因此有权维护它的域，队友的化身 entity 照常走它自己的框选基建。
+- **「我的当前选中」是 ControlPlaneView**：对 `controls` 可达域集合的**组合只读视图**（EntityView 的 domainScope 扩展），不是物理合并的集合。Order fan-out 与 HUD 消费该视图。
+- **任何原因**导致 controls 边消失（掉线结束、心控解除、演出归还——association 层一概不知道原因），组合视图即时收缩；对方域内 collection 保持其最新状态，client 重新 bind 即所见即所得。「归还」是拓扑变化的涌现行为，零专用代码路径。
+- 「掉线」「心灵控制」「剧本演出接管」都只是 mod 侧打 tag / 增删边的领域 trigger；**association/collection 基建对这些语义零感知**，schema 里不出现任何场景词汇。
+- 多控制者并发写同一域：row 携带 `writerDomain` 追踪，写入按 authoritative input 顺序定序（确定性不受影响）。
 
-Core 不偏袒任何一种；showcase 至少演示 freeze 与 mirror。
+### DEC-5 Provenance 由地址承载，viewer 语义拓扑现算
 
-### DEC-5 Provenance 写时填充 + 失效钩子
+DEC-4 的域路由让 RFC-0064 方案 A 的写时快照大幅简化，且陈旧问题自然消失：
 
-采用 RFC-0064 方案 A（row metadata），但补失效：relationship 变更（grant/revoke）bump revision → 受影响 collection 重过 filter / 驱逐失效行；Performer 通过 revision diff 自动换色。禁止出现「队友已重连、marker 还是浅绿」的陈旧帧跨越一个 maintenance 周期以上。
+- `controlDomain` 不再是写入的 row metadata——**它就是 collection 地址本身**（row 住在哪个 rep 的域里）。
+- `relationKind`（owns / controls / spectate）是 **viewer 相对语义**，由 Performer / View 求值时按「viewer anchor → row 所在域」的实时拓扑现算，不写死在行里。队友重连的瞬间，浅绿 marker 判定条件（controls 边）不复存在，视图重算即消失——不存在「写时快照过期」问题。
+- 写时仅保留 `writerDomain`（谁维护了这行）用于审计与并发定序。
+- relationship revision 变更 → ControlPlaneView / Performer 订阅重算；禁止陈旧帧跨越一个 maintenance 周期以上。
 
 ### DEC-6 Context frame 带 ownerToken，支持并发 exec
 
@@ -185,20 +193,32 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 }
 ```
 
-### 5.4 AssociationControlProfile
+### 5.4 AssociationControlProfile（通用「条件 → 边增删」规则，schema 零业务词汇）
+
+profile 是一个纯粹的谓词→边操作规则：`when`（tag / relationship 谓词组合，复用现有 condition DSL）成立时 grant 边，`revokeWhen` 成立时删边。**tag 字符串对 Core 完全不透明**——`participant.offline`、`unit.mind_controlled`、`script.cinematic_owned` 都只是 mod 数据，同一 schema 覆盖任意接管场景：
 
 ```json
 {
-  "id": "profile.control.offline_teammate_proxy",
+  "id": "profile.control.ally_offline_proxy",
   "when": { "all": [
-    { "relationship": "Ally", "between": ["localPlayerRep", "targetPlayerRep"] },
-    { "tag": "participant.offline", "on": "targetPlayerRep" }
+    { "relationship": "Ally", "between": ["grantee", "grantor"] },
+    { "tag": "participant.offline", "on": "grantor" }
   ]},
-  "grant": { "edgeType": "Controls", "from": "localPlayerRep", "scope": "all_owned_by:targetPlayerRep" },
-  "revokeWhen": { "not": { "tag": "participant.offline", "on": "targetPlayerRep" } },
-  "handbackPolicy": "mirror"
+  "grant": { "edgeType": "Controls", "from": "grantee", "scope": "all_owned_by:grantor" },
+  "revokeWhen": { "not": { "tag": "participant.offline", "on": "grantor" } }
 }
 ```
+
+```json
+{
+  "id": "profile.control.mind_control_steal",
+  "when": { "tag": "unit.mind_controlled_by:caster", "on": "unit" },
+  "grant": { "edgeType": "Controls", "from": "casterRep", "scope": "unit" },
+  "revokeWhen": { "not": { "tag": "unit.mind_controlled_by:caster", "on": "unit" } }
+}
+```
+
+没有 handback / policy 字段：边消失后的一切行为由 DEC-4 的域路由 + ControlPlaneView 涌现，profile 不需要也不允许描述「之后集合怎么办」。
 
 ### 5.5 CastFlowProfile（多段施法状态机）
 
@@ -293,6 +313,25 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
   "tint": "teamPalette(controlDomain.team) + phaseOffset(controlDomain.indexInTeam)" }
 ```
 
+`relationKind` 条件（Owns / Controls）由 Performer 求值时按「viewer anchor → row 所在域」的实时拓扑现算（DEC-5），不是 row 里的静态字段。
+
+### 5.10 ControlPlaneView（组合只读视图）
+
+```json
+{
+  "viewKey": "view.control_plane.command",
+  "collectionKey": "collection.command.source",
+  "role": "CommandSource",
+  "domainScope": {
+    "anchor": "localPlayerRep",
+    "edgeTypes": ["Owns", "Controls"],
+    "includeAnchor": true
+  }
+}
+```
+
+求值 = 对 anchor 经 `domainScope` 可达的每个域取 `(domainRep, collectionKey)` 拼接为只读序列，row 保留其所在域信息。Order fan-out、HUD、PanelRouter 消费该视图；relationship revision 变更触发重算。
+
 ---
 
 ## 6. BDD 验收（Gherkin UAT Showcases）
@@ -352,51 +391,57 @@ Feature: M2 技能域 context 与恢复 [showcase]
 ```
 
 ```gherkin
-Feature: M3 掉线代理与归还策略 [showcase]
+Feature: M3 代理控制是纯拓扑投影 [showcase]
   As a mod developer
-  I want 用 AssociationControlProfile 声明"盟友掉线 → 我获得 controls"
-  So that 控制权转移零专用系统
+  I want 用通用的「条件 → controls 边增删」profile 表达接管，集合由域路由 + 组合视图导出
+  So that 掉线/心控/演出等任何接管场景零专用代码、零归还逻辑
 
   Background:
-    Given profile.control.offline_teammate_proxy 已注册（见 §5.4）
+    Given profile.control.ally_offline_proxy 已注册（§5.4，tag 字符串对 Core 不透明）
+    And 断言 association/collection 生产代码零 "offline"/"mind_control"/"cinematic" 字面量（ArchitectureTests）
 
-  Scenario: 掉线只增 controls 边
-    When P2 掉线（participant.offline tag 打到 P2Rep）
-    Then runtime 建立 Controls(P1Rep → m99)
+  Scenario: 接管只增 controls 边，双方域各自维护
+    When P2Rep 被 mod trigger 打上 participant.offline
+    Then profile 求值建立 Controls(P1Rep → P2 域)
     And owns 边不变，m99 上没有任何组件被写入
     And (P2Rep, collection.command.source) 原值保留
 
-  Scenario: 混合框选跨控制域
-    When 玩家1 框选 [m01, m99]
-    Then (P1Rep, collection.command.source) rows =
-      | entity | controlDomain | relationKind |
-      | m01    | P1Rep         | Owns         |
-      | m99    | P2Rep         | Controls     |
+  Scenario: 代理期间写入按域路由，队友化身照常走自己的框选基建
+    Given Controls(P1Rep → P2 域) 生效
+    When 玩家1 框选 [m01(P1 owns), m99(P2 owns)]
+    Then (P1Rep, collection.command.source) = [m01]
+    And (P2Rep, collection.command.source) = [m99]   # 写入落在所属域，writerDomain=P1Rep
+    And 玩家1 的 ControlPlaneView(command) 组合呈现 [m01, m99]
 
-  Scenario Outline: 重连按 handbackPolicy 归还
-    Given profile 的 handbackPolicy = <policy>
-    And 掉线期间玩家1 框选过 [m99]
-    When P2 重连（offline tag 移除）
-    Then Controls(P1Rep → m99) 被 revoke
-    And (P2Rep, collection.command.source) = <result>
-    And (P1Rep, collection.command.source) 中 m99 的行被驱逐（provenance 失效钩子）
+  Scenario: 边消失即"归还"，不存在归还系统
+    Given 代理期间玩家1 框选过 [m99]
+    When P2 重连（mod trigger 移除 offline tag → profile revoke Controls）
+    Then 玩家1 的 ControlPlaneView 收缩为 [m01]，无需驱逐任何行
+    And P2 client bind P2Rep 后直接看到 (P2Rep, command.source) = [m99]（代理期间的维护结果原地可见）
+    And 全程零 collection 迁移、零 handback 代码路径
+
+  Scenario Outline: 同一套基建覆盖任意接管语义（trigger 无关性）
+    Given mod 定义 trigger tag <tag> 与对应 AssociationControlProfile
+    When <scenario> 发生又结束
+    Then association 层只观察到 Controls 边增删与 revision 变化
+    And 集合行为与掉线场景逐字节一致，无任何新增 Core 代码
 
     Examples:
-      | policy  | result                    |
-      | freeze  | 掉线前原值                 |
-      | mirror  | [m99]（代理期间的写入镜像） |
-      | discard | 空                        |
+      | tag                     | scenario                     |
+      | participant.offline     | 队友掉线后重连                 |
+      | unit.mind_controlled    | 一群单位被心灵控制后解除        |
+      | script.cinematic_owned  | 剧本演出临时拿走单位后归还      |
 ```
 
 ```gherkin
 Feature: M4 Provenance marker（深绿/浅绿）[showcase]
-  Scenario: 本地玩家看混合控制域 marker
+  Scenario: 本地玩家看混合控制域 marker（relationKind 拓扑现算）
     Given performer catalog §5.9 已加载
-    And (P1Rep, collection.command.source) 含 owns 行 m01 与 controls 行 m99
-    Then m01 渲染 palette.self.deep（深绿）ring
-    And m99 渲染 palette.self.light（浅绿）ring
-    When P2 重连导致 m99 行被驱逐
-    Then m99 的 marker 在下一 revision diff 消失（无全量重建抖动）
+    And 玩家1 的 ControlPlaneView 含 m01（住在 P1Rep 域）与 m99（住在 P2Rep 域）
+    Then m01 渲染 palette.self.deep（深绿）ring   # viewer==域 → Owns
+    And m99 渲染 palette.self.light（浅绿）ring   # viewer→域 走 Controls 边 → 现算为 proxy
+    When P2 重连（Controls 边消失）
+    Then m99 的 marker 随视图重算在下一 revision diff 消失（无全量重建抖动，无陈旧快照）
 ```
 
 ```gherkin
@@ -500,6 +545,8 @@ Feature: M9 护栏（ArchitectureTests 即验收）
       | SelectionRuntime 零 command-intake 消费者 |
       | Performer 规则零 PlayerOwner 读取 |
       | Core 零 "rts"/"moba" 字面量分支 |
+      | association/collection 基建零 "offline"/"mind_control"/"cinematic" 等业务场景字面量 |
+      | 零 collection 跨域 copy/move API（不存在"归还"代码路径） |
       | InteractionModeType 类型已删除或仅存于迁移 shim 白名单 |
 ```
 
@@ -636,7 +683,9 @@ CTRL-1..CTRL-10 按原文；修订：
 |----|------|
 | CTRL-1b | `controls` 为查询期视图（DEC-1） |
 | CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PerformPhaseResolver / lifecycle snapshot / #499 publisher） |
-| CTRL-4b | `handbackPolicy` 字段 + mirror 实现（DEC-4） |
+| CTRL-4b | AssociationControlProfile = 通用「谓词 → 边增删」规则引擎，复用 condition DSL，schema 零业务词汇（DEC-4；无 handback/policy 字段） |
+| CTRL-4c | CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain（DEC-4） |
+| CTRL-4d | ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图（DEC-4，衔接 ORD-4） |
 
 ### Phase 4 — Provenance & Performer（继承 PROV，修订）
 
@@ -644,7 +693,8 @@ PROV-1..PROV-8 按原文；修订：
 
 | ID | 修订 |
 |----|------|
-| PROV-2b | relationship revision → collection 失效/驱逐钩子（DEC-5） |
+| PROV-1b | provenance 简化：controlDomain 由 collection 地址承载，写时仅存 writerDomain；relationKind 不入行（DEC-5） |
+| PROV-2b | relationship revision → ControlPlaneView / Performer 重算钩子；viewer 相对语义拓扑现算（DEC-5，取代"失效/驱逐"方案） |
 
 ### Phase 5 — Panel Router & 聚合（新增 PNL）
 
@@ -671,7 +721,7 @@ PROV-1..PROV-8 按原文；修订：
 | ID | 内容 |
 |----|------|
 | SHOW-1 | [showcase] M2 超级武器 context（含 IMC 切换） |
-| SHOW-2 | [showcase] M3+M4+P5 掉线代理 + marker + handback（freeze 与 mirror 各一遍） |
+| SHOW-2 | [showcase] M3+M4+P5 代理控制拓扑投影 + marker + 边消失涌现"归还"（掉线与心控两种 trigger 各演示一遍，证明 trigger 无关性） |
 | SHOW-3 | [showcase] M5+P8 裁判多控制域投影 |
 | SHOW-4 | [showcase] M6+P3 面板聚合三案例切换 |
 | SHOW-5 | [showcase] M8+P4 追猎 blink 三种 dispatch |
