@@ -194,6 +194,22 @@ namespace Ludots.Core.Gameplay.GAS
             return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
         }
 
+        /// <summary>
+        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.CatalogTags"/>
+        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
+        /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
+        /// </summary>
+        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagContainer mask)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                return 0;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            return definition.HasCatalogTags ? definition.CatalogTags.FirstCommonTag(in mask) : 0;
+        }
+
         public void RegisterFromEntity(World world, Entity templateEntity, int abilityId)
         {
             if (!world.IsAlive(templateEntity) || abilityId <= 0) return;

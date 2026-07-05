@@ -226,7 +226,8 @@ namespace CoreInputMod.Systems
                 eventBus: null,
                 effectRequests: null,
                 _globals);
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            var candidateGate = new KnowledgeCommandTargetGate(_world, _globals);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;
         }
 

@@ -61,6 +61,14 @@ namespace Ludots.Core.Input.Interaction
         Span<CommandIntentRoute> routesPerActor,
         int routedCount);
 
+    /// <summary>
+    /// Knowledge gate for target facts (RFC-0065 INT-2, DEC-14): true when <paramref name="viewerRep"/>
+    /// is allowed to command-target <paramref name="target"/> (<c>CanTargetCommand</c> semantics).
+    /// <paramref name="viewerRep"/> is the acting side's control domain rep — proxy control gates from
+    /// the acting domain, matching stance evaluation.
+    /// </summary>
+    public delegate bool CommandIntentTargetGate(Entity viewerRep, Entity target);
+
     /// <summary>Merged root of <c>Input/command_intent_profiles.json</c>.</summary>
     public sealed class CommandIntentProfilesConfig
     {

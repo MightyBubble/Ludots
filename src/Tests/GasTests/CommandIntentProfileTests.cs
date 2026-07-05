@@ -10,7 +10,9 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -230,6 +232,116 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TryRoute_GateDeniedEntityTarget_DemotesToGroundRule()
+        {
+            using var world = World.Create();
+            Entity deniedTarget = Entity.Null;
+            // Gate receives the acting domain rep as viewer (INT-2) and rejects only the denied target.
+            Harness harness = Harness.Create(world, (viewerRep, target) => target != deniedTarget);
+            harness.InstallStandardProfile();
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
+            deniedTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag, DestructibleTag);
+
+            var facts = new CommandIntentTargetFacts(deniedTarget, HasEntity: true);
+            bool routed = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in facts, out CommandIntentRoute route);
+
+            Assert.That(routed, Is.True, "demoted facts must still be able to hit the ground rule.");
+            Assert.That(route.OrderTypeId, Is.EqualTo(harness.MoveToOrderId),
+                "gate-denied entity target demotes to HasEntity=false and hits only the ground move rule (DEC-14).");
+            Assert.That(route.RouteKind, Is.EqualTo(CommandIntentRouteKinds.None));
+        }
+
+        [Test]
+        public void TryRoute_GateAllowsEntityTarget_KeepsEntityRuleRouting()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, (_, _) => true);
+            harness.InstallStandardProfile();
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
+            Entity target = harness.CreateTaggedEntity(p2Rep, GarrisonableTag, DestructibleTag);
+
+            var facts = new CommandIntentTargetFacts(target, HasEntity: true);
+            bool routed = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in facts, out CommandIntentRoute route);
+
+            Assert.That(routed, Is.True);
+            Assert.That(route.RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+                "an allowed target keeps the ungated routing outcome.");
+        }
+
+        [Test]
+        public void RouteGroup_GateAppliesPerActorDomainRep()
+        {
+            using var world = World.Create();
+            Entity blindRep = Entity.Null;
+            Harness harness = Harness.Create(world, (viewerRep, _) => viewerRep != blindRep);
+            harness.InstallStandardProfile();
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            blindRep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity sightedActor = harness.CreateActor(p1Rep, GarrisonAbilityId);
+            Entity blindActor = harness.CreateActor(blindRep, GarrisonAbilityId);
+            Entity target = harness.CreateTaggedEntity(p3Rep, GarrisonableTag);
+
+            var facts = new CommandIntentTargetFacts(target, HasEntity: true);
+            Span<Entity> actors = stackalloc Entity[] { sightedActor, blindActor };
+            Span<CommandIntentRoute> routes = stackalloc CommandIntentRoute[2];
+            int routedCount = harness.Intents.RouteGroup(harness.ProfileId(TestProfileId), actors, p1Rep, in facts, routes);
+
+            Assert.That(routedCount, Is.EqualTo(2), "both actors route: one to garrison, one to the demoted ground rule.");
+            Assert.That(routes[0].RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+                "the sighted domain keeps the entity rule.");
+            Assert.That(routes[1].OrderTypeId, Is.EqualTo(harness.MoveToOrderId),
+                "the blind domain's facts demote per-actor to the ground rule.");
+        }
+
+        [Test]
+        public void TryRoute_KnowledgeCommandTargetGate_UsesViewerProjection()
+        {
+            using var world = World.Create();
+            var globals = new Dictionary<string, object>();
+            var gate = new KnowledgeCommandTargetGate(world, globals);
+            Harness harness = Harness.Create(world, gate.CanTarget);
+            harness.InstallStandardProfile();
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity actor = harness.CreateActor(p1Rep, GarrisonAbilityId, WeaponAbilityId);
+            Entity knownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
+            Entity unknownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
+
+            var store = new KnowledgeProjectionStore();
+            store.Upsert(p1Rep, knownTarget, new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                KnowledgeIdMask256.Empty,
+                KnowledgeIdMask256.Empty,
+                KnowledgeIdMask256.Empty,
+                p1Rep,
+                observedTick: 1,
+                expiryTick: 0,
+                confidencePermille: 1000,
+                revision: 0));
+            globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
+
+            var knownFacts = new CommandIntentTargetFacts(knownTarget, HasEntity: true);
+            Assert.That(harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in knownFacts, out CommandIntentRoute knownRoute), Is.True);
+            Assert.That(knownRoute.RouteParamId, Is.EqualTo(TagRegistry.GetId(GarrisonAbilityTag)),
+                "a live-visible target passes the default gate and hits the entity rule.");
+
+            var unknownFacts = new CommandIntentTargetFacts(unknownTarget, HasEntity: true);
+            Assert.That(harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in unknownFacts, out CommandIntentRoute unknownRoute), Is.True);
+            Assert.That(unknownRoute.OrderTypeId, Is.EqualTo(harness.MoveToOrderId),
+                "an unprojected target demotes to the ground rule under the default gate.");
+        }
+
+        [Test]
         public void RouteGroup_SteadyState_IsAllocationFree()
         {
             using var world = World.Create();
@@ -286,7 +398,7 @@ namespace Ludots.Tests.GAS
             public int CastAbilityOrderId;
             public int MoveToOrderId;
 
-            public static Harness Create(World world)
+            public static Harness Create(World world, CommandIntentTargetGate targetGate = null)
             {
                 var types = new RelationshipTypeRegistry();
                 var relationships = new RelationshipRuntime(
@@ -329,7 +441,8 @@ namespace Ludots.Tests.GAS
                     abilities,
                     controlDomains,
                     stances,
-                    orderTypes);
+                    orderTypes,
+                    targetGate);
                 return new Harness
                 {
                     World = world,

@@ -41,6 +41,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
@@ -1187,7 +1188,9 @@ namespace Ludots.Core.Engine
             int cfgCastAbilityEnd = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.End");
 
             // Pointer command intent routing (RFC-0065 INT-1, DEC-14); installed after order types so
-            // rule routes validate their orderTypeKey at load time.
+            // rule routes validate their orderTypeKey at load time. Target facts are knowledge-gated
+            // through CanTargetCommand semantics (INT-2).
+            var commandIntentTargetGate = new KnowledgeCommandTargetGate(World, GlobalContext);
             var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var commandIntentProfileRegistry = new CommandIntentProfileRegistry(
                 commandIntentProfileIds,
@@ -1196,8 +1199,21 @@ namespace Ludots.Core.Engine
                 abilityDefinitions,
                 controlDomainQuery,
                 domainStanceQuery,
-                orderTypeRegistry);
+                orderTypeRegistry,
+                commandIntentTargetGate.CanTarget);
             commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
+            var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
+            castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
+            // so catalog tag prefixes compile against the loaded definitions.
+            var abilityAggregationProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var abilityAggregationProfileRegistry = new AbilityAggregationProfileRegistry(abilityAggregationProfileIds);
+            abilityAggregationProfileRegistry.Install(new AbilityAggregationProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
             int stepRateHz = engineClockConfig.FixedHz / Math.Max(1, gasClockConfig.StepEveryFixedTicks);
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
@@ -1269,6 +1285,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
             SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
+            SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
+            SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);

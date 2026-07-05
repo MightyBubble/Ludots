@@ -163,6 +163,24 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
             return false;
         }
+
+        /// <summary>
+        /// Lowest tag id set in both this container and <paramref name="other"/>;
+        /// 0 (the reserved invalid id) when the intersection is empty.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int FirstCommonTag(in GameplayTagContainer other)
+        {
+            for (int i = 0; i < ULONG_COUNT; i++)
+            {
+                ulong intersection = Bits[i] & other.Bits[i];
+                if (intersection != 0)
+                {
+                    return i * 64 + System.Numerics.BitOperations.TrailingZeroCount(intersection);
+                }
+            }
+            return 0;
+        }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()

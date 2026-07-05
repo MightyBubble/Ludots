@@ -21,9 +21,12 @@ namespace Ludots.Core.Input.Interaction
     /// fall through to lower-priority rules (no fallback). Steady-state evaluation is allocation free and
     /// performs zero string comparisons.
     /// <para>
-    /// Caller responsibility (INT-2): <see cref="CommandIntentTargetFacts"/> must be produced from the
-    /// viewer's knowledge projection (<c>CanTargetCommand</c> semantics), never from sim truth. This
-    /// registry evaluates the facts it is given.
+    /// Knowledge gating (INT-2) is built into evaluation: when a <see cref="CommandIntentTargetGate"/>
+    /// is injected, entity facts the acting domain cannot know are demoted to a ground hit before any
+    /// rule (including target domain resolution for stance predicates) sees them — per DEC-14 a unit
+    /// invisible under fog must not be routable, so ground rules may still win but no entity predicate
+    /// can. A null gate is an explicit assembly choice (no knowledge projection wired); facts then pass
+    /// through unchanged. This is assembly semantics, not a fallback.
     /// </para>
     /// </summary>
     public sealed class CommandIntentProfileRegistry
@@ -35,6 +38,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly ControlDomainQuery _controlDomains;
         private readonly DomainStanceQuery _stances;
         private readonly OrderTypeRegistry _orderTypes;
+        private readonly CommandIntentTargetGate _targetGate;
         private readonly Dictionary<string, int> _groupPolicyIndexByKind = new(StringComparer.Ordinal);
         private readonly List<CommandIntentGroupPolicyApplier> _groupPolicies = new();
 
@@ -43,6 +47,10 @@ namespace Ludots.Core.Input.Interaction
         private const string ByAbilityTagSelectorPrefix = "byAbilityTag:";
         private const string ContextGroupSelectorPrefix = "contextGroup:";
 
+        /// <param name="targetGate">
+        /// Optional INT-2 knowledge gate. Null means the assembly runs without knowledge projection and
+        /// entity facts are evaluated as given (explicit wiring choice, not a fallback).
+        /// </param>
         public CommandIntentProfileRegistry(
             StringIntRegistry profileIdRegistry,
             World world,
@@ -50,7 +58,8 @@ namespace Ludots.Core.Input.Interaction
             AbilityDefinitionRegistry abilityDefinitions,
             ControlDomainQuery controlDomains,
             DomainStanceQuery stances,
-            OrderTypeRegistry orderTypes)
+            OrderTypeRegistry orderTypes,
+            CommandIntentTargetGate targetGate = null)
         {
             _profileIds = profileIdRegistry ?? throw new ArgumentNullException(nameof(profileIdRegistry));
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -59,6 +68,7 @@ namespace Ludots.Core.Input.Interaction
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             _stances = stances ?? throw new ArgumentNullException(nameof(stances));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+            _targetGate = targetGate;
             _groupPolicyIndexByKind.Add(CommandIntentGroupPolicyKinds.Independent, 0);
             _groupPolicies.Add(static (_, _, _, routedCount) => routedCount);
         }
@@ -118,6 +128,10 @@ namespace Ludots.Core.Input.Interaction
         /// <paramref name="actorDomainRep"/> is the actor's own control domain (proxy control still
         /// evaluates stance from the acting domain, DEC-14); pass <see cref="Entity.Null"/> when the
         /// actor has no domain — stance-requiring rules then never match.
+        /// INT-2: when the injected gate rejects an entity fact for <paramref name="actorDomainRep"/>,
+        /// the facts are demoted to a ground hit before evaluation — the target can never satisfy an
+        /// entity predicate (equivalent to the entity not existing) but ground rules may still win, and
+        /// target domain resolution for stance happens only after the gate passed.
         /// </summary>
         public bool TryRoute(
             int profileId,
@@ -127,10 +141,11 @@ namespace Ludots.Core.Input.Interaction
             out CommandIntentRoute route)
         {
             CompiledProfile profile = RequireInstalled(profileId);
+            CommandIntentTargetFacts gatedFacts = GateFacts(actorDomainRep, in facts);
             CompiledRule[] rules = profile.Rules;
             for (int i = 0; i < rules.Length; i++)
             {
-                if (Matches(in rules[i], profile.StancePool, actorEntity, actorDomainRep, in facts))
+                if (Matches(in rules[i], profile.StancePool, actorEntity, actorDomainRep, in gatedFacts))
                 {
                     route = rules[i].Route;
                     return true;
@@ -146,7 +161,8 @@ namespace Ludots.Core.Input.Interaction
         /// <see cref="ControlDomainQuery"/>), then the profile's group policy adjusts the per-actor
         /// results. <paramref name="routesPerActor"/> is parallel to <paramref name="actors"/>; actors
         /// without a matching rule receive <see cref="CommandIntentRoute.None"/>. Returns the number of
-        /// actors that keep a route. Steady-state allocation free.
+        /// actors that keep a route. INT-2 gating applies per actor against its own domain rep (see
+        /// <see cref="TryRoute"/>). Steady-state allocation free.
         /// </summary>
         public int RouteGroup(
             int profileId,
@@ -182,6 +198,20 @@ namespace Ludots.Core.Input.Interaction
 
             CommandIntentGroupPolicyApplier applier = _groupPolicies[profile.GroupPolicyIndex];
             return applier(actors, anchorRep, routesPerActor[..actors.Length], routedCount);
+        }
+
+        /// <summary>
+        /// INT-2 (DEC-14): an entity fact the viewer's domain cannot know demotes to a ground hit.
+        /// Null gate = knowledge projection not wired in this assembly; facts pass through unchanged.
+        /// </summary>
+        private CommandIntentTargetFacts GateFacts(Entity viewerRep, in CommandIntentTargetFacts facts)
+        {
+            if (_targetGate == null || !facts.HasEntity || _targetGate(viewerRep, facts.Target))
+            {
+                return facts;
+            }
+
+            return new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
         }
 
         private bool Matches(
