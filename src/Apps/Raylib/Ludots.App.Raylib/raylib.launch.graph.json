@@ -3,16 +3,31 @@
   "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
   "orderedModIds": [
     "LudotsCoreMod",
-    "CoreInputMod"
+    "CoreInputMod",
+    "EntityCommandPanelMod",
+    "RtsDemoMod",
+    "AoeEmpireMod"
   ],
   "plannedMods": [
     {
       "id": "LudotsCoreMod",
-      "rootPath": "../../../../mods/LudotsCoreMod"
+      "rootPath": "/workspace/mods/LudotsCoreMod"
     },
     {
       "id": "CoreInputMod",
-      "rootPath": "../../../../mods/CoreInputMod"
+      "rootPath": "/workspace/mods/CoreInputMod"
+    },
+    {
+      "id": "EntityCommandPanelMod",
+      "rootPath": "/workspace/mods/EntityCommandPanelMod"
+    },
+    {
+      "id": "RtsDemoMod",
+      "rootPath": "/workspace/mods/RtsDemoMod"
+    },
+    {
+      "id": "AoeEmpireMod",
+      "rootPath": "/workspace/mods/aoe_empire/AoeEmpireMod"
     }
   ]
 }

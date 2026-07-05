@@ -934,13 +934,13 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
                 if (mapped.Count > 0)
                 {
-                    var edges = new List<BrowserRtsProductionTechEdgeView>();
+                    var projectedEdges = new List<BrowserRtsProductionTechEdgeView>();
                     for (int i = 0; i < mapped.Count - 1; i++)
                     {
-                        edges.Add(new BrowserRtsProductionTechEdgeView(mapped[i].Id, mapped[i + 1].Id));
+                        projectedEdges.Add(new BrowserRtsProductionTechEdgeView(mapped[i].Id, mapped[i + 1].Id));
                     }
 
-                    return new BrowserRtsProductionTechTreeView(mapped.ToArray(), edges.ToArray());
+                    return new BrowserRtsProductionTechTreeView(mapped.ToArray(), projectedEdges.ToArray());
                 }
             }
         }

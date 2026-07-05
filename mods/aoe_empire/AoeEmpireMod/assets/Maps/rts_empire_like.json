@@ -26,6 +26,20 @@
       "NavigationEnabled": false
     }
   ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "frankia_team_anchor" },
+    { "TeamId": 2, "RepresentativeInstanceId": "andalus_team_anchor" },
+    { "TeamId": 3, "RepresentativeInstanceId": "khanate_team_anchor" },
+    { "TeamId": 4, "RepresentativeInstanceId": "dynasty_team_anchor" },
+    { "TeamId": 5, "RepresentativeInstanceId": "nordheim_team_anchor" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "frankia_player_anchor" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "andalus_player_anchor" },
+    { "PlayerId": 3, "TeamId": 3, "RepresentativeInstanceId": "khanate_player_anchor" },
+    { "PlayerId": 4, "TeamId": 4, "RepresentativeInstanceId": "dynasty_player_anchor" },
+    { "PlayerId": 5, "TeamId": 5, "RepresentativeInstanceId": "nordheim_player_anchor" }
+  ],
   "Entities": [
     {
       "Template": "aoe_frankia_team_anchor",
