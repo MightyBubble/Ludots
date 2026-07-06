@@ -1,4 +1,5 @@
 using Ludots.Core.Hosting;
+using Ludots.Core.Config;
 
 namespace Ludots.Launcher.Backend;
 
@@ -51,6 +52,7 @@ public sealed class LauncherPreset
     public List<string> Selectors { get; init; } = new();
     public string AdapterId { get; init; } = LauncherPlatformIds.Raylib;
     public string BuildMode { get; init; } = LauncherBuildMode.Auto.ToString().ToLowerInvariant();
+    public BrowserRuntimeConfig? BrowserRuntime { get; init; }
     public List<string> ActiveModIds { get; init; } = new();
     public bool IncludeDependencies { get; init; } = true;
 }
@@ -87,6 +89,7 @@ public sealed record LauncherLaunchPlan(
     string AppOutputDirectory,
     string AppAssemblyPath,
     string LaunchUrl,
+    BrowserRuntimeConfig? BrowserRuntime,
     LauncherPlanDiagnostics Diagnostics,
     LauncherAdapterDescriptor Adapter,
     int SchemaVersion,

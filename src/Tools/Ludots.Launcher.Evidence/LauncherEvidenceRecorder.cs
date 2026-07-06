@@ -146,7 +146,9 @@ public static class LauncherEvidenceRecorder
             return EvidenceScenario.CameraAcceptanceProjectionClick;
         }
 
-        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase)))
+        if (plan.RootModIds.Any(id =>
+                string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(id, "CapabilityStandardMassNavigationLargeWorld10kMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.MassNavigationLargeWorld;
         }
@@ -235,7 +237,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -310,7 +312,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Invalid launcher bootstrap: StartupMapId cannot be empty.");
         }
 
-        engine.LoadMap(config.StartupMapId);
+        engine.LoadStartupMap();
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
     }
 
@@ -1930,7 +1932,7 @@ public static class LauncherEvidenceRecorder
                 throw new InvalidOperationException("MassNavigation UAT requires a configured startup map.");
             }
 
-            runtime.Engine.LoadMap(runtime.Config.StartupMapId);
+            runtime.Engine.LoadStartupMap();
         }
 
         PresentationTimingDiagnostics timings = runtime.Engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)

@@ -29,6 +29,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "Relation", EffectPresetType.Relation },
             { "Exchange", EffectPresetType.Exchange },
             { "CompleteProgression", EffectPresetType.CompleteProgression },
+            { "SubmitOrderFromBlackboard", EffectPresetType.SubmitOrderFromBlackboard },
+            { "DeployConsumeSource", EffectPresetType.DeployConsumeSource },
         };
 
         /// <summary>
@@ -183,6 +185,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
             { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
             { "CompleteProgression", BuiltinHandlerId.CompleteProgression },
+            { "SubmitOrderFromBlackboard", BuiltinHandlerId.SubmitOrderFromBlackboard },
+            { "MaterializeTemplate", BuiltinHandlerId.MaterializeTemplate },
+            { "CopyIdentityComponents", BuiltinHandlerId.CopyIdentityComponents },
+            { "CopyAttributeSlice", BuiltinHandlerId.CopyAttributeSlice },
+            { "ClearActiveEffects", BuiltinHandlerId.ClearActiveEffects },
+            { "TransferStableId", BuiltinHandlerId.TransferStableId },
+            { "RewireSelection", BuiltinHandlerId.RewireSelection },
+            { "ConsumeEntity", BuiltinHandlerId.ConsumeEntity },
         };
 
         /// <summary>

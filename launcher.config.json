@@ -170,14 +170,6 @@
       }
     },
     {
-      "name": "browser_cef_runtime",
-      "target": {
-        "type": "path",
-        "value": "mods/browser/BrowserCefRuntimeMod",
-        "projectPath": "BrowserCefRuntimeMod.csproj"
-      }
-    },
-    {
       "name": "live_map_editor",
       "target": {
         "type": "path",
@@ -237,5 +229,12 @@
   "adapters": {
     "default": "raylib"
   },
+  "browserRuntimeProviders": [
+    {
+      "id": "cef",
+      "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
+      "assemblyPath": "src/Libraries/Ludots.UI.Browser.Cef/bin/Release/net8.0-windows/Ludots.UI.Browser.Cef.dll"
+    }
+  ],
   "projectHints": []
 }

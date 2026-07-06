@@ -14,7 +14,7 @@
 
 1. `src/Libraries/Ludots.UI/UIRoot.cs` 一次只能挂一棵 `UiScene`，现有交互面板都是各自直接 `MountScene(...)`，没有可复用的多实例共享宿主。
 2. `mods/CoreInputMod/Systems/SkillBarOverlaySystem.cs` 只能绘制单条 Native HUD skill bar，无法表达技能组切换、多实例、锚点尺寸配置，也没有 handle 生命周期。
-3. `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs` 只有执行与 indicator 元数据，没有“面板展示元数据”与“面板数据提供契约”。
+3. `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs` 只有执行与 targeting 元数据，没有“面板展示元数据”与“面板数据提供契约”。
 
 结论：这不是一个可以直接塞进某个 demo mod 的普通 feature，而是一个需要先补 Core 扩展点的基础设施任务。
 
@@ -27,7 +27,7 @@
 * Pipeline: `ReactivePage<TState>` → `UiScene.ApplyReactiveRoot(...)` → `UIRoot.Render()` — 单一 UI runtime，用于 retained diff、多实例组合与虚拟窗口。
 * Pipeline: `AbilityStateBuffer` + `AbilityFormRoutingSystem` + `AbilitySlotResolver.Resolve(...)` — 把实体当前 slot 解析成最终可显示技能。
 * Pipeline: `TriggerManager.FireEvent(...)` / `FireMapEvent(...)` — 允许 trigger 在不绑定输入系统的前提下控制面板开关与切组。
-* System: `AbilityIndicatorOverlayBridge`、`ContextScoredOrderResolver` — 已证明 slot 解析、form/granted 层合并与 context group 查询可以在 Core 中集中完成。
+* System: `AbilityAimPresentationRuntime`、`ContextScoredOrderResolver` — 已证明 slot 解析、form/granted 层合并与 context group 查询可以在 Core 中集中完成。
 * Mod: `InteractionShowcaseMod` — 可复用其多交互模式、form routing 与 showcase 表达方式。
 * Mod: `CameraAcceptanceMod` — 可复用其 reactive panel、多区块 UI、虚拟窗口与性能观测方法。
 

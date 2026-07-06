@@ -13,7 +13,7 @@ The current interaction stack needs two kinds of immediate visual feedback witho
 The shipped implementation keeps both behaviors on top of existing infrastructure:
 
 - order/runtime reuse stays inside `src/Core/Gameplay/GAS/Orders/`
-- presentation reuse stays inside `src/Core/Presentation/Rendering/GroundOverlayBuffer.cs`
+- presentation reuse stays inside `PresentationEventStream -> PerformerRuleSystem -> PerformerCommand`
 - sandbox-specific indicator policy stays inside `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs`
 
 ## 2. Reuse-First Design
@@ -24,8 +24,8 @@ The slice explicitly reuses these existing systems and boundaries:
   - remains the authoritative `moveTo` order consumer
 - `src/Core/Gameplay/GAS/Orders/CompositeOrderPlanner.cs`
   - continues to plan cast-followed-by-move sequences, now via shared spatial resolution
-- `src/Core/Input/Orders/AbilityIndicatorOverlayBridge.cs`
-  - remains the reference pattern for order-to-overlay bridging
+- `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs`
+  - remains the reference path for ability aim events feeding performer rules instead of direct visual ownership in ability config
 - `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
   - remains the single install point for generic input presentation systems
 - `src/Core/Navigation/Pathing/IPathService.cs` runtime service contract when a map exposes pathing
@@ -51,27 +51,28 @@ This keeps queued-order projection, cast anchor planning, and move destination e
 
 ## 4. Selected Move Path Preview
 
-`src/Core/Input/Orders/SelectedMovePathOverlayBridge.cs` is the generic bridge responsible for previewing the current selected unit's move plan.
+`mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs` is the generic event projection responsible for previewing the current selected unit's move plan.
 
 Its runtime behavior is:
 
 1. Read the current selected entity from the existing selection/global context.
 2. Resolve the currently active or queued move destination through `OrderWorldSpatialResolver`.
-3. Query the shared path service when the current map exposes pathing.
-4. Emit preview geometry into `GroundOverlayBuffer`.
+3. Publish `MovePathBegun` / `MovePathUpdated` / `MovePathEnded` events into `PresentationEventStream`.
+4. Let performer rules in `mods/CoreInputMod/assets/Presentation/performers.json` create, update, and destroy the ground overlay performers.
 
-The bridge is presented by `mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs` and registered in `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`.
+The system is registered in `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs` immediately before `PerformerRuleSystem`.
 
 ### 4.1 Fallback Boundary
 
-Some maps, including the current champion sandbox, boot a path service adapter without a board/path graph. In that case path solving is unavailable even though move execution still works.
+Some maps, including the current champion sandbox, boot without a board/path graph. In that case selected move path projection uses the authored order-space waypoints or final destination instead of inventing a private renderer.
 
-For those maps the bridge falls back to a direct order-space segment preview instead of failing silently. This keeps the UX visible on maps that are intentionally lightweight while still preferring true path output when available.
+This keeps the UX visible on intentionally lightweight maps while preserving a single presentation route: projected events first, performer rules second.
 
 Relevant code and evidence:
 
-- `src/Core/Input/Orders/SelectedMovePathOverlayBridge.cs`
-- `src/Tests/GasTests/SelectedMovePathOverlayBridgeTests.cs`
+- `mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs`
+- `mods/CoreInputMod/assets/Presentation/performers.json`
+- `src/Tests/GasTests/SelectedMovePathPresentationSystemTests.cs`
 - `src/Tests/GasTests/OrderNavigationMoveRuntimeTests.cs`
 
 ## 5. Hover Marker Policy
@@ -93,13 +94,13 @@ The hover marker still reuses the existing performer/overlay stack:
 Code evidence:
 
 - `src/Core/Gameplay/GAS/Orders/OrderWorldSpatialResolver.cs`
-- `src/Core/Input/Orders/SelectedMovePathOverlayBridge.cs`
 - `mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs`
+- `mods/CoreInputMod/assets/Presentation/performers.json`
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillSandboxRuntime.cs`
 
 Test evidence:
 
-- `src/Tests/GasTests/SelectedMovePathOverlayBridgeTests.cs`
+- `src/Tests/GasTests/SelectedMovePathPresentationSystemTests.cs`
 - `src/Tests/GasTests/Production/InputOrderConvergenceValidationTests.cs`
 - `src/Tests/GasTests/Production/OrderCompositePlannerTests.cs`
 - `src/Tests/GasTests/OrderNavigationMoveRuntimeTests.cs`

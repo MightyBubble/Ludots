@@ -22,6 +22,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Hex;
@@ -923,6 +924,68 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudPerformBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                Entity target = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+                Entity hostileAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+                var behavior = new WorldHudPerformBehavior();
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                bool transientTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    ReadOnlySpan<int>.Empty,
+                    out PerformPhaseResult transientTextPhase);
+                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
+                bool attributeTextProjected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    target,
+                    LODLevel.High,
+                    WorldHudItemKind.Text,
+                    requiredAttributes,
+                    out PerformPhaseResult attributeTextPhase);
+
+                Assert.That(transientTextProjected, Is.True);
+                Assert.That(transientTextPhase.IsHostile, Is.True);
+                Assert.That(transientTextPhase.ShouldPresent, Is.True);
+                Assert.That(transientTextPhase.AllowWorldHudProjection, Is.True);
+
+                Assert.That(attributeTextProjected, Is.False);
+                Assert.That(attributeTextPhase.RequiresAttributeProjection, Is.True);
+                Assert.That(attributeTextPhase.AllowWorldHudProjection, Is.False);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
         public void WorldHudPerformBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
         {
             using var world = World.Create();
@@ -1033,6 +1096,53 @@ namespace Ludots.Tests.Presentation
             Assert.That(phase.ShouldPresent, Is.False);
             Assert.That(phase.HasVision, Is.False);
             Assert.That(phase.AllowWorldHudProjection, Is.False);
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_DefaultAudienceRequiresOwnerAttributesForAttributeHud()
+        {
+            using var world = World.Create();
+
+            const int healthAttributeId = 7;
+            Entity ownerWithoutAttributes = world.Create(
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity ownerWithAttributes = world.Create(
+                new AttributeBuffer(),
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(ownerWithAttributes);
+            attributes.SetCurrent(healthAttributeId, 100f);
+
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>();
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
+
+            bool projectedWithoutAttributes = behavior.TryResolveProjection(
+                world,
+                globals,
+                ownerWithoutAttributes,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PerformPhaseResult missingPhase);
+            bool projectedWithAttributes = behavior.TryResolveProjection(
+                world,
+                globals,
+                ownerWithAttributes,
+                LODLevel.High,
+                WorldHudItemKind.Bar,
+                requiredAttributes,
+                out PerformPhaseResult presentPhase);
+
+            Assert.That(projectedWithoutAttributes, Is.False);
+            Assert.That(missingPhase.ShouldPresent, Is.True);
+            Assert.That(missingPhase.RequiresAttributeProjection, Is.True);
+            Assert.That(missingPhase.HasAttributeProjection, Is.False);
+            Assert.That(missingPhase.AllowWorldHudProjection, Is.False);
+
+            Assert.That(projectedWithAttributes, Is.True);
+            Assert.That(presentPhase.RequiresAttributeProjection, Is.True);
+            Assert.That(presentPhase.HasAttributeProjection, Is.True);
+            Assert.That(presentPhase.AllowWorldHudProjection, Is.True);
         }
 
         [Test]
@@ -1729,6 +1839,51 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerEntityRuntime_OwnerPayloadRootIgnoresWorldPositionOverlayRoots()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int entityRootDef = definitions.Register("runtime.payload.entity.root", new PerformerDefinition());
+            int overlayRootDef = definitions.Register("runtime.payload.overlay.root", new PerformerDefinition());
+            instances.BindDefinitions(definitions);
+
+            Entity entityRoot = instances.Create(entityRootDef, owner, scopeId: 1);
+            Entity overlayRoot = instances.Create(
+                overlayRootDef,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.WorldPosition,
+                new Vector3(4f, 0f, 6f),
+                stableId: 2002,
+                Entity.Null,
+                definitions.Get(overlayRootDef));
+
+            Assert.That(world.TryGet(owner, out PresentationOwnerHasPerformerPayload payload), Is.True);
+            Assert.That(payload.Count, Is.EqualTo(2));
+            Assert.That(payload.RootCount, Is.EqualTo(1), "World-position overlay roots share owner scope but must not break the entity-root fast path.");
+            Assert.That(payload.SingleRootPerformer, Is.EqualTo(entityRoot));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(1));
+
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(2500, -700).Value;
+            world.Get<VisualTransform>(owner).Position = new Vector3(25f, 0f, -7f);
+
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            sync.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(entityRoot).Value, Is.EqualTo(new Vector3(25f, 0f, -7f)));
+            Assert.That(world.Get<PerformerWorldPosition>(overlayRoot).Value, Is.EqualTo(new Vector3(4f, 0f, 6f)));
+        }
+
+        [Test]
         public void PresentationVisualProxyEmitter_Throws_WhenSnapshotBufferOverflows()
         {
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -2291,4 +2446,3 @@ namespace Ludots.Tests.Presentation
         }
     }
 }
-

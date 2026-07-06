@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public sealed class BuiltinHandlerRegistry
     {
-        public const int MaxHandlers = 64;
+        public const int MaxHandlers = 96;
 
         private readonly BuiltinHandlerFn[] _handlers = new BuiltinHandlerFn[MaxHandlers];
 

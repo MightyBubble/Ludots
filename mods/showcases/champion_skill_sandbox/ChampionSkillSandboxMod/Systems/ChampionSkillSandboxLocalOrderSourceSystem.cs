@@ -12,6 +12,8 @@ namespace ChampionSkillSandboxMod.Systems
 {
     public sealed class ChampionSkillSandboxLocalOrderSourceSystem : ISystem<float>
     {
+        public const string LastUpdateDebugKey = "ChampionSkillSandbox.Debug.LocalOrderSource";
+
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly LocalOrderSourceHelper _helper;
@@ -40,20 +42,24 @@ namespace ChampionSkillSandboxMod.Systems
             EnsureInitialized();
             if (_mapping == null)
             {
+                _globals[LastUpdateDebugKey] = "mapping=<missing>";
                 return;
             }
 
             Entity actor = _helper.GetControlledActor();
             if (!_world.IsAlive(actor))
             {
+                _globals[LastUpdateDebugKey] = $"actor=<dead> commandPressed={IsCommandPressed()}";
                 return;
             }
 
             if (!_helper.TrySetLocalPlayer(_mapping, actor))
             {
+                _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} setLocalPlayer=false commandPressed={IsCommandPressed()}";
                 return;
             }
 
+            _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} setLocalPlayer=true commandPressed={IsCommandPressed()}";
             _mapping.Update(dt);
         }
 
@@ -85,6 +91,13 @@ namespace ChampionSkillSandboxMod.Systems
                        inputObj is IInputActionReader input &&
                        input.IsDown("QueueModifier");
             });
+        }
+
+        private bool IsCommandPressed()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                   inputObj is IInputActionReader input &&
+                   input.PressedThisFrame("Command");
         }
     }
 }

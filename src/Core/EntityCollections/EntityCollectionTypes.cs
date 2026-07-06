@@ -7,6 +7,9 @@ namespace Ludots.Core.EntityCollections
     {
         public const string SelectionLivePrimary = "collection.selection.live.primary";
         public const string UiSelectionAcquisition = "collection.ui.selection.acquisition";
+        public const string HoveredEntity = "collection.ui.selection.hover";
+        public const string AbilityAimHover = "collection.ability.aim.hover";
+        public const string AbilityAimAffected = "collection.ability.aim.affected";
         public const string EntityInfoExplicit = "collection.entityinfo.explicit";
         public const string CommandSource = "collection.command.source";
     }
@@ -21,6 +24,8 @@ namespace Ludots.Core.EntityCollections
         SpatialQuery = 5,
         GasGraphResult = 6,
         Debug = 7,
+        UiHover = 8,
+        DynamicParticipant = 9,
     }
 
     public enum EntityCollectionRoleKind : byte
@@ -30,6 +35,7 @@ namespace Ludots.Core.EntityCollections
         FormalSelection = 2,
         CommandSource = 3,
         Debug = 4,
+        AimAffected = 5,
     }
 
     [Flags]

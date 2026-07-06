@@ -57,6 +57,37 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Runtime_PerAgentWorldTargetLocksVelocityAfterArrival()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world);
+            Entity agent = runtime.AgentState.AllAgents[0];
+            Vector2 start = runtime.GetAgentWorldPositionCm(0);
+            Vector2 target = start + new Vector2(80f, 0f);
+
+            Assert.That(runtime.SetAgentNavigationTargetWorldCm(agent, target, resetRecovery: true), Is.True);
+
+            Span<MassNavigationArrivalEvent> events = stackalloc MassNavigationArrivalEvent[4];
+            int drained = StepUntilArrival(runtime, world, events);
+
+            Assert.That(drained, Is.EqualTo(1));
+
+            Vector2 settledPosition = runtime.GetAgentWorldPositionCm(0);
+            for (int i = 0; i < 20; i++)
+            {
+                runtime.StepNavigationForTests(world, 0.05f, runHardResolve: true);
+                Vector2 position = runtime.GetAgentWorldPositionCm(0);
+                Vector2 velocity = runtime.GetFlowSolverForTests().GetVelocityCmPerSecond(0);
+
+                Assert.That(Vector2.Distance(position, settledPosition), Is.LessThan(0.001f));
+                Assert.That(velocity.X, Is.EqualTo(0f).Within(0.001f));
+                Assert.That(velocity.Y, Is.EqualTo(0f).Within(0.001f));
+            }
+
+            Assert.That(runtime.DrainArrivalEvents(events), Is.EqualTo(0));
+        }
+
+        [Test]
         public void Runtime_RuntimeObstacleStampRebuildsAndBlocksTargetProjection()
         {
             using var world = World.Create();

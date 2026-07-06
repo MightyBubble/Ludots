@@ -127,5 +127,23 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "CompleteProgression" }
     }
+  },
+  {
+    "id": "SubmitOrderFromBlackboard",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "SubmitOrderFromBlackboard" }
+    }
+  },
+  {
+    "id": "DeployConsumeSource",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "graph", "id": "Graph.Lifecycle.DeployConsumeSource" }
+    }
   }
 ]

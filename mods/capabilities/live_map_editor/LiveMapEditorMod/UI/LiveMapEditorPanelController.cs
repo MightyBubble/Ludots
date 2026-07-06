@@ -41,7 +41,7 @@ internal sealed class LiveMapEditorPanelController : IAsyncDisposable, IDisposab
             ?? throw new InvalidOperationException("UIRoot service is missing.");
         if (!TryGetBrowserRuntime(context, engine, out IBrowserRuntime browserRuntime))
         {
-            throw new InvalidOperationException("LiveMapEditorMod requires BrowserCefRuntimeMod.");
+            throw new InvalidOperationException("LiveMapEditorMod requires a host-owned IBrowserRuntime service.");
         }
 
         string assetRoot = ResolveAssetRoot(engine);

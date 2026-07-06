@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -236,6 +237,12 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.SourceHasVisualTransform:
                     return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
 
+                case InlineConditionKind.EventMagnitudePositive:
+                    return evt.Magnitude > 0f;
+
+                case InlineConditionKind.EventMagnitudeNonPositive:
+                    return evt.Magnitude <= 0f;
+
                 default:
                     throw new InvalidOperationException($"Unsupported performer rule inline condition '{kind}'.");
             }
@@ -357,12 +364,19 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitRule(in IndexedRule rule, in PresentationEvent evt)
         {
-            if (rule.OwnerDefinitionId > 0 &&
-                _runtime != null &&
-                EventTargetsExistingPerformerInstances(evt.Kind))
+            if (rule.OwnerDefinitionId > 0 && _runtime != null)
             {
-                EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
-                return;
+                if (CommandTargetsExistingPerformerInstances(in rule.Command))
+                {
+                    EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
+                    return;
+                }
+
+                if (CommandTargetsScopedPerformer(rule.Command.CommandKind))
+                {
+                    EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
+                    return;
+                }
             }
 
             EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
@@ -402,17 +416,21 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
                 PerformerCommandScopeSource.EventKeyId => evt.KeyId,
-                PerformerCommandScopeSource.SourceStableId => ResolveSourceStableId(evt.Source),
+                PerformerCommandScopeSource.SourceStableId => ResolveStableId(evt.Source, nameof(PerformerCommandScopeSource.SourceStableId)),
+                PerformerCommandScopeSource.EventTargetStableId => ResolveStableId(evt.Target, nameof(PerformerCommandScopeSource.EventTargetStableId)),
                 _ => cmd.ScopeTag,
             };
 
             var emitted = cmd;
             emitted.ScopeTag = scopeId;
             emitted.ScopeSource = PerformerCommandScopeSource.Fixed;
-            emitted.AnchorKind = Commands.PresentationAnchorKind.Entity;
-            emitted.Source = evt.Source;
+            emitted.AnchorKind = cmd.UseEventPosition
+                ? Commands.PresentationAnchorKind.WorldPosition
+                : Commands.PresentationAnchorKind.Entity;
+            emitted.Source = ResolveCommandOwner(in cmd, in evt);
             emitted.Target = evt.Target;
-            emitted.Position = default;
+            emitted.Viewer = evt.Viewer;
+            emitted.Position = cmd.UseEventPosition ? evt.Position : default;
             emitted.PerformerEntity = performerEntity;
             Entity normalizedParent = NormalizeOptionalEntity(cmd.ParentEntity);
             emitted.ParentEntity = normalizedParent != Entity.Null
@@ -422,8 +440,14 @@ namespace Ludots.Core.Presentation.Systems
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                 : ResolveParamFloatValue(in cmd, in evt);
             emitted.IntValue = ResolveParamIntValue(in cmd, in evt);
+            emitted.VectorValue = ResolveParamVectorValue(in cmd, in evt);
             emitted.ParamGraphProgramId = 0;
             emitted.ValueSource = PerformerCommandValueSource.Fixed;
+            emitted.VectorXSource = PerformerCommandValueSource.Fixed;
+            emitted.VectorYSource = PerformerCommandValueSource.Fixed;
+            emitted.VectorZSource = PerformerCommandValueSource.Fixed;
+            emitted.VectorWSource = PerformerCommandValueSource.Fixed;
+            emitted.UseEventPosition = cmd.UseEventPosition;
 
             if (emitted.CommandKind == PerformerCommandKind.CreatePerformer &&
                 emitted.ParentEntity == Entity.Null &&
@@ -438,6 +462,15 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
             }
+        }
+
+        private static Entity ResolveCommandOwner(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.OwnerSource switch
+            {
+                PerformerCommandEntitySource.EventTarget => evt.Target,
+                _ => evt.Source,
+            };
         }
 
         private static Entity NormalizeOptionalEntity(Entity entity)
@@ -474,17 +507,39 @@ namespace Ludots.Core.Presentation.Systems
                 or PresentationEventKind.AttributeValueChanged;
         }
 
-        private int ResolveSourceStableId(Entity source)
+        private static bool CommandTargetsExistingPerformerInstances(in PerformerCommand command)
+        {
+            if (command.CommandKind == PerformerCommandKind.SetParam &&
+                command.PerformerDefinitionId > 0)
+            {
+                return false;
+            }
+
+            return command.CommandKind is PerformerCommandKind.SetParam
+                or PerformerCommandKind.ActivateBehavior
+                or PerformerCommandKind.DeactivateBehavior
+                or PerformerCommandKind.InitializeTransform
+                or PerformerCommandKind.DestroyPerformer;
+        }
+
+        private static bool CommandTargetsScopedPerformer(PerformerCommandKind kind)
+        {
+            return kind is PerformerCommandKind.CreatePerformer
+                or PerformerCommandKind.DestroyPerformerScope
+                or PerformerCommandKind.DestroyScopedPerformer;
+        }
+
+        private int ResolveStableId(Entity source, string scopeSourceName)
         {
             if (!World.IsAlive(source) || !World.Has<PresentationStableId>(source))
             {
-                throw new InvalidOperationException("Performer command scopeSource=SourceStableId requires an alive source with PresentationStableId.");
+                throw new InvalidOperationException($"Performer command scopeSource={scopeSourceName} requires an alive entity with PresentationStableId.");
             }
 
             int stableId = World.Get<PresentationStableId>(source).Value;
             if (stableId <= 0)
             {
-                throw new InvalidOperationException($"Performer command scopeSource=SourceStableId requires a positive PresentationStableId, got {stableId}.");
+                throw new InvalidOperationException($"Performer command scopeSource={scopeSourceName} requires a positive PresentationStableId, got {stableId}.");
             }
 
             return stableId;
@@ -505,6 +560,13 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
                 PerformerCommandValueSource.EventMagnitude => evt.Magnitude,
+                PerformerCommandValueSource.EventFloatA => evt.FloatA,
+                PerformerCommandValueSource.EventFloatB => evt.FloatB,
+                PerformerCommandValueSource.EventFloatC => evt.FloatC,
+                PerformerCommandValueSource.EventFloatD => evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => evt.Position.Z,
                 _ => cmd.ParamValue,
             };
         }
@@ -517,7 +579,51 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
                 PerformerCommandValueSource.EventMagnitude => (int)evt.Magnitude,
+                PerformerCommandValueSource.EventFloatA => (int)evt.FloatA,
+                PerformerCommandValueSource.EventFloatB => (int)evt.FloatB,
+                PerformerCommandValueSource.EventFloatC => (int)evt.FloatC,
+                PerformerCommandValueSource.EventFloatD => (int)evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => (int)evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => (int)evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => (int)evt.Position.Z,
                 _ => cmd.IntValue,
+            };
+        }
+
+        private static Vector4 ResolveParamVectorValue(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            if (cmd.ParamLane != ParamLane.Vector ||
+                (cmd.VectorXSource == PerformerCommandValueSource.Fixed &&
+                 cmd.VectorYSource == PerformerCommandValueSource.Fixed &&
+                 cmd.VectorZSource == PerformerCommandValueSource.Fixed &&
+                 cmd.VectorWSource == PerformerCommandValueSource.Fixed))
+            {
+                return cmd.VectorValue;
+            }
+
+            return new Vector4(
+                ResolveValueSource(cmd.VectorXSource, in evt, cmd.VectorValue.X),
+                ResolveValueSource(cmd.VectorYSource, in evt, cmd.VectorValue.Y),
+                ResolveValueSource(cmd.VectorZSource, in evt, cmd.VectorValue.Z),
+                ResolveValueSource(cmd.VectorWSource, in evt, cmd.VectorValue.W));
+        }
+
+        private static float ResolveValueSource(PerformerCommandValueSource source, in PresentationEvent evt, float fixedValue)
+        {
+            return source switch
+            {
+                PerformerCommandValueSource.EventKeyId => evt.KeyId,
+                PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandValueSource.EventMagnitude => evt.Magnitude,
+                PerformerCommandValueSource.EventFloatA => evt.FloatA,
+                PerformerCommandValueSource.EventFloatB => evt.FloatB,
+                PerformerCommandValueSource.EventFloatC => evt.FloatC,
+                PerformerCommandValueSource.EventFloatD => evt.FloatD,
+                PerformerCommandValueSource.EventPositionX => evt.Position.X,
+                PerformerCommandValueSource.EventPositionY => evt.Position.Y,
+                PerformerCommandValueSource.EventPositionZ => evt.Position.Z,
+                _ => fixedValue,
             };
         }
 

@@ -5,8 +5,7 @@ using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.MovePlanning;
-using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Scripting;
+using Ludots.Core.Presentation.Events;
 using RoadNetworkShowcaseMod.Gameplay;
 
 namespace RoadNetworkShowcaseMod.Systems
@@ -18,6 +17,10 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly SelectionRuntime _selection;
         private readonly RoadRoutePreviewSplineBuilder _builder;
         private readonly RoadRouteProfileCatalog _profiles;
+        private readonly PresentationWorldFactPublisher _facts;
+        private readonly List<RoadRoutePreviewFactScope> _currentScopes = new();
+        private readonly List<RoadRoutePreviewFactScope> _previousScopes = new();
+        private readonly HashSet<RoadRoutePreviewFactScope> _currentScopeSet = new();
 
         public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection, MovePlanStore plans)
         {
@@ -26,6 +29,10 @@ namespace RoadNetworkShowcaseMod.Systems
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
             _builder = new RoadRoutePreviewSplineBuilder(plans ?? throw new ArgumentNullException(nameof(plans)));
             _profiles = new RoadRouteProfileCatalog(world);
+            if (!PresentationWorldFactPublisher.TryCreate(globals, out _facts))
+            {
+                throw new InvalidOperationException("Road selected route presentation requires PresentationEventStream.");
+            }
         }
 
         public void Initialize()
@@ -38,19 +45,16 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Update(in float dt)
         {
-            if (!TryGetBuffers(out RoadSplineBuffer? roadSplines, out GroundOverlayBuffer? overlays))
-            {
-                return;
-            }
-
+            _currentScopes.Clear();
+            _currentScopeSet.Clear();
             Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _globals);
             int count = selected.Length;
             if (count <= 0)
             {
+                EndPreviousScopes();
                 return;
             }
 
-            int stableBase = 20000;
             for (int i = 0; i < count; i++)
             {
                 Entity entity = selected[i];
@@ -61,8 +65,10 @@ namespace RoadNetworkShowcaseMod.Systems
 
                 ref var buffer = ref _world.Get<OrderBuffer>(entity);
                 RoadRoutePreviewPalette palette = _profiles.ResolvePreviewPalette(entity);
-                _builder.EmitSelectionPreview(_world, entity, ref buffer, in palette, roadSplines!, overlays!, stableBase + (i * 128));
+                _builder.EmitSelectionPreview(_world, entity, ref buffer, in palette, _facts, _currentScopes);
             }
+
+            RemoveStaleScopes();
         }
 
         public void AfterUpdate(in float dt)
@@ -71,23 +77,50 @@ namespace RoadNetworkShowcaseMod.Systems
 
         public void Dispose()
         {
+            EndPreviousScopes();
         }
 
-        private bool TryGetBuffers(out RoadSplineBuffer? roadSplines, out GroundOverlayBuffer? overlays)
+        private void RemoveStaleScopes()
         {
-            roadSplines = null;
-            overlays = null;
-            if (!_globals.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out object? roadSplineObj) ||
-                roadSplineObj is not RoadSplineBuffer resolvedRoadSplines ||
-                !_globals.TryGetValue(CoreServiceKeys.GroundOverlayBuffer.Name, out object? overlaysObj) ||
-                overlaysObj is not GroundOverlayBuffer resolvedOverlays)
+            for (int i = 0; i < _currentScopes.Count; i++)
             {
-                return false;
+                _currentScopeSet.Add(_currentScopes[i]);
             }
 
-            roadSplines = resolvedRoadSplines;
-            overlays = resolvedOverlays;
-            return true;
+            for (int i = 0; i < _previousScopes.Count; i++)
+            {
+                RoadRoutePreviewFactScope previous = _previousScopes[i];
+                if (!_currentScopeSet.Contains(previous))
+                {
+                    EndScope(previous);
+                }
+            }
+
+            _previousScopes.Clear();
+            _previousScopes.AddRange(_currentScopes);
+        }
+
+        private void EndPreviousScopes()
+        {
+            for (int i = 0; i < _previousScopes.Count; i++)
+            {
+                EndScope(_previousScopes[i]);
+            }
+
+            _previousScopes.Clear();
+            _currentScopes.Clear();
+            _currentScopeSet.Clear();
+        }
+
+        private void EndScope(in RoadRoutePreviewFactScope scope)
+        {
+            if (scope.Key.Contains(".endpoint.", StringComparison.Ordinal))
+            {
+                _facts.PublishWorldOverlayEnded(scope.Key, Entity.Null, scope.Scope);
+                return;
+            }
+
+            _facts.PublishWorldSplineEnded(scope.Key, Entity.Null, scope.Scope);
         }
     }
 }

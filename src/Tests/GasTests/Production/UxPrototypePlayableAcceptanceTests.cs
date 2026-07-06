@@ -705,8 +705,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadHoveredEntityName(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hoveredObj) &&
-                   hoveredObj is Entity hovered &&
+            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.TryGet(hovered, out Name name)
                 ? name.Value

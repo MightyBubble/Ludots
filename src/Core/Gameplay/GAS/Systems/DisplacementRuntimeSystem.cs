@@ -133,11 +133,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 ref var physicsPosition = ref World.Get<Position2D>(target);
                 physicsPosition.Value = physicsPosition.Value + step;
-                return;
             }
 
-            ref var worldPosition = ref World.Get<WorldPositionCm>(target);
-            worldPosition.Value = worldPosition.Value + step;
+            if (World.Has<WorldPositionCm>(target))
+            {
+                ref var worldPosition = ref World.Get<WorldPositionCm>(target);
+                worldPosition.Value = worldPosition.Value + step;
+            }
         }
 
         private static Fix64Vec2 ComputeDirection(in DisplacementState disp, World world)

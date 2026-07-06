@@ -242,6 +242,7 @@ public sealed class MassNavigationSimulationRuntime
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
+        MassNavigationFlow.PreallocateAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
@@ -709,6 +710,13 @@ public sealed class MassNavigationSimulationRuntime
             throw new InvalidOperationException("MassNavigation authored rebuild requires matching entity, seed, and controllable spans.");
         }
 
+        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (agentSeeds.Length > membershipCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
+        }
+
         int previousSelectedCount = _selectedCount;
         uint previousSelectionRevision = _selectionRevision;
         Span<Entity> previousSelectedEntities = previousSelectedCount > 0
@@ -719,6 +727,7 @@ public sealed class MassNavigationSimulationRuntime
             _selectedEntities.AsSpan(0, previousSelectedCount).CopyTo(previousSelectedEntities);
         }
 
+        var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
         ClearAuthoredRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
@@ -726,7 +735,42 @@ public sealed class MassNavigationSimulationRuntime
             BindSpawnedAgent(world, entities[i], i, controllableFlags[i]);
         }
 
+        NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
         RestoreSelectionAfterAuthoredRebuild(world, previousSelectedEntities, previousSelectionRevision);
+        MarkStructuralChange();
+    }
+
+    public void AppendAuthoredAgents(
+        World world,
+        ReadOnlySpan<Entity> newEntities,
+        ReadOnlySpan<MassNavigationAgentSeed> newAgentSeeds,
+        ReadOnlySpan<bool> controllableFlags)
+    {
+        if (newEntities.Length != newAgentSeeds.Length || newEntities.Length != controllableFlags.Length)
+        {
+            throw new InvalidOperationException("MassNavigation authored append requires matching entity, seed, and controllable spans.");
+        }
+
+        if (newAgentSeeds.Length <= 0)
+        {
+            return;
+        }
+
+        int newTotal = checked(AgentState.TotalAgents + newAgentSeeds.Length);
+        int membershipCapacity = Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity;
+        if (newTotal > membershipCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation authored append required {newTotal} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
+        }
+
+        int startIndex = MassNavigationFlow.UnitCount;
+        MassNavigationFlow.AppendAuthoredAgents(newAgentSeeds);
+        for (int i = 0; i < newEntities.Length; i++)
+        {
+            BindSpawnedAgent(world, newEntities[i], startIndex + i, controllableFlags[i]);
+        }
+
         MarkStructuralChange();
     }
 

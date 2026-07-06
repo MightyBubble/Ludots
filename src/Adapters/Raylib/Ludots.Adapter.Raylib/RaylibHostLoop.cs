@@ -310,7 +310,7 @@ namespace Ludots.Adapter.Raylib
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
-                engine.LoadMap(config.StartupMapId);
+                engine.LoadStartupMap();
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
@@ -1602,7 +1602,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (engine.TryGetService(CoreServiceKeys.HoveredEntity, out Entity hovered) &&
+            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";

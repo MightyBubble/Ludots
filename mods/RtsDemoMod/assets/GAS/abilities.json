@@ -4,7 +4,10 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "presentation": {
@@ -19,8 +22,15 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Shared.EnterGarrison" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Shared.EnterGarrison"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
@@ -31,17 +41,15 @@
         "State.Rts.Warping"
       ]
     },
-    "indicator": {
-      "shape": "Single",
-      "range": 1200,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55"
-    },
     "presentation": {
       "displayName": "进驻",
       "iconGlyph": "IN",
       "accentColor": "#F59E0B",
       "hintText": "选择可进驻建筑，把当前单位挂入建筑关系。"
+    },
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.Rts.Shared.EnterGarrison"
     }
   },
   {
@@ -49,8 +57,15 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagSignal", "tick": 0, "tag": "Command.Rts.UngarrisonAll" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagSignal",
+          "tick": 0,
+          "tag": "Command.Rts.UngarrisonAll"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "presentation": {
@@ -65,32 +80,42 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.BuilderAttached" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostLumberMill" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CreateLumberMillSite" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagSignal",
+          "tick": 0,
+          "tag": "State.Rts.BuilderAttached"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.War3.CostLumberMill"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.War3.CreateLumberMillSite"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["State.Rts.BuilderAttached", "State.Rts.MorphConsumed"]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 1600,
-      "radius": 240,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.1,
-        "offsetY": 0.05
-      }
+      "blockedAny": [
+        "State.Rts.BuilderAttached",
+        "State.Rts.MorphConsumed"
+      ]
     },
     "presentation": {
       "displayName": "伐木场",
       "iconGlyph": "LM",
       "accentColor": "#22C55E",
       "hintText": "War3 式农民驻场施工，完工后自动脱离。"
+    },
+    "targeting": {
+      "castRangeCm": 1600,
+      "impactEffect": "Effect.Rts.War3.CreateLumberMillSite"
     }
   },
   {
@@ -98,32 +123,42 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.BuilderAttached" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostGuardTower" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CreateGuardTowerSite" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagSignal",
+          "tick": 0,
+          "tag": "State.Rts.BuilderAttached"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.War3.CostGuardTower"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.War3.CreateGuardTowerSite"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["State.Rts.BuilderAttached", "State.Rts.MorphConsumed"]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 1500,
-      "radius": 220,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.45,
-        "offsetY": 0.08
-      }
+      "blockedAny": [
+        "State.Rts.BuilderAttached",
+        "State.Rts.MorphConsumed"
+      ]
     },
     "presentation": {
       "displayName": "箭塔",
       "iconGlyph": "GT",
       "accentColor": "#A16207",
       "hintText": "War3 式带工人进驻施工，可继续收容驻军。"
+    },
+    "targeting": {
+      "castRangeCm": 1500,
+      "impactEffect": "Effect.Rts.War3.CreateGuardTowerSite"
     }
   },
   {
@@ -131,14 +166,34 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Status.Rts.Training" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.War3.CostTrainFootman" },
-        { "kind": "EffectSignal", "tick": 90, "template": "Effect.Rts.War3.TrainFootman", "dispatchTarget": "Source" },
-        { "kind": "End", "tick": 90 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.War3.CostTrainFootman"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 90,
+          "template": "Effect.Rts.War3.TrainFootman",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 90
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing"]
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
     },
     "presentation": {
       "displayName": "训练步兵",
@@ -152,28 +207,31 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostPowerPlant" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.PlacePowerPlant" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Cnc.CostPowerPlant"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Cnc.PlacePowerPlant"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 2200,
-      "radius": 280,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 0.82,
-        "offsetY": 0.02
-      }
     },
     "presentation": {
       "displayName": "发电厂",
       "iconGlyph": "PP",
       "accentColor": "#F97316",
       "hintText": "C&C 式拍地而起，短暂升起后即可运作。"
+    },
+    "targeting": {
+      "castRangeCm": 2200,
+      "impactEffect": "Effect.Rts.Cnc.PlacePowerPlant"
     }
   },
   {
@@ -181,28 +239,31 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostRefinery" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.PlaceRefinery" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Cnc.CostRefinery"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Cnc.PlaceRefinery"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 2200,
-      "radius": 300,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_build_site",
-        "scaleY": 1.25,
-        "offsetY": 0.06
-      }
     },
     "presentation": {
       "displayName": "矿石精炼厂",
       "iconGlyph": "RF",
       "accentColor": "#DC2626",
       "hintText": "C&C 式重型生产建筑，落地即进入短施工态。"
+    },
+    "targeting": {
+      "castRangeCm": 2200,
+      "impactEffect": "Effect.Rts.Cnc.PlaceRefinery"
     }
   },
   {
@@ -210,22 +271,74 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 105, "tag": "Status.Rts.Training" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 12, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 24, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 36, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 48, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 60, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 72, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 84, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 96, "template": "Effect.Rts.Cnc.CostTrainRhinoStep" },
-        { "kind": "EffectSignal", "tick": 105, "template": "Effect.Rts.Cnc.TrainRhino", "dispatchTarget": "Source" },
-        { "kind": "End", "tick": 105 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 105,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 12,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 24,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 36,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 48,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 60,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 72,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 84,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 96,
+          "template": "Effect.Rts.Cnc.CostTrainRhinoStep"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 105,
+          "template": "Effect.Rts.Cnc.TrainRhino",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 105
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing"]
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing"
+      ]
     },
     "presentation": {
       "displayName": "训练犀牛",
@@ -239,14 +352,35 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 75, "tag": "Status.Rts.Training" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostTrainZealot" },
-        { "kind": "EffectSignal", "tick": 75, "template": "Effect.Rts.Sc2.TrainZealot", "dispatchTarget": "Source" },
-        { "kind": "End", "tick": 75 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 75,
+          "tag": "Status.Rts.Training"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Sc2.CostTrainZealot"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 75,
+          "template": "Effect.Rts.Sc2.TrainZealot",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 75
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing", "Progression.Rts.WarpGate"]
+      "blockedAny": [
+        "Status.Rts.Training",
+        "State.Rts.Constructing",
+        "Progression.Rts.WarpGate"
+      ]
     },
     "presentation": {
       "displayName": "训练狂热者",
@@ -260,14 +394,35 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 135, "tag": "Status.Rts.Researching" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostResearchWarpGate" },
-        { "kind": "EffectSignal", "tick": 135, "template": "Effect.Rts.Sc2.ResearchWarpGateComplete", "dispatchTarget": "Source" },
-        { "kind": "End", "tick": 135 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 135,
+          "tag": "Status.Rts.Researching"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Sc2.CostResearchWarpGate"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 135,
+          "template": "Effect.Rts.Sc2.ResearchWarpGateComplete",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "End",
+          "tick": 135
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Researching", "Progression.Rts.WarpGate", "State.Rts.Constructing"]
+      "blockedAny": [
+        "Status.Rts.Researching",
+        "Progression.Rts.WarpGate",
+        "State.Rts.Constructing"
+      ]
     },
     "presentation": {
       "displayName": "研究折跃门",
@@ -281,32 +436,39 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.CostWarpZealot" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Sc2.WarpZealot" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Sc2.CostWarpZealot"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Sc2.WarpZealot"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "requiredAll": ["Progression.Rts.WarpGate"],
-      "blockedAny": ["State.Rts.Constructing"]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 2600,
-      "radius": 180,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_warp_site",
-        "scaleY": 2.4,
-        "offsetY": 0.18
-      }
+      "requiredAll": [
+        "Progression.Rts.WarpGate"
+      ],
+      "blockedAny": [
+        "State.Rts.Constructing"
+      ]
     },
     "presentation": {
       "displayName": "折跃狂热者",
       "iconGlyph": "WP",
       "accentColor": "#06B6D4",
       "hintText": "SC2 神族式地面折跃，单位在落点短暂成型。"
+    },
+    "targeting": {
+      "castRangeCm": 2600,
+      "impactEffect": "Effect.Rts.Sc2.WarpZealot"
     }
   },
   {
@@ -314,32 +476,42 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagSignal", "tick": 0, "tag": "State.Rts.MorphConsumed" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Zerg.CostMorphSpawningPool" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Rts.Zerg.MorphSpawningPool" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagSignal",
+          "tick": 0,
+          "tag": "State.Rts.MorphConsumed"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Zerg.CostMorphSpawningPool"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Rts.Zerg.MorphSpawningPool"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "blockTags": {
-      "blockedAny": ["State.Rts.MorphConsumed", "State.Rts.BuilderAttached"]
-    },
-    "indicator": {
-      "shape": "Circle",
-      "range": 1500,
-      "radius": 260,
-      "showRangeCircle": true,
-      "rangeCircleColor": "#3366FF55",
-      "preview": {
-        "performerId": "core_input_preview_morph_site",
-        "scaleY": 1.8,
-        "offsetY": 0.1
-      }
+      "blockedAny": [
+        "State.Rts.MorphConsumed",
+        "State.Rts.BuilderAttached"
+      ]
     },
     "presentation": {
       "displayName": "变形血池",
       "iconGlyph": "MP",
       "accentColor": "#84CC16",
       "hintText": "虫族 Drone 会被吸入建筑，完工时自身消失。"
+    },
+    "targeting": {
+      "castRangeCm": 1500,
+      "impactEffect": "Effect.Rts.Zerg.MorphSpawningPool"
     }
   }
 ]

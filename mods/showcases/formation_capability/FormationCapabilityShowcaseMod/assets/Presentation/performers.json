@@ -335,5 +335,160 @@
     "id": "formation_capability_showcase_formation_health_text",
     "extends": "mass_navigation_agent_health_text_heavy",
     "defaultFontSize": 13
+  },
+  {
+    "id": "formation_capability.obstacle_overlay",
+    "defaultColor": [1.0, 0.82, 0.24, 1.0],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 0.0 },
+      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.28 },
+      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.22 },
+      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.08 },
+      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.42 },
+      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.82 },
+      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.24 },
+      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 1.0 },
+      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.06 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.0, 0.0, 0.06]
+        }
+      }
+    ]
+  },
+  {
+    "id": "formation_capability.formation_outline.azure",
+    "defaultColor": [0.54, 0.86, 1.0, 0.96],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.18, 0.54, 0.88, 0.24] },
+      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [0.54, 0.86, 1.0, 0.96] },
+      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.08 },
+      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.08 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [0.08, 0.08, 0.08]
+        }
+      }
+    ]
+  },
+  {
+    "id": "formation_capability.formation_outline.crimson",
+    "defaultColor": [1.0, 0.52, 0.42, 0.96],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.82, 0.22, 0.18, 0.22] },
+      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [1.0, 0.52, 0.42, 0.96] },
+      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.08 },
+      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.08 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [0.08, 0.08, 0.08]
+        }
+      }
+    ]
+  },
+  {
+    "id": "formation_capability.world_fact_rules",
+    "rules": [
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
+        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+      },
+      {
+        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldOverlayEnded", "key": "formation_capability.obstacle_overlay" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldSplineEnded", "key": "formation_capability.formation_outline.azure" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldSplineEnded", "key": "formation_capability.formation_outline.crimson" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA" }
+      }
+    ]
   }
 ]

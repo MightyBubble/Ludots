@@ -127,6 +127,25 @@ public sealed class SelectionKnowledgeProjectionTests
     }
 
     [Test]
+    public void ExplicitSelectionViewer_IsNotOverriddenBySelectionViewDiagnosticsViewer()
+    {
+        using var world = World.Create();
+        Entity localViewer = world.Create();
+        Entity diagnosticsViewer = world.Create();
+        Entity live = world.Create(new SelectionSelectableTag());
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.LocalPlayerEntity.Name] = localViewer,
+            [CoreServiceKeys.SelectionViewViewerEntity.Name] = diagnosticsViewer,
+        };
+        var store = new KnowledgeProjectionStore();
+        store.Upsert(localViewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, localViewer));
+        globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
+
+        Assert.That(SelectionEligibility.CanInspectLive(world, globals, localViewer, live), Is.True);
+    }
+
+    [Test]
     public void Issue197_GasSelectionResponseFiltersUnknownAndLastKnownCandidatesThroughProjection()
     {
         using var world = World.Create();

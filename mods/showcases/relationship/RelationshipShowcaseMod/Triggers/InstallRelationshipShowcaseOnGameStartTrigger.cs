@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using RelationshipShowcaseMod.Runtime;
 using RelationshipShowcaseMod.Systems;
@@ -55,7 +56,7 @@ namespace RelationshipShowcaseMod.Triggers
             }
 
             engine.RegisterSystem(new RelationshipShowcaseSimulationSystem(engine, _state), SystemGroup.InputCollection);
-            engine.RegisterPresentationSystem(new RelationshipShowcasePresentationSystem(engine, _state));
+            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new RelationshipShowcasePresentationSystem(engine, _state));
 
             _context.Log(_config.Logs.SystemInstalled);
             return Task.CompletedTask;

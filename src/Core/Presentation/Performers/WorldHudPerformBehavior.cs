@@ -2,7 +2,9 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Performers
@@ -20,22 +22,27 @@ namespace Ludots.Core.Presentation.Performers
             Dictionary<string, object> globals,
             Entity owner,
             LODLevel defaultLod,
+            WorldHudItemKind itemKind,
             ReadOnlySpan<int> requiredAttributeIds,
             out PerformPhaseResult phaseResult)
         {
             PerformAudienceContext audience = ResolveAudienceContext(world, globals);
             if (!audience.HasViewer)
             {
+                bool requiresAttributeProjection = !requiredAttributeIds.IsEmpty;
+                bool hasAttributeProjection = OwnerSatisfiesRequiredAttributes(world, owner, requiredAttributeIds);
                 phaseResult = new PerformPhaseResult
                 {
                     ShouldPresent = true,
-                    AllowWorldHudProjection = true,
+                    AllowWorldHudProjection = hasAttributeProjection,
                     IsVisible = true,
                     HasVision = true,
+                    RequiresAttributeProjection = requiresAttributeProjection,
+                    HasAttributeProjection = hasAttributeProjection,
                     LOD = defaultLod,
                 };
 
-                return true;
+                return phaseResult.AllowWorldHudProjection;
             }
 
             PerformProjectionFacts projection = ResolveProjectionFacts(globals, audience.Viewer, owner);
@@ -45,9 +52,28 @@ namespace Ludots.Core.Presentation.Performers
                 audience,
                 in projection,
                 requiredAttributeIds);
+            input.AllowVisibleTransientWorldText = itemKind == WorldHudItemKind.Text && requiredAttributeIds.IsEmpty;
             phaseResult = _phaseResolver.Resolve(input);
 
             return phaseResult.AllowWorldHudProjection;
+        }
+
+        public bool TryResolveProjection(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            LODLevel defaultLod,
+            ReadOnlySpan<int> requiredAttributeIds,
+            out PerformPhaseResult phaseResult)
+        {
+            return TryResolveProjection(
+                world,
+                globals,
+                owner,
+                defaultLod,
+                WorldHudItemKind.Bar,
+                requiredAttributeIds,
+                out phaseResult);
         }
 
         public bool TryResolveProjection(
@@ -62,6 +88,7 @@ namespace Ludots.Core.Presentation.Performers
                 globals,
                 owner,
                 defaultLod,
+                WorldHudItemKind.Bar,
                 ReadOnlySpan<int>.Empty,
                 out phaseResult);
         }
@@ -105,6 +132,33 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             return 0;
+        }
+
+        private static bool OwnerSatisfiesRequiredAttributes(
+            World world,
+            Entity owner,
+            ReadOnlySpan<int> requiredAttributeIds)
+        {
+            if (requiredAttributeIds.IsEmpty)
+            {
+                return true;
+            }
+
+            if (!world.IsAlive(owner) || !world.Has<AttributeBuffer>(owner))
+            {
+                return false;
+            }
+
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            for (int i = 0; i < requiredAttributeIds.Length; i++)
+            {
+                if (!attributes.HasAttribute(requiredAttributeIds[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -13,7 +13,6 @@ namespace BrowserRtsProductionShowcaseMod;
 
 public sealed class BrowserRtsProductionShowcaseModEntry : IMod
 {
-    private const string BrowserServiceKey = "BrowserRuntime";
     private const string AssetIndexPath = "BrowserRtsProductionShowcaseMod:Assets/rts-production-app/index.html";
 
     private IBrowserSurface? _surface;
@@ -78,7 +77,7 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
         if (!TryGetBrowserRuntime(context, out IBrowserRuntime runtime))
         {
             throw new InvalidOperationException(
-                "BrowserRtsProductionShowcaseMod requires BrowserCefRuntimeMod to provide BrowserRuntime.");
+                "BrowserRtsProductionShowcaseMod requires a Ludots host-provided BrowserRuntime service.");
         }
 
         string assetRoot = ResolveAssetRoot(engine);
@@ -147,7 +146,7 @@ public sealed class BrowserRtsProductionShowcaseModEntry : IMod
 
     private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)
     {
-        var key = new ServiceKey<IBrowserRuntime>(BrowserServiceKey);
+        var key = new ServiceKey<IBrowserRuntime>(BrowserRuntimeServiceNames.BrowserRuntime);
         if (context.TryGet(key, out runtime))
         {
             return true;

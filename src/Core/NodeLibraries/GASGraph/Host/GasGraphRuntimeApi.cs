@@ -8,12 +8,18 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Placement;
+using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.GraphQuery;
+using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -29,10 +35,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
+        private LoadedGraphRuntime? _loadedGraphRuntime;
+        private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
         private bool _hasConfigContext;
+
+        // ── Builtin invocation context for lifecycle graph composition ──
+        private BuiltinHandlerRegistry? _builtinHandlers;
+        private EffectTemplateRegistry? _effectTemplates;
+        private BuiltinHandlerExecutionContext? _builtinRuntime;
+        private int _currentEffectTemplateId;
+        private EffectContext _currentEffectContext;
+        private bool _hasEffectContext;
 
         public static GasGraphRuntimeApi CreateProduction(
             World world,
@@ -143,6 +159,180 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _currentConfigParams = default;
             _hasConfigContext = false;
+        }
+
+        public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
+        {
+            _loadedGraphRuntime = runtime;
+        }
+
+        public void BeginBuiltinInvocation(
+            BuiltinHandlerRegistry builtinHandlers,
+            EffectTemplateRegistry effectTemplates,
+            BuiltinHandlerExecutionContext? builtinRuntime,
+            int effectTemplateId,
+            in EffectContext effectContext,
+            in EffectConfigParams mergedParams)
+        {
+            _builtinHandlers = builtinHandlers ?? throw new ArgumentNullException(nameof(builtinHandlers));
+            _effectTemplates = effectTemplates ?? throw new ArgumentNullException(nameof(effectTemplates));
+            _builtinRuntime = builtinRuntime;
+            _currentEffectTemplateId = effectTemplateId;
+            _currentEffectContext = effectContext;
+            _hasEffectContext = true;
+            SetConfigContext(in mergedParams);
+        }
+
+        public void EndBuiltinInvocation()
+        {
+            if (_builtinRuntime?.LifecycleTransaction != null)
+            {
+                _builtinRuntime.LifecycleTransaction = null;
+            }
+
+            _builtinHandlers = null;
+            _effectTemplates = null;
+            _builtinRuntime = null;
+            _currentEffectTemplateId = 0;
+            _currentEffectContext = default;
+            _hasEffectContext = false;
+            ClearConfigContext();
+        }
+
+        public void BeginLifecycleTransaction()
+        {
+            var runtime = RequireBuiltinRuntime();
+            var services = runtime.LifecycleServices
+                ?? throw new InvalidOperationException("BeginLifecycleTransaction requires LifecycleServices on BuiltinHandlerExecutionContext.");
+
+            if (runtime.LifecycleTransaction != null)
+            {
+                throw new InvalidOperationException("BeginLifecycleTransaction cannot nest an active lifecycle transaction.");
+            }
+
+            if (!_hasEffectContext)
+            {
+                throw new InvalidOperationException("BeginLifecycleTransaction requires an active effect context.");
+            }
+
+            Entity source = _currentEffectContext.Source;
+            if (!_world.IsAlive(source))
+            {
+                throw new LifecycleExecutionException("Entity lifecycle transaction failed because the source entity is no longer alive.");
+            }
+
+            if (_world.Has<PresentationDestroyPending>(source))
+            {
+                throw new LifecycleExecutionException("Entity lifecycle transaction failed because the source entity is already pending destroy.");
+            }
+
+            if (!_hasConfigContext ||
+                !_currentConfigParams.TryGetInt(EffectParamKeys.TargetEntityTemplateKeyId, out int templateKeyId) ||
+                templateKeyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    "BeginLifecycleTransaction requires config param '_ep.targetEntityTemplate' with type EntityTemplate.");
+            }
+
+            string targetTemplateId = services.TemplateKeys.GetName(templateKeyId);
+            if (string.IsNullOrWhiteSpace(targetTemplateId))
+            {
+                throw new InvalidOperationException(
+                    $"BeginLifecycleTransaction could not resolve entity template key id '{templateKeyId}'.");
+            }
+
+            if (!EffectTargetPointResolver.TryResolve(
+                    _world,
+                    in _currentEffectContext,
+                    in _currentConfigParams,
+                    EffectTargetPointResolveOptions.DeployAtTargetPoint,
+                    out var placementCm))
+            {
+                throw new LifecycleExecutionException(
+                    "DeployConsumeSource failed because target point could not be resolved.");
+            }
+
+            var state = new LifecycleTransactionState
+            {
+                Source = source,
+                TargetTemplateId = targetTemplateId,
+                PlacementCm = placementCm,
+                Snapshot = LifecycleSnapshot.Capture(_world, source),
+            };
+            RuntimeEntityLifecycleTransactionExecutor.ConfigureDeployConsumeSourceFromConfig(
+                state,
+                in _currentConfigParams);
+            runtime.LifecycleTransaction = state;
+        }
+
+        public void InvokeBuiltin(int builtinHandlerId)
+        {
+            var runtime = RequireBuiltinRuntime();
+            var registry = RequireBuiltinHandlers();
+            var templates = RequireEffectTemplates();
+
+            if (!_hasEffectContext)
+            {
+                throw new InvalidOperationException("InvokeBuiltin requires an active effect context.");
+            }
+
+            if (!templates.TryGetRef(_currentEffectTemplateId, out int tplIdx))
+            {
+                throw new InvalidOperationException(
+                    $"InvokeBuiltin requires effect template id '{_currentEffectTemplateId}', but it is not registered.");
+            }
+
+            ref readonly var tplData = ref templates.GetRef(tplIdx);
+            var context = _currentEffectContext;
+            var mergedParams = _hasConfigContext ? _currentConfigParams : tplData.ConfigParams;
+
+            try
+            {
+                registry.Invoke(
+                    (BuiltinHandlerId)builtinHandlerId,
+                    _world,
+                    default,
+                    ref context,
+                    in mergedParams,
+                    in tplData,
+                    runtime);
+            }
+            catch
+            {
+                RollbackLifecycleTransaction(runtime);
+                throw;
+            }
+        }
+
+        private BuiltinHandlerExecutionContext RequireBuiltinRuntime()
+        {
+            return _builtinRuntime
+                ?? throw new InvalidOperationException("Graph builtin invocation requires BuiltinHandlerExecutionContext.");
+        }
+
+        private BuiltinHandlerRegistry RequireBuiltinHandlers()
+        {
+            return _builtinHandlers
+                ?? throw new InvalidOperationException("Graph builtin invocation requires BuiltinHandlerRegistry.");
+        }
+
+        private EffectTemplateRegistry RequireEffectTemplates()
+        {
+            return _effectTemplates
+                ?? throw new InvalidOperationException("Graph builtin invocation requires EffectTemplateRegistry.");
+        }
+
+        private void RollbackLifecycleTransaction(BuiltinHandlerExecutionContext runtime)
+        {
+            LifecycleTransactionState? state = runtime.LifecycleTransaction;
+            if (state == null || !state.HasMaterializedTarget)
+            {
+                return;
+            }
+
+            EntityLifecycleAtomicOps.RollbackMaterializedTarget(_world, state.Target);
+            state.HasMaterializedTarget = false;
+            state.Target = Entity.Null;
         }
 
         public bool TryGetGridPos(Entity entity, out IntVector2 gridPos)
@@ -587,6 +777,84 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             value = 0;
             if (!_hasConfigContext) return false;
             return _currentConfigParams.TryGetInt(keyId, out value);
+        }
+
+        public bool TrySnapTargetToNearestInCollection(
+            Entity owner,
+            int collectionKeyId,
+            ref IntVector2 targetPosCm,
+            float maxDistanceCm,
+            out Entity snappedEntity)
+        {
+            snappedEntity = Entity.Null;
+            if (_entityCollections == null)
+            {
+                return false;
+            }
+
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
+            bool found = PlacementValidation.TrySnapToNearestInCollection(
+                _world,
+                _entityCollections,
+                owner,
+                collectionKeyId,
+                in pointCm,
+                Fix64.FromFloat(maxDistanceCm),
+                out Fix64Vec2 snappedCm,
+                out snappedEntity);
+            if (found)
+            {
+                var rounded = snappedCm.RoundToInt();
+                targetPosCm = new IntVector2(rounded.x, rounded.y);
+            }
+
+            return found;
+        }
+
+        public bool TrySnapTargetToNearestGraphEdge(
+            ref IntVector2 targetPosCm,
+            float searchRadiusCm,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
+            LoadedGraphRuntime? runtime = _loadedGraphRuntime;
+            if (runtime == null || !runtime.HasLoadedGraph || searchRadiusCm <= 0f)
+            {
+                return false;
+            }
+
+            EnsureGraphProjectionCandidateCapacity(runtime.CurrentGraph.NodeCount);
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
+            bool found = PlacementValidation.TrySnapToNearestGraphEdge(
+                runtime.CurrentGraph,
+                runtime.CurrentSpatialIndex,
+                ref pointCm,
+                Fix64.FromFloat(searchRadiusCm),
+                _graphProjectionCandidateScratch,
+                out projection);
+            if (found)
+            {
+                var rounded = pointCm.RoundToInt();
+                targetPosCm = new IntVector2(rounded.x, rounded.y);
+            }
+
+            return found;
+        }
+
+        private void EnsureGraphProjectionCandidateCapacity(int required)
+        {
+            if (_graphProjectionCandidateScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _graphProjectionCandidateScratch.Length == 0 ? 64 : _graphProjectionCandidateScratch.Length * 2;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _graphProjectionCandidateScratch, next);
         }
     }
 }

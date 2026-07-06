@@ -21,6 +21,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 
@@ -138,8 +139,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
             new FormationCapabilityShowcaseFormationRuntimeSystem(engine, this, simulation),
             SystemGroup.PostMovement);
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
-        engine.RegisterPresentationSystem(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
+        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
+        engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
     }
 

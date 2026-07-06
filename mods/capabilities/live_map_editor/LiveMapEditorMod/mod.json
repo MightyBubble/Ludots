@@ -6,8 +6,7 @@
   "priority": 0,
   "dependencies": {
     "LudotsCoreMod": "^1.0.0",
-    "CoreInputMod": "^1.0.0",
-    "BrowserCefRuntimeMod": "^1.0.0"
+    "CoreInputMod": "^1.0.0"
   },
   "author": "Ludots Team",
   "tags": ["capability", "map-editor", "webui", "raylib", "navigation"]

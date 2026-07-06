@@ -17,7 +17,13 @@ namespace Ludots.Core.Input.Runtime
             _states.Clear();
         }
 
-        public void CaptureAction(string actionId, Vector3 value, bool isDown, bool pressedThisFrame, bool releasedThisFrame)
+        public void CaptureAction(
+            string actionId,
+            Vector3 value,
+            bool isDown,
+            bool pressedThisFrame,
+            bool releasedThisFrame,
+            bool preserveValueUntilSnapshot = false)
         {
             if (string.IsNullOrWhiteSpace(actionId))
             {
@@ -30,10 +36,15 @@ namespace Ludots.Core.Input.Runtime
                 _states[actionId] = state;
             }
 
-            state.Value = value;
-            state.IsDown = isDown;
+            if (preserveValueUntilSnapshot || !state.PreserveValueUntilSnapshot)
+            {
+                state.Value = value;
+                state.IsDown = isDown;
+            }
+
             state.PressedThisTick |= pressedThisFrame;
             state.ReleasedThisTick |= releasedThisFrame;
+            state.PreserveValueUntilSnapshot |= preserveValueUntilSnapshot;
         }
 
         public void CaptureVisualFrame(PlayerInputHandler input)
@@ -67,6 +78,7 @@ namespace Ludots.Core.Input.Runtime
                 snapshot.SetActionState(pair.Key, state.Value, state.IsDown, state.PressedThisTick, state.ReleasedThisTick);
                 state.PressedThisTick = false;
                 state.ReleasedThisTick = false;
+                state.PreserveValueUntilSnapshot = false;
             }
         }
 
@@ -76,6 +88,7 @@ namespace Ludots.Core.Input.Runtime
             public bool IsDown;
             public bool PressedThisTick;
             public bool ReleasedThisTick;
+            public bool PreserveValueUntilSnapshot;
         }
     }
 }

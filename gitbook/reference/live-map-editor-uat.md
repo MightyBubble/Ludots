@@ -98,11 +98,11 @@ Raylib WYSIWYG terrain rendering is intentionally sourced from Core. `LogicTerra
 
 ## Configuration
 
-The preset stacks three selectors:
+The preset stacks the UAT selector and editor capability, and declares host-owned CEF through `browserRuntime`:
 
-| Selector | Purpose |
+| Entry | Purpose |
 |---|---|
-| `$browser_cef_runtime` | Provides the CEF browser runtime service used by the editor panel |
+| `browserRuntime.provider=cef` | Host-owned CEF provider used by the editor panel |
 | `$live_map_editor_nav_grid_uat` | Resource-only UAT selector that opens `live_editor_nav_grid`, inheriting the existing core `nav_editor_grid` map and adding `Feature.NavMesh:On` plus an explicit live-editor save target |
 | `$live_map_editor` | Capability mod containing the panel, command lane, viewport overlays, and save command |
 
@@ -132,11 +132,11 @@ The Raylib board guide overlay must align to the same authoring surface as the t
 | `default` | `Grid` | terrain/navmesh | Primary board, live `LogicTerrainField`, VisualHeightmap adapter, runtime-incremental CDT navmesh |
 | `transport` | `NodeGraph` | transport network | `TransportNetworkAsset` bake target, `ChunkedNodeGraphStore`, `LoadedGraphRuntime` |
 
-The integrated preset stacks:
+The integrated preset stacks the UAT map and editor capability, and declares host-owned CEF through `browserRuntime`:
 
-| Selector | Purpose |
+| Entry | Purpose |
 |---|---|
-| `$browser_cef_runtime` | CEF browser runtime |
+| `browserRuntime.provider=cef` | Host-owned CEF provider used by the editor panel |
 | `$live_map_editor_integrated_nav_transport_uat` | Resource-only map, camera, pathing profiles, and `TransportNetwork/transport_network.json` |
 | `$live_map_editor` | Shared editor shell, command lane, terrain/nav/entity tools, and transport authoring |
 

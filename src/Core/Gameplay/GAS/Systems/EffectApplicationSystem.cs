@@ -1,16 +1,20 @@
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.Exchange;
-using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Components;
 using Ludots.Core.Spatial;
-using Ludots.Core.Mathematics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System;
@@ -113,8 +117,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
+        private readonly OrderTypeRegistry? _orderTypeRegistry;
+        private readonly OrderRuleRegistry? _orderRuleRegistry;
+        private readonly IClock? _orderClock;
+        private readonly int _stepRateHz;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, IClock orderClock = null, int stepRateHz = 30) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -130,8 +138,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
+            _builtinRuntime.LifecycleRequests = lifecycleRequests;
+            _builtinRuntime.LifecycleServices = lifecycleServices;
             _builtinRuntime.Exchange = exchangeRuntime;
             _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
+            _orderTypeRegistry = orderTypeRegistry;
+            _orderRuleRegistry = orderRuleRegistry;
+            _orderClock = orderClock;
+            _stepRateHz = stepRateHz > 0 ? stepRateHz : 30;
+        }
+
+        private void RefreshBuiltinOrderContext()
+        {
+            _builtinRuntime.OrderTypeRegistry = _orderTypeRegistry;
+            _builtinRuntime.OrderRuleRegistry = _orderRuleRegistry;
+            _builtinRuntime.StepRateHz = _stepRateHz;
+            _builtinRuntime.CurrentStep = _orderClock?.Now(ClockDomainId.Step) ?? 0;
         }
 
         public override void Update(in float dt)
@@ -150,6 +172,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _sliceStage = ApplicationStage.ProcessPending;
                 _cursor = 0;
                 _playbackCursor = 0;
+
+                RefreshBuiltinOrderContext();
 
                 _effectsToDestroy.Clear();
                 _effectsToActivate.Clear();
@@ -216,11 +240,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.State = EffectState.Calculate;
                         effect.State = EffectState.Apply;
 
+                        int templateId = World.Has<EffectTemplateRef>(effectEntity)
+                            ? World.Get<EffectTemplateRef>(effectEntity).TemplateId
+                            : 0;
+                        int primaryAttrId = ResolvePrimaryAttributeId(in modifiers, templateId);
+                        bool hasPrimaryAttributeSnapshot = isInstant &&
+                                                           primaryAttrId >= 0 &&
+                                                           World.IsAlive(context.Target) &&
+                                                           World.Has<AttributeBuffer>(context.Target);
+                        float primaryAttributeBefore = hasPrimaryAttributeSnapshot
+                            ? World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId)
+                            : 0f;
+
                         // Execute phase handlers through the unified phase executor.
                         if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
                         {
-                            int tplId = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
-                            if (tplId > 0 && _templates.TryGetRef(tplId, out int tplIdx))
+                            if (templateId > 0 && _templates.TryGetRef(templateId, out int tplIdx))
                             {
                                 ref readonly var tplData = ref _templates.GetRef(tplIdx);
                                 _builtinRuntime.ResetPerEffect();
@@ -230,7 +265,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ExecutePhaseForEffect(effectEntity, in context, in tplData, EffectPhaseId.OnApply, _builtinRuntime);
 
                                 _fanOutDropped += _builtinRuntime.DroppedCount;
-                                PublishBuiltinAttributeDelta(in context, tplId, _builtinRuntime);
+                                PublishBuiltinAttributeDelta(in context, templateId, _builtinRuntime);
                             }
                         }
 
@@ -238,23 +273,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             if ((_phaseExecutor == null || _graphApi == null) && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
                             {
-                                ref var attrBuffer = ref World.Get<AttributeBuffer>(context.Target);
-                                int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
-                                float before = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
                                 AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers);
-                                float after = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
-                                float delta = after - before;
-                                if (_presentationEvents != null)
+                            }
+
+                            if (_presentationEvents != null && hasPrimaryAttributeSnapshot && World.IsAlive(context.Target) && World.Has<AttributeBuffer>(context.Target))
+                            {
+                                float primaryAttributeAfter = World.Get<AttributeBuffer>(context.Target).GetCurrent(primaryAttrId);
+                                _presentationEvents.Publish(new GasPresentationEvent
                                 {
-                                    _presentationEvents.Publish(new GasPresentationEvent
-                                    {
-                                        Kind = GasPresentationEventKind.EffectApplied,
-                                        Actor = context.Source,
-                                        Target = context.Target,
-                                        AttributeId = primaryAttrId,
-                                        Delta = delta
-                                    });
-                                }
+                                    Kind = GasPresentationEventKind.EffectApplied,
+                                    Actor = context.Source,
+                                    Target = context.Target,
+                                    EffectTemplateId = templateId,
+                                    AttributeId = primaryAttrId,
+                                    Delta = primaryAttributeAfter - primaryAttributeBefore
+                                });
                             }
 
                             effect.State = EffectState.Committed;
@@ -616,10 +649,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_graphApiHost != null && mergedConfig.Count > 0)
                 _graphApiHost.SetConfigContext(in mergedConfig);
 
+            IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _phaseExecutor.ExecutePhase(
                 World, _graphApi,
                 context.Source, context.Target, context.TargetContext,
-                default,
+                targetPos,
                 phase,
                 in tpl.PhaseGraphBindings,
                 tpl.PresetType,
@@ -715,6 +749,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static uint Mix(uint hash, int value)
         {
             return (hash ^ unchecked((uint)value)) * 16777619u;
+        }
+
+        private int ResolvePrimaryAttributeId(in EffectModifiers modifiers, int templateId)
+        {
+            if (modifiers.Count > 0)
+            {
+                return modifiers.Get(0).AttributeId;
+            }
+
+            if (_templates == null || templateId <= 0 || !_templates.TryGetRef(templateId, out int tplIdx))
+            {
+                return -1;
+            }
+
+            ref readonly EffectTemplateData template = ref _templates.GetRef(tplIdx);
+            return template.Modifiers.Count > 0
+                ? template.Modifiers.Get(0).AttributeId
+                : -1;
         }
     }
 }

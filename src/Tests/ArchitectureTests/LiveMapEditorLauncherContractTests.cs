@@ -14,7 +14,7 @@ namespace Ludots.Tests.Architecture;
 public sealed class LiveMapEditorLauncherContractTests
 {
     [Test]
-    public void LauncherPreset_StacksCefRuntimeUatMapAndLiveEditorCapability()
+    public void LauncherPreset_StacksUatMapAndLiveEditorCapabilityWithHostCefRuntime()
     {
         string repoRoot = FindRepoRoot();
         JsonObject presets = ReadObject(Path.Combine(repoRoot, "launcher.presets.json"));
@@ -30,11 +30,11 @@ public sealed class LiveMapEditorLauncherContractTests
 
         Assert.That(selectors, Is.EqualTo(new[]
         {
-            "$browser_cef_runtime",
             "$live_map_editor_nav_grid_uat",
             "$live_map_editor"
         }));
         Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+        AssertHostCefRuntime(preset);
     }
 
     [Test]
@@ -54,11 +54,11 @@ public sealed class LiveMapEditorLauncherContractTests
 
         Assert.That(selectors, Is.EqualTo(new[]
         {
-            "$browser_cef_runtime",
             "$live_map_editor_integrated_nav_transport_uat",
             "$live_map_editor"
         }));
         Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+        AssertHostCefRuntime(preset);
     }
 
     [Test]
@@ -78,12 +78,12 @@ public sealed class LiveMapEditorLauncherContractTests
 
         Assert.That(selectors, Is.EqualTo(new[]
         {
-            "$browser_cef_runtime",
             "$capability_standard_transport_network",
             "$live_map_editor"
         }));
         Assert.That(preset["name"]?.GetValue<string>(), Does.Contain("Debug Only"));
         Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+        AssertHostCefRuntime(preset);
     }
 
     [Test]
@@ -1133,6 +1133,18 @@ public sealed class LiveMapEditorLauncherContractTests
         {
             Assert.That(target["projectPath"]?.GetValue<string>(), Is.EqualTo(expectedProjectPath));
         }
+    }
+
+    private static void AssertHostCefRuntime(JsonObject preset)
+    {
+        JsonObject browserRuntime = preset["browserRuntime"] as JsonObject
+            ?? throw new InvalidDataException("CEF preset must declare browserRuntime.");
+        Assert.Multiple(() =>
+        {
+            Assert.That(browserRuntime["enabled"]?.GetValue<bool>(), Is.True);
+            Assert.That(browserRuntime["required"]?.GetValue<bool>(), Is.True);
+            Assert.That(browserRuntime["provider"]?.GetValue<string>(), Is.EqualTo("cef"));
+        });
     }
 
     private static void AssertProjectReferenceCopiesLocal(string project, string projectName)

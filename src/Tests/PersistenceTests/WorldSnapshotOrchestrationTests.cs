@@ -150,7 +150,7 @@ public sealed class WorldSnapshotOrchestrationTests
         engine.InitializeWithConfigPipeline(
             RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
             Path.Combine(repoRoot, "assets"));
-        engine.LoadMap(engine.MergedConfig.StartupMapId);
+        engine.LoadStartupMap();
         Assert.That(engine.GetService(CoreServiceKeys.SaveParticipants), Is.Not.Null);
         return engine;
     }

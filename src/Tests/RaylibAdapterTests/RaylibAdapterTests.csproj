@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Adapters\Raylib\Ludots.Adapter.Raylib\Ludots.Adapter.Raylib.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
   </ItemGroup>
 </Project>

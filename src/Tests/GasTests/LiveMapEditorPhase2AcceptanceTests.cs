@@ -120,7 +120,6 @@ public sealed class LiveMapEditorPhase2AcceptanceTests
         using GameEngine engine = CreateEngine(
             repoRoot,
             Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
-            Path.Combine(repoRoot, "mods", "browser", "BrowserCefRuntimeMod"),
             Path.Combine(repoRoot, "mods", "CoreInputMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "live_map_editor", "LiveMapEditorMod"),
             Path.Combine(repoRoot, "mods", "capabilities", "live_map_editor", "LiveMapEditorIntegratedUatMod"));

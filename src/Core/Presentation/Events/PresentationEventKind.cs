@@ -17,6 +17,7 @@ namespace Ludots.Core.Presentation.Events
         EffectApplied = 20,
         CastCommitted = 21,
         CastFailed = 22,
+        EffectActivated = 23,
 
         // Global domain events
         GlobalDayNight = 30,
@@ -29,5 +30,26 @@ namespace Ludots.Core.Presentation.Events
         // Selection domain events
         SelectionMemberAdded = 50,
         SelectionMemberRemoved = 51,
+
+        // Ability aim presentation events
+        AbilityAimUpdated = 60,
+        AbilityAimEnded = 61,
+        AbilityAimBegun = 62,
+        AbilityAimSlotAdvanced = 63,
+        MovePathUpdated = 64,
+        MovePathEnded = 65,
+        MovePathBegun = 66,
+
+        // Entity collection presentation events
+        EntityCollectionMemberAdded = 70,
+        EntityCollectionMemberRemoved = 71,
+
+        // World presentation fact events
+        WorldOverlayUpdated = 72,
+        WorldOverlayEnded = 73,
+        WorldHudUpdated = 74,
+        WorldHudEnded = 75,
+        WorldSplineUpdated = 76,
+        WorldSplineEnded = 77,
     }
 }

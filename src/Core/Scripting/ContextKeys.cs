@@ -93,7 +93,6 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
-        public const string HoveredEntity = "HoveredEntity";
         public const string TabTargetEntity = "TabTargetEntity";
         public const string SelectionViewViewerEntity = "SelectionViewViewerEntity";
         public const string SelectionViewKey = "SelectionViewKey";

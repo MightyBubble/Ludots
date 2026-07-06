@@ -1,7 +1,7 @@
 {
-  "SolverIterations": 6,
+  "SolverIterations": 12,
   "Epsilon": 0.000001,
-  "PositionCorrectionPercentage": 0.4,
+  "PositionCorrectionPercentage": 1.0,
   "PositionCorrectionSlopCm": 0.01,
   "MinVelocityCmPerSecSquared": 0.0001,
   "LinearMotionThresholdCmPerSec": 0.01,

@@ -23,7 +23,6 @@ namespace InteractionShowcaseMod.UI
         private readonly InteractionShowcaseRuntime _runtime;
         private ReactivePage<InteractionShowcasePanelState>? _page;
         private GameEngine? _engine;
-        private ViewModeManager? _viewModeManager;
         private UiSurfaceLeaseHandle _lease;
 
         public InteractionShowcasePanelController(InteractionShowcaseRuntime runtime)
@@ -31,7 +30,7 @@ namespace InteractionShowcaseMod.UI
             _runtime = runtime;
         }
 
-        public void MountOrRefresh(UIRoot root, GameEngine engine, string mapId, ViewModeManager? viewModeManager)
+        public void MountOrRefresh(UIRoot root, GameEngine engine, string mapId)
         {
             if (engine.GetService(CoreServiceKeys.UiSurfaceHost) is not IUiSurfaceHost surfaceHost)
             {
@@ -39,9 +38,8 @@ namespace InteractionShowcaseMod.UI
             }
 
             _engine = engine;
-            _viewModeManager = viewModeManager;
 
-            var nextState = BuildState(engine, mapId, viewModeManager);
+            var nextState = BuildState(engine, mapId);
             if (_page == null)
             {
                 var textMeasurer = (IUiTextMeasurer)engine.GetService(CoreServiceKeys.UiTextMeasurer);
@@ -68,7 +66,6 @@ namespace InteractionShowcaseMod.UI
             }
 
             _engine = null;
-            _viewModeManager = null;
         }
 
         private UiElementBuilder BuildRoot(ReactiveContext<InteractionShowcasePanelState> context)
@@ -139,11 +136,11 @@ namespace InteractionShowcaseMod.UI
             return Ui.Card(
                     Ui.Text("Reference Interactions").FontSize(12f).Bold().Color("#F0C36B"),
                     Ui.Row(
-                            BuildActionButton("WoW", state.ActiveModeId == InteractionShowcaseIds.WowModeId, _ => _viewModeManager?.SwitchTo(InteractionShowcaseIds.WowModeId)),
-                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => _viewModeManager?.SwitchTo(InteractionShowcaseIds.LolModeId)),
-                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => _viewModeManager?.SwitchTo(InteractionShowcaseIds.Sc2ModeId)),
-                            BuildActionButton("Indicator", state.ActiveModeId == InteractionShowcaseIds.IndicatorModeId, _ => _viewModeManager?.SwitchTo(InteractionShowcaseIds.IndicatorModeId)),
-                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => _viewModeManager?.SwitchTo(InteractionShowcaseIds.ActionModeId)))
+                            BuildActionButton("WoW", state.ActiveModeId == InteractionShowcaseIds.WowModeId, _ => SwitchMode(InteractionShowcaseIds.WowModeId)),
+                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
+                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
+                            BuildActionButton("Indicator", state.ActiveModeId == InteractionShowcaseIds.IndicatorModeId, _ => SwitchMode(InteractionShowcaseIds.IndicatorModeId)),
+                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
                         .Wrap()
                         .Gap(8f),
                     Ui.Text(state.ModeSummary)
@@ -367,7 +364,15 @@ namespace InteractionShowcaseMod.UI
             _engine.LoadMap(mapId);
         }
 
-        private static InteractionShowcasePanelState BuildState(GameEngine engine, string mapId, ViewModeManager? viewModeManager)
+        private void SwitchMode(string modeId)
+        {
+            if (_engine != null)
+            {
+                ViewModeRuntime.TrySwitchTo(_engine.GlobalContext, modeId);
+            }
+        }
+
+        private static InteractionShowcasePanelState BuildState(GameEngine engine, string mapId)
         {
             string selectedLabel = ResolveSelectedLabel(engine);
             string selectionSummary = ResolveSelectionSummary(engine, selectedLabel);
@@ -377,14 +382,18 @@ namespace InteractionShowcaseMod.UI
             string selectionViewLabel = ResolveSelectionViewLabel(engine, selectionViewMode);
             int activeControlGroup = ResolveActiveControlGroup(engine);
             ResolveSelectionDockState(engine, out int liveCount, out int formationCount, out SelectionGroupSummary group1, out SelectionGroupSummary group2, out SelectionGroupSummary group3, out SelectionGroupSummary group4);
+            ViewModeRuntime.TryGetActiveModeId(engine.GlobalContext, out string activeModeId);
+            string activeModeName = ViewModeRuntime.TryGetActiveModeDisplayName(engine.GlobalContext, out string displayName)
+                ? displayName
+                : "Unassigned";
 
             var telemetry = ResolveStressTelemetry(engine);
             return new InteractionShowcasePanelState(
                 MapId: mapId,
                 MapDescription: InteractionShowcaseIds.DescribeMap(mapId),
-                ActiveModeId: viewModeManager?.ActiveMode?.Id ?? string.Empty,
-                ActiveModeName: viewModeManager?.ActiveMode?.DisplayName ?? "Unassigned",
-                ModeSummary: ResolveModeSummary(viewModeManager?.ActiveMode?.Id),
+                ActiveModeId: activeModeId,
+                ActiveModeName: activeModeName,
+                ModeSummary: ResolveModeSummary(activeModeId),
                 SelectionViewMode: selectionViewMode,
                 SelectionViewLabel: selectionViewLabel,
                 ActiveControlGroup: activeControlGroup,

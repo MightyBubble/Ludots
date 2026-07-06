@@ -670,7 +670,8 @@ namespace Ludots.Tests.GAS
                 GroupMoveFormation = new GroupMoveFormationSettings
                 {
                     Mode = GroupMoveFormationMode.Grid,
-                    SpacingCm = 120
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -879,6 +880,38 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_PointerHoverWithoutButtonSnapshot_WritesHoverCollection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var hovered = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            That(SelectionContextRuntime.TryGetCurrentHovered(world, globals, out Entity actual), Is.True);
+            That(actual, Is.EqualTo(hovered));
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_RuntimeDisabledEntity_IsNotSelectable()
         {
             using var world = World.Create();
@@ -946,7 +979,7 @@ namespace Ludots.Tests.GAS
                 Click(system, globals, input, new Vector2(1600f, 1200f));
 
                 That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
-                That(globals.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hovered), Is.True);
+                That(SelectionContextRuntime.TryGetCurrentHovered(world, globals, out Entity hovered), Is.True);
                 That(hovered, Is.EqualTo(formation));
 
                 world.Set(formation, new Team { Id = 1 });

@@ -151,6 +151,7 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 - **30k HUD 那条不是 UiScene**。它是“高性能大批量”专用通道，不要试图用面板系统去画上万条血条。
 - **浏览器面板是 Host 的一个租约**（通常 `Segment.Main` + `Exclusive`），和原生面板在同一棵场景里合成；输入/焦点/命中穿透全部经 `UIRoot` 路由。
 - **WebUI DataPlane 只管“喂数据/命令/事件给 Web 应用”**（传输中立，CEF 与 UE5 BLUI 同一套 `window.ludotsDataplane` facade），它**不**序列化 UiScene、不拥有任何 gameplay 真相。详见 `docs/architecture/webui_dataplane_architecture.md`。
+- **UE5 若调用 Ludots-owned CEF bootstrap**，必须按 launcher/bootstrap 中的 `browserRuntime.providerAssemblyPath` 把 provider 包当作宿主依赖根，优先复用 `Ludots.UI.Browser.BrowserRuntimeProviderLoader` 进行 hash shadow-copy、collectible ALC 加载与 provider `.deps.json` 解析；不要硬编码 CefSharp DLL 名，也不要从 Mod 加载链路寻找或兜底 CEF。
 
 ---
 

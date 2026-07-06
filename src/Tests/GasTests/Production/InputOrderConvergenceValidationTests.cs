@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));
             Assert.That(presentationNames, Does.Not.Contain("ViewModeSwitchSystem"));
             Assert.That(presentationNames, Does.Not.Contain("MobaLocalOrderSourceSystem"));
-            Assert.That(presentationNames, Does.Contain("AbilityAimOverlayPresentationSystem"));
+            Assert.That(presentationNames, Does.Contain("AbilityAimPresentationProjectionSystem"));
             Assert.That(presentationNames, Does.Contain("SelectedMovePathPresentationSystem"));
             Assert.That(presentationNames, Does.Contain("SkillBarOverlaySystem"));
             Assert.That(presentationNames, Does.Contain("WorldToVisualSyncSystem"));

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 
 namespace Ludots.Core.Hosting
 {
@@ -77,5 +78,6 @@ namespace Ludots.Core.Hosting
         IReadOnlyList<string> OrderedModIds,
         IReadOnlyList<LauncherPlannedMod> PlannedMods,
         LauncherRuntimeArtifacts RuntimeArtifacts,
+        BrowserRuntimeConfig? BrowserRuntime,
         LauncherPlanDiagnostics Diagnostics);
 }

@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 
@@ -144,13 +145,21 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             if (slot.AbilityId <= 0 ||
                 !_abilities!.TryGet(slot.AbilityId, out var definition) ||
-                !definition.HasIndicator)
+                !definition.HasTargeting ||
+                ShouldBypassMoveThenCastPlanning(in definition))
             {
                 return false;
             }
 
-            rangeCm = definition.Indicator.Range;
+            rangeCm = definition.Targeting.CastRangeCm;
             return rangeCm > 0f;
+        }
+
+        private static bool ShouldBypassMoveThenCastPlanning(in AbilityDefinition definition)
+        {
+            return definition.HasInputBindingOverride &&
+                   definition.InputBindingOverride.HasAutoTargetPolicy &&
+                   definition.InputBindingOverride.AutoTargetPolicy != AutoTargetPolicy.None;
         }
 
         private bool TryResolvePlanningOrigin(in Order order, out Vector3 originWorldCm)

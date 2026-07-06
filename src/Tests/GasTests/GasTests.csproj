@@ -46,6 +46,7 @@
     <ProjectReference Include="..\..\..\mods\capabilities\camera\VirtualCameraShotsMod\VirtualCameraShotsMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\participant_view\ParticipantViewCapabilityMod\ParticipantViewCapabilityMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\narrativefrontend\NarrativeFrontendMod\NarrativeFrontendMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\FourXDemoMod\FourXDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\TcgDemoMod\TcgDemoMod.csproj" />
@@ -80,11 +81,6 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\browser\BrowserCefRuntimeMod\BrowserCefRuntimeMod.csproj"
-                      ReferenceOutputAssembly="false"
-                      OutputItemType="_BrowserCefRuntimeModBuildOutput"
-                      Private="false"
-                      SkipGetTargetFrameworkProperties="true" />
     <ProjectReference Include="..\..\..\mods\capabilities\live_map_editor\LiveMapEditorMod\LiveMapEditorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />

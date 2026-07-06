@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -16,6 +17,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -265,6 +267,96 @@ namespace GasTests
             That(performerRuntime.TryResolveFloat(rootB, slopeParamKey, out float slopeB), Is.True);
             That(slopeA, Is.EqualTo(-0.375f).Within(0.0001f));
             That(slopeB, Is.EqualTo(0.875f).Within(0.0001f));
+        }
+
+        [Test]
+        public void LoadEntities_DirectBootstrapBatch_PreseededOwnerPayloadDrivesRootTransformSync()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
+            int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.ownerpayload.root");
+            definitions.Register("test.map.batch.ownerpayload.root", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            loader.SetPresentationRuntime(
+                new PresentationStableIdAllocator(),
+                performerRuntime,
+                definitions,
+                new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
+                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawn(null));
+            map.Entities.Add(CreateSpawn(new Dictionary<string, JsonNode>
+            {
+                ["WorldPositionCm"] = WorldPosition(1200, -800),
+            }));
+
+            loader.LoadEntities(map);
+
+            That(
+                performerRuntime.LastRootBatchOwnerPayloadCount,
+                Is.EqualTo(2),
+                "MapLoader direct bootstrap batches must preseed owner payload markers so the performer root batch writes transform-sync payloads in bulk.");
+            var owners = FindTemplateEntities(world);
+            That(owners.Count, Is.EqualTo(2));
+            Entity owner = owners[0];
+            That(world.Has<PresentationOwnerHasPerformerPayload>(owner), Is.True);
+            ref readonly PresentationOwnerHasPerformerPayload payload = ref world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            That(payload.RootCount, Is.EqualTo(1));
+            That(payload.SingleRootTransformSync, Is.EqualTo(1));
+            Entity root = payload.SingleRootPerformer;
+            That(world.IsAlive(root), Is.True);
+            That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
+
+            var movedWorld = Fix64Vec2.FromInt(1800, -600);
+            world.Get<WorldPositionCm>(owner).Value = movedWorld;
+            world.Get<VisualTransform>(owner).Position = new Vector3(18f, 0f, -6f);
+
+            using var transformSync = new PerformerEntityTransformSyncSystem(world, performerRuntime, definitions);
+            transformSync.Update(0.016f);
+
+            That(world.Get<PerformerWorldPosition>(root).Value, Is.EqualTo(new Vector3(18f, 0f, -6f)));
+            That(world.Get<PerformerWorldPlanePosition>(root).ValueCm, Is.EqualTo(new Vector2(1800f, -600f)));
         }
 
         [Test]

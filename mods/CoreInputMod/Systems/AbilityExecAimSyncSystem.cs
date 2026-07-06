@@ -1,8 +1,10 @@
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -37,6 +39,8 @@ namespace CoreInputMod.Systems
                 return;
             }
 
+            _context.TryGetAbilityDefinitionRegistry(out AbilityDefinitionRegistry? abilityDefinitions);
+
             World.Query(in Query, (Entity entity, ref AbilityExecInstance exec, ref AbilityExecAimSync sync) =>
             {
                 if (!entity.Equals(actor) || exec.AbilitySlot != sync.AbilitySlot)
@@ -44,12 +48,27 @@ namespace CoreInputMod.Systems
                     return;
                 }
 
-                exec.TargetPosCm = Fix64Vec2.FromInt(worldCm.X, worldCm.Y);
+                Fix64Vec2 targetCm = Fix64Vec2.FromInt(worldCm.X, worldCm.Y);
+                if (abilityDefinitions != null &&
+                    abilityDefinitions.TryGet(exec.AbilityId, out AbilityDefinition definition) &&
+                    definition.HasTargeting &&
+                    definition.Targeting.CastRangeCm > 0f &&
+                    World.TryGet(entity, out WorldPositionCm position))
+                {
+                    Fix64Vec2 originCm = position.Value;
+                    PlacementValidation.ClampToRange(
+                        in originCm,
+                        ref targetCm,
+                        Fix64.FromFloat(definition.Targeting.CastRangeCm),
+                        out _);
+                }
+
+                exec.TargetPosCm = targetCm;
                 exec.HasTargetPos = 1;
 
-                if (sync.SyncFacing != 0 && World.TryGet(entity, out WorldPositionCm position))
+                if (sync.SyncFacing != 0 && World.TryGet(entity, out WorldPositionCm facingPosition))
                 {
-                    Fix64Vec2 delta = exec.TargetPosCm - position.Value;
+                    Fix64Vec2 delta = exec.TargetPosCm - facingPosition.Value;
                     if (delta.X != Fix64.Zero || delta.Y != Fix64.Zero)
                     {
                         Upsert(entity, new FacingDirection { AngleRad = WorldPlane2D.FacingRadFromDirection(in delta) });
@@ -60,7 +79,7 @@ namespace CoreInputMod.Systems
                 {
                     spatial.SetPoint(
                         OrderBlackboardKeys.Cast_TargetPosition,
-                        new System.Numerics.Vector3(worldCm.X, 0f, worldCm.Y));
+                        new System.Numerics.Vector3(targetCm.X.ToFloat(), 0f, targetCm.Y.ToFloat()));
                     World.Set(entity, spatial);
                 }
             });

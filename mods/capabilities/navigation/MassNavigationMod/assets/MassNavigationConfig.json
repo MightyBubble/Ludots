@@ -136,7 +136,7 @@
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
     "initialSelectionScratchCapacity": 256,
-    "initialSelectedEntityCapacity": 64,
+    "initialSelectedEntityCapacity": 128,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,

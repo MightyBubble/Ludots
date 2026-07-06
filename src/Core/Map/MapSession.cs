@@ -30,6 +30,7 @@ namespace Ludots.Core.Map
         public int LocalPlayerId { get; set; }
         public Entity LocalPlayerEntity { get; set; }
         public TeamRelationshipSnapshot? TeamRelationships { get; set; }
+        public MapLaunchContext? LaunchContext { get; set; }
 
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();

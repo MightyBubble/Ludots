@@ -183,7 +183,7 @@ flowchart LR
 | #456 EDR-4 | Grid `LogicTerrainField` can be edited live and saved as `.ltrn` |
 | #457 EDR-5 | Terrain dirty AABBs feed runtime-incremental CDT rebake; Raylib overlays draw authoritative nav tiles/path |
 | #458 EDR-6 | `MapAuthoringAssetWriter` saves map config, grid terrain, entities, and loaded nav tiles in-process |
-| #459 EDR-7 | UAT preset `live_map_editor_nav_grid_cef_raylib` stacks CEF runtime, an existing nav grid map, and the editor mod |
+| #459 EDR-7 | UAT preset `live_map_editor_nav_grid_cef_raylib` declares host-owned CEF browser runtime, an existing nav grid map, and the editor mod |
 | #473 EDR-9 | Phase 2 contract ADR, no-map binding, and no-NodeGraph transport gate |
 | #474 EDR-10 | `LogicTerrainCell` SSOT ruling for height/water/area/cost/blocked/ramp; biome/vegetation/layers deferred |
 | #475 EDR-11 | Set/Raise/Lower cell brush plus connected same-height Water Bucket |

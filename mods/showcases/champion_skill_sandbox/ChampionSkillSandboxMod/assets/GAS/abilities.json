@@ -4,14 +4,34 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 72, "tag": "Cooldown.Champion.Ezreal.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Ezreal.ArcaneShift", "dispatchTarget": "Source" },
-        { "kind": "EffectSignal", "tick": 5, "template": "Effect.Champion.Ezreal.ArcaneShiftBolt" },
-        { "kind": "End", "tick": 5 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Cooldown.Champion.Ezreal.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Ezreal.ArcaneShift",
+          "dispatchTarget": "Source"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 5,
+          "template": "Effect.Champion.Ezreal.ArcaneShiftBolt"
+        },
+        {
+          "kind": "End",
+          "tick": 5
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 440, "radius": 120, "showRangeCircle": true, "validColor": "#4FD7F077", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Ezreal.E"
+      ]
+    },
     "input": {
       "autoTargetPolicy": "NearestEnemyInRange",
       "autoTargetRangeCm": 760
@@ -25,6 +45,10 @@
         "SmartCastWithIndicator": "Hold to preview blink",
         "PressReleaseAimCast": "Release key, then confirm blink"
       }
+    },
+    "targeting": {
+      "castRangeCm": 440,
+      "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
     }
   },
   {
@@ -32,13 +56,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Ezreal.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Ezreal.EssenceFlux" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Cooldown.Champion.Ezreal.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Ezreal.EssenceFlux"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 760, "radius": 85, "showRangeCircle": true, "validColor": "#F0C35A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Ezreal.W"
+      ]
+    },
     "presentation": {
       "displayName": "Essence Flux",
       "iconGlyph": "W",
@@ -48,6 +87,10 @@
         "SmartCastWithIndicator": "Hold to preview mark shot",
         "PressReleaseAimCast": "Release key, then confirm mark shot"
       }
+    },
+    "targeting": {
+      "castRangeCm": 760,
+      "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
     }
   },
   {
@@ -55,13 +98,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Champion.Ezreal.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Ezreal.MysticShot" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 30,
+          "tag": "Cooldown.Champion.Ezreal.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Ezreal.MysticShot"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 840, "radius": 70, "showRangeCircle": true, "validColor": "#61C3FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Ezreal.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Mystic Shot",
       "iconGlyph": "Q",
@@ -71,6 +129,10 @@
         "SmartCastWithIndicator": "Hold to preview line shot",
         "PressReleaseAimCast": "Release key, then confirm line shot"
       }
+    },
+    "targeting": {
+      "castRangeCm": 840,
+      "impactEffect": "Effect.Champion.Ezreal.MysticShot"
     }
   },
   {
@@ -78,13 +140,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 150, "tag": "Cooldown.Champion.Ezreal.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Ezreal.TrueshotBarrage" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 150,
+          "tag": "Cooldown.Champion.Ezreal.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Ezreal.TrueshotBarrage"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 2200, "radius": 120, "showRangeCircle": true, "validColor": "#9BE0FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Ezreal.R"
+      ]
+    },
     "presentation": {
       "displayName": "Trueshot Barrage",
       "iconGlyph": "R",
@@ -94,6 +171,10 @@
         "SmartCastWithIndicator": "Hold to preview barrage direction",
         "PressReleaseAimCast": "Release key, then confirm barrage direction"
       }
+    },
+    "targeting": {
+      "castRangeCm": 2200,
+      "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
     }
   },
   {
@@ -101,22 +182,38 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 24, "tag": "Cooldown.Champion.Garen.W" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 24,
+          "tag": "Cooldown.Champion.Garen.W"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
       "toggleTag": "State.Champion.Garen.Courage",
-      "activeEffects": ["Effect.Champion.Garen.CourageAura"],
+      "activeEffects": [
+        "Effect.Champion.Garen.CourageAura"
+      ],
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "indicator": { "shape": "Circle", "radius": 220, "showRangeCircle": false, "validColor": "#C9E98766", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Garen.W"
+      ]
+    },
     "presentation": {
       "displayName": "Courage",
       "iconGlyph": "W",
@@ -133,13 +230,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.Champion.Garen.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Garen.DecisiveStrike" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 36,
+          "tag": "Cooldown.Champion.Garen.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Garen.DecisiveStrike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 320, "radius": 100, "showRangeCircle": true, "validColor": "#F6D37A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Garen.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Decisive Strike",
       "iconGlyph": "Q",
@@ -149,6 +261,10 @@
         "SmartCastWithIndicator": "Hold to preview engage range",
         "PressReleaseAimCast": "Release key, then confirm engage"
       }
+    },
+    "targeting": {
+      "castRangeCm": 320,
+      "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
     }
   },
   {
@@ -156,13 +272,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Champion.Garen.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Garen.DemacianJustice" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 120,
+          "tag": "Cooldown.Champion.Garen.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Garen.DemacianJustice"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 520, "radius": 150, "showRangeCircle": true, "validColor": "#FF8B76AA", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Garen.R"
+      ]
+    },
     "presentation": {
       "displayName": "Demacian Justice",
       "iconGlyph": "R",
@@ -172,6 +303,10 @@
         "SmartCastWithIndicator": "Hold to preview execute zone",
         "PressReleaseAimCast": "Release key, then confirm execute"
       }
+    },
+    "targeting": {
+      "castRangeCm": 520,
+      "impactEffect": "Effect.Champion.Garen.DemacianJustice"
     }
   },
   {
@@ -179,13 +314,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Champion.Garen.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Garen.Judgment" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Champion.Garen.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Garen.Judgment"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "radius": 260, "showRangeCircle": false, "validColor": "#E5A95A77", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Garen.E"
+      ]
+    },
     "presentation": {
       "displayName": "Judgment",
       "iconGlyph": "E",
@@ -195,6 +345,10 @@
         "SmartCastWithIndicator": "Hold to preview spin radius",
         "PressReleaseAimCast": "Release key, then confirm spin"
       }
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Champion.Garen.Judgment"
     }
   },
   {
@@ -202,13 +356,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.Geomancer.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Geomancer.RunicBeacon" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 42,
+          "tag": "Cooldown.Champion.Geomancer.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Geomancer.RunicBeacon"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 110, "showRangeCircle": true, "validColor": "#86E2A977", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Geomancer.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Runic Beacon",
       "iconGlyph": "Q",
@@ -218,6 +387,10 @@
         "SmartCastWithIndicator": "Hold to preview beacon landing",
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
+    },
+    "targeting": {
+      "castRangeCm": 720,
+      "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
     }
   },
   {
@@ -225,13 +398,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Geomancer.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Geomancer.RuneField" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Cooldown.Champion.Geomancer.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Geomancer.RuneField"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 220, "showRangeCircle": true, "validColor": "#D7F08B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Geomancer.W"
+      ]
+    },
     "presentation": {
       "displayName": "Rune Field",
       "iconGlyph": "W",
@@ -241,6 +429,10 @@
         "SmartCastWithIndicator": "Hold to preview rune field",
         "PressReleaseAimCast": "Release key, then confirm rune field"
       }
+    },
+    "targeting": {
+      "castRangeCm": 720,
+      "impactEffect": "Effect.Champion.Geomancer.RuneField"
     }
   },
   {
@@ -248,13 +440,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 66, "tag": "Cooldown.Champion.Geomancer.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Geomancer.StonePillar" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 66,
+          "tag": "Cooldown.Champion.Geomancer.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Geomancer.StonePillar"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 140, "showRangeCircle": true, "validColor": "#F0B36C77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Geomancer.E"
+      ]
+    },
     "presentation": {
       "displayName": "Stone Pillar",
       "iconGlyph": "E",
@@ -264,6 +471,10 @@
         "SmartCastWithIndicator": "Hold to preview pillar placement",
         "PressReleaseAimCast": "Release key, then confirm pillar"
       }
+    },
+    "targeting": {
+      "castRangeCm": 720,
+      "impactEffect": "Effect.Champion.Geomancer.StonePillar"
     }
   },
   {
@@ -271,13 +482,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 96, "tag": "Cooldown.Champion.Geomancer.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Geomancer.PrismaticBeam" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 96,
+          "tag": "Cooldown.Champion.Geomancer.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Geomancer.PrismaticBeam"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 920, "radius": 80, "showRangeCircle": true, "validColor": "#78E2FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Geomancer.R"
+      ]
+    },
     "presentation": {
       "displayName": "Prismatic Beam",
       "iconGlyph": "R",
@@ -287,6 +513,10 @@
         "SmartCastWithIndicator": "Hold to preview beam",
         "PressReleaseAimCast": "Release key, then confirm beam"
       }
+    },
+    "targeting": {
+      "castRangeCm": 920,
+      "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
     }
   },
   {
@@ -294,13 +524,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Jayce.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Cannon.AccelerationGate" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Cooldown.Champion.Jayce.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Cannon.AccelerationGate"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Rectangle", "range": 640, "radius": 220, "showRangeCircle": true, "validColor": "#8ED9A977", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.E"
+      ]
+    },
     "presentation": {
       "displayName": "Acceleration Gate",
       "iconGlyph": "E",
@@ -310,6 +555,10 @@
         "SmartCastWithIndicator": "Hold to preview gate",
         "PressReleaseAimCast": "Release key, then confirm gate"
       }
+    },
+    "targeting": {
+      "castRangeCm": 640,
+      "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
     }
   },
   {
@@ -317,13 +566,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Champion.Jayce.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Cannon.HyperCharge" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Champion.Jayce.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Cannon.HyperCharge"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "radius": 220, "showRangeCircle": false, "validColor": "#B4F0C277", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.W"
+      ]
+    },
     "presentation": {
       "displayName": "Hyper Charge",
       "iconGlyph": "W",
@@ -333,6 +597,10 @@
         "SmartCastWithIndicator": "Hold to preview aura",
         "PressReleaseAimCast": "Release key, then confirm charge"
       }
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
     }
   },
   {
@@ -340,13 +608,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.Jayce.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Cannon.ShockBlast" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 42,
+          "tag": "Cooldown.Champion.Jayce.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Cannon.ShockBlast"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 880, "radius": 90, "showRangeCircle": true, "validColor": "#67D4FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Shock Blast",
       "iconGlyph": "Q",
@@ -356,6 +639,10 @@
         "SmartCastWithIndicator": "Hold to preview shock blast",
         "PressReleaseAimCast": "Release key, then confirm shock blast"
       }
+    },
+    "targeting": {
+      "castRangeCm": 880,
+      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
     }
   },
   {
@@ -363,13 +650,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Champion.Jayce.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Hammer.LightningField" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Champion.Jayce.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Hammer.LightningField"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Ring", "radius": 280, "innerRadius": 90, "showRangeCircle": false, "validColor": "#FFD27B77", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.W"
+      ]
+    },
     "presentation": {
       "displayName": "Lightning Field",
       "iconGlyph": "W",
@@ -379,6 +681,10 @@
         "SmartCastWithIndicator": "Hold to preview shock ring",
         "PressReleaseAimCast": "Release key, then confirm shock ring"
       }
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
     }
   },
   {
@@ -386,13 +692,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 54, "tag": "Cooldown.Champion.Jayce.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Hammer.ThunderingBlow" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 54,
+          "tag": "Cooldown.Champion.Jayce.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Cone", "range": 300, "radius": 300, "angleDeg": 40, "showRangeCircle": true, "validColor": "#FFA76777", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.E"
+      ]
+    },
     "presentation": {
       "displayName": "Thundering Blow",
       "iconGlyph": "E",
@@ -402,6 +723,10 @@
         "SmartCastWithIndicator": "Hold to preview cone",
         "PressReleaseAimCast": "Release key, then confirm cone"
       }
+    },
+    "targeting": {
+      "castRangeCm": 300,
+      "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
     }
   },
   {
@@ -409,13 +734,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Champion.Jayce.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Jayce.Hammer.ToTheSkies" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 42,
+          "tag": "Cooldown.Champion.Jayce.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.Jayce.Hammer.ToTheSkies"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 520, "radius": 170, "showRangeCircle": true, "validColor": "#FFB85B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.Q"
+      ]
+    },
     "presentation": {
       "displayName": "To The Skies!",
       "iconGlyph": "Q",
@@ -425,6 +765,10 @@
         "SmartCastWithIndicator": "Hold to preview leap",
         "PressReleaseAimCast": "Release key, then confirm leap"
       }
+    },
+    "targeting": {
+      "castRangeCm": 520,
+      "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
     }
   },
   {
@@ -432,8 +776,16 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 18, "tag": "Cooldown.Champion.Jayce.R" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 18,
+          "tag": "Cooldown.Champion.Jayce.R"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
@@ -441,12 +793,18 @@
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "indicator": { "shape": "Circle", "radius": 200, "showRangeCircle": false, "validColor": "#8AA8FF66", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.R"
+      ]
+    },
     "presentation": {
       "displayName": "Mercury Cannon",
       "iconGlyph": "R",
@@ -463,8 +821,16 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 18, "tag": "Cooldown.Champion.Jayce.R" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 18,
+          "tag": "Cooldown.Champion.Jayce.R"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
@@ -472,12 +838,18 @@
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "indicator": { "shape": "Circle", "radius": 200, "showRangeCircle": false, "validColor": "#FFB55C66", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.Jayce.R"
+      ]
+    },
     "presentation": {
       "displayName": "Mercury Hammer",
       "iconGlyph": "R",
@@ -494,13 +866,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 18, "tag": "Cooldown.ChampionStress.Warrior.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Warrior.Cleave" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 18,
+          "tag": "Cooldown.ChampionStress.Warrior.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Warrior.Cleave"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 180, "radius": 180, "showRangeCircle": true, "validColor": "#F1A45E77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.ChampionStress.Warrior.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.ChampionStress.Warrior.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Cleave",
       "iconGlyph": "Q",
@@ -510,6 +897,10 @@
         "SmartCastWithIndicator": "Hold to preview melee arc",
         "PressReleaseAimCast": "Release key, then confirm melee sweep"
       }
+    },
+    "targeting": {
+      "castRangeCm": 180,
+      "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
     }
   },
   {
@@ -517,13 +908,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.ChampionStress.FireMage.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.FireMage.Fireball" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 30,
+          "tag": "Cooldown.ChampionStress.FireMage.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.FireMage.Fireball"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 1200, "radius": 180, "showRangeCircle": true, "validColor": "#FF8B5F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.ChampionStress.FireMage.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.ChampionStress.FireMage.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Fireball",
       "iconGlyph": "Q",
@@ -533,6 +939,10 @@
         "SmartCastWithIndicator": "Hold to preview fireball impact",
         "PressReleaseAimCast": "Release key, then confirm fireball"
       }
+    },
+    "targeting": {
+      "castRangeCm": 1200,
+      "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
     }
   },
   {
@@ -540,13 +950,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 20, "tag": "Cooldown.ChampionStress.LaserMage.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.LaserMage.Laser" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 20,
+          "tag": "Cooldown.ChampionStress.LaserMage.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.LaserMage.Laser"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 1400, "radius": 80, "showRangeCircle": true, "validColor": "#63D8FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.ChampionStress.LaserMage.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.ChampionStress.LaserMage.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Laser Bolt",
       "iconGlyph": "Q",
@@ -556,6 +981,10 @@
         "SmartCastWithIndicator": "Hold to preview laser line",
         "PressReleaseAimCast": "Release key, then confirm laser"
       }
+    },
+    "targeting": {
+      "castRangeCm": 1400,
+      "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
     }
   },
   {
@@ -563,13 +992,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 24, "tag": "Cooldown.ChampionStress.Priest.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Priest.Heal" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 24,
+          "tag": "Cooldown.ChampionStress.Priest.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.ChampionStress.Priest.Heal"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 900, "radius": 140, "showRangeCircle": true, "validColor": "#83E7A177", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.ChampionStress.Priest.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.ChampionStress.Priest.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Renew",
       "iconGlyph": "Q",
@@ -579,6 +1023,10 @@
         "SmartCastWithIndicator": "Hold to preview heal range",
         "PressReleaseAimCast": "Release key, then confirm heal"
       }
+    },
+    "targeting": {
+      "castRangeCm": 900,
+      "impactEffect": "Effect.ChampionStress.Priest.Heal"
     }
   },
   {
@@ -586,13 +1034,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Champion.SpellEngineer.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.SpellBeacon" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Champion.SpellEngineer.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.SpellEngineer.SpellBeacon"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 760, "radius": 110, "showRangeCircle": true, "validColor": "#73E1FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.Q"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.SpellEngineer.Q"
+      ]
+    },
     "presentation": {
       "displayName": "Spell Beacon",
       "iconGlyph": "Q",
@@ -602,6 +1065,10 @@
         "SmartCastWithIndicator": "Hold to preview beacon landing",
         "PressReleaseAimCast": "Release key, then confirm beacon"
       }
+    },
+    "targeting": {
+      "castRangeCm": 760,
+      "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
     }
   },
   {
@@ -609,13 +1076,28 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 60, "tag": "Cooldown.Champion.SpellEngineer.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.GravityWell" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Cooldown.Champion.SpellEngineer.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.SpellEngineer.GravityWell"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 760, "radius": 240, "showRangeCircle": true, "validColor": "#78AFFF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.W"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.SpellEngineer.W"
+      ]
+    },
     "presentation": {
       "displayName": "Gravity Well",
       "iconGlyph": "W",
@@ -625,6 +1107,10 @@
         "SmartCastWithIndicator": "Hold to preview well radius",
         "PressReleaseAimCast": "Release key, then confirm well"
       }
+    },
+    "targeting": {
+      "castRangeCm": 760,
+      "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
     }
   },
   {
@@ -632,14 +1118,33 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Cooldown.Champion.SpellEngineer.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.CataclysmRing" },
-        { "kind": "EventGate", "tick": 0, "payloadA": 180 },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Cooldown.Champion.SpellEngineer.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.SpellEngineer.CataclysmRing"
+        },
+        {
+          "kind": "EventGate",
+          "tick": 0,
+          "payloadA": 180
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 700, "radius": 300, "showRangeCircle": true, "validColor": "#FF9D6F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.E"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.SpellEngineer.E"
+      ]
+    },
     "presentation": {
       "displayName": "Cataclysm Ring",
       "iconGlyph": "E",
@@ -649,6 +1154,10 @@
         "SmartCastWithIndicator": "Hold to preview arena center",
         "PressReleaseAimCast": "Release key, then confirm arena"
       }
+    },
+    "targeting": {
+      "castRangeCm": 700,
+      "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
     }
   },
   {
@@ -656,14 +1165,33 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 132, "tag": "Cooldown.Champion.SpellEngineer.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.SpellEngineer.GuidedLaser" },
-        { "kind": "EventGate", "tick": 0, "payloadA": 210 },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 132,
+          "tag": "Cooldown.Champion.SpellEngineer.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Champion.SpellEngineer.GuidedLaser"
+        },
+        {
+          "kind": "EventGate",
+          "tick": 0,
+          "payloadA": 210
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 1050, "radius": 75, "showRangeCircle": true, "validColor": "#B07CFF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.R"] },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Champion.SpellEngineer.R"
+      ]
+    },
     "input": {
       "trigger": "Held",
       "heldPolicy": "StartEnd",
@@ -677,6 +1205,10 @@
       "modeHints": {
         "SmartCast": "Hold to channel steerable beam, release to stop"
       }
+    },
+    "targeting": {
+      "castRangeCm": 1050,
+      "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
     }
   }
 ]

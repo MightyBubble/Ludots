@@ -2,9 +2,12 @@ using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -140,6 +143,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.AggMinAttribute] = HandleAggMinAttribute;
             h[(ushort)GraphNodeOp.AggMaxEntityByAttribute] = HandleAggMaxEntityByAttribute;
             h[(ushort)GraphNodeOp.AggMinEntityByAttribute] = HandleAggMinEntityByAttribute;
+            h[(ushort)GraphNodeOp.BeginLifecycleTransaction] = HandleBeginLifecycleTransaction;
+            h[(ushort)GraphNodeOp.InvokeBuiltin] = HandleInvokeBuiltin;
 
             // ── Int Math / Bool (29, 31-33) ──
             h[(ushort)GraphNodeOp.AddInt] = HandleAddInt;
@@ -189,6 +194,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // ── Self attribute access for derived graphs (330-331) ──
             h[(ushort)GraphNodeOp.LoadSelfAttribute] = HandleLoadSelfAttribute;
             h[(ushort)GraphNodeOp.WriteSelfAttribute] = HandleWriteSelfAttribute;
+
+            // ── Placement validation (402-406) ──
+            h[(ushort)GraphNodeOp.LoadTargetPosX] = HandleLoadTargetPosX;
+            h[(ushort)GraphNodeOp.LoadTargetPosY] = HandleLoadTargetPosY;
+            h[(ushort)GraphNodeOp.ClampTargetToRange] = HandleClampTargetToRange;
+            h[(ushort)GraphNodeOp.IsPointInCircle] = HandleIsPointInCircle;
+            h[(ushort)GraphNodeOp.SnapToNearestInCollection] = HandleSnapToNearestInCollection;
+            h[(ushort)GraphNodeOp.SnapToNearestGraphEdge] = HandleSnapToNearestGraphEdge;
 
             return h;
         }
@@ -942,6 +955,85 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 AttributeMutationOps.SetCurrent(s.World, self, ins.Imm, s.F[ins.A]);
             }
+        }
+
+        private static void HandleLoadTargetPosX(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.TargetPos.X;
+        }
+
+        private static void HandleLoadTargetPosY(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = s.TargetPos.Y;
+        }
+
+        private static void HandleClampTargetToRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!PlacementValidation.TryGetEntityWorldPositionCm(s.World, s.E[ins.A], out Fix64Vec2 originCm))
+            {
+                s.B[ins.Dst] = 0;
+                return;
+            }
+
+            Fix64Vec2 targetCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            PlacementValidation.ClampToRange(
+                in originCm,
+                ref targetCm,
+                Fix64.FromFloat(s.F[ins.B]),
+                out bool inRange);
+            var rounded = targetCm.RoundToInt();
+            s.TargetPos = new IntVector2(rounded.x, rounded.y);
+            s.B[ins.Dst] = (byte)(inRange ? 1 : 0);
+        }
+
+        private static void HandleIsPointInCircle(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            if (!PlacementValidation.TryGetEntityWorldPositionCm(s.World, s.E[ins.A], out Fix64Vec2 centerCm))
+            {
+                s.B[ins.Dst] = 0;
+                return;
+            }
+
+            Fix64Vec2 pointCm = Fix64Vec2.FromInt(s.TargetPos.X, s.TargetPos.Y);
+            bool inside = PlacementValidation.IsPointInCircle(
+                in pointCm,
+                in centerCm,
+                Fix64.FromFloat(s.F[ins.B]));
+            s.B[ins.Dst] = (byte)(inside ? 1 : 0);
+        }
+
+        private static void HandleSnapToNearestInCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            bool found = s.Api.TrySnapTargetToNearestInCollection(
+                s.E[ins.A],
+                ins.Imm,
+                ref s.TargetPos,
+                s.F[ins.B],
+                out Entity snappedEntity);
+            s.E[ins.Dst] = snappedEntity;
+            if (ins.Flags != byte.MaxValue)
+            {
+                s.B[ins.Flags] = (byte)(found ? 1 : 0);
+            }
+        }
+
+        private static void HandleSnapToNearestGraphEdge(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            bool found = s.Api.TrySnapTargetToNearestGraphEdge(
+                ref s.TargetPos,
+                s.F[ins.A],
+                out _);
+            s.B[ins.Dst] = (byte)(found ? 1 : 0);
+        }
+
+        private static void HandleBeginLifecycleTransaction(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.BeginLifecycleTransaction();
+        }
+
+        private static void HandleInvokeBuiltin(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.InvokeBuiltin(ins.Imm);
         }
     }
 }

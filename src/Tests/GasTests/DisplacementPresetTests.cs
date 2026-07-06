@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics;
+using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -155,6 +156,42 @@ namespace Ludots.Tests.GAS
             var finalPos = world.Get<WorldPositionCm>(mover).Value;
             That(finalPos.X.ToFloat(), Is.EqualTo(300f).Within(5f));
             That(finalPos.Y.ToFloat(), Is.EqualTo(400f).Within(5f));
+        }
+
+        [Test]
+        public void Displacement_WithPhysicsPosition_SynchronizesWorldPosition()
+        {
+            using var world = World.Create();
+
+            var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var mover = world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.Zero },
+                Position2D.Zero);
+
+            world.Create(new DisplacementState
+            {
+                TargetEntity = mover,
+                SourceEntity = source,
+                DirectionMode = DisplacementDirectionMode.Fixed,
+                FixedDirectionRad = Fix64.Zero,
+                TotalDistanceCm = 120,
+                RemainingDistanceCm = Fix64.FromInt(120),
+                TotalDurationTicks = 3,
+                RemainingTicks = 3,
+                OverrideNavigation = false,
+            });
+
+            var system = new DisplacementRuntimeSystem(world);
+            for (int i = 0; i < 3; i++)
+            {
+                system.Update(0f);
+            }
+
+            var worldPos = world.Get<WorldPositionCm>(mover).Value;
+            var physicsPos = world.Get<Position2D>(mover).Value;
+            That(worldPos.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
+            That(physicsPos.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
+            That(worldPos.Y.ToFloat(), Is.EqualTo(physicsPos.Y.ToFloat()).Within(0.01f));
         }
 
         [Test]

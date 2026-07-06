@@ -6,6 +6,23 @@
   {
     "id": "performance_visualization.benchmark_cube",
     "defaultLifetime": -1,
+    "bindings": [
+      {
+        "paramKey": "worldBar.fillRatio",
+        "source": "attributeRatio",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "worldBar.width",
+        "source": "constant",
+        "constantValue": 46
+      },
+      {
+        "paramKey": "worldBar.height",
+        "source": "constant",
+        "constantValue": 6
+      }
+    ],
     "behaviors": [
       {
         "slot": "body",
@@ -22,6 +39,27 @@
             0.85,
             0.85
           ]
+        }
+      },
+      {
+        "slot": "hud",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            1.1,
+            0
+          ],
+          "localScale": [
+            46,
+            6,
+            1
+          ],
+          "materialParamKey": "worldBar.fillRatio"
         }
       }
     ]

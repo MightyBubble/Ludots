@@ -4,109 +4,209 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.Arcweaver.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.DuelBolt" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 36,
+          "tag": "Cooldown.Arcweaver.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.DuelBolt"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.Q"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.Q"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.BlinkStep",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Cooldown.Arcweaver.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.BlinkStep" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Cooldown.Arcweaver.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.BlinkStep"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": {
-      "shape": "Circle",
-      "range": 520,
-      "radius": 90,
-      "showRangeCircle": true,
-      "validColor": "#4AC4F088",
-      "invalidColor": "#E2575788",
-      "rangeCircleColor": "#3388D955"
+    "targeting": {
+      "castRangeCm": 520,
+      "impactEffect": "Effect.Interaction.BlinkStep"
     },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.W"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.W"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.FireLance",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Arcweaver.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.FireLance" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Arcweaver.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.FireLance"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 760,
-      "radius": 80,
-      "showRangeCircle": true,
-      "validColor": "#F6B14C88",
-      "invalidColor": "#E2575788",
-      "rangeCircleColor": "#336AB855"
+    "targeting": {
+      "castRangeCm": 760,
+      "impactEffect": "Effect.Interaction.FireLance"
     },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.E"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.E"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.NovaPulse",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Arcweaver.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.NovaPulse" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 120,
+          "tag": "Cooldown.Arcweaver.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.NovaPulse"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "radius": 280, "showRangeCircle": false, "validColor": "#D76BFF77", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.R"] }
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Interaction.NovaPulse"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.R"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.ArcDash",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 72, "tag": "Cooldown.Arcweaver.Z" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.ArcDash" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 72,
+          "tag": "Cooldown.Arcweaver.Z"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.ArcDash"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 360, "radius": 55, "showRangeCircle": true, "validColor": "#6BE1C988", "invalidColor": "#E2575788", "rangeCircleColor": "#3372D16A" },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.Z"] }
+    "targeting": {
+      "castRangeCm": 360,
+      "impactEffect": "Effect.Interaction.ArcDash"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.Z"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.GuardToggle",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 12, "tag": "Cooldown.Arcweaver.F" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 12,
+          "tag": "Cooldown.Arcweaver.F"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
       "toggleTag": "State.Arcweaver.Guarding",
-      "activeEffects": ["Effect.Interaction.ArcaneGuardAura"],
+      "activeEffects": [
+        "Effect.Interaction.ArcaneGuardAura"
+      ],
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.GuardRelease" },
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "EffectSignal",
+            "tick": 0,
+            "template": "Effect.Interaction.GuardRelease"
+          },
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.F"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.F"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Arcweaver.ActionContext",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     }
   },
@@ -115,113 +215,236 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 150, "tag": "Cooldown.Arcweaver.Rune" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.RuneBurst" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 150,
+          "tag": "Cooldown.Arcweaver.Rune"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.RuneBurst"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 780,
-      "radius": 95,
-      "showRangeCircle": true,
-      "validColor": "#66C97E77",
-      "invalidColor": "#E2575788",
-      "rangeCircleColor": "#4478CF55"
+    "targeting": {
+      "castRangeCm": 780,
+      "impactEffect": "Effect.Interaction.RuneBurst"
     },
-    "blockTags": { "blockedAny": ["Cooldown.Arcweaver.Rune"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Arcweaver.Rune"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.Challenge",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Vanguard.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Challenge" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 30,
+          "tag": "Cooldown.Vanguard.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Challenge"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.Q"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.Q"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.BannerLeap",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 90, "tag": "Cooldown.Vanguard.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.BannerLeap" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 90,
+          "tag": "Cooldown.Vanguard.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.BannerLeap"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 440, "radius": 120, "showRangeCircle": true, "validColor": "#F0C36B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.W"] }
+    "targeting": {
+      "castRangeCm": 440,
+      "impactEffect": "Effect.Interaction.BannerLeap"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.W"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.CleaveCone",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 42, "tag": "Cooldown.Vanguard.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.CleaveCone" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 42,
+          "tag": "Cooldown.Vanguard.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.CleaveCone"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Cone", "range": 360, "radius": 360, "angleDeg": 42, "showRangeCircle": true, "validColor": "#D2A55C77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.E"] }
+    "targeting": {
+      "castRangeCm": 360,
+      "impactEffect": "Effect.Interaction.CleaveCone"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.E"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.Shockwave",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 100, "tag": "Cooldown.Vanguard.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Shockwave" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 100,
+          "tag": "Cooldown.Vanguard.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Shockwave"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Ring", "radius": 320, "innerRadius": 140, "showRangeCircle": false, "validColor": "#E9A34A77", "invalidColor": "#E2575788" },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.R"] }
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.Interaction.Shockwave"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.R"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.ChargeDash",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 60, "tag": "Cooldown.Vanguard.Z" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.ChargeDash" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 60,
+          "tag": "Cooldown.Vanguard.Z"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.ChargeDash"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 300, "radius": 55, "showRangeCircle": true, "validColor": "#F06B5E77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.Z"] }
+    "targeting": {
+      "castRangeCm": 300,
+      "impactEffect": "Effect.Interaction.ChargeDash"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.Z"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.IronWall",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 12, "tag": "Cooldown.Vanguard.F" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 12,
+          "tag": "Cooldown.Vanguard.F"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
       "toggleTag": "State.Vanguard.IronWall",
-      "activeEffects": ["Effect.Interaction.IronWallAura"],
+      "activeEffects": [
+        "Effect.Interaction.IronWallAura"
+      ],
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.F"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.F"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Vanguard.ActionContext",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     }
   },
@@ -230,104 +453,232 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Vanguard.Rune" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.GroundSlam" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 120,
+          "tag": "Cooldown.Vanguard.Rune"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.GroundSlam"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Rectangle", "range": 520, "radius": 130, "showRangeCircle": true, "validColor": "#F0936F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Vanguard.Rune"] }
+    "targeting": {
+      "castRangeCm": 520,
+      "impactEffect": "Effect.Interaction.GroundSlam"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Vanguard.Rune"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.SupportBeam",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 36, "tag": "Cooldown.Commander.Q" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.SupportBeam" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 36,
+          "tag": "Cooldown.Commander.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.SupportBeam"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.Q"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.Q"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.TacticalJump",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 80, "tag": "Cooldown.Commander.W" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.TacticalJump" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 80,
+          "tag": "Cooldown.Commander.W"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.TacticalJump"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 560, "radius": 100, "showRangeCircle": true, "validColor": "#5ED5BB77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.W"] }
+    "targeting": {
+      "castRangeCm": 560,
+      "impactEffect": "Effect.Interaction.TacticalJump"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.W"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.VolleyLine",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 48, "tag": "Cooldown.Commander.E" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.VolleyLine" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 48,
+          "tag": "Cooldown.Commander.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.VolleyLine"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 720, "radius": 90, "showRangeCircle": true, "validColor": "#7CC4E877", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.E"] }
+    "targeting": {
+      "castRangeCm": 720,
+      "impactEffect": "Effect.Interaction.VolleyLine"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.E"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.Overclock",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 120, "tag": "Cooldown.Commander.R" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Overclock" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 120,
+          "tag": "Cooldown.Commander.R"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Overclock"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.R"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.R"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.ThrustJump",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 64, "tag": "Cooldown.Commander.Z" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.ThrustJump" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 64,
+          "tag": "Cooldown.Commander.Z"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.ThrustJump"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 320, "radius": 55, "showRangeCircle": true, "validColor": "#7BD89A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.Z"] }
+    "targeting": {
+      "castRangeCm": 320,
+      "impactEffect": "Effect.Interaction.ThrustJump"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.Z"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.ShieldNet",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 12, "tag": "Cooldown.Commander.F" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 12,
+          "tag": "Cooldown.Commander.F"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
     "toggleSpec": {
       "toggleTag": "State.Commander.ShieldNet",
-      "activeEffects": ["Effect.Interaction.ShieldNetAura"],
+      "activeEffects": [
+        "Effect.Interaction.ShieldNetAura"
+      ],
       "deactivateExec": {
         "clockId": "FixedFrame",
         "items": [
-          { "kind": "End", "tick": 0 }
+          {
+            "kind": "End",
+            "tick": 0
+          }
         ]
       }
     },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.F"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.F"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Commander.ActionContext",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     }
   },
@@ -336,24 +687,59 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 180, "tag": "Cooldown.Commander.Rune" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.OrbitalStrike" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 180,
+          "tag": "Cooldown.Commander.Rune"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.OrbitalStrike"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "indicator": { "shape": "Line", "range": 820, "radius": 120, "showRangeCircle": true, "validColor": "#86B9FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
-    "blockTags": { "blockedAny": ["Cooldown.Commander.Rune"] }
+    "targeting": {
+      "castRangeCm": 820,
+      "impactEffect": "Effect.Interaction.OrbitalStrike"
+    },
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Commander.Rune"
+      ]
+    }
   },
   {
     "id": "Ability.Interaction.Stress.Fireball",
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 30, "tag": "Cooldown.Stress.Fireball" },
-        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Stress.Fireball" },
-        { "kind": "End", "tick": 0 }
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 30,
+          "tag": "Cooldown.Stress.Fireball"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.Interaction.Stress.Fireball"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
       ]
     },
-    "blockTags": { "blockedAny": ["Cooldown.Stress.Fireball"] }
+    "blockTags": {
+      "blockedAny": [
+        "Cooldown.Stress.Fireball"
+      ]
+    }
   }
 ]

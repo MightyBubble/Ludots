@@ -1,5 +1,6 @@
 {
   "Id": "interaction_showcase_stress",
+  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
   "Tags": ["interaction.showcase", "interaction.showcase.stress"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical"

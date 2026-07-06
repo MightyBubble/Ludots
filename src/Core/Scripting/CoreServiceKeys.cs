@@ -24,6 +24,7 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
@@ -35,6 +36,7 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
+using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
@@ -106,6 +108,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IFocusedMapLoadStateSink> FocusedMapLoadStateSink = new("FocusedMapLoadStateSink");
         public static readonly ServiceKey<BoardIdRegistry> BoardIdRegistry = new("BoardIdRegistry");
         public static readonly ServiceKey<MapContext> MapContext = new("MapContext");
+        public static readonly ServiceKey<MapLaunchContext> MapLaunchContext = new("MapLaunchContext");
 
         // --- UI ---
         public static readonly ServiceKey<IUiSystem> UISystem = new("UISystem");
@@ -197,6 +200,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
         public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
         public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
+        public static readonly ServiceKey<DynamicParticipantVisibilityPublisher> DynamicParticipantVisibilityPublisher = new("DynamicParticipantVisibilityPublisher");
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
@@ -219,6 +223,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
+        public static readonly ServiceKey<RuntimeEntityLifecycleQueue> RuntimeEntityLifecycleQueue = new("RuntimeEntityLifecycleQueue");
+        public static readonly ServiceKey<RuntimeEntityLifecycleReceiptQueue> RuntimeEntityLifecycleReceiptQueue = new("RuntimeEntityLifecycleReceiptQueue");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");
         public static readonly ServiceKey<EntityTemplateKeyRegistry> EntityTemplateKeyRegistry = new("EntityTemplateKeyRegistry");
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
@@ -330,7 +336,6 @@ namespace Ludots.Core.Scripting
         // --- Entity Selection (presentation-layer) ---
         public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
-        public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
         public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
         public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");

@@ -416,14 +416,28 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             float alpha)
         {
-            float width = asset.ScaleParamKey >= 0
+            Vector3 fallbackScale = ResolveScale(entity, in asset, performerWorldScale);
+            float authoredWidth = asset.ScaleParamKey >= 0
                 ? RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
-                : MathF.Max(ResolveScale(entity, in asset, performerWorldScale).X, 0.001f);
-            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
-            Vector3 p0 = position;
-            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(performerWorldRotation));
-            Vector3 p1 = Vector3.Lerp(p0, p3, 0.33f);
-            Vector3 p2 = Vector3.Lerp(p0, p3, 0.66f);
+                : fallbackScale.X;
+            float width = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.SplineWidth, authoredWidth),
+                0.001f);
+            Vector4 authoredColor = ResolveColor(entity, in asset, definition.DefaultColor);
+            Vector4 fillColor = ApplyAlpha(
+                ResolveOptionalVectorParam(entity, WellKnownPerformerParamKeys.SplineFillColor, authoredColor),
+                alpha);
+            Vector4 borderColor = ApplyAlpha(
+                ResolveOptionalVectorParam(entity, WellKnownPerformerParamKeys.SplineBorderColor, authoredColor),
+                alpha);
+            float borderWidth = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.SplineBorderWidth, 0f),
+                0f);
+            Vector3 p0 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP0, position);
+            Vector3 defaultP3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(performerWorldRotation));
+            Vector3 p3 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP3, defaultP3);
+            Vector3 p1 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP1, Vector3.Lerp(p0, p3, 1f / 3f));
+            Vector3 p2 = ResolveOptionalVector3Param(entity, WellKnownPerformerParamKeys.SplineP2, Vector3.Lerp(p0, p3, 2f / 3f));
 
             _requests.Add(PresentationRequest.FromRoadSpline(state.OwnerEntity, new RoadSplineRequest
             {
@@ -433,9 +447,9 @@ namespace Ludots.Core.Presentation.Systems
                 P2 = p2,
                 P3 = p3,
                 Width = width,
-                FillColor = color,
-                BorderColor = color,
-                BorderWidth = 0f,
+                FillColor = fillColor,
+                BorderColor = borderColor,
+                BorderWidth = borderWidth,
                 Style = 0,
             }, lod));
         }
@@ -452,6 +466,7 @@ namespace Ludots.Core.Presentation.Systems
                     _globals,
                     state.OwnerEntity,
                     lod,
+                    WorldHudItemKind.Bar,
                     definition.RequiredAttributeIds,
                     out PerformPhaseResult phaseResult))
             {
@@ -493,6 +508,7 @@ namespace Ludots.Core.Presentation.Systems
                     _globals,
                     state.OwnerEntity,
                     lod,
+                    WorldHudItemKind.Text,
                     definition.RequiredAttributeIds,
                     out PerformPhaseResult phaseResult))
             {
@@ -548,12 +564,49 @@ namespace Ludots.Core.Presentation.Systems
             float alpha)
         {
             Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
-            float radius = MathF.Max(scale.X, 0.001f);
-            float innerRadius = Math.Clamp(scale.Y, 0f, radius);
-            float length = MathF.Max(scale.X, 0.001f);
-            float width = MathF.Max(scale.Y, 0.001f);
+            float radius = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayRadius, scale.X),
+                0.001f);
+            float innerRadius = Math.Clamp(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayInnerRadius, scale.Y),
+                0f,
+                radius);
+            float length = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayLength, scale.X),
+                0.001f);
+            float width = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayWidth, scale.Y),
+                0.001f);
+            float angle = MathF.Max(
+                DegreesToRadians(ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayAngle, 45f)),
+                0f);
+            float rotation = DegreesToRadians(ResolveOptionalFloatParam(
+                entity,
+                WellKnownPerformerParamKeys.OverlayRotation,
+                RadiansToDegrees(ResolveGroundOverlayRotation(performerWorldFacing))));
             GroundOverlayShape shape = ResolveGroundOverlayShape(asset.AssetId);
-            Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
+            Vector4 fallbackColor = ResolveColor(entity, in asset, definition.DefaultColor);
+            Vector4 fillColor = ApplyAlpha(
+                ResolveOptionalColorParams(
+                    entity,
+                    WellKnownPerformerParamKeys.OverlayFillR,
+                    WellKnownPerformerParamKeys.OverlayFillG,
+                    WellKnownPerformerParamKeys.OverlayFillB,
+                    WellKnownPerformerParamKeys.OverlayFillA,
+                    fallbackColor),
+                alpha);
+            Vector4 borderColor = ApplyAlpha(
+                ResolveOptionalColorParams(
+                    entity,
+                    WellKnownPerformerParamKeys.OverlayBorderR,
+                    WellKnownPerformerParamKeys.OverlayBorderG,
+                    WellKnownPerformerParamKeys.OverlayBorderB,
+                    WellKnownPerformerParamKeys.OverlayBorderA,
+                    fallbackColor),
+                alpha);
+            float borderWidth = MathF.Max(
+                ResolveOptionalFloatParam(entity, WellKnownPerformerParamKeys.OverlayBorderWidth, scale.Z),
+                0f);
 
             _requests.Add(PresentationRequest.FromGroundOverlay(state.OwnerEntity, new GroundOverlayItem
             {
@@ -562,12 +615,13 @@ namespace Ludots.Core.Presentation.Systems
                 Center = position,
                 Radius = radius,
                 InnerRadius = shape == GroundOverlayShape.Ring ? innerRadius : 0f,
-                Rotation = ResolveGroundOverlayRotation(performerWorldFacing),
+                Angle = shape == GroundOverlayShape.Cone ? angle : 0f,
+                Rotation = rotation,
                 Length = shape == GroundOverlayShape.Line ? length : 0f,
                 Width = shape == GroundOverlayShape.Line ? width : 0f,
-                FillColor = color,
-                BorderColor = color,
-                BorderWidth = MathF.Max(scale.Z, 0f),
+                FillColor = fillColor,
+                BorderColor = borderColor,
+                BorderWidth = borderWidth,
             }, lod));
         }
 
@@ -692,6 +746,26 @@ namespace Ludots.Core.Presentation.Systems
             return value;
         }
 
+        private float ResolveOptionalFloatParam(Entity entity, int paramKey, float fallback)
+        {
+            return _runtime.TryResolveFloat(entity, paramKey, out float value) ? value : fallback;
+        }
+
+        private Vector4 ResolveOptionalColorParams(
+            Entity entity,
+            int rParamKey,
+            int gParamKey,
+            int bParamKey,
+            int aParamKey,
+            Vector4 fallback)
+        {
+            return new Vector4(
+                ResolveOptionalFloatParam(entity, rParamKey, fallback.X),
+                ResolveOptionalFloatParam(entity, gParamKey, fallback.Y),
+                ResolveOptionalFloatParam(entity, bParamKey, fallback.Z),
+                ResolveOptionalFloatParam(entity, aParamKey, fallback.W));
+        }
+
         private Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
         {
             if (!_runtime.TryResolveVector(entity, paramKey, out Vector4 value))
@@ -700,6 +774,18 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return value;
+        }
+
+        private Vector4 ResolveOptionalVectorParam(Entity entity, int paramKey, Vector4 fallback)
+        {
+            return _runtime.TryResolveVector(entity, paramKey, out Vector4 value) ? value : fallback;
+        }
+
+        private Vector3 ResolveOptionalVector3Param(Entity entity, int paramKey, Vector3 fallback)
+        {
+            return _runtime.TryResolveVector(entity, paramKey, out Vector4 value)
+                ? new Vector3(value.X, value.Y, value.Z)
+                : fallback;
         }
 
         private AnimatorPackedState ResolveAnimator(Entity entity, VisualRenderPath renderPath)
@@ -806,6 +892,16 @@ namespace Ludots.Core.Presentation.Systems
             return facing.HasValue != 0 && float.IsFinite(facing.AngleRad)
                 ? facing.AngleRad
                 : 0f;
+        }
+
+        private static float DegreesToRadians(float degrees)
+        {
+            return degrees * (MathF.PI / 180f);
+        }
+
+        private static float RadiansToDegrees(float radians)
+        {
+            return radians * (180f / MathF.PI);
         }
 
         internal static Vector3 ResolvePosition(in PerformerState state, in PerformerDefinition definition, Vector3 performerWorldPosition)

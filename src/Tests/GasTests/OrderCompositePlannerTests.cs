@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Orders;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -89,6 +90,35 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompositeOrderPlanner_AutoTargetAbility_BypassesMoveThenCastPlanning()
+        {
+            using var world = World.Create();
+            var orderQueue = new OrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f, autoTargetPolicy: AutoTargetPolicy.NearestEnemyInRange),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                OrderBuffer.CreateEmpty());
+
+            var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+
+            Assert.That(planner.TrySubmit(in castOrder), Is.True);
+            Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
+            Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Assert.That(submittedOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+        }
+
+        [Test]
         public void OrderContinuationSystem_QueuesFollowUpAheadOfLaterQueuedCommands()
         {
             using var world = World.Create();
@@ -154,17 +184,31 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.GetQueued(1).Order.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
         }
 
-        private static AbilityDefinitionRegistry CreateAbilityRegistry(float rangeCm)
+        private static AbilityDefinitionRegistry CreateAbilityRegistry(
+            float rangeCm,
+            AutoTargetPolicy autoTargetPolicy = AutoTargetPolicy.None)
         {
-            var registry = new AbilityDefinitionRegistry();
-            registry.Register(TestAbilityId, new AbilityDefinition
+            var definition = new AbilityDefinition
             {
-                HasIndicator = true,
-                Indicator = new AbilityIndicatorConfig
+                HasTargeting = true,
+                Targeting = new AbilityTargetingConfig
                 {
-                    Range = rangeCm
+                    CastRangeCm = rangeCm
                 }
-            });
+            };
+
+            if (autoTargetPolicy != AutoTargetPolicy.None)
+            {
+                definition.HasInputBindingOverride = true;
+                definition.InputBindingOverride = new AbilityInputBindingOverride
+                {
+                    HasAutoTargetPolicy = true,
+                    AutoTargetPolicy = autoTargetPolicy
+                };
+            }
+
+            var registry = new AbilityDefinitionRegistry();
+            registry.Register(TestAbilityId, in definition);
             return registry;
         }
 

@@ -1,8 +1,10 @@
 using System;
 using Arch.Core;
+using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Persistence
 {
@@ -17,6 +19,8 @@ namespace Ludots.Core.Persistence
             NormalizeActiveEffectContainer(world);
             NormalizeAbilityStateBuffer(world);
             NormalizeTeamEntityRef(world);
+            NormalizeRelationshipKeys<RelationshipEdgeSet>(world);
+            NormalizeRelationshipKeys<InRelationship>(world);
         }
 
         private static void NormalizeBlackboardEntityBuffer(World world)
@@ -96,6 +100,35 @@ namespace Ludots.Core.Persistence
                 if (value != Entity.Null)
                 {
                     teamRef.Value = EntityUtil.Reconstruct(value.Id, worldId, value.Version);
+                }
+            });
+        }
+
+        private static void NormalizeRelationshipKeys<T>(World world)
+        {
+            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<Relationship<T>>();
+            world.Query(in query, (ref Relationship<T> relationships) =>
+            {
+                if (relationships == null || relationships.Elements.Count == 0)
+                {
+                    return;
+                }
+
+                var normalized = new SortedList<Entity, T>(relationships.Elements.Count);
+                foreach (KeyValuePair<Entity, T> entry in relationships.Elements)
+                {
+                    Entity target = entry.Key;
+                    Entity normalizedTarget = target == Entity.Null
+                        ? Entity.Null
+                        : EntityUtil.Reconstruct(target.Id, worldId, target.Version);
+                    normalized.Add(normalizedTarget, entry.Value);
+                }
+
+                relationships.Elements.Clear();
+                foreach (KeyValuePair<Entity, T> entry in normalized)
+                {
+                    relationships.Elements.Add(entry.Key, entry.Value);
                 }
             });
         }

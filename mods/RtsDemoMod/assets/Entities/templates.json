@@ -7,7 +7,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400 } },
+      "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.War3.BuildLumberMill",
@@ -103,7 +103,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 420 } },
+      "AttributeBuffer": { "base": { "Health": 420, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold",
@@ -242,7 +242,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 660 } },
+      "AttributeBuffer": { "base": { "Health": 660, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -265,7 +265,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 240 } },
+      "AttributeBuffer": { "base": { "Health": 240, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold",
@@ -317,7 +317,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500 } },
+      "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -340,7 +340,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 500, "Shield": 500 } },
+      "AttributeBuffer": { "base": { "Health": 500, "Shield": 500, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Shared.Hold"
@@ -363,7 +363,7 @@
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700 } },
+      "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700, "MoveSpeed": 600 } },
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.Rts.Strategy.Zerg.MorphSpawningPool"

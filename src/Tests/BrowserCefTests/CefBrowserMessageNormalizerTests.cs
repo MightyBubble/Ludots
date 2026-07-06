@@ -51,7 +51,7 @@ public sealed class CefBrowserMessageNormalizerTests
 	}
 
 	[Test]
-	public void Normalize_WhenPayloadIsProviderLocalMessage_KeepsProviderPrivateChannel()
+	public void Normalize_WhenPayloadIsApplicationMessage_UsesProviderNeutralApplicationChannel()
 	{
 		BrowserScriptMessage message = CefBrowserMessageNormalizer.Normalize(new
 		{
@@ -59,7 +59,7 @@ public sealed class CefBrowserMessageNormalizerTests
 			payload = "loaded"
 		});
 
-		Assert.That(message.Channel, Is.EqualTo("cefsharp"));
+		Assert.That(message.Channel, Is.EqualTo(BrowserMessageChannels.Application));
 		Assert.That(message.Payload, Does.Contain("browser-ui-showcase"));
 	}
 }

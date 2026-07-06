@@ -51,7 +51,12 @@
       "maxTargets": 8
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Moba.Cone.E.Hit"
+      "payloadEffect": "Effect.Moba.Cone.E.Hit",
+      "contextMapping": {
+        "payloadSource": "OriginalSource",
+        "payloadTarget": "ResolvedEntity",
+        "payloadTargetContext": "OriginalTarget"
+      }
     }
   },
   {
@@ -211,9 +216,14 @@
       "range": 2000,
       "arcHeight": 0,
       "impactEffect": "Effect.Moba.Damage.R",
+      "hitEffect": "Effect.Moba.Damage.R",
       "presentationEffect": "Effect.Moba.Damage.R",
-      "travelMode": "Legacy",
-      "impactPolicy": "Legacy"
+      "travelMode": "TrackTarget",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 80,
+      "collisionRelationFilter": "All",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -226,9 +236,11 @@
     "participatesInResponse": false,
     "unitCreation": {
       "unitType": "Unit.Skeleton",
-      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 200,
+      "placementPattern": "Circle",
+      "facingPattern": "RadialOutward",
+      "placementRadiusCm": 200,
+      "placementStartAngleDeg": 0,
       "copySourcePlayerOwner": true
     }
   },

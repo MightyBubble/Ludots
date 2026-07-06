@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphQuery;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -263,6 +264,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
+        // ── Entity lifecycle graph composition ──
+        void BeginLifecycleTransaction()
+        {
+            throw new InvalidOperationException("Graph lifecycle transaction runtime is not available.");
+        }
+
+        void InvokeBuiltin(int builtinHandlerId)
+        {
+            throw new InvalidOperationException("Graph builtin invocation runtime is not available.");
+        }
+
         // ── Blackboard immediate read/write ──
 
         bool TryReadBlackboardFloat(Entity entity, int keyId, out float value);
@@ -276,6 +288,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         bool TryLoadConfigFloat(int keyId, out float value);
         bool TryLoadConfigInt(int keyId, out int value);
+
+        bool TrySnapTargetToNearestInCollection(
+            Entity owner,
+            int collectionKeyId,
+            ref IntVector2 targetPosCm,
+            float maxDistanceCm,
+            out Entity snappedEntity)
+        {
+            snappedEntity = Entity.Null;
+            return false;
+        }
+
+        bool TrySnapTargetToNearestGraphEdge(
+            ref IntVector2 targetPosCm,
+            float searchRadiusCm,
+            out GraphEdgeProjection projection)
+        {
+            projection = default;
+            return false;
+        }
     }
 
     /// <summary>

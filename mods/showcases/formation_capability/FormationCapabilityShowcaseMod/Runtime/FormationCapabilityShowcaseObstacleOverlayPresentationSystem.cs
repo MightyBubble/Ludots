@@ -8,8 +8,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -17,13 +17,15 @@ namespace FormationCapabilityShowcaseMod.Runtime;
 
 internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSystem : ISystem<float>
 {
+    private const string ObstacleOverlayKey = "formation_capability.obstacle_overlay";
+
     private static readonly QueryDescription ObstacleOverlayQuery = new QueryDescription()
         .WithAll<FormationCapabilityShowcaseObstacleOverlay, VisualTransform, PresentationStableId>()
         .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
     private readonly FormationCapabilityShowcaseRuntime _runtime;
-    private readonly GroundOverlayBuffer _overlays;
+    private readonly PresentationWorldFactPublisher _facts;
     private readonly IVisualHeightmap _heightmap;
     private readonly int _overlayCapacity;
     private readonly List<int> _currentStableIds;
@@ -45,8 +47,11 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
         _previousStableIds = new List<int>(_overlayCapacity);
         _currentStableIdSet = new HashSet<int>(_overlayCapacity);
         _emittedStateByStableId = new Dictionary<int, ObstacleOverlayEmissionState>(_overlayCapacity);
-        _overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
-            ?? throw new InvalidOperationException("Formation Capability obstacle overlay requires GroundOverlayBuffer.");
+        if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
+        {
+            throw new InvalidOperationException("Formation Capability obstacle overlay presentation requires PresentationEventStream.");
+        }
+
         _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
             ?? throw new InvalidOperationException("Formation Capability obstacle overlay requires VisualHeightmap.");
     }
@@ -108,7 +113,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
             ownerStableId,
             FormationCapabilityShowcaseObstacleOverlayVisualSlots.ObstacleRing,
             AssetKind.GroundOverlay,
-            (int)GroundOverlayShape.Ring);
+            FormationCapabilityShowcaseObstacleOverlayVisualSlots.ObstacleRing);
         ObstacleOverlayEmissionState nextState = ObstacleOverlayEmissionState.From(in overlay, in transform);
         if (_emittedStateByStableId.TryGetValue(stableId, out ObstacleOverlayEmissionState previousState) &&
             previousState.Equals(nextState))
@@ -121,22 +126,14 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
         _emittedStateByStableId[stableId] = nextState;
         Vector3 center = ProjectToGround(transform.Position, overlay.HeightOffsetM);
         RequireStableIdCapacity();
-        var item = new GroundOverlayItem
-        {
-            StableId = stableId,
-            Shape = GroundOverlayShape.Ring,
-            Center = center,
-            Radius = WorldUnits.CmToM(overlay.RadiusCm),
-            InnerRadius = 0f,
-            FillColor = overlay.FillColor,
-            BorderColor = overlay.BorderColor,
-            BorderWidth = WorldUnits.CmToM(overlay.BorderWidthCm),
-        };
-
-        if (!_overlays.Upsert(in item))
-        {
-            throw new InvalidOperationException("GroundOverlayBuffer overflowed while emitting Formation Capability obstacle overlay.");
-        }
+        _facts.PublishWorldOverlayUpdated(
+            ObstacleOverlayKey,
+            entity,
+            stableId,
+            center,
+            radiusOrLength: WorldUnits.CmToM(overlay.RadiusCm),
+            innerRadiusOrWidth: 0f,
+            borderWidth: WorldUnits.CmToM(overlay.BorderWidthCm));
 
         TrackStableId(stableId);
     }
@@ -158,7 +155,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
     {
         for (int i = 0; i < _previousStableIds.Count; i++)
         {
-            _overlays.Remove(_previousStableIds[i]);
+            _facts.PublishWorldOverlayEnded(ObstacleOverlayKey, Entity.Null, _previousStableIds[i]);
         }
 
         _previousStableIds.Clear();
@@ -174,7 +171,7 @@ internal sealed class FormationCapabilityShowcaseObstacleOverlayPresentationSyst
             int stableId = _previousStableIds[i];
             if (!_currentStableIdSet.Contains(stableId))
             {
-                _overlays.Remove(stableId);
+                _facts.PublishWorldOverlayEnded(ObstacleOverlayKey, Entity.Null, stableId);
                 _emittedStateByStableId.Remove(stableId);
             }
         }

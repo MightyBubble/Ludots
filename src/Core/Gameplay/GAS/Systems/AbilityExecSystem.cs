@@ -850,7 +850,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             else
             {
                 Entity target = ResolveEffectDispatchTarget(actor, dispatchTarget, in inst);
-                PublishEffectRequest(actor, target, inst.TargetContext, templateId,
+                Entity targetContext = ResolveEffectDispatchTargetContext(dispatchTarget, in inst);
+                PublishEffectRequest(actor, target, targetContext, templateId,
                     hasCp ? callerPool.Get(cpIdx) : default, hasCp, in inst);
             }
         }
@@ -865,6 +866,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExecEffectDispatchTarget.Default when World.IsAlive(inst.Target) => inst.Target,
                 _ => actor,
             };
+        }
+
+        private Entity ResolveEffectDispatchTargetContext(ExecEffectDispatchTarget dispatchTarget, in AbilityExecInstance inst)
+        {
+            if (World.IsAlive(inst.TargetContext))
+            {
+                return inst.TargetContext;
+            }
+
+            return dispatchTarget == ExecEffectDispatchTarget.Source && World.IsAlive(inst.Target)
+                ? inst.Target
+                : default;
         }
 
         private void PublishEffectRequest(Entity source, Entity target, Entity targetContext,
@@ -1304,4 +1317,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
     }
 }
-

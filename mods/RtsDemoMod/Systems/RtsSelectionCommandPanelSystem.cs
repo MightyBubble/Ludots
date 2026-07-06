@@ -129,7 +129,13 @@ namespace RtsDemoMod.Systems
 
         private Entity FindFallbackTarget()
         {
-            Entity result = FindFirstByNameContains("Barracks");
+            Entity result = FindFirstByNameContains("Peasant");
+            if (result != Entity.Null)
+            {
+                return result;
+            }
+
+            result = FindFirstByNameContains("Barracks");
             if (result != Entity.Null)
             {
                 return result;
@@ -142,12 +148,6 @@ namespace RtsDemoMod.Systems
             }
 
             result = FindFirstByNameContains("Gateway");
-            if (result != Entity.Null)
-            {
-                return result;
-            }
-
-            result = FindFirstByNameContains("Peasant");
             if (result != Entity.Null)
             {
                 return result;

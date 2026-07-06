@@ -32,8 +32,8 @@
     { "TeamId": 2, "RepresentativeInstanceId": "utility-autocast-enemy-brute" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "utility-autocast-mage", "IsLocal": true },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "utility-autocast-enemy-brute", "IsLocal": false }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "utility-autocast-mage" },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "utility-autocast-enemy-brute" }
   ],
   "ParticipantRelationships": {
     "Teams": [

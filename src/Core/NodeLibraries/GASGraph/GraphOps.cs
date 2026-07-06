@@ -130,6 +130,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggMinMetric = 394,
         RelationshipAggMaxEntityByMetric = 395,
         RelationshipAggMinEntityByMetric = 396,
+
+        // ── Entity lifecycle composition (400-401) ──
+        BeginLifecycleTransaction = 400,
+        InvokeBuiltin = 401,
+
+        // ── Placement validation (402-406) ──
+        LoadTargetPosX = 402,
+        LoadTargetPosY = 403,
+        ClampTargetToRange = 404,
+        IsPointInCircle = 405,
+        SnapToNearestInCollection = 406,
+        SnapToNearestGraphEdge = 407,
     }
 
     public static class GraphNodeOpParser
@@ -149,4 +161,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-

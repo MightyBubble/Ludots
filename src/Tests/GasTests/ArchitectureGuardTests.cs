@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Ludots.Core.Engine;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace GasTests
@@ -176,7 +178,310 @@ namespace GasTests
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Issue #200 expects Core Knowledge Projection to land on entity projections instead of player/team visibility shortcuts:\n" +
+                "Issue #200 expects Core Knowledge Projection to land on entity projections instead of player/team visibility shortcuts:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_GlobalHoveredEntityKeys_AreRemoved()
+        {
+            Assert.That(
+                typeof(CoreServiceKeys).GetField("HoveredEntity"),
+                Is.Null,
+                "Epic #322 D6 requires hover state to live in EntityCollectionStore, not a flat CoreServiceKeys.HoveredEntity global.");
+            Assert.That(
+                typeof(ContextKeys).GetField("HoveredEntity"),
+                Is.Null,
+                "Epic #322 D6 requires hover state to live in EntityCollectionStore, not a flat ContextKeys.HoveredEntity global.");
+        }
+
+        [Test]
+        public void Epic322_VectorAimPhase_IsRemoved()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "docs", "architecture", "interaction")
+            };
+
+            var hits = new List<string>();
+            for (int i = 0; i < directories.Length; i++)
+            {
+                string dir = directories[i];
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    string ext = Path.GetExtension(file);
+                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, new[] { "VectorAimPhase" }, hits);
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 D7 removed the hardcoded VectorAimPhase name; aim state should expose targeting input slots instead:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_ModAbilityConfigs_DoNotDeclareAimVisualPerformers()
+        {
+            var repoRoot = FindRepoRoot();
+            string modsDir = Path.Combine(repoRoot, "mods");
+            Assert.That(Directory.Exists(modsDir), Is.True, $"Missing {modsDir}");
+
+            string[] forbiddenKeys =
+            {
+                "indicator",
+                "aimVisual",
+                "areaPerformerId",
+                "rangeCirclePerformerId",
+                "previewPerformerId",
+                "performerId"
+            };
+
+            var hits = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(modsDir, "abilities.json", SearchOption.AllDirectories))
+            {
+                JsonNode? root = JsonNode.Parse(File.ReadAllText(file));
+                if (root == null)
+                {
+                    continue;
+                }
+
+                AppendForbiddenJsonKeys(repoRoot, file, root, "$", forbiddenKeys, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action performer rules:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_TargetSelector_DuplicateTargetTruth_IsRemoved()
+        {
+            var repoRoot = FindRepoRoot();
+            string path = Path.Combine(repoRoot, "src", "Core", "Gameplay", "GAS", "Components", "TargetSelector.cs");
+
+            Assert.That(
+                File.Exists(path),
+                Is.False,
+                "Epic #322 ADR-1 keeps target resolution in the referenced impact effect; TargetSelector carried a parallel shape/range/radius/angle truth.");
+        }
+
+        [Test]
+        public void Epic322_AbilityAimOverlayNaming_IsRemoved()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "docs")
+            };
+            string[] forbidden =
+            {
+                "AbilityAimOverlayPresentationSystem",
+                "AbilityAimOverlay"
+            };
+
+            var hits = new List<string>();
+            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
+            {
+                string dir = directories[dirIndex];
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    string ext = Path.GetExtension(file);
+                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                "Epic #322 ability aim presentation is an event/collection projection consumed by performer rules; overlay-named entry points must not return:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_ChampionSandboxPresentation_DoesNotBypassPerformerRules()
+        {
+            var repoRoot = FindRepoRoot();
+            string sandboxDir = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "champion_skill_sandbox",
+                "ChampionSkillSandboxMod");
+            Assert.That(Directory.Exists(sandboxDir), Is.True, $"Missing {sandboxDir}");
+
+            string[] forbidden =
+            {
+                "ChampionSkillSandboxVisualFeedback",
+                "GasPresentationEventBuffer",
+                "PresentationPrimitiveDrawBuffer",
+                "PrimitiveDrawBuffer",
+                "TransientMarkerBuffer",
+                "WorldHudBatchBuffer"
+            };
+
+            var hits = FindForbiddenSourceTokens(repoRoot, new[] { sandboxDir }, forbidden);
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 champion skill presentation must project events and let PerformerRuleSystem produce performer commands. Sandbox code must not consume GAS events or write presentation buffers directly:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_SelectedMovePathOverlayBridge_IsRemoved()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                Path.Combine(repoRoot, "docs", "architecture", "interaction")
+            };
+            string[] forbidden =
+            {
+                "SelectedMovePathOverlayBridge"
+            };
+
+            var hits = new List<string>();
+            for (int dirIndex = 0; dirIndex < directories.Length; dirIndex++)
+            {
+                string dir = directories[dirIndex];
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories))
+                {
+                    string ext = Path.GetExtension(file);
+                    if (!string.Equals(ext, ".cs", StringComparison.OrdinalIgnoreCase) &&
+                        !string.Equals(ext, ".md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_SelectedMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
+        {
+            var repoRoot = FindRepoRoot();
+            string file = Path.Combine(
+                repoRoot,
+                "mods",
+                "CoreInputMod",
+                "Systems",
+                "SelectedMovePathPresentationSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 selected move path source {file}");
+
+            string[] forbidden =
+            {
+                "GroundOverlayBuffer",
+                "ScreenOverlayBuffer",
+                "GroundOverlayItem",
+                ".AddRect(",
+                ".AddText(",
+                ".TryAddLine(",
+                ".TryAdd(new GroundOverlayItem"
+            };
+
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void Epic322_ShowcasePresentationSystems_PublishWorldFactsInsteadOfWritingRenderBuffers()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsSelectionFeedbackPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "formation_capability", "FormationCapabilityShowcaseMod", "Runtime", "FormationCapabilityShowcaseObstacleOverlayPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "formation_capability", "FormationCapabilityShowcaseMod", "Runtime", "FormationCapabilityShowcaseFormationOutlinePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Systems", "RoadSelectedRoutePresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Gameplay", "RoadRoutePreviewSplineBuilder.cs")
+            };
+            string[] forbidden =
+            {
+                "GroundOverlayBuffer",
+                "RoadSplineBuffer",
+                "WorldHudBatchBuffer",
+                "new GroundOverlayItem",
+                "new RoadSplineItem",
+                "new WorldHudItem",
+                ".TryAddLine(",
+                ".TryAdd(new GroundOverlayItem",
+                ".TryAdd(new WorldHudItem"
+            };
+
+            var hits = new List<string>();
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                string file = files[fileIndex];
+                Assert.That(File.Exists(file), Is.True, $"Missing epic #322 presentation source {file}");
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Epic #322 showcase presentation systems must publish semantic world facts and let PerformerRuleSystem/performer emit own render buffers:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -1430,6 +1735,49 @@ namespace GasTests
             }
 
             return hits;
+        }
+
+        private static void AppendForbiddenJsonKeys(
+            string repoRoot,
+            string file,
+            JsonNode node,
+            string jsonPath,
+            IReadOnlyList<string> forbiddenKeys,
+            List<string> hits)
+        {
+            if (node is JsonObject obj)
+            {
+                foreach ((string key, JsonNode? child) in obj)
+                {
+                    for (int i = 0; i < forbiddenKeys.Count; i++)
+                    {
+                        if (string.Equals(key, forbiddenKeys[i], StringComparison.Ordinal))
+                        {
+                            hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{jsonPath}.{key}");
+                            break;
+                        }
+                    }
+
+                    if (child != null)
+                    {
+                        AppendForbiddenJsonKeys(repoRoot, file, child, $"{jsonPath}.{key}", forbiddenKeys, hits);
+                    }
+                }
+
+                return;
+            }
+
+            if (node is JsonArray arr)
+            {
+                for (int i = 0; i < arr.Count; i++)
+                {
+                    JsonNode? child = arr[i];
+                    if (child != null)
+                    {
+                        AppendForbiddenJsonKeys(repoRoot, file, child, $"{jsonPath}[{i}]", forbiddenKeys, hits);
+                    }
+                }
+            }
         }
 
         private static void AppendForbiddenSourceTokens(

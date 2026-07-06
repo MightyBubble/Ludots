@@ -7,8 +7,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MovePlanning;
-using Ludots.Core.Presentation.Rendering;
-using RoadNetworkShowcaseMod.Runtime;
+using Ludots.Core.Presentation.Events;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
@@ -27,20 +26,19 @@ namespace RoadNetworkShowcaseMod.Gameplay
             Entity entity,
             ref OrderBuffer buffer,
             in RoadRoutePreviewPalette palette,
-            RoadSplineBuffer roadSplines,
-            GroundOverlayBuffer overlays,
-            int primaryStableIdBase)
+            PresentationWorldFactPublisher facts,
+            IList<RoadRoutePreviewFactScope> activeScopes)
         {
             if (!OrderWorldSpatialResolver.TryGetEntityWorldCm(world, entity, out Vector3 originWorldCm))
             {
                 return;
             }
 
-            int stableCursor = primaryStableIdBase;
+            int segmentIndex = 0;
             if (buffer.HasActive)
             {
                 ref Order active = ref buffer.ActiveOrder.Order;
-                EmitActivePlanRoute(world, entity, in active, originWorldCm, palette, roadSplines, overlays, ref stableCursor);
+                EmitActivePlanRoute(world, entity, in active, originWorldCm, palette, facts, activeScopes, ref segmentIndex);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in active, out Vector3 activeDestination))
                 {
                     originWorldCm = activeDestination;
@@ -50,7 +48,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                EmitOrderRoute(in queued, originWorldCm, palette, roadSplines, overlays, ref stableCursor);
+                EmitOrderRoute(entity, in queued, originWorldCm, palette, facts, activeScopes, ref segmentIndex);
                 if (OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out Vector3 queuedDestination))
                 {
                     originWorldCm = queuedDestination;
@@ -64,9 +62,9 @@ namespace RoadNetworkShowcaseMod.Gameplay
             in Order order,
             in Vector3 originWorldCm,
             in RoadRoutePreviewPalette palette,
-            RoadSplineBuffer roadSplines,
-            GroundOverlayBuffer overlays,
-            ref int stableCursor)
+            PresentationWorldFactPublisher facts,
+            IList<RoadRoutePreviewFactScope> activeScopes,
+            ref int segmentIndex)
         {
             if (!_plans.TryGetPlan(entity, order.OrderId, out MovePlanView plan))
             {
@@ -104,17 +102,18 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return;
             }
 
-            EmitSplineSegments(points[..writeCount], palette, roadSplines, ref stableCursor);
-            EmitEndpoint(points[writeCount - 1], palette, overlays);
+            EmitSplineSegments(entity, points[..writeCount], palette, facts, activeScopes, ref segmentIndex);
+            EmitEndpoint(entity, points[writeCount - 1], palette, facts, activeScopes, ref segmentIndex);
         }
 
         private static void EmitOrderRoute(
+            Entity owner,
             in Order order,
             in Vector3 originWorldCm,
             in RoadRoutePreviewPalette palette,
-            RoadSplineBuffer roadSplines,
-            GroundOverlayBuffer overlays,
-            ref int stableCursor)
+            PresentationWorldFactPublisher facts,
+            IList<RoadRoutePreviewFactScope> activeScopes,
+            ref int segmentIndex)
         {
             if (order.Args.Spatial.Mode != OrderCollectionMode.List)
             {
@@ -145,48 +144,74 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 return;
             }
 
-            EmitSplineSegments(points[..writeCount], palette, roadSplines, ref stableCursor);
-            EmitEndpoint(points[writeCount - 1], palette, overlays);
+            EmitSplineSegments(owner, points[..writeCount], palette, facts, activeScopes, ref segmentIndex);
+            EmitEndpoint(owner, points[writeCount - 1], palette, facts, activeScopes, ref segmentIndex);
         }
 
         private static void EmitSplineSegments(
+            Entity owner,
             ReadOnlySpan<Vector3> points,
             in RoadRoutePreviewPalette palette,
-            RoadSplineBuffer roadSplines,
-            ref int stableCursor)
+            PresentationWorldFactPublisher facts,
+            IList<RoadRoutePreviewFactScope> activeScopes,
+            ref int segmentIndex)
         {
+            string key = ResolveSplineKey(in palette);
             for (int i = 0; i < points.Length - 1; i++)
             {
-                Vector3 previous = i == 0 ? points[i] : points[i - 1];
                 Vector3 start = points[i];
                 Vector3 end = points[i + 1];
-                Vector3 next = i + 2 < points.Length ? points[i + 2] : points[i + 1];
-                Vector3 control0 = start + ((end - previous) / 6f);
-                Vector3 control1 = end - ((next - start) / 6f);
-                roadSplines.TryAdd(
-                    stableCursor++,
+                int scope = PresentationWorldFactPublisher.ComposeScope(key, owner, segmentIndex++);
+                facts.PublishWorldSplineUpdated(
+                    key,
+                    owner,
+                    scope,
                     start,
-                    control0,
-                    control1,
                     end,
                     palette.WidthMeters,
-                    palette.FillColor,
-                    palette.BorderColor,
                     palette.BorderWidthMeters);
+                activeScopes.Add(new RoadRoutePreviewFactScope(key, scope));
             }
         }
 
-        private static void EmitEndpoint(in Vector3 position, in RoadRoutePreviewPalette palette, GroundOverlayBuffer overlays)
+        private static void EmitEndpoint(
+            Entity owner,
+            in Vector3 position,
+            in RoadRoutePreviewPalette palette,
+            PresentationWorldFactPublisher facts,
+            IList<RoadRoutePreviewFactScope> activeScopes,
+            ref int segmentIndex)
         {
-            overlays.TryAdd(new GroundOverlayItem
+            string key = ResolveEndpointKey(in palette);
+            int scope = PresentationWorldFactPublisher.ComposeScope(key, owner, segmentIndex++);
+            facts.PublishWorldOverlayUpdated(
+                key,
+                owner,
+                scope,
+                position,
+                radiusOrLength: 0.30f,
+                borderWidth: 0.04f);
+            activeScopes.Add(new RoadRoutePreviewFactScope(key, scope));
+        }
+
+        private static string ResolveSplineKey(in RoadRoutePreviewPalette palette)
+        {
+            return palette.PaletteId switch
             {
-                Shape = GroundOverlayShape.Circle,
-                Center = position,
-                Radius = 0.30f,
-                FillColor = palette.FillColor,
-                BorderColor = palette.BorderColor,
-                BorderWidth = 0.04f
-            });
+                RoadRouteProfileCatalog.PreviewCyan => RoadRoutePreviewPresentationKeys.RouteCyan,
+                RoadRouteProfileCatalog.PreviewCrimson => RoadRoutePreviewPresentationKeys.RouteCrimson,
+                _ => RoadRoutePreviewPresentationKeys.RouteAmber,
+            };
+        }
+
+        private static string ResolveEndpointKey(in RoadRoutePreviewPalette palette)
+        {
+            return palette.PaletteId switch
+            {
+                RoadRouteProfileCatalog.PreviewCyan => RoadRoutePreviewPresentationKeys.EndpointCyan,
+                RoadRouteProfileCatalog.PreviewCrimson => RoadRoutePreviewPresentationKeys.EndpointCrimson,
+                _ => RoadRoutePreviewPresentationKeys.EndpointAmber,
+            };
         }
 
         private static Vector3 ToVisualMeters(in Vector3 worldCm)
@@ -212,5 +237,42 @@ namespace RoadNetworkShowcaseMod.Gameplay
 
             return 0;
         }
+    }
+
+    internal readonly struct RoadRoutePreviewFactScope : IEquatable<RoadRoutePreviewFactScope>
+    {
+        public readonly string Key;
+        public readonly int Scope;
+
+        public RoadRoutePreviewFactScope(string key, int scope)
+        {
+            Key = key ?? throw new ArgumentNullException(nameof(key));
+            Scope = scope;
+        }
+
+        public bool Equals(RoadRoutePreviewFactScope other)
+        {
+            return Scope == other.Scope && string.Equals(Key, other.Key, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is RoadRoutePreviewFactScope other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Key, Scope);
+        }
+    }
+
+    internal static class RoadRoutePreviewPresentationKeys
+    {
+        public const string RouteAmber = "road_network.route_preview.amber";
+        public const string RouteCyan = "road_network.route_preview.cyan";
+        public const string RouteCrimson = "road_network.route_preview.crimson";
+        public const string EndpointAmber = "road_network.route_preview.endpoint.amber";
+        public const string EndpointCyan = "road_network.route_preview.endpoint.cyan";
+        public const string EndpointCrimson = "road_network.route_preview.endpoint.crimson";
     }
 }

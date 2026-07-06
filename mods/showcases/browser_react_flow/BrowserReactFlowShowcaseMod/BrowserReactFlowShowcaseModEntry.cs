@@ -15,7 +15,6 @@ namespace BrowserReactFlowShowcaseMod;
 
 public sealed class BrowserReactFlowShowcaseModEntry : IMod
 {
-    private const string BrowserServiceKey = "BrowserRuntime";
     private const string AssetIndexPath = "BrowserReactFlowShowcaseMod:Assets/react-flow-app/index.html";
     private const string PerfModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_MODE";
     private const string HitTestModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_HIT_TEST";
@@ -254,7 +253,7 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     {
         return Ui.Column(
                 Ui.Text("Browser runtime missing").FontSize(32f).Bold(),
-                Ui.Text("Run this showcase with the CEF runtime preset to load the packaged React Flow web app."))
+                Ui.Text("Run this showcase with Ludots host CEF browser runtime enabled to load the packaged React Flow web app."))
             .WidthPercent(100f)
             .HeightPercent(100f)
             .Padding(32f)
@@ -263,7 +262,7 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
 
     private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)
     {
-        var key = new ServiceKey<IBrowserRuntime>(BrowserServiceKey);
+        var key = new ServiceKey<IBrowserRuntime>(BrowserRuntimeServiceNames.BrowserRuntime);
         if (context.TryGet(key, out runtime))
         {
             return true;

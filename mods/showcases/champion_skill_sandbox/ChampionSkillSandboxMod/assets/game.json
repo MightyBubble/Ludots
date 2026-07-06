@@ -1,3 +1,4 @@
 {
-    "startupMapId":  "champion_skill_sandbox"
+  "startupMapId": "champion_skill_sandbox",
+  "startupInputContexts": ["Default_Gameplay", "ChampionSkillSandbox.Controls"]
 }

@@ -245,7 +245,7 @@
     "expireCondition": {
       "kind": "TagPresent",
       "tag": "State.Champion.Garen.Courage",
-      "sense": "Raw"
+      "sense": "Effective"
     }
   },
   {
@@ -288,8 +288,7 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Garen.JudgmentHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Garen.JudgmentHit"
     }
   },
   {
@@ -327,8 +326,7 @@
       "maxTargets": 6
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit"
     }
   },
   {
@@ -359,10 +357,10 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_runic_beacon",
       "count": 1,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -378,10 +376,10 @@
       "templateId": "champion_skill_sandbox_rune_field",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.Geomancer.RuneFieldPersistent",
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -408,8 +406,7 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Geomancer.RuneFieldHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Geomancer.RuneFieldHit"
     }
   },
   {
@@ -440,10 +437,10 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_stone_pillar",
       "count": 1,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -467,8 +464,7 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit"
     }
   },
   {
@@ -547,7 +543,7 @@
       "travelMode": "Direction",
       "impactPolicy": "DestroyOnFirstHit",
       "collisionHalfWidth": 90,
-      "collisionRelationFilter": "Hostile",
+      "collisionRelationFilter": "All",
       "collisionExcludeSource": true,
       "maxHitCount": 1
     }
@@ -572,8 +568,7 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit"
     }
   },
   {
@@ -612,8 +607,7 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit"
     }
   },
   {
@@ -652,8 +646,7 @@
       "maxTargets": 10
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit"
     }
   },
   {
@@ -691,8 +684,7 @@
       "maxTargets": 10
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit"
     }
   },
   {
@@ -730,8 +722,7 @@
       "maxTargets": 4
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit"
     }
   },
   {
@@ -767,7 +758,7 @@
       "presentationEffect": "Effect.ChampionStress.FireMage.FireballResolve",
       "travelMode": "Direction",
       "impactPolicy": "DestroyOnFirstHit",
-      "collisionHalfWidth": 180,
+      "collisionHalfWidth": 100,
       "collisionRelationFilter": "Hostile",
       "collisionExcludeSource": true,
       "maxHitCount": 1
@@ -792,8 +783,7 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit"
     }
   },
   {
@@ -829,7 +819,7 @@
       "presentationEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
       "travelMode": "Direction",
       "impactPolicy": "DestroyOnFirstHit",
-      "collisionHalfWidth": 110,
+      "collisionHalfWidth": 70,
       "collisionRelationFilter": "Hostile",
       "collisionExcludeSource": true,
       "maxHitCount": 1
@@ -854,8 +844,7 @@
       "maxTargets": 4
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit"
     }
   },
   {
@@ -902,10 +891,10 @@
     "unitCreation": {
       "templateId": "champion_skill_sandbox_spell_beacon",
       "count": 1,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -921,10 +910,10 @@
       "templateId": "champion_skill_sandbox_gravity_well",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GravityWellPersistent",
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -951,8 +940,7 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.SpellEngineer.GravityWellHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.SpellEngineer.GravityWellHit"
     }
   },
   {
@@ -1004,10 +992,10 @@
       "templateId": "champion_skill_sandbox_guided_laser",
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true,
+      "offsetRadius": 0,
       "placementPattern": "Scatter",
-      "offsetRadius": 0
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": true
     }
   },
   {
@@ -1035,8 +1023,7 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.SpellEngineer.GuidedLaserHit",
-      "preset": "SourceToResolved"
+      "payloadEffect": "Effect.Champion.SpellEngineer.GuidedLaserHit"
     }
   },
   {

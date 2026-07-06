@@ -14,8 +14,6 @@ namespace BrowserUiShowcaseMod;
 
 public sealed class BrowserUiShowcaseModEntry : IMod
 {
-    private const string BrowserServiceKey = "BrowserRuntime";
-
     private IBrowserSurface? _surface;
     private BrowserCanvasContent? _browserContent;
     private IUiSurfaceHost? _surfaceHost;
@@ -176,7 +174,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
 
     private static bool TryGetBrowserRuntime(ScriptContext context, out IBrowserRuntime runtime)
     {
-        var key = new ServiceKey<IBrowserRuntime>(BrowserServiceKey);
+        var key = new ServiceKey<IBrowserRuntime>(BrowserRuntimeServiceNames.BrowserRuntime);
         if (context.TryGet(key, out runtime))
         {
             return true;

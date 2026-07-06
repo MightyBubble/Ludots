@@ -64,6 +64,53 @@ namespace Ludots.Core.Knowledge
                    projection.CanReadPosition(requiredPosition);
         }
 
+        public static bool TryResolveForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            out KnowledgeProjection projection)
+        {
+            projection = default;
+            if (viewer == Entity.Null ||
+                !world.IsAlive(viewer) ||
+                !TryGetResolver(globals, out KnowledgeProjectionResolver resolver))
+            {
+                return false;
+            }
+
+            Span<Entity> scopeMembers = stackalloc Entity[1];
+            Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
+            Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
+            return resolver.TryResolveWithRelationGrants(
+                viewer,
+                target,
+                ResolveCurrentTick(globals),
+                in viewerScope,
+                in roleContext,
+                scopeMembers,
+                relationSources,
+                relationTargets,
+                out projection);
+        }
+
+        public static bool CanReadPositionForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            KnowledgePositionAccess requiredPosition,
+            out KnowledgeProjection projection)
+        {
+            return TryResolveForViewer(world, globals, viewer, target, out projection) &&
+                   projection.CanReadPosition(requiredPosition);
+        }
+
         public static bool TryResolveViewer(
             World world,
             Dictionary<string, object> globals,

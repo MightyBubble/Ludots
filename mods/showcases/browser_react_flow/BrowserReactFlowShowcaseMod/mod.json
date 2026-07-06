@@ -8,5 +8,5 @@
     "LudotsCoreMod": "^1.0.0"
   },
   "author": "Ludots Team",
-  "tags": ["showcase", "browser-ui", "cef", "react-flow"]
+  "tags": ["showcase", "browser-ui", "react-flow"]
 }

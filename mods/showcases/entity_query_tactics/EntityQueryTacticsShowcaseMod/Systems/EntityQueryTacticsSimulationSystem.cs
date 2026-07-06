@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -29,6 +30,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
     internal sealed class EntityQueryTacticsSimulationSystem : ISystem<float>
     {
         private static readonly QueryDescription NamedMapEntityQuery = new QueryDescription().WithAll<Name, MapEntity>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
 
         private readonly GameEngine _engine;
         private readonly World _world;
@@ -106,6 +108,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             _state.AdvanceFrame();
+            PublishSelectableKnowledge(ScenarioContext.Owner);
             MirrorFormalSelectionToCollection();
             MaintainFormationSnapshotFromSelectionChange();
             RunDemoPlayback();
@@ -148,6 +151,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             PrepareEntities(context);
             SeedRelationshipRuntime(context);
             BindSelectionRuntime(context.Owner);
+            PublishSelectableKnowledge(context.Owner);
             _state.SetScenarioContext(context);
             _engine.GlobalContext[EntityQueryTacticsShowcaseIds.ScenarioKey] = context;
             _state.AddLog(Config.Logs.ScenarioReady);
@@ -354,6 +358,42 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 cull.IsVisible = true;
                 _world.Set(entity, cull);
             }
+        }
+
+        private void PublishSelectableKnowledge(Entity viewer)
+        {
+            if (viewer == Entity.Null || !_world.IsAlive(viewer))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore knowledge = _engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("Entity query tactics showcase requires KnowledgeProjectionStore before publishing selectable visibility.");
+            var empty = KnowledgeIdMask256.Empty;
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
+            string mapId = Config.MapId;
+            _world.Query(in SelectableKnowledgeQuery, (Entity target, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            {
+                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                knowledge.Upsert(
+                    viewer,
+                    target,
+                    new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        empty,
+                        empty,
+                        empty,
+                        viewer,
+                        observedTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0));
+            });
         }
 
         private void AddTag(Entity entity, int tagId)

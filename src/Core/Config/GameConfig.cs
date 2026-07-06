@@ -27,6 +27,11 @@ namespace Ludots.Core.Config
         /// </summary>
         public string StartupMapId { get; set; }
 
+        /// <summary>
+        /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
+        /// </summary>
+        public int StartupSelectedPlayerId { get; set; }
+
         public List<string> StartupInputContexts { get; set; } = new List<string>();
 
         // Engine-level defaults (these stay in Core's game.json)
@@ -53,6 +58,8 @@ namespace Ludots.Core.Config
 
         public LogConfig Logging { get; set; } = new LogConfig();
 
+        public BrowserRuntimeConfig BrowserRuntime { get; set; } = new BrowserRuntimeConfig();
+
         /// <summary>
         /// Game constants table - merged from all Mods via ConfigPipeline.
         /// Contains order type ids, response-chain order type ids, attributes, etc.
@@ -63,6 +70,23 @@ namespace Ludots.Core.Config
     public sealed class Physics2DConfig
     {
         public bool Enabled { get; set; }
+    }
+
+    public sealed class BrowserRuntimeConfig
+    {
+        public bool Enabled { get; set; }
+
+        public bool Required { get; set; }
+
+        public string Provider { get; set; } = string.Empty;
+
+        public string ProviderAssemblyPath { get; set; } = string.Empty;
+
+        public string ProviderProjectPath { get; set; } = string.Empty;
+
+        public string RuntimeRootPath { get; set; } = string.Empty;
+
+        public string CacheRootPath { get; set; } = string.Empty;
     }
 
     /// <summary>

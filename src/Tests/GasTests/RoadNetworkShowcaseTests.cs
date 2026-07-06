@@ -25,6 +25,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -609,7 +610,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcaseRuntime_EngineBootstrapsGraphOnlyAutoPathService_AndFindsRoadPath()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             Assert.That(engine.CurrentMapSession, Is.Not.Null);
             Assert.That(engine.CurrentMapSession!.PrimaryBoard, Is.TypeOf<NodeGraphBoard>());
@@ -652,7 +653,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcaseRuntime_HandleMapFocused_PrimesInteractiveBootstrapState()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             var runtime = new RoadNetworkShowcaseRuntime();
             var context = new ScriptContext();
@@ -678,7 +679,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_RepairsLocalPlayerAndSeedsLivePrimarySelectionWithoutReset()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             var runtime = new RoadNetworkShowcaseRuntime();
             var context = new ScriptContext();
@@ -705,7 +706,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_DoesNotOverwriteValidLivePrimarySelection()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             var runtime = new RoadNetworkShowcaseRuntime();
             var context = new ScriptContext();
@@ -735,7 +736,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsLivePrimarySelectionPrimary()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             var runtime = new RoadNetworkShowcaseRuntime();
             var context = new ScriptContext();
@@ -868,7 +869,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcase_EngineFarRoadMove_ReachesDestinationWithoutStoppingMidRoute()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
             Assert.That(actor, Is.Not.EqualTo(Entity.Null));
@@ -932,7 +933,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcase_EngineCentralRoadMove_DoesNotBacktrackToBehindSampledWaypoint()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
             Assert.That(actor, Is.Not.EqualTo(Entity.Null));
@@ -982,7 +983,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcase_EngineBranchRoadQuery_BuildsFollowRouteForBranchClick()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             Entity actor = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
             Assert.That(actor, Is.Not.EqualTo(Entity.Null));
@@ -1023,7 +1024,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcase_EngineNorthColumnRoadMove_ReachesDestination()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             Entity actor = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
             Assert.That(actor, Is.Not.EqualTo(Entity.Null));
@@ -1081,7 +1082,7 @@ namespace Ludots.Tests.GAS
         public void RoadNetworkShowcase_StrategyMatrix_WritesAcceptanceArtifacts_ForProfilesWeightsAndTraits()
         {
             using var engine = CreateRoadShowcaseEngine();
-            engine.LoadMap(engine.MergedConfig.StartupMapId);
+            engine.LoadStartupMap();
 
             int moveToOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["moveTo"];
             int roadMoveFollowOrderTypeId = engine.MergedConfig.Constants.OrderTypeIds[RoadNetworkShowcaseIds.RoadMoveFollowOrderTypeKey];
@@ -1834,7 +1835,17 @@ namespace Ludots.Tests.GAS
 
         private static void LoadPlayableMap(GameEngine engine, string mapId, int frames = 5)
         {
-            engine.LoadMap(mapId);
+            if (string.Equals(mapId, engine.MergedConfig.StartupMapId, StringComparison.OrdinalIgnoreCase))
+            {
+                engine.LoadStartupMap();
+            }
+            else
+            {
+                MapLaunchContext? launchContext = engine.MergedConfig.StartupSelectedPlayerId > 0
+                    ? MapLaunchContext.Create(engine.MergedConfig.StartupSelectedPlayerId)
+                    : null;
+                engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
+            }
             Assert.That(engine.CurrentMapSession, Is.Not.Null, $"{mapId} should create a live map session.");
             Tick(engine, frames);
         }

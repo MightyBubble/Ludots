@@ -108,6 +108,7 @@ The bridge is intentionally string-based at the contract layer:
 - Browser-to-host: `MessageReceived` emits `BrowserScriptMessage(Channel, Payload)`.
 - Host-to-browser: `PostMessageAsync` sends structured payloads to the web app.
 - Host-to-browser script execution: `ExecuteScriptAsync` is available for engine adapters that support direct script execution.
+- Browser applications must target Ludots-owned script facades, not provider private globals. Generic application messages use `window.ludotsBrowser`; DataPlane traffic uses `window.ludotsDataplane`.
 
 Higher-level C# API binding, permission checks, serialization, and Ludots gameplay/service routing must be built above `IBrowserMessageBridge`, not inside the pixel renderer.
 
@@ -132,6 +133,7 @@ Transport choices are adapter details:
 
 - Ludots-started CEF is the built-in compatibility path for arbitrary web applications hosted through `Ludots.UI.Browser.Cef`.
 - UE5 BLUI is an external commercial-engine transport adapter path. It may forward DataPlane messages through BLUI/CEF, but it does not enter Core and must not define collection, marker, or topic semantics.
+- Provider globals such as CEF/CefSharp or BLUI-specific objects are adapter-private. The adapter may use them to install Ludots facades, but web app source and shipped Mod assets must not call them directly.
 
 Both paths share the same `Ludots.WebUI` DataPlane vocabulary. Browser-side caches are derived views invalidated by Ludots-owned revision/sequence diagnostics, not a separate source of truth.
 
@@ -158,6 +160,22 @@ Formal built-in providers:
 | Ultralight | `Ludots.UI.Browser.Ultralight` | Lightweight game UI path. Use when Ludots controls the web bundle and wants a smaller, game-oriented runtime. |
 
 CEF remains the compatibility baseline. Ultralight is a first-class optional provider, but it must not be documented as Chrome-equivalent. Provider-specific native handles, callbacks, and package layout stay inside provider assemblies.
+
+### 7.1 CEF Process Lifetime
+
+CEF is a process-scoped native runtime. Once `Cef.Shutdown()` has run, CefSharp does not support creating a fresh CEF runtime later in the same process. Ludots therefore treats CEF initialization, assembly resolution, custom-scheme registration, and the browser surface registry as a process-scoped host/runtime adapter implementation detail.
+
+The CEF provider is host-owned Ludots infrastructure, not a Mod. Raylib, UE bridge hosts, and future hosts must install CEF from their composition root through the `Ludots.UI.Browser.Cef` host facade before game start when their resolved application configuration requires browser runtime support. A Mod may request or require `browserRuntime` as application configuration, and it may consume `IBrowserRuntime`; it must not ship, locate, initialize, register, or unload CEF.
+
+Hosts that load a provider from `browserRuntime.providerAssemblyPath` should use `Ludots.UI.Browser.BrowserRuntimeProviderLoader`. The loader shadow-copies the provider output directory into a hash-addressed cache, loads the provider implementation through a collectible ALC, keeps browser contracts such as `IBrowserRuntime` in the host ALC, and resolves provider-private managed/native dependencies from the shadow-copied provider package. This prevents long-lived editor hosts from locking source build outputs such as `Ludots.UI.Browser.Cef.dll`.
+
+External adapters should follow the GitBook runbook in `gitbook/architecture/browser-runtime-provider-adapter-guide.md`. That guide is the SSOT checklist for UE5 bridge hosts, Unity/Godot-style hosts, and custom desktop adapters: resolve provider config in the host composition root, call the shared loader, keep browser input through `UIRoot`, and reserve terminal provider shutdown for host process exit.
+
+`CefBrowserRuntime` is only the `IBrowserRuntime` facade exposed to a game engine or mod session. Disposing a `CefBrowserRuntime` releases the browser surfaces owned by that facade, but it must not call `Cef.Shutdown()` or unregister process-wide CEF state. Repeated editor sessions such as UE PIE must be able to create a new facade in the same host process.
+
+The CEF process runtime is a deep internal module behind that facade. It owns the single CEF initialization path and the process-stable `ludots-app://` scheme handler. The surface resource registry used by that scheme handler must also be process-scoped rather than assembly-instance-scoped: repeated editor sessions may load `Ludots.UI.Browser.Cef` through a fresh host ALC while CEF still holds the first scheme handler instance. Newly created browser surfaces must therefore register their resource resolver in process storage that the original scheme handler can still read.
+
+If a future host needs an explicit CEF shutdown hook, that hook must be host-owned and terminal: it may only run when the host process will not attempt to create another CEF runtime. It must not be reachable from `IBrowserRuntime.DisposeAsync`, mod unload, surface disposal, or ordinary editor play-session teardown. UE5 bridge integrations must follow the same rule: Ludots owns CEF bootstrap and process state; UE PIE/session reload is only an application lifecycle event and cannot own CEF shutdown or reinitialization.
 
 ## 8 Relation To Native UI
 

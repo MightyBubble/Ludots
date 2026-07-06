@@ -613,6 +613,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationFormationFollowerSystem_AppendFollowerDoesNotApplyPreviousCarrierDelta()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
+            using (engine)
+            {
+                int formationId = MassNavigationFormationRegistry.Register("tests.massNavigation.append.follower");
+                Entity anchor = CreateFormationAnchor(engine.World, formationId, slotCount: 2);
+                Entity firstFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { anchor, firstFollower },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 1100f, worldYCm: 1000f),
+                    },
+                    new[] { true, false });
+
+                var followerSystem = new MassNavigationFormationFollowerSystem(engine, simulation);
+                UpdateSystem(followerSystem);
+
+                simulation.MassNavigationFlow.SetUnitPositionForTests(
+                    index: 0,
+                    localXCm: simulation.ToLocalXCm(1200f),
+                    localYCm: simulation.ToLocalYCm(1000f));
+                Entity appendedFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 1, localOffsetXCm: 0f, localOffsetYCm: 200f);
+                simulation.AppendAuthoredAgents(
+                    engine.World,
+                    new[] { appendedFollower },
+                    new[] { CreateAgentSeed(simulation, worldXCm: 1400f, worldYCm: 1000f) },
+                    new[] { false });
+
+                UpdateSystem(followerSystem);
+
+                Assert.That(simulation.GetAgentWorldPositionCm(1).X, Is.EqualTo(1300f).Within(0.001f),
+                    "Existing followers should still receive the carrier delta.");
+                Vector2 appendedFollowerWorld = simulation.GetAgentWorldPositionCm(2);
+                Assert.That(appendedFollowerWorld.X, Is.EqualTo(1400f).Within(0.001f),
+                    "A follower appended after the carrier moved must not receive carrier displacement from before it joined the formation.");
+                Assert.That(appendedFollowerWorld.Y, Is.EqualTo(1000f).Within(0.001f));
+            }
+        }
+
+        [Test]
         public void MassNavigationFormationFollowerSystem_PrunesSyncStateWhenAnchorsDisappear()
         {
             MassNavigationSimulationRuntime simulation = CreateFocusedMassNavigationSimulation(out GameEngine engine);
@@ -820,13 +864,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Obstacle overlay entities should be bound from MassNavigation obstacle snapshots.");
 
-            Entity[] overlays = CaptureObstacleOverlays(engine, simulation.NavigationObstacleCount);
-            for (int i = 0; i < overlays.Length; i++)
-            {
-                FormationCapabilityShowcaseObstacleOverlay overlay = engine.World.Get<FormationCapabilityShowcaseObstacleOverlay>(overlays[i]);
-                Assert.That(overlay.RadiusCm, Is.EqualTo(simulation.GetObstacleWorldSnapshot(i).RadiusCm).Within(0.001f));
-                Assert.That(overlay.BorderWidthCm, Is.EqualTo(obstacleOverlay["borderWidthCm"]?.GetValue<float>()).Within(0.001f));
-            }
+            AssertObstacleOverlayComponentsMatchSimulation(engine, simulation, obstacleOverlay);
         }
 
         [Test]
@@ -2522,14 +2560,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationShowcaseMods_DoNotDependOnMassNavigationDataMod()
+        public void MassNavigationBusinessShowcaseMods_DoNotDependOnMassNavigationDataMod()
         {
             string modsRoot = Path.Combine(FindRepoRoot(), "mods");
             string[] applyingMods =
             {
                 Path.Combine(modsRoot, "showcases", "formation_capability", "FormationCapabilityShowcaseMod"),
                 Path.Combine(modsRoot, "showcases", "road_network", "RoadNetworkShowcaseMod"),
-                Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardMassNavigationLargeWorld10kMod"),
                 Path.Combine(modsRoot, "showcases", "capability_standard", "CapabilityStandardParticipantViewsMod"),
             };
 
@@ -2545,6 +2582,52 @@ namespace Ludots.Tests.Presentation
                 Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
                     $"MassNavigation-using showcase projects must not reference the MassNavigation data mod. Mod: {modRoot}");
             }
+        }
+
+        [Test]
+        public void CapabilityStandardMassNavigationLargeWorldEntry_ComposesFoundationMods()
+        {
+            string modRoot = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardMassNavigationLargeWorld10kMod");
+            JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+            JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException($"{modRoot} mod.json must author dependencies.");
+            string[] projectReferences = ReadProjectReferenceIncludes(Directory.EnumerateFiles(modRoot, "*.csproj").Single());
+
+            Assert.That(dependencies.ContainsKey("LudotsCoreMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("CoreInputMod"), Is.True);
+            Assert.That(dependencies.ContainsKey("MassNavigationMod"), Is.True);
+            Assert.That(projectReferences.Any(reference => reference.Contains("MassNavigationMod", StringComparison.Ordinal)), Is.False,
+                "The capability entry composes the MassNavigation foundation through the mod graph, not a code-level project reference.");
+        }
+
+        [Test]
+        public void CapabilityStandardMassNavigationLargeWorldEntry_ConfiguresCoreMinimapOnMapFocus()
+        {
+            string modRoot = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardMassNavigationLargeWorld10kMod");
+            string entrySource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kModEntry.cs"));
+
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldUatAsync);"));
+            Assert.That(entrySource, Does.Contain("engine.MergedConfig?.StartupMapId"));
+            Assert.That(entrySource, Does.Contain("CoreServiceKeys.MinimapRuntime"));
+            Assert.That(entrySource, Does.Contain("runtime.Visible = true;"));
+            Assert.That(entrySource, Does.Contain("runtime.SetRotateWithCamera(false);"));
+            Assert.That(entrySource, Does.Contain("runtime.UseRtsFullMapPreset();"));
+            Assert.That(entrySource, Does.Not.Contain("\"mass_navigation\""),
+                "The capability entry must use authored startupMapId instead of a code-level map-id duplicate.");
+            Assert.That(entrySource, Does.Not.Contain("Environment.GetEnvironmentVariable"),
+                "Capability-standard MassNavigation acceptance must not depend on env fallback toggles.");
         }
 
         [Test]
@@ -3577,7 +3660,8 @@ namespace Ludots.Tests.Presentation
                    CountFormationAgents(engine) == FormationCapabilityAcceptance.ExpectedTotalFormations &&
                    CountFormationSoldiers(engine) == FormationCapabilityAcceptance.ExpectedTotalSoldiers &&
                    CountMassNavigationFlowObstacleProjections(engine) == simulation.AgentState.BlockerCount &&
-                   simulation.NavigationObstacleCount > 0;
+                   simulation.NavigationObstacleCount > 0 &&
+                   CountObstacleOverlays(engine) == simulation.NavigationObstacleCount;
         }
 
         private static void AssertConfiguredObstaclesAreEcsBlockers(GameEngine engine, MassNavigationSimulationRuntime simulation)
@@ -3610,6 +3694,14 @@ namespace Ludots.Tests.Presentation
             int count = 0;
             var query = new QueryDescription().WithAll<FormationCapabilityShowcaseFormationSoldier, MassNavigationAgentIndex>();
             engine.World.Query(in query, (ref FormationCapabilityShowcaseFormationSoldier _, ref MassNavigationAgentIndex _) => count++);
+            return count;
+        }
+
+        private static int CountObstacleOverlays(GameEngine engine)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay>();
+            engine.World.Query(in query, (ref FormationCapabilityShowcaseObstacleOverlay _) => count++);
             return count;
         }
 
@@ -3756,6 +3848,40 @@ namespace Ludots.Tests.Presentation
                 ringCount,
                 Is.GreaterThanOrEqualTo(simulation.NavigationObstacleCount),
                 BuildObstacleOverlayDiagnostics(engine));
+        }
+
+        private static void AssertObstacleOverlayComponentsMatchSimulation(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            JsonObject obstacleOverlay)
+        {
+            float expectedBorderWidthCm = obstacleOverlay["borderWidthCm"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("Formation Capability obstacleOverlay.borderWidthCm must be numeric.");
+            var overlaysByPosition = new Dictionary<(int X, int Y), FormationCapabilityShowcaseObstacleOverlay>(
+                simulation.NavigationObstacleCount);
+            var overlayQuery = new QueryDescription().WithAll<FormationCapabilityShowcaseObstacleOverlay, WorldPositionCm>();
+            engine.World.Query(in overlayQuery, (ref FormationCapabilityShowcaseObstacleOverlay overlay, ref WorldPositionCm position) =>
+            {
+                var key = (position.Value.X.ToInt(), position.Value.Y.ToInt());
+                Assert.That(
+                    overlaysByPosition.ContainsKey(key),
+                    Is.False,
+                    $"Formation Capability obstacle overlay position ({key.Item1}, {key.Item2}) must be unique.");
+                overlaysByPosition.Add(key, overlay);
+            });
+
+            Assert.That(overlaysByPosition.Count, Is.EqualTo(simulation.NavigationObstacleCount));
+            for (int i = 0; i < simulation.NavigationObstacleCount; i++)
+            {
+                MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(i);
+                var key = ((int)MathF.Round(obstacle.WorldXCm), (int)MathF.Round(obstacle.WorldYCm));
+                Assert.That(
+                    overlaysByPosition.TryGetValue(key, out FormationCapabilityShowcaseObstacleOverlay overlay),
+                    Is.True,
+                    $"Formation Capability obstacle overlay should exist at MassNavigation obstacle position ({key.Item1}, {key.Item2}).");
+                Assert.That(overlay.RadiusCm, Is.EqualTo(obstacle.RadiusCm).Within(0.001f));
+                Assert.That(overlay.BorderWidthCm, Is.EqualTo(expectedBorderWidthCm).Within(0.001f));
+            }
         }
 
         private static string BuildObstacleOverlayDiagnostics(GameEngine engine)
