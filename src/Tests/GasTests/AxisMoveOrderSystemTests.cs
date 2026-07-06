@@ -130,6 +130,22 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Update_Enabled_MissingAuthoritativeInputService_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            var system = harness.CreateSystem(Harness.Config(enabled: true));
+            harness.Globals.Remove(CoreServiceKeys.AuthoritativeInput.Name);
+
+            Assert.Throws<InvalidOperationException>(
+                () => system.Update(0f),
+                "enabled without the authoritative input snapshot is a wiring error, never a state to wait out.");
+
+            var disabled = harness.CreateSystem(Harness.Config(enabled: false));
+            Assert.DoesNotThrow(() => disabled.Update(0f), "disabled config keeps zero work per tick.");
+        }
+
+        [Test]
         public void Update_MissingLocalPlayerOrPosition_SubmitsNothing()
         {
             using var world = World.Create();

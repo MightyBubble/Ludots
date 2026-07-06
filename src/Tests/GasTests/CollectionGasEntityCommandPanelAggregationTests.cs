@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
-using EntityCommandPanelMod;
 using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
@@ -14,7 +13,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
@@ -246,19 +244,13 @@ namespace Ludots.Tests.GAS
         {
             string repoRoot = FindRepoRoot();
             var engine = new GameEngine();
+            // EntityCommandPanelMod loads through the real ModLoader so its
+            // assets/Configs/UI/ability_aggregation_profiles.json fragment (aggregation.by_family)
+            // merges additively into the Core structural profiles at engine init (ArrayById).
             engine.InitializeWithConfigPipeline(
-                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod" }),
+                RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
                 Path.Combine(repoRoot, "assets"));
             InstallUiServices(engine);
-
-            var context = new ModContext(
-                "EntityCommandPanelMod",
-                engine.VFS,
-                engine.FunctionRegistry,
-                engine.TriggerManager,
-                engine.SystemFactoryRegistry,
-                engine.TriggerDecoratorRegistry);
-            new EntityCommandPanelModEntry().OnLoad(context);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             return engine;

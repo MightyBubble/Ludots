@@ -3,7 +3,7 @@
     {
       "id": "filter.controllable.default",
       "associationQuery": { "anchor": "localPlayerRep", "expand": "controls" },
-      "exclude": { "anyTags": ["state.dead", "presentation.hidden"] },
+      "exclude": { "anyTags": [] },
       "include": { "anyTags": [] }
     }
   ]

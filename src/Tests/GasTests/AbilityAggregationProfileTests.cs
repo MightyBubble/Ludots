@@ -228,24 +228,44 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void DefaultConfigFile_ValidatesAndInstalls()
+        public void DefaultConfigFiles_ValidateAndInstall_CoreStructuralPlusModFamilyFragment()
         {
-            string path = Path.Combine(FindRepoRoot(), "assets", "Configs", "UI", "ability_aggregation_profiles.json");
-            Assert.That(File.Exists(path), Is.True, $"Missing {path}");
+            string repoRoot = FindRepoRoot();
+            // Core default carries only structural profiles (identity keys, no cast-family vocabulary).
+            string corePath = Path.Combine(repoRoot, "assets", "Configs", "UI", "ability_aggregation_profiles.json");
+            // aggregation.by_family is EntityCommandPanelMod data, merged as an additive ArrayById fragment.
+            string modPath = Path.Combine(
+                repoRoot, "mods", "EntityCommandPanelMod", "assets", "Configs", "UI", "ability_aggregation_profiles.json");
+            Assert.That(File.Exists(corePath), Is.True, $"Missing {corePath}");
+            Assert.That(File.Exists(modPath), Is.True, $"Missing {modPath}");
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, AllowTrailingCommas = true };
-            var config = JsonSerializer.Deserialize<AbilityAggregationProfilesConfig>(File.ReadAllText(path), options);
-            AbilityAggregationProfileConfigLoader.Validate(config, path);
+            var coreConfig = new AbilityAggregationProfilesConfig
+            {
+                Profiles = JsonSerializer.Deserialize<List<AbilityAggregationProfileDefinition>>(File.ReadAllText(corePath), options),
+            };
+            AbilityAggregationProfileConfigLoader.Validate(coreConfig, corePath);
+            Assert.That(
+                coreConfig.Profiles.Exists(profile => profile.Id == ByFamilyProfileId),
+                Is.False,
+                "Core default must stay structural; by_family belongs to EntityCommandPanelMod's fragment.");
+
+            var modConfig = new AbilityAggregationProfilesConfig
+            {
+                Profiles = JsonSerializer.Deserialize<List<AbilityAggregationProfileDefinition>>(File.ReadAllText(modPath), options),
+            };
+            AbilityAggregationProfileConfigLoader.Validate(modConfig, modPath);
 
             TagRegistry.Register(StimFamilyTag);
             var registry = new AbilityAggregationProfileRegistry(
                 new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            registry.Install(config);
+            registry.Install(coreConfig);
+            registry.Install(modConfig);
 
-            Assert.That(registry.IsInstalled(registry.ProfileIdRegistry.GetId(ByFamilyProfileId)), Is.True);
-            Assert.That(registry.GetOverflow(registry.ProfileIdRegistry.GetId(ByFamilyProfileId)), Is.Not.Empty);
             Assert.That(registry.IsInstalled(registry.ProfileIdRegistry.GetId(ByTemplateProfileId)), Is.True);
             Assert.That(registry.IsInstalled(registry.ProfileIdRegistry.GetId(ByAbilityIdProfileId)), Is.True);
+            Assert.That(registry.IsInstalled(registry.ProfileIdRegistry.GetId(ByFamilyProfileId)), Is.True);
+            Assert.That(registry.GetOverflow(registry.ProfileIdRegistry.GetId(ByFamilyProfileId)), Is.Not.Empty);
         }
 
         private static long MeasureBuildGroupsAllocations(

@@ -1,7 +1,4 @@
-{
-  "profiles": [
-    { "id": "aggregation.by_family", "groupBy": "catalog.castFamily", "overflow": "nextPanelSlot" },
-    { "id": "aggregation.by_template", "groupBy": "template.id" },
-    { "id": "aggregation.by_ability_id", "groupBy": "ability.id" }
-  ]
-}
+[
+  { "id": "aggregation.by_template", "groupBy": "template.id" },
+  { "id": "aggregation.by_ability_id", "groupBy": "ability.id" }
+]

@@ -159,7 +159,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             int typeId = registry.GetId(typeName);
             if (typeId < 0)
             {
-                throw new InvalidOperationException($"Relationship type '{typeName}' is not registered in the core catalog.");
+                throw new InvalidOperationException($"Relationship type '{typeName}' is not registered in the merged relationship catalog.");
             }
 
             return typeId;

@@ -24,6 +24,13 @@ namespace Ludots.Core.Input.Systems
     /// cast dispatch — the control-plane anchor is the same local player rep either way.
     /// Disabled config (<c>enabled=false</c>, the shipped default) means zero work per tick.
     /// </para>
+    /// <para>
+    /// Failure semantics: an enabled system with no <c>CoreServiceKeys.AuthoritativeInput</c>
+    /// service is a wiring error and throws on the first tick (fail fast, never silently idle).
+    /// An unresolved local player binding or a local player entity without
+    /// <see cref="WorldPositionCm"/> is a transient state (map loading, rep swap) and is skipped
+    /// for that tick.
+    /// </para>
     /// </summary>
     public sealed class AxisMoveOrderSystem : ISystem<float>
     {
@@ -72,7 +79,9 @@ namespace Ludots.Core.Input.Systems
             if (!_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object inputObj) ||
                 inputObj is not IInputActionReader input)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"AxisMoveOrderSystem is enabled but the '{CoreServiceKeys.AuthoritativeInput.Name}' service is missing; " +
+                    "register the authoritative input snapshot before the InputCollection group ticks.");
             }
 
             Vector2 axis = input.ReadAction<Vector2>(_config.ActionId);

@@ -15,8 +15,10 @@ namespace EntityCommandPanelMod
 
         /// <summary>
         /// Default panel aggregation profile for collection selections (RFC-0065 PNL-4, DEC-10).
-        /// Mod data-layer id referencing <c>UI/ability_aggregation_profiles.json</c>; switchable at
-        /// runtime via <see cref="Runtime.CollectionGasEntityCommandPanelSource.SetAggregationProfile"/>.
+        /// The profile itself is declared in this mod's own
+        /// <c>assets/Configs/UI/ability_aggregation_profiles.json</c> fragment (ArrayById merge into
+        /// the Core structural profiles); switchable at runtime via
+        /// <see cref="Runtime.CollectionGasEntityCommandPanelSource.SetAggregationProfile"/>.
         /// </summary>
         private const string DefaultAggregationProfileId = "aggregation.by_family";
 

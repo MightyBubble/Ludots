@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Ludots.Core.EntityCollections;
 using NUnit.Framework;
@@ -22,6 +23,13 @@ namespace Ludots.Tests.Architecture
     {
         private static readonly Regex ForbiddenScenarioWord = new(
             @"\b(offline|mind_control|cinematic|hostile|enemy|garrison|attack)\b",
+            RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+        // Asset-layer variant: Core default config files additionally must not carry scenario
+        // relationship/tag vocabulary such as alliance ("ally") or death state ("dead") — those
+        // belong to mod fragments / test data (H-1/M-1/M-2 findings of the semantic-intrusion audit).
+        private static readonly Regex ForbiddenAssetScenarioWord = new(
+            @"\b(offline|mind_control|cinematic|hostile|enemy|garrison|attack|ally|dead)\b",
             RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
         [Test]
@@ -59,6 +67,53 @@ namespace Ludots.Tests.Architecture
                 Is.Empty,
                 "RFC-0065 keeps Relationships/EntityCollections infrastructure scenario-neutral; " +
                 "offline/mind_control/cinematic/hostile/enemy/garrison/attack semantics belong in config/mod layers:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void CoreDefaultConfigAssets_CarryNoScenarioVocabulary()
+        {
+            string repoRoot = FindRepoRoot();
+            string configsRoot = Path.Combine(repoRoot, "assets", "Configs");
+            string[] roots =
+            {
+                Path.Combine(configsRoot, "Relationships"),
+                Path.Combine(configsRoot, "Input"),
+                Path.Combine(configsRoot, "UI")
+            };
+
+            var violations = new List<string>();
+            int scannedFiles = 0;
+            foreach (string root in roots)
+            {
+                Assert.That(Directory.Exists(root), Is.True, $"Missing Core default config directory {root}");
+                foreach (string file in Directory.EnumerateFiles(root, "*.json", SearchOption.AllDirectories))
+                {
+                    scannedFiles++;
+                    JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
+                    if (node is JsonObject rootObject &&
+                        string.Equals(
+                            ToRepoRelativePath(repoRoot, file),
+                            "assets/Configs/Relationships/catalog.json",
+                            StringComparison.Ordinal))
+                    {
+                        // Explicit exemption: the catalog stance section (Hostile/Friendly/Neutral)
+                        // is TeamManager bridge-period reserved vocabulary (handoff §二.5) and is
+                        // retired together with the bridge; everything else in the file is scanned.
+                        rootObject.Remove("stance");
+                    }
+
+                    CollectJsonScenarioWordViolations(node, ToRepoRelativePath(repoRoot, file), "$", violations);
+                }
+            }
+
+            Assert.That(scannedFiles, Is.GreaterThan(0), "RFC-0065 asset scenario-word contract scanned no config files.");
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065 keeps Core default config assets scenario-neutral; " +
+                "offline/mind_control/cinematic/hostile/enemy/garrison/attack/ally/dead vocabulary " +
+                "belongs in mod fragments or test data:\n" +
                 string.Join(Environment.NewLine, violations));
         }
 
@@ -416,6 +471,49 @@ namespace Ludots.Tests.Architecture
             }
 
             return results;
+        }
+
+        /// <summary>
+        /// Recursively scans property names and string values of a parsed JSON document against
+        /// <see cref="ForbiddenAssetScenarioWord"/>, recording violations with their JSON path.
+        /// </summary>
+        private static void CollectJsonScenarioWordViolations(
+            JsonNode? node,
+            string file,
+            string jsonPath,
+            List<string> violations)
+        {
+            switch (node)
+            {
+                case JsonObject obj:
+                    foreach (KeyValuePair<string, JsonNode?> pair in obj)
+                    {
+                        Match keyMatch = ForbiddenAssetScenarioWord.Match(pair.Key);
+                        if (keyMatch.Success)
+                        {
+                            violations.Add($"{file}: {jsonPath}.{pair.Key}: \"{keyMatch.Value}\" in property name");
+                        }
+
+                        CollectJsonScenarioWordViolations(pair.Value, file, $"{jsonPath}.{pair.Key}", violations);
+                    }
+
+                    break;
+                case JsonArray array:
+                    for (int i = 0; i < array.Count; i++)
+                    {
+                        CollectJsonScenarioWordViolations(array[i], file, $"{jsonPath}[{i}]", violations);
+                    }
+
+                    break;
+                case JsonValue value when value.TryGetValue(out string? text):
+                    Match match = ForbiddenAssetScenarioWord.Match(text);
+                    if (match.Success)
+                    {
+                        violations.Add($"{file}: {jsonPath}: \"{match.Value}\" in value \"{text}\"");
+                    }
+
+                    break;
+            }
         }
 
         private static IEnumerable<string> EnumeratePascalCaseTokens(string name)

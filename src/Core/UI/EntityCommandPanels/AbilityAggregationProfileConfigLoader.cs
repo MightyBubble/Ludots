@@ -6,10 +6,11 @@ using Ludots.Core.Config;
 namespace Ludots.Core.UI.EntityCommandPanels
 {
     /// <summary>
-    /// Loader for <c>UI/ability_aggregation_profiles.json</c> (RFC-0065 PNL-1/2). Follows the
-    /// <c>CommandIntentProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>, structural validation fails fast here;
-    /// <c>groupBy</c> prefix resolution fails fast at registry install.
+    /// Loader for <c>UI/ability_aggregation_profiles.json</c> (RFC-0065 PNL-1/2): catalog-declared
+    /// ArrayById merge through the shared <see cref="ConfigPipeline"/>, so mods add their own
+    /// aggregation profiles as additive fragments without restating (or clobbering) the Core
+    /// structural profiles. Structural validation fails fast here; <c>groupBy</c> prefix resolution
+    /// fails fast at registry install.
     /// </summary>
     public sealed class AbilityAggregationProfileConfigLoader
     {
@@ -33,15 +34,18 @@ namespace Ludots.Core.UI.EntityCommandPanels
             ConfigConflictReport report = null,
             string relativePath = "UI/ability_aggregation_profiles.json")
         {
-            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
-            var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
-            if (mergedObject == null)
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById);
+            var merged = report != null
+                ? _pipeline.MergeFromCatalog(in entry, report)
+                : _pipeline.MergeFromCatalog(in entry);
+            if (merged == null)
             {
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
-            var config = mergedObject.Deserialize<AbilityAggregationProfilesConfig>(JsonOptions)
+            var profiles = merged.Deserialize<List<AbilityAggregationProfileDefinition>>(JsonOptions)
                 ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
+            var config = new AbilityAggregationProfilesConfig { Profiles = profiles };
             Validate(config, relativePath);
             return config;
         }
