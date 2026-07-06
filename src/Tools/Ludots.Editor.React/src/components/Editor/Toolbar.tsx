@@ -140,6 +140,7 @@ const inputClass = 'mt-1 w-full rounded border border-slate-700 bg-slate-900 px-
 const compactInputClass = 'rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100 outline-none focus:border-sky-500';
 const darkButtonClass = 'inline-flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900 px-2 py-1.5 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45';
 const iconToggleClass = 'inline-flex h-9 w-9 items-center justify-center rounded border border-slate-800 bg-slate-900 text-slate-400 transition hover:border-slate-600 hover:bg-slate-800';
+const preferredEditorModIds = ['LiveMapEditorIntegratedUatMod', 'LiveMapEditorNavGridUatMod'];
 const idleNavBakeState: NavBakeState = {
     phase: 'idle',
     title: 'Bake idle',
@@ -515,7 +516,10 @@ export const Toolbar: React.FC = () => {
                 if (cancelled) return;
                 const s = useEditorStore.getState();
                 if (!s.selectedModId && s.mods.length > 0) {
-                    await s.selectMod(s.mods[0].id);
+                    const preferred = preferredEditorModIds
+                        .map((id) => s.mods.find((mod) => mod.id === id))
+                        .find(Boolean);
+                    await s.selectMod((preferred ?? s.mods[0]).id);
                 }
             } catch {
                 // Bridge health is surfaced in the dev status strip.
@@ -728,14 +732,17 @@ export const Toolbar: React.FC = () => {
 
     const navPayloadKey = (cx: number, cy: number, layer: number, profileId: string) => `${cx},${cy},${layer},${profileId}`;
 
-    const getQueryablePayloads = (profileId: string, layer: number) => {
+    const isFlatGridBaselineSource = (source: string | null | undefined) =>
+        source === FLAT_GRID_BASELINE_SOURCE || source === LEGACY_FLAT_GRID_BASELINE_SOURCE;
+
+    const getQueryablePayloads = (profileId: string, layer: number, includeFlatBaseline = false) => {
         return useEditorStore.getState().bakedNavTilePayloads.filter((tile) =>
             tile.profileId === profileId &&
             tile.layer === layer &&
             tile.base64.length > 0 &&
             !!tile.detourBase64 &&
             tile.detourBase64.length > 0 &&
-            tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
+            (includeFlatBaseline || !isFlatGridBaselineSource(tile.source)));
     };
 
     const collectRouteChunkRequests = (
@@ -781,20 +788,25 @@ export const Toolbar: React.FC = () => {
         }
 
         const routeChunks = collectRouteChunkRequests(startCell, goalCell);
+        const currentPayloads = useEditorStore.getState().bakedNavTilePayloads;
+        const nonBaselinePayloads = currentPayloads.filter((tile) =>
+            tile.profileId === profileId &&
+            tile.layer === navQueryLayer &&
+            !!tile.detourBase64 &&
+            tile.detourBase64.length > 0 &&
+            !isFlatGridBaselineSource(tile.source));
         const existing = new Set(
-            useEditorStore.getState().bakedNavTilePayloads
-                .filter((tile) => {
-                    const source = tile.source ?? null;
-                    return tile.profileId === profileId &&
-                        tile.layer === navQueryLayer &&
-                        !!tile.detourBase64 &&
-                        tile.detourBase64.length > 0 &&
-                        source !== LEGACY_FLAT_GRID_BASELINE_SOURCE;
-                })
+            nonBaselinePayloads
                 .map((tile) => tile.key));
         const missingChunks = routeChunks.filter((chunk) => !existing.has(navPayloadKey(chunk.cx, chunk.cy, navQueryLayer, profileId)));
         if (missingChunks.length === 0) {
             return getQueryablePayloads(profileId, navQueryLayer);
+        }
+
+        if (nonBaselinePayloads.length > 0) {
+            const missing = missingChunks.map((chunk) => `${chunk.cx},${chunk.cy}`).join(', ');
+            throw new Error(
+                `Baked Recast Detour payloads are missing route chunk(s): ${missing}. Run Full or Dirty+N Bake before simulating this route; the editor will not mix flat Grid baseline tiles into a baked query.`);
         }
 
         setNavQueryState({
@@ -847,7 +859,7 @@ export const Toolbar: React.FC = () => {
             if (!showNavMesh) toggleNavMesh();
         }
 
-        return getQueryablePayloads(profileId, navQueryLayer);
+        return getQueryablePayloads(profileId, navQueryLayer, true);
     };
 
     const cloneJson = <T,>(value: T): T => JSON.parse(JSON.stringify(value ?? null));
@@ -1368,7 +1380,7 @@ export const Toolbar: React.FC = () => {
             tile.base64.length > 0 &&
             !!tile.detourBase64 &&
             tile.detourBase64.length > 0 &&
-            tile.source !== LEGACY_FLAT_GRID_BASELINE_SOURCE);
+            !isFlatGridBaselineSource(tile.source));
     }, [bakedNavTilePayloads, navQueryLayer, navQueryProfileId]);
     const flatBaselinePayloadCount = React.useMemo(
         () => bakedNavTilePayloads.filter((tile) => tile.source === FLAT_GRID_BASELINE_SOURCE).length,
@@ -2248,7 +2260,7 @@ export const Toolbar: React.FC = () => {
                             ))}
                         </div>
                         <div className="rounded border border-slate-800 bg-slate-900/40 p-2 text-[11px] text-slate-400">
-                            SSOT: this panel owns nav bake, simulation, and navigation config. Map/board plus minimap live in the right panel; brush authoring lives in the bottom rail. Visual overlay is baked Recast NavTile (.ntil) triangles; simulation calls C# Core NavQueryService backed by DotRecast Detour.
+                            SSOT: this panel owns nav bake, simulation, and navigation config. Map/board plus minimap live in the right panel; brush authoring lives in the bottom rail. React Bridge Bake/Sim uses offline Recast NavTile (.ntil + Detour payload) and C# Core NavQueryService backed by DotRecast Detour; Config edits the selected mod runtime navmesh profile.
                         </div>
                     </section>
 
@@ -2265,6 +2277,10 @@ export const Toolbar: React.FC = () => {
                                 <span className="text-[10px] uppercase tracking-wide text-slate-500">Loaded</span>
                                 <span className="truncate font-mono">{loadedTargetLabel}</span>
                             </div>
+                        </div>
+                        <div className="rounded border border-emerald-800/60 bg-emerald-950/20 p-2 text-[11px] text-emerald-100">
+                            <div className="font-semibold">Offline editor toolchain: Recast -&gt; DotRecast Detour</div>
+                            <div className="mt-1 text-emerald-100/75">The local Estimate/Bake buttons call the React Bridge Recast endpoint. Runtime incremental/CDT settings are edited under Config for in-session runtime usage.</div>
                         </div>
                         {!selectedNavReady ? (
                             <div className="rounded border border-amber-800/70 bg-amber-950/30 p-2 text-[11px] text-amber-100">
@@ -2523,6 +2539,9 @@ export const Toolbar: React.FC = () => {
 
                         {navEditorConfig ? (
                             <div className="space-y-3 text-xs">
+                                <div className="rounded border border-slate-800 bg-slate-900/60 p-2 text-[11px] text-slate-400">
+                                    Runtime config for the selected mod. These values are saved to navmesh.json for in-session bake/runtime behavior; the React Bridge Bake tab remains the offline Recast editor path.
+                                </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <div className="text-[10px] uppercase tracking-wide text-slate-500">Agent Profiles</div>

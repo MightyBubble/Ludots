@@ -1,0 +1,37 @@
+{
+  "Id": "real_window_hex_20260701055526",
+  "ParentId": null,
+  "Dependencies": {},
+  "VisualHeightmapAsset": null,
+  "Tags": [],
+  "Metadata": {
+    "liveMapEditor": {
+      "saveTarget": true
+    }
+  },
+  "Entities": [],
+  "Teams": [],
+  "Players": [],
+  "ParticipantRelationships": {
+    "Teams": [],
+    "Players": [],
+    "PlayerTeams": []
+  },
+  "Boards": [
+    {
+      "Name": "hex_main",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 2,
+      "HeightInMacroTiles": 2,
+      "GridCellSizeCm": 100,
+      "HexEdgeLengthCm": 350,
+      "ChunkSizeCells": 64,
+      "DataFile": null,
+      "VisualHeightmapAsset": null,
+      "NavigationEnabled": false
+    }
+  ],
+  "VisualHeightmap": null,
+  "TriggerTypes": [],
+  "DefaultCamera": null
+}

@@ -29,6 +29,7 @@ using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
+using Ludots.Core.Input.Automation;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -125,6 +126,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
         public static readonly ServiceKey<AuthoritativeGroundPointerOverride> AuthoritativeGroundPointerOverride = new("AuthoritativeGroundPointerOverride");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
+        public static readonly ServiceKey<InputAutomationPlayer> InputAutomationPlayer = new("InputAutomationPlayer");
         public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
         public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
 

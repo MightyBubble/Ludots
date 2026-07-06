@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Map;
 using Ludots.Core.Map.Authoring;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace GasTests;
@@ -12,6 +15,140 @@ namespace GasTests;
 [TestFixture]
 public sealed class MapAuthoringAssetWriterTests
 {
+    [Test]
+    public void BoardAllocationPreview_UsesSpatialScaleDefaultsAndTerrainChunkBytes()
+    {
+        BoardAllocationPreview preview =
+            BoardAllocationPreviewCalculator.FromDesiredMeters(512f, 256f, SpatialScaleDefaults.CellCm);
+
+        Assert.That(preview.IsValid, Is.True);
+        Assert.That(preview.WidthMacroTiles, Is.EqualTo(2));
+        Assert.That(preview.HeightMacroTiles, Is.EqualTo(1));
+        Assert.That(preview.AllocatedWidthCells, Is.EqualTo(512));
+        Assert.That(preview.AllocatedHeightCells, Is.EqualTo(256));
+        Assert.That(preview.WidthTerrainChunks, Is.EqualTo(8));
+        Assert.That(preview.HeightTerrainChunks, Is.EqualTo(4));
+        Assert.That(preview.TotalTerrainChunks, Is.EqualTo(32));
+        Assert.That(preview.FullTerrainBytes, Is.EqualTo(32L * 64 * 64 * sizeof(int)));
+        Assert.That(preview.SnappedToMacroTile, Is.False);
+    }
+
+    [Test]
+    public void SaveConfig_CreatesNewMapAssetThatLoadMapCanDiscover()
+    {
+        string root = CreateTempDir();
+        try
+        {
+            string modRoot = CreateAssetOnlyMod(root, "AuthoringMod", priority: 0);
+            using var engine = CreateEngine(modRoot);
+            var mapConfig = new MapConfig
+            {
+                Id = "created_map",
+                Boards = new List<BoardConfig>
+                {
+                    new BoardConfig
+                    {
+                        Name = "default",
+                        SpatialType = "Grid",
+                        WidthInMacroTiles = 2,
+                        HeightInMacroTiles = 1,
+                        GridCellSizeCm = 100,
+                        ChunkSizeCells = SpatialScaleDefaults.PartitionChunkCells,
+                        NavigationEnabled = true
+                    }
+                }
+            };
+
+            MapAuthoringConfigSaveResult result =
+                new MapAuthoringAssetWriter(engine).SaveConfig("AuthoringMod", mapConfig, overwriteExisting: false);
+            engine.LoadMap("created_map");
+
+            Assert.That(result.MapConfigPath, Is.EqualTo(Path.Combine(modRoot, "assets", "Maps", "created_map.json")));
+            Assert.That(File.Exists(result.MapConfigPath), Is.True);
+            Assert.That(engine.CurrentMapSession.AllBoards, Has.Count.EqualTo(1));
+            Assert.That(engine.CurrentMapSession.PrimaryBoard, Is.TypeOf<GridBoard>());
+            Assert.That(engine.LogicTerrain, Is.Not.Null);
+            Assert.That(engine.LogicTerrain.WidthCells, Is.EqualTo(512));
+            Assert.That(engine.LogicTerrain.HeightCells, Is.EqualTo(256));
+            Assert.That(engine.LogicTerrain.HorizontalStepCm, Is.EqualTo(100));
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
+    [Test]
+    public void Save_CurrentSessionMapConfigWithBoardLifecycleChanges_ReloadsBoardStack()
+    {
+        string root = CreateTempDir();
+        try
+        {
+            string modRoot = CreateAssetOnlyMod(root, "AuthoringMod", priority: 0);
+            WriteMap(modRoot, "board_lifecycle_map", """
+            {
+              "id": "board_lifecycle_map",
+              "boards": [
+                {
+                  "name": "default",
+                  "spatialType": "Grid",
+                  "widthInMacroTiles": 1,
+                  "heightInMacroTiles": 1,
+                  "gridCellSizeCm": 100,
+                  "chunkSizeCells": 64,
+                  "navigationEnabled": true
+                }
+              ],
+              "entities": []
+            }
+            """);
+
+            using var engine = CreateEngine(modRoot);
+            engine.LoadMap("board_lifecycle_map");
+            MapSession session = engine.CurrentMapSession;
+            session.MapConfig.Boards.Add(new BoardConfig
+            {
+                Name = "secondary",
+                SpatialType = "HexGrid",
+                WidthInMacroTiles = 1,
+                HeightInMacroTiles = 1,
+                GridCellSizeCm = 200,
+                HexEdgeLengthCm = 500,
+                ChunkSizeCells = SpatialScaleDefaults.PartitionChunkCells,
+                NavigationEnabled = false
+            });
+
+            new MapAuthoringAssetWriter(engine).Save(new MapAuthoringSaveRequest
+            {
+                Session = session,
+                WriteNavTiles = false
+            });
+            engine.LoadMap("board_lifecycle_map");
+
+            Assert.That(engine.CurrentMapSession.AllBoards, Has.Count.EqualTo(2));
+            Assert.That(engine.CurrentMapSession.GetBoard("secondary"), Is.TypeOf<HexGridBoard>());
+
+            session = engine.CurrentMapSession;
+            session.MapConfig.Boards[0].GridCellSizeCm = 200;
+            session.MapConfig.Boards.RemoveAt(1);
+            new MapAuthoringAssetWriter(engine).Save(new MapAuthoringSaveRequest
+            {
+                Session = session,
+                WriteNavTiles = false
+            });
+            engine.LoadMap("board_lifecycle_map");
+
+            Assert.That(engine.CurrentMapSession.AllBoards, Has.Count.EqualTo(1));
+            Assert.That(engine.CurrentMapSession.PrimaryBoard, Is.TypeOf<GridBoard>());
+            Assert.That(((GridBoard)engine.CurrentMapSession.PrimaryBoard).GridCellSizeCm, Is.EqualTo(200));
+            Assert.That(engine.LogicTerrain.HorizontalStepCm, Is.EqualTo(200));
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
     [Test]
     public void Save_IgnoresTagOnlyOverlayAndWritesAuthoringMapFragment()
     {

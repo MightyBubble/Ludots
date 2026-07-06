@@ -17,6 +17,17 @@ The transport editor is the NodeGraph authoring leg of the Live Map Editor. It e
 | Save | `TransportNetwork/transport_network.json` plus `config_catalog.json` | Save validates, writes, ensures catalog registration, reloads through `TransportNetworkAssetLoader`, and re-bakes |
 | Cost | `Navigation/pathing.json`, `AgentProfile`, optional `GraphEdgeCostOverlay` | The editor does not edit or bake edge costs |
 
+## Board Coexistence Contract
+
+Transport editing is not a separate world from terrain and navmesh. A focused map may use a Grid primary board for terrain/navmesh and one NodeGraph board for transport. Transport authoring resolves the unique `INodeGraphBoard` from `MapSession.AllBoards`; it does not require `PrimaryBoard` to be a NodeGraph.
+
+| Board role | Required shape | Runtime owner |
+|---|---|---|
+| Terrain/navmesh | Primary `Grid`/terrain board with `Feature.NavMesh:On` | `LogicTerrainField`, VisualHeightmap adapter, runtime-incremental CDT navmesh |
+| Transport | Exactly one `NodeGraph` board | `TransportNetworkBaker`, `ChunkedNodeGraphStore`, `LoadedGraphRuntime`, `TransportNetworkRibbonSource` |
+
+Zero NodeGraph boards make transport editing unavailable. Multiple NodeGraph boards fail fast until a future config explicitly names the transport board.
+
 ## Tool Modes
 
 | Mode | Viewport input | Panel commands | Result |
@@ -49,7 +60,7 @@ Multiple writable transport asset sources fail fast.
 
 | Step | Command or operation | Expected feedback |
 |---|---|---|
-| 1 | Launch `preset:live_map_editor_transport_network_cef_raylib` | Transport panel shows asset id, nodes, segments, baked graph/ribbon chunk counts |
+| 1 | Launch `preset:live_map_editor_integrated_nav_transport_cef_raylib` | One focused map contains the Grid terrain/navmesh board and the `transport` NodeGraph board |
 | 2 | Select Transport -> Node, left click empty ground | New node appears in the Raylib gizmo overlay; DataPlane node count increments |
 | 3 | Set Kind=`Ford`, tags as needed, then Update/move/delete/select nodes | Asset validation accepts legal edits, node renames keep segment references intact, and referenced-node deletion is rejected |
 | 4 | Select Transport -> Segment, Begin, add points, set area/tag/flow/depth/width, Commit; then Select and Insert Pt | Segment appears in the authoring overlay and the bake message reports refreshed graph/ribbon chunks |
@@ -58,7 +69,9 @@ Multiple writable transport asset sources fail fast.
 | 7 | Press Save | `transport_network.json` is written and reloads through the strict loader |
 | 8 | Relaunch the same mod stack | Nodes, segments, bake output, and route behavior match the saved state |
 
-`CapabilityStandardTransportNetworkMod` provides three data-driven route profiles for this checklist:
+`preset:live_map_editor_transport_network_cef_raylib` remains a narrow NodeGraph-only debugging preset. It is not the acceptance proof for coexistence with terrain and navmesh.
+
+The integrated UAT provides three data-driven route profiles for this checklist:
 
 | Agent type | What it proves |
 |---|---|

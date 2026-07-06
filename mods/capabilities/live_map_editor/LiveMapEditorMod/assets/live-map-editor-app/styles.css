@@ -54,6 +54,13 @@ button.active {
   border-color: rgba(85, 214, 190, 0.9);
 }
 
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
 .topbar,
 .bottombar,
 .panel {
@@ -87,6 +94,27 @@ button.active {
   gap: 10px;
   color: var(--muted);
   font-size: 13px;
+}
+
+#command-status {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+#command-status[data-tone='ok'] {
+  color: var(--accent);
+}
+
+#command-status[data-tone='pending'],
+.command-message[data-tone='warn'] {
+  color: var(--warn);
+}
+
+#command-status[data-tone='error'] {
+  color: var(--danger);
 }
 
 .panel {
@@ -131,6 +159,7 @@ label {
 
 input[type='number'],
 input[type='text'],
+textarea,
 select {
   width: 100%;
   min-width: 0;
@@ -139,6 +168,12 @@ select {
   background: #0f1722;
   color: var(--text);
   padding: 8px;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.35;
 }
 
 .segmented {
@@ -156,6 +191,10 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
+}
+
+.button-grid .wide {
+  grid-column: 1 / -1;
 }
 
 .two-col {
@@ -190,11 +229,43 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.board-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.board-stack button {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.allocation-preview {
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(6, 10, 15, 0.42);
+}
+
 .hint {
   margin: 8px 0 0;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.command-message {
+  min-height: 16px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.command-message[data-tone='ok'] {
+  color: var(--accent);
 }
 
 .checks {
@@ -203,11 +274,33 @@ h3 {
   gap: 4px;
 }
 
+.checks.stacked {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .checks label {
   display: flex;
   align-items: center;
   gap: 6px;
   margin: 0;
+}
+
+.unavailable-message {
+  display: none;
+  color: var(--warn);
+}
+
+.unavailable-message.visible {
+  display: block;
+}
+
+#minimap {
+  width: 100%;
+  aspect-ratio: 13 / 9;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(6, 10, 15, 0.72);
 }
 
 dl {

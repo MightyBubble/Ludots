@@ -195,8 +195,19 @@
       "buildMode": "auto"
     },
     {
+      "id": "live_map_editor_integrated_nav_transport_cef_raylib",
+      "name": "Live Map Editor Integrated Nav + Transport CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$live_map_editor_integrated_nav_transport_uat",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "live_map_editor_transport_network_cef_raylib",
-      "name": "Live Map Editor Transport Network CEF Raylib",
+      "name": "Live Map Editor Transport Network Debug Only CEF Raylib",
       "selectors": [
         "$browser_cef_runtime",
         "$capability_standard_transport_network",

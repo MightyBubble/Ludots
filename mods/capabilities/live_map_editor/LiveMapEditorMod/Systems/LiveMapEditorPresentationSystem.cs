@@ -6,6 +6,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -34,8 +35,12 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly LiveMapEditorRuntime _runtime;
     private readonly LiveMapEditorPanelController _panelController;
+    private readonly LiveMapEditorRealWindowUatDriver? _realWindowUat;
+    private readonly int _autoOpenFrame;
     private PlayerInputHandler? _input;
     private float _publishAccumulator;
+    private int _frameIndex;
+    private bool _autoOpenHandled;
 
     public LiveMapEditorPresentationSystem(
         GameEngine engine,
@@ -45,6 +50,8 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         _panelController = panelController ?? throw new ArgumentNullException(nameof(panelController));
+        _realWindowUat = LiveMapEditorRealWindowUatDriver.TryCreate(_engine, _runtime, _panelController);
+        _autoOpenFrame = Math.Max(0, ReadEnvIntOrDefault("LUDOTS_LIVE_MAP_EDITOR_AUTO_OPEN_FRAME", 0));
     }
 
     public void Initialize()
@@ -57,6 +64,7 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
 
     public void Update(in float t)
     {
+        HandleAutoOpenPanel();
         ResolveInput();
         if (_input != null)
         {
@@ -67,7 +75,9 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
 
         _runtime.DrainSpawnReceipts(_engine);
         FlushDataPlane(t);
+        _realWindowUat?.Update(_frameIndex, t);
         DrawDebugOverlays();
+        _frameIndex++;
     }
 
     public void AfterUpdate(in float t)
@@ -95,9 +105,38 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
     {
         if (_input!.PressedThisFrame(LiveMapEditorIds.TogglePanelAction))
         {
+            Ludots.Core.Diagnostics.Log.Info(
+                in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                $"[LiveMapEditorMod] Toggle panel requested (F4); panelOpen={_runtime.PanelOpen}.");
             _panelController.Toggle();
             _input.SuppressActionThisFrame(LiveMapEditorIds.TogglePanelAction);
         }
+    }
+
+    private void HandleAutoOpenPanel()
+    {
+        if (_autoOpenHandled ||
+            _autoOpenFrame <= 0 ||
+            _frameIndex < _autoOpenFrame)
+        {
+            return;
+        }
+
+        _autoOpenHandled = true;
+        if (!_runtime.PanelOpen)
+        {
+            Ludots.Core.Diagnostics.Log.Info(
+                in Ludots.Core.Diagnostics.LogChannels.Presentation,
+                $"[LiveMapEditorMod] Auto-opening panel at frame {_frameIndex} for real-window UAT.");
+            _panelController.Show();
+        }
+    }
+
+    private static int ReadEnvIntOrDefault(string key, int defaultValue)
+    {
+        return int.TryParse(Environment.GetEnvironmentVariable(key), out int value)
+            ? value
+            : defaultValue;
     }
 
     private void UpdatePick()
@@ -130,6 +169,33 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
             _input!.PressedThisFrame(LiveMapEditorIds.PrimaryAction))
         {
             _runtime.SelectNearestEntity(_engine, null, null);
+            return;
+        }
+
+        if (string.Equals(_runtime.Tool, "obstacle", StringComparison.Ordinal))
+        {
+            if (_input!.PressedThisFrame(LiveMapEditorIds.PrimaryAction))
+            {
+                _runtime.PlaceObstacle(
+                    _engine,
+                    templateId: null,
+                    shape: null,
+                    radiusCm: null,
+                    halfWidthCm: null,
+                    halfHeightCm: null,
+                    navRadiusCm: null,
+                    sinkPhysicsCollider: null,
+                    sinkNavigationObstacle: null,
+                    polygonVertices: null,
+                    xCm: null,
+                    yCm: null);
+            }
+
+            if (_input.PressedThisFrame(LiveMapEditorIds.SecondaryAction))
+            {
+                _runtime.EraseObstacleAt(_engine, null, null);
+            }
+
             return;
         }
 
@@ -295,26 +361,47 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
     {
         if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is GroundOverlayBuffer ground)
         {
-            DrawBoardAuthoringGuides(ground);
+            if (_runtime.View.ShowGrid || _runtime.View.ShowChunks)
+            {
+                DrawBoardAuthoringGuides(ground);
+            }
+
             DrawPickAndBrush(ground);
-            DrawPath(ground);
-            DrawTransportAuthoring(ground);
+            if (_runtime.View.ShowPath)
+            {
+                DrawPath(ground);
+            }
+
+            if (_runtime.View.ShowTransport)
+            {
+                DrawTransportAuthoring(ground);
+            }
+
+            _realWindowUat?.DrawGround(ground);
         }
 
-        if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer screen)
+        if ((_runtime.View.ShowGrid || _runtime.View.ShowChunks) &&
+            _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer screen)
         {
             DrawBoardAuthoringStatus(screen);
         }
 
-        if (_engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) is DebugDrawCommandBuffer debug)
+        if (_runtime.View.ShowNavMesh &&
+            _engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) is DebugDrawCommandBuffer debug)
         {
             DrawNavTiles(debug);
+        }
+
+        if (_realWindowUat != null &&
+            _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer uatScreen)
+        {
+            _realWindowUat.DrawScreen(uatScreen);
         }
     }
 
     private void DrawBoardAuthoringGuides(GroundOverlayBuffer ground)
     {
-        if (!TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds) ||
+        if (!TryResolveAuthoringSurface(out IBoard? board, out WorldAabbCm bounds) ||
             bounds.Width <= 0 ||
             bounds.Height <= 0)
         {
@@ -334,7 +421,7 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
             return;
         }
 
-        if (!TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds) ||
+        if (!TryResolveAuthoringSurface(out IBoard? board, out WorldAabbCm bounds) ||
             bounds.Width <= 0 ||
             bounds.Height <= 0)
         {
@@ -352,9 +439,18 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
         screen.AddText(28, 28, line, 16, BoardGuideStatusTextColor);
     }
 
-    private bool TryResolvePrimaryBoard(out IBoard? board, out WorldAabbCm bounds)
+    private bool TryResolveAuthoringSurface(out IBoard? board, out WorldAabbCm bounds)
     {
         board = _engine.CurrentMapSession?.PrimaryBoard;
+        if (_engine.LogicTerrain is LogicTerrainField terrain &&
+            terrain.Topology == LogicTerrainTopology.Grid &&
+            terrain.WidthCells > 0 &&
+            terrain.HeightCells > 0)
+        {
+            bounds = ResolveLogicTerrainAuthoringBounds(terrain);
+            return true;
+        }
+
         if (board != null)
         {
             bounds = board.WorldSize.Bounds;
@@ -364,6 +460,13 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
         bounds = _engine.WorldSizeSpec.Bounds;
         return bounds.Width > 0 && bounds.Height > 0;
     }
+
+    private static WorldAabbCm ResolveLogicTerrainAuthoringBounds(LogicTerrainField terrain)
+        => new(
+            0,
+            0,
+            checked(terrain.WidthCells * terrain.HorizontalStepCm),
+            checked(terrain.HeightCells * terrain.VerticalStepCm));
 
     private int ResolveBoardGuideStepCm(IBoard? board, in WorldAabbCm bounds)
     {
@@ -509,7 +612,8 @@ internal sealed class LiveMapEditorPresentationSystem : ISystem<float>
             BorderWidth = 0.03f
         });
 
-        if (_runtime.SelectedEntity != Entity.Null &&
+        if (_runtime.View.ShowEntities &&
+            _runtime.SelectedEntity != Entity.Null &&
             _engine.World.IsAlive(_runtime.SelectedEntity) &&
             _engine.World.TryGet(_runtime.SelectedEntity, out Ludots.Core.Components.WorldPositionCm position))
         {

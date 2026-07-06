@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Ludots.Adapter.Web.Services;
 using Ludots.Adapter.Web.Streaming;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Automation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
@@ -98,6 +100,7 @@ namespace Ludots.Adapter.Web
             var sw = Stopwatch.StartNew();
             long lastTickMs = 0;
             long lastDiagMs = 0;
+            int frameIndex = 0;
 
             try
             {
@@ -123,7 +126,18 @@ namespace Ludots.Adapter.Web
 
                     try
                     {
+                        InputAutomationPlayer? inputAutomationPlayer = engine.GetService(CoreServiceKeys.InputAutomationPlayer);
+                        if (inputAutomationPlayer != null)
+                        {
+                            inputAutomationPlayer.UsesExternalFrameClock = true;
+                            inputAutomationPlayer.SetFrame(frameIndex);
+                        }
                         bool uiCaptured = setup.UiBridge.Update(dt);
+                        if (inputAutomationPlayer != null &&
+                            InputAutomationUiForwarder.Forward(setup.UiRoot, inputAutomationPlayer, out bool automationPointerCaptured, out bool automationWheelCaptured))
+                        {
+                            uiCaptured |= automationPointerCaptured || automationWheelCaptured;
+                        }
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
                         engine.Tick(dt);
 
@@ -146,6 +160,7 @@ namespace Ludots.Adapter.Web
                             int ddLines = ddBuf?.Lines.Count ?? 0;
                             Log.Info(in LogChannel, $"[Diag] Primitives={primCount} DebugLines={ddLines} Clients={setup.Transport.ClientCount} Tick={engine.GameSession?.CurrentTick ?? 0}");
                         }
+                        frameIndex++;
                     }
                     catch (Exception ex)
                     {

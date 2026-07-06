@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
+using Ludots.Core.Input.Automation;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Assets;
@@ -72,6 +73,12 @@ namespace Ludots.Adapter.Raylib
 
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
             IInputBackend inputBackend = new RaylibInputBackend();
+            if (InputAutomationScriptLoader.TryCreatePlayerFromEnvironment(out var automationPlayer) &&
+                automationPlayer != null)
+            {
+                inputBackend = new InputAutomationBackend(inputBackend, automationPlayer);
+                engine.SetService(CoreServiceKeys.InputAutomationPlayer, automationPlayer);
+            }
             var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
             if (config.StartupInputContexts != null)
             {

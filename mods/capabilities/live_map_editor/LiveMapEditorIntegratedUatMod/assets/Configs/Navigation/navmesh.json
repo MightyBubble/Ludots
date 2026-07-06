@@ -1,0 +1,56 @@
+{
+  "mode": "runtime-incremental",
+  "algorithm": "cdt",
+  "profiles": [
+    {
+      "id": "Small",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Medium",
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Large",
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
+    },
+    {
+      "id": "Transport.FootScout",
+      "maxClimbCm": 40,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "Transport.ShallowBoat",
+      "maxClimbCm": 20,
+      "maxSlopeDeg": 20
+    },
+    {
+      "id": "Transport.DeepDraftShip",
+      "maxClimbCm": 10,
+      "maxSlopeDeg": 12
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    }
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 4,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1
+  }
+}

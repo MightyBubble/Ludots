@@ -26,12 +26,11 @@ internal sealed class CapabilityStandardTransportNetworkRuntime : IDisposable
         Dispose();
 
         GameEngine engine = context.GetEngine();
-        if (context.GetMapSession().PrimaryBoard is not INodeGraphBoard graphBoard)
-        {
-            throw new InvalidOperationException("CapabilityStandardTransportNetworkMod requires a NodeGraph primary board.");
-        }
+        INodeGraphBoard graphBoard = BoardResolution.RequireSingleNodeGraphBoard(
+            context.GetMapSession(),
+            "CapabilityStandardTransportNetworkMod");
 
-        if (context.GetMapSession().PrimaryBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
+        if (graphBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
         {
             throw new InvalidOperationException("CapabilityStandardTransportNetworkMod requires WorldGridLoadedChunks.");
         }

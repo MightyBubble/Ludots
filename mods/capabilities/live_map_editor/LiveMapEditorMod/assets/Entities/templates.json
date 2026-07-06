@@ -1,0 +1,8 @@
+[
+  {
+    "id": "live_map_editor_obstacle",
+    "components": {
+      "Name": { "Value": "LiveMapEditor.Obstacle" }
+    }
+  }
+]

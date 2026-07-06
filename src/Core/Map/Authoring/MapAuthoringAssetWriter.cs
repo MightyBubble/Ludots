@@ -48,6 +48,25 @@ namespace Ludots.Core.Map.Authoring
         public int NavTileCount { get; }
     }
 
+    public sealed class MapAuthoringConfigSaveResult
+    {
+        public MapAuthoringConfigSaveResult(string modId, string mapConfigPath, string mapId, int boardCount)
+        {
+            ModId = modId ?? throw new ArgumentNullException(nameof(modId));
+            MapConfigPath = mapConfigPath ?? throw new ArgumentNullException(nameof(mapConfigPath));
+            MapId = mapId ?? throw new ArgumentNullException(nameof(mapId));
+            BoardCount = boardCount;
+        }
+
+        public string ModId { get; }
+
+        public string MapConfigPath { get; }
+
+        public string MapId { get; }
+
+        public int BoardCount { get; }
+    }
+
     public sealed class MapAuthoringAssetWriter
     {
         private static readonly JsonSerializerOptions MapJsonOptions = new() { WriteIndented = true };
@@ -57,6 +76,45 @@ namespace Ludots.Core.Map.Authoring
         public MapAuthoringAssetWriter(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        }
+
+        public string ResolveWritableTargetModId(MapSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            if (string.IsNullOrWhiteSpace(session.MapId.Value))
+            {
+                throw new InvalidOperationException("Map authoring target resolution requires a focused map id.");
+            }
+
+            return ResolveWritableMapConfigPath(session.MapId.Value).ModId;
+        }
+
+        public MapAuthoringConfigSaveResult SaveConfig(
+            string modId,
+            MapConfig mapConfig,
+            bool overwriteExisting)
+        {
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new ArgumentException("Target mod id is required.", nameof(modId));
+            }
+
+            if (mapConfig == null) throw new ArgumentNullException(nameof(mapConfig));
+            if (string.IsNullOrWhiteSpace(mapConfig.Id))
+            {
+                throw new InvalidOperationException("MapConfig.Id is required for authoring save.");
+            }
+
+            if (mapConfig.Boards == null || mapConfig.Boards.Count == 0)
+            {
+                throw new InvalidOperationException("Map authoring save requires at least one board.");
+            }
+
+            string mapId = mapConfig.Id.Trim();
+            string mapPath = ResolveWritableMapConfigPathForMod(modId.Trim(), mapId, overwriteExisting);
+            Directory.CreateDirectory(Path.GetDirectoryName(mapPath)!);
+            File.WriteAllText(mapPath, JsonSerializer.Serialize(mapConfig, MapJsonOptions));
+            return new MapAuthoringConfigSaveResult(modId.Trim(), mapPath, mapId, mapConfig.Boards.Count);
         }
 
         public MapAuthoringSaveResult Save(MapAuthoringSaveRequest request)
@@ -296,6 +354,22 @@ namespace Ludots.Core.Map.Authoring
             }
 
             return createdPath;
+        }
+
+        private string ResolveWritableMapConfigPathForMod(string modId, string mapId, bool overwriteExisting)
+        {
+            string relativePath = $"assets/Maps/{SanitizePathSegment(mapId)}.json";
+            if (!_engine.VFS.TryResolveFullPath($"{modId}:{relativePath}", out string path))
+            {
+                throw new InvalidOperationException($"Cannot resolve writable map config path '{modId}:{relativePath}'.");
+            }
+
+            if (!overwriteExisting && File.Exists(path))
+            {
+                throw new IOException($"Map '{mapId}' already exists in mod '{modId}'.");
+            }
+
+            return path;
         }
 
         private static BoardConfig ResolveBoardConfig(MapConfig mapConfig, string boardName)

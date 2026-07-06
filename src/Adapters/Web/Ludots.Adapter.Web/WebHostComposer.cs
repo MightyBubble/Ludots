@@ -5,6 +5,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
+using Ludots.Core.Input.Automation;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -62,8 +63,15 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.UISystem, (Core.UI.IUiSystem)new MarkupUiSystem(uiSurfaceHost));
 
             var inputBackend = new WebInputBackend();
+            IInputBackend effectiveInputBackend = inputBackend;
+            if (InputAutomationScriptLoader.TryCreatePlayerFromEnvironment(out var automationPlayer) &&
+                automationPlayer != null)
+            {
+                effectiveInputBackend = new InputAutomationBackend(inputBackend, automationPlayer);
+                engine.SetService(CoreServiceKeys.InputAutomationPlayer, automationPlayer);
+            }
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
+            var inputHandler = new PlayerInputHandler(effectiveInputBackend, inputConfig);
             if (config.StartupInputContexts != null)
             {
                 foreach (var contextId in config.StartupInputContexts)
@@ -76,7 +84,7 @@ namespace Ludots.Adapter.Web
             }
 
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
-            engine.SetService(CoreServiceKeys.InputBackend, (IInputBackend)inputBackend);
+            engine.SetService(CoreServiceKeys.InputBackend, effectiveInputBackend);
 
             var viewController = new WebViewController();
             var cameraAdapter = new WebCameraAdapter();

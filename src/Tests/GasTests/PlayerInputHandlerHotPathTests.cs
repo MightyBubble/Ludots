@@ -1,5 +1,8 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
+using Ludots.Core.Input.Automation;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using NUnit.Framework;
@@ -252,6 +255,285 @@ namespace Ludots.Tests.GAS
 
             Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(640f, 360f)));
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(2f));
+        }
+
+        [Test]
+        public void InputAutomationBackend_DrivesPointerKeyboardAndWheelThroughPlayerInputHandler()
+        {
+            var physicalBackend = new StubInputBackend();
+            var player = new InputAutomationPlayer(new[]
+            {
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.PointerMove,
+                    Frame = 0,
+                    DurationFrames = 2,
+                    X = 100f,
+                    Y = 200f,
+                    EndX = 160f,
+                    EndY = 230f
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.KeyStroke,
+                    Frame = 1,
+                    DurationFrames = 2,
+                    Key = "W"
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.PointerScroll,
+                    Frame = 2,
+                    X = 160f,
+                    Y = 230f,
+                    DeltaY = 3f
+                }
+            });
+            var backend = new InputAutomationBackend(physicalBackend, player);
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                    new() { Id = "PointerDelta", Type = InputActionType.Axis2D },
+                    new() { Id = "Forward", Type = InputActionType.Button },
+                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 10,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
+                            new() { ActionId = "PointerDelta", Path = "<Mouse>/Delta" },
+                            new() { ActionId = "Forward", Path = "<Keyboard>/w" },
+                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY" },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(100f, 200f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(130f, 215f)));
+            Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(new Vector2(30f, 15f)));
+            Assert.That(handler.IsDown("Forward"), Is.True);
+            Assert.That(handler.PressedThisFrame("Forward"), Is.True);
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(160f, 230f)));
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(3f));
+            Assert.That(handler.IsDown("Forward"), Is.True);
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.IsDown("Forward"), Is.False);
+            Assert.That(handler.ReleasedThisFrame("Forward"), Is.True);
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void InputAutomationBackend_AddsAutomationWithoutSuppressingPhysicalButtons()
+        {
+            var physicalBackend = new StubInputBackend();
+            physicalBackend.Buttons["<Keyboard>/d"] = true;
+            physicalBackend.Buttons["<Mouse>/LeftButton"] = true;
+            var player = new InputAutomationPlayer(new[]
+            {
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.KeyStroke,
+                    Frame = 0,
+                    DurationFrames = 1,
+                    Key = "W"
+                }
+            });
+            var backend = new InputAutomationBackend(physicalBackend, player);
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Forward", Type = InputActionType.Button },
+                    new() { Id = "StrafeRight", Type = InputActionType.Button },
+                    new() { Id = "Select", Type = InputActionType.Button },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 10,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Forward", Path = "<Keyboard>/w" },
+                            new() { ActionId = "StrafeRight", Path = "<Keyboard>/d" },
+                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton" },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.IsDown("Forward"), Is.True);
+            Assert.That(handler.IsDown("StrafeRight"), Is.True);
+            Assert.That(handler.IsDown("Select"), Is.True);
+
+            backend.AdvanceFrameInput();
+            handler.Update();
+            Assert.That(handler.IsDown("Forward"), Is.False);
+            Assert.That(handler.IsDown("StrafeRight"), Is.True);
+            Assert.That(handler.IsDown("Select"), Is.True);
+        }
+
+        [Test]
+        public void InputAutomationPlayer_EmitsHostNeutralPointerKeyboardTextAndScrollEvents()
+        {
+            var player = new InputAutomationPlayer(new[]
+            {
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.PointerClick,
+                    Frame = 0,
+                    DurationFrames = 2,
+                    X = 10f,
+                    Y = 20f,
+                    Button = InputAutomationPointerButton.Left,
+                    Modifiers = 1
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.PointerDrag,
+                    Frame = 4,
+                    DurationFrames = 3,
+                    X = 1f,
+                    Y = 2f,
+                    EndX = 7f,
+                    EndY = 8f,
+                    Button = InputAutomationPointerButton.Right,
+                    Modifiers = 2
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.Text,
+                    Frame = 8,
+                    Text = "ab",
+                    Modifiers = 4
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.PointerScroll,
+                    Frame = 9,
+                    X = 30f,
+                    Y = 40f,
+                    DeltaY = -120f,
+                    Modifiers = 8
+                },
+                new InputAutomationCommand
+                {
+                    Kind = InputAutomationCommandKind.KeyStroke,
+                    Frame = 10,
+                    DurationFrames = 1,
+                    Key = "Enter",
+                    Modifiers = 16
+                }
+            });
+
+            player.SetFrame(0);
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerMove));
+            Assert.That(player.FrameEvents[0].Position, Is.EqualTo(new Vector2(10f, 20f)));
+            Assert.That(player.FrameEvents[0].Modifiers, Is.EqualTo(1));
+            Assert.That(player.FrameEvents[1].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerDown));
+            Assert.That(player.TryGetButton("<Mouse>/LeftButton", out bool leftDown) && leftDown, Is.True);
+
+            player.SetFrame(2);
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerUp));
+            Assert.That(player.TryGetButton("<Mouse>/LeftButton", out leftDown), Is.True);
+            Assert.That(leftDown, Is.False);
+
+            player.SetFrame(4);
+            Assert.That(player.TryGetButton("<Mouse>/RightButton", out bool rightDown) && rightDown, Is.True);
+            Assert.That(player.FrameEvents[^1].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerDown));
+            Assert.That(player.FrameEvents[^1].Modifiers, Is.EqualTo(2));
+
+            player.SetFrame(5);
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerMove));
+            Assert.That(player.FrameEvents[0].Position, Is.EqualTo(new Vector2(3f, 4f)));
+
+            player.SetFrame(7);
+            Assert.That(player.FrameEvents[^1].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerUp));
+            Assert.That(player.TryGetButton("<Mouse>/RightButton", out rightDown), Is.True);
+            Assert.That(rightDown, Is.False);
+
+            player.SetFrame(8);
+            Assert.That(player.ConsumeCharBuffer(), Is.EqualTo("ab"));
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.Character));
+            Assert.That(player.FrameEvents[0].Text, Is.EqualTo("a"));
+            Assert.That(player.FrameEvents[0].Modifiers, Is.EqualTo(4));
+            Assert.That(player.FrameEvents[1].Text, Is.EqualTo("b"));
+
+            player.SetFrame(9);
+            Assert.That(player.MouseWheel, Is.EqualTo(-120f));
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.PointerScroll));
+            Assert.That(player.FrameEvents[0].Delta.Y, Is.EqualTo(-120f));
+            Assert.That(player.FrameEvents[0].Modifiers, Is.EqualTo(8));
+
+            player.SetFrame(10);
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.KeyDown));
+            Assert.That(player.FrameEvents[0].Key, Is.EqualTo("Enter"));
+            Assert.That(player.FrameEvents[0].Modifiers, Is.EqualTo(16));
+            Assert.That(player.TryGetButton("<Keyboard>/enter", out bool enterDown) && enterDown, Is.True);
+
+            player.SetFrame(11);
+            Assert.That(player.FrameEvents[0].Kind, Is.EqualTo(InputAutomationFrameEventKind.KeyUp));
+            Assert.That(player.TryGetButton("<Keyboard>/enter", out enterDown), Is.True);
+            Assert.That(enterDown, Is.False);
+        }
+
+        [Test]
+        public void InputAutomationScriptLoader_UsesSingleHostNeutralEnvironmentVariable()
+        {
+            string scriptPath = Path.Combine(
+                Path.GetTempPath(),
+                "ludots-input-automation-" + Guid.NewGuid().ToString("N") + ".json");
+            string? previous = Environment.GetEnvironmentVariable(InputAutomationScriptLoader.ScriptEnvironmentVariable);
+
+            try
+            {
+                File.WriteAllText(
+                    scriptPath,
+                    @"{ ""commands"": [ { ""kind"": ""Text"", ""frame"": 3, ""text"": ""ok"" } ] }");
+                Environment.SetEnvironmentVariable(InputAutomationScriptLoader.ScriptEnvironmentVariable, scriptPath);
+
+                Assert.That(InputAutomationScriptLoader.TryCreatePlayerFromEnvironment(out var player), Is.True);
+                Assert.That(player, Is.Not.Null);
+
+                player!.SetFrame(3);
+                Assert.That(player.ConsumeCharBuffer(), Is.EqualTo("ok"));
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(InputAutomationScriptLoader.ScriptEnvironmentVariable, previous);
+                if (File.Exists(scriptPath))
+                {
+                    File.Delete(scriptPath);
+                }
+            }
         }
 
         private sealed class StubInputBackend : IInputBackend

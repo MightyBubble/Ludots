@@ -16,7 +16,20 @@ internal sealed class LiveMapEditorNavState
     public int LastRebuiltTiles { get; set; }
     public int LastFailedTiles { get; set; }
     public int PendingTiles { get; set; }
+    public string BakeScope { get; set; } = "dirty";
+    public bool BakeIncludeNeighbors { get; set; } = true;
+    public bool BakeParallel { get; set; }
+    public int BakeMaxTiles { get; set; } = 16;
+    public int LastEstimatedTiles { get; set; }
+    public int QueryLayer { get; set; }
+    public int QueryProfileIndex { get; set; }
+    public string QueryProfileId { get; set; } = string.Empty;
+    public int MaxPortals { get; set; } = 256;
     public string LastMessage { get; set; } = "idle";
+    public bool ConfigDirty { get; set; }
+    public string ConfigStatus { get; set; } = "idle";
+    public string ConfigMessage { get; set; } = string.Empty;
+    public string ConfigTargetModId { get; set; } = string.Empty;
 
     public void SetPath(NavPathResult result, long elapsedMicroseconds)
     {

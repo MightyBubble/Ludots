@@ -5,7 +5,10 @@ namespace LiveMapEditorMod.Runtime;
 internal sealed class LiveMapEditorBrushState
 {
     public int RadiusCells { get; set; } = 2;
+    public string Mode { get; set; } = "set";
+    public string Target { get; set; } = "all";
     public byte HeightLevel { get; set; } = 0;
+    public byte WaterHeightLevel { get; set; } = 0;
     public byte AreaId { get; set; } = 0;
     public float Cost { get; set; } = 1f;
     public bool Blocked { get; set; }

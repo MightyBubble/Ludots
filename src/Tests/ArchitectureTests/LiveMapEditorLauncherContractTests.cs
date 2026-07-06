@@ -3,6 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Modding;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Config;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture;
@@ -35,7 +38,31 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
-    public void LauncherPreset_StacksCefRuntimeTransportNetworkAndLiveEditorCapability()
+    public void LauncherPreset_StacksIntegratedTerrainNavTransportUatAndLiveEditorCapability()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonObject presets = ReadObject(Path.Combine(repoRoot, "launcher.presets.json"));
+        JsonArray presetArray = presets["presets"] as JsonArray
+            ?? throw new InvalidDataException("launcher.presets.json must contain a presets array.");
+        JsonObject preset = presetArray
+            .OfType<JsonObject>()
+            .Single(obj => string.Equals(obj["id"]?.GetValue<string>(), "live_map_editor_integrated_nav_transport_cef_raylib", StringComparison.Ordinal));
+        string[] selectors = (preset["selectors"] as JsonArray
+                ?? throw new InvalidDataException("integrated live map editor preset must declare selectors."))
+            .Select(node => node?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+
+        Assert.That(selectors, Is.EqualTo(new[]
+        {
+            "$browser_cef_runtime",
+            "$live_map_editor_integrated_nav_transport_uat",
+            "$live_map_editor"
+        }));
+        Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+    }
+
+    [Test]
+    public void LauncherPreset_KeepsTransportNetworkEntryAsDebugOnly()
     {
         string repoRoot = FindRepoRoot();
         JsonObject presets = ReadObject(Path.Combine(repoRoot, "launcher.presets.json"));
@@ -55,6 +82,7 @@ public sealed class LiveMapEditorLauncherContractTests
             "$capability_standard_transport_network",
             "$live_map_editor"
         }));
+        Assert.That(preset["name"]?.GetValue<string>(), Does.Contain("Debug Only"));
         Assert.That(preset["adapterId"]?.GetValue<string>(), Is.EqualTo("raylib"));
     }
 
@@ -75,6 +103,11 @@ public sealed class LiveMapEditorLauncherContractTests
             bindings,
             "live_map_editor_nav_grid_uat",
             "mods/capabilities/live_map_editor/LiveMapEditorNavGridUatMod",
+            expectedProjectPath: null);
+        AssertModPath(
+            bindings,
+            "live_map_editor_integrated_nav_transport_uat",
+            "mods/capabilities/live_map_editor/LiveMapEditorIntegratedUatMod",
             expectedProjectPath: null);
     }
 
@@ -104,6 +137,71 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
+    public void IntegratedUatMap_DeclaresGridPrimaryAndSingleNodeGraphBoard()
+    {
+        string repoRoot = FindRepoRoot();
+        string modRoot = Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorIntegratedUatMod");
+        JsonObject map = ReadObject(Path.Combine(
+            modRoot,
+            "assets",
+            "Maps",
+            "live_editor_integrated_nav_transport.json"));
+        JsonObject pathing = ReadObject(Path.Combine(
+            modRoot,
+            "assets",
+            "Configs",
+            "Navigation",
+            "pathing.json"));
+        JsonObject navmesh = ReadObject(Path.Combine(
+            modRoot,
+            "assets",
+            "Configs",
+            "Navigation",
+            "navmesh.json"));
+        JsonObject transport = ReadObject(Path.Combine(
+            modRoot,
+            "assets",
+            "TransportNetwork",
+            "transport_network.json"));
+
+        Assert.That(map["Metadata"]?["liveMapEditor"]?["saveTarget"]?.GetValue<bool>(), Is.True);
+        Assert.That(map["ParentId"], Is.Null);
+        Assert.That((map["Tags"] as JsonArray)?.Select(node => node?.GetValue<string>()).ToArray(), Does.Contain("Feature.NavMesh:On"));
+
+        JsonArray boards = map["Boards"] as JsonArray
+            ?? throw new InvalidDataException("integrated UAT map must declare boards.");
+        Assert.That(boards, Has.Count.EqualTo(2));
+        Assert.That(boards[0]?["Name"]?.GetValue<string>(), Is.EqualTo("default"));
+        Assert.That(boards[0]?["SpatialType"]?.GetValue<string>(), Is.EqualTo("Grid"));
+        Assert.That(boards[0]?["NavigationEnabled"]?.GetValue<bool>(), Is.True);
+        Assert.That(boards[1]?["Name"]?.GetValue<string>(), Is.EqualTo("transport"));
+        Assert.That(boards[1]?["SpatialType"]?.GetValue<string>(), Is.EqualTo("NodeGraph"));
+        Assert.That(boards.OfType<JsonObject>().Count(board => string.Equals(board["SpatialType"]?.GetValue<string>(), "NodeGraph", StringComparison.Ordinal)), Is.EqualTo(1));
+
+        string[] agentTypes = ((JsonArray)pathing["agentTypes"]!)
+            .OfType<JsonObject>()
+            .Select(agent => agent["id"]?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+        Assert.That(agentTypes, Does.Contain("Humanoid"));
+        Assert.That(agentTypes, Does.Contain("Transport.FootScout"));
+        Assert.That(agentTypes, Does.Contain("Transport.ShallowBoat"));
+        Assert.That(agentTypes, Does.Contain("Transport.DeepDraftShip"));
+        string[] navmeshProfileIds = ((JsonArray)navmesh["profiles"]!)
+            .OfType<JsonObject>()
+            .Select(profile => profile["id"]?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+        Assert.That(navmeshProfileIds, Does.Contain("Transport.FootScout"));
+        Assert.That(navmeshProfileIds, Does.Contain("Transport.ShallowBoat"));
+        Assert.That(navmeshProfileIds, Does.Contain("Transport.DeepDraftShip"));
+        Assert.That(transport["segments"] as JsonArray, Is.Not.Null.And.Count.GreaterThan(0));
+    }
+
+    [Test]
     public void PresentationSystem_DrawsBoardAuthoringGuidesAtStartup()
     {
         string repoRoot = FindRepoRoot();
@@ -120,6 +218,10 @@ public sealed class LiveMapEditorLauncherContractTests
         Assert.That(source, Does.Contain("DrawBoardAuthoringStatus"));
         Assert.That(source, Does.Contain("MaxBoardGuideLinesPerAxis"));
         Assert.That(source, Does.Contain("ResolveBoardGuideStepCm"));
+        Assert.That(source, Does.Contain("TryResolveAuthoringSurface"));
+        Assert.That(source, Does.Contain("ResolveLogicTerrainAuthoringBounds"));
+        Assert.That(source, Does.Contain("terrain.WidthCells * terrain.HorizontalStepCm"));
+        Assert.That(source, Does.Contain("terrain.HeightCells * terrain.VerticalStepCm"));
         Assert.That(source, Does.Contain("GroundOverlayShape.Line"));
     }
 
@@ -240,6 +342,54 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
+    public void WebPanel_ExposesDirectCreateAndLoadMapEntryPoint()
+    {
+        string repoRoot = FindRepoRoot();
+        string html = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "index.html"));
+        string appJs = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "app.js"));
+        string handler = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "WebUi",
+            "LiveMapEditorCommandHandler.cs"));
+        string runtime = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Runtime",
+            "LiveMapEditorRuntime.cs"));
+
+        Assert.That(html, Does.Contain("id=\"new-map\""));
+        Assert.That(html, Does.Contain("id=\"create-map-load\""));
+        Assert.That(appJs, Does.Contain("focusMapCreation"));
+        Assert.That(appJs, Does.Contain("loadAfterCreate"));
+        Assert.That(handler, Does.Contain("ReadBool(payload, \"loadAfterCreate\")"));
+        Assert.That(runtime, Does.Contain("engine.LoadMap(result.MapId)"));
+        Assert.That(runtime, Does.Contain("create_map_load_failed"));
+    }
+
+    [Test]
     public void ArchitectureDoc_CapturesEntityPlacementSpatialGeometrySsot()
     {
         string repoRoot = FindRepoRoot();
@@ -348,6 +498,188 @@ public sealed class LiveMapEditorLauncherContractTests
     }
 
     [Test]
+    public void Phase2ParityAdr_IsIndexedAndClassifiesTerrainSsot()
+    {
+        string repoRoot = FindRepoRoot();
+        string adr = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "docs",
+            "adr",
+            "ADR-0005-live-map-editor-phase2-parity-boundary.md"));
+        string adrIndex = File.ReadAllText(Path.Combine(repoRoot, "docs", "adr", "README.md"));
+        string gitbookIndex = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "architecture", "README.md"));
+        string architecture = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "gitbook",
+            "architecture",
+            "live-map-editor-architecture.md"));
+        string uat = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "gitbook",
+            "reference",
+            "live-map-editor-uat.md"));
+
+        Assert.That(adr, Does.Contain("Status: Accepted"));
+        Assert.That(adr, Does.Contain("LogicTerrainCell"));
+        Assert.That(adr, Does.Contain("HeightLevel"));
+        Assert.That(adr, Does.Contain("WaterHeightLevel"));
+        Assert.That(adr, Does.Contain("AreaId"));
+        Assert.That(adr, Does.Contain("Biome"));
+        Assert.That(adr, Does.Contain("Vegetation"));
+        Assert.That(adr, Does.Contain("Deferred"));
+        Assert.That(adr, Does.Contain("Ludots.Editor.Bridge"));
+        Assert.That(adr, Does.Contain("NodeGraph"));
+        Assert.That(adrIndex, Does.Contain("ADR-0005-live-map-editor-phase2-parity-boundary.md"));
+        Assert.That(gitbookIndex, Does.Contain("ADR-0005-live-map-editor-phase2-parity-boundary.md"));
+        Assert.That(architecture, Does.Contain("Phase 2 Parity Boundary"));
+        Assert.That(architecture, Does.Contain("bucketFillWater"));
+        Assert.That(architecture, Does.Contain("estimateNavBake"));
+        Assert.That(architecture, Does.Contain("setPathOptions"));
+        Assert.That(architecture, Does.Contain("setViewToggle"));
+        Assert.That(architecture, Does.Contain("ManifestationObstacleIntent2D"));
+        Assert.That(uat, Does.Contain("Phase 2 Parity Checks"));
+        Assert.That(uat, Does.Contain("UiSurfaceSegment.Main"));
+        Assert.That(uat, Does.Contain("EntityTemplateKeyRegistry.SnapshotMappings"));
+    }
+
+    [Test]
+    public void RaylibWysiwygTerrain_UsesOptionalCoreFeatureSource()
+    {
+        string repoRoot = FindRepoRoot();
+        string heightmapSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Core",
+            "Presentation",
+            "Terrain",
+            "IVisualHeightmapRenderSource.cs"));
+        string featureSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Core",
+            "Presentation",
+            "Terrain",
+            "VisualTerrainRenderFeatures.cs"));
+        string adapter = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Core",
+            "Presentation",
+            "Terrain",
+            "LogicTerrainVisualHeightmapAdapter.cs"));
+        string rules = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Core",
+            "Presentation",
+            "Rendering",
+            "TerrainVisualRules.cs"));
+        string renderer = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Client",
+            "Ludots.Client.Raylib",
+            "Rendering",
+            "RaylibVisualHeightmapRenderer.cs"));
+
+        Assert.That(heightmapSource, Does.Not.Contain("TryReadFeatureCell"));
+        Assert.That(featureSource, Does.Contain("IVisualTerrainRenderFeatureSource"));
+        Assert.That(featureSource, Does.Contain("VisualTerrainRenderCell"));
+        Assert.That(adapter, Does.Contain("IVisualTerrainRenderFeatureSource"));
+        Assert.That(adapter, Does.Contain("source.WaterHeightLevel"));
+        Assert.That(adapter, Does.Contain("source.AreaId"));
+        Assert.That(rules, Does.Contain("GetTerrainFeatureColor"));
+        Assert.That(rules, Does.Contain("cell.IsBlocked"));
+        Assert.That(renderer, Does.Contain("CreateWaterMesh"));
+        Assert.That(renderer, Does.Contain("DrawFeatureEdges"));
+        Assert.That(renderer, Does.Contain("IVisualTerrainRenderFeatureSource? featureSource"));
+    }
+
+    [Test]
+    public void WebPanel_ExposesPhase2BrushBakePathViewAndMinimapControls()
+    {
+        string repoRoot = FindRepoRoot();
+        string html = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "index.html"));
+        string appJs = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "live-map-editor-app",
+            "app.js"));
+
+        Assert.That(html, Does.Contain("data-brush-mode=\"set\""));
+        Assert.That(html, Does.Contain("data-brush-mode=\"raise\""));
+        Assert.That(html, Does.Contain("data-brush-mode=\"lower\""));
+        Assert.That(html, Does.Contain("id=\"brush-target\""));
+        Assert.That(html, Does.Contain("id=\"brush-water-height\""));
+        Assert.That(html, Does.Contain("id=\"water-bucket\""));
+        Assert.That(html, Does.Contain("id=\"command-status\""));
+        Assert.That(html, Does.Contain("id=\"brush-status\""));
+        Assert.That(html, Does.Contain("data-view-toggle=\"navmesh\""));
+        Assert.That(html, Does.Contain("data-view-toggle=\"minimap\""));
+        Assert.That(html, Does.Contain("id=\"bake-scope\""));
+        Assert.That(html, Does.Contain("id=\"nav-config-mode\""));
+        Assert.That(html, Does.Contain("id=\"nav-agent-profiles\""));
+        Assert.That(html, Does.Contain("id=\"nav-bake-profiles\""));
+        Assert.That(html, Does.Contain("id=\"nav-layers\""));
+        Assert.That(html, Does.Contain("id=\"nav-areas\""));
+        Assert.That(html, Does.Contain("id=\"path-profile\""));
+        Assert.That(html, Does.Contain("id=\"minimap\""));
+        Assert.That(html, Does.Contain("id=\"transport-unavailable\""));
+        Assert.That(html, Does.Contain("id=\"obstacle-shape\""));
+        Assert.That(html, Does.Contain("id=\"place-obstacle\""));
+        Assert.That(html, Does.Contain("id=\"entity-override-json\""));
+        Assert.That(html, Does.Contain("id=\"create-map\""));
+        Assert.That(html, Does.Contain("id=\"add-board\""));
+        Assert.That(html, Does.Contain("id=\"board-stack\""));
+        Assert.That(html, Does.Contain("id=\"update-board\""));
+        Assert.That(html, Does.Contain("id=\"reload-map\""));
+        Assert.That(appJs, Does.Contain("state.map?.id"));
+        Assert.That(appJs, Does.Contain("isDataPlaneEnvelope"));
+        Assert.That(appJs, Does.Contain("typeof value.kind === 'string'"));
+        Assert.That(appJs, Does.Contain("typeof value.topic === 'string'"));
+        Assert.That(appJs, Does.Contain("bucketFillWater"));
+        Assert.That(appJs, Does.Contain("renderBrushPickState"));
+        Assert.That(appJs, Does.Contain("formatCommandError"));
+        Assert.That(appJs, Does.Contain("setBakeOptions"));
+        Assert.That(appJs, Does.Contain("navConfigSave"));
+        Assert.That(appJs, Does.Contain("navConfigReload"));
+        Assert.That(appJs, Does.Contain("navAddProfile"));
+        Assert.That(appJs, Does.Contain("navAddBakeProfile"));
+        Assert.That(appJs, Does.Contain("navAddLayer"));
+        Assert.That(appJs, Does.Contain("navAddArea"));
+        Assert.That(appJs, Does.Contain("estimateNavBake"));
+        Assert.That(appJs, Does.Contain("rebakeNav"));
+        Assert.That(appJs, Does.Contain("clearNavTiles"));
+        Assert.That(appJs, Does.Contain("setPathOptions"));
+        Assert.That(appJs, Does.Contain("setViewToggle"));
+        Assert.That(appJs, Does.Contain("cameraPanTo"));
+        Assert.That(appJs, Does.Contain("drawMinimapCamera"));
+        Assert.That(appJs, Does.Contain("chunk.dirty"));
+        Assert.That(appJs, Does.Contain("placeObstacle"));
+        Assert.That(appJs, Does.Contain("setEntityOverride"));
+        Assert.That(appJs, Does.Contain("renderMinimap"));
+        Assert.That(appJs, Does.Contain("previewBoardAllocation"));
+        Assert.That(appJs, Does.Contain("createMap"));
+        Assert.That(appJs, Does.Contain("addBoard"));
+        Assert.That(appJs, Does.Contain("renderBoardStack"));
+        Assert.That(appJs, Does.Contain("renderAllocationPreview"));
+        Assert.That(appJs, Does.Contain("No NodeGraph board"));
+        Assert.That(appJs, Does.Not.Contain("Ludots.Editor.Bridge"));
+    }
+
+    [Test]
     public void PanelController_RegistersTransportNetworkCommands()
     {
         string repoRoot = FindRepoRoot();
@@ -390,6 +722,296 @@ public sealed class LiveMapEditorLauncherContractTests
             Assert.That(source, Does.Contain($"router.Register(\"{command}\", handler);"));
         }
     }
+
+    [Test]
+    public void PanelController_RegistersPhase2ParityCommands()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "UI",
+            "LiveMapEditorPanelController.cs"));
+        string handler = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "WebUi",
+            "LiveMapEditorCommandHandler.cs"));
+        string runtime = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Runtime",
+            "LiveMapEditorRuntime.cs"));
+        string stateProducer = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "WebUi",
+            "LiveMapEditorStateTopicProducer.cs"));
+
+        string[] commands =
+        {
+            "bucketFillWater",
+            "setBakeOptions",
+            "estimateNavBake",
+            "rebakeNav",
+            "clearNavTiles",
+            "setPathOptions",
+            "setViewToggle",
+            "cameraPanTo",
+            "previewBoardAllocation",
+            "createMap",
+            "addBoard",
+            "deleteBoard",
+            "updateBoard",
+            "selectBoard",
+            "reloadMap",
+            "setObstacle",
+            "placeObstacle",
+            "eraseObstacle",
+            "setEntityOverride",
+            "deleteEntityOverride",
+            "navConfigReload",
+            "navConfigSave",
+            "navAddProfile",
+            "navDeleteProfile",
+            "navAddBakeProfile",
+            "navDeleteBakeProfile",
+            "navAddLayer",
+            "navDeleteLayer",
+            "navAddArea",
+            "navDeleteArea",
+            "navSetMode",
+            "navSetAlgorithm",
+            "navSetRuntimeField"
+        };
+
+        foreach (string command in commands)
+        {
+            Assert.That(source, Does.Contain($"router.Register(\"{command}\", handler);"));
+            Assert.That(handler, Does.Contain($"\"{command}\""));
+        }
+
+        Assert.That(runtime, Does.Contain("BucketFillWater"));
+        Assert.That(runtime, Does.Contain("NormalizeBakeScope"));
+        Assert.That(runtime, Does.Contain("NavTileStore"));
+        Assert.That(runtime, Does.Contain("NavMeshProfileRegistry"));
+        Assert.That(runtime, Does.Contain("WaterHeightLevel"));
+        Assert.That(runtime, Does.Contain("LogicTerrainSurfaceFlags.Water"));
+        Assert.That(runtime, Does.Contain("SetViewToggle"));
+        Assert.That(runtime, Does.Contain("ManifestationObstacleIntent2D"));
+        Assert.That(runtime, Does.Contain("RuntimeNavMeshStructuralObstacle"));
+        Assert.That(runtime, Does.Contain("SetSelectedEntityOverride"));
+        Assert.That(runtime, Does.Contain("Nav.MaxPortals"));
+        Assert.That(runtime, Does.Contain("NavigationConfigAuthoringWriter"));
+        Assert.That(runtime, Does.Contain("ResolveWritableMapConfigTargetModId"));
+        Assert.That(runtime, Does.Contain("ReloadNavConfig"));
+        Assert.That(runtime, Does.Contain("BoardAllocationPreviewCalculator"));
+        Assert.That(runtime, Does.Contain("CreateMap"));
+        Assert.That(runtime, Does.Contain("AddBoard"));
+        Assert.That(runtime, Does.Contain("UpdateBoardSettings"));
+        Assert.That(runtime, Does.Contain("ReloadCurrentMap"));
+        Assert.That(stateProducer, Does.Contain("EntityTemplateKeyRegistry"));
+        Assert.That(stateProducer, Does.Contain("SnapshotMappings"));
+        Assert.That(stateProducer, Does.Contain("CaptureMinimap"));
+        Assert.That(stateProducer, Does.Contain("CaptureCamera"));
+        Assert.That(stateProducer, Does.Contain("CaptureNavConfig"));
+        Assert.That(stateProducer, Does.Contain("CaptureSimulationProfile"));
+        Assert.That(stateProducer, Does.Contain("maxPortals = _runtime.Nav.MaxPortals"));
+        Assert.That(stateProducer, Does.Contain("dirty = IsMinimapChunkDirty"));
+        Assert.That(stateProducer, Does.Contain("CaptureAgentProfiles"));
+        Assert.That(stateProducer, Does.Contain("CaptureNavProfiles"));
+        Assert.That(stateProducer, Does.Contain("obstacleCount"));
+        Assert.That(stateProducer, Does.Contain("CaptureEntityOverrides"));
+        Assert.That(stateProducer, Does.Contain("CaptureAuthoredBoards"));
+        Assert.That(stateProducer, Does.Contain("CaptureAllocationPreview"));
+    }
+
+    [Test]
+    public void NavigationConfigAuthoringWriter_WritesAgentProfilesAndNavMeshToMountedMod()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"ludots_nav_config_writer_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("TargetNavMod", tempRoot);
+            var agents = new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "Scout",
+                    RadiusCm = 32f,
+                    HeightCm = 180f,
+                    ClearanceCm = 24f,
+                    DraftCm = 0f,
+                    BeamCm = 0f,
+                    Mass = 1f,
+                    Layer = 0
+                }
+            };
+            var config = new NavMeshBakeConfig
+            {
+                Mode = "runtime-incremental",
+                Algorithm = "cdt",
+                Profiles = new()
+                {
+                    new NavMeshAgentProfileConfig
+                    {
+                        Id = "Scout",
+                        MaxClimbCm = 40,
+                        MaxSlopeDeg = 45f
+                    }
+                },
+                Layers = new()
+                {
+                    new NavLayerConfig { Id = "Ground", Layer = 0 }
+                },
+                Areas = new()
+                {
+                    new NavAreaCostConfig { Id = "Default", AreaId = 0, Cost = 1f }
+                },
+                RuntimeIncremental = new NavRuntimeIncrementalConfig
+                {
+                    TileBudgetPerFixedTick = 4,
+                    IncludeNeighborTiles = true,
+                    HeightScaleMeters = 1f,
+                    MinWalkableUpDot = 0.6f,
+                    CliffHeightThreshold = 1
+                }
+            };
+
+            NavigationConfigAuthoringSaveResult result =
+                new NavigationConfigAuthoringWriter(vfs).Save("TargetNavMod", agents, config);
+
+            Assert.That(result.AgentProfileCount, Is.EqualTo(1));
+            Assert.That(result.BakeProfileCount, Is.EqualTo(1));
+            Assert.That(File.Exists(result.AgentProfilesPath), Is.True);
+            Assert.That(File.Exists(result.NavMeshPath), Is.True);
+            JsonArray writtenAgents = ReadArray(result.AgentProfilesPath);
+            JsonObject writtenNavMesh = ReadObject(result.NavMeshPath);
+            Assert.That(writtenAgents[0]?["id"]?.GetValue<string>(), Is.EqualTo("Scout"));
+            Assert.That(writtenNavMesh["mode"]?.GetValue<string>(), Is.EqualTo("runtime-incremental"));
+            Assert.That(writtenNavMesh["algorithm"]?.GetValue<string>(), Is.EqualTo("cdt"));
+            Assert.That(writtenNavMesh["runtimeIncremental"]?["tileBudgetPerFixedTick"]?.GetValue<int>(), Is.EqualTo(4));
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
+    [Test]
+    public void LiveMapEditorMod_ProvidesDefaultObstacleTemplate()
+    {
+        string repoRoot = FindRepoRoot();
+        JsonArray templates = ReadArray(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "assets",
+            "Entities",
+            "templates.json"));
+
+        JsonObject template = templates
+            .OfType<JsonObject>()
+            .Single(obj => string.Equals(obj["id"]?.GetValue<string>(), "live_map_editor_obstacle", StringComparison.Ordinal));
+        Assert.That(template["components"]?["Name"]?["Value"]?.GetValue<string>(), Is.EqualTo("LiveMapEditor.Obstacle"));
+    }
+
+    [Test]
+    public void PresentationSystem_GatesPhase2DebugOverlaysFromViewState()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Systems",
+            "LiveMapEditorPresentationSystem.cs"));
+
+        Assert.That(source, Does.Contain("_runtime.View.ShowGrid"));
+        Assert.That(source, Does.Contain("_runtime.View.ShowChunks"));
+        Assert.That(source, Does.Contain("_runtime.View.ShowNavMesh"));
+        Assert.That(source, Does.Contain("_runtime.View.ShowPath"));
+        Assert.That(source, Does.Contain("_runtime.View.ShowTransport"));
+        Assert.That(source, Does.Contain("_runtime.View.ShowEntities"));
+        Assert.That(source, Does.Contain("_runtime.PlaceObstacle"));
+        Assert.That(source, Does.Contain("_runtime.EraseObstacleAt"));
+    }
+
+    [Test]
+    public void PanelController_UsesExclusiveMainSurfaceForPhase2()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "UI",
+            "LiveMapEditorPanelController.cs"));
+
+        Assert.That(source, Does.Contain("UiSurfaceSegment.Main"));
+        Assert.That(source, Does.Contain("exclusive: true"));
+        Assert.That(source, Does.Contain("exclusive Main lease published"));
+    }
+
+    [Test]
+    public void RaylibHostLoop_ProvidesRealWindowFrameCaptureForLiveEditorUat()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib",
+            "RaylibHostLoop.cs"));
+
+        Assert.That(source, Does.Contain("LUDOTS_RAYLIB_FRAME_CAPTURE_DIR"));
+        Assert.That(source, Does.Contain("LUDOTS_RAYLIB_FRAME_CAPTURE_START_FRAME"));
+        Assert.That(source, Does.Contain("LUDOTS_RAYLIB_FRAME_CAPTURE_END_FRAME"));
+        Assert.That(source, Does.Contain("SaveRaylibScreenshot"));
+    }
+
+    [Test]
+    public void PresentationSystem_ProvidesAutoOpenPanelHookForRealWindowUat()
+    {
+        string repoRoot = FindRepoRoot();
+        string source = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "mods",
+            "capabilities",
+            "live_map_editor",
+            "LiveMapEditorMod",
+            "Systems",
+            "LiveMapEditorPresentationSystem.cs"));
+
+        Assert.That(source, Does.Contain("LUDOTS_LIVE_MAP_EDITOR_AUTO_OPEN_FRAME"));
+        Assert.That(source, Does.Contain("Auto-opening panel"));
+        Assert.That(source, Does.Contain("_panelController.Show()"));
+    }
+
 
     [Test]
     public void TransportShowcase_ProvidesDataDrivenRouteProfilesForCapacityValidation()
@@ -465,10 +1087,12 @@ public sealed class LiveMapEditorLauncherContractTests
             "CapabilityStandardTransportNetworkMod",
             "Runtime",
             "CapabilityStandardTransportNetworkRuntime.cs"));
+        string gameEngine = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
 
         Assert.That(source, Does.Contain("TransportNetworkAssetLoader"));
         Assert.That(source, Does.Contain("TransportNetworkBaker().Bake"));
         Assert.That(source, Does.Contain("graphBoard.GraphStore.Clear"));
+        Assert.That(source, Does.Contain("BoardResolution.RequireSingleNodeGraphBoard"));
         Assert.That(source, Does.Contain("TransportNetworkRibbonSource"));
         Assert.That(source, Does.Contain("TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId"));
         Assert.That(source, Does.Contain("GraphEdgeProjectionQuery"));
@@ -476,7 +1100,10 @@ public sealed class LiveMapEditorLauncherContractTests
         Assert.That(source, Does.Contain("PolylineGoalSnapQuery"));
         Assert.That(source, Does.Contain("PathService"));
         Assert.That(ribbonSource, Does.Contain("ComposeDefaultSurfaceScopeId"));
+        Assert.That(gameEngine, Does.Contain("BoardResolution.TryGetSingleNodeGraphBoard"));
+        Assert.That(gameEngine, Does.Contain("graphBoard='"));
         Assert.That(showcaseRuntime, Does.Contain("TransportNetworkRibbonSource.ComposeDefaultSurfaceScopeId"));
+        Assert.That(showcaseRuntime, Does.Contain("BoardResolution.RequireSingleNodeGraphBoard"));
         Assert.That(showcaseRuntime, Does.Not.Contain("ComposeSurfaceScopeId"));
         Assert.That(source, Does.Not.Contain("ComposeSurfaceScopeId"));
         Assert.That(source, Does.Not.Contain("corridor"));

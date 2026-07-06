@@ -767,12 +767,8 @@ internal sealed class LiveMapEditorTransportAuthoring : IDisposable
         TransportNetworkAsset asset = EnsureAsset(engine);
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("Transport rebuild requires a focused map session.");
-        if (session.PrimaryBoard is not INodeGraphBoard graphBoard)
-        {
-            throw new InvalidOperationException("Transport rebuild requires a NodeGraph primary board.");
-        }
-
-        if (session.PrimaryBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
+        INodeGraphBoard graphBoard = BoardResolution.RequireSingleNodeGraphBoard(session, "Transport rebuild");
+        if (graphBoard.LoadedChunks is not WorldGridLoadedChunks loadedChunks)
         {
             throw new InvalidOperationException("Transport rebuild requires WorldGridLoadedChunks.");
         }
@@ -809,7 +805,10 @@ internal sealed class LiveMapEditorTransportAuthoring : IDisposable
 
     private void RunRouteQuery(GameEngine engine)
     {
-        if (engine.CurrentMapSession?.PrimaryBoard?.LoadedChunks is WorldGridLoadedChunks loadedChunks)
+        MapSession session = engine.CurrentMapSession
+            ?? throw new InvalidOperationException("Transport route validation requires a focused map session.");
+        INodeGraphBoard graphBoard = BoardResolution.RequireSingleNodeGraphBoard(session, "Transport route validation");
+        if (graphBoard.LoadedChunks is WorldGridLoadedChunks loadedChunks)
         {
             Span<Vector2> points = stackalloc[]
             {

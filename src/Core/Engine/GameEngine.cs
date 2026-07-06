@@ -2175,10 +2175,7 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            if (CurrentMapSession?.VisualHeightmap == null)
-            {
-                RefreshFocusedLogicTerrainVisualHeightmap(revision: 0);
-            }
+            RefreshLogicTerrainVisualHeightmapForSession(session, revision: 0);
         }
 
         public void ReplaceFocusedLogicTerrain(LogicTerrainField terrain, bool reloadNavServices = true)
@@ -2217,26 +2214,51 @@ namespace Ludots.Core.Engine
 
         public void RefreshFocusedLogicTerrainVisualHeightmap(int revision)
         {
+            MapSession session = CurrentMapSession;
+            if (session == null)
+            {
+                return;
+            }
+
+            RefreshLogicTerrainVisualHeightmapForSession(session, revision);
+        }
+
+        private void RefreshLogicTerrainVisualHeightmapForSession(MapSession session, int revision)
+        {
+            if (session == null)
+            {
+                throw new ArgumentNullException(nameof(session));
+            }
+
             if (LogicTerrain == null || LogicTerrain.Topology != LogicTerrainTopology.Grid)
             {
                 return;
             }
 
-            MapSession session = CurrentMapSession;
-            if (session?.VisualHeightmap != null &&
+            if (session.VisualHeightmap != null &&
                 session.VisualHeightmap is not LogicTerrainVisualHeightmapAdapter)
             {
+                if (IsFocusedMapSession(session))
+                {
+                    SetService(CoreServiceKeys.VisualHeightmap, session.VisualHeightmap);
+                }
+
                 return;
             }
 
             var visualHeightmap = new LogicTerrainVisualHeightmapAdapter(LogicTerrain, revision);
-            if (session != null)
-            {
-                session.VisualHeightmap = visualHeightmap;
-            }
+            session.VisualHeightmap = visualHeightmap;
 
-            SetService(CoreServiceKeys.VisualHeightmap, (IVisualHeightmap)visualHeightmap);
+            if (IsFocusedMapSession(session))
+            {
+                SetService(CoreServiceKeys.VisualHeightmap, (IVisualHeightmap)visualHeightmap);
+            }
         }
+
+        private bool IsFocusedMapSession(MapSession session)
+            => session != null &&
+               CurrentMapSession != null &&
+               CurrentMapSession.MapId == session.MapId;
 
         private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
         {
@@ -2658,17 +2680,6 @@ namespace Ludots.Core.Engine
 
             var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
-            LoadedGraphRuntime loadedGraphRuntime = null;
-            IPathService nodeGraphService = null;
-
-            if (session.PrimaryBoard is INodeGraphBoard nodeGraphBoard)
-            {
-                loadedGraphRuntime = nodeGraphBoard.GraphRuntime;
-                nodeGraphService = new NodeGraphPathServiceAdapter(loadedGraphRuntime, pathStore);
-            }
-
-            IPathService pathService = nodeGraphService;
-
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
@@ -2679,6 +2690,18 @@ namespace Ludots.Core.Engine
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
             bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
 
+            LoadedGraphRuntime loadedGraphRuntime = null;
+            IPathService nodeGraphService = null;
+            INodeGraphBoard nodeGraphBoard = null;
+            if (BoardResolution.TryGetSingleNodeGraphBoard(session, out INodeGraphBoard resolvedGraphBoard, out string graphBoardError))
+            {
+                nodeGraphBoard = resolvedGraphBoard;
+                loadedGraphRuntime = nodeGraphBoard.GraphRuntime;
+                nodeGraphService = new NodeGraphPathServiceAdapter(loadedGraphRuntime, pathStore);
+                SetService(CoreServiceKeys.LoadedGraphRuntime, loadedGraphRuntime);
+            }
+            IPathService pathService = nodeGraphService;
+
             if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
                 Diagnostics.Log.Info(
@@ -2687,10 +2710,10 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            if (loadedGraphRuntime == null && requiresGraphPathing)
+            if (loadedGraphRuntime == null && requiresGraphPathing && !hasNavServices)
             {
                 throw new InvalidOperationException(
-                    $"Map '{session.MapId.Value}' pathing config selects graph-capable routing but the primary board is not a node graph.");
+                    $"Map '{session.MapId.Value}' pathing config selects graph-capable routing but graph board resolution failed: {graphBoardError}");
             }
 
             if (!hasNavServices && requiresNavMeshPathing)
@@ -2727,7 +2750,7 @@ namespace Ludots.Core.Engine
 
             Diagnostics.Log.Info(
                 in LogChannels.Engine,
-                $"Pathing bootstrap ready for map '{session.MapId.Value}': service={pathService.GetType().Name}, board='{session.PrimaryBoard?.Name ?? "<none>"}', loadedGraphChunks={loadedGraphRuntime?.LoadedChunkCount ?? 0}.");
+                $"Pathing bootstrap ready for map '{session.MapId.Value}': service={pathService.GetType().Name}, primaryBoard='{session.PrimaryBoard?.Name ?? "<none>"}', graphBoard='{nodeGraphBoard?.Name ?? "<none>"}', loadedGraphChunks={loadedGraphRuntime?.LoadedChunkCount ?? 0}.");
         }
 
         private void ClearPathingServices()
@@ -3165,6 +3188,10 @@ namespace Ludots.Core.Engine
 
         private void EnsureCameraRuntimeConfigured()
         {
+            GameSession.Camera.UpdateRuntimeProviders(
+                () => WorldSizeSpec.Bounds,
+                () => GetService(CoreServiceKeys.VisualHeightmap));
+
             var input = GetService(CoreServiceKeys.InputHandler);
             var viewport = GetService(CoreServiceKeys.ViewController);
             if (input == null || viewport == null)
@@ -3179,6 +3206,7 @@ namespace Ludots.Core.Engine
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
+                return;
             }
         }
     }

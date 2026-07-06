@@ -194,6 +194,14 @@
       }
     },
     {
+      "name": "live_map_editor_integrated_nav_transport_uat",
+      "target": {
+        "type": "path",
+        "value": "mods/capabilities/live_map_editor/LiveMapEditorIntegratedUatMod",
+        "projectPath": null
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",

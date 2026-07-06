@@ -23,6 +23,7 @@ export type ToolCategory = 'Height' | 'Water' | 'Area' | 'Blocked' | 'Biome' | '
 export type ToolMode = 'Set' | 'Raise' | 'Lower' | 'Smooth' | 'Bucket'; // Added Bucket
 export type NavPanelTab = 'bake' | 'simulation' | 'config';
 export type CanvasSessionKind = 'empty' | 'local' | 'repo';
+const preferredEditorMapIds = ['live_editor_integrated_nav_transport', 'live_editor_nav_grid'];
 
 export interface NavQueryCell {
     col: number;
@@ -518,7 +519,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             navigationConfig = null;
         }
 
-        const defaultMapInfo = mapInfos.find((m) => m.canBake) ?? mapInfos.find((m) => m.canEditTerrain) ?? mapInfos[0] ?? null;
+        const preferredMapInfo = preferredEditorMapIds
+            .map((id) => mapInfos.find((m) => m.id === id))
+            .find(Boolean) ?? null;
+        const defaultMapInfo = preferredMapInfo ?? mapInfos.find((m) => m.canBake) ?? mapInfos.find((m) => m.canEditTerrain) ?? mapInfos[0] ?? null;
         const defaultMapId = defaultMapInfo?.id ?? (maps.length > 0 ? maps[0] : null);
         const defaultBoardInfo = pickDefaultBoardInfo(defaultMapInfo);
 

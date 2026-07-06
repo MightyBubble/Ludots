@@ -83,15 +83,18 @@ internal sealed class LiveMapEditorPanelController : IAsyncDisposable, IDisposab
         {
             _lease = _surfaceHost.Acquire(new UiSurfaceLeaseRequest(
                 LiveMapEditorIds.OwnerId,
-                UiSurfaceSegment.Overlay,
-                priority: 80,
-                exclusive: false));
+                UiSurfaceSegment.Main,
+                priority: 100,
+                exclusive: true));
         }
 
         _surfaceHost.Publish(
             _lease,
             UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(_browserContent)));
         _runtime.PanelOpen = true;
+        Ludots.Core.Diagnostics.Log.Info(
+            in Ludots.Core.Diagnostics.LogChannels.Presentation,
+            "[LiveMapEditorMod] Panel shown (exclusive Main lease published).");
     }
 
     public void Hide()
@@ -142,11 +145,44 @@ internal sealed class LiveMapEditorPanelController : IAsyncDisposable, IDisposab
         router.Register("setTool", handler);
         router.Register("setBrush", handler);
         router.Register("paintTerrain", handler);
+        router.Register("bucketFillWater", handler);
         router.Register("placeEntity", handler);
         router.Register("selectEntity", handler);
         router.Register("removeEntity", handler);
+        router.Register("setObstacle", handler);
+        router.Register("placeObstacle", handler);
+        router.Register("eraseObstacle", handler);
+        router.Register("setEntityOverride", handler);
+        router.Register("deleteEntityOverride", handler);
+        router.Register("navConfigReload", handler);
+        router.Register("navConfigSave", handler);
+        router.Register("navAddProfile", handler);
+        router.Register("navDeleteProfile", handler);
+        router.Register("navAddBakeProfile", handler);
+        router.Register("navDeleteBakeProfile", handler);
+        router.Register("navAddLayer", handler);
+        router.Register("navDeleteLayer", handler);
+        router.Register("navAddArea", handler);
+        router.Register("navDeleteArea", handler);
+        router.Register("navSetMode", handler);
+        router.Register("navSetAlgorithm", handler);
+        router.Register("navSetRuntimeField", handler);
+        router.Register("setBakeOptions", handler);
+        router.Register("estimateNavBake", handler);
+        router.Register("rebakeNav", handler);
         router.Register("rebakeDirty", handler);
+        router.Register("clearNavTiles", handler);
+        router.Register("setPathOptions", handler);
         router.Register("queryPath", handler);
+        router.Register("setViewToggle", handler);
+        router.Register("cameraPanTo", handler);
+        router.Register("previewBoardAllocation", handler);
+        router.Register("createMap", handler);
+        router.Register("addBoard", handler);
+        router.Register("deleteBoard", handler);
+        router.Register("updateBoard", handler);
+        router.Register("selectBoard", handler);
+        router.Register("reloadMap", handler);
         router.Register("saveMap", handler);
         router.Register("transportSetMode", handler);
         router.Register("transportSetRoot", handler);

@@ -6,7 +6,8 @@ namespace Ludots.Core.Presentation.Terrain
 {
     internal sealed class LogicTerrainVisualHeightmapAdapter :
         RegularGridVisualHeightmapRuntimeBase,
-        IVisualHeightmapRenderSource
+        IVisualHeightmapRenderSource,
+        IVisualTerrainRenderFeatureSource
     {
         private const int HeightLevelToCm = 100;
         private readonly LogicTerrainField _terrain;
@@ -59,6 +60,12 @@ namespace Ludots.Core.Presentation.Terrain
 
         public int Revision { get; }
 
+        public WorldAabbCm FeatureBounds => Bounds;
+
+        public int FeatureCellColumns => _terrain.WidthCells;
+
+        public int FeatureCellRows => _terrain.HeightCells;
+
         public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
         {
             if ((uint)chunkX >= (uint)_terrain.WidthChunks ||
@@ -97,6 +104,25 @@ namespace Ludots.Core.Presentation.Terrain
             return true;
         }
 
+        public bool TryReadFeatureCell(int cellX, int cellY, out VisualTerrainRenderCell cell)
+        {
+            if (!_terrain.IsInBounds(cellX, cellY))
+            {
+                cell = default;
+                return false;
+            }
+
+            LogicTerrainCell source = _terrain.GetCell(cellX, cellY);
+            cell = new VisualTerrainRenderCell(
+                source.HeightLevel,
+                checked(source.HeightLevel * HeightLevelToCm),
+                source.WaterHeightLevel,
+                checked(source.WaterHeightLevel * HeightLevelToCm),
+                MapSurfaceFlags(source.SurfaceFlags),
+                source.AreaId);
+            return true;
+        }
+
         protected override bool TryReadSampleCm(int layerSampleOffset, int globalSampleX, int globalSampleY, out float heightCm)
         {
             heightCm = default;
@@ -132,5 +158,14 @@ namespace Ludots.Core.Presentation.Terrain
                 0,
                 checked(terrain.WidthCells * terrain.HorizontalStepCm),
                 checked(terrain.HeightCells * terrain.VerticalStepCm));
+
+        private static VisualTerrainSurfaceFlags MapSurfaceFlags(LogicTerrainSurfaceFlags flags)
+        {
+            VisualTerrainSurfaceFlags mapped = VisualTerrainSurfaceFlags.None;
+            if ((flags & LogicTerrainSurfaceFlags.Water) != 0) mapped |= VisualTerrainSurfaceFlags.Water;
+            if ((flags & LogicTerrainSurfaceFlags.Ramp) != 0) mapped |= VisualTerrainSurfaceFlags.Ramp;
+            if ((flags & LogicTerrainSurfaceFlags.Blocked) != 0) mapped |= VisualTerrainSurfaceFlags.Blocked;
+            return mapped;
+        }
     }
 }
