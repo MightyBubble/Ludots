@@ -1214,6 +1214,27 @@ namespace Ludots.Core.Engine
             var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
             castCommitProfileRegistry.Install(new CastCommitProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
+            // Client cast preference scope chain (RFC-0065 CTX-8, §5.6): player preference layers plus
+            // the mod lock set; template/form-set keys resolve through the engine-wide id spaces.
+            var clientCastPreferences = new ClientCastPreferenceStore(
+                castCommitProfileRegistry,
+                MapLoader.EntityTemplateKeys.Register,
+                MapLoader.EntityTemplateKeys.GetName,
+                AbilityFormSetIdRegistry.Register,
+                AbilityFormSetIdRegistry.GetName);
+            clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). The player input
+            // handler is adapter-bound after engine init, so it is resolved per switch (null tolerated).
+            var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var controlSchemeRuntime = new ControlSchemeRuntime(
+                controlSchemeIds,
+                interactionContextStack,
+                commandIntentProfileRegistry,
+                () => GetService(CoreServiceKeys.InputHandler),
+                clientCastPreferences);
+            controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
             // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
             var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1299,6 +1320,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
             SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
             SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
+            SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
+            SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
@@ -1432,6 +1455,15 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6, DEC-15).
+            RegisterSystem(
+                new AxisMoveOrderSystem(
+                    World,
+                    GlobalContext,
+                    new AxisMoveConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                    orderQueue,
+                    orderTypeRegistry),
+                SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
