@@ -663,10 +663,12 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 entityCollectionStore);
             // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
+            // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
+            // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
+            // are pure data — profiles referencing them fail fast at their own load site instead.
             int ownsRelationshipTypeId = relationshipTypeRegistry.GetId("Owns");
             int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
             int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
-            _ = relationshipTypeRegistry.GetId("Ally");
             var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
             var controlDomainQuery = new ControlDomainQuery(
                 World,

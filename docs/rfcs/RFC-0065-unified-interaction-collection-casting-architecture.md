@@ -111,6 +111,12 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 `controls(rep) ≡ owns(rep) ∪ 显式 grant 边`。只物化代理 grant（`AssociationControlProfileRuntime` 增删），正常归属不复制第二条边。避免 spawn/death/转移双写不同步。`ControlDomainQuery.CollectControlled` 内部合并两个来源。
 
+**已知边界（明文声明，非完备性承诺）**：
+
+1. **控制抑制未覆盖**：并集语义下 owner 永远保有控制权——"借来的控制"（代理/心控夺取）可表达，"被夺走时原主失控"（魅惑/恐惧期间不能指挥自己单位）不可表达，order 鉴权会放行原主。闭合路径 = 并集加 suppression 谓词（`controls = (owns − suppressed) ∪ grants`，suppressed 本身是 tag/边数据），需要时以 DEC 修订落地，禁止在消费方各自绕。
+2. **controls 不传递**：一跳展开是 Core 策略；链式指挥（A controls B 的域，B controls C）不自动闭包——需要的场景用 profile 数据显式建 A→C 直连边表达。
+3. **保留名契约**：Core 只绑定 `Owns`/`Controls`/`MemberOf` 三个类型名（引擎与 catalog 的基建契约）；alliance/diplomacy 等场景类型是纯数据，由引用它们的 profile 在自己的加载点 fail-fast。若未来需要总转换 mod 改名，用 catalog roles 间接层（Core 绑角色不绑字面名），不加第四个保留名。
+
 ### DEC-2 关系反向索引先行
 
 现状 `RelationshipRuntime.CollectIncoming` 是全 world 扫描。本 Epic 前置：为 relationship 存储补 **反向邻接索引**（或等价的 per-typeId incoming cache），否则写入域路由（unit → 所属域反查 `TryResolveControlDomain`）在大战场不可用。FilterProfile 求值统一走「anchor 正向展开 → bitset → 与 raw hits 求交」，不做逐 hit 反查。

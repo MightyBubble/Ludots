@@ -29,6 +29,12 @@
 5. **控制组/Selection 双轨**：SelectionRuntime 仍是正式框选 SSOT；showcase 的域路由由 `ControlPlaneRoutedSelectionSystem`（mod 侧）从 formal selection 桥接——ORD-5/CTX-5 的 Core 级迁移未做（见尾巴）。
 6. **DomainStanceQuery 与 TeamManager 桥接一致性**：双写点在 `ParticipantBindingResolver.ResolveRelationships`（map attitude → TeamManager 矩阵 + teamRep→teamRep stance 边，同一循环）；任何绕过该入口直改 TeamManager 或直建 stance 边的代码都会造成双轨分叉。一致性由 `DomainStanceBridgeAcceptanceTests`（引擎级，全参与者对遍历）与 `ParticipantBindingContractTests` 的桥接用例守护；attitude↔stance 命名对齐是数据约定（enum 成员名 = catalog stance 名），不存在代码映射表。
 
+### 二.5 语义侵入复审结论（"control" 层）
+
+- **判定**：control plane（谁可指挥谁）与 knowledge plane 同级，是基建平面而非业务语义——场景（掉线/心控/演出/转移）全走 tag+profile 数据，Core 零改动，检验通过。
+- **已修**：`GameEngine` 曾 fail-fast 解析 `"Ally"` 但零消费者（强迫无结盟概念的游戏注册该类型）——已删除，场景类型的失败点移回引用它们的 profile 加载处。
+- **已声明的 Core 策略边界**（RFC DEC-1 已知边界小节）：① owns⊆controls 并集无法表达"控制抑制"（魅惑/恐惧原主失控），闭合路径 = suppression 谓词进并集；② controls 不传递（链式指挥用数据直连边表达）；③ 保留名契约仅 `Owns`/`Controls`/`MemberOf` 三个，改名需求走 catalog roles 间接层。审计时请核查没有消费方私自绕这三条边界。
+
 ## 三、未做的尾巴（按风险排序）
 
 | 尾巴 | 原因 | 建议 |
