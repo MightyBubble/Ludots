@@ -43,6 +43,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         /// If set, use this ability ID instead of the slot's default.
         /// </summary>
         public const int Cast_AbilityId = 113;
+
+        /// <summary>
+        /// Facing angle for the ability in positive degrees (BlackboardFloatBuffer).
+        /// Used by facing-sector queries when a cast has an explicit authored aim direction.
+        /// </summary>
+        public const int Cast_Facing = 114;
         
         // ========== Attack Order (120-129) ==========
         
@@ -130,6 +136,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             new("Cast.TargetEntity", Cast_TargetEntity),
             new("Cast.TargetPosition", Cast_TargetPosition),
             new("Cast.AbilityId", Cast_AbilityId),
+            new("Cast.Facing", Cast_Facing),
             new("Attack.TargetEntity", Attack_TargetEntity),
             new("Attack.MovePosition", Attack_MovePosition),
             new("Attack.IsAttackMove", Attack_IsAttackMove),
