@@ -211,7 +211,8 @@ public sealed class FogOfWarShowcaseAcceptanceTests
             new RelationshipMetricRegistry(),
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer(capacity: 4));
+            new RelationshipChangeBuffer(capacity: 4),
+            new RelationshipReverseIndex(world));
     }
 
     private static string FindRepoRoot()

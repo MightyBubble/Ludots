@@ -818,7 +818,8 @@ namespace Ludots.Tests.GAS
                 relationshipMetrics,
                 relationshipFlags,
                 relationshipBands,
-                new RelationshipChangeBuffer(capacity: 8));
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
             RelationshipCatalogInstaller.RegisterCatalog(
                 new RelationshipCatalogConfig
                 {

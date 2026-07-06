@@ -1,0 +1,14 @@
+{
+  "name": "ControlPlaneProjectionShowcaseMod",
+  "version": "1.0.0",
+  "description": "RFC-0065 control plane showcase: box selection routed by control domain, proxy control toggling via Controls grants, and viewer-relative owned/proxied marker projections with a CEF-ready dataplane contract.",
+  "main": "bin/net8.0/ControlPlaneProjectionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["control-plane", "selection", "collection", "relationship", "projection", "showcase"]
+}

@@ -122,6 +122,24 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasUseProgressionRequirement;
         public int ShowProgressionRequirementId;
         public bool HasShowProgressionRequirement;
+
+        // ── Catalog classification (RFC-0065 DEC-14) ──
+        /// <summary>
+        /// Catalog tags declared on the ability (abilities.json <c>catalogTags</c>).
+        /// Pure classification data for semantic routing (e.g. CommandIntentProfile
+        /// <c>hasAbilityWithTag</c> / <c>byAbilityTag</c>); Core never interprets tag names.
+        /// </summary>
+        public GameplayTagContainer CatalogTags;
+        public bool HasCatalogTags;
+
+        // ── Interaction context binding (RFC-0065 CTX-6) ──
+        /// <summary>
+        /// Optional InteractionContextProfile id (abilities.json <c>interactionContextProfile</c>).
+        /// While an exec instance of this ability runs, the client pushes the profile's context
+        /// frame and reclaims it when the exec ends/aborts; Core never interprets the id.
+        /// </summary>
+        public string InteractionContextProfileId;
+        public bool HasInteractionContextProfile;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -171,6 +189,58 @@ namespace Ludots.Core.Gameplay.GAS
 
             definition = _items[abilityId];
             return true;
+        }
+
+        /// <summary>In-place catalog tag probe (no definition copy); hot path for semantic routing (RFC-0065 DEC-14).</summary>
+        public bool HasCatalogTag(int abilityId, int tagId)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                return false;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
+        }
+
+        /// <summary>
+        /// In-place interaction context profile probe (no definition copy); hot path for the exec
+        /// lifecycle context system (RFC-0065 CTX-6). False when the ability is unknown or declares
+        /// no <see cref="AbilityDefinition.InteractionContextProfileId"/>.
+        /// </summary>
+        public bool TryGetInteractionContextProfileId(int abilityId, out string profileId)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                profileId = string.Empty;
+                return false;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            if (!definition.HasInteractionContextProfile)
+            {
+                profileId = string.Empty;
+                return false;
+            }
+
+            profileId = definition.InteractionContextProfileId;
+            return true;
+        }
+
+        /// <summary>
+        /// Lowest catalog tag id shared between the ability's <see cref="AbilityDefinition.CatalogTags"/>
+        /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
+        /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
+        /// </summary>
+        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagContainer mask)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                return 0;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            return definition.HasCatalogTags ? definition.CatalogTags.FirstCommonTag(in mask) : 0;
         }
 
         public void RegisterFromEntity(World world, Entity templateEntity, int abilityId)

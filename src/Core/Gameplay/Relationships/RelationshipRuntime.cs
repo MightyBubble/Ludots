@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Relationships;
 
@@ -7,15 +6,13 @@ namespace Ludots.Core.Gameplay.Relationships
 {
     public sealed class RelationshipRuntime
     {
-        private static readonly QueryDescription RelationshipQuery = new QueryDescription()
-            .WithAll<Relationship<RelationshipEdgeSet>>();
-
         private readonly World _world;
         private readonly RelationshipTypeRegistry _types;
         private readonly RelationshipMetricRegistry _metrics;
         private readonly RelationshipFlagRegistry _flags;
         private readonly RelationshipBandRegistry _bands;
         private readonly RelationshipChangeBuffer _changes;
+        private readonly RelationshipReverseIndex _reverseIndex;
 
         public RelationshipRuntime(
             World world,
@@ -23,7 +20,8 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
             RelationshipBandRegistry bands,
-            RelationshipChangeBuffer changes)
+            RelationshipChangeBuffer changes,
+            RelationshipReverseIndex reverseIndex)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -31,9 +29,13 @@ namespace Ludots.Core.Gameplay.Relationships
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
             _bands = bands ?? throw new ArgumentNullException(nameof(bands));
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
+            _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
+
+        /// <summary>Reverse adjacency index backing incoming-edge queries.</summary>
+        public RelationshipReverseIndex ReverseIndex => _reverseIndex;
 
         public bool HasLink(Entity source, Entity target)
         {
@@ -81,6 +83,8 @@ namespace Ludots.Core.Gameplay.Relationships
             {
                 source.AddRelationship(target, set);
             }
+
+            _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
@@ -104,10 +108,13 @@ namespace Ludots.Core.Gameplay.Relationships
             if (set.Count == 0)
             {
                 source.RemoveRelationship<RelationshipEdgeSet>(target);
-                return;
+            }
+            else
+            {
+                source.SetRelationship(target, set);
             }
 
-            source.SetRelationship(target, set);
+            _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
         }
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
@@ -286,6 +293,11 @@ namespace Ludots.Core.Gameplay.Relationships
             return CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer);
         }
 
+        /// <summary>
+        /// Collects live incoming sources straight from the reverse index. No per-source edge re-verification:
+        /// <see cref="EnsureLink"/>/<see cref="RemoveLink"/> are the only edge mutation paths (M9 guardrail)
+        /// and both notify the index, while entity death is covered by the index's lazy IsAlive reclamation.
+        /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
         {
             if (!_world.IsAlive(target) || buffer.Length == 0)
@@ -293,40 +305,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return 0;
             }
 
-            int validatedTypeId = ValidateFilterTypeId(typeId);
-            int count = 0;
-            foreach (ref var chunk in _world.Query(in RelationshipQuery))
-            {
-                ref Entity sourceFirst = ref chunk.Entity(0);
-                Span<Relationship<RelationshipEdgeSet>> relationshipSpans = chunk.GetSpan<Relationship<RelationshipEdgeSet>>();
-                foreach (int index in chunk)
-                {
-                    if (count >= buffer.Length)
-                    {
-                        break;
-                    }
-
-                    Entity source = Unsafe.Add(ref sourceFirst, index);
-                    ref Relationship<RelationshipEdgeSet> relationships = ref relationshipSpans[index];
-                    foreach ((Entity key, RelationshipEdgeSet set) in relationships)
-                    {
-                        if (key != target || !MatchesType(set, validatedTypeId))
-                        {
-                            continue;
-                        }
-
-                        buffer[count++] = source;
-                        break;
-                    }
-                }
-
-                if (count >= buffer.Length)
-                {
-                    break;
-                }
-            }
-
-            return count;
+            return _reverseIndex.CopyIncoming(target, ValidateFilterTypeId(typeId), buffer);
         }
 
         public int CollectMutual(Entity first, Entity second, Span<Entity> buffer)

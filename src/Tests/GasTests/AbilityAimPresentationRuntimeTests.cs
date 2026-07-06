@@ -772,7 +772,8 @@ namespace Ludots.Tests.GAS
                 metricRegistry,
                 flagRegistry,
                 bandRegistry,
-                changeBuffer);
+                changeBuffer,
+                new RelationshipReverseIndex(_world));
             var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
             var entityQueries = new EntitySetQueryRuntime(_world, tagOps, relationships);
             int assistTypeId = typeRegistry.Register("Assist");

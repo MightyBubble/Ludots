@@ -13,6 +13,15 @@ namespace EntityCommandPanelMod
     {
         private const string InstalledKey = "EntityCommandPanelMod.Installed";
 
+        /// <summary>
+        /// Default panel aggregation profile for collection selections (RFC-0065 PNL-4, DEC-10).
+        /// The profile itself is declared in this mod's own
+        /// <c>assets/Configs/UI/ability_aggregation_profiles.json</c> fragment (ArrayById merge into
+        /// the Core structural profiles); switchable at runtime via
+        /// <see cref="Runtime.CollectionGasEntityCommandPanelSource.SetAggregationProfile"/>.
+        /// </summary>
+        private const string DefaultAggregationProfileId = "aggregation.by_family";
+
         public void OnLoad(IModContext context)
         {
             context.Log("[EntityCommandPanelMod] Loaded");
@@ -55,8 +64,13 @@ namespace EntityCommandPanelMod
             var gasSource = new GasEntityCommandPanelSource(engine);
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new System.InvalidOperationException("EntityCollectionStore must be registered before EntityCommandPanelMod installs.");
+            var aggregationProfiles = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
+                ?? throw new System.InvalidOperationException("AbilityAggregationProfileRegistry must be registered before EntityCommandPanelMod installs.");
             sources.Register(GasEntityCommandPanelSource.SourceId, gasSource);
-            sources.Register(CollectionGasEntityCommandPanelSource.SourceId, new CollectionGasEntityCommandPanelSource(collections, gasSource, collectionQueries));
+            sources.Register(
+                CollectionGasEntityCommandPanelSource.SourceId,
+                new CollectionGasEntityCommandPanelSource(
+                    engine, collections, gasSource, collectionQueries, aggregationProfiles, DefaultAggregationProfileId));
 
             var runtime = new EntityCommandPanelRuntime(engine, sources, handles);
             var controller = new EntityCommandPanelController(engine, runtime);

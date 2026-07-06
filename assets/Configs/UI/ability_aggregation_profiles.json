@@ -1,0 +1,4 @@
+[
+  { "id": "aggregation.by_template", "groupBy": "template.id" },
+  { "id": "aggregation.by_ability_id", "groupBy": "ability.id" }
+]

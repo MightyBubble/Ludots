@@ -1,0 +1,11 @@
+{
+  "types": [
+    { "id": "Ally", "isSymmetric": true }
+  ],
+  "metrics": [],
+  "flags": [],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

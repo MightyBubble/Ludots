@@ -245,7 +245,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 4));
+                new RelationshipChangeBuffer(capacity: 4),
+                new RelationshipReverseIndex(world));
         }
     }
 }

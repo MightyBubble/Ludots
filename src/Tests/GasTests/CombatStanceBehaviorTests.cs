@@ -284,7 +284,7 @@ public sealed class CombatStanceBehaviorTests
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();
             var relationshipChanges = new RelationshipChangeBuffer();
-            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges);
+            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges, new RelationshipReverseIndex(world));
             var teamLookup = new TeamEntityLookup();
             var partition = new ChunkedGridSpatialPartitionWorld(64);
             var spec = new WorldSizeSpec(new WorldAabbCm(-5000, -5000, 10000, 10000), 100);

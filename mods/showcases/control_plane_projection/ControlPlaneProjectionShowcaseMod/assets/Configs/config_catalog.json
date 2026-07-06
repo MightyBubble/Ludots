@@ -1,0 +1,5 @@
+[
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }
+]
