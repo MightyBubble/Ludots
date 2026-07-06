@@ -143,6 +143,66 @@ namespace Ludots.Tests.GAS
             Assert.That(allocated, Is.EqualTo(0));
         }
 
+        /// <summary>
+        /// Budget guard for the documented partial-domain complexity contract: one O(rows) hash-probe pass.
+        /// A 10k-row foreign collection with 8 direct unit grants must project exactly the granted rows in
+        /// collection order and stay allocation-free in steady state.
+        /// </summary>
+        [Test]
+        public void PartialDomainProjection_TenThousandRowForeignCollection_StaysCorrectAndAllocationFree()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity mOwn = world.Create();
+            harness.Ownership.EnsureOwnership(p1Rep, mOwn);
+
+            const int foreignRows = 10_000;
+            const int grantCount = 8;
+            var foreign = new Entity[foreignRows];
+            for (int i = 0; i < foreignRows; i++)
+            {
+                foreign[i] = world.Create();
+                harness.Ownership.EnsureOwnership(p3Rep, foreign[i]);
+            }
+
+            var granted = new Entity[grantCount];
+            for (int i = 0; i < grantCount; i++)
+            {
+                granted[i] = foreign[i * (foreignRows / grantCount) + 3];
+                harness.Relationships.EnsureLink(p1Rep, granted[i], harness.ControlsTypeId);
+            }
+
+            harness.ReplaceDomainCollection(p1Rep, stackalloc Entity[] { mOwn });
+            harness.ReplaceDomainCollection(p3Rep, foreign);
+
+            var expected = new Entity[grantCount + 1];
+            expected[0] = mOwn;
+            Array.Copy(granted, 0, expected, 1, grantCount);
+
+            var members = new Entity[grantCount + 4];
+            int count = harness.View.CopyMembers(p1Rep, harness.CommandSourceKeyId, members);
+            Assert.That(members[..count], Is.EqualTo(expected),
+                "The partial domain must contribute exactly the granted rows, in collection order.");
+
+            long allocated = MeasureBudgetReadAllocations(harness, p1Rep, members);
+            allocated = Math.Min(allocated, MeasureBudgetReadAllocations(harness, p1Rep, members));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        private static long MeasureBudgetReadAllocations(Harness harness, Entity anchorRep, Entity[] members)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000; i++)
+            {
+                harness.View.CopyMembers(anchorRep, harness.CommandSourceKeyId, members);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
         private static long MeasureViewReadAllocations(Harness harness, Entity anchorRep, Entity[] members, Entity[] domains)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();

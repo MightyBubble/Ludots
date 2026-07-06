@@ -72,6 +72,92 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        /// <summary>
+        /// CollectIncoming delegates to the index without per-source edge re-verification, so this regression
+        /// must stay green under entity destruction, not just link churn. Destroyed entities are never
+        /// re-created within a round: id recycling bumps entity versions, and the vendored Arch
+        /// <c>Entity.CompareTo</c> composes field comparisons with bit-or, which is an inconsistent comparator
+        /// for mixed-version keys and corrupts the world-side SortedList buffers themselves (pre-existing
+        /// vendored limitation, independent of the reverse index). Fresh worlds per round keep versions uniform.
+        /// </summary>
+        [Test]
+        public void CollectIncoming_MatchesNaiveReferenceUnderRandomizedMutationsWithDestroys()
+        {
+            Span<Entity> buffer = stackalloc Entity[24];
+            for (int round = 0; round < 8; round++)
+            {
+                using var world = World.Create();
+                var types = new RelationshipTypeRegistry();
+                var runtime = CreateRuntime(world, types, new RelationshipMetricRegistry(), out RelationshipReverseIndex index);
+                int[] typeIds =
+                {
+                    types.Register("SocialBond"),
+                    types.Register("Hostility"),
+                    types.Register("Owns"),
+                };
+
+                var entities = new List<Entity>(16);
+                for (int i = 0; i < 16; i++)
+                {
+                    entities.Add(world.Create());
+                }
+
+                var reference = new HashSet<(Entity Source, Entity Target, int TypeId)>();
+                var random = new Random(20260706 + round);
+                for (int step = 0; step < 500; step++)
+                {
+                    int roll = random.Next(10);
+                    if (roll < 4)
+                    {
+                        Entity source = entities[random.Next(entities.Count)];
+                        Entity target = entities[random.Next(entities.Count)];
+                        int typeId = typeIds[random.Next(typeIds.Length)];
+                        runtime.EnsureLink(source, target, typeId);
+                        reference.Add((source, target, typeId));
+                    }
+                    else if (roll < 8)
+                    {
+                        Entity source = entities[random.Next(entities.Count)];
+                        Entity target = entities[random.Next(entities.Count)];
+                        int typeId = typeIds[random.Next(typeIds.Length)];
+                        runtime.RemoveLink(source, target, typeId);
+                        reference.Remove((source, target, typeId));
+                    }
+                    else if (roll < 9 && entities.Count > 6)
+                    {
+                        int victimIndex = random.Next(entities.Count);
+                        Entity victim = entities[victimIndex];
+                        world.Destroy(victim);
+                        entities.RemoveAt(victimIndex);
+                        reference.RemoveWhere(edge => edge.Source == victim || edge.Target == victim);
+                    }
+                    else
+                    {
+                        index.Compact();
+                    }
+
+                    if (step % 100 != 0 && step != 499)
+                    {
+                        continue;
+                    }
+
+                    foreach (Entity target in entities)
+                    {
+                        foreach (int typeId in typeIds)
+                        {
+                            Entity[] expected = NaiveIncoming(reference, target, typeId);
+                            int count = runtime.CollectIncoming(target, typeId, buffer);
+                            Assert.That(buffer[..count].ToArray(), Is.EquivalentTo(expected), $"round {round}, step {step}, typeId {typeId}");
+                        }
+
+                        Entity[] expectedAny = NaiveIncoming(reference, target, RelationshipTypeRegistry.AnyTypeId);
+                        int anyCount = runtime.CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer);
+                        Assert.That(buffer[..anyCount].ToArray(), Is.EquivalentTo(expectedAny), $"round {round}, step {step}, AnyTypeId");
+                    }
+                }
+            }
+        }
+
         [Test]
         public void CollectIncoming_TruncatesToBufferLengthWithoutDuplicates()
         {

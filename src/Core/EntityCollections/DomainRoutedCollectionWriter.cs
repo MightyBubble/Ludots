@@ -26,6 +26,10 @@ namespace Ludots.Core.EntityCollections
     /// per domain rep, tagged with the maintaining writer domain. Entities without a resolvable domain are
     /// handled per the caller's <see cref="DomainRoutingUnresolvedPolicy"/>. Collections never migrate across
     /// domains; domains written by the previous routed batch but absent from the current one are cleared for the key.
+    /// A given (domain, key) row is the domain's shared command state, not a per-controller view: concurrent
+    /// controllers writing the same key overwrite each other (last write wins) and the recorded writer domain only
+    /// tracks the last maintainer — controllers needing a private parallel selection write a different collection
+    /// key (per-controller context frame → distinct activeCollectionKey), per RFC-0065 DEC-4.
     /// Grouping is a single pass over the batch (counting-sort layout), O(rows + domains), allocation free at steady state.
     /// </summary>
     public sealed class DomainRoutedCollectionWriter

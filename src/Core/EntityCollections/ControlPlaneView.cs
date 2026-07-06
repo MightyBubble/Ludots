@@ -8,8 +8,14 @@ namespace Ludots.Core.EntityCollections
     /// Composite read-only control-plane view (RFC-0065 §5.10 / CTRL-4d). For an anchor rep it concatenates the
     /// <c>(domainRep, collectionKeyId)</c> collections of every control-reachable domain (anchor first). Fully
     /// controlled domains contribute all rows; partially controlled domains (reached only through a Controls grant
-    /// to a plain unit) contribute only the rows that are themselves controllable by the anchor. Nothing is
-    /// materialized: a Controls edge disappearing shrinks the view on the next read while each domain keeps its rows.
+    /// to a plain unit) contribute only the anchor's directly granted units. Nothing is materialized: a Controls
+    /// edge disappearing shrinks the view on the next read while each domain keeps its rows.
+    /// <para>
+    /// Complexity contract: a fully controlled domain is a straight block copy. A partially controlled domain is
+    /// a single O(rows) pass over its collection with an O(1) pooled hash probe per row against the materialized
+    /// direct-grant unit set (grant out-degree is small). True O(granted_rows) would require an entity→row index
+    /// inside <see cref="EntityCollectionStore"/> and is deliberately out of scope here.
+    /// </para>
     /// </summary>
     public sealed class ControlPlaneView
     {
@@ -17,6 +23,9 @@ namespace Ludots.Core.EntityCollections
         private readonly ControlDomainQuery _domains;
         private Entity[] _domainScratch = new Entity[8];
         private bool[] _fullyControlledScratch = new bool[8];
+        private Entity[] _unitGrantScratch = new Entity[8];
+        private Entity[] _probeEntities = new Entity[16];
+        private bool[] _probeUsed = new bool[16];
 
         public ControlPlaneView(EntityCollectionStore store, ControlDomainQuery domains)
         {
@@ -58,7 +67,7 @@ namespace Ludots.Core.EntityCollections
 
                 int copied = _fullyControlledScratch[d]
                     ? _store.CopyEntities(handle, 0, entities[written..])
-                    : CopyControllableRows(anchorRep, handle, entities[written..]);
+                    : CopyControllableRows(anchorRep, domainRep, handle, entities[written..]);
                 if (!domains.IsEmpty)
                 {
                     domains.Slice(written, copied).Fill(domainRep);
@@ -70,18 +79,34 @@ namespace Ludots.Core.EntityCollections
             return written;
         }
 
-        /// <summary>Row-level projection for a partially controlled domain: only rows the anchor can control.</summary>
-        private int CopyControllableRows(Entity anchorRep, EntityCollectionHandle handle, Span<Entity> destination)
+        /// <summary>
+        /// Row-level projection for a partially controlled domain: materializes the anchor's direct-grant unit
+        /// set for the domain into a pooled hash set, then filters the collection in one pass with O(1) probes
+        /// instead of an owns-chain query per row.
+        /// </summary>
+        private int CopyControllableRows(Entity anchorRep, Entity domainRep, EntityCollectionHandle handle, Span<Entity> destination)
         {
             if (!_store.TryGetView(handle, out EntityCollectionView view))
             {
                 return 0;
             }
 
+            int grantCount = CollectDirectUnitGrants(anchorRep, domainRep);
+            if (grantCount == 0)
+            {
+                return 0;
+            }
+
+            PrepareProbeSet(grantCount);
+            for (int i = 0; i < grantCount; i++)
+            {
+                AddToProbeSet(_unitGrantScratch[i]);
+            }
+
             int written = 0;
             for (int i = 0; i < view.Count && written < destination.Length; i++)
             {
-                if (_store.TryGetEntityAt(handle, i, out Entity row) && _domains.IsControllableBy(anchorRep, row))
+                if (_store.TryGetEntityAt(handle, i, out Entity row) && ProbeSetContains(row))
                 {
                     destination[written++] = row;
                 }
@@ -126,6 +151,86 @@ namespace Ludots.Core.EntityCollections
                 Array.Resize(ref _domainScratch, _domainScratch.Length * 2);
                 Array.Resize(ref _fullyControlledScratch, _fullyControlledScratch.Length * 2);
             }
+        }
+
+        private int CollectDirectUnitGrants(Entity anchorRep, Entity domainRep)
+        {
+            while (true)
+            {
+                int count = _domains.CollectDirectUnitGrants(anchorRep, domainRep, _unitGrantScratch);
+                if (count < _unitGrantScratch.Length)
+                {
+                    return count;
+                }
+
+                Array.Resize(ref _unitGrantScratch, _unitGrantScratch.Length * 2);
+            }
+        }
+
+        /// <summary>Resets the pooled open-addressed probe set for at most <paramref name="expectedCount"/> insertions.</summary>
+        private void PrepareProbeSet(int expectedCount)
+        {
+            int required = NextPowerOfTwo(Math.Max(4, expectedCount * 2));
+            if (_probeEntities.Length < required)
+            {
+                _probeEntities = new Entity[required];
+                _probeUsed = new bool[required];
+            }
+            else
+            {
+                Array.Clear(_probeUsed, 0, _probeUsed.Length);
+            }
+        }
+
+        private void AddToProbeSet(Entity candidate)
+        {
+            int mask = _probeEntities.Length - 1;
+            int slot = ProbeSlot(candidate, mask);
+            while (_probeUsed[slot])
+            {
+                if (_probeEntities[slot] == candidate)
+                {
+                    return;
+                }
+
+                slot = (slot + 1) & mask;
+            }
+
+            _probeEntities[slot] = candidate;
+            _probeUsed[slot] = true;
+        }
+
+        private bool ProbeSetContains(Entity candidate)
+        {
+            int mask = _probeEntities.Length - 1;
+            int slot = ProbeSlot(candidate, mask);
+            while (_probeUsed[slot])
+            {
+                if (_probeEntities[slot] == candidate)
+                {
+                    return true;
+                }
+
+                slot = (slot + 1) & mask;
+            }
+
+            return false;
+        }
+
+        private static int ProbeSlot(Entity candidate, int mask)
+        {
+            return (int)((((uint)candidate.Id * 2654435761u) ^ (uint)candidate.WorldId) & (uint)mask);
+        }
+
+        private static int NextPowerOfTwo(int value)
+        {
+            int result = 1;
+            while (result < value)
+            {
+                result <<= 1;
+            }
+
+            return result;
         }
 
         private static uint HashCombine(uint hash, uint value)

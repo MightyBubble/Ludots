@@ -135,10 +135,19 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 - **「我的当前选中」是 ControlPlaneView**：对 `controls` 可达域集合的**组合只读视图**（EntityView 的 domainScope 扩展），不是物理合并的集合。Order fan-out 与 HUD 消费该视图。
 - **任何原因**导致 controls 边消失（掉线结束、心控解除、演出归还——association 层一概不知道原因），组合视图即时收缩；对方域内 collection 保持其最新状态，client 重新 bind 即所见即所得。「归还」是拓扑变化的涌现行为，零专用代码路径。
 - 「掉线」「心灵控制」「剧本演出接管」都只是 mod 侧打 tag / 增删边的领域 trigger；**association/collection 基建对这些语义零感知**，schema 里不出现任何场景词汇。
-- 多控制者并发写同一域：row 携带 `writerDomain` 追踪，写入按 authoritative input 顺序定序（确定性不受影响）。
+- 多控制者写同一域同一 key —— **共享单例，后写覆盖**（见下方小节）。
 - **路由策略是 collection profile 的声明字段**，不是全局行为：控制平面语义的 key（如 `collection.command.source`）声明 `writeRouting: byControlDomain`；技能目标语义的 key（如 `collection.ability.*.targets`，选的是目标而非"我维护的域"，可能包含敌方单位）声明 `writeRouting: toContextOwner`，写入 context frame 的 owner 域。两种都是数据，Core 不猜语义。
 
-### DEC-5 Provenance 由地址承载，viewer 语义拓扑现算
+#### DEC-4 附则：多控制者写同一 (domain, key) = 共享单例，后写覆盖（产品语义，非缺陷）
+
+当 P1 与 P3 同时 controls P2 域，双方的路由写都落在 `(P2Rep, collection.command.source)` 这一行地址上，**后写覆盖前写**。这是本决策的刻意语义，不是并发缺陷，理由：
+
+- **域 collection 是域的指挥状态，不是控制者的私有视图**。单一域在同一时刻只有一份「当前选中集」——两个控制者共享控制，就是共享同一份指挥状态，类比两人共用同一只鼠标：光标只有一个，谁最后动它它就在哪。
+- **这是「row 住在所属域、重连即所见即所得」的根基**。若按 writer 隔离出多份行，P2 重连 bind 自己的域时该读谁的行？「所见即所得」语义会碎裂成 N 份视角互相打架。共享单例保证域状态永远只有一个事实。
+- **`writerDomain` 是「最后维护者」的追踪元数据**（审计 + Performer 拓扑现算的输入），**不是隔离键**。它回答"这行是谁写的"，不制造平行副本。
+- **确定性**：并发定序由 authoritative input 顺序保证（同一 tick 内多个控制者的写按输入序列全序落地），双端回放逐字节一致。
+
+需要「并行私有选择」的场景有正交出口，**无需破坏域状态单例**：每个控制者推自己的 context frame → `activeCollectionKey` 不同 → 写入**不同的 collection key**（DEC-6 / M2 的 context 路由本来就是为此设计的）。同 key = 共享指挥状态；要私有，换 key，而不是给同 key 造隔离行。
 
 DEC-4 的域路由让 RFC-0064 方案 A 的写时快照大幅简化，且陈旧问题自然消失：
 
@@ -632,6 +641,15 @@ Feature: M3 代理控制是纯拓扑投影 [showcase]
     Then (P1Rep, collection.command.source) = [m01]
     And (P2Rep, collection.command.source) = [m99]   # 写入落在所属域，writerDomain=P1Rep
     And 玩家1 的 ControlPlaneView(command) 组合呈现 [m01, m99]
+
+  Scenario: 多控制者写同域同 key 是共享单例，后写覆盖（DEC-4 附则）
+    Given Controls(P1Rep → P2 域) 与 Controls(P3Rep → P2 域) 同时生效
+    When 玩家1 框选 [m99a(P2 owns)]
+    Then (P2Rep, collection.command.source) = [m99a]，writerDomain=P1Rep
+    When 玩家3 随后框选 [m99b(P2 owns)]
+    Then (P2Rep, collection.command.source) = [m99b]，writerDomain=P3Rep   # 后写覆盖，writerDomain 记录最后维护者
+    And 玩家1 的 ControlPlaneView(command) 读到 [m99b]                      # 共享的是同一份域指挥状态
+    And 需要并行私有选择时走正交出口：P1 push 自己的 context frame，用不同 collection key 写私有集，不触碰共享 key
 
   Scenario: 边消失即"归还"，不存在归还系统
     Given 代理期间玩家1 框选过 [m99]

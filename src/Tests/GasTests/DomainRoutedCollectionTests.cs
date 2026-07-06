@@ -128,6 +128,79 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ConcurrentControllers_SameDomainSameKey_IsSharedSingletonWithLastWriteWins()
+        {
+            // DEC-4 附则 UAT: a domain collection row is the domain's command state, not a per-controller
+            // private view. Two controllers of the same domain share one (domain, key) row — last write wins,
+            // writerDomain records the last maintainer. Private parallel selection uses a different key.
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity p3Rep = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity m99a = world.Create();
+            Entity m99b = world.Create();
+            harness.Ownership.EnsureOwnership(p2Rep, m99a);
+            harness.Ownership.EnsureOwnership(p2Rep, m99b);
+            harness.Relationships.EnsureLink(p1Rep, p2Rep, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(p3Rep, p2Rep, harness.ControlsTypeId);
+
+            harness.Writer.ReplaceRouted(
+                p1Rep,
+                harness.CommandSourceKeyId,
+                stackalloc Entity[] { m99a },
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
+
+            Span<Entity> rows = stackalloc Entity[4];
+            Assert.That(harness.Store.TryGet(p2Rep, harness.CommandSourceKeyId, out EntityCollectionHandle handle), Is.True);
+            Assert.That(harness.Store.CopyEntities(handle, 0, rows), Is.EqualTo(1));
+            Assert.That(rows[0], Is.EqualTo(m99a));
+            Assert.That(harness.Store.TryGetWriterDomainAt(handle, 0, out Entity writer), Is.True);
+            Assert.That(writer, Is.EqualTo(p1Rep));
+
+            harness.Writer.ReplaceRouted(
+                p3Rep,
+                harness.CommandSourceKeyId,
+                stackalloc Entity[] { m99b },
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
+
+            Assert.That(harness.Store.TryGet(p2Rep, harness.CommandSourceKeyId, out handle), Is.True);
+            Assert.That(harness.Store.CopyEntities(handle, 0, rows), Is.EqualTo(1), "Same (domain, key) is a shared singleton: the later write replaces the earlier one.");
+            Assert.That(rows[0], Is.EqualTo(m99b));
+            Assert.That(harness.Store.TryGetWriterDomainAt(handle, 0, out writer), Is.True);
+            Assert.That(writer, Is.EqualTo(p3Rep), "writerDomain records the last maintainer, it is not an isolation key.");
+
+            Span<Entity> members = stackalloc Entity[8];
+            int count = harness.View.CopyMembers(p1Rep, harness.CommandSourceKeyId, members);
+            Assert.That(members[..count].ToArray(), Is.EqualTo(new[] { m99b }), "Every controller's view reads the shared domain command state, not a private snapshot.");
+
+            // Orthogonal exit for private parallel selection: a per-controller context frame yields a
+            // different activeCollectionKey, so the writes land on a different (domain, key) row.
+            int privateKeyId = harness.Store.KeyRegistry.Register("collection.ctx.p1_frame.command.source");
+            harness.Writer.ReplaceRouted(
+                p1Rep,
+                privateKeyId,
+                stackalloc Entity[] { m99a },
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
+
+            Assert.That(harness.Store.TryGet(p2Rep, privateKeyId, out EntityCollectionHandle privateHandle), Is.True);
+            Assert.That(harness.Store.CopyEntities(privateHandle, 0, rows), Is.EqualTo(1));
+            Assert.That(rows[0], Is.EqualTo(m99a));
+            Assert.That(harness.Store.TryGetWriterDomainAt(privateHandle, 0, out writer), Is.True);
+            Assert.That(writer, Is.EqualTo(p1Rep));
+
+            Assert.That(harness.Store.TryGet(p2Rep, harness.CommandSourceKeyId, out handle), Is.True);
+            Assert.That(harness.Store.CopyEntities(handle, 0, rows), Is.EqualTo(1), "The private key must not disturb the shared key.");
+            Assert.That(rows[0], Is.EqualTo(m99b));
+            Assert.That(harness.Store.TryGetWriterDomainAt(handle, 0, out writer), Is.True);
+            Assert.That(writer, Is.EqualTo(p3Rep));
+        }
+
+        [Test]
         public void ReplaceRouted_WriterDomainPolicy_ExplicitlyRoutesDomainlessEntityToTheWriterDomain()
         {
             using var world = World.Create();

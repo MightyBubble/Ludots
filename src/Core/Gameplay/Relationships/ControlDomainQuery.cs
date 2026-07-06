@@ -166,6 +166,37 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         /// <summary>
+        /// Collects the plain units (no <see cref="PlayerIdentity"/>) directly granted to the controller through
+        /// Controls edges whose control domain resolves to <paramref name="domainRep"/> — exactly the rows a
+        /// partially controlled domain contributes to composite views. Results are de-duplicated and truncated
+        /// to the buffer length. Cost is O(grant out-degree); domain resolution is cached per target.
+        /// </summary>
+        public int CollectDirectUnitGrants(Entity controllerRep, Entity domainRep, Span<Entity> buffer)
+        {
+            if (controllerRep == Entity.Null || domainRep == Entity.Null || buffer.IsEmpty ||
+                !_world.IsAlive(controllerRep) || !_world.IsAlive(domainRep))
+            {
+                return 0;
+            }
+
+            int grantCount = CollectGrants(controllerRep);
+            int written = 0;
+            for (int i = 0; i < grantCount && written < buffer.Length; i++)
+            {
+                Entity target = _grantScratch[i];
+                if (_world.IsAlive(target) &&
+                    !_world.Has<PlayerIdentity>(target) &&
+                    TryResolveControlDomain(target, out Entity unitDomain) &&
+                    unitDomain == domainRep)
+                {
+                    written = AppendUnique(buffer, written, target);
+                }
+            }
+
+            return written;
+        }
+
+        /// <summary>
         /// Returns true when the target would appear in <see cref="CollectControlled"/> for the controller rep:
         /// it sits in the controller's owns subtree, is a directly granted non-rep entity, or sits in the owns
         /// subtree of a granted domain rep. Edge membership is resolved through the reverse index so per-row

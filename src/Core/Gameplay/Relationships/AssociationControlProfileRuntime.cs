@@ -15,11 +15,15 @@ namespace Ludots.Core.Gameplay.Relationships
     /// two roles, <c>revokeWhen</c> removes an edge this engine granted. All strings (tag names, edge names)
     /// are resolved to ids at load time; steady-state evaluation performs zero string comparisons and zero
     /// allocations. Candidates are the domain reps carrying <see cref="PlayerIdentity"/>, evaluated pairwise
-    /// (an O(players²) set). Edges granted by profiles carry the <c>Granted</c> relationship flag so revoke
-    /// never touches manually created edges. Re-evaluation is gated by the relationship reverse-index revision
-    /// and a tag-bit snapshot of the candidate reps projected onto the tags the profile predicates actually
-    /// reference (plus their rule disable masks, since predicates read the effective sense): an unchanged tick
-    /// or a change to an unreferenced tag does no predicate work.
+    /// (an O(players²) set). Every grant is attributed per (profile, from, to): the physical edge exists while
+    /// the active grant count for its (from, to, edgeType) triple is above zero, so a profile revoking its own
+    /// grant never kills an edge another profile still holds, independent of profile order. Edges granted by
+    /// profiles carry the <c>Granted</c> relationship flag so revoke never touches manually created edges.
+    /// Re-evaluation is gated by the relationship reverse-index revision and a tag-bit snapshot of the candidate
+    /// reps projected onto the tags the profile predicates actually reference (plus their rule disable masks,
+    /// since predicates read the effective sense): an unchanged tick or a change to an unreferenced tag does no
+    /// predicate work, and a tags-only change re-evaluates only the pairs touching a rep whose projection
+    /// changed (topology changes still run the full pair set).
     /// </summary>
     public sealed class AssociationControlProfileRuntime
     {
@@ -39,7 +43,11 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private readonly List<Entity> _candidates = new(8);
         private readonly ulong[] _relevantTagMask = new ulong[TagWordCount];
+        private readonly HashSet<GrantKey> _activeGrants = new(16);
+        private readonly Dictionary<EdgeKey, int> _edgeGrantCounts = new(16);
+        private readonly List<GrantKey> _grantSweepScratch = new(8);
         private ulong[] _tagSnapshot = new ulong[8 * TagWordCount];
+        private bool[] _candidateChanged = new bool[8];
         private uint _lastTopologyRevision;
         private bool _hasEvaluated;
 
@@ -62,8 +70,14 @@ namespace Ludots.Core.Gameplay.Relationships
         /// <summary>Number of registered profiles; zero profiles means the runtime is a no-op.</summary>
         public int ProfileCount => _profiles.Length;
 
-        /// <summary>Completed full evaluation passes; unchanged ticks must not advance this (revision gate).</summary>
+        /// <summary>Completed evaluation passes; unchanged ticks must not advance this (revision gate).</summary>
         public int EvaluationPassCount { get; private set; }
+
+        /// <summary>Total (from, to) pairs whose profiles were evaluated; budget probe for candidate narrowing.</summary>
+        public long EvaluatedPairCount { get; private set; }
+
+        /// <summary>Active (profile, from, to) grant records; diagnostics for attribution and sweep tests.</summary>
+        public int ActiveGrantCount => _activeGrants.Count;
 
         /// <summary>Compiles the profile catalog: every tag / edge / role string becomes an id here.</summary>
         public static AssociationControlProfileRuntime Create(
@@ -129,8 +143,9 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         /// <summary>
-        /// Re-evaluates all profiles over all candidate pairs when — and only when — the relationship topology
-        /// revision or a candidate rep's tag bits changed since the last pass.
+        /// Re-evaluates profiles when — and only when — the relationship topology revision or a candidate
+        /// rep's tag bits changed since the last pass. Topology changes evaluate all pairs (and sweep dangling
+        /// grant records); tags-only changes evaluate only the pairs touching a changed rep.
         /// </summary>
         public void Update()
         {
@@ -153,7 +168,8 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
-            EvaluatePairs();
+            SweepDanglingGrants();
+            EvaluatePairs(changedRepsOnly: !topologyChanged);
             _hasEvaluated = true;
             // Read the post-mutation revision so self-inflicted edge changes do not retrigger a pass.
             _lastTopologyRevision = _relationships.ReverseIndex.Revision;
@@ -173,8 +189,60 @@ namespace Ludots.Core.Gameplay.Relationships
                 Array.Resize(ref _tagSnapshot, Math.Max(required, _tagSnapshot.Length * 2));
             }
 
+            if (_candidateChanged.Length < _candidates.Count)
+            {
+                Array.Resize(ref _candidateChanged, Math.Max(_candidates.Count, _candidateChanged.Length * 2));
+            }
+
             // Invalidate the snapshot so the refresh below re-seeds it for the new candidate layout.
             Array.Clear(_tagSnapshot, 0, required);
+        }
+
+        /// <summary>
+        /// Lazily drops grant records whose endpoints died (their edges vanished with the entity) so the
+        /// grant set never accumulates dangling entries; runs once per evaluation pass, O(active grants).
+        /// </summary>
+        private void SweepDanglingGrants()
+        {
+            if (_activeGrants.Count == 0)
+            {
+                return;
+            }
+
+            _grantSweepScratch.Clear();
+            foreach (GrantKey grant in _activeGrants)
+            {
+                if (!_world.IsAlive(grant.From) || !_world.IsAlive(grant.To))
+                {
+                    _grantSweepScratch.Add(grant);
+                }
+            }
+
+            for (int i = 0; i < _grantSweepScratch.Count; i++)
+            {
+                GrantKey grant = _grantSweepScratch[i];
+                _activeGrants.Remove(grant);
+                DecrementEdgeGrantCount(new EdgeKey(grant.From, grant.To, _profiles[grant.ProfileIndex].EdgeTypeId));
+            }
+
+            _grantSweepScratch.Clear();
+        }
+
+        private void DecrementEdgeGrantCount(in EdgeKey edge)
+        {
+            if (!_edgeGrantCounts.TryGetValue(edge, out int count))
+            {
+                return;
+            }
+
+            if (count <= 1)
+            {
+                _edgeGrantCounts.Remove(edge);
+            }
+            else
+            {
+                _edgeGrantCounts[edge] = count - 1;
+            }
         }
 
         /// <summary>
@@ -216,6 +284,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
         }
 
+        /// <summary>Refreshes the per-rep projected snapshot and flags each rep whose projection changed.</summary>
         private unsafe bool RefreshTagSnapshot()
         {
             bool changed = false;
@@ -223,33 +292,37 @@ namespace Ludots.Core.Gameplay.Relationships
             {
                 Entity candidate = _candidates[i];
                 int baseIndex = i * TagWordCount;
+                bool candidateChanged = false;
                 if (!_world.IsAlive(candidate) || !_world.Has<GameplayTagContainer>(candidate))
                 {
                     for (int w = 0; w < TagWordCount; w++)
                     {
-                        changed |= _tagSnapshot[baseIndex + w] != 0;
+                        candidateChanged |= _tagSnapshot[baseIndex + w] != 0;
                         _tagSnapshot[baseIndex + w] = 0;
                     }
-
-                    continue;
                 }
-
-                ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(candidate);
-                fixed (ulong* bits = tags.Bits)
+                else
                 {
-                    for (int w = 0; w < TagWordCount; w++)
+                    ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(candidate);
+                    fixed (ulong* bits = tags.Bits)
                     {
-                        ulong masked = bits[w] & _relevantTagMask[w];
-                        changed |= _tagSnapshot[baseIndex + w] != masked;
-                        _tagSnapshot[baseIndex + w] = masked;
+                        for (int w = 0; w < TagWordCount; w++)
+                        {
+                            ulong masked = bits[w] & _relevantTagMask[w];
+                            candidateChanged |= _tagSnapshot[baseIndex + w] != masked;
+                            _tagSnapshot[baseIndex + w] = masked;
+                        }
                     }
                 }
+
+                _candidateChanged[i] = candidateChanged;
+                changed |= candidateChanged;
             }
 
             return changed;
         }
 
-        private void EvaluatePairs()
+        private void EvaluatePairs(bool changedRepsOnly)
         {
             for (int from = 0; from < _candidates.Count; from++)
             {
@@ -266,41 +339,70 @@ namespace Ludots.Core.Gameplay.Relationships
                         continue;
                     }
 
+                    // Predicates only read the pair's own tags and the edges between the two reps, so a
+                    // tags-only pass can skip every pair whose endpoints both kept their projection.
+                    if (changedRepsOnly && !_candidateChanged[from] && !_candidateChanged[to])
+                    {
+                        continue;
+                    }
+
                     Entity toRep = _candidates[to];
                     if (!_world.IsAlive(toRep))
                     {
                         continue;
                     }
 
+                    EvaluatedPairCount++;
                     for (int p = 0; p < _profiles.Length; p++)
                     {
-                        EvaluateProfile(_profiles[p], fromRep, toRep);
+                        EvaluateProfile(p, fromRep, toRep);
                     }
                 }
             }
         }
 
-        private void EvaluateProfile(CompiledProfile profile, Entity fromRep, Entity toRep)
+        private void EvaluateProfile(int profileIndex, Entity fromRep, Entity toRep)
         {
+            CompiledProfile profile = _profiles[profileIndex];
             bool exists = _relationships.HasLink(fromRep, toRep, profile.EdgeTypeId);
+            var grantKey = new GrantKey(profileIndex, fromRep, toRep);
+            var edgeKey = new EdgeKey(fromRep, toRep, profile.EdgeTypeId);
             if (Evaluate(profile, profile.WhenRoot, fromRep, toRep))
             {
+                // An existing edge without the Granted flag is a manual edge; the profile never claims it.
+                if (exists && !_relationships.HasFlag(fromRep, toRep, profile.EdgeTypeId, _grantedFlagId))
+                {
+                    return;
+                }
+
+                if (_activeGrants.Add(grantKey))
+                {
+                    _edgeGrantCounts.TryGetValue(edgeKey, out int count);
+                    _edgeGrantCounts[edgeKey] = count + 1;
+                }
+
                 if (!exists)
                 {
                     _relationships.EnsureLink(fromRep, toRep, profile.EdgeTypeId);
                     _relationships.SetFlag(fromRep, toRep, profile.EdgeTypeId, _grantedFlagId, enabled: true);
                 }
 
-                // An existing edge without the Granted flag is a manual edge; the profile never claims it.
                 return;
             }
 
+            // Revoke only releases this profile's own grant; the edge stays while any other grant holds it.
             if (profile.RevokeRoot >= 0 &&
-                exists &&
-                _relationships.HasFlag(fromRep, toRep, profile.EdgeTypeId, _grantedFlagId) &&
+                _activeGrants.Contains(grantKey) &&
                 Evaluate(profile, profile.RevokeRoot, fromRep, toRep))
             {
-                _relationships.RemoveLink(fromRep, toRep, profile.EdgeTypeId);
+                _activeGrants.Remove(grantKey);
+                DecrementEdgeGrantCount(in edgeKey);
+                if (!_edgeGrantCounts.ContainsKey(edgeKey) &&
+                    exists &&
+                    _relationships.HasFlag(fromRep, toRep, profile.EdgeTypeId, _grantedFlagId))
+                {
+                    _relationships.RemoveLink(fromRep, toRep, profile.EdgeTypeId);
+                }
             }
         }
 
@@ -410,6 +512,66 @@ namespace Ludots.Core.Gameplay.Relationships
             public void Update(Entity entity, ref PlayerIdentity identity)
             {
                 Candidates.Add(entity);
+            }
+        }
+
+        /// <summary>Attribution key of one active grant: which profile holds which directed pair.</summary>
+        private readonly struct GrantKey : IEquatable<GrantKey>
+        {
+            public GrantKey(int profileIndex, Entity from, Entity to)
+            {
+                ProfileIndex = profileIndex;
+                From = from;
+                To = to;
+            }
+
+            public readonly int ProfileIndex;
+            public readonly Entity From;
+            public readonly Entity To;
+
+            public bool Equals(GrantKey other)
+            {
+                return ProfileIndex == other.ProfileIndex && From == other.From && To == other.To;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is GrantKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(ProfileIndex, From, To);
+            }
+        }
+
+        /// <summary>Identity of one physical edge; its grant count decides whether the engine keeps it alive.</summary>
+        private readonly struct EdgeKey : IEquatable<EdgeKey>
+        {
+            public EdgeKey(Entity from, Entity to, int edgeTypeId)
+            {
+                From = from;
+                To = to;
+                EdgeTypeId = edgeTypeId;
+            }
+
+            public readonly Entity From;
+            public readonly Entity To;
+            public readonly int EdgeTypeId;
+
+            public bool Equals(EdgeKey other)
+            {
+                return From == other.From && To == other.To && EdgeTypeId == other.EdgeTypeId;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is EdgeKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(From, To, EdgeTypeId);
             }
         }
 

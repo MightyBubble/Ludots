@@ -160,6 +160,123 @@ namespace Ludots.Tests.GAS
             Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.False, "not(any(a|b)) must revoke.");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void TwoProfilesGrantSameEdge_RevokingOneKeepsTheStillActiveGrant(bool reversedProfileOrder)
+        {
+            const string tagA = "test.grant.first";
+            const string tagB = "test.grant.second";
+            var catalog = new AssociationControlProfileCatalogConfig
+            {
+                Profiles =
+                {
+                    CreateTagTriggeredProfile("profile.control.first", tagA),
+                    CreateTagTriggeredProfile("profile.control.second", tagB),
+                },
+            };
+            if (reversedProfileOrder)
+            {
+                catalog.Profiles.Reverse();
+            }
+
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, catalog);
+
+            harness.AddTag(harness.P2Rep, tagA);
+            harness.AddTag(harness.P2Rep, tagB);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(2), "Both profiles must record their own grant.");
+
+            harness.RemoveTag(harness.P2Rep, tagB);
+            harness.Runtime.Update();
+            Assert.That(
+                harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId),
+                Is.True,
+                "A still-active profile granting the same Controls edge must keep the edge alive regardless of profile order.");
+            Assert.That(
+                harness.Relationships.HasFlag(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId, harness.GrantedFlagId),
+                Is.True,
+                "The surviving grant keeps the Granted flag.");
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(1), "Revoke must only release the revoking profile's grant.");
+
+            harness.RemoveTag(harness.P2Rep, tagA);
+            harness.Runtime.Update();
+            Assert.That(
+                harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId),
+                Is.False,
+                "Revoking the last grant must remove the edge.");
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ThreeProfilesSameEdge_PartialOverlap_EdgeSurvivesUntilLastGrantRevoked()
+        {
+            const string tagA = "test.grant.a";
+            const string tagB = "test.grant.b";
+            const string tagC = "test.grant.c";
+            var catalog = new AssociationControlProfileCatalogConfig
+            {
+                Profiles =
+                {
+                    CreateTagTriggeredProfile("profile.control.a", tagA),
+                    CreateTagTriggeredProfile("profile.control.b", tagB),
+                    CreateTagTriggeredProfile("profile.control.c", tagC),
+                },
+            };
+
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, catalog);
+
+            harness.AddTag(harness.P2Rep, tagA);
+            harness.AddTag(harness.P2Rep, tagB);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(2));
+
+            harness.AddTag(harness.P2Rep, tagC);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(3), "The late profile joins the existing engine edge.");
+
+            harness.RemoveTag(harness.P2Rep, tagA);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(2));
+
+            harness.RemoveTag(harness.P2Rep, tagC);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(1));
+
+            harness.RemoveTag(harness.P2Rep, tagB);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.False);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void DestroyedGrantor_ReevaluationSweepsDanglingGrantRecords()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, CreateProxyProfileCatalog());
+
+            harness.AddTag(harness.P2Rep, TriggerTag);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(1));
+
+            world.Destroy(harness.P2Rep);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0), "Grants whose endpoints died must be reclaimed.");
+
+            // Further passes over the stale candidate slot must not throw or resurrect state.
+            harness.AddTag(harness.P1Rep, TriggerTag);
+            harness.Runtime.Update();
+            harness.RemoveTag(harness.P1Rep, TriggerTag);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0));
+        }
+
         [Test]
         public void UnchangedTicks_SkipEvaluationAndAllocateZero()
         {
@@ -418,6 +535,87 @@ namespace Ludots.Tests.GAS
             Assert.That(rows[0], Is.EqualTo(m99));
         }
 
+        [Test]
+        public void SingleRepTagFlip_EvaluatesOnlyPairsTouchingTheChangedRep_AndAllocatesZero()
+        {
+            const int repCount = 64;
+            const int profileCount = 4;
+            const string flipTag = "test.budget.trigger_0";
+            var catalog = new AssociationControlProfileCatalogConfig();
+            for (int i = 0; i < profileCount; i++)
+            {
+                // The Ally gate never holds here, so flips exercise the full predicate path
+                // without physical edge churn polluting the allocation window.
+                catalog.Profiles.Add(new AssociationControlProfileConfig
+                {
+                    Id = $"profile.control.budget_{i}",
+                    When = new AssociationControlConditionConfig
+                    {
+                        All = new List<AssociationControlConditionConfig>
+                        {
+                            new() { Relationship = "Ally", Between = new List<string> { "grantee", "grantor" } },
+                            new() { Tag = $"test.budget.trigger_{i}", On = "grantor" },
+                        },
+                    },
+                    Grant = new AssociationControlGrantConfig { EdgeType = "Controls", From = "grantee", To = "grantor" },
+                    RevokeWhen = new AssociationControlConditionConfig
+                    {
+                        Not = new AssociationControlConditionConfig { Tag = $"test.budget.trigger_{i}", On = "grantor" },
+                    },
+                });
+            }
+
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, catalog, linkAllies: false);
+            for (int i = 2; i < repCount; i++)
+            {
+                world.Create(
+                    new PlayerIdentity { PlayerId = i + 1 },
+                    new GameplayTagContainer(),
+                    new TagCountContainer());
+            }
+
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.EvaluatedPairCount, Is.EqualTo((long)repCount * (repCount - 1)), "The bootstrap pass covers all pairs.");
+
+            Entity flipped = harness.P2Rep;
+            int passesBeforeFlip = harness.Runtime.EvaluationPassCount;
+            long pairsBeforeFlip = harness.Runtime.EvaluatedPairCount;
+            harness.AddTag(flipped, flipTag);
+            harness.Runtime.Update();
+
+            Assert.That(harness.Runtime.EvaluationPassCount, Is.EqualTo(passesBeforeFlip + 1));
+            long pairsPerFlip = harness.Runtime.EvaluatedPairCount - pairsBeforeFlip;
+            Assert.That(pairsPerFlip, Is.GreaterThan(0), "A relevant flip must evaluate the changed rep's pairs.");
+            Assert.That(
+                pairsPerFlip,
+                Is.LessThanOrEqualTo(2L * (repCount - 1)),
+                "A single-rep tag flip must only evaluate pairs touching the changed rep, not the full pair set.");
+
+            int flipTagId = TagRegistry.GetId(flipTag);
+            long allocated = MeasureTagFlipAllocations(harness, flipped, flipTagId);
+            allocated = Math.Min(allocated, MeasureTagFlipAllocations(harness, flipped, flipTagId));
+            Assert.That(allocated, Is.EqualTo(0), "Relevant tag flips must be steady-state allocation free.");
+        }
+
+        private static long MeasureTagFlipAllocations(Harness harness, Entity flipped, int tagId)
+        {
+            TagOps tagOps = harness.TagOps;
+            World world = harness.World;
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 64; i++)
+            {
+                ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(flipped);
+                ref TagCountContainer counts = ref world.Get<TagCountContainer>(flipped);
+                tagOps.RemoveTag(ref tags, ref counts, tagId);
+                harness.Runtime.Update();
+                tagOps.AddTag(ref tags, ref counts, tagId);
+                harness.Runtime.Update();
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
         private static long MeasureUnchangedTickAllocations(Harness harness)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();
@@ -466,6 +664,20 @@ namespace Ludots.Tests.GAS
                         $"Core source '{Path.GetFileName(source)}' must not contain scenario literal '{token}'.");
                 }
             }
+        }
+
+        private static AssociationControlProfileConfig CreateTagTriggeredProfile(string id, string tag)
+        {
+            return new AssociationControlProfileConfig
+            {
+                Id = id,
+                When = new AssociationControlConditionConfig { Tag = tag, On = "grantor" },
+                Grant = new AssociationControlGrantConfig { EdgeType = "Controls", From = "grantee", To = "grantor" },
+                RevokeWhen = new AssociationControlConditionConfig
+                {
+                    Not = new AssociationControlConditionConfig { Tag = tag, On = "grantor" },
+                },
+            };
         }
 
         private static AssociationControlProfileCatalogConfig CreateProxyProfileCatalog()

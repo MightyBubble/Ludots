@@ -27,7 +27,8 @@
 3. **并发子代理产物的接缝**：GameEngine 接线块（约 L957/L1190-1300）是多任务合流点，审查服务构造顺序依赖（aggregation 必须在 abilities.json 后、commandIntent 在 orderTypes 后）。
 4. **已知基线失败**（非本分支引入，均经 stash/worktree 基线对照确认）：`AbilityExecLoaderFailFastTests`（14 个）、`OrderTypeConfigLoader_*`（5 个）、SkiaSharp 缺 so、零分配波动类。建议单独开 issue 追踪。
 5. **控制组/Selection 双轨**：SelectionRuntime 仍是正式框选 SSOT；showcase 的域路由由 `ControlPlaneRoutedSelectionSystem`（mod 侧）从 formal selection 桥接——ORD-5/CTX-5 的 Core 级迁移未做（见尾巴）。
-6. **DomainStanceQuery 与 TeamManager 桥接一致性**：双写点在 `ParticipantBindingResolver.ResolveRelationships`（map attitude → TeamManager 矩阵 + teamRep→teamRep stance 边，同一循环）；任何绕过该入口直改 TeamManager 或直建 stance 边的代码都会造成双轨分叉。一致性由 `DomainStanceBridgeAcceptanceTests`（引擎级，全参与者对遍历）与 `ParticipantBindingContractTests` 的桥接用例守护；attitude↔stance 命名对齐是数据约定（enum 成员名 = catalog stance 名），不存在代码映射表。
+6. **多写者共享单例语义（DEC-4 附则，非隔离）已有 UAT 固定**：多控制者写同一 `(domain, key)` 是共享的域指挥状态，后写覆盖、`writerDomain` 只记录最后维护者——这是产品语义，不是并发缺陷；并行私有选择走不同 context 的不同 collection key（正交出口）。RFC §6.1 M3 有对应 Scenario，`DomainRoutedCollectionTests.ConcurrentControllers_SameDomainSameKey_IsSharedSingletonWithLastWriteWins` 固定该行为。审计时不要把后写覆盖当成需要 writer 隔离的 bug 报告。
+7. **DomainStanceQuery 与 TeamManager 桥接一致性**：双写点在 `ParticipantBindingResolver.ResolveRelationships`（map attitude → TeamManager 矩阵 + teamRep→teamRep stance 边，同一循环）；任何绕过该入口直改 TeamManager 或直建 stance 边的代码都会造成双轨分叉。一致性由 `DomainStanceBridgeAcceptanceTests`（引擎级，全参与者对遍历）与 `ParticipantBindingContractTests` 的桥接用例守护；attitude↔stance 命名对齐是数据约定（enum 成员名 = catalog stance 名），不存在代码映射表。
 
 ### 二.5 语义侵入复审结论（"control" 层）
 

@@ -293,6 +293,11 @@ namespace Ludots.Core.Gameplay.Relationships
             return CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer);
         }
 
+        /// <summary>
+        /// Collects live incoming sources straight from the reverse index. No per-source edge re-verification:
+        /// <see cref="EnsureLink"/>/<see cref="RemoveLink"/> are the only edge mutation paths (M9 guardrail)
+        /// and both notify the index, while entity death is covered by the index's lazy IsAlive reclamation.
+        /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
         {
             if (!_world.IsAlive(target) || buffer.Length == 0)
@@ -300,19 +305,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return 0;
             }
 
-            int validatedTypeId = ValidateFilterTypeId(typeId);
-            int copied = _reverseIndex.CopyIncoming(target, validatedTypeId, buffer);
-            int count = 0;
-            for (int i = 0; i < copied; i++)
-            {
-                Entity source = buffer[i];
-                if (HasLink(source, target, validatedTypeId))
-                {
-                    buffer[count++] = source;
-                }
-            }
-
-            return count;
+            return _reverseIndex.CopyIncoming(target, ValidateFilterTypeId(typeId), buffer);
         }
 
         public int CollectMutual(Entity first, Entity second, Span<Entity> buffer)

@@ -246,6 +246,67 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CollectDirectUnitGrants_ReturnsOnlyPlainUnitsResolvingToTheRequestedDomain()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemyC1 = world.Create();
+            Entity enemyC2 = world.Create();
+            Entity enemyC3 = world.Create();
+            Entity unitB = world.Create();
+            Entity strayUnit = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemyC1);
+            harness.Ownership.EnsureOwnership(repC, enemyC2);
+            harness.Ownership.EnsureOwnership(repC, enemyC3);
+            harness.Ownership.EnsureOwnership(repB, unitB);
+            harness.Relationships.EnsureLink(repA, enemyC1, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, enemyC2, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, unitB, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, strayUnit, harness.ControlsTypeId);
+
+            Span<Entity> buffer = stackalloc Entity[8];
+            int countC = harness.Query.CollectDirectUnitGrants(repA, repC, buffer);
+            Assert.That(buffer[..countC].ToArray(), Is.EquivalentTo(new[] { enemyC1, enemyC2 }),
+                "Only granted plain units resolving to the requested domain qualify; ungranted siblings never appear.");
+
+            int countB = harness.Query.CollectDirectUnitGrants(repA, repB, buffer);
+            Assert.That(buffer[..countB].ToArray(), Is.EquivalentTo(new[] { unitB }),
+                "A grant to the domain rep itself is a full grant, not a unit grant.");
+        }
+
+        [Test]
+        public void CollectDirectUnitGrants_ShrinksAfterRevokeAndTruncatesToBuffer()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemy1 = world.Create();
+            Entity enemy2 = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemy1);
+            harness.Ownership.EnsureOwnership(repC, enemy2);
+            harness.Relationships.EnsureLink(repA, enemy1, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, enemy2, harness.ControlsTypeId);
+
+            Span<Entity> tiny = stackalloc Entity[1];
+            Assert.That(harness.Query.CollectDirectUnitGrants(repA, repC, tiny), Is.EqualTo(1));
+
+            Span<Entity> buffer = stackalloc Entity[4];
+            harness.Relationships.RemoveLink(repA, enemy1, harness.ControlsTypeId);
+            int count = harness.Query.CollectDirectUnitGrants(repA, repC, buffer);
+            Assert.That(buffer[..count].ToArray(), Is.EquivalentTo(new[] { enemy2 }));
+
+            harness.Relationships.RemoveLink(repA, enemy2, harness.ControlsTypeId);
+            Assert.That(harness.Query.CollectDirectUnitGrants(repA, repC, buffer), Is.EqualTo(0));
+        }
+
+        [Test]
         public void TryResolveControlDomain_WalksMultiLevelOwnsChainToPlayerIdentityRep()
         {
             using var world = World.Create();
