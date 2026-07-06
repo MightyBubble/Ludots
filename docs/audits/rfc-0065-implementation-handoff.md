@@ -67,14 +67,45 @@
 
 Showcase 通用注意：单位外观用 cube/sphere + Static/InstancedStaticMesh renderPath（GpuSkinned 不进 web/primitive 流）；marker 用 GroundOverlay Ring（`entity_query_tactics` 先例）；Web 面板走 `window.ludotsDataplane`（参照 `browser_react_flow`/`browser_rts_production` 模板）。
 
-## 五、给审计 agent 的执行提示词（可直接粘贴）
+## 五、后续工作分派（给后续实现 agent，按工作流拆单）
+
+> 三条工作流互相独立可并行；每单自带验收标准，做完一单提交一单。
+
+### 工作流 A：可见 UAT（Gherkin → 可运行 showcase + 录屏）
+
+环境：Windows + raylib + Ludots CEF WebUI（`launch <binding> --adapter raylib`）。验收产物 = 录屏 + **RFC §6 对应 Gherkin scenario 逐条对照表**（scenario 文本 → 录屏时间点）。
+
+| 单 | 内容 | 就绪度 | 验收 Gherkin |
+|---|---|---|---|
+| A1 | `control_plane_projection_showcase` 可视化：① 用 PROV-4b 拓扑谓词 graph ops 写 marker performer 规则（own=深绿 / proxy=浅绿 ring，条件样板在 `PerformerTopologyConditionGraphTests`，规则形态在 RFC §5.9）；② CEF 面板订阅 `ludots.showcase.control_plane.state` topic + `toggleProxy` command（DataPlane 契约层已实现，WebApp 参照 `browser_react_flow` 模板）；③ 录屏：框选混编 → O 键 toggle → marker 变色 → revoke 收缩 | 无头链路全绿，launcher binding 已注册 | M3/M4/P5 |
+| A2 | 面板聚合演示：EntityCommandPanel 宿主 + `SetAggregationProfile` 运行时切换（by_family fragment 在 EntityCommandPanelMod） | 内核+迁移完成 | M6/P3 |
+| A3 | 超级武器 context showcase：ability 配 `interactionContextProfile` + targeting collection + indicator performer + IMC 切换 | CTX-6/7 基建就绪，需新 showcase mod | M2/P6 |
+| A4 | pointer intent + dispatch + ControlScheme 演示（追猎 blink 三种 dispatch、右键语义路由、WASD⇄鼠标热切换） | **依赖 C2 接线**，先做 C2 | M8/M11/M12/P4/P9 |
+
+### 工作流 B：benchmark 固化与复验
+
+| 单 | 内容 | 验收 |
+|---|---|---|
+| B1 | 把 codex review 4632829926 的 `bench.*` 探针固化为仓库内 benchmark 测试（跟随 `EntityCollectionQueryBenchmarkTests` 先例）：reverse index CopyIncoming（specific/any）、`CollectIncoming` wrapper、partial-domain projection（ns/row 上界）、`ReplaceRouted` 域数平坦性、AssociationControlProfile 单 rep 翻转预算 | 每项断言预算上界 + 0 alloc（两窗口取 min）；基线数字记入本文档 |
+| B2 | 在稳定环境（非本 VM，存在 24B GC 测量波动）复跑全部 0 alloc 断言与 B1 基线 | 复测报告 + 波动项排除清单 |
+
+### 工作流 C：迁移任务（续）
+
+| 单 | 内容 | 验收 |
+|---|---|---|
+| C1 | **CTRL-3 消费者迁移**（独立 PR，逐个子单）：`TargetResolverFanOutHelper`（Team 敌我）、`SelectionEligibility.CanAcquire`、`TeamColorResolver`、`PerformPhaseResolver`/`PerformAudienceContext`、CoreInputMod `NearestEnemyInRange` resolver、MassNavigation 命令权限、`DynamicParticipantVisibilityPublisher`(#499)、lifecycle snapshot、ParticipantView projection → 全部迁 `ControlDomainQuery`/`DomainStanceQuery`；最后删 embodied `PlayerOwner`/`Team` + `TeamManager` 退役 + ArchitectureTests 禁令 | 每子单：迁移后原测试全绿 + 零组件读取（rg 断言）；终单：组件删除 + 禁令测试 |
+| C2 | **输入主链路接线**：`InputOrderMappingSystem` 的 pointer/fan-out 改为 frameActions 拦截 → `CommandIntentArbiter` → `CommandIntentProfileRegistry.RouteGroup` → `CastDispatchProfileRegistry.SelectDispatchTargets` → OrderQueue（调用约定已在各类 XML doc）；退役 `InteractionModeType`（六值→CastCommitProfile 映射表见 CTX-7b）。**前置：人工仲裁 PR #535 vs #577** | InputOrderContract/InteractionSelection 等既有测试迁移后全绿；M9 断言 InteractionModeType 删除 |
+| C3 | PROV-4c（`VisibilityCondition` graph Emit 接线，现状 throw）+ PROV-3/5/6（marker catalog JSON、referee knowledge grant、team palette + 相位） | per-viewer 可见性测试 + SHOW-3 可视验收（M5/P8） |
+| C4 | INT-8（KnowledgeProjection tag/stance 事实投影，伪装 UAT 解 deferred）、M10 回放 acceptance（GUARD-2）、gitbook DOC-1 回写（RFC accept 后） | 对应 UAT/文档 |
+
+## 六、给审计 agent 的执行提示词（可直接粘贴）
 
 ```
 你在 Ludots 仓库分支 cursor/epic-unified-interaction-casting-114d（PR #581）上审计 RFC-0065 的第一批实现。
 先读 docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md（铁律 §3、DEC §4、UAT §6）
 与 docs/audits/rfc-0065-implementation-handoff.md（本文）。
 
-审计范围 = git log 中含 "RFC-0065" 的全部提交。逐项核查：
+审计范围 = git log 中含 "RFC-0065" 的全部提交。后续实现单在本文档 §五（A/B/C 三条工作流）。逐项核查：
 1) 铁律 1~16 合规（重点：零业务语义字面量、零 fallback、collection 永不跨域迁移、
    Performer 只读、OrderQueue 唯一 intake——注意旧输入链路尚未迁移属已知尾巴，不算违规）；
 2) 每个新 registry/profile 的加载 fail-fast 完整性（未知 kind/重复 id/悬空引用）；
