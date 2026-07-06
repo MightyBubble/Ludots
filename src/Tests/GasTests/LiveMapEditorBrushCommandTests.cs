@@ -119,6 +119,54 @@ public sealed class LiveMapEditorBrushCommandTests
         }
     }
 
+    [Test]
+    public async Task PaintTerrainCommand_WithExplicitOutOfBoundsCell_ReturnsOutOfBoundsAndKeepsTerrainClean()
+    {
+        string root = CreateTempDir();
+        try
+        {
+            string modRoot = CreateAssetOnlyMod(root, "LiveEditorBrushOutOfBoundsMod", priority: 0);
+            WriteMap(modRoot, "brush_map", """
+            {
+              "id": "brush_map",
+              "boards": [
+                {
+                  "name": "default",
+                  "spatialType": "Grid",
+                  "widthInMacroTiles": 1,
+                  "heightInMacroTiles": 1,
+                  "gridCellSizeCm": 100,
+                  "chunkSizeCells": 4,
+                  "navigationEnabled": false,
+                  "dataFile": "brush_map_default.ltrn"
+                }
+              ],
+              "entities": []
+            }
+            """);
+            WriteLogicTerrain(modRoot, "brush_map_default.ltrn", CreateTerrain(heightLevel: 1));
+
+            using var engine = CreateEngine(modRoot);
+            engine.LoadMap("brush_map");
+            IWebUiCommandHandler handler = CreateCommandHandler(engine);
+
+            WebUiCommandResult paint = await HandleAsync(handler, "paintTerrain", new
+            {
+                col = -1,
+                row = 1,
+                radiusCells = 0
+            });
+
+            Assert.That(paint.Success, Is.False);
+            Assert.That(paint.ErrorCode, Is.EqualTo("paint_out_of_bounds"));
+            Assert.That(engine.LogicTerrain.GetCell(0, 1).HeightLevel, Is.EqualTo(1));
+        }
+        finally
+        {
+            TryDelete(root);
+        }
+    }
+
     private static async Task<WebUiCommandResult> HandleAsync(
         IWebUiCommandHandler handler,
         string name,

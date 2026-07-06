@@ -229,6 +229,12 @@ internal sealed class LiveMapEditorRuntime : IDisposable
             {
                 return Fail("brush_radius_invalid", "Brush radius cells must be between 0 and 64.");
             }
+
+            if (!mutable.IsInBounds(targetCol, targetRow))
+            {
+                return Fail("paint_out_of_bounds", "Paint target is outside the terrain grid.");
+            }
+
             int minCol = Math.Max(0, targetCol - radius);
             int maxCol = Math.Min(mutable.WidthCells - 1, targetCol + radius);
             int minRow = Math.Max(0, targetRow - radius);
