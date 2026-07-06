@@ -70,6 +70,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
 using Ludots.Core.Spatial;
+using Ludots.Core.StructureCollision;
 using Ludots.Core.Systems;
 using Ludots.Core.UI;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -138,6 +139,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CameraCullingFocusOverride> CameraCullingFocusOverride = new("CameraCullingFocusOverride");
         public static readonly ServiceKey<IVisualGroundProjector> VisualGroundProjector = new("VisualGroundProjector");
         public static readonly ServiceKey<IVisualHeightmap> VisualHeightmap = new("VisualHeightmap");
+        public static readonly ServiceKey<StructureCollisionAsset> StructureCollisionAsset = new("StructureCollisionAsset");
+        public static readonly ServiceKey<StructureCollisionRuntimeState> StructureCollisionRuntimeState = new("StructureCollisionRuntimeState");
+        public static readonly ServiceKey<IGroundSurfaceSampler> GroundSurfaceSampler = new("GroundSurfaceSampler");
         public static readonly ServiceKey<CameraPoseRequest> CameraPoseRequest = new("CameraPoseRequest");
         public static readonly ServiceKey<VirtualCameraRequest> VirtualCameraRequest = new("VirtualCameraRequest");
         public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");

@@ -28,6 +28,7 @@
   - [Placement Validation SSOT](architecture/placement-validation-ssot.md)
   - [空间尺度与分辨率 SSOT](architecture/spatial-scale-and-resolution-ssot.md)
   - [Prefab Grounding?Visual Height](architecture/prefab-grounding-and-visual-height.md)
+  - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)
   - [Performer-as-Actor 架构总览](architecture/performer-as-actor-architecture.md)
   - [Performer 参数黑板?Animator 统一](architecture/performer-param-blackboard.md)
   - [Performer Transform、Grounding?Attachment](architecture/performer-transform-and-attachment.md)

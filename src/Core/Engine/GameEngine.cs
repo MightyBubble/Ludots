@@ -63,6 +63,7 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
+using Ludots.Core.StructureCollision;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
@@ -1207,6 +1208,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
+            RemoveService(CoreServiceKeys.StructureCollisionAsset);
+            RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+            RemoveService(CoreServiceKeys.GroundSurfaceSampler);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleQueue, runtimeEntityLifecycleQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleReceiptQueue, runtimeEntityLifecycleReceiptQueue);
@@ -1721,11 +1725,13 @@ namespace Ludots.Core.Engine
             {
                 var previousFocused = MapSessions.FocusedSession;
                 IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+                StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 session.LaunchContext = request.LaunchContext;
                 session.VisualHeightmap = visualHeightmap;
+                BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
@@ -1849,6 +1855,21 @@ namespace Ludots.Core.Engine
             spawnQueue?.RemoveForMap(mapId);
         }
 
+        private static void BindStructureCollisionSession(
+            MapSession session,
+            IVisualHeightmap? visualHeightmap,
+            StructureCollisionAsset? structureCollision)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            session.StructureCollisionAsset = structureCollision;
+            session.StructureCollisionRuntimeState = structureCollision != null
+                ? new StructureCollisionRuntimeState(structureCollision)
+                : null;
+            session.GroundSurfaceSampler = visualHeightmap != null || structureCollision != null
+                ? new GroundSurfaceSampler(visualHeightmap, structureCollision, session.StructureCollisionRuntimeState)
+                : null;
+        }
+
         /// <summary>
         /// Push a nested inner map (三国志12 mode). Outer map is suspended, inner map becomes active.
         /// </summary>
@@ -1867,11 +1888,13 @@ namespace Ludots.Core.Engine
             }
 
             IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+            StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
             session.VisualHeightmap = visualHeightmap;
+            BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
             // Pass through data to inner context
             if (passthrough != null)
