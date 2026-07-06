@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Arch.Relationships;
 using Ludots.Core.Association;
 
 namespace Ludots.Core.Gameplay.Relationships
@@ -8,7 +9,7 @@ namespace Ludots.Core.Gameplay.Relationships
     public sealed class RelationshipReverseIndex
     {
         private readonly World _world;
-        private readonly EntityKeyedSoaTable<ReverseSlotPayload> _slots;
+        private EntityKeyedSoaTable<ReverseSlotPayload> _slots;
 
         private int[] _rowStarts;
         private int[] _rowCounts;
@@ -45,6 +46,37 @@ namespace Ludots.Core.Gameplay.Relationships
 
         /// <summary>Monotonically increasing change counter bumped on every mutation, including lazy dead-row reclamation.</summary>
         public uint Revision => _revision;
+
+        /// <summary>Rebuilds the derived incoming-edge index from authoritative relationship components already present in the world.</summary>
+        public void RebuildFromWorld()
+        {
+            Clear();
+
+            var query = new QueryDescription().WithAll<Relationship<RelationshipEdgeSet>>();
+            _world.Query(in query, (Entity source, ref Relationship<RelationshipEdgeSet> relationships) =>
+            {
+                if (!_world.IsAlive(source) || relationships == null)
+                {
+                    return;
+                }
+
+                foreach ((Entity target, RelationshipEdgeSet set) in relationships)
+                {
+                    if (!_world.IsAlive(target))
+                    {
+                        continue;
+                    }
+
+                    for (int i = 0; i < set.Count; i++)
+                    {
+                        if (set.TryGetAt(i, out int typeId, out _))
+                        {
+                            OnLinkAdded(source, target, typeId);
+                        }
+                    }
+                }
+            });
+        }
 
         /// <summary>Records a newly created (source → target) edge of the given type. Callers must guarantee the edge did not already exist.</summary>
         public void OnLinkAdded(Entity source, Entity target, int typeId)
@@ -313,6 +345,18 @@ namespace Ludots.Core.Gameplay.Relationships
             _rowSources[rowStart + lastLocal] = Entity.Null;
             _rowCounts[slot] = lastLocal;
             _revision++;
+        }
+
+        private void Clear()
+        {
+            _slots = new EntityKeyedSoaTable<ReverseSlotPayload>(_rowStarts.Length);
+            Array.Clear(_rowStarts, 0, _rowStarts.Length);
+            Array.Clear(_rowCounts, 0, _rowCounts.Length);
+            Array.Clear(_rowCapacities, 0, _rowCapacities.Length);
+            Array.Clear(_rowSources, 0, _rowSources.Length);
+            Array.Clear(_dedupUsed, 0, _dedupUsed.Length);
+            _rowCursor = 0;
+            _revision = 0;
         }
 
         private void EnsureSlotCapacity(int required)

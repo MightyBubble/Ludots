@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Arch.Core;
 using Ludots.Core.Association;
@@ -216,6 +217,39 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeConstructor_RebuildsIncomingIndexFromExistingRelationshipComponents()
+        {
+            using var world = World.Create();
+            var types = new RelationshipTypeRegistry();
+            var metrics = new RelationshipMetricRegistry();
+            var runtime = CreateRuntime(world, types, metrics, out _);
+            int bondTypeId = types.Register("SocialBond");
+            int hostilityTypeId = types.Register("Hostility");
+
+            Entity source = world.Create();
+            Entity target = world.Create();
+            runtime.EnsureLink(source, target, bondTypeId);
+            runtime.EnsureLink(source, target, hostilityTypeId);
+
+            var rebuiltRuntime = new RelationshipRuntime(
+                world,
+                types,
+                metrics,
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 4),
+                new RelationshipReverseIndex(world));
+
+            Span<Entity> buffer = stackalloc Entity[4];
+            Assert.That(rebuiltRuntime.CollectIncoming(target, bondTypeId, buffer), Is.EqualTo(1));
+            Assert.That(buffer[0], Is.EqualTo(source));
+            Assert.That(rebuiltRuntime.CollectIncoming(target, hostilityTypeId, buffer), Is.EqualTo(1));
+            Assert.That(buffer[0], Is.EqualTo(source));
+            Assert.That(rebuiltRuntime.CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer), Is.EqualTo(1));
+            Assert.That(buffer[0], Is.EqualTo(source));
+        }
+
+        [Test]
         public void CollectIncoming_SkipsDestroyedSourcesAndSurvivesDestroyedTarget()
         {
             using var world = World.Create();
@@ -293,6 +327,72 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Budget_LargeIncomingQueries_StayIndexedAndAllocationFree()
+        {
+            using var world = World.Create();
+            var types = new RelationshipTypeRegistry();
+            var runtime = CreateRuntime(world, types, new RelationshipMetricRegistry(), out RelationshipReverseIndex index);
+            int[] typeIds =
+            {
+                types.Register("BudgetTypeA"),
+                types.Register("BudgetTypeB"),
+                types.Register("BudgetTypeC"),
+                types.Register("BudgetTypeD"),
+            };
+
+            const int sourceCount = 4_096;
+            const int iterations = 400;
+            Entity target = world.Create();
+            var sources = new Entity[sourceCount];
+            for (int i = 0; i < sourceCount; i++)
+            {
+                sources[i] = world.Create();
+                for (int t = 0; t < typeIds.Length; t++)
+                {
+                    runtime.EnsureLink(sources[i], target, typeIds[t]);
+                }
+            }
+
+            var buffer = new Entity[sourceCount];
+            Assert.That(index.CopyIncoming(target, typeIds[0], buffer), Is.EqualTo(sourceCount));
+            Assert.That(index.CopyIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer), Is.EqualTo(sourceCount),
+                "AnyType merges four edge-type slots but must deduplicate sources.");
+            Assert.That(runtime.CollectIncoming(target, typeIds[0], buffer), Is.EqualTo(sourceCount));
+            Assert.That(runtime.CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer), Is.EqualTo(sourceCount));
+
+            IncomingBudgetMeasurement indexSpecific = MeasureStableIncomingBudget(
+                iterations,
+                sourceCount,
+                () => index.CopyIncoming(target, typeIds[0], buffer));
+            IncomingBudgetMeasurement indexAny = MeasureStableIncomingBudget(
+                iterations,
+                sourceCount,
+                () => index.CopyIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer));
+            IncomingBudgetMeasurement runtimeSpecific = MeasureStableIncomingBudget(
+                iterations,
+                sourceCount,
+                () => runtime.CollectIncoming(target, typeIds[0], buffer));
+            IncomingBudgetMeasurement runtimeAny = MeasureStableIncomingBudget(
+                iterations,
+                sourceCount,
+                () => runtime.CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer));
+
+            Console.WriteLine(
+                $"bench.reverse_index_specific sources={sourceCount} iterations={iterations} elapsed_ms={indexSpecific.ElapsedMs:F2} ns_per_source={indexSpecific.NsPerSource:F1} alloc_bytes={indexSpecific.AllocatedBytes}");
+            Console.WriteLine(
+                $"bench.reverse_index_any sources={sourceCount} edge_types_per_source={typeIds.Length} iterations={iterations} elapsed_ms={indexAny.ElapsedMs:F2} ns_per_source={indexAny.NsPerSource:F1} alloc_bytes={indexAny.AllocatedBytes}");
+            Console.WriteLine(
+                $"bench.relationship_runtime_collect_specific sources={sourceCount} iterations={iterations} elapsed_ms={runtimeSpecific.ElapsedMs:F2} ns_per_source={runtimeSpecific.NsPerSource:F1} alloc_bytes={runtimeSpecific.AllocatedBytes}");
+            Console.WriteLine(
+                $"bench.relationship_runtime_collect_any sources={sourceCount} edge_types_per_source={typeIds.Length} iterations={iterations} elapsed_ms={runtimeAny.ElapsedMs:F2} ns_per_source={runtimeAny.NsPerSource:F1} alloc_bytes={runtimeAny.AllocatedBytes}");
+
+            AssertIncomingBudget(indexSpecific, iterations, sourceCount, nsPerSourceBudget: 250d);
+            AssertIncomingBudget(indexAny, iterations, sourceCount, nsPerSourceBudget: 400d);
+            AssertIncomingBudget(runtimeSpecific, iterations, sourceCount, nsPerSourceBudget: 300d);
+            AssertIncomingBudget(runtimeAny, iterations, sourceCount, nsPerSourceBudget: 450d);
+        }
+
+        [Test]
         public void ScopeResolver_RelationshipIncomingMembership_ResolvesSourcesThroughIndex()
         {
             using var world = World.Create();
@@ -338,6 +438,48 @@ namespace Ludots.Tests.GAS
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
+        private static IncomingBudgetMeasurement MeasureStableIncomingBudget(int iterations, int expectedPerCall, Func<int> action)
+        {
+            action();
+            action();
+            IncomingBudgetMeasurement first = MeasureIncomingBudget(iterations, expectedPerCall, action);
+            IncomingBudgetMeasurement second = MeasureIncomingBudget(iterations, expectedPerCall, action);
+            return second.AllocatedBytes <= first.AllocatedBytes ? second : first;
+        }
+
+        private static IncomingBudgetMeasurement MeasureIncomingBudget(int iterations, int expectedPerCall, Func<int> action)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            int checksum = 0;
+            for (int i = 0; i < iterations; i++)
+            {
+                checksum += action();
+            }
+
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            double elapsedMs = Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds;
+            double nsPerSource = elapsedMs * 1_000_000d / (iterations * (double)expectedPerCall);
+            return new IncomingBudgetMeasurement(checksum, elapsedMs, nsPerSource, allocated);
+        }
+
+        private static void AssertIncomingBudget(
+            IncomingBudgetMeasurement measurement,
+            int iterations,
+            int expectedPerCall,
+            double nsPerSourceBudget)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.That(measurement.Checksum, Is.EqualTo(iterations * expectedPerCall));
+                Assert.That(measurement.AllocatedBytes, Is.EqualTo(0), "Incoming relationship reads are hot path and must be steady-state 0Alloc.");
+                Assert.That(measurement.NsPerSource, Is.LessThan(nsPerSourceBudget),
+                    "Incoming relationship reads must stay indexed; a world scan regression is orders of magnitude slower.");
+            });
+        }
+
         private static RelationshipRuntime CreateRuntime(
             World world,
             RelationshipTypeRegistry types,
@@ -371,5 +513,11 @@ namespace Ludots.Tests.GAS
 
             return sources.ToArray();
         }
+
+        private readonly record struct IncomingBudgetMeasurement(
+            int Checksum,
+            double ElapsedMs,
+            double NsPerSource,
+            long AllocatedBytes);
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 
 namespace Arch.Relationships;
@@ -40,7 +42,6 @@ internal interface IRelationship
 /// <typeparam name="T">The type of the second relationship element.</typeparam>
 public class Relationship<T> : IRelationship
 {
-
     /// <summary>
     ///     Its relations. 
     /// </summary>
@@ -98,7 +99,15 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Set(Entity entity, T data = default!)
     {
-        Elements[entity] = data;
+        int index = FindEntityIndex(entity);
+        if (index >= 0)
+        {
+            SortedListValueAccessor<T>.GetValues(Elements)[index] = data;
+            SortedListValueAccessor<T>.BumpVersion(Elements);
+            return;
+        }
+
+        Elements.Add(entity, data);
     }
     
     /// <summary>
@@ -109,7 +118,7 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Contains(Entity entity)
     {
-        return Elements.ContainsKey(entity);
+        return FindEntityIndex(entity) >= 0;
     }
     
     /// <summary>
@@ -120,7 +129,13 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T Get(Entity entity)
     {
-        return Elements[entity];
+        int index = FindEntityIndex(entity);
+        if (index < 0)
+        {
+            throw new KeyNotFoundException();
+        }
+
+        return SortedListValueAccessor<T>.GetValues(Elements)[index];
     }
 
     /// <summary>
@@ -132,14 +147,52 @@ public class Relationship<T> : IRelationship
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool TryGetValue(Entity entity, out T value)
     {
-        return Elements.TryGetValue(entity, out value!);
+        return TryGetValueNoAlloc(entity, out value);
+    }
+
+    /// <summary>
+    ///     Returns the stored <typeparamref name="T"/> without going through
+    ///     <see cref="SortedList{TKey,TValue}"/> key lookup, whose public APIs box struct keys.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool TryGetValueNoAlloc(Entity entity, out T value)
+    {
+        IList<Entity> keys = Elements.Keys;
+        int lo = 0;
+        int hi = Elements.Count - 1;
+        while (lo <= hi)
+        {
+            int mid = lo + ((hi - lo) >> 1);
+            int comparison = keys[mid].CompareTo(entity);
+            if (comparison == 0)
+            {
+                value = SortedListValueAccessor<T>.GetValues(Elements)[mid];
+                return true;
+            }
+
+            if (comparison < 0)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+
+        value = default!;
+        return false;
     }
     
     /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     void IRelationship.Remove(Entity target)
     {
-        Elements.Remove(target);
+        int index = FindEntityIndex(target);
+        if (index >= 0)
+        {
+            Elements.RemoveAt(index);
+        }
     }
 
     /// <inheritdoc cref="IRelationship.Remove(Entity)"/>
@@ -147,6 +200,34 @@ public class Relationship<T> : IRelationship
     internal void Remove(Entity target)
     {
         ((IRelationship) this).Remove(target);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private int FindEntityIndex(Entity entity)
+    {
+        IList<Entity> keys = Elements.Keys;
+        int lo = 0;
+        int hi = Elements.Count - 1;
+        while (lo <= hi)
+        {
+            int mid = lo + ((hi - lo) >> 1);
+            int comparison = keys[mid].CompareTo(entity);
+            if (comparison == 0)
+            {
+                return mid;
+            }
+
+            if (comparison < 0)
+            {
+                lo = mid + 1;
+            }
+            else
+            {
+                hi = mid - 1;
+            }
+        }
+
+        return -1;
     }
     
     /// <inheritdoc/>
@@ -171,5 +252,51 @@ public class Relationship<T> : IRelationship
     public SortedListEnumerator<T> GetEnumerator()
     {
         return new SortedListEnumerator<T>(Elements);
+    }
+
+    private static class SortedListValueAccessor<TValue>
+    {
+        public static readonly Func<SortedList<Entity, TValue>, TValue[]> GetValues = CreateGetter();
+        public static readonly Action<SortedList<Entity, TValue>> BumpVersion = CreateVersionBumper();
+
+        // Relationship<T> must keep Elements as the live SortedList backing store because persistence and
+        // relationship cleanup mutate it directly. The public SortedList key APIs allocate on hot struct-key
+        // paths, so existing-entry updates write through the backing array after our own binary key lookup.
+        private static Func<SortedList<Entity, TValue>, TValue[]> CreateGetter()
+        {
+            FieldInfo? field = typeof(SortedList<Entity, TValue>).GetField(
+                "values",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field == null)
+            {
+                throw new MissingFieldException(
+                    typeof(SortedList<Entity, TValue>).FullName,
+                    "values");
+            }
+
+            ParameterExpression list = Expression.Parameter(typeof(SortedList<Entity, TValue>), "list");
+            return Expression.Lambda<Func<SortedList<Entity, TValue>, TValue[]>>(
+                Expression.Field(list, field),
+                list).Compile();
+        }
+
+        private static Action<SortedList<Entity, TValue>> CreateVersionBumper()
+        {
+            FieldInfo? field = typeof(SortedList<Entity, TValue>).GetField(
+                "version",
+                BindingFlags.NonPublic | BindingFlags.Instance);
+            if (field == null)
+            {
+                throw new MissingFieldException(
+                    typeof(SortedList<Entity, TValue>).FullName,
+                    "version");
+            }
+
+            ParameterExpression list = Expression.Parameter(typeof(SortedList<Entity, TValue>), "list");
+            MemberExpression version = Expression.Field(list, field);
+            return Expression.Lambda<Action<SortedList<Entity, TValue>>>(
+                Expression.PreIncrementAssign(version),
+                list).Compile();
+        }
     }
 };

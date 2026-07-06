@@ -45,25 +45,20 @@ namespace Ludots.Core.Input.Orders
         private readonly ContextScoredCandidateGate _candidateGate;
         private readonly Entity[] _queryBuffer = new Entity[256];
 
-        /// <param name="candidateGate">
-        /// Optional INT-4 knowledge gate applied to every spatial candidate before scoring. Null means
-        /// the assembly runs without knowledge projection and candidates are scored as queried
-        /// (explicit wiring choice, not a fallback).
-        /// </param>
         public ContextScoredOrderResolver(
             World world,
             ContextGroupRegistry contextGroups,
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
-            ContextScoredCandidateGate candidateGate = null)
+            ContextScoredCandidateGate candidateGate)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
             _graphPrograms = graphPrograms ?? throw new ArgumentNullException(nameof(graphPrograms));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
-            _candidateGate = candidateGate;
+            _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -96,7 +91,7 @@ namespace Ludots.Core.Input.Orders
             if (group.SearchRadiusCm > 0)
             {
                 candidateCount = _spatialQueries.QueryRadius(actorWorldCm, group.SearchRadiusCm, _queryBuffer).Count;
-                if (_candidateGate != null)
+                if (candidateCount > 0)
                 {
                     // INT-4: compact in place so only viewer-knowable candidates reach scoring.
                     int kept = 0;

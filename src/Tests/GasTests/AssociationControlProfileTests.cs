@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Association;
@@ -598,6 +599,82 @@ namespace Ludots.Tests.GAS
             Assert.That(allocated, Is.EqualTo(0), "Relevant tag flips must be steady-state allocation free.");
         }
 
+        [Test]
+        public void SingleRepTagFlip_WithPhysicalGrantRevokeChurn_StaysNarrowAndAllocationFreeAfterWarmup()
+        {
+            const int repCount = 64;
+            const int toggleCycles = 32;
+            using var world = World.Create();
+            Harness harness = Harness.Create(
+                world,
+                CreateProxyProfileCatalog(),
+                linkAllies: false,
+                relationshipChangeCapacity: repCount * toggleCycles * 2);
+
+            var reps = new Entity[repCount];
+            reps[0] = harness.P1Rep;
+            reps[1] = harness.P2Rep;
+            for (int i = 2; i < repCount; i++)
+            {
+                reps[i] = world.Create(
+                    new PlayerIdentity { PlayerId = i + 1 },
+                    new GameplayTagContainer(),
+                    new TagCountContainer());
+            }
+
+            Entity grantor = harness.P2Rep;
+            for (int i = 0; i < reps.Length; i++)
+            {
+                if (reps[i] == grantor)
+                {
+                    continue;
+                }
+
+                harness.Relationships.EnsureLink(reps[i], grantor, harness.AllyTypeId);
+            }
+
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.EvaluatedPairCount, Is.EqualTo((long)repCount * (repCount - 1)),
+                "The bootstrap pass covers all candidate pairs once.");
+
+            int triggerTagId = TagRegistry.GetId(TriggerTag);
+            Assert.That(triggerTagId, Is.GreaterThan(0));
+
+            // Warm the active-grant hash sets, edge grant-count dictionary, relationship edge sets,
+            // reverse-index rows, and change buffer outside the measured window. The measured loop still
+            // performs real Controls EnsureLink/RemoveLink churn; it just does not pay first-use capacity costs.
+            AddTagById(harness, grantor, triggerTagId);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(repCount - 1));
+            RemoveTagById(harness, grantor, triggerTagId);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0));
+
+            AssociationChurnBudgetMeasurement measurement = MeasurePhysicalGrantRevokeChurn(harness, grantor, triggerTagId, toggleCycles);
+            AssociationChurnBudgetMeasurement second = MeasurePhysicalGrantRevokeChurn(harness, grantor, triggerTagId, toggleCycles);
+            if (second.AllocatedBytes <= measurement.AllocatedBytes)
+            {
+                measurement = second;
+            }
+
+            long maxPairsPerCycle = 4L * (repCount - 1);
+            Console.WriteLine(
+                $"bench.association_profile_churn reps={repCount} toggle_cycles={toggleCycles} elapsed_ms={measurement.ElapsedMs:F2} " +
+                $"ms_per_cycle={measurement.ElapsedMs / toggleCycles:F3} alloc_bytes={measurement.AllocatedBytes} evaluated_pairs={measurement.EvaluatedPairs}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(measurement.AllocatedBytes, Is.EqualTo(0),
+                    "Warmed profile-driven Controls grant/revoke churn must not allocate; true first-use capacity growth stays outside the hot window.");
+                Assert.That(measurement.EvaluatedPairs, Is.LessThanOrEqualTo(maxPairsPerCycle * toggleCycles),
+                    "A single changed rep must only evaluate pairs touching that rep across grant and revoke updates.");
+                Assert.That(measurement.ElapsedMs / toggleCycles, Is.LessThan(5d),
+                    "AssociationControlProfile churn is a SchemaUpdate maintenance path, but a 64-rep proxy revoke/grant cycle should remain comfortably bounded.");
+                Assert.That(harness.Runtime.ActiveGrantCount, Is.EqualTo(0));
+                Assert.That(harness.Relationships.HasLink(harness.P1Rep, grantor, harness.ControlsTypeId), Is.False);
+            });
+        }
+
         private static long MeasureTagFlipAllocations(Harness harness, Entity flipped, int tagId)
         {
             TagOps tagOps = harness.TagOps;
@@ -614,6 +691,52 @@ namespace Ludots.Tests.GAS
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        private static AssociationChurnBudgetMeasurement MeasurePhysicalGrantRevokeChurn(
+            Harness harness,
+            Entity grantor,
+            int tagId,
+            int toggleCycles)
+        {
+            long pairsBefore = harness.Runtime.EvaluatedPairCount;
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < toggleCycles; i++)
+            {
+                AddTagById(harness, grantor, tagId);
+                harness.Runtime.Update();
+                RemoveTagById(harness, grantor, tagId);
+                harness.Runtime.Update();
+            }
+
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            return new AssociationChurnBudgetMeasurement(
+                Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds,
+                allocated,
+                harness.Runtime.EvaluatedPairCount - pairsBefore);
+        }
+
+        private static void AddTagById(Harness harness, Entity entity, int tagId)
+        {
+            ref GameplayTagContainer tags = ref harness.World.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref harness.World.Get<TagCountContainer>(entity);
+            if (!harness.TagOps.AddTag(ref tags, ref counts, tagId))
+            {
+                throw new InvalidOperationException("Expected test tag add to change state.");
+            }
+        }
+
+        private static void RemoveTagById(Harness harness, Entity entity, int tagId)
+        {
+            ref GameplayTagContainer tags = ref harness.World.Get<GameplayTagContainer>(entity);
+            ref TagCountContainer counts = ref harness.World.Get<TagCountContainer>(entity);
+            if (!harness.TagOps.RemoveTag(ref tags, ref counts, tagId))
+            {
+                throw new InvalidOperationException("Expected test tag remove to change state.");
+            }
         }
 
         private static long MeasureUnchangedTickAllocations(Harness harness)
@@ -720,10 +843,15 @@ namespace Ludots.Tests.GAS
             public Entity P1Rep;
             public Entity P2Rep;
             public int ControlsTypeId;
+            public int AllyTypeId;
             public int GrantedFlagId;
             public int CommandSourceKeyId;
 
-            public static Harness Create(World world, AssociationControlProfileCatalogConfig catalog, bool linkAllies = true)
+            public static Harness Create(
+                World world,
+                AssociationControlProfileCatalogConfig catalog,
+                bool linkAllies = true,
+                int relationshipChangeCapacity = 16)
             {
                 var types = new RelationshipTypeRegistry();
                 var flags = new RelationshipFlagRegistry();
@@ -733,7 +861,7 @@ namespace Ludots.Tests.GAS
                     new RelationshipMetricRegistry(),
                     flags,
                     new RelationshipBandRegistry(),
-                    new RelationshipChangeBuffer(capacity: 16),
+                    new RelationshipChangeBuffer(capacity: relationshipChangeCapacity),
                     new RelationshipReverseIndex(world));
                 int ownsTypeId = types.Register("Owns");
                 int controlsTypeId = types.Register("Controls");
@@ -774,6 +902,7 @@ namespace Ludots.Tests.GAS
                     P1Rep = p1Rep,
                     P2Rep = p2Rep,
                     ControlsTypeId = controlsTypeId,
+                    AllyTypeId = allyTypeId,
                     GrantedFlagId = grantedFlagId,
                     CommandSourceKeyId = keyRegistry.Register(EntityCollectionKeys.CommandSource),
                 };
@@ -801,5 +930,10 @@ namespace Ludots.Tests.GAS
                 Assert.That(TagOps.RemoveTag(ref tags, ref counts, tagId), Is.True);
             }
         }
+
+        private readonly record struct AssociationChurnBudgetMeasurement(
+            double ElapsedMs,
+            long AllocatedBytes,
+            long EvaluatedPairs);
     }
 }

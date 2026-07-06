@@ -212,6 +212,37 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void CommandTargetPaths_RequireExplicitKnowledgeGate()
+        {
+            string repoRoot = FindRepoRoot();
+            string localOrderSourcePath = Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs");
+            string commandIntentRegistryPath = Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "CommandIntentProfileRegistry.cs");
+            string contextScoredResolverPath = Path.Combine(repoRoot, "src", "Core", "Input", "Orders", "ContextScoredOrderResolver.cs");
+
+            string localOrderSource = File.ReadAllText(localOrderSourcePath);
+            string commandIntentRegistry = File.ReadAllText(commandIntentRegistryPath);
+            string contextScoredResolver = File.ReadAllText(contextScoredResolverPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(localOrderSource, Does.Contain("KnowledgeCommandTargetGate"),
+                    "CoreInputMod command target paths must use the explicit resolver-backed knowledge gate.");
+                Assert.That(localOrderSource, Does.Not.Contain("SelectionEligibility.CanTargetCommand("),
+                    "CoreInputMod hover/auto-target command paths must not call the globals overload, which allows all targets when no resolver is registered.");
+
+                Assert.That(commandIntentRegistry, Does.Not.Contain("targetGate = null"),
+                    "CommandIntentProfileRegistry must not make the target gate optional.");
+                Assert.That(commandIntentRegistry, Does.Contain("throw new ArgumentNullException(nameof(targetGate))"),
+                    "CommandIntentProfileRegistry must fail fast when the knowledge target gate is missing.");
+
+                Assert.That(contextScoredResolver, Does.Not.Contain("candidateGate = null"),
+                    "ContextScoredOrderResolver must not make spatial candidate gating optional.");
+                Assert.That(contextScoredResolver, Does.Contain("throw new ArgumentNullException(nameof(candidateGate))"),
+                    "ContextScoredOrderResolver must fail fast when the knowledge candidate gate is missing.");
+            });
+        }
+
+        [Test]
         public void RelationshipEdgeMutations_OnlyHappenInsideRelationshipRuntime()
         {
             string repoRoot = FindRepoRoot();

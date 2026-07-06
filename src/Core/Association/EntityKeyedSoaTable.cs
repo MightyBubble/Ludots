@@ -63,12 +63,29 @@ namespace Ludots.Core.Association
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Primary, Secondary, Discriminator, KeyKind);
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = HashCombine(hash, KeyKind);
+                hash = HashCombine(hash, Primary.Id);
+                hash = HashCombine(hash, Primary.WorldId);
+                hash = HashCombine(hash, Primary.Version);
+                hash = HashCombine(hash, Secondary.Id);
+                hash = HashCombine(hash, Secondary.WorldId);
+                hash = HashCombine(hash, Secondary.Version);
+                hash = HashCombine(hash, Discriminator);
+                return (int)hash;
+            }
         }
 
         public static bool operator ==(EntityKeyedSoaKey left, EntityKeyedSoaKey right) => left.Equals(right);
 
         public static bool operator !=(EntityKeyedSoaKey left, EntityKeyedSoaKey right) => !left.Equals(right);
+
+        private static uint HashCombine(uint hash, int value)
+        {
+            return (hash ^ (uint)value) * 16777619u;
+        }
     }
 
     public readonly struct EntityKeyedSoaRow<TPayload>

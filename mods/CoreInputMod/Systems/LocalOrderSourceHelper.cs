@@ -14,7 +14,6 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -39,6 +38,7 @@ namespace CoreInputMod.Systems
         private readonly IReadOnlyDictionary<string, int> _orderTypeIds;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly CompositeOrderPlanner? _planner;
+        private KnowledgeCommandTargetGate? _commandTargetGate;
 
         public int CastAbilityOrderTypeId { get; }
         public int MoveToOrderTypeId { get; }
@@ -133,6 +133,7 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
+            RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
@@ -227,24 +228,7 @@ namespace CoreInputMod.Systems
                 eventBus: null,
                 effectRequests: null,
                 _globals);
-            // The knowledge gate never falls back to allow-all: a missing resolver/clock is a startup failure.
-            if (!_globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out var knowledgeResolverObj) ||
-                knowledgeResolverObj is not KnowledgeProjectionResolver knowledgeResolver)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(LocalOrderSourceHelper)}: KnowledgeProjectionResolver is not registered in globals; " +
-                    "ContextScored candidate gating cannot run without it.");
-            }
-
-            if (!_globals.TryGetValue(CoreServiceKeys.Clock.Name, out var clockObj) ||
-                clockObj is not IClock clock)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(LocalOrderSourceHelper)}: Clock is not registered in globals; " +
-                    "ContextScored candidate gating cannot run without it.");
-            }
-
-            var candidateGate = new KnowledgeCommandTargetGate(_world, knowledgeResolver, clock);
+            KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
             resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;
         }
@@ -271,7 +255,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            resolver = new AutoTargetResolver(_world, _globals, spatialQueries);
+            resolver = new AutoTargetResolver(_world, spatialQueries, RequireCommandTargetGate().CanTarget);
             return true;
         }
 
@@ -284,18 +268,40 @@ namespace CoreInputMod.Systems
             }
 
             Entity viewer = _context.TryGetSelectionOwner(out Entity owner) ? owner : Entity.Null;
-            if (!SelectionEligibility.CanTargetCommand(
-                    _world,
-                    _globals,
-                    viewer,
-                    candidate,
-                    KnowledgePositionAccess.Live))
+            if (!RequireCommandTargetGate().CanTarget(viewer, candidate))
             {
                 return false;
             }
 
             entity = candidate;
             return true;
+        }
+
+        private KnowledgeCommandTargetGate RequireCommandTargetGate()
+        {
+            if (_commandTargetGate != null)
+            {
+                return _commandTargetGate;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out var knowledgeResolverObj) ||
+                knowledgeResolverObj is not KnowledgeProjectionResolver knowledgeResolver)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: KnowledgeProjectionResolver is not registered in globals; " +
+                    "command target gating cannot run without it.");
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.Clock.Name, out var clockObj) ||
+                clockObj is not IClock clock)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: Clock is not registered in globals; " +
+                    "command target gating cannot run without it.");
+            }
+
+            _commandTargetGate = new KnowledgeCommandTargetGate(_world, knowledgeResolver, clock);
+            return _commandTargetGate;
         }
 
         private static string DescribeOrder(in Order order)
@@ -421,14 +427,14 @@ namespace CoreInputMod.Systems
         private sealed class AutoTargetResolver
         {
             private readonly World _world;
-            private readonly Dictionary<string, object> _globals;
             private readonly ISpatialQueryService _spatialQueries;
+            private readonly CommandIntentTargetGate _targetGate;
 
-            public AutoTargetResolver(World world, Dictionary<string, object> globals, ISpatialQueryService spatialQueries)
+            public AutoTargetResolver(World world, ISpatialQueryService spatialQueries, CommandIntentTargetGate targetGate)
             {
                 _world = world;
-                _globals = globals;
                 _spatialQueries = spatialQueries;
+                _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             }
 
             public bool TryResolve(Entity actor, AutoTargetPolicy policy, int rangeCm, out Entity target)
@@ -480,12 +486,7 @@ namespace CoreInputMod.Systems
                     if (!_world.IsAlive(candidate) ||
                         candidate == actor ||
                         !_world.Has<WorldPositionCm>(candidate) ||
-                        !SelectionEligibility.CanTargetCommand(
-                            _world,
-                            _globals,
-                            actor,
-                            candidate,
-                            KnowledgePositionAccess.Live))
+                        !_targetGate(actor, candidate))
                     {
                         continue;
                     }

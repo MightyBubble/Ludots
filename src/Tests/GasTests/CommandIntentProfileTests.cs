@@ -316,6 +316,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommandIntentProfileRegistry_MissingTargetGate_FailsAtConstruction()
+        {
+            using var world = World.Create();
+
+            Assert.Throws<ArgumentNullException>(
+                () => _ = Harness.Create(world, targetGate: null, requireTargetGate: true),
+                "Command intent routing must not silently allow entity facts when the knowledge gate is missing.");
+        }
+
+        [Test]
         public void TryRoute_KnowledgeCommandTargetGate_UsesViewerProjection()
         {
             using var world = World.Create();
@@ -410,7 +420,10 @@ namespace Ludots.Tests.GAS
             public int CastAbilityOrderId;
             public int MoveToOrderId;
 
-            public static Harness Create(World world, CommandIntentTargetGate targetGate = null)
+            public static Harness Create(
+                World world,
+                CommandIntentTargetGate? targetGate = null,
+                bool requireTargetGate = false)
             {
                 var types = new RelationshipTypeRegistry();
                 var relationships = new RelationshipRuntime(
@@ -446,6 +459,9 @@ namespace Ludots.Tests.GAS
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                CommandIntentTargetGate gate = requireTargetGate
+                    ? targetGate!
+                    : targetGate ?? AllowAllTargets;
                 var intents = new CommandIntentProfileRegistry(
                     profileIds,
                     world,
@@ -454,7 +470,7 @@ namespace Ludots.Tests.GAS
                     controlDomains,
                     stances,
                     orderTypes,
-                    targetGate);
+                    gate);
                 return new Harness
                 {
                     World = world,
@@ -467,6 +483,11 @@ namespace Ludots.Tests.GAS
                     CastAbilityOrderId = 1,
                     MoveToOrderId = 2,
                 };
+            }
+
+            private static bool AllowAllTargets(Entity viewerRep, Entity target)
+            {
+                return true;
             }
 
             public int ProfileId(string name) => ProfileIds.GetId(name);

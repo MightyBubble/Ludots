@@ -367,7 +367,8 @@ namespace Ludots.Core.Gameplay.Relationships
             bool exists = _relationships.HasLink(fromRep, toRep, profile.EdgeTypeId);
             var grantKey = new GrantKey(profileIndex, fromRep, toRep);
             var edgeKey = new EdgeKey(fromRep, toRep, profile.EdgeTypeId);
-            if (Evaluate(profile, profile.WhenRoot, fromRep, toRep))
+            bool when = Evaluate(profile, profile.WhenRoot, fromRep, toRep);
+            if (when)
             {
                 // An existing edge without the Granted flag is a manual edge; the profile never claims it.
                 if (exists && !_relationships.HasFlag(fromRep, toRep, profile.EdgeTypeId, _grantedFlagId))
@@ -541,7 +542,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(ProfileIndex, From, To);
+                return Hash(ProfileIndex, From, To);
             }
         }
 
@@ -571,8 +572,29 @@ namespace Ludots.Core.Gameplay.Relationships
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(From, To, EdgeTypeId);
+                return Hash(EdgeTypeId, From, To);
             }
+        }
+
+        private static int Hash(int discriminator, Entity from, Entity to)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = HashCombine(hash, discriminator);
+                hash = HashCombine(hash, from.Id);
+                hash = HashCombine(hash, from.WorldId);
+                hash = HashCombine(hash, from.Version);
+                hash = HashCombine(hash, to.Id);
+                hash = HashCombine(hash, to.WorldId);
+                hash = HashCombine(hash, to.Version);
+                return (int)hash;
+            }
+        }
+
+        private static uint HashCombine(uint hash, int value)
+        {
+            return (hash ^ (uint)value) * 16777619u;
         }
 
         private enum ConditionKind : byte

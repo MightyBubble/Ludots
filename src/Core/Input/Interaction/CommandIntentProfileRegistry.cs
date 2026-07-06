@@ -21,12 +21,12 @@ namespace Ludots.Core.Input.Interaction
     /// fall through to lower-priority rules (no fallback). Steady-state evaluation is allocation free and
     /// performs zero string comparisons.
     /// <para>
-    /// Knowledge gating (INT-2) is built into evaluation: when a <see cref="CommandIntentTargetGate"/>
-    /// is injected, entity facts the acting domain cannot know are demoted to a ground hit before any
+    /// Knowledge gating (INT-2) is built into evaluation: entity facts the acting domain cannot know
+    /// are demoted to a ground hit before any
     /// rule (including target domain resolution for stance predicates) sees them — per DEC-14 a unit
     /// invisible under fog must not be routable, so ground rules may still win but no entity predicate
-    /// can. A null gate is an explicit assembly choice (no knowledge projection wired); facts then pass
-    /// through unchanged. This is assembly semantics, not a fallback.
+    /// can. Assemblies that intentionally run without fog must pass an explicit no-op gate; a missing
+    /// gate is a startup error, not an allow-all fallback.
     /// </para>
     /// </summary>
     public sealed class CommandIntentProfileRegistry
@@ -47,10 +47,6 @@ namespace Ludots.Core.Input.Interaction
         private const string ByAbilityTagSelectorPrefix = "byAbilityTag:";
         private const string ContextGroupSelectorPrefix = "contextGroup:";
 
-        /// <param name="targetGate">
-        /// Optional INT-2 knowledge gate. Null means the assembly runs without knowledge projection and
-        /// entity facts are evaluated as given (explicit wiring choice, not a fallback).
-        /// </param>
         public CommandIntentProfileRegistry(
             StringIntRegistry profileIdRegistry,
             World world,
@@ -59,7 +55,7 @@ namespace Ludots.Core.Input.Interaction
             ControlDomainQuery controlDomains,
             DomainStanceQuery stances,
             OrderTypeRegistry orderTypes,
-            CommandIntentTargetGate targetGate = null)
+            CommandIntentTargetGate targetGate)
         {
             _profileIds = profileIdRegistry ?? throw new ArgumentNullException(nameof(profileIdRegistry));
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -68,7 +64,7 @@ namespace Ludots.Core.Input.Interaction
             _controlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             _stances = stances ?? throw new ArgumentNullException(nameof(stances));
             _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
-            _targetGate = targetGate;
+            _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             _groupPolicyIndexByKind.Add(CommandIntentGroupPolicyKinds.Independent, 0);
             _groupPolicies.Add(static (_, _, _, routedCount) => routedCount);
         }
@@ -202,11 +198,11 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// INT-2 (DEC-14): an entity fact the viewer's domain cannot know demotes to a ground hit.
-        /// Null gate = knowledge projection not wired in this assembly; facts pass through unchanged.
+        /// Assemblies without fog use an explicit no-op target gate; null is never accepted.
         /// </summary>
         private CommandIntentTargetFacts GateFacts(Entity viewerRep, in CommandIntentTargetFacts facts)
         {
-            if (_targetGate == null || !facts.HasEntity || _targetGate(viewerRep, facts.Target))
+            if (!facts.HasEntity || _targetGate(viewerRep, facts.Target))
             {
                 return facts;
             }

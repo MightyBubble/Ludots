@@ -30,6 +30,7 @@ namespace Ludots.Core.Gameplay.Relationships
             _bands = bands ?? throw new ArgumentNullException(nameof(bands));
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
+            _reverseIndex.RebuildFromWorld();
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
@@ -49,7 +50,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return false;
             }
@@ -67,7 +68,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateTypeId(typeId);
-            bool hasExisting = source.TryGetRelationship(target, out RelationshipEdgeSet set);
+            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
 
             if (set.HasType(validatedTypeId))
             {
@@ -94,7 +95,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return;
             }
@@ -381,7 +382,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateTypeId(typeId);
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return false;
             }
@@ -392,6 +393,13 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             return true;
+        }
+
+        private bool TryGetEdgeSet(Entity source, Entity target, out RelationshipEdgeSet set)
+        {
+            set = default;
+            ref Relationship<RelationshipEdgeSet> relationships = ref _world.TryGetRef<Relationship<RelationshipEdgeSet>>(source, out bool exists);
+            return exists && relationships.TryGetValueNoAlloc(target, out set);
         }
 
         private int ValidateTypeId(int typeId)

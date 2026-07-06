@@ -86,7 +86,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 1. **OrderQueue 唯一 intake**：MassNav / AI / input / evidence 不得旁路 `SubmitOrder`。
 2. **MassNav 只消费 OrderBuffer**：零 Input / Selection 读取。
-3. **Selection 概念退役**：「selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 不得作为 hub；Order payload 不得引用 selection 容器实体，须自包含目标集或引用 `(owner, collectionKey, revision)`。
+3. **Selection 概念退役（终态约束）**：「selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 不得作为 hub；Order payload 不得引用 selection 容器实体，须自包含目标集或引用 `(owner, collectionKey, revision)`。PR581 第一批实现仍是双轨过渡：`SelectionRuntime` 继续承载正式框选 SSOT，Core 级 command-intake 迁移归 ORD-5/CTX-5 后续单。
 4. **Embodied entity 零 `PlayerOwner` / `Team` / `PlayerIdentity`**：归属只存在于 relationship 边。
 5. **控制平面只走 `ControlDomainQuery`**；阵营/敌我判定只走 `DomainStanceQuery`（缓存投影，relationship revision 失效；stance key 是 catalog 数据，Core 无 "hostile" 字面语义）。
 6. **代理控制只增删 `controls` 边**：不迁移 collection、不改 `owns`、不写 unit 组件。
@@ -232,7 +232,7 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 - `actorOrderRouting`（`ActorOrderRoutingMatcher` + `input_order_mappings.json` candidates）：**actor 侧**按 priority 路由已落地，混合框选（producer rally vs unit move）有测试——但 match 只看 actor 自身 tag/slot，**不看 target**。
 - `ContextScoredOrderResolver` + `context_groups.json`：graph 评分选 slot 已落地（平局链 score → entity id → slot index）——但只挂技能键的 `ContextScored` 模式，未接 pointer command；且其 spatial 候选查询**无 knowledge 过滤**（INT-4 必须补）。
 - `AutoTargetPolicy.NearestEnemyInRange`：enum 在 Core，`Team` 组件直读发生在 CoreInputMod `LocalOrderSourceHelper` 的 resolver；随 CTRL-3 一并退役，语义并入本决策的 stance 谓词。
-- **hover 目标的 knowledge 门控现状是对的**：`LocalOrderSourceHelper.TryResolveHoveredCommandTarget` 经 `SelectionEligibility.CanTargetCommand(viewer, candidate, KnowledgePositionAccess.Live)` 过滤——本决策必须继承这一语义（见下），禁止"重构即倒退"。
+- **hover 目标的 knowledge 门控现状是对的**：`LocalOrderSourceHelper.TryResolveHoveredCommandTarget` 经显式 `KnowledgeCommandTargetGate` 过滤；该 gate 复用 `SelectionEligibility.CanTargetCommand(World, KnowledgeProjectionResolver, ...)` 的 presence/position 语义，但没有 globals 缺 resolver 时 allow-all 的装配缺口。本决策必须继承这一语义（见下），禁止"重构即倒退"。
 
 **结论模型——`CommandIntentProfile`**：pointer intent 的 per-actor 规则表，规则 = actor 谓词 × target 事实谓词 → route：
 
