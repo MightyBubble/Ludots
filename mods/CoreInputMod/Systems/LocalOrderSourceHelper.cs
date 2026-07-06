@@ -5,6 +5,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -226,7 +227,25 @@ namespace CoreInputMod.Systems
                 eventBus: null,
                 effectRequests: null,
                 _globals);
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            // The knowledge gate never falls back to allow-all: a missing resolver/clock is a startup failure.
+            if (!_globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out var knowledgeResolverObj) ||
+                knowledgeResolverObj is not KnowledgeProjectionResolver knowledgeResolver)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: KnowledgeProjectionResolver is not registered in globals; " +
+                    "ContextScored candidate gating cannot run without it.");
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.Clock.Name, out var clockObj) ||
+                clockObj is not IClock clock)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: Clock is not registered in globals; " +
+                    "ContextScored candidate gating cannot run without it.");
+            }
+
+            var candidateGate = new KnowledgeCommandTargetGate(_world, knowledgeResolver, clock);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;
         }
 

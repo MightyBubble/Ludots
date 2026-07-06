@@ -41,6 +41,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
@@ -621,6 +622,7 @@ namespace Ludots.Core.Engine
             registry.Register(EntityCollectionKeys.AbilityAimAffected);
             registry.Register(EntityCollectionKeys.EntityInfoExplicit);
             registry.Register(EntityCollectionKeys.CommandSource);
+            registry.Register(EntityCollectionKeys.UiCastRaw);
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -646,7 +648,7 @@ namespace Ludots.Core.Engine
             var relationshipBandRegistry = new RelationshipBandRegistry();
             var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
-            var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer);
+            var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer, new RelationshipReverseIndex(World));
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             RegisterBuiltInEntityCollectionKeys(entityCollectionKeyRegistry);
@@ -660,7 +662,36 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 relationshipReasonRegistry,
                 entityCollectionStore);
-            var ownershipResolver = new OwnershipResolver(relationshipRuntime, relationshipTypeRegistry.GetId("Owns"));
+            // Control-plane relationship types must ship in the default relationship catalog (RFC-0065 DEC-1/DEC-3); GetId fails fast when missing.
+            // Control-plane reserved relationship types (RFC-0065 DEC-1): the engine binds these three
+            // names as its contract with the catalog. Scenario-level types (e.g. alliance/diplomacy)
+            // are pure data — profiles referencing them fail fast at their own load site instead.
+            int ownsRelationshipTypeId = relationshipTypeRegistry.GetId("Owns");
+            int controlsRelationshipTypeId = relationshipTypeRegistry.GetId("Controls");
+            int memberOfRelationshipTypeId = relationshipTypeRegistry.GetId("MemberOf");
+            var ownershipResolver = new OwnershipResolver(relationshipRuntime, ownsRelationshipTypeId);
+            var controlDomainQuery = new ControlDomainQuery(
+                World,
+                relationshipRuntime,
+                ownershipResolver,
+                ownsRelationshipTypeId,
+                controlsRelationshipTypeId);
+            var domainStanceQuery = DomainStanceQuery.Create(
+                relationshipRuntime,
+                memberOfRelationshipTypeId,
+                relationshipCatalog.Stance);
+            var domainRoutedCollectionWriter = new DomainRoutedCollectionWriter(entityCollectionStore, controlDomainQuery);
+            var controlPlaneView = new ControlPlaneView(entityCollectionStore, controlDomainQuery);
+            // Infrastructure flag marking profile-granted edges (RFC-0065 CTRL-4b); registration is idempotent.
+            int grantedRelationshipFlagId = relationshipFlagRegistry.Register(AssociationControlProfileRuntime.GrantedFlagName);
+            var associationControlProfileCatalog = new AssociationControlProfilePipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var associationControlProfileRuntime = AssociationControlProfileRuntime.Create(
+                World,
+                relationshipRuntime,
+                tagOps,
+                relationshipTypeRegistry,
+                associationControlProfileCatalog,
+                grantedRelationshipFlagId);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
@@ -836,6 +867,23 @@ namespace Ludots.Core.Engine
                 ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var interactionActionBindings = new InteractionActionBindings();
+            var interactionContextStack = new InteractionContextStack(entityCollectionKeyRegistry);
+            interactionContextStack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                EntityViewKeys.ControlPlaneCommand));
+            var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
+            // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
+            filterProfileRegistry.RegisterExpander(
+                FilterAssociationExpandKinds.Controls,
+                controlDomainQuery.CollectControlled,
+                () => controlDomainQuery.Revision);
+            filterProfileRegistry.Install(new FilterProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            var contextBoundCollectionWriter = new ContextBoundCollectionWriter(
+                interactionContextStack,
+                filterProfileRegistry,
+                domainRoutedCollectionWriter,
+                entityCollectionStore);
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
@@ -923,6 +971,8 @@ namespace Ludots.Core.Engine
                 targetDispatchPresets: targetDispatchPresetRegistry,
                 entityCollections: entityCollectionStore,
                 entityQueries: entitySetQueryRuntime);
+            // RFC-0065 PROV-4b: topology predicate ops for performer graph conditions.
+            performerGraphApi.BindTopologyServices(controlDomainQuery, knowledgeProjectionResolver, clock);
             int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
             {
                 return eventKind == PresentationEventKind.EffectApplied
@@ -1059,7 +1109,7 @@ namespace Ludots.Core.Engine
                 },
                 selectionSetKeyRegistry.Register,
                 instancedBatchAssets.GetId,
-                entityCollectionKeyRegistry.GetId).Load(ConfigCatalog, ConfigConflictReport);
+                entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
             performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
@@ -1140,6 +1190,64 @@ namespace Ludots.Core.Engine
             int cfgChainActivateEffect = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainActivateEffect", "constants.responseChainOrderTypeIds");
             int cfgCastAbilityStart = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.Start");
             int cfgCastAbilityEnd = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.End");
+
+            // Pointer command intent routing (RFC-0065 INT-1, DEC-14); installed after order types so
+            // rule routes validate their orderTypeKey at load time. Target facts are knowledge-gated
+            // through CanTargetCommand semantics (INT-2); the resolver is a hard dependency here.
+            var commandIntentTargetGate = new KnowledgeCommandTargetGate(World, knowledgeProjectionResolver, clock);
+            var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var commandIntentProfileRegistry = new CommandIntentProfileRegistry(
+                commandIntentProfileIds,
+                World,
+                tagOps,
+                abilityDefinitions,
+                controlDomainQuery,
+                domainStanceQuery,
+                orderTypeRegistry,
+                commandIntentTargetGate.CanTarget);
+            commandIntentProfileRegistry.Install(new CommandIntentProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Interaction context profiles + cast commit profiles (RFC-0065 CTX-6/CTX-7, DEC-13).
+            var interactionContextProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var interactionContextProfileRegistry = new InteractionContextProfileRegistry(interactionContextProfileIds);
+            interactionContextProfileRegistry.Install(new InteractionContextProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+            var castCommitProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castCommitActionIds = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castCommitProfileRegistry = new CastCommitProfileRegistry(castCommitProfileIds, castCommitActionIds, interactionContextProfileRegistry);
+            castCommitProfileRegistry.Install(new CastCommitProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Client cast preference scope chain (RFC-0065 CTX-8, §5.6): player preference layers plus
+            // the mod lock set; template/form-set keys resolve through the engine-wide id spaces.
+            var clientCastPreferences = new ClientCastPreferenceStore(
+                castCommitProfileRegistry,
+                MapLoader.EntityTemplateKeys.Register,
+                MapLoader.EntityTemplateKeys.GetName,
+                AbilityFormSetIdRegistry.Register,
+                AbilityFormSetIdRegistry.GetName);
+            clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). The player input
+            // handler is adapter-bound after engine init, so it is resolved per switch (null tolerated).
+            var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var controlSchemeRuntime = new ControlSchemeRuntime(
+                controlSchemeIds,
+                interactionContextStack,
+                commandIntentProfileRegistry,
+                () => GetService(CoreServiceKeys.InputHandler),
+                clientCastPreferences);
+            controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
+            var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
+            castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
+            // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
+            // so catalog tag prefixes compile against the loaded definitions.
+            var abilityAggregationProfileIds = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var abilityAggregationProfileRegistry = new AbilityAggregationProfileRegistry(abilityAggregationProfileIds);
+            abilityAggregationProfileRegistry.Install(new AbilityAggregationProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
             int stepRateHz = engineClockConfig.FixedHz / Math.Max(1, gasClockConfig.StepEveryFixedTicks);
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
@@ -1195,6 +1303,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
+            SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
+            SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
             SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);
@@ -1206,6 +1316,16 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
+            SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
+            SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
+            SetService(CoreServiceKeys.CommandIntentProfileRegistry, commandIntentProfileRegistry);
+            SetService(CoreServiceKeys.CastDispatchProfileRegistry, castDispatchProfileRegistry);
+            SetService(CoreServiceKeys.InteractionContextProfileRegistry, interactionContextProfileRegistry);
+            SetService(CoreServiceKeys.CastCommitProfileRegistry, castCommitProfileRegistry);
+            SetService(CoreServiceKeys.ClientCastPreferenceStore, clientCastPreferences);
+            SetService(CoreServiceKeys.ControlSchemeRuntime, controlSchemeRuntime);
+            SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
+            SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleQueue, runtimeEntityLifecycleQueue);
@@ -1241,6 +1361,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipRuntime, relationshipRuntime);
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
+            SetService(CoreServiceKeys.ControlDomainQuery, controlDomainQuery);
+            SetService(CoreServiceKeys.DomainStanceQuery, domainStanceQuery);
+            SetService(CoreServiceKeys.AssociationControlProfileRuntime, associationControlProfileRuntime);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.PlayerEntityLookup, playerEntityLookup);
             SetService(CoreServiceKeys.EntitySetQueryRuntime, entitySetQueryRuntime);
@@ -1324,6 +1447,7 @@ namespace Ludots.Core.Engine
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
+            RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
 
             // Phase 0.5: 保存上一帧位置（插值前置条件，必须在所有移动系统之前）
             RegisterSystem(new SavePreviousWorldPositionSystem(World), SystemGroup.SchemaUpdate);
@@ -1333,6 +1457,15 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6, DEC-15).
+            RegisterSystem(
+                new AxisMoveOrderSystem(
+                    World,
+                    GlobalContext,
+                    new AxisMoveConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
+                    orderQueue,
+                    orderTypeRegistry),
+                SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
@@ -1381,6 +1514,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
+            // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
+            RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
             RegisterSystem(moveToOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(orderContinuationSystem, SystemGroup.AbilityActivation);
             RegisterSystem(relationshipProcessingSystem, SystemGroup.AbilityActivation);
@@ -1420,7 +1555,9 @@ namespace Ludots.Core.Engine
                 _spatialPartition,
                 WorldSizeSpec,
                 presentationTimingDiagnostics,
-                componentAuthoringContext),
+                componentAuthoringContext,
+                ownership: ownershipResolver,
+                playerLookup: playerEntityLookup),
                 SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntityLifecycleSystem(
@@ -1761,7 +1898,9 @@ namespace Ludots.Core.Engine
                         World,
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
-                        GetService(CoreServiceKeys.RelationshipTypeRegistry)));
+                        GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                        GetService(CoreServiceKeys.OwnershipResolver),
+                        GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
                 SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
@@ -1914,7 +2053,9 @@ namespace Ludots.Core.Engine
                     World,
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
-                    GetService(CoreServiceKeys.RelationshipTypeRegistry)));
+                    GetService(CoreServiceKeys.RelationshipTypeRegistry),
+                    GetService(CoreServiceKeys.OwnershipResolver),
+                    GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
             SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)

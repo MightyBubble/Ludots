@@ -142,6 +142,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ins.Dst = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Dst)));
                         }
                         break;
+                    case GraphNodeOp.RelationshipHasLink:
+                        if (ins.Flags != byte.MaxValue)
+                        {
+                            ins.Flags = checked((byte)symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
+                        }
+                        break;
                     case GraphNodeOp.RelationshipEnsureLink:
                     case GraphNodeOp.RelationshipRemoveLink:
                     case GraphNodeOp.RelationshipQueryOutgoing:

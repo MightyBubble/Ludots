@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -35,12 +37,21 @@ namespace Ludots.Core.Gameplay.Teams
 
     public static class ParticipantBindingResolver
     {
+        /// <summary>
+        /// Binds map participants and materializes the control-plane topology.
+        /// <paramref name="stanceCatalog"/> selects the stance-bridging semantics (RFC-0065 DEC-3):
+        /// when configured, every map attitude must match a registered stance type and is double-written
+        /// as a relationship edge next to the TeamManager matrix; when null, no stance edges are built
+        /// (explicit data absence = pure legacy TeamManager behavior).
+        /// </summary>
         public static ParticipantBindingResult Resolve(
             MapSession session,
             World world,
             MapLoadEntityIndex entityIndex,
             RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes)
+            RelationshipTypeRegistry? relationshipTypes,
+            OwnershipResolver? ownership = null,
+            DomainStanceConfig? stanceCatalog = null)
         {
             ArgumentNullException.ThrowIfNull(session);
             ArgumentNullException.ThrowIfNull(world);
@@ -144,7 +155,8 @@ namespace Ludots.Core.Gameplay.Teams
                 localPlayerEntity = selectedEntity;
             }
 
-            ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes);
+            ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);
+            BuildControlPlaneEdges(session, world, mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, ownership);
 
             bool hasParticipantBindings = mapConfig.Teams.Count > 0 || mapConfig.Players.Count > 0;
             return new ParticipantBindingResult(
@@ -243,7 +255,8 @@ namespace Ludots.Core.Gameplay.Teams
             TeamEntityLookup teams,
             PlayerEntityLookup players,
             RelationshipRuntime? relationships,
-            RelationshipTypeRegistry? relationshipTypes)
+            RelationshipTypeRegistry? relationshipTypes,
+            DomainStanceConfig? stanceCatalog)
         {
             ParticipantRelationshipConfig config = mapConfig.ParticipantRelationships ?? new ParticipantRelationshipConfig();
             ValidateCollection(config.Teams, $"Map '{mapId}' ParticipantRelationships.Teams");
@@ -286,6 +299,19 @@ namespace Ludots.Core.Gameplay.Teams
                 {
                     TeamManager.SetRelationship(binding.TeamA, binding.TeamB, attitude);
                 }
+
+                // RFC-0065 DEC-3 bridge: double-write the attitude as a teamRep→teamRep stance edge so
+                // DomainStanceQuery and the legacy TeamManager matrix stay consistent until CTRL-3 retires the latter.
+                if (stanceCatalog != null)
+                {
+                    int stanceTypeId = ResolveStanceType(
+                        relationshipTypes!,
+                        stanceCatalog,
+                        mapId,
+                        $"ParticipantRelationships.Teams[{i}]",
+                        binding.Attitude);
+                    EnsureRelationship(relationships!, teamA, teamB, stanceTypeId, symmetric: binding.Symmetric);
+                }
             }
 
             for (int i = 0; i < config.Players.Count; i++)
@@ -304,7 +330,82 @@ namespace Ludots.Core.Gameplay.Teams
                 Entity team = RequireTeam(teams, binding.TeamId, mapId, $"ParticipantRelationships.PlayerTeams[{i}].TeamId");
                 int typeId = ResolveRelationshipType(relationshipTypes!, mapId, $"ParticipantRelationships.PlayerTeams[{i}]", binding.TypeId);
                 EnsureRelationship(relationships!, player, team, typeId, symmetric: binding.Symmetric);
+
+                if (stanceCatalog != null && !string.IsNullOrEmpty(binding.Attitude))
+                {
+                    int stanceTypeId = ResolveStanceType(
+                        relationshipTypes!,
+                        stanceCatalog,
+                        mapId,
+                        $"ParticipantRelationships.PlayerTeams[{i}]",
+                        binding.Attitude);
+                    EnsureRelationship(relationships!, player, team, stanceTypeId, symmetric: binding.Symmetric);
+                }
             }
+        }
+
+        /// <summary>
+        /// Resolves a map attitude string against the data-declared stance catalog (no code-level mapping):
+        /// the attitude must literally match one of the registered stance names, otherwise fail fast.
+        /// </summary>
+        private static int ResolveStanceType(
+            RelationshipTypeRegistry registry,
+            DomainStanceConfig stanceCatalog,
+            string mapId,
+            string context,
+            string attitude)
+        {
+            for (int i = 0; i < stanceCatalog.StanceTypes.Count; i++)
+            {
+                if (string.Equals(stanceCatalog.StanceTypes[i], attitude, StringComparison.Ordinal))
+                {
+                    return registry.GetId(attitude);
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Map '{mapId}' {context}.Attitude '{attitude}' does not match any registered stance type " +
+                $"[{string.Join(", ", stanceCatalog.StanceTypes)}]. Stance names are relationship catalog data (RFC-0065 DEC-3); " +
+                "align the map attitude with the catalog stance names or extend the catalog stance section.");
+        }
+
+        /// <summary>
+        /// RFC-0065 CTRL-2: materializes the control-plane topology at participant binding time —
+        /// <c>MemberOf(playerRep → teamRep)</c> for every bound player and <c>Owns(playerRep → unit)</c>
+        /// for every map-owned non-rep entity carrying <see cref="PlayerOwner"/>.
+        /// </summary>
+        private static void BuildControlPlaneEdges(
+            MapSession session,
+            World world,
+            string mapId,
+            MapConfig mapConfig,
+            TeamEntityLookup teams,
+            PlayerEntityLookup players,
+            RelationshipRuntime? relationships,
+            RelationshipTypeRegistry? relationshipTypes,
+            OwnershipResolver? ownership)
+        {
+            if (mapConfig.Players.Count == 0)
+            {
+                return;
+            }
+
+            if (relationships == null || relationshipTypes == null || ownership == null)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' declares participant bindings but the relationship control plane (RelationshipRuntime/RelationshipTypeRegistry/OwnershipResolver) is unavailable.");
+            }
+
+            int memberOfTypeId = relationshipTypes.GetId("MemberOf");
+            for (int i = 0; i < mapConfig.Players.Count; i++)
+            {
+                PlayerBindingData binding = mapConfig.Players[i]!;
+                Entity playerRep = players.Get(binding.PlayerId);
+                Entity teamRep = teams.Get(binding.TeamId);
+                relationships.EnsureLink(playerRep, teamRep, memberOfTypeId);
+            }
+
+            OwnershipEdgeBuilder.LinkMapOwnedEntities(world, ownership, players, session.MapId);
         }
 
         private static void EnsureRelationship(RelationshipRuntime relationships, Entity source, Entity target, int typeId, bool symmetric)

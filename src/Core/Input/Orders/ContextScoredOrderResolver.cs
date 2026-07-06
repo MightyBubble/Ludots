@@ -28,6 +28,13 @@ namespace Ludots.Core.Input.Orders
         public bool HasTargetWorldCm { get; }
     }
 
+    /// <summary>
+    /// Knowledge gate for spatial candidates (RFC-0065 INT-4): true when <paramref name="viewer"/> is
+    /// allowed to command-target <paramref name="candidate"/> (<c>CanTargetCommand</c> semantics). The
+    /// resolver invokes it with the acting entity as viewer.
+    /// </summary>
+    public delegate bool ContextScoredCandidateGate(Entity viewer, Entity candidate);
+
     public sealed class ContextScoredOrderResolver
     {
         private readonly World _world;
@@ -35,20 +42,28 @@ namespace Ludots.Core.Input.Orders
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly ISpatialQueryService _spatialQueries;
+        private readonly ContextScoredCandidateGate _candidateGate;
         private readonly Entity[] _queryBuffer = new Entity[256];
 
+        /// <param name="candidateGate">
+        /// Optional INT-4 knowledge gate applied to every spatial candidate before scoring. Null means
+        /// the assembly runs without knowledge projection and candidates are scored as queried
+        /// (explicit wiring choice, not a fallback).
+        /// </param>
         public ContextScoredOrderResolver(
             World world,
             ContextGroupRegistry contextGroups,
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi)
+            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
+            ContextScoredCandidateGate candidateGate = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
             _graphPrograms = graphPrograms ?? throw new ArgumentNullException(nameof(graphPrograms));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            _candidateGate = candidateGate;
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -81,6 +96,20 @@ namespace Ludots.Core.Input.Orders
             if (group.SearchRadiusCm > 0)
             {
                 candidateCount = _spatialQueries.QueryRadius(actorWorldCm, group.SearchRadiusCm, _queryBuffer).Count;
+                if (_candidateGate != null)
+                {
+                    // INT-4: compact in place so only viewer-knowable candidates reach scoring.
+                    int kept = 0;
+                    for (int i = 0; i < candidateCount; i++)
+                    {
+                        if (_candidateGate(actor, _queryBuffer[i]))
+                        {
+                            _queryBuffer[kept++] = _queryBuffer[i];
+                        }
+                    }
+
+                    candidateCount = kept;
+                }
             }
 
             float bestScore = float.MinValue;

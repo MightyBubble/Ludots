@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
@@ -11,6 +13,10 @@ namespace Ludots.Core.Input.Selection
     /// </summary>
     public static class SelectionEligibility
     {
+        // Mirrors KnowledgeProjectionConsumer's relation-grant scratch buffer capacities.
+        private const int RelationSourceBufferCapacity = 32;
+        private const int RelationTargetBufferCapacity = 64;
+
         public static bool IsSelectableNow(World world, Entity entity)
         {
             if (!world.IsAlive(entity) || !world.Has<SelectionSelectableTag>(entity))
@@ -110,6 +116,46 @@ namespace Ludots.Core.Input.Selection
                 candidate,
                 requiredPosition,
                 out _);
+        }
+
+        /// <summary>
+        /// Command-target gate against an explicit <see cref="KnowledgeProjectionResolver"/> (no globals
+        /// lookup, no allow-all fallback when the resolver is absent). Allocation free per call.
+        /// </summary>
+        public static bool CanTargetCommand(
+            World world,
+            KnowledgeProjectionResolver resolver,
+            int currentTick,
+            Entity viewer,
+            Entity candidate,
+            KnowledgePositionAccess requiredPosition)
+        {
+            ArgumentNullException.ThrowIfNull(resolver);
+            if (!world.IsAlive(candidate) ||
+                !TryResolveExplicitViewer(world, viewer, out Entity resolvedViewer))
+            {
+                return false;
+            }
+
+            Span<Entity> scopeMembers = stackalloc Entity[1];
+            Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
+            Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: resolvedViewer,
+                subject: resolvedViewer,
+                viewer: resolvedViewer);
+            return resolver.TryResolveWithRelationGrants(
+                       resolvedViewer,
+                       candidate,
+                       currentTick,
+                       in viewerScope,
+                       in roleContext,
+                       scopeMembers,
+                       relationSources,
+                       relationTargets,
+                       out KnowledgeProjection projection) &&
+                   projection.CanReadPosition(requiredPosition);
         }
 
         private static bool TryResolveExplicitViewer(World world, Entity viewer, out Entity resolvedViewer)

@@ -12,6 +12,12 @@ namespace Ludots.Core.EntityCollections
         public const string AbilityAimAffected = "collection.ability.aim.affected";
         public const string EntityInfoExplicit = "collection.entityinfo.explicit";
         public const string CommandSource = "collection.command.source";
+        public const string UiCastRaw = "collection.ui.cast.raw";
+    }
+
+    public static class EntityViewKeys
+    {
+        public const string ControlPlaneCommand = "view.control_plane.command";
     }
 
     public enum EntityCollectionSourceKind : byte

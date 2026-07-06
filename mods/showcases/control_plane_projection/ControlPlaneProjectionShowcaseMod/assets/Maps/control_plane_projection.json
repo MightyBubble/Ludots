@@ -1,0 +1,117 @@
+{
+  "Id": "control_plane_projection",
+  "Tags": ["control_plane.showcase", "selection.collection.routing"],
+  "DefaultCamera": {
+    "VirtualCameraId": "ControlPlaneProjection.Camera.Showcase",
+    "TargetXCm": 1650,
+    "TargetYCm": 930,
+    "DistanceCm": 3600,
+    "Pitch": 54,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "InstanceId": "team-rep",
+      "Template": "control_plane_projection_team",
+      "Overrides": {
+        "Name": { "Value": "Emerald Compact" }
+      }
+    },
+    {
+      "InstanceId": "p1-rep",
+      "Template": "control_plane_projection_player",
+      "Overrides": {
+        "Name": { "Value": "Azure Commander" }
+      }
+    },
+    {
+      "InstanceId": "p2-rep",
+      "Template": "control_plane_projection_player",
+      "Overrides": {
+        "Name": { "Value": "Amber Commander" }
+      }
+    },
+    {
+      "InstanceId": "p1-unit-1",
+      "Template": "control_plane_projection_p1_unit",
+      "Overrides": {
+        "Name": { "Value": "Azure Spear" },
+        "WorldPositionCm": { "Value": { "X": 1150, "Y": 700 } }
+      }
+    },
+    {
+      "InstanceId": "p1-unit-2",
+      "Template": "control_plane_projection_p1_unit",
+      "Overrides": {
+        "Name": { "Value": "Azure Shield" },
+        "WorldPositionCm": { "Value": { "X": 1350, "Y": 640 } }
+      }
+    },
+    {
+      "InstanceId": "p1-unit-3",
+      "Template": "control_plane_projection_p1_unit",
+      "Overrides": {
+        "Name": { "Value": "Azure Lance" },
+        "WorldPositionCm": { "Value": { "X": 1250, "Y": 900 } }
+      }
+    },
+    {
+      "InstanceId": "p1-unit-4",
+      "Template": "control_plane_projection_p1_unit",
+      "Overrides": {
+        "Name": { "Value": "Azure Scout" },
+        "WorldPositionCm": { "Value": { "X": 1150, "Y": 1150 } }
+      }
+    },
+    {
+      "InstanceId": "p1-unit-5",
+      "Template": "control_plane_projection_p1_unit",
+      "Overrides": {
+        "Name": { "Value": "Azure Medic" },
+        "WorldPositionCm": { "Value": { "X": 1350, "Y": 1200 } }
+      }
+    },
+    {
+      "InstanceId": "p2-unit-1",
+      "Template": "control_plane_projection_p2_unit",
+      "Overrides": {
+        "Name": { "Value": "Amber Ram" },
+        "WorldPositionCm": { "Value": { "X": 2050, "Y": 720 } }
+      }
+    },
+    {
+      "InstanceId": "p2-unit-2",
+      "Template": "control_plane_projection_p2_unit",
+      "Overrides": {
+        "Name": { "Value": "Amber Bolt" },
+        "WorldPositionCm": { "Value": { "X": 2200, "Y": 930 } }
+      }
+    },
+    {
+      "InstanceId": "p2-unit-3",
+      "Template": "control_plane_projection_p2_unit",
+      "Overrides": {
+        "Name": { "Value": "Amber Ward" },
+        "WorldPositionCm": { "Value": { "X": 2050, "Y": 1150 } }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "team-rep"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "p1-rep"
+    },
+    {
+      "PlayerId": 2,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "p2-rep"
+    }
+  ]
+}

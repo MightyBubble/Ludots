@@ -286,7 +286,8 @@ public sealed class SelectionKnowledgeProjectionTests
             new RelationshipMetricRegistry(),
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer(capacity: 4));
+            new RelationshipChangeBuffer(capacity: 4),
+            new RelationshipReverseIndex(world));
         var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
         relationships.EnsureLink(viewer, ally, intelTypeId);
         collections.Replace(

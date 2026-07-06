@@ -418,7 +418,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 4));
+                new RelationshipChangeBuffer(capacity: 4),
+                new RelationshipReverseIndex(world));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             return new TestRuntime(relationshipTypes, relationships, collectionKeys, collections);

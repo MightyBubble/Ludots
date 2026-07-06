@@ -119,6 +119,8 @@ namespace Ludots.Core.Config
         public int PlayerId { get; set; }
         public int TeamId { get; set; }
         public string TypeId { get; set; } = string.Empty;
+        /// <summary>Optional stance name for the playerRep→teamRep edge; empty means no stance is declared.</summary>
+        public string Attitude { get; set; } = string.Empty;
         public bool Symmetric { get; set; }
     }
 
