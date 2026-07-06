@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
 
@@ -6,7 +7,8 @@ namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, §5.11, DEC-15). Schemes are
-    /// declared in <c>Input/control_schemes.json</c> and compiled at install time: default command
+    /// declared in <c>Input/control_schemes.json</c> and compiled at install time: axis move
+    /// <c>orderTypeKey</c> references resolve against <see cref="OrderTypeRegistry"/>, default command
     /// intent ids must be installed <see cref="CommandIntentProfileRegistry"/> profiles and register
     /// into the <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space, so
     /// <see cref="ActiveDefaultCommandIntentId"/> is directly comparable with
@@ -23,6 +25,7 @@ namespace Ludots.Core.Input.Interaction
         private readonly StringIntRegistry _schemeIds;
         private readonly InteractionContextStack _stack;
         private readonly CommandIntentProfileRegistry _commandIntents;
+        private readonly OrderTypeRegistry _orderTypes;
         private readonly Func<PlayerInputHandler> _handlerProvider;
         private readonly ClientCastPreferenceStore _preferences;
 
@@ -36,12 +39,14 @@ namespace Ludots.Core.Input.Interaction
             StringIntRegistry schemeIdRegistry,
             InteractionContextStack stack,
             CommandIntentProfileRegistry commandIntents,
+            OrderTypeRegistry orderTypes,
             Func<PlayerInputHandler> handlerProvider = null,
             ClientCastPreferenceStore preferences = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));
             _stack = stack ?? throw new ArgumentNullException(nameof(stack));
             _commandIntents = commandIntents ?? throw new ArgumentNullException(nameof(commandIntents));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
             _handlerProvider = handlerProvider;
             _preferences = preferences;
         }
@@ -62,6 +67,24 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>Bumped on every successful switch.</summary>
         public uint Revision { get; private set; }
+
+        /// <summary>
+        /// The active scheme's axis move declaration with the order type key pre-resolved at
+        /// <see cref="Install"/> (consumers never re-parse strings per tick). Returns false when no
+        /// scheme is active or the active scheme declares no axis move — the topology fact that the
+        /// current scheme has no axis movement, not a fallback.
+        /// </summary>
+        public bool TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding axisMove)
+        {
+            if (_activeSchemeId == 0 || !_schemes[_activeSchemeId].HasAxisMove)
+            {
+                axisMove = default;
+                return false;
+            }
+
+            axisMove = _schemes[_activeSchemeId].AxisMove;
+            return true;
+        }
 
         /// <summary>
         /// Compile and install every scheme in the config. Fails fast on duplicate installs and on
@@ -178,6 +201,23 @@ namespace Ludots.Core.Input.Interaction
                 DefaultCommandIntentId = _stack.CommandIntentProfileIdRegistry.Register(commandIntentId),
             };
 
+            if (definition.AxisMove != null)
+            {
+                if (!_orderTypes.TryGetId(definition.AxisMove.OrderTypeKey, out int orderTypeId))
+                {
+                    throw new InvalidOperationException(
+                        $"Control scheme '{definition.Id}' axisMove.orderTypeKey references unknown order type " +
+                        $"'{definition.AxisMove.OrderTypeKey}'.");
+                }
+
+                scheme.HasAxisMove = true;
+                scheme.AxisMove = new ControlSchemeAxisMoveBinding(
+                    definition.AxisMove.ActionId,
+                    orderTypeId,
+                    definition.AxisMove.ThrottleTicks,
+                    definition.AxisMove.StepDistanceCm);
+            }
+
             if (schemeId >= _schemes.Length)
             {
                 int next = _schemes.Length;
@@ -204,6 +244,29 @@ namespace Ludots.Core.Input.Interaction
         {
             public string[] InputContexts = Array.Empty<string>();
             public int DefaultCommandIntentId;
+            public bool HasAxisMove;
+            public ControlSchemeAxisMoveBinding AxisMove;
+        }
+    }
+
+    /// <summary>
+    /// Compiled axis move declaration of the active control scheme: the raw Axis2D action id plus
+    /// the order parameters, with <c>orderTypeKey</c> already resolved to its
+    /// <c>OrderTypeRegistry</c> id at install time.
+    /// </summary>
+    public readonly struct ControlSchemeAxisMoveBinding
+    {
+        public readonly string ActionId;
+        public readonly int OrderTypeId;
+        public readonly int ThrottleTicks;
+        public readonly int StepDistanceCm;
+
+        public ControlSchemeAxisMoveBinding(string actionId, int orderTypeId, int throttleTicks, int stepDistanceCm)
+        {
+            ActionId = actionId;
+            OrderTypeId = orderTypeId;
+            ThrottleTicks = throttleTicks;
+            StepDistanceCm = stepDistanceCm;
         }
     }
 }

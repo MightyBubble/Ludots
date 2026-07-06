@@ -5,31 +5,41 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Systems
 {
     /// <summary>
-    /// WASD-style axis intent → throttled move order kernel (RFC-0065 INT-6, DEC-15). Samples the
-    /// configured Axis2D action from the authoritative input snapshot
-    /// (<c>CoreServiceKeys.AuthoritativeInput</c>, fed by <c>PlayerInputHandler</c> through the
-    /// accumulator) each simulation tick; while the axis is non-zero it submits one order per
-    /// <see cref="AxisMoveConfig.ThrottleTicks"/> ticks to the <see cref="OrderQueue"/> targeting
+    /// WASD-style axis intent → throttled move order kernel (RFC-0065 INT-6, DEC-15). The single
+    /// source of truth for enablement and parameters is the active control scheme's
+    /// <c>axisMove</c> declaration (<see cref="ControlSchemeRuntime.TryGetActiveAxisMove"/>): a
+    /// scheme without the declaration means zero work per tick — the topology fact that the current
+    /// scheme has no axis movement, not a fallback — and a hot switch (P9) takes effect on the next
+    /// tick. While declared, the system samples the declared Axis2D action from the authoritative
+    /// input snapshot (<c>CoreServiceKeys.AuthoritativeInput</c>, fed by <c>PlayerInputHandler</c>
+    /// through the accumulator) each simulation tick; while the axis is non-zero it submits one
+    /// order per <c>throttleTicks</c> ticks to the <see cref="OrderQueue"/> targeting
     /// <c>current position + direction × stepDistanceCm</c>. Movement always goes through the order
     /// pipeline — this system never writes <see cref="WorldPositionCm"/> (iron law 1).
+    /// <para>
+    /// Id resolution is never repeated per tick: <c>orderTypeKey</c> is pre-resolved at
+    /// <see cref="ControlSchemeRuntime.Install"/> and the binding is re-fetched only when
+    /// <see cref="ControlSchemeRuntime.Revision"/> changes (a scheme switch also re-arms the
+    /// throttle so the new scheme's first press submits immediately).
+    /// </para>
     /// <para>
     /// Actor selection (minimal surface): the resolved local player entity itself, when it carries
     /// <see cref="WorldPositionCm"/> (ARPG avatar). RTS multi-selection actors are wired later by
     /// cast dispatch — the control-plane anchor is the same local player rep either way.
-    /// Disabled config (<c>enabled=false</c>, the shipped default) means zero work per tick.
     /// </para>
     /// <para>
-    /// Failure semantics: an enabled system with no <c>CoreServiceKeys.AuthoritativeInput</c>
-    /// service is a wiring error and throws on the first tick (fail fast, never silently idle).
-    /// An unresolved local player binding or a local player entity without
-    /// <see cref="WorldPositionCm"/> is a transient state (map loading, rep swap) and is skipped
-    /// for that tick.
+    /// Failure semantics: an active axis move declaration with no
+    /// <c>CoreServiceKeys.AuthoritativeInput</c> service is a wiring error and throws on the first
+    /// tick (fail fast, never silently idle). An unresolved local player binding or a local player
+    /// entity without <see cref="WorldPositionCm"/> is a transient state (map loading, rep swap)
+    /// and is skipped for that tick.
     /// </para>
     /// </summary>
     public sealed class AxisMoveOrderSystem : ISystem<float>
@@ -38,30 +48,25 @@ namespace Ludots.Core.Input.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly AxisMoveConfig _config;
+        private readonly ControlSchemeRuntime _schemes;
         private readonly OrderQueue _orderQueue;
-        private readonly int _orderTypeId;
+
+        private uint _cachedSchemeRevision;
+        private bool _hasBinding;
+        private ControlSchemeAxisMoveBinding _binding;
         private int _cooldownTicks;
 
         public AxisMoveOrderSystem(
             World world,
             Dictionary<string, object> globals,
-            AxisMoveConfig config,
-            OrderQueue orderQueue,
-            OrderTypeRegistry orderTypeRegistry)
+            ControlSchemeRuntime schemes,
+            OrderQueue orderQueue)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
-            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _schemes = schemes ?? throw new ArgumentNullException(nameof(schemes));
             _orderQueue = orderQueue ?? throw new ArgumentNullException(nameof(orderQueue));
-            if (orderTypeRegistry == null)
-            {
-                throw new ArgumentNullException(nameof(orderTypeRegistry));
-            }
-
-            AxisMoveConfigLoader.Validate(config, nameof(AxisMoveConfig));
-            // Resolve the order type up front so a bad key fails at wiring, not on first key press.
-            _orderTypeId = config.Enabled ? orderTypeRegistry.GetId(config.OrderTypeKey) : 0;
+            _cachedSchemeRevision = uint.MaxValue;
         }
 
         public void Initialize() { }
@@ -71,7 +76,14 @@ namespace Ludots.Core.Input.Systems
 
         public void Update(in float dt)
         {
-            if (!_config.Enabled)
+            if (_cachedSchemeRevision != _schemes.Revision)
+            {
+                _cachedSchemeRevision = _schemes.Revision;
+                _hasBinding = _schemes.TryGetActiveAxisMove(out _binding);
+                _cooldownTicks = 0;
+            }
+
+            if (!_hasBinding)
             {
                 return;
             }
@@ -80,11 +92,11 @@ namespace Ludots.Core.Input.Systems
                 inputObj is not IInputActionReader input)
             {
                 throw new InvalidOperationException(
-                    $"AxisMoveOrderSystem is enabled but the '{CoreServiceKeys.AuthoritativeInput.Name}' service is missing; " +
-                    "register the authoritative input snapshot before the InputCollection group ticks.");
+                    $"AxisMoveOrderSystem has an active axis move declaration but the '{CoreServiceKeys.AuthoritativeInput.Name}' " +
+                    "service is missing; register the authoritative input snapshot before the InputCollection group ticks.");
             }
 
-            Vector2 axis = input.ReadAction<Vector2>(_config.ActionId);
+            Vector2 axis = input.ReadAction<Vector2>(_binding.ActionId);
             if (axis.LengthSquared() <= AxisDeadzoneSquared)
             {
                 // Released axis re-arms the throttle so a fresh press submits immediately.
@@ -111,11 +123,11 @@ namespace Ludots.Core.Input.Systems
 
             Vector2 current = _world.Get<WorldPositionCm>(local).Value.ToVector2();
             Vector2 direction = Vector2.Normalize(axis);
-            Vector2 target = current + (direction * _config.StepDistanceCm);
+            Vector2 target = current + (direction * _binding.StepDistanceCm);
 
             var order = new Order
             {
-                OrderTypeId = _orderTypeId,
+                OrderTypeId = _binding.OrderTypeId,
                 PlayerId = playerId,
                 Actor = local,
                 SubmitMode = OrderSubmitMode.Immediate,
@@ -126,7 +138,7 @@ namespace Ludots.Core.Input.Systems
 
             if (_orderQueue.TryEnqueue(in order))
             {
-                _cooldownTicks = _config.ThrottleTicks - 1;
+                _cooldownTicks = _binding.ThrottleTicks - 1;
             }
         }
     }

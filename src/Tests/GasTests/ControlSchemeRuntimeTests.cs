@@ -5,6 +5,7 @@ using System.Numerics;
 using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
@@ -135,6 +136,82 @@ namespace Ludots.Tests.GAS
                     AllowedSchemes = new List<string> { "scheme.test.undeclared" },
                 }, "test"),
                 "allowedSchemes must reference declared schemes.");
+        }
+
+        [Test]
+        public void TryGetActiveAxisMove_TracksActiveSchemeDeclaration()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            ControlSchemeDefinition withAxis = Harness.Scheme(SchemeA, DefaultIntent);
+            withAxis.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "Move",
+                OrderTypeKey = "moveTo",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+            harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { withAxis, Harness.Scheme(SchemeB, AltIntent) },
+            });
+
+            Assert.That(harness.Runtime.TryGetActiveAxisMove(out _), Is.False, "no active scheme: no declaration.");
+
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeA)), Is.True);
+            Assert.That(harness.Runtime.TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding binding), Is.True);
+            Assert.That(binding.ActionId, Is.EqualTo("Move"));
+            Assert.That(binding.OrderTypeId, Is.EqualTo(2), "orderTypeKey resolves to its registry id at install.");
+            Assert.That(binding.ThrottleTicks, Is.EqualTo(6));
+            Assert.That(binding.StepDistanceCm, Is.EqualTo(400));
+
+            // Hot switch is declaration switch (P9): the undeclared scheme exposes nothing.
+            Assert.That(harness.Runtime.TrySwitch(harness.SchemeId(SchemeB)), Is.True);
+            Assert.That(harness.Runtime.TryGetActiveAxisMove(out _), Is.False);
+        }
+
+        [Test]
+        public void Install_AxisMoveUnknownOrderTypeKey_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, withHandler: false);
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            scheme.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = "Move",
+                OrderTypeKey = "orders.test.unknown",
+                ThrottleTicks = 6,
+                StepDistanceCm = 400,
+            };
+
+            Assert.Throws<InvalidOperationException>(() => harness.Runtime.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition> { scheme },
+            }));
+        }
+
+        [TestCase("", "moveTo", 6, 400, TestName = "Validate_AxisMoveMissingActionId_FailsFast")]
+        [TestCase("Move", "", 6, 400, TestName = "Validate_AxisMoveMissingOrderTypeKey_FailsFast")]
+        [TestCase("Move", "moveTo", 0, 400, TestName = "Validate_AxisMoveZeroThrottleTicks_FailsFast")]
+        [TestCase("Move", "moveTo", 6, 0, TestName = "Validate_AxisMoveZeroStepDistance_FailsFast")]
+        public void Validate_AxisMoveDeclarationWithMissingOrIllegalField_FailsFast(
+            string actionId, string orderTypeKey, int throttleTicks, int stepDistanceCm)
+        {
+            ControlSchemeDefinition scheme = Harness.Scheme(SchemeA, DefaultIntent);
+            scheme.AxisMove = new ControlSchemeAxisMove
+            {
+                ActionId = actionId,
+                OrderTypeKey = orderTypeKey,
+                ThrottleTicks = throttleTicks,
+                StepDistanceCm = stepDistanceCm,
+            };
+
+            Assert.Throws<InvalidOperationException>(
+                () => ControlSchemeConfigLoader.Validate(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition> { scheme },
+                }, "test"),
+                "a declared axisMove requires all four fields to be present and legal.");
         }
 
         [Test]
@@ -281,10 +358,14 @@ namespace Ludots.Tests.GAS
                     harness.Handler = new PlayerInputHandler(harness.Backend, BuildInputConfig());
                 }
 
+                var orderTypes = new OrderTypeRegistry();
+                orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+
                 harness.Runtime = new ControlSchemeRuntime(
                     harness._schemeIds,
                     stack,
                     intents.Intents,
+                    orderTypes,
                     withHandler ? () => harness.Handler : null,
                     preferences);
                 return harness;

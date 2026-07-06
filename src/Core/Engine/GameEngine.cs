@@ -1233,6 +1233,7 @@ namespace Ludots.Core.Engine
                 controlSchemeIds,
                 interactionContextStack,
                 commandIntentProfileRegistry,
+                orderTypeRegistry,
                 () => GetService(CoreServiceKeys.InputHandler),
                 clientCastPreferences);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
@@ -1457,14 +1458,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6, DEC-15).
+            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
+            // DEC-15); enablement and parameters come from the active control scheme's axisMove
+            // declaration (single source of truth, hot-switch aware).
             RegisterSystem(
-                new AxisMoveOrderSystem(
-                    World,
-                    GlobalContext,
-                    new AxisMoveConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
-                    orderQueue,
-                    orderTypeRegistry),
+                new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);

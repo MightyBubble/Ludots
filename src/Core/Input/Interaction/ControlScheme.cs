@@ -28,6 +28,32 @@ namespace Ludots.Core.Input.Interaction
         public List<string> InputContexts { get; set; }
 
         public ControlSchemeDefaults Defaults { get; set; }
+
+        /// <summary>
+        /// Optional WASD-style axis move declaration (RFC-0065 INT-6, DEC-15). Null means the scheme
+        /// has no axis movement — a topology fact, not a fallback. When declared, all four fields
+        /// are mandatory (loader fails fast).
+        /// </summary>
+        public ControlSchemeAxisMove AxisMove { get; set; }
+    }
+
+    /// <summary>
+    /// Per-scheme axis move declaration consumed by <c>AxisMoveOrderSystem</c>: the Axis2D action
+    /// sampled from the authoritative input snapshot and the throttled move-order parameters.
+    /// <c>orderTypeKey</c> resolves against <c>OrderTypeRegistry</c> at
+    /// <see cref="ControlSchemeRuntime.Install"/> (fail fast on unknown keys).
+    /// </summary>
+    public sealed class ControlSchemeAxisMove
+    {
+        public string ActionId { get; set; } = string.Empty;
+
+        public string OrderTypeKey { get; set; } = string.Empty;
+
+        /// <summary>Simulation ticks between two submitted orders while the axis is held.</summary>
+        public int ThrottleTicks { get; set; }
+
+        /// <summary>Distance in world centimeters from the actor's position to the order target.</summary>
+        public int StepDistanceCm { get; set; }
     }
 
     /// <summary>Scheme defaults consumed when the top interaction frame declares no explicit override.</summary>

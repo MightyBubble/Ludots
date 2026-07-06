@@ -3,33 +3,51 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Systems;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 INT-6 (DEC-15): WASD axis intent → throttled move order kernel. Orders always go
-    /// through the <see cref="OrderQueue"/> (never direct <see cref="WorldPositionCm"/> writes),
-    /// the throttle re-arms on axis release, disabled config means zero work, and the steady-state
-    /// tick is allocation free.
+    /// RFC-0065 INT-6 (DEC-15): WASD axis intent → throttled move order kernel, driven by the
+    /// active control scheme's <c>axisMove</c> declaration (single source of truth — no global
+    /// enable switch). Orders always go through the <see cref="OrderQueue"/> (never direct
+    /// <see cref="WorldPositionCm"/> writes), the throttle re-arms on axis release and on scheme
+    /// switch, a scheme without the declaration means zero work, hot switching (P9) stops and
+    /// resumes order flow, and the steady-state tick is allocation free.
     /// </summary>
     [TestFixture]
+    [NonParallelizable]
     public sealed class AxisMoveOrderSystemTests
     {
         private const int MoveToOrderTypeId = 2;
         private const int StartXcm = 1000;
         private const int StartYcm = 2000;
+        private const string Intent = "intent.test.default";
+        private const string AxisScheme = "scheme.test.axis";
+        private const string PlainScheme = "scheme.test.plain";
+
+        [SetUp]
+        public void SetUp()
+        {
+            TagRegistry.Clear();
+            ContextGroupIdRegistry.Clear();
+        }
 
         [Test]
-        public void Update_Disabled_SubmitsNothingEvenWithAxisInput()
+        public void Update_NoActiveScheme_SubmitsNothingEvenWithAxisInput()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: false));
+            harness.InstallSchemes();
+            var system = harness.CreateSystem();
             harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
 
             for (int i = 0; i < 10; i++)
@@ -37,7 +55,25 @@ namespace Ludots.Tests.GAS
                 system.Update(0f);
             }
 
-            Assert.That(harness.Orders.Count, Is.EqualTo(0), "enabled=false is explicit configuration: zero work per tick.");
+            Assert.That(harness.Orders.Count, Is.EqualTo(0), "no active scheme: no axis move declaration, zero work per tick.");
+        }
+
+        [Test]
+        public void Update_ActiveSchemeWithoutAxisMove_SubmitsNothingEvenWithAxisInput()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            harness.InstallSchemes();
+            harness.Switch(PlainScheme);
+            var system = harness.CreateSystem();
+            harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
+
+            for (int i = 0; i < 10; i++)
+            {
+                system.Update(0f);
+            }
+
+            Assert.That(harness.Orders.Count, Is.EqualTo(0), "a scheme without axisMove is topology, not fallback: zero work per tick.");
         }
 
         [Test]
@@ -45,7 +81,9 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true, throttleTicks: 6));
+            harness.InstallSchemes();
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
 
             for (int i = 0; i < 10; i++)
             {
@@ -60,7 +98,9 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true, throttleTicks: 6, stepDistanceCm: 400));
+            harness.InstallSchemes(axisThrottleTicks: 6, axisStepDistanceCm: 400);
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
             // Diagonal (3,4) normalizes to (0.6, 0.8): step lands at +240/+320 cm.
             harness.Input.SetActionValue("Move", new Vector3(3f, 4f, 0f));
 
@@ -89,7 +129,9 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true, throttleTicks: 6));
+            harness.InstallSchemes(axisThrottleTicks: 6);
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
 
             harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
             system.Update(0f);
@@ -108,41 +150,72 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Ctor_UnknownOrderTypeKey_FailsFastOnlyWhenEnabled()
+        public void Update_HotSwitch_StopsAndResumesOrderFlow()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
+            harness.InstallSchemes(axisThrottleTicks: 2);
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
+            harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
 
-            Assert.Throws<KeyNotFoundException>(() => harness.CreateSystem(new AxisMoveConfig
-            {
-                Enabled = true,
-                ActionId = "Move",
-                OrderTypeKey = "orders.test.unknown",
-                ThrottleTicks = 6,
-                StepDistanceCm = 400,
-            }));
+            system.Update(0f);
+            Assert.That(harness.Orders.Count, Is.EqualTo(1), "the declared scheme submits while the axis is held.");
 
-            Assert.DoesNotThrow(() => harness.CreateSystem(new AxisMoveConfig
+            // P9 core: switching to a scheme without the declaration stops order flow immediately.
+            harness.Switch(PlainScheme);
+            for (int i = 0; i < 10; i++)
             {
-                Enabled = false,
-                OrderTypeKey = "orders.test.unknown",
-            }));
+                system.Update(0f);
+            }
+
+            Assert.That(harness.Orders.Count, Is.EqualTo(1), "a scheme without axisMove submits nothing after the hot switch.");
+
+            // Switching back resumes: the switch re-arms the throttle so the held axis submits at once.
+            harness.Switch(AxisScheme);
+            system.Update(0f);
+            Assert.That(harness.Orders.Count, Is.EqualTo(2), "switching back to the declared scheme resumes order flow.");
         }
 
         [Test]
-        public void Update_Enabled_MissingAuthoritativeInputService_FailsFast()
+        public void Install_UnknownOrderTypeKey_FailsFast()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true));
+
+            Assert.Throws<InvalidOperationException>(
+                () => harness.Schemes.Install(new ControlSchemesConfig
+                {
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        Harness.Scheme("scheme.test.bad", new ControlSchemeAxisMove
+                        {
+                            ActionId = "Move",
+                            OrderTypeKey = "orders.test.unknown",
+                            ThrottleTicks = 6,
+                            StepDistanceCm = 400,
+                        }),
+                    },
+                }),
+                "an unknown axisMove.orderTypeKey fails at install, not on first key press.");
+        }
+
+        [Test]
+        public void Update_DeclaredScheme_MissingAuthoritativeInputService_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            harness.InstallSchemes();
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
             harness.Globals.Remove(CoreServiceKeys.AuthoritativeInput.Name);
 
             Assert.Throws<InvalidOperationException>(
                 () => system.Update(0f),
-                "enabled without the authoritative input snapshot is a wiring error, never a state to wait out.");
+                "a declared axis move without the authoritative input snapshot is a wiring error, never a state to wait out.");
 
-            var disabled = harness.CreateSystem(Harness.Config(enabled: false));
-            Assert.DoesNotThrow(() => disabled.Update(0f), "disabled config keeps zero work per tick.");
+            harness.Switch(PlainScheme);
+            Assert.DoesNotThrow(() => system.Update(0f), "a scheme without the declaration keeps zero work per tick.");
         }
 
         [Test]
@@ -150,7 +223,9 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true, throttleTicks: 1));
+            harness.InstallSchemes(axisThrottleTicks: 1);
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
             harness.Input.SetActionValue("Move", new Vector3(1f, 0f, 0f));
 
             harness.Globals.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
@@ -168,7 +243,9 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
-            var system = harness.CreateSystem(Harness.Config(enabled: true, throttleTicks: 4));
+            harness.InstallSchemes(axisThrottleTicks: 4);
+            harness.Switch(AxisScheme);
+            var system = harness.CreateSystem();
             harness.Input.SetActionValue("Move", new Vector3(1f, 1f, 0f));
 
             for (int i = 0; i < 64; i++)
@@ -200,8 +277,9 @@ namespace Ludots.Tests.GAS
             public Dictionary<string, object> Globals = null!;
             public FrozenInputActionReader Input = null!;
             public OrderQueue Orders = null!;
+            public ControlSchemeRuntime Schemes = null!;
             public Entity Avatar;
-            private OrderTypeRegistry _orderTypes = null!;
+            private StringIntRegistry _schemeIds = null!;
 
             public static Harness Create(World world)
             {
@@ -210,14 +288,35 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry();
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = MoveToOrderTypeId });
 
+                // Real scheme install path: axisMove enablement is the scheme declaration (DEC-15).
+                CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
+                intents.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+                {
+                    Id = Intent,
+                    GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                    Rules = new List<CommandIntentRuleDefinition>
+                    {
+                        CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                    },
+                }));
+
+                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var schemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var schemes = new ControlSchemeRuntime(
+                    schemeIds,
+                    new InteractionContextStack(collectionKeys),
+                    intents.Intents,
+                    orderTypes);
+
                 var input = new FrozenInputActionReader();
                 return new Harness
                 {
                     World = world,
                     Input = input,
                     Orders = new OrderQueue(),
+                    Schemes = schemes,
                     Avatar = avatar,
-                    _orderTypes = orderTypes,
+                    _schemeIds = schemeIds,
                     Globals = new Dictionary<string, object>
                     {
                         [CoreServiceKeys.AuthoritativeInput.Name] = input,
@@ -227,20 +326,43 @@ namespace Ludots.Tests.GAS
                 };
             }
 
-            public AxisMoveOrderSystem CreateSystem(AxisMoveConfig config)
+            public AxisMoveOrderSystem CreateSystem()
             {
-                return new AxisMoveOrderSystem(World, Globals, config, Orders, _orderTypes);
+                return new AxisMoveOrderSystem(World, Globals, Schemes, Orders);
             }
 
-            public static AxisMoveConfig Config(bool enabled, int throttleTicks = 6, int stepDistanceCm = 400)
+            /// <summary>One scheme with an axisMove declaration and one without.</summary>
+            public void InstallSchemes(int axisThrottleTicks = 6, int axisStepDistanceCm = 400)
             {
-                return new AxisMoveConfig
+                Schemes.Install(new ControlSchemesConfig
                 {
-                    Enabled = enabled,
-                    ActionId = "Move",
-                    OrderTypeKey = "moveTo",
-                    ThrottleTicks = throttleTicks,
-                    StepDistanceCm = stepDistanceCm,
+                    Schemes = new List<ControlSchemeDefinition>
+                    {
+                        Scheme(AxisScheme, new ControlSchemeAxisMove
+                        {
+                            ActionId = "Move",
+                            OrderTypeKey = "moveTo",
+                            ThrottleTicks = axisThrottleTicks,
+                            StepDistanceCm = axisStepDistanceCm,
+                        }),
+                        Scheme(PlainScheme, axisMove: null),
+                    },
+                });
+            }
+
+            public void Switch(string schemeId)
+            {
+                Assert.That(Schemes.TrySwitch(_schemeIds.GetId(schemeId)), Is.True, $"switch to '{schemeId}' must succeed.");
+            }
+
+            public static ControlSchemeDefinition Scheme(string id, ControlSchemeAxisMove axisMove)
+            {
+                return new ControlSchemeDefinition
+                {
+                    Id = id,
+                    InputContexts = new List<string>(),
+                    Defaults = new ControlSchemeDefaults { CommandIntentId = Intent },
+                    AxisMove = axisMove,
                 };
             }
         }
