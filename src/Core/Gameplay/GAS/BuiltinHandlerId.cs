@@ -38,6 +38,10 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Entity relations ──
         /// <summary>Read RelationParams and mutate entity parent-child relationships.</summary>
         ApplyRelation = 50,
+        /// <summary>Reveal a configured area through the Vision/Fog/Knowledge runtime.</summary>
+        RevealArea = 51,
+        /// <summary>Downgrade a configured revealed area to last-known Knowledge records.</summary>
+        DecayRevealArea = 52,
 
         // ── Exchange settlement ──
         /// <summary>Read Exchange params and execute an Exchange operation.</summary>

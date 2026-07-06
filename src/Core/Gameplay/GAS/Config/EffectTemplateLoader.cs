@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS.Config
 {
@@ -26,9 +27,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
+        private readonly FogLayerRegistry? _fogLayers;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -45,7 +48,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             TargetDispatchPresetRegistry targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
             ScopeKeyRegistry? progressionScopeKeys = null,
-            EntityTemplateKeyRegistry? entityTemplateKeys = null)
+            EntityTemplateKeyRegistry? entityTemplateKeys = null,
+            Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
+            FogLayerRegistry? fogLayers = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -54,6 +59,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
             _entityTemplateKeys = entityTemplateKeys;
+            _relationshipTypes = relationshipTypes;
+            _fogLayers = fogLayers;
         }
 
         public void Load(
@@ -307,6 +314,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var revealArea = default(KnowledgeAreaRevealDescriptor);
             var submitOrderFromBlackboard = CompileSubmitOrderFromBlackboard(cfg.SubmitOrderFromBlackboard, cfg.Id, relativePath);
             var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
@@ -350,7 +358,32 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (presetType == EffectPresetType.Exchange)
+            if (cfg.RevealArea != null && presetType != EffectPresetType.RevealArea)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'revealArea' block is only valid when presetType=RevealArea.");
+            }
+            if (presetType == EffectPresetType.RevealArea)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant && lifetimeKind != EffectLifetimeKind.After)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires lifetime=Instant or lifetime=After.");
+                }
+                if (lifetimeKind == EffectLifetimeKind.After && periodTicks <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
+                }
+                if (cfg.RevealArea == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires a 'revealArea' block.");
+                }
+
+                revealArea = CompileRevealArea(cfg.RevealArea, cfg.Id, relativePath);
+            }
+
             if (presetType == EffectPresetType.Exchange)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant)
@@ -490,6 +523,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                RevealArea = revealArea,
                 SubmitOrderFromBlackboard = submitOrderFromBlackboard,
                 ProgressionScope = progressionScope,
                 ProgressionChange = progressionChange,
@@ -553,7 +587,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static RelationDescriptor CompileRelation(RelationConfig cfg, string ownerId, string relativePath)
+        private RelationDescriptor CompileRelation(RelationConfig cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -586,10 +620,43 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=SetParent.");
             }
 
-            if (operation == RelationOperation.RemoveParent && snapSubjectToParentPosition)
+            if (operation == RelationOperation.EnsureLink && parent == RelationEntitySlot.None)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.parent cannot be None when operation=EnsureLink.");
+            }
+
+            if (operation != RelationOperation.SetParent && snapSubjectToParentPosition)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{ownerId}' in {relativePath}: relation.snapSubjectToParentPosition is only valid when operation=SetParent.");
+            }
+
+            int relationshipTypeId = 0;
+            if (operation == RelationOperation.EnsureLink)
+            {
+                if (_relationshipTypes == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.operation=EnsureLink requires RelationshipTypeRegistry.");
+                }
+
+                string relationshipType = RequireString(
+                    cfg.RelationshipType,
+                    ownerId,
+                    relativePath,
+                    "relation.relationshipType");
+                relationshipTypeId = _relationshipTypes.GetId(relationshipType);
+                if (relationshipTypeId < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: relation.relationshipType '{relationshipType}' is not registered.");
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(cfg.RelationshipType))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: relation.relationshipType is only valid when operation=EnsureLink.");
             }
 
             return new RelationDescriptor
@@ -597,8 +664,82 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 Operation = operation,
                 Subject = subject,
                 Parent = parent,
-                SnapSubjectToParentPosition = snapSubjectToParentPosition
+                SnapSubjectToParentPosition = snapSubjectToParentPosition,
+                RelationshipTypeId = relationshipTypeId
             };
+        }
+
+        private KnowledgeAreaRevealDescriptor CompileRevealArea(RevealAreaConfig cfg, string ownerId, string relativePath)
+        {
+            if (cfg == null) return default;
+
+            if (_progressionScopeKeys == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.scope requires ScopeKeyRegistry.");
+            }
+
+            if (_fogLayers == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.layers requires FogLayerRegistry.");
+            }
+
+            int radiusCm = RequirePositiveInt(cfg.Radius, ownerId, relativePath, "revealArea.radius");
+            string scope = RequireString(cfg.Scope, ownerId, relativePath, "revealArea.scope");
+            int scopeKeyId = _progressionScopeKeys.GetId(scope);
+            if (scopeKeyId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.scope '{scope}' is not registered.");
+            }
+
+            if (cfg.Layers == null || cfg.Layers.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.layers requires at least one layer.");
+            }
+
+            if (cfg.Layers.Count > KnowledgeAreaRevealDescriptor.MaxLayers)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.layers supports at most {KnowledgeAreaRevealDescriptor.MaxLayers} layers.");
+            }
+
+            Span<FogLayerId> layers = stackalloc FogLayerId[KnowledgeAreaRevealDescriptor.MaxLayers];
+            for (int i = 0; i < cfg.Layers.Count; i++)
+            {
+                string layerName = RequireString(cfg.Layers[i], ownerId, relativePath, $"revealArea.layers[{i}]");
+                FogLayerId layerId = _fogLayers.GetId(layerName);
+                if (layerId.Value <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: revealArea.layers[{i}] '{layerName}' is not registered.");
+                }
+
+                layers[i] = layerId;
+            }
+
+            int memoryTtlTicks = cfg.MemoryTtlTicks ?? 0;
+            if (memoryTtlTicks < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.memoryTtlTicks must be >= 0.");
+            }
+
+            int detectionStrength = cfg.DetectionStrength ?? 0;
+            if ((uint)detectionStrength > byte.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: revealArea.detectionStrength must be in range 0..255.");
+            }
+
+            return new KnowledgeAreaRevealDescriptor(
+                scopeKeyId,
+                radiusCm,
+                layers[..cfg.Layers.Count],
+                memoryTtlTicks,
+                (byte)detectionStrength);
         }
 
         private static SubmitOrderFromBlackboardDescriptor CompileSubmitOrderFromBlackboard(
@@ -943,8 +1084,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 "SetParent" => RelationOperation.SetParent,
                 "RemoveParent" => RelationOperation.RemoveParent,
+                "EnsureLink" => RelationOperation.EnsureLink,
                 _ => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent.")
+                    $"Effect template '{ownerId}' in {relativePath}: unsupported relation.operation '{value}'. Supported: SetParent, RemoveParent, EnsureLink.")
             };
         }
 

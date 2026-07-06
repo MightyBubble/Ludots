@@ -45,6 +45,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
         public RelationConfig? Relation { get; set; }
+        /// <summary>Area reveal parameters for Vision/Fog/Knowledge projection.</summary>
+        public RevealAreaConfig? RevealArea { get; set; }
         /// <summary>On-spawn order dispatch from configured blackboard stored target keys.</summary>
         public SubmitOrderFromBlackboardConfig? SubmitOrderFromBlackboard { get; set; }
         /// <summary>Entity-scoped progression completion parameters.</summary>
@@ -222,6 +224,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Subject { get; set; }
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
+        public string? RelationshipType { get; set; }
+    }
+
+    public sealed class RevealAreaConfig
+    {
+        public int? Radius { get; set; }
+        public string? Scope { get; set; }
+        public List<string>? Layers { get; set; }
+        public int? MemoryTtlTicks { get; set; }
+        public int? DetectionStrength { get; set; }
     }
 
     public sealed class StoredTargetKeysConfig
