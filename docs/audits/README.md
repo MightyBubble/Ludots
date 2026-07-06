@@ -11,6 +11,7 @@
 * [PR 集成审计](pr_integration_audit.md)
 * [PR92 TimeFlow Core 主线落地计划](pr92_timeflow_core_mainline_delivery.md)
 * [PR73 合并与架构审计](pr73_merge_architecture_audit.md)
+* [RFC-0065 PR581 Workflow Closeout](rfc_0065_pr581_workflow_closeout.md)
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
 

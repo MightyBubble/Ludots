@@ -594,9 +594,26 @@ namespace Ludots.Tests.GAS
                 "A single-rep tag flip must only evaluate pairs touching the changed rep, not the full pair set.");
 
             int flipTagId = TagRegistry.GetId(flipTag);
-            long allocated = MeasureTagFlipAllocations(harness, flipped, flipTagId);
-            allocated = Math.Min(allocated, MeasureTagFlipAllocations(harness, flipped, flipTagId));
-            Assert.That(allocated, Is.EqualTo(0), "Relevant tag flips must be steady-state allocation free.");
+            const int toggleCycles = 64;
+            AssociationTagFlipBudgetMeasurement measurement = MeasureStableTagFlipBudget(
+                harness,
+                flipped,
+                flipTagId,
+                toggleCycles);
+
+            Console.WriteLine(
+                $"bench.association_profile_tag_flip reps={repCount} profiles={profileCount} toggle_cycles={toggleCycles} " +
+                $"elapsed_ms={measurement.ElapsedMs:F2} ms_per_cycle={measurement.ElapsedMs / toggleCycles:F3} " +
+                $"alloc_bytes={measurement.AllocatedBytes} evaluated_pairs={measurement.EvaluatedPairs}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(measurement.AllocatedBytes, Is.EqualTo(0), "Relevant tag flips must be steady-state allocation free.");
+                Assert.That(measurement.EvaluatedPairs, Is.LessThanOrEqualTo(4L * (repCount - 1) * toggleCycles),
+                    "A single-rep tag toggle must only evaluate pairs touching the changed rep across remove/add updates.");
+                Assert.That(measurement.ElapsedMs / toggleCycles, Is.LessThan(2d),
+                    "Relevant tag flips without physical edge churn should stay comfortably bounded.");
+            });
         }
 
         [Test]
@@ -675,12 +692,31 @@ namespace Ludots.Tests.GAS
             });
         }
 
-        private static long MeasureTagFlipAllocations(Harness harness, Entity flipped, int tagId)
+        private static AssociationTagFlipBudgetMeasurement MeasureStableTagFlipBudget(
+            Harness harness,
+            Entity flipped,
+            int tagId,
+            int toggleCycles)
+        {
+            MeasureTagFlipBudget(harness, flipped, tagId, 2);
+            AssociationTagFlipBudgetMeasurement first = MeasureTagFlipBudget(harness, flipped, tagId, toggleCycles);
+            AssociationTagFlipBudgetMeasurement second = MeasureTagFlipBudget(harness, flipped, tagId, toggleCycles);
+            return second.AllocatedBytes <= first.AllocatedBytes ? second : first;
+        }
+
+        private static AssociationTagFlipBudgetMeasurement MeasureTagFlipBudget(
+            Harness harness,
+            Entity flipped,
+            int tagId,
+            int toggleCycles)
         {
             TagOps tagOps = harness.TagOps;
             World world = harness.World;
+            long pairsBefore = harness.Runtime.EvaluatedPairCount;
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 64; i++)
+            long start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < toggleCycles; i++)
             {
                 ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(flipped);
                 ref TagCountContainer counts = ref world.Get<TagCountContainer>(flipped);
@@ -690,7 +726,12 @@ namespace Ludots.Tests.GAS
                 harness.Runtime.Update();
             }
 
-            return GC.GetAllocatedBytesForCurrentThread() - before;
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            return new AssociationTagFlipBudgetMeasurement(
+                Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds,
+                allocated,
+                harness.Runtime.EvaluatedPairCount - pairsBefore);
         }
 
         private static AssociationChurnBudgetMeasurement MeasurePhysicalGrantRevokeChurn(
@@ -932,6 +973,11 @@ namespace Ludots.Tests.GAS
         }
 
         private readonly record struct AssociationChurnBudgetMeasurement(
+            double ElapsedMs,
+            long AllocatedBytes,
+            long EvaluatedPairs);
+
+        private readonly record struct AssociationTagFlipBudgetMeasurement(
             double ElapsedMs,
             long AllocatedBytes,
             long EvaluatedPairs);

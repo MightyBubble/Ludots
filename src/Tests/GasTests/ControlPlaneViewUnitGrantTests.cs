@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
@@ -145,11 +146,11 @@ namespace Ludots.Tests.GAS
 
         /// <summary>
         /// Budget guard for the documented partial-domain complexity contract: one O(rows) hash-probe pass.
-        /// A 10k-row foreign collection with 8 direct unit grants must project exactly the granted rows in
+        /// A 50k-row foreign collection with 64 direct unit grants must project exactly the granted rows in
         /// collection order and stay allocation-free in steady state.
         /// </summary>
         [Test]
-        public void PartialDomainProjection_TenThousandRowForeignCollection_StaysCorrectAndAllocationFree()
+        public void PartialDomainProjection_FiftyThousandRowForeignCollection_StaysWithinBudgetAndAllocationFree()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
@@ -159,8 +160,9 @@ namespace Ludots.Tests.GAS
             Entity mOwn = world.Create();
             harness.Ownership.EnsureOwnership(p1Rep, mOwn);
 
-            const int foreignRows = 10_000;
-            const int grantCount = 8;
+            const int foreignRows = 50_000;
+            const int grantCount = 64;
+            const int iterations = 80;
             var foreign = new Entity[foreignRows];
             for (int i = 0; i < foreignRows; i++)
             {
@@ -187,20 +189,88 @@ namespace Ludots.Tests.GAS
             Assert.That(members[..count], Is.EqualTo(expected),
                 "The partial domain must contribute exactly the granted rows, in collection order.");
 
-            long allocated = MeasureBudgetReadAllocations(harness, p1Rep, members);
-            allocated = Math.Min(allocated, MeasureBudgetReadAllocations(harness, p1Rep, members));
-            Assert.That(allocated, Is.EqualTo(0));
+            PartialProjectionBudgetMeasurement measurement = MeasureStablePartialProjectionBudget(
+                harness,
+                p1Rep,
+                members,
+                iterations,
+                expectedRowsPerRead: grantCount + 1,
+                foreignRows);
+
+            Console.WriteLine(
+                $"bench.control_plane_partial_view foreign_rows={foreignRows} direct_grants={grantCount} " +
+                $"returned={measurement.RowsPerRead} iterations={iterations} elapsed_ms={measurement.ElapsedMs:F2} " +
+                $"ns_per_foreign_row={measurement.NsPerForeignRow:F1} alloc_bytes={measurement.AllocatedBytes}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(measurement.Checksum, Is.EqualTo(iterations * (grantCount + 1)));
+                Assert.That(measurement.AllocatedBytes, Is.EqualTo(0));
+                Assert.That(measurement.NsPerForeignRow, Is.LessThan(250d),
+                    "Partial-domain projection has a documented O(rows) pass; keep the per-row slope bounded.");
+            });
         }
 
-        private static long MeasureBudgetReadAllocations(Harness harness, Entity anchorRep, Entity[] members)
+        private static PartialProjectionBudgetMeasurement MeasureStablePartialProjectionBudget(
+            Harness harness,
+            Entity anchorRep,
+            Entity[] members,
+            int iterations,
+            int expectedRowsPerRead,
+            int foreignRows)
         {
+            harness.View.CopyMembers(anchorRep, harness.CommandSourceKeyId, members);
+            harness.View.CopyMembers(anchorRep, harness.CommandSourceKeyId, members);
+            PartialProjectionBudgetMeasurement first = MeasurePartialProjectionBudget(
+                harness,
+                anchorRep,
+                members,
+                iterations,
+                expectedRowsPerRead,
+                foreignRows);
+            PartialProjectionBudgetMeasurement second = MeasurePartialProjectionBudget(
+                harness,
+                anchorRep,
+                members,
+                iterations,
+                expectedRowsPerRead,
+                foreignRows);
+            return second.AllocatedBytes <= first.AllocatedBytes ? second : first;
+        }
+
+        private static PartialProjectionBudgetMeasurement MeasurePartialProjectionBudget(
+            Harness harness,
+            Entity anchorRep,
+            Entity[] members,
+            int iterations,
+            int expectedRowsPerRead,
+            int foreignRows)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 1_000; i++)
+            long start = Stopwatch.GetTimestamp();
+            int checksum = 0;
+            for (int i = 0; i < iterations; i++)
             {
-                harness.View.CopyMembers(anchorRep, harness.CommandSourceKeyId, members);
+                int count = harness.View.CopyMembers(anchorRep, harness.CommandSourceKeyId, members);
+                if (count != expectedRowsPerRead)
+                {
+                    throw new InvalidOperationException($"Expected {expectedRowsPerRead} projected rows, got {count}.");
+                }
+
+                checksum += count;
             }
 
-            return GC.GetAllocatedBytesForCurrentThread() - before;
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            double elapsedMs = Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds;
+            double nsPerForeignRow = elapsedMs * 1_000_000d / (iterations * (double)foreignRows);
+            return new PartialProjectionBudgetMeasurement(
+                checksum,
+                expectedRowsPerRead,
+                elapsedMs,
+                nsPerForeignRow,
+                allocated);
         }
 
         private static long MeasureViewReadAllocations(Harness harness, Entity anchorRep, Entity[] members, Entity[] domains)
@@ -263,5 +333,12 @@ namespace Ludots.Tests.GAS
                 };
             }
         }
+
+        private readonly record struct PartialProjectionBudgetMeasurement(
+            int Checksum,
+            int RowsPerRead,
+            double ElapsedMs,
+            double NsPerForeignRow,
+            long AllocatedBytes);
     }
 }

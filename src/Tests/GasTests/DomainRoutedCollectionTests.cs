@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
@@ -317,12 +318,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ReplaceRouted_ManyDomains_GroupsEveryRowCorrectlyWithZeroSteadyStateAllocations()
+        public void ReplaceRouted_ManyDomains_GroupsEveryRowCorrectlyWithinBudgetAndZeroAllocations()
         {
             // Complexity contract: grouping is one resolve pass + one counting-sort scatter,
             // O(rows + domains) per write — never rows × domains.
-            const int domainCount = 32;
-            const int unitsPerDomain = 64;
+            const int domainCount = 64;
+            const int unitsPerDomain = 192;
+            const int iterations = 32;
 
             using var world = World.Create();
             Harness harness = Harness.Create(world);
@@ -362,20 +364,101 @@ namespace Ludots.Tests.GAS
                 }
             }
 
-            long allocated = MeasureScaleWriteAllocations(harness, writerRep, batch);
-            allocated = Math.Min(allocated, MeasureScaleWriteAllocations(harness, writerRep, batch));
-            Assert.That(allocated, Is.EqualTo(0));
+            RoutedWriteBudgetMeasurement manyDomain = MeasureStableRoutedWriteBudget(harness, writerRep, batch, iterations);
+            RoutedWriteBudgetMeasurement singleDomain = MeasureRoutedWriteBudgetScenario(
+                domainCount: 1,
+                rowCount: batch.Length,
+                iterations);
+            double flatnessRatio = manyDomain.NsPerRow / Math.Max(100d, singleDomain.NsPerRow);
+
+            Console.WriteLine(
+                $"bench.domain_routed_write_single domains=1 rows={batch.Length} iterations={iterations} " +
+                $"elapsed_ms={singleDomain.ElapsedMs:F2} ms_per_write={singleDomain.ElapsedMs / iterations:F3} " +
+                $"ns_per_row={singleDomain.NsPerRow:F1} alloc_bytes={singleDomain.AllocatedBytes}");
+            Console.WriteLine(
+                $"bench.domain_routed_write domains={domainCount} rows={batch.Length} iterations={iterations} " +
+                $"elapsed_ms={manyDomain.ElapsedMs:F2} ms_per_write={manyDomain.ElapsedMs / iterations:F3} " +
+                $"ns_per_row={manyDomain.NsPerRow:F1} alloc_bytes={manyDomain.AllocatedBytes} " +
+                $"flatness_ratio_vs_single={flatnessRatio:F2}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singleDomain.Checksum, Is.EqualTo(iterations * batch.Length));
+                Assert.That(manyDomain.Checksum, Is.EqualTo(iterations * batch.Length));
+                Assert.That(singleDomain.AllocatedBytes, Is.EqualTo(0));
+                Assert.That(manyDomain.AllocatedBytes, Is.EqualTo(0));
+                Assert.That(manyDomain.NsPerRow, Is.LessThan(2_500d),
+                    "Routed writes should stay near a single row pass, not drift toward rows * domains.");
+                Assert.That(flatnessRatio, Is.LessThan(8d),
+                    "Increasing domain count must stay flat relative to the same-row single-domain write.");
+            });
         }
 
-        private static long MeasureScaleWriteAllocations(Harness harness, Entity writerDomain, Entity[] batch)
+        private static RoutedWriteBudgetMeasurement MeasureRoutedWriteBudgetScenario(int domainCount, int rowCount, int iterations)
         {
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 32; i++)
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            var domainReps = new Entity[domainCount];
+            var batch = new Entity[rowCount];
+            for (int d = 0; d < domainCount; d++)
             {
-                harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+                domainReps[d] = world.Create(new PlayerIdentity { PlayerId = d + 1 });
             }
 
-            return GC.GetAllocatedBytesForCurrentThread() - before;
+            Entity writerRep = domainReps[0];
+            for (int d = 1; d < domainCount; d++)
+            {
+                harness.Relationships.EnsureLink(writerRep, domainReps[d], harness.ControlsTypeId);
+            }
+
+            for (int i = 0; i < rowCount; i++)
+            {
+                Entity unit = world.Create();
+                harness.Ownership.EnsureOwnership(domainReps[i % domainCount], unit);
+                batch[i] = unit;
+            }
+
+            harness.Writer.ReplaceRouted(writerRep, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+            return MeasureStableRoutedWriteBudget(harness, writerRep, batch, iterations);
+        }
+
+        private static RoutedWriteBudgetMeasurement MeasureStableRoutedWriteBudget(
+            Harness harness,
+            Entity writerDomain,
+            Entity[] batch,
+            int iterations)
+        {
+            harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+            harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+            RoutedWriteBudgetMeasurement first = MeasureRoutedWriteBudget(harness, writerDomain, batch, iterations);
+            RoutedWriteBudgetMeasurement second = MeasureRoutedWriteBudget(harness, writerDomain, batch, iterations);
+            return second.AllocatedBytes <= first.AllocatedBytes ? second : first;
+        }
+
+        private static RoutedWriteBudgetMeasurement MeasureRoutedWriteBudget(
+            Harness harness,
+            Entity writerDomain,
+            Entity[] batch,
+            int iterations)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            int checksum = 0;
+            for (int i = 0; i < iterations; i++)
+            {
+                harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+                checksum += batch.Length;
+            }
+
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            double elapsedMs = Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds;
+            return new RoutedWriteBudgetMeasurement(
+                checksum,
+                elapsedMs,
+                elapsedMs * 1_000_000d / (iterations * (double)batch.Length),
+                allocated);
         }
 
         private static long MeasureSteadyStateAllocations(
@@ -395,6 +478,12 @@ namespace Ludots.Tests.GAS
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
+
+        private readonly record struct RoutedWriteBudgetMeasurement(
+            int Checksum,
+            double ElapsedMs,
+            double NsPerRow,
+            long AllocatedBytes);
 
         private sealed class Harness
         {

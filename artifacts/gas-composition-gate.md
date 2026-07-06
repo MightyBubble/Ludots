@@ -1,6 +1,6 @@
 ## GAS Composition Gate - Self Review
 
-- **Task / Issue**: PR #581 RFC-0065 review fixes for relationship/control-plane hot paths and command target knowledge gates.
+- **Task / Issue**: PR #581 RFC-0065 workflow closeout, benchmark hardening, and review-gap verification for relationship/control-plane hot paths.
 - **Date**: 2026-07-06
 - **Agent / Author**: Codex
 
@@ -10,7 +10,7 @@
 
 结论: PASS
 
-一句话理由: 本次修复复用既有 RelationshipRuntime、AssociationControlProfileRuntime、KnowledgeCommandTargetGate、ControlPlaneView 和测试预算护栏；没有新增 profile enum、preset 开关、graph op、effect step 或平行 schema。
+一句话理由: 本次修复复用既有 RelationshipRuntime、AssociationControlProfileRuntime、KnowledgeCommandTargetGate、DomainRoutedCollectionWriter、ControlPlaneView 和测试预算护栏；没有新增 profile enum、preset 开关、graph op、effect step 或平行 schema。
 
 ### 2. Layer assignment
 
@@ -20,6 +20,8 @@
 | association profile physical grant/revoke budget | N/A - existing runtime infrastructure | AssociationControlProfileRuntime + GasTests budget |
 | command target knowledge gate fail-fast | N/A - input/control infrastructure | KnowledgeCommandTargetGate injection into CoreInput and registries |
 | partial-domain projection budget | N/A - collection/control infrastructure | ControlPlaneViewUnitGrantTests |
+| domain-routed write flatness budget | N/A - collection/control infrastructure | DomainRoutedCollectionTests |
+| workflow closeout audit | N/A - documentation evidence | docs/audits/rfc_0065_pr581_workflow_closeout.md |
 
 ### 3. Reuse list
 
