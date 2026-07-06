@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
+using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Persistence
 {
@@ -18,6 +21,8 @@ namespace Ludots.Core.Persistence
             ValidateActiveEffectContainer(world, policy);
             ValidateAbilityStateBuffer(world, policy);
             ValidateTeamEntityRef(world, policy);
+            ValidateRelationshipKeys<RelationshipEdgeSet>(world, policy);
+            ValidateRelationshipKeys<InRelationship>(world, policy);
         }
 
         private static void ValidateBlackboardEntityBuffer(World world, SaveEntityInclusionPolicy policy)
@@ -119,6 +124,31 @@ namespace Ludots.Core.Persistence
                 }
 
                 ValidateTarget(world, policy, owner, teamRef.Value, nameof(TeamEntityRef), nameof(TeamEntityRef.Value));
+            });
+        }
+
+        private static void ValidateRelationshipKeys<T>(World world, SaveEntityInclusionPolicy policy)
+        {
+            var query = new QueryDescription().WithAll<Relationship<T>>();
+            world.Query(in query, (Entity owner, ref Relationship<T> relationships) =>
+            {
+                if (!policy.ShouldInclude(world, owner) || relationships == null)
+                {
+                    return;
+                }
+
+                int index = 0;
+                foreach (KeyValuePair<Entity, T> entry in relationships.Elements)
+                {
+                    ValidateTarget(
+                        world,
+                        policy,
+                        owner,
+                        entry.Key,
+                        $"Relationship<{typeof(T).Name}>",
+                        $"target={index}");
+                    index++;
+                }
             });
         }
 

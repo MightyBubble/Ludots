@@ -1,4 +1,6 @@
 using Arch.Persistence;
+using Arch.Relationships;
+using Ludots.Core.Gameplay.Relationships;
 using MessagePack.Formatters;
 using System;
 using System.Collections.Generic;
@@ -58,10 +60,23 @@ namespace Ludots.Core.Persistence
         private static IMessagePackFormatter[] BuildFormatters()
         {
             var formatters = new Dictionary<Type, IMessagePackFormatter>();
+            AddFormatter(formatters, typeof(RelationshipEdge), new RelationshipEdgeFormatter());
+            AddFormatter(formatters, typeof(RelationshipEdgeSet), new RelationshipEdgeSetFormatter());
+            AddFormatter(formatters, typeof(InRelationship), new InRelationshipFormatter());
+            AddComponentFormatter(formatters, new RelationshipComponentFormatter<RelationshipEdgeSet>());
+            AddComponentFormatter(formatters, new RelationshipComponentFormatter<InRelationship>());
             AddComponentFormatter(formatters, new NameFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters);
             return formatters.Values.ToArray();
+        }
+
+        private static void AddFormatter(
+            Dictionary<Type, IMessagePackFormatter> formatters,
+            Type formatterType,
+            IMessagePackFormatter formatter)
+        {
+            formatters[formatterType] = formatter;
         }
 
         private static void AddComponentFormatter(

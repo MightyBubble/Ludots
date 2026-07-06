@@ -10,6 +10,20 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public int Count => _count;
 
+        public bool TryGetAt(int index, out int typeId, out RelationshipEdge edge)
+        {
+            if ((uint)index >= (uint)_count || _typeIds == null || _edges == null)
+            {
+                typeId = default;
+                edge = default;
+                return false;
+            }
+
+            typeId = _typeIds[index];
+            edge = _edges[index];
+            return true;
+        }
+
         public bool HasType(int typeId)
         {
             return FindIndex(typeId) >= 0;

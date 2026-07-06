@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public uint Flags;
         public int Version;
+        public ReadOnlySpan<short> Metrics => _metrics;
 
         public short GetMetric(int metricId)
         {

@@ -1947,6 +1947,15 @@ public sealed partial class MassNavigationFlowSolverState
                 }
             }
 
+            if (suppressTargetMotion)
+            {
+                _velocitiesCm[i2] = 0f;
+                _velocitiesCm[i2 + 1] = 0f;
+                _positionsCm[i2] = px;
+                _positionsCm[i2 + 1] = py;
+                continue;
+            }
+
             float directTargetX = hasGoalTarget ? targetX - px : 0f;
             float directTargetY = hasGoalTarget ? targetY - py : 0f;
             float directTargetSq = hasGoalTarget ? directTargetX * directTargetX + directTargetY * directTargetY : 0f;
