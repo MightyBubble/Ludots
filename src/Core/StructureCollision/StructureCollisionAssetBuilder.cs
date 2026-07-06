@@ -271,6 +271,159 @@ namespace Ludots.Core.StructureCollision
             return Build(header, layers, masks, shapes, surfaces);
         }
 
+        public static StructureCollisionAsset CreateNonIdealBenchmarkAsset(int chunkColumns, int chunkRows, int chunkSizeCm)
+        {
+            if (chunkColumns < 6) throw new ArgumentOutOfRangeException(nameof(chunkColumns));
+            if (chunkRows < 4) throw new ArgumentOutOfRangeException(nameof(chunkRows));
+            if (chunkSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(chunkSizeCm));
+
+            int worldWidth = checked(chunkColumns * chunkSizeCm);
+            int worldHeight = checked(chunkRows * chunkSizeCm);
+            var header = new StructureCollisionHeader(
+                version: 1,
+                new WorldAabbCm(0, 0, worldWidth, worldHeight),
+                chunkSizeCm,
+                revision: 1,
+                coordinateScale: 1f);
+            var layers = new[]
+            {
+                new StructureLayerDefinition("ground", 0),
+                new StructureLayerDefinition("bridge", 1)
+            };
+            var masks = new[] { new StructureAgentMaskDefinition("all", uint.MaxValue) };
+            float bridgeEndX = worldWidth - 500f;
+            var shapes = new[]
+            {
+                new StructureShapeDefinition
+                {
+                    Id = "nonideal_long_bridge_deck",
+                    Kind = StructureShapeKind.WalkablePolygon,
+                    Vertices = new[]
+                    {
+                        new StructurePointCm(500f, 1000f),
+                        new StructurePointCm(bridgeEndX, 1000f),
+                        new StructurePointCm(bridgeEndX, 1400f),
+                        new StructurePointCm(500f, 1400f)
+                    },
+                    PlaneOriginXCm = 500f,
+                    PlaneOriginZCm = 1000f,
+                    PlaneHeightCm = 500f,
+                    MinHeightCm = 500f,
+                    MaxHeightCm = 500f
+                },
+                new StructureShapeDefinition
+                {
+                    Id = "nonideal_overlap_ramp",
+                    Kind = StructureShapeKind.RampPlane,
+                    Vertices = new[]
+                    {
+                        new StructurePointCm(2500f, 900f),
+                        new StructurePointCm(5000f, 900f),
+                        new StructurePointCm(5000f, 1700f),
+                        new StructurePointCm(2500f, 1700f)
+                    },
+                    PlaneOriginXCm = 2500f,
+                    PlaneOriginZCm = 900f,
+                    PlaneHeightCm = 360f,
+                    PlaneSlopeX = 0.04f,
+                    PlaneSlopeZ = 0.08f,
+                    MinHeightCm = 360f,
+                    MaxHeightCm = 700f
+                },
+                new StructureShapeDefinition
+                {
+                    Id = "nonideal_upper_platform",
+                    Kind = StructureShapeKind.WalkablePolygon,
+                    Vertices = new[]
+                    {
+                        new StructurePointCm(3000f, 1100f),
+                        new StructurePointCm(4200f, 1100f),
+                        new StructurePointCm(4200f, 1500f),
+                        new StructurePointCm(3000f, 1500f)
+                    },
+                    PlaneOriginXCm = 3000f,
+                    PlaneOriginZCm = 1100f,
+                    PlaneHeightCm = 520f,
+                    MinHeightCm = 520f,
+                    MaxHeightCm = 520f
+                },
+                new StructureShapeDefinition
+                {
+                    Id = "nonideal_long_wall",
+                    Kind = StructureShapeKind.WallSegment,
+                    SegmentAXCm = 1200f,
+                    SegmentAZCm = 2600f,
+                    SegmentBXCm = worldWidth - 1200f,
+                    SegmentBZCm = 3000f,
+                    SegmentHalfWidthCm = 90f,
+                    MinHeightCm = 0f,
+                    MaxHeightCm = 300f
+                },
+                new StructureShapeDefinition
+                {
+                    Id = "nonideal_diagonal_gate",
+                    Kind = StructureShapeKind.OrientedBox,
+                    CenterXCm = worldWidth * 0.55f,
+                    CenterZCm = 3200f,
+                    HalfWidthCm = 1600f,
+                    HalfDepthCm = 150f,
+                    YawRadians = 0.35f,
+                    MinHeightCm = 0f,
+                    MaxHeightCm = 350f
+                }
+            };
+            var surfaces = new[]
+            {
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 1,
+                    Kind = StructureSurfaceKind.Deck,
+                    Flags = StructureSurfaceFlags.Walkable | StructureSurfaceFlags.PickingGround | StructureSurfaceFlags.CameraGround,
+                    LayerId = 1,
+                    AgentMask = uint.MaxValue,
+                    ShapeId = "nonideal_long_bridge_deck"
+                },
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 2,
+                    Kind = StructureSurfaceKind.Ramp,
+                    Flags = StructureSurfaceFlags.Walkable | StructureSurfaceFlags.PickingGround | StructureSurfaceFlags.CameraGround,
+                    LayerId = 1,
+                    AgentMask = uint.MaxValue,
+                    ShapeId = "nonideal_overlap_ramp"
+                },
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 3,
+                    Kind = StructureSurfaceKind.Platform,
+                    Flags = StructureSurfaceFlags.Walkable | StructureSurfaceFlags.PickingGround | StructureSurfaceFlags.CameraGround,
+                    LayerId = 1,
+                    AgentMask = uint.MaxValue,
+                    ShapeId = "nonideal_upper_platform"
+                },
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 4,
+                    Kind = StructureSurfaceKind.Wall,
+                    Flags = StructureSurfaceFlags.BlocksMovement | StructureSurfaceFlags.BlocksVision,
+                    LayerId = 0,
+                    AgentMask = uint.MaxValue,
+                    ShapeId = "nonideal_long_wall"
+                },
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 5,
+                    Kind = StructureSurfaceKind.Gate,
+                    Flags = StructureSurfaceFlags.BlocksMovement | StructureSurfaceFlags.Mutable,
+                    LayerId = 0,
+                    AgentMask = uint.MaxValue,
+                    ShapeId = "nonideal_diagonal_gate"
+                }
+            };
+
+            return Build(header, layers, masks, shapes, surfaces);
+        }
+
         private static StructureSurfaceSoA BuildSurfaces(
             IReadOnlyList<StructureSurfaceDefinition> surfaceDefinitions,
             Dictionary<string, int> shapeIndexById,

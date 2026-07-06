@@ -626,9 +626,9 @@ namespace Ludots.Core.StructureCollision
 
         private static bool Contains(in WorldAabbCm bounds, float worldXCm, float worldZCm)
             => worldXCm >= bounds.Left &&
-               worldXCm <= bounds.Right &&
+               worldXCm < bounds.Right &&
                worldZCm >= bounds.Top &&
-               worldZCm <= bounds.Bottom;
+               worldZCm < bounds.Bottom;
     }
 
     public sealed class StructureDirtyChunkState
@@ -659,8 +659,15 @@ namespace Ludots.Core.StructureCollision
 
         public int CopyDirtyChunks(Span<StructureChunkRevision> output)
         {
+            int required = CountDirtyChunks();
+            if (output.Length < required)
+            {
+                throw new InvalidOperationException(
+                    $"Structure dirty chunk output span too small: required {required}, got {output.Length}.");
+            }
+
             int written = 0;
-            for (int i = 0; i < _dirty.Length && written < output.Length; i++)
+            for (int i = 0; i < _dirty.Length; i++)
             {
                 if (_dirty[i] == 0)
                 {
@@ -671,6 +678,20 @@ namespace Ludots.Core.StructureCollision
             }
 
             return written;
+        }
+
+        public int CountDirtyChunks()
+        {
+            int count = 0;
+            for (int i = 0; i < _dirty.Length; i++)
+            {
+                if (_dirty[i] != 0)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         public void ClearDirty()

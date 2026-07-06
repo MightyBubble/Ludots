@@ -13,12 +13,26 @@ namespace Ludots.Core.StructureCollision
             return StructureCollisionDerivedViewUtility.CollectBlockers(asset, runtimeState, blockerKind, output);
         }
 
+        public static int CountBlockers(
+            StructureCollisionAsset asset,
+            StructureCollisionRuntimeState? runtimeState,
+            StructureCollisionBlockerKind blockerKind)
+        {
+            return StructureCollisionDerivedViewUtility.CountBlockers(asset, runtimeState, blockerKind);
+        }
+
         public static int CollectDirtyChunkInvalidations(
             StructureCollisionRuntimeState runtimeState,
             Span<StructureChunkRevision> output)
         {
             if (runtimeState == null) throw new ArgumentNullException(nameof(runtimeState));
             return runtimeState.DirtyChunks.CopyDirtyChunks(output);
+        }
+
+        public static int CountDirtyChunkInvalidations(StructureCollisionRuntimeState runtimeState)
+        {
+            if (runtimeState == null) throw new ArgumentNullException(nameof(runtimeState));
+            return runtimeState.DirtyChunks.CountDirtyChunks();
         }
     }
 
@@ -32,12 +46,25 @@ namespace Ludots.Core.StructureCollision
             return StructureCollisionDerivedViewUtility.CollectBlockers(asset, runtimeState, StructureCollisionBlockerKind.Movement, output);
         }
 
+        public static int CountCollisionShapes(
+            StructureCollisionAsset asset,
+            StructureCollisionRuntimeState? runtimeState)
+        {
+            return StructureCollisionDerivedViewUtility.CountBlockers(asset, runtimeState, StructureCollisionBlockerKind.Movement);
+        }
+
         public static int CollectDirtyChunkInvalidations(
             StructureCollisionRuntimeState runtimeState,
             Span<StructureChunkRevision> output)
         {
             if (runtimeState == null) throw new ArgumentNullException(nameof(runtimeState));
             return runtimeState.DirtyChunks.CopyDirtyChunks(output);
+        }
+
+        public static int CountDirtyChunkInvalidations(StructureCollisionRuntimeState runtimeState)
+        {
+            if (runtimeState == null) throw new ArgumentNullException(nameof(runtimeState));
+            return runtimeState.DirtyChunks.CountDirtyChunks();
         }
     }
 
@@ -130,16 +157,16 @@ namespace Ludots.Core.StructureCollision
             Span<StructureCollisionBlockerView> output)
         {
             if (asset == null) throw new ArgumentNullException(nameof(asset));
-            StructureSurfaceFlags required = blockerKind switch
+            StructureSurfaceFlags required = ResolveRequiredFlag(blockerKind);
+            int requiredCount = CountBlockers(asset, runtimeState, required);
+            if (output.Length < requiredCount)
             {
-                StructureCollisionBlockerKind.Movement => StructureSurfaceFlags.BlocksMovement,
-                StructureCollisionBlockerKind.Projectile => StructureSurfaceFlags.BlocksProjectiles,
-                StructureCollisionBlockerKind.Vision => StructureSurfaceFlags.BlocksVision,
-                _ => throw new ArgumentOutOfRangeException(nameof(blockerKind))
-            };
+                throw new InvalidOperationException(
+                    $"Structure blocker output span too small: required {requiredCount}, got {output.Length}.");
+            }
 
             int written = 0;
-            for (int i = 0; i < asset.SurfaceCount && written < output.Length; i++)
+            for (int i = 0; i < asset.SurfaceCount; i++)
             {
                 if ((asset.Surfaces.Flags[i] & required) == 0)
                 {
@@ -162,6 +189,50 @@ namespace Ludots.Core.StructureCollision
             }
 
             return written;
+        }
+
+        public static int CountBlockers(
+            StructureCollisionAsset asset,
+            StructureCollisionRuntimeState? runtimeState,
+            StructureCollisionBlockerKind blockerKind)
+        {
+            if (asset == null) throw new ArgumentNullException(nameof(asset));
+            return CountBlockers(asset, runtimeState, ResolveRequiredFlag(blockerKind));
+        }
+
+        private static int CountBlockers(
+            StructureCollisionAsset asset,
+            StructureCollisionRuntimeState? runtimeState,
+            StructureSurfaceFlags required)
+        {
+            int count = 0;
+            for (int i = 0; i < asset.SurfaceCount; i++)
+            {
+                if ((asset.Surfaces.Flags[i] & required) == 0)
+                {
+                    continue;
+                }
+
+                if (runtimeState != null && !runtimeState.IsSurfaceEnabled(i))
+                {
+                    continue;
+                }
+
+                count++;
+            }
+
+            return count;
+        }
+
+        private static StructureSurfaceFlags ResolveRequiredFlag(StructureCollisionBlockerKind blockerKind)
+        {
+            return blockerKind switch
+            {
+                StructureCollisionBlockerKind.Movement => StructureSurfaceFlags.BlocksMovement,
+                StructureCollisionBlockerKind.Projectile => StructureSurfaceFlags.BlocksProjectiles,
+                StructureCollisionBlockerKind.Vision => StructureSurfaceFlags.BlocksVision,
+                _ => throw new ArgumentOutOfRangeException(nameof(blockerKind))
+            };
         }
     }
 }

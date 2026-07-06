@@ -76,6 +76,14 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void StructureCollisionAssetLoader_RejectsNumericEnumAndFlagStrings()
+        {
+            AssertLoadFailsAfterReplacing("\"kind\": \"WalkablePolygon\"", "\"kind\": \"99\"", "unknown kind");
+            AssertLoadFailsAfterReplacing("\"kind\": \"Deck\"", "\"kind\": \"99\"", "unknown kind");
+            AssertLoadFailsAfterReplacing("\"PickingGround\"", "\"128\"", "unknown flag");
+        }
+
+        [Test]
         public void StructureCollisionAssetLoader_RejectsMissingOrInvalidHeaderFieldsInsteadOfDefaulting()
         {
             AssertLoadFailsAfterRemovingLine("  \"version\": 1,", "requires positive version");
@@ -115,6 +123,24 @@ namespace Ludots.Tests.Architecture
                     asset.ChunkColumns,
                     asset.ChunkRows))!;
             Assert.That(ex.Message, Does.Contain("out of range"));
+        }
+
+        [Test]
+        public void StructureCollisionAsset_UsesHalfOpenShapeBoundsAtChunkBoundary()
+        {
+            StructureCollisionAsset asset = CreateBoundaryAsset();
+            Assert.That(asset.TryGetSurfaceIndexById(201, out int surfaceIndex), Is.True);
+            Assert.That(asset.TryGetChunkIndex(999.5f, 500f, out int leftChunk), Is.True);
+            Assert.That(leftChunk, Is.EqualTo(asset.GetChunkIndex(0, 0)));
+            Assert.That(asset.TryGetChunkIndex(1000f, 500f, out int rightChunk), Is.True);
+            Assert.That(rightChunk, Is.EqualTo(asset.GetChunkIndex(1, 0)));
+            Assert.That(asset.SurfaceChunkCount[surfaceIndex], Is.EqualTo(1));
+            Assert.That(asset.SurfaceChunkIndices[asset.SurfaceChunkStart[surfaceIndex]], Is.EqualTo(leftChunk));
+
+            Assert.That(asset.TryEvaluateSurfaceHeight(surfaceIndex, 999.5f, 500f, out float insideHeight), Is.True);
+            Assert.That(insideHeight, Is.EqualTo(250f).Within(0.001f));
+            Assert.That(asset.TryEvaluateSurfaceHeight(surfaceIndex, 1000f, 500f, out _), Is.False);
+            Assert.That(asset.TryEvaluateSurfaceHeight(surfaceIndex, 750f, 750f, out _), Is.False);
         }
 
         [Test]
@@ -202,6 +228,44 @@ namespace Ludots.Tests.Architecture
             Assert.That(physicsCount, Is.EqualTo(1));
             Assert.That(physicsShapes[0].SurfaceId, Is.EqualTo(104));
             Assert.That(ContainsDebugSurface(debugRecords.Slice(0, debugCount), 104), Is.True);
+        }
+
+        [Test]
+        public void StructureAdapters_ReportRequiredCountsAndRejectTooSmallOutputSpans()
+        {
+            StructureCollisionAsset asset = LoadFixtureAsset();
+            var runtime = new StructureCollisionRuntimeState(asset);
+
+            int movementRequired = StructureCollisionNavigationAdapter.CountBlockers(asset, runtime, StructureCollisionBlockerKind.Movement);
+            int physicsRequired = StructureCollisionPhysicsAdapter.CountCollisionShapes(asset, runtime);
+
+            Assert.That(movementRequired, Is.EqualTo(1));
+            Assert.That(physicsRequired, Is.EqualTo(1));
+            InvalidOperationException movementEx = Assert.Throws<InvalidOperationException>(
+                () => StructureCollisionNavigationAdapter.CollectBlockers(
+                    asset,
+                    runtime,
+                    StructureCollisionBlockerKind.Movement,
+                    Array.Empty<StructureCollisionBlockerView>()))!;
+            InvalidOperationException physicsEx = Assert.Throws<InvalidOperationException>(
+                () => StructureCollisionPhysicsAdapter.CollectCollisionShapes(
+                    asset,
+                    runtime,
+                    Array.Empty<StructureCollisionBlockerView>()))!;
+            Assert.That(movementEx.Message, Does.Contain("output span too small"));
+            Assert.That(physicsEx.Message, Does.Contain("output span too small"));
+
+            Assert.That(asset.TryGetSurfaceIndexById(104, out int gateIndex), Is.True);
+            Assert.That(runtime.SetSurfaceEnabled(asset, gateIndex, enabled: false), Is.True);
+            Assert.That(StructureCollisionNavigationAdapter.CountDirtyChunkInvalidations(runtime), Is.EqualTo(1));
+            Assert.That(StructureCollisionPhysicsAdapter.CountDirtyChunkInvalidations(runtime), Is.EqualTo(1));
+
+            InvalidOperationException navDirtyEx = Assert.Throws<InvalidOperationException>(
+                () => StructureCollisionNavigationAdapter.CollectDirtyChunkInvalidations(runtime, Array.Empty<StructureChunkRevision>()))!;
+            InvalidOperationException physicsDirtyEx = Assert.Throws<InvalidOperationException>(
+                () => StructureCollisionPhysicsAdapter.CollectDirtyChunkInvalidations(runtime, Array.Empty<StructureChunkRevision>()))!;
+            Assert.That(navDirtyEx.Message, Does.Contain("output span too small"));
+            Assert.That(physicsDirtyEx.Message, Does.Contain("output span too small"));
         }
 
         [Test]
@@ -293,10 +357,74 @@ namespace Ludots.Tests.Architecture
             Assert.That(result.ManagedAllocationsBytes, Is.EqualTo(0));
         }
 
+        [Test]
+        public void StructureGroundingNonIdealStressBenchmark_ExercisesOverlapTerrainAndLongChunkSpans()
+        {
+            StructureGroundingBenchmarkResult result = StructureGroundingBenchmark.RunNonIdealBenchmark(
+                samplesPerFrame: 20_000,
+                frames: 50);
+
+            TestContext.WriteLine(
+                $"nonIdeal surfaces={result.TotalSurfaces}; chunks={result.LoadedChunks}; samples={result.SampledPoints}; visitedChunks={result.VisitedChunks}; candidates={result.TestedCandidateSurfaces}; maxCandidatesPerSample={result.MaxCandidateSurfacesPerSample}; elapsedMs={result.ElapsedMilliseconds:F3}; p95Ms={result.P95FrameMilliseconds:F3}; allocations={result.ManagedAllocationsBytes}");
+
+            Assert.That(result.TotalSurfaces, Is.GreaterThanOrEqualTo(4));
+            Assert.That(result.LoadedChunks, Is.GreaterThan(1));
+            Assert.That(result.SampledPoints, Is.EqualTo(1_000_000));
+            Assert.That(result.MaxCandidateSurfacesPerSample, Is.GreaterThan(1));
+            Assert.That(result.TestedCandidateSurfaces, Is.GreaterThan(result.SampledPoints));
+            Assert.That(result.ManagedAllocationsBytes, Is.EqualTo(0));
+        }
+
         private static StructureCollisionAsset LoadFixtureAsset()
         {
             using Stream stream = File.OpenRead(Path.Combine(FindRepoRoot(), FixtureRelativePath));
             return StructureCollisionAssetJson.Read(stream);
+        }
+
+        private static StructureCollisionAsset CreateBoundaryAsset()
+        {
+            var header = new StructureCollisionHeader(
+                version: 1,
+                new WorldAabbCm(0, 0, 2000, 1000),
+                chunkSizeCm: 1000,
+                revision: 591,
+                coordinateScale: 1f);
+            var layers = new[] { new StructureLayerDefinition("bridge", BridgeLayer) };
+            var masks = new[] { new StructureAgentMaskDefinition("all", AllAgentsMask) };
+            var shapes = new[]
+            {
+                new StructureShapeDefinition
+                {
+                    Id = "right_boundary_deck_shape",
+                    Kind = StructureShapeKind.WalkablePolygon,
+                    Vertices = new[]
+                    {
+                        new StructurePointCm(500f, 250f),
+                        new StructurePointCm(1000f, 250f),
+                        new StructurePointCm(1000f, 750f),
+                        new StructurePointCm(500f, 750f)
+                    },
+                    PlaneOriginXCm = 500f,
+                    PlaneOriginZCm = 250f,
+                    PlaneHeightCm = 250f,
+                    MinHeightCm = 250f,
+                    MaxHeightCm = 250f
+                }
+            };
+            var surfaces = new[]
+            {
+                new StructureSurfaceDefinition
+                {
+                    SurfaceId = 201,
+                    Kind = StructureSurfaceKind.Deck,
+                    Flags = StructureSurfaceFlags.Walkable,
+                    LayerId = BridgeLayer,
+                    AgentMask = AllAgentsMask,
+                    ShapeId = "right_boundary_deck_shape"
+                }
+            };
+
+            return StructureCollisionAssetBuilder.Build(header, layers, masks, shapes, surfaces);
         }
 
         private static void AssertLoadFailsAfterReplacing(string oldValue, string newValue, string expectedMessage)

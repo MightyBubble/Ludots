@@ -125,10 +125,9 @@ namespace Ludots.Core.StructureCollision
             for (int i = 0; i < dtos.Count; i++)
             {
                 ShapeDto dto = dtos[i] ?? throw new InvalidOperationException($"shapes[{i}] is null.");
-                if (!Enum.TryParse(dto.Kind, ignoreCase: false, out StructureShapeKind kind))
-                {
-                    throw new InvalidOperationException($"Structure shape '{dto.Id}' has unknown kind '{dto.Kind}'.");
-                }
+                StructureShapeKind kind = ParseDefinedEnum<StructureShapeKind>(
+                    dto.Kind,
+                    $"Structure shape '{dto.Id}' has unknown kind '{dto.Kind}'.");
 
                 float planeHeight = dto.PlaneHeightCm ?? dto.HeightCm ?? 0f;
                 float minHeight = dto.MinHeightCm ?? dto.HeightCm ?? planeHeight;
@@ -177,10 +176,9 @@ namespace Ludots.Core.StructureCollision
             for (int i = 0; i < dtos.Count; i++)
             {
                 SurfaceDto dto = dtos[i] ?? throw new InvalidOperationException($"surfaces[{i}] is null.");
-                if (!Enum.TryParse(dto.Kind, ignoreCase: false, out StructureSurfaceKind kind))
-                {
-                    throw new InvalidOperationException($"Structure surface '{dto.Id}' has unknown kind '{dto.Kind}'.");
-                }
+                StructureSurfaceKind kind = ParseDefinedEnum<StructureSurfaceKind>(
+                    dto.Kind,
+                    $"Structure surface '{dto.Id}' has unknown kind '{dto.Kind}'.");
 
                 if (!layerById.TryGetValue(dto.LayerId, out int layerId))
                 {
@@ -239,15 +237,53 @@ namespace Ludots.Core.StructureCollision
             for (int i = 0; i < flags.Count; i++)
             {
                 string flag = flags[i];
-                if (!Enum.TryParse(flag, ignoreCase: false, out StructureSurfaceFlags parsed))
-                {
-                    throw new InvalidOperationException($"Structure surface '{surfaceId}' has unknown flag '{flag}'.");
-                }
+                StructureSurfaceFlags parsed = ParseDefinedEnum<StructureSurfaceFlags>(
+                    flag,
+                    $"Structure surface '{surfaceId}' has unknown flag '{flag}'.");
 
                 result |= parsed;
             }
 
             return result;
+        }
+
+        private static TEnum ParseDefinedEnum<TEnum>(string value, string failureMessage)
+            where TEnum : struct, Enum
+        {
+            if (string.IsNullOrWhiteSpace(value) ||
+                IsNumericEnumLiteral(value) ||
+                !Enum.TryParse(value, ignoreCase: false, out TEnum parsed) ||
+                !Enum.IsDefined(typeof(TEnum), parsed))
+            {
+                throw new InvalidOperationException(failureMessage);
+            }
+
+            return parsed;
+        }
+
+        private static bool IsNumericEnumLiteral(string value)
+        {
+            string text = value.Trim();
+            if (text.Length == 0)
+            {
+                return false;
+            }
+
+            int start = text[0] == '-' || text[0] == '+' ? 1 : 0;
+            if (start == text.Length)
+            {
+                return false;
+            }
+
+            for (int i = start; i < text.Length; i++)
+            {
+                if (!char.IsDigit(text[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private sealed class AssetDto
