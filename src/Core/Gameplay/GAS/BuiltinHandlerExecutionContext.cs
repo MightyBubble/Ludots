@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -26,7 +28,9 @@ namespace Ludots.Core.Gameplay.GAS
         public EntityLifecycleRuntimeServices? LifecycleServices { get; set; }
         public LifecycleTransactionState? LifecycleTransaction { get; set; }
         public ExchangeRuntime? Exchange { get; set; }
+        public RelationshipRuntime? Relationships { get; set; }
         public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
+        public KnowledgeAreaRevealRuntime? KnowledgeAreaReveal { get; set; }
         public OrderTypeRegistry? OrderTypeRegistry { get; set; }
         public OrderRuleRegistry? OrderRuleRegistry { get; set; }
         public int CurrentStep { get; set; }

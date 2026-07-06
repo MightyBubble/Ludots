@@ -9,6 +9,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
+using Ludots.Core.StructureCollision;
 
 namespace Ludots.Core.Engine
 {
@@ -93,6 +94,9 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapLoadStatus);
                 RemoveService(CoreServiceKeys.MapLaunchContext);
                 RemoveService(CoreServiceKeys.VisualHeightmap);
+                RemoveService(CoreServiceKeys.StructureCollisionAsset);
+                RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+                RemoveService(CoreServiceKeys.GroundSurfaceSampler);
                 ParticipantBindingResolver.ClearFocused(GlobalContext);
                 PublishFocusedMapLoadState();
                 return;
@@ -117,6 +121,31 @@ namespace Ludots.Core.Engine
             else
             {
                 RemoveService(CoreServiceKeys.VisualHeightmap);
+            }
+            if (session.StructureCollisionAsset != null)
+            {
+                session.StructureCollisionRuntimeState ??= new StructureCollisionRuntimeState(session.StructureCollisionAsset);
+                session.GroundSurfaceSampler ??= new GroundSurfaceSampler(
+                    session.VisualHeightmap,
+                    session.StructureCollisionAsset,
+                    session.StructureCollisionRuntimeState);
+                SetService(CoreServiceKeys.StructureCollisionAsset, session.StructureCollisionAsset);
+                SetService(CoreServiceKeys.StructureCollisionRuntimeState, session.StructureCollisionRuntimeState);
+                SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
+            }
+            else
+            {
+                RemoveService(CoreServiceKeys.StructureCollisionAsset);
+                RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+                if (session.VisualHeightmap != null)
+                {
+                    session.GroundSurfaceSampler ??= new GroundSurfaceSampler(session.VisualHeightmap, null, null);
+                    SetService(CoreServiceKeys.GroundSurfaceSampler, session.GroundSurfaceSampler);
+                }
+                else
+                {
+                    RemoveService(CoreServiceKeys.GroundSurfaceSampler);
+                }
             }
             PublishSessionParticipants(session);
             PublishFocusedMapLoadState();

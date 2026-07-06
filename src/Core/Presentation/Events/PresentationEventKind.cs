@@ -18,6 +18,11 @@ namespace Ludots.Core.Presentation.Events
         CastCommitted = 21,
         CastFailed = 22,
         EffectActivated = 23,
+        CastStarted = 24,
+        CastFinished = 25,
+        CastInterrupted = 26,
+        EffectExpired = 27,
+        EffectCancelled = 28,
 
         // Global domain events
         GlobalDayNight = 30,

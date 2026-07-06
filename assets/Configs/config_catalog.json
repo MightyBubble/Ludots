@@ -19,6 +19,8 @@
   { "Path": "GAS/clock.json", "Policy": "DeepObject" },
   { "Path": "GAS/order_types.json", "Policy": "DeepObject" },
 
+  { "Path": "Vision/fog_layers.json", "Policy": "ArrayById", "IdField": "id" },
+
   { "Path": "Progression/scopes.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Progression/progressions.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Progression/requirements.json", "Policy": "ArrayById", "IdField": "id" },

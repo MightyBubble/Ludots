@@ -59,11 +59,13 @@ using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Vision.Config;
 // Indicators directory removed — unified into Performers
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
+using Ludots.Core.StructureCollision;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
@@ -709,7 +711,8 @@ namespace Ludots.Core.Engine
                 gasConditions,
                 targetDispatchPresetRegistry,
                 progressionScopeKeys: progressionScopeKeys,
-                entityTemplateKeys: MapLoader.EntityTemplateKeys);
+                entityTemplateKeys: MapLoader.EntityTemplateKeys,
+                relationshipTypes: relationshipTypeRegistry);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -737,6 +740,8 @@ namespace Ludots.Core.Engine
             var visionFogFieldStore = new FogFieldStore();
             var visionFogSnapshotStore = new FogSnapshotStore(relationships: relationshipRuntime);
             var visionFogCellMap = new FogCellMap();
+            new VisionFogLayerConfigLoader(ConfigPipeline, visionFogLayerRegistry)
+                .Load(ConfigCatalog, ConfigConflictReport);
             var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
             var visionResolver = new VisionResolver(
                 visionFogLayerRegistry,
@@ -744,6 +749,12 @@ namespace Ludots.Core.Engine
                 elevation: visionFogCellMap,
                 occlusion: visionFogCellMap,
                 relationships: relationshipRuntime);
+            var knowledgeAreaRevealRuntime = new KnowledgeAreaRevealRuntime(
+                World,
+                visionFogLayerRegistry,
+                visionFogFieldStore,
+                visionResolver,
+                fogKnowledgeProjector);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -803,7 +814,9 @@ namespace Ludots.Core.Engine
                 targetDispatchPresetRegistry,
                 exchangeOperations,
                 progressionScopeKeys,
-                MapLoader.EntityTemplateKeys);
+                MapLoader.EntityTemplateKeys,
+                relationshipTypes: relationshipTypeRegistry,
+                fogLayers: visionFogLayerRegistry);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
@@ -1314,6 +1327,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
+            SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
@@ -1327,6 +1341,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AbilityAggregationProfileRegistry, abilityAggregationProfileRegistry);
             SetService(CoreServiceKeys.ContextBoundCollectionWriter, contextBoundCollectionWriter);
             RemoveService(CoreServiceKeys.VisualHeightmap);
+            RemoveService(CoreServiceKeys.StructureCollisionAsset);
+            RemoveService(CoreServiceKeys.StructureCollisionRuntimeState);
+            RemoveService(CoreServiceKeys.GroundSurfaceSampler);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleQueue, runtimeEntityLifecycleQueue);
             SetService(CoreServiceKeys.RuntimeEntityLifecycleReceiptQueue, runtimeEntityLifecycleReceiptQueue);
@@ -1538,7 +1555,7 @@ namespace Ludots.Core.Engine
                 performerRuntime,
                 performerDefinitions,
                 componentAuthoringContext);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
@@ -1858,11 +1875,13 @@ namespace Ludots.Core.Engine
             {
                 var previousFocused = MapSessions.FocusedSession;
                 IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+                StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
                 session.LaunchContext = request.LaunchContext;
                 session.VisualHeightmap = visualHeightmap;
+                BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);
                 if (previousFocused != null)
                 {
@@ -1988,6 +2007,21 @@ namespace Ludots.Core.Engine
             spawnQueue?.RemoveForMap(mapId);
         }
 
+        private static void BindStructureCollisionSession(
+            MapSession session,
+            IVisualHeightmap? visualHeightmap,
+            StructureCollisionAsset? structureCollision)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+            session.StructureCollisionAsset = structureCollision;
+            session.StructureCollisionRuntimeState = structureCollision != null
+                ? new StructureCollisionRuntimeState(structureCollision)
+                : null;
+            session.GroundSurfaceSampler = visualHeightmap != null || structureCollision != null
+                ? new GroundSurfaceSampler(visualHeightmap, structureCollision, session.StructureCollisionRuntimeState)
+                : null;
+        }
+
         /// <summary>
         /// Push a nested inner map (三国志12 mode). Outer map is suspended, inner map becomes active.
         /// </summary>
@@ -2006,11 +2040,13 @@ namespace Ludots.Core.Engine
             }
 
             IVisualHeightmap? visualHeightmap = MapVisualHeightmapLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
+            StructureCollisionAsset? structureCollision = MapStructureCollisionLoader.Load(VFS, ModLoader?.LoadedModIds, mapConfig);
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
             var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
             session.VisualHeightmap = visualHeightmap;
+            BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
             // Pass through data to inner context
             if (passthrough != null)

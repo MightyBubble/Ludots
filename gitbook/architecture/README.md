@@ -19,6 +19,7 @@
 - [能力标准 Showcase](capability-standard-showcases.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
+- [Structure Collision Surfaces](structure-collision-surfaces.md)
 - [Core Minimap Authoring](core-minimap-authoring.md)
 - [Core Field2D](core-field2d.md)
 - [Global Field Rendering](global-field-rendering.md)

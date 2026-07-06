@@ -362,6 +362,18 @@ namespace Ludots.Core.Gameplay.GAS
 
         private static int ComputeDirection(World world, in EffectContext ctx, in EffectConfigParams mergedParams)
         {
+            if (TryResolveBlackboardFacing(world, ctx.Source, out int blackboardFacingDeg))
+            {
+                return blackboardFacingDeg;
+            }
+
+            if (world.IsAlive(ctx.Source) && world.Has<FacingDirection>(ctx.Source))
+            {
+                float degrees = WorldPlane2D.NormalizeDegreesPositive(
+                    WorldPlane2D.RadToDegValue(world.Get<FacingDirection>(ctx.Source).AngleRad));
+                return (int)MathF.Round(degrees);
+            }
+
             if (TryResolveQueryOrigin(world, in ctx, in mergedParams, out var sourcePos) &&
                 TryResolveTargetPoint(world, in ctx, in mergedParams, out var targetPos))
             {
@@ -373,6 +385,24 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
             return 0;
+        }
+
+        private static bool TryResolveBlackboardFacing(World world, Entity source, out int facingDeg)
+        {
+            facingDeg = 0;
+            if (!world.IsAlive(source) || !world.Has<BlackboardFloatBuffer>(source))
+            {
+                return false;
+            }
+
+            ref readonly BlackboardFloatBuffer blackboard = ref world.Get<BlackboardFloatBuffer>(source);
+            if (!blackboard.TryGet(Orders.OrderBlackboardKeys.Cast_Facing, out float degrees))
+            {
+                return false;
+            }
+
+            facingDeg = (int)MathF.Round(WorldPlane2D.NormalizeDegreesPositive(degrees));
+            return true;
         }
 
         private static bool TryResolveQueryOrigin(World world, in EffectContext ctx, out WorldCmInt2 point)

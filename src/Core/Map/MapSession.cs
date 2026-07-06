@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
+using Ludots.Core.StructureCollision;
 
 namespace Ludots.Core.Map
 {
@@ -24,6 +25,9 @@ namespace Ludots.Core.Map
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
         public IVisualHeightmap? VisualHeightmap { get; set; }
+        public StructureCollisionAsset? StructureCollisionAsset { get; set; }
+        public StructureCollisionRuntimeState? StructureCollisionRuntimeState { get; set; }
+        public IGroundSurfaceSampler? GroundSurfaceSampler { get; set; }
         public TeamEntityLookup TeamEntityLookup { get; set; } = new TeamEntityLookup();
         public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
         public MapLoadEntityIndex EntityIndex { get; set; } = new MapLoadEntityIndex();

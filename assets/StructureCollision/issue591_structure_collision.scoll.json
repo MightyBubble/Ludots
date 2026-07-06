@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "revision": 591,
+  "coordinateScale": 1,
+  "worldBounds": { "xcm": 0, "zcm": 0, "widthCm": 4000, "heightCm": 4000 },
+  "chunkSizeCm": 1000,
+  "layers": [
+    { "id": "ground", "value": 0 },
+    { "id": "bridge", "value": 1 }
+  ],
+  "agentMasks": [
+    { "id": "infantry", "bits": 1 },
+    { "id": "mounted", "bits": 2 },
+    { "id": "all", "bits": 3 }
+  ],
+  "shapes": [
+    {
+      "id": "bridge_deck_shape",
+      "kind": "WalkablePolygon",
+      "vertices": [
+        { "xcm": 1000, "zcm": 1000 },
+        { "xcm": 1600, "zcm": 1000 },
+        { "xcm": 1600, "zcm": 1400 },
+        { "xcm": 1000, "zcm": 1400 }
+      ],
+      "heightCm": 500
+    },
+    {
+      "id": "ramp_shape",
+      "kind": "RampPlane",
+      "vertices": [
+        { "xcm": 1000, "zcm": 1600 },
+        { "xcm": 1600, "zcm": 1600 },
+        { "xcm": 1600, "zcm": 2000 },
+        { "xcm": 1000, "zcm": 2000 }
+      ],
+      "minHeightCm": 0,
+      "maxHeightCm": 220,
+      "planeOriginXCm": 1000,
+      "planeOriginZCm": 1600,
+      "planeHeightCm": 0,
+      "planeSlopeZ": 0.5
+    },
+    {
+      "id": "narrow_platform_shape",
+      "kind": "WalkablePolygon",
+      "vertices": [
+        { "xcm": 2000, "zcm": 1000 },
+        { "xcm": 2200, "zcm": 1000 },
+        { "xcm": 2200, "zcm": 1300 },
+        { "xcm": 2000, "zcm": 1300 }
+      ],
+      "heightCm": 300
+    },
+    {
+      "id": "gate_shape",
+      "kind": "OrientedBox",
+      "centerXCm": 2700,
+      "centerZCm": 1200,
+      "halfWidthCm": 100,
+      "halfDepthCm": 200,
+      "minHeightCm": 0,
+      "maxHeightCm": 250
+    }
+  ],
+  "surfaces": [
+    {
+      "id": 101,
+      "kind": "Deck",
+      "shapeId": "bridge_deck_shape",
+      "layerId": "bridge",
+      "agentMaskId": "all",
+      "flags": [ "Walkable", "PickingGround", "CameraGround" ],
+      "sourcePrefabId": 9001,
+      "sourcePartId": 1
+    },
+    {
+      "id": 102,
+      "kind": "Ramp",
+      "shapeId": "ramp_shape",
+      "layerId": "bridge",
+      "agentMaskId": "all",
+      "flags": [ "Walkable", "PickingGround", "CameraGround" ],
+      "sourcePrefabId": 9001,
+      "sourcePartId": 2
+    },
+    {
+      "id": 103,
+      "kind": "Platform",
+      "shapeId": "narrow_platform_shape",
+      "layerId": "bridge",
+      "agentMaskId": "infantry",
+      "flags": [ "Walkable", "PickingGround", "CameraGround" ],
+      "sourcePrefabId": 9002,
+      "sourcePartId": 1
+    },
+    {
+      "id": 104,
+      "kind": "Gate",
+      "shapeId": "gate_shape",
+      "layerId": "ground",
+      "agentMaskId": "all",
+      "flags": [ "BlocksMovement", "Mutable" ],
+      "sourcePrefabId": 9003,
+      "sourcePartId": 1
+    }
+  ]
+}

@@ -71,7 +71,9 @@ namespace CoreInputMod.Systems
                     Fix64Vec2 delta = exec.TargetPosCm - facingPosition.Value;
                     if (delta.X != Fix64.Zero || delta.Y != Fix64.Zero)
                     {
-                        Upsert(entity, new FacingDirection { AngleRad = WorldPlane2D.FacingRadFromDirection(in delta) });
+                        float facingRad = WorldPlane2D.FacingRadFromDirection(in delta);
+                        Upsert(entity, new FacingDirection { AngleRad = facingRad });
+                        UpsertBlackboardFacing(entity, facingRad);
                     }
                 }
 
@@ -94,6 +96,24 @@ namespace CoreInputMod.Systems
             else
             {
                 World.Add(entity, component);
+            }
+        }
+
+        private void UpsertBlackboardFacing(Entity entity, float facingRad)
+        {
+            BlackboardFloatBuffer floats = World.TryGet(entity, out BlackboardFloatBuffer existing)
+                ? existing
+                : default;
+            floats.Set(
+                OrderBlackboardKeys.Cast_Facing,
+                WorldPlane2D.NormalizeDegreesPositive(WorldPlane2D.RadToDegValue(facingRad)));
+            if (World.Has<BlackboardFloatBuffer>(entity))
+            {
+                World.Set(entity, floats);
+            }
+            else
+            {
+                World.Add(entity, floats);
             }
         }
     }
