@@ -255,6 +255,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException("Graph relationship query runtime is not available.");
         }
+
+        // ── Topology predicates (RFC-0065 PROV-4b / DEC-5) ──
+
+        /// <summary>Edge-existence predicate over RelationshipRuntime.HasLink.</summary>
+        bool HasRelationshipLink(Entity source, Entity target, int typeId)
+        {
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
+        }
+
+        /// <summary>Resolves the control domain rep of a target; returns Entity.Null when no domain exists.</summary>
+        Entity ResolveControlDomain(Entity target)
+        {
+            throw new InvalidOperationException("Graph control-domain runtime is not available.");
+        }
+
+        /// <summary>Controls-reachability predicate (owns subtree ∪ Controls grants).</summary>
+        bool IsControllableBy(Entity controllerRep, Entity target)
+        {
+            throw new InvalidOperationException("Graph control-domain runtime is not available.");
+        }
+
+        /// <summary>True when the viewer holds a live knowledge projection of the target.</summary>
+        bool HasKnowledgeProjection(Entity viewer, Entity target)
+        {
+            throw new InvalidOperationException("Graph knowledge runtime is not available.");
+        }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
         void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)

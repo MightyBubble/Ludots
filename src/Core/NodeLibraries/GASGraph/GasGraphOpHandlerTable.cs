@@ -151,6 +151,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.CompareLtInt] = HandleCompareLtInt;
             h[(ushort)GraphNodeOp.CompareEqInt] = HandleCompareEqInt;
             h[(ushort)GraphNodeOp.HasTag] = HandleHasTag;
+            h[(ushort)GraphNodeOp.CompareEqEntity] = HandleCompareEqEntity;
             h[(ushort)GraphNodeOp.RandomFloat01] = HandleRandomFloat01;
 
             // ── Hex spatial queries (130-132) ──
@@ -202,6 +203,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.IsPointInCircle] = HandleIsPointInCircle;
             h[(ushort)GraphNodeOp.SnapToNearestInCollection] = HandleSnapToNearestInCollection;
             h[(ushort)GraphNodeOp.SnapToNearestGraphEdge] = HandleSnapToNearestGraphEdge;
+
+            // ── Event evaluation context (410-412) ──
+            h[(ushort)GraphNodeOp.LoadViewer] = HandleLoadViewer;
+            h[(ushort)GraphNodeOp.LoadEventPayloadInt] = HandleLoadEventPayloadInt;
+            h[(ushort)GraphNodeOp.LoadEventPayloadFloat] = HandleLoadEventPayloadFloat;
+
+            // ── Topology predicates (397, 420-422) ──
+            h[(ushort)GraphNodeOp.RelationshipHasLink] = HandleRelationshipHasLink;
+            h[(ushort)GraphNodeOp.ControlDomainResolve] = HandleControlDomainResolve;
+            h[(ushort)GraphNodeOp.ControlDomainControls] = HandleControlDomainControls;
+            h[(ushort)GraphNodeOp.KnowledgeHasProjection] = HandleKnowledgeHasProjection;
 
             return h;
         }
@@ -701,6 +713,62 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
             var entity = s.E[ins.A];
             s.B[ins.Dst] = (byte)(s.Api.HasTag(entity, ins.Imm) ? 1 : 0);
+        }
+
+        private static void HandleCompareEqEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.E[ins.A] == s.E[ins.B] ? 1 : 0);
+        }
+
+        // ── Event evaluation context (410-412) ──
+
+        private static void HandleLoadViewer(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.E[ins.Dst] = s.Viewer;
+        }
+
+        private static void HandleLoadEventPayloadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.I[ins.Dst] = ins.Imm switch
+            {
+                0 => s.EventPayload.PayloadA,
+                1 => s.EventPayload.PayloadB,
+                _ => throw new InvalidOperationException($"LoadEventPayloadInt slot {ins.Imm} is out of range (0=PayloadA, 1=PayloadB)."),
+            };
+        }
+
+        private static void HandleLoadEventPayloadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = ins.Imm switch
+            {
+                0 => s.EventPayload.FloatA,
+                1 => s.EventPayload.FloatB,
+                2 => s.EventPayload.FloatC,
+                3 => s.EventPayload.FloatD,
+                _ => throw new InvalidOperationException($"LoadEventPayloadFloat slot {ins.Imm} is out of range (0..3 = FloatA..FloatD)."),
+            };
+        }
+
+        // ── Topology predicates (397, 420-422) ──
+
+        private static void HandleRelationshipHasLink(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.HasRelationshipLink(s.E[ins.A], s.E[ins.B], RequireExplicitRelationshipTypeId(ins.Flags)) ? 1 : 0);
+        }
+
+        private static void HandleControlDomainResolve(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.E[ins.Dst] = s.Api.ResolveControlDomain(s.E[ins.A]);
+        }
+
+        private static void HandleControlDomainControls(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.IsControllableBy(s.E[ins.A], s.E[ins.B]) ? 1 : 0);
+        }
+
+        private static void HandleKnowledgeHasProjection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.B[ins.Dst] = (byte)(s.Api.HasKnowledgeProjection(s.E[ins.A], s.E[ins.B]) ? 1 : 0);
         }
 
         private static void HandleRandomFloat01(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

@@ -173,6 +173,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasCatalogTags = hasCatalogTags;
             }
 
+            // ── interactionContextProfile (RFC-0065 CTX-6) ──
+            if (obj["interactionContextProfile"] != null)
+            {
+                string contextProfileId = obj["interactionContextProfile"]?.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(contextProfileId))
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' interactionContextProfile must be a non-empty string.");
+                }
+
+                def.InteractionContextProfileId = contextProfileId.Trim();
+                def.HasInteractionContextProfile = true;
+            }
+
             if (obj["activationPrecondition"] is JsonObject preconditionObj)
             {
                 def.ActivationPrecondition = CompileActivationPrecondition(preconditionObj, id, path);

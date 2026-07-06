@@ -131,6 +131,15 @@ namespace Ludots.Core.Gameplay.GAS
         /// </summary>
         public GameplayTagContainer CatalogTags;
         public bool HasCatalogTags;
+
+        // ── Interaction context binding (RFC-0065 CTX-6) ──
+        /// <summary>
+        /// Optional InteractionContextProfile id (abilities.json <c>interactionContextProfile</c>).
+        /// While an exec instance of this ability runs, the client pushes the profile's context
+        /// frame and reclaims it when the exec ends/aborts; Core never interprets the id.
+        /// </summary>
+        public string InteractionContextProfileId;
+        public bool HasInteractionContextProfile;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -192,6 +201,30 @@ namespace Ludots.Core.Gameplay.GAS
 
             ref readonly AbilityDefinition definition = ref _items[abilityId];
             return definition.HasCatalogTags && definition.CatalogTags.HasTag(tagId);
+        }
+
+        /// <summary>
+        /// In-place interaction context profile probe (no definition copy); hot path for the exec
+        /// lifecycle context system (RFC-0065 CTX-6). False when the ability is unknown or declares
+        /// no <see cref="AbilityDefinition.InteractionContextProfileId"/>.
+        /// </summary>
+        public bool TryGetInteractionContextProfileId(int abilityId, out string profileId)
+        {
+            if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
+            {
+                profileId = string.Empty;
+                return false;
+            }
+
+            ref readonly AbilityDefinition definition = ref _items[abilityId];
+            if (!definition.HasInteractionContextProfile)
+            {
+                profileId = string.Empty;
+                return false;
+            }
+
+            profileId = definition.InteractionContextProfileId;
+            return true;
         }
 
         /// <summary>

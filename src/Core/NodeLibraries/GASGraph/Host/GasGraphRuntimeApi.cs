@@ -4,11 +4,13 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map.Hex;
@@ -36,6 +38,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EntityCollectionStore? _entityCollections;
         private readonly EntitySetQueryRuntime? _entityQueries;
         private LoadedGraphRuntime? _loadedGraphRuntime;
+
+        // ── Topology predicate services (RFC-0065 PROV-4b), bound post-construction ──
+        private ControlDomainQuery? _controlDomains;
+        private KnowledgeProjectionResolver? _knowledgeProjections;
+        private IClock? _clock;
         private int[] _graphProjectionCandidateScratch = Array.Empty<int>();
 
         // ── Config context: set before each graph execution, cleared after ──
@@ -63,7 +70,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new ArgumentNullException(nameof(services));
             }
 
-            return new GasGraphRuntimeApi(
+            var api = new GasGraphRuntimeApi(
                 world,
                 spatialQueries,
                 coords,
@@ -78,6 +85,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime));
+            api.BindTopologyServices(
+                OptionalService(services, CoreServiceKeys.ControlDomainQuery),
+                OptionalService(services, CoreServiceKeys.KnowledgeProjectionResolver),
+                OptionalService(services, CoreServiceKeys.Clock));
+            return api;
+        }
+
+        private static T? OptionalService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
+            where T : class
+        {
+            return services.TryGetValue(key.Name, out object? value) && value is T typed ? typed : null;
         }
 
         private static T RequireService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
@@ -164,6 +182,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {
             _loadedGraphRuntime = runtime;
+        }
+
+        /// <summary>
+        /// Binds the topology predicate services consumed by the ControlDomain*/Knowledge* graph ops
+        /// (RFC-0065 PROV-4b). The clock supplies the Step-domain tick for knowledge projection expiry.
+        /// </summary>
+        public void BindTopologyServices(
+            ControlDomainQuery? controlDomains,
+            KnowledgeProjectionResolver? knowledgeProjections,
+            IClock? clock)
+        {
+            _controlDomains = controlDomains;
+            _knowledgeProjections = knowledgeProjections;
+            _clock = clock;
         }
 
         public void BeginBuiltinInvocation(
@@ -574,6 +606,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             => RequireEntityQueries().TryMaxEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
         public bool TryMinEntityByRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId, out Entity entity, out int value)
             => RequireEntityQueries().TryMinEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
+
+        // ── Topology predicates (RFC-0065 PROV-4b / DEC-5) ──
+
+        public bool HasRelationshipLink(Entity source, Entity target, int typeId)
+            => RequireRelationshipRuntime().HasLink(source, target, typeId);
+
+        public Entity ResolveControlDomain(Entity target)
+            => RequireControlDomains().TryResolveControlDomain(target, out Entity domainRep) ? domainRep : Entity.Null;
+
+        public bool IsControllableBy(Entity controllerRep, Entity target)
+            => RequireControlDomains().IsControllableBy(controllerRep, target);
+
+        public bool HasKnowledgeProjection(Entity viewer, Entity target)
+            => RequireKnowledgeProjections().CanKnowEntity(viewer, target, CurrentStepTick());
+
+        private ControlDomainQuery RequireControlDomains()
+        {
+            return _controlDomains ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingControlDomainQuery");
+        }
+
+        private KnowledgeProjectionResolver RequireKnowledgeProjections()
+        {
+            return _knowledgeProjections ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingKnowledgeProjectionResolver");
+        }
+
+        private int CurrentStepTick()
+        {
+            return _clock?.Now(ClockDomainId.Step) ?? 0;
+        }
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
         {
