@@ -11,10 +11,12 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -35,6 +37,8 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
+            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea);
+            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
             registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
@@ -401,7 +405,81 @@ namespace Ludots.Core.Gameplay.GAS
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
                     break;
+                case RelationOperation.EnsureLink:
+                {
+                    Entity target = ResolveRelationEntity(in context, relation.Parent);
+                    if (!world.IsAlive(target))
+                    {
+                        return;
+                    }
+
+                    var runtime = BuiltinHandlerRuntimeScope.Current;
+                    if (runtime?.Relationships == null)
+                    {
+                        throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
+                    }
+
+                    if (relation.RelationshipTypeId < 0)
+                    {
+                        throw new InvalidOperationException("Relation operation EnsureLink requires a registered relationship type id.");
+                    }
+
+                    runtime.Relationships.EnsureLink(subject, target, relation.RelationshipTypeId);
+                    break;
+                }
             }
+        }
+
+        public static void HandleRevealArea(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.KnowledgeAreaReveal == null)
+            {
+                throw new InvalidOperationException("RevealArea requires KnowledgeAreaRevealRuntime in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryResolveRevealAreaCenter(world, in context, in mergedParams, out WorldCmInt2 center))
+            {
+                return;
+            }
+
+            runtime.KnowledgeAreaReveal.Reveal(
+                ResolveRevealViewer(world, in context),
+                context.Source,
+                center,
+                in templateData.RevealArea,
+                runtime.CurrentStep);
+        }
+
+        public static void HandleDecayRevealArea(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.KnowledgeAreaReveal == null)
+            {
+                throw new InvalidOperationException("DecayRevealArea requires KnowledgeAreaRevealRuntime in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!TryResolveRevealAreaCenter(world, in context, in mergedParams, out WorldCmInt2 center))
+            {
+                return;
+            }
+
+            runtime.KnowledgeAreaReveal.DecayArea(
+                ResolveRevealViewer(world, in context),
+                context.Source,
+                center,
+                in templateData.RevealArea,
+                runtime.CurrentStep);
         }
 
         public static void HandleExecuteExchange(
@@ -622,6 +700,47 @@ namespace Ludots.Core.Gameplay.GAS
                 RelationEntitySlot.TargetContext => context.TargetContext,
                 _ => Entity.Null,
             };
+        }
+
+        private static bool TryResolveRevealAreaCenter(
+            World world,
+            in EffectContext context,
+            in EffectConfigParams mergedParams,
+            out WorldCmInt2 center)
+        {
+            if (EffectTargetPointResolver.TryResolve(
+                    world,
+                    in context,
+                    in mergedParams,
+                    EffectTargetPointResolveOptions.CreateUnit,
+                    out Fix64Vec2 point))
+            {
+                center = point.ToWorldCmInt2();
+                return true;
+            }
+
+            center = default;
+            return false;
+        }
+
+        private static Entity ResolveRevealViewer(World world, in EffectContext context)
+        {
+            if (world.IsAlive(context.Source))
+            {
+                return context.Source;
+            }
+
+            if (world.IsAlive(context.Target))
+            {
+                return context.Target;
+            }
+
+            if (world.IsAlive(context.TargetContext))
+            {
+                return context.TargetContext;
+            }
+
+            return Entity.Null;
         }
 
         private static void SnapSubjectToParentPosition(World world, Entity subject, Entity parent)

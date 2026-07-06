@@ -5,6 +5,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -35,6 +36,8 @@ namespace Ludots.Core.Gameplay.GAS
         SubmitOrderFromBlackboard = 15,
         /// <summary>Atomic entity template replacement with inheritance profile.</summary>
         DeployConsumeSource = 16,
+        /// <summary>Timed area reveal through Vision/Fog/Knowledge projection.</summary>
+        RevealArea = 17,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -280,6 +283,7 @@ namespace Ludots.Core.Gameplay.GAS
         None = 0,
         SetParent = 1,
         RemoveParent = 2,
+        EnsureLink = 3,
     }
 
     public enum RelationEntitySlot : byte
@@ -296,6 +300,7 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationEntitySlot Subject;
         public RelationEntitySlot Parent;
         public bool SnapSubjectToParentPosition;
+        public int RelationshipTypeId;
     }
 
     /// <summary>
@@ -339,6 +344,7 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public KnowledgeAreaRevealDescriptor RevealArea;
         public SubmitOrderFromBlackboardDescriptor SubmitOrderFromBlackboard;
         public ScopeKey ProgressionScope;
         public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;

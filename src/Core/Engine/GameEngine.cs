@@ -58,6 +58,7 @@ using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Vision.Config;
 // Indicators directory removed — unified into Performers
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -678,7 +679,8 @@ namespace Ludots.Core.Engine
                 gasConditions,
                 targetDispatchPresetRegistry,
                 progressionScopeKeys: progressionScopeKeys,
-                entityTemplateKeys: MapLoader.EntityTemplateKeys);
+                entityTemplateKeys: MapLoader.EntityTemplateKeys,
+                relationshipTypes: relationshipTypeRegistry);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -706,6 +708,8 @@ namespace Ludots.Core.Engine
             var visionFogFieldStore = new FogFieldStore();
             var visionFogSnapshotStore = new FogSnapshotStore(relationships: relationshipRuntime);
             var visionFogCellMap = new FogCellMap();
+            new VisionFogLayerConfigLoader(ConfigPipeline, visionFogLayerRegistry)
+                .Load(ConfigCatalog, ConfigConflictReport);
             var fogKnowledgeProjector = new FogKnowledgeProjector(knowledgeProjectionStore, visionFogCellMap);
             var visionResolver = new VisionResolver(
                 visionFogLayerRegistry,
@@ -713,6 +717,12 @@ namespace Ludots.Core.Engine
                 elevation: visionFogCellMap,
                 occlusion: visionFogCellMap,
                 relationships: relationshipRuntime);
+            var knowledgeAreaRevealRuntime = new KnowledgeAreaRevealRuntime(
+                World,
+                visionFogLayerRegistry,
+                visionFogFieldStore,
+                visionResolver,
+                fogKnowledgeProjector);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -772,7 +782,9 @@ namespace Ludots.Core.Engine
                 targetDispatchPresetRegistry,
                 exchangeOperations,
                 progressionScopeKeys,
-                MapLoader.EntityTemplateKeys);
+                MapLoader.EntityTemplateKeys,
+                relationshipTypes: relationshipTypeRegistry,
+                fogLayers: visionFogLayerRegistry);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
@@ -1204,6 +1216,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionFogCellMap, visionFogCellMap);
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
+            SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
@@ -1403,7 +1416,7 @@ namespace Ludots.Core.Engine
                 performerRuntime,
                 performerDefinitions,
                 componentAuthoringContext);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, runtimeEntityLifecycleQueue, entityLifecycleServices, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, exchangeRuntime: exchangeRuntime, progressionEvaluator: progressionEvaluator, orderTypeRegistry: orderTypeRegistry, orderRuleRegistry: orderRuleRegistry, stepRateHz: stepRateHz, relationshipRuntime: relationshipRuntime, knowledgeAreaRevealRuntime: knowledgeAreaRevealRuntime), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(

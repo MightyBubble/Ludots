@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -260,6 +261,8 @@ namespace Ludots.Tests.GAS
         {
             string json = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
+            GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
 
             // Warm up
             for (int i = 0; i < 10; i++)
@@ -292,11 +295,11 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.Directory.Exists(System.IO.Path.Combine(dir, "assets")))
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))
                     return dir;
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
-            throw new InvalidOperationException("Cannot find repo root.");
+            throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
         }
     }
 }

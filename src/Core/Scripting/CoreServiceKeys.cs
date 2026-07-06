@@ -205,6 +205,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
         public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");
         public static readonly ServiceKey<FogKnowledgeProjector> FogKnowledgeProjector = new("Vision.FogKnowledgeProjector");
+        public static readonly ServiceKey<KnowledgeAreaRevealRuntime> KnowledgeAreaRevealRuntime = new("Vision.KnowledgeAreaRevealRuntime");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
