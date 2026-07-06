@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Map;
@@ -283,6 +284,107 @@ namespace Ludots.Tests.GAS
             Assert.That(relationships.HasLink(playerTwo, unit, ownsType), Is.True);
             Assert.That(ownership.TryGetDirectOwner(unit, out Entity owner), Is.True);
             Assert.That(owner, Is.EqualTo(playerTwo));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_StanceCatalogConfigured_BridgesAttitudeEdgesConsistentWithTeamManager()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            var session = new MapSession(new MapId(map.Id), map);
+            var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            DomainStanceConfig stanceCatalog = CreateStanceCatalog(types);
+            map.ParticipantRelationships.PlayerTeams[0].Attitude = stanceCatalog.StanceTypes[0];
+
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog);
+
+            int bridgedStanceId = types.GetId(stanceCatalog.StanceTypes[0]);
+            Assert.That(relationships.HasLink(teamOne, teamTwo, bridgedStanceId), Is.True, "Symmetric team attitude must bridge the A→B stance edge.");
+            Assert.That(relationships.HasLink(teamTwo, teamOne, bridgedStanceId), Is.True, "Symmetric team attitude must bridge the B→A stance edge.");
+            Assert.That(relationships.HasLink(playerOne, teamOne, bridgedStanceId), Is.True, "PlayerTeams attitude must bridge the playerRep→teamRep stance edge.");
+            Assert.That(relationships.HasLink(teamOne, playerOne, bridgedStanceId), Is.False, "Asymmetric PlayerTeams binding must not mirror the stance edge.");
+
+            var stanceQuery = DomainStanceQuery.Create(relationships, types.GetId("MemberOf"), stanceCatalog);
+            int resolvedStance = stanceQuery.GetStance(playerOne, playerTwo);
+            Assert.That(resolvedStance, Is.EqualTo(bridgedStanceId), "DomainStanceQuery must read the bridged team edge through member_of.");
+            Assert.That(
+                resolvedStance,
+                Is.EqualTo(types.GetId(TeamManager.GetRelationship(10, 20).ToString())),
+                "Bridged stance must agree with the TeamManager matrix (name alignment is data, not code mapping).");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_StanceCatalogConfigured_UnknownAttitude_FailsFastListingStanceNames()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            var session = new MapSession(new MapId(map.Id), map);
+            var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            var stanceCatalog = new DomainStanceConfig
+            {
+                StanceTypes = { "Stance.OnlyOther" },
+                SameDomainStance = "Stance.OnlyOther",
+                SameTeamStance = "Stance.OnlyOther",
+                DefaultStance = "Stance.OnlyOther",
+            };
+            types.Register(stanceCatalog.StanceTypes[0]);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog))!;
+
+            Assert.That(ex.Message, Does.Contain(map.ParticipantRelationships.Teams[0].Attitude));
+            Assert.That(ex.Message, Does.Contain(stanceCatalog.StanceTypes[0]), "Fail-fast message must list the registered stance names.");
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_WithoutStanceCatalog_SkipsStanceEdges()
+        {
+            using var world = World.Create();
+            var map = CreateMap();
+            var session = new MapSession(new MapId(map.Id), map);
+            var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out _, out _);
+            var types = new RelationshipTypeRegistry();
+            types.Register("Alliance");
+            types.Register("Rivalry");
+            types.Register("Membership");
+            RelationshipRuntime relationships = CreateRelationshipRuntime(world, types);
+            OwnershipResolver ownership = CreateOwnership(relationships, types);
+            int stanceId = types.Register(CreateStanceCatalog(types).StanceTypes[0]);
+
+            ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership, stanceCatalog: null);
+
+            Assert.That(relationships.HasLink(teamOne, teamTwo, stanceId), Is.False, "No stance catalog = pure legacy TeamManager behavior, no stance edges.");
+            Assert.That(TeamManager.GetRelationship(10, 20), Is.EqualTo(TeamRelationship.Friendly), "TeamManager double-write must stay untouched.");
+        }
+
+        private static DomainStanceConfig CreateStanceCatalog(RelationshipTypeRegistry types)
+        {
+            // Stance names exist only in this catalog construction (matching the default catalog data).
+            var catalog = new DomainStanceConfig
+            {
+                StanceTypes = { "Friendly", "Hostile", "Neutral" },
+                SameDomainStance = "Friendly",
+                SameTeamStance = "Friendly",
+                DefaultStance = "Neutral",
+            };
+            for (int i = 0; i < catalog.StanceTypes.Count; i++)
+            {
+                types.Register(catalog.StanceTypes[i]);
+            }
+
+            return catalog;
         }
 
         private static PlayerEntityLookup RebuildPlayerLookup(Entity playerOne, Entity playerTwo)

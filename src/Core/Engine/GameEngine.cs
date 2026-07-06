@@ -1897,7 +1897,8 @@ namespace Ludots.Core.Engine
                         entityIndex,
                         GetService(CoreServiceKeys.RelationshipRuntime),
                         GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                        GetService(CoreServiceKeys.OwnershipResolver)));
+                        GetService(CoreServiceKeys.OwnershipResolver),
+                        GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
                 SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
@@ -2051,7 +2052,8 @@ namespace Ludots.Core.Engine
                     entityIndex,
                     GetService(CoreServiceKeys.RelationshipRuntime),
                     GetService(CoreServiceKeys.RelationshipTypeRegistry),
-                    GetService(CoreServiceKeys.OwnershipResolver)));
+                    GetService(CoreServiceKeys.OwnershipResolver),
+                    GetService(CoreServiceKeys.RelationshipCatalogConfig)?.Stance));
             SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)

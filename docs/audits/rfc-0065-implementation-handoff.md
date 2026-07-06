@@ -27,12 +27,13 @@
 3. **并发子代理产物的接缝**：GameEngine 接线块（约 L957/L1190-1300）是多任务合流点，审查服务构造顺序依赖（aggregation 必须在 abilities.json 后、commandIntent 在 orderTypes 后）。
 4. **已知基线失败**（非本分支引入，均经 stash/worktree 基线对照确认）：`AbilityExecLoaderFailFastTests`（14 个）、`OrderTypeConfigLoader_*`（5 个）、SkiaSharp 缺 so、零分配波动类。建议单独开 issue 追踪。
 5. **控制组/Selection 双轨**：SelectionRuntime 仍是正式框选 SSOT；showcase 的域路由由 `ControlPlaneRoutedSelectionSystem`（mod 侧）从 formal selection 桥接——ORD-5/CTX-5 的 Core 级迁移未做（见尾巴）。
+6. **DomainStanceQuery 与 TeamManager 桥接一致性**：双写点在 `ParticipantBindingResolver.ResolveRelationships`（map attitude → TeamManager 矩阵 + teamRep→teamRep stance 边，同一循环）；任何绕过该入口直改 TeamManager 或直建 stance 边的代码都会造成双轨分叉。一致性由 `DomainStanceBridgeAcceptanceTests`（引擎级，全参与者对遍历）与 `ParticipantBindingContractTests` 的桥接用例守护；attitude↔stance 命名对齐是数据约定（enum 成员名 = catalog stance 名），不存在代码映射表。
 
 ## 三、未做的尾巴（按风险排序）
 
 | 尾巴 | 原因 | 建议 |
 |---|---|---|
-| **CTRL-3：删除 embodied PlayerOwner/Team（breaking）** | 消费者面极大（GAS targeting/TeamColorResolver/PerformPhaseResolver/SelectionEligibility.CanAcquire/lifecycle snapshot/#499 publisher/MassNav 等），需 DomainStanceQuery 全面替换热路径后才能删 | 独立 PR；先迁消费者（每个一个子单），最后删组件 + ArchitectureTests 禁令 |
+| **CTRL-3：删除 embodied PlayerOwner/Team（breaking）** | 消费者面极大（GAS targeting/TeamColorResolver/PerformPhaseResolver/SelectionEligibility.CanAcquire/lifecycle snapshot/#499 publisher/MassNav 等），需 DomainStanceQuery 全面替换热路径后才能删。**被替代清单另含 `TeamManager`（静态 (TeamA,TeamB)→TeamRelationship enum 矩阵 + `TeamRelationshipSnapshot` 持久化）**：桥接已建立——`ParticipantBindingResolver` 在写 TeamManager 的同一循环把 map attitude 双写为 teamRep→teamRep / playerRep→teamRep stance 边（stance catalog 配置时 fail-fast 校验，未配置时跳过），SSOT 迁移到 relationship 边完成后 TeamManager 退役 | 独立 PR；先迁消费者（每个一个子单），最后删组件 + ArchitectureTests 禁令 |
 | **ORD 工作流 + PR #535 vs #577 仲裁** | 两个外部 PR 25 文件重叠、closes 同批子单，需人工 triage | 人工决策 canonical 后，把 InputOrderMappingSystem 的 fan-out 迁移到 CommandIntentProfile.RouteGroup + CastDispatchProfile.SelectDispatchTargets（挂点已就绪） |
 | **CastCommit/Intent/Dispatch 与 InputOrderMappingSystem 的接线** | 内核全部就绪但输入主链路仍走旧 InteractionModeType；退役 InteractionModeType 是 ORD/CTX-7 收尾 | 接线顺序：frameActions 拦截 → CommandIntentArbiter → RouteGroup → Dispatch → OrderQueue（约定已在 XML doc） |
 | **PROV-4c：VisibilityCondition graph Emit 接线** | PerformerEmitSystem 该路径现状 throw；触碰 emit 热路径，未在本轮改 | 小单独做，加 per-viewer 可见性测试 |
