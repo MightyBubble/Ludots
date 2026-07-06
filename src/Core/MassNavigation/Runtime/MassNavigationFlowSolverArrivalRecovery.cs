@@ -41,6 +41,8 @@ public sealed partial class MassNavigationFlowSolverState
             : configuredStopThresholdSq;
     }
 
+    // Runs inside parallel step jobs: must only touch per-agent slots. Arrival events are
+    // enqueued later by the single-threaded post-step scan (EnqueuePendingArrivalEvents).
     private void EnterSettledState(int index, float px, float py)
     {
         int i2 = index << 1;
@@ -52,7 +54,6 @@ public sealed partial class MassNavigationFlowSolverState
         _unitStuckSeconds[index] = 0f;
         _velocitiesCm[i2] = 0f;
         _velocitiesCm[i2 + 1] = 0f;
-        EnqueueArrivalEvent(index);
     }
 
     private void ExitSettledState(int index, float px, float py)

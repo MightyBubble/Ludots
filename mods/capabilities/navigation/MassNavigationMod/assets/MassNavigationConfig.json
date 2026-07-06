@@ -313,6 +313,8 @@
       "flowObstacleNeighborRadiusCells": 4,
       "flowObstacleNeighborWeight": 5,
       "flowObstacleAvoidanceWeight": 1.5,
+      "crowdStampCenterCost": 8,
+      "crowdStampNeighborCost": 3,
       "coincidentPairHashBucketCount": 1024,
       "coincidentPairHashPrimeA": 73856093,
       "coincidentPairHashPrimeB": 19349663

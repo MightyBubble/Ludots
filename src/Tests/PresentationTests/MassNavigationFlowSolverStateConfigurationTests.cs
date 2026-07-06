@@ -137,6 +137,60 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent()
+        {
+            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
+            {
+                ThreadPrefixName = "MassNavArrivalTests",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false
+            });
+
+            const int agentCount = 16;
+            var flow = CreateConfiguredFlow(parallelWorkerCount: 4);
+            flow.Semantics.Solver.ParallelStepMinAgents = 2;
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            for (int i = 0; i < agentCount; i++)
+            {
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 1_000f + ((i % 4) * 800f),
+                    localPositionYCm: 1_000f + ((i / 4) * 800f),
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            flow.ResetAuthoredAgents(seeds);
+            for (int i = 0; i < agentCount; i++)
+            {
+                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
+            }
+
+            using var world = World.Create();
+            var navGroups = new MassNavigationGroupRuntime(
+                new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
+
+            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
+            Assert.That(flow.SettledUnitCount, Is.EqualTo(agentCount));
+            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
+
+            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
+            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
+        }
+
+        [Test]
         public void SpawnJitter_UsesConfiguredSeedDeterministically()
         {
             var first = CreateSpawnedFlow(randomSeed: 1234);
