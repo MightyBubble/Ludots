@@ -107,6 +107,145 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CollectControlledDomains_SingleSpanReturnsOnlyFullyControlledDomains()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemyUnit = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
+
+            Span<Entity> buffer = stackalloc Entity[8];
+            int count = harness.Query.CollectControlledDomains(repA, buffer);
+            Assert.That(buffer[..count].ToArray(), Is.EqualTo(new[] { repA, repB }),
+                "Single-span overload must report only fully controlled domains.");
+        }
+
+        [Test]
+        public void CollectControlledDomains_DualSpanMarksUnitGrantDomainAsPartial()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemy1 = world.Create();
+            Entity enemy2 = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemy1);
+            harness.Ownership.EnsureOwnership(repC, enemy2);
+            harness.Relationships.EnsureLink(repA, enemy1, harness.ControlsTypeId);
+
+            Span<Entity> domains = stackalloc Entity[8];
+            Span<bool> fullyControlled = stackalloc bool[8];
+            int count = harness.Query.CollectControlledDomains(repA, domains, fullyControlled);
+            Assert.That(domains[..count].ToArray(), Is.EqualTo(new[] { repA, repC }));
+            Assert.That(fullyControlled[..count].ToArray(), Is.EqualTo(new[] { true, false }),
+                "A domain reached only through a unit grant is partially controlled.");
+
+            harness.Relationships.RemoveLink(repA, enemy1, harness.ControlsTypeId);
+            count = harness.Query.CollectControlledDomains(repA, domains, fullyControlled);
+            Assert.That(domains[..count].ToArray(), Is.EqualTo(new[] { repA }),
+                "Revoking the unit grant must drop the partial domain entry.");
+        }
+
+        [Test]
+        public void CollectControlledDomains_DomainlessUnitGrantProducesNoEntry()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity strayUnit = world.Create();
+            harness.Relationships.EnsureLink(rep, strayUnit, harness.ControlsTypeId);
+
+            Span<Entity> domains = stackalloc Entity[4];
+            Span<bool> fullyControlled = stackalloc bool[4];
+            int count = harness.Query.CollectControlledDomains(rep, domains, fullyControlled);
+            Assert.That(count, Is.EqualTo(1));
+            Assert.That(domains[0], Is.EqualTo(rep));
+            Assert.That(fullyControlled[0], Is.True);
+        }
+
+        [Test]
+        public void CollectControlledDomains_FullGrantWinsOverUnitGrantIntoSameDomain()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemyUnit = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, repC, harness.ControlsTypeId);
+
+            Span<Entity> domains = stackalloc Entity[4];
+            Span<bool> fullyControlled = stackalloc bool[4];
+            int count = harness.Query.CollectControlledDomains(repA, domains, fullyControlled);
+            Assert.That(domains[..count].ToArray(), Is.EqualTo(new[] { repA, repC }));
+            Assert.That(fullyControlled[..count].ToArray(), Is.EqualTo(new[] { true, true }),
+                "A domain that is both fully granted and unit-granted must report as fully controlled.");
+        }
+
+        [Test]
+        public void CollectControlledDomains_DualSpanThrowsWhenFlagSpanIsShorter()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+
+            Assert.That(() =>
+            {
+                Span<Entity> domains = stackalloc Entity[4];
+                Span<bool> fullyControlled = stackalloc bool[2];
+                harness.Query.CollectControlledDomains(rep, domains, fullyControlled);
+            }, Throws.ArgumentException);
+        }
+
+        [Test]
+        public void CollectControlledDomains_DualSpanAllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity repA = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity repB = world.Create(new PlayerIdentity { PlayerId = 2 });
+            Entity repC = world.Create(new PlayerIdentity { PlayerId = 3 });
+            Entity enemyUnit = world.Create();
+            harness.Ownership.EnsureOwnership(repC, enemyUnit);
+            harness.Relationships.EnsureLink(repA, repB, harness.ControlsTypeId);
+            harness.Relationships.EnsureLink(repA, enemyUnit, harness.ControlsTypeId);
+
+            var domains = new Entity[8];
+            var fullyControlled = new bool[8];
+            harness.Query.CollectControlledDomains(repA, domains, fullyControlled);
+
+            long allocated = MeasureCollectControlledDomainsAllocations(harness.Query, repA, domains, fullyControlled);
+            allocated = Math.Min(allocated, MeasureCollectControlledDomainsAllocations(harness.Query, repA, domains, fullyControlled));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        private static long MeasureCollectControlledDomainsAllocations(
+            ControlDomainQuery query,
+            Entity controllerRep,
+            Entity[] domains,
+            bool[] fullyControlled)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                query.CollectControlledDomains(controllerRep, domains, fullyControlled);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [Test]
         public void TryResolveControlDomain_WalksMultiLevelOwnsChainToPlayerIdentityRep()
         {
             using var world = World.Create();

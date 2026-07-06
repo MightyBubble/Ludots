@@ -10,6 +10,9 @@ namespace Ludots.Core.Gameplay.Relationships.Config
     /// Loads and merges <c>Relationships/control_profiles.json</c> fragments across Core and mods
     /// (same ConfigPipeline pattern as <see cref="RelationshipCatalogPipelineLoader"/>).
     /// A missing file yields an empty profile list, which makes the runtime a no-op.
+    /// Duplicate ids within one fragment fail fast; a later fragment overriding an earlier one's id
+    /// is the sanctioned mod-override path and is recorded as the winner in the conflict report
+    /// (same contract as the ArrayById merge in <see cref="ConfigMerger"/>).
     /// </summary>
     public sealed class AssociationControlProfilePipelineLoader
     {
@@ -41,6 +44,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
 
             var byId = new Dictionary<string, AssociationControlProfileConfig>(StringComparer.OrdinalIgnoreCase);
             var order = new List<string>();
+            var fragmentIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < fragments.Count; i++)
             {
                 AssociationControlProfileCatalogConfig? fragment = fragments[i].Node.Deserialize<AssociationControlProfileCatalogConfig>(_options);
@@ -49,6 +53,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                     continue;
                 }
 
+                fragmentIds.Clear();
                 for (int p = 0; p < fragment.Profiles.Count; p++)
                 {
                     AssociationControlProfileConfig? profile = fragment.Profiles[p];
@@ -58,12 +63,20 @@ namespace Ludots.Core.Gameplay.Relationships.Config
                             $"Control profile fragment '{fragments[i].SourceUri}' contains a profile without a non-empty id.");
                     }
 
+                    if (!fragmentIds.Add(profile.Id))
+                    {
+                        // Same-fragment duplicates are authoring errors, never a legitimate override.
+                        throw new InvalidOperationException(
+                            $"Control profile fragment '{fragments[i].SourceUri}' declares duplicate profile id '{profile.Id}'.");
+                    }
+
                     if (!byId.ContainsKey(profile.Id))
                     {
                         order.Add(profile.Id);
                     }
 
                     byId[profile.Id] = profile;
+                    report?.RecordWinner(relativePath, profile.Id, fragments[i].SourceUri);
                 }
             }
 

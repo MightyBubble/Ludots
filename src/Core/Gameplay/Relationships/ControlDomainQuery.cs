@@ -88,9 +88,10 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         /// <summary>
-        /// Collects the domain reps the controller can maintain: the controller rep itself plus every Controls
-        /// grant target that is a domain rep (carries <see cref="PlayerIdentity"/>). Units are never expanded,
-        /// which makes this the lightweight domain-list companion of <see cref="CollectControlled"/>.
+        /// Collects only the <b>fully controlled</b> domain reps: the controller rep itself plus every Controls
+        /// grant target that is a domain rep (carries <see cref="PlayerIdentity"/>). Domains reached through a
+        /// grant to a plain unit are partially controlled and are not reported here; use
+        /// <see cref="CollectControlledDomains(Entity, Span{Entity}, Span{bool})"/> when they matter.
         /// Results are de-duplicated and truncated to the buffer length.
         /// </summary>
         public int CollectControlledDomains(Entity controllerRep, Span<Entity> buffer)
@@ -115,9 +116,60 @@ namespace Ludots.Core.Gameplay.Relationships
         }
 
         /// <summary>
+        /// Collects every domain rep the controller can reach and marks, per entry, whether the domain is
+        /// <b>fully controlled</b> (the anchor's own domain or a Controls grant to the domain rep itself) or
+        /// <b>partially controlled</b> (reached only through a Controls grant to a plain unit; the unit's domain
+        /// is resolved via <see cref="TryResolveControlDomain"/>). A grant to a unit without any control domain
+        /// produces no entry — there is no domain to project it into. A domain that is both fully granted and
+        /// reached through a unit grant reports as fully controlled. Results are de-duplicated and truncated
+        /// to the domain buffer length.
+        /// </summary>
+        public int CollectControlledDomains(Entity controllerRep, Span<Entity> domains, Span<bool> fullyControlled)
+        {
+            if (fullyControlled.Length < domains.Length)
+            {
+                throw new ArgumentException(
+                    "Fully-controlled span must be at least as long as the domain destination.",
+                    nameof(fullyControlled));
+            }
+
+            if (controllerRep == Entity.Null || domains.IsEmpty || !_world.IsAlive(controllerRep))
+            {
+                return 0;
+            }
+
+            int written = AppendUniqueDomain(domains, fullyControlled, written: 0, controllerRep, full: true);
+            int grantCount = CollectGrants(controllerRep);
+
+            // Fully controlled domains first so a later unit grant into the same domain never downgrades it.
+            for (int i = 0; i < grantCount && written < domains.Length; i++)
+            {
+                Entity target = _grantScratch[i];
+                if (_world.IsAlive(target) && _world.Has<PlayerIdentity>(target))
+                {
+                    written = AppendUniqueDomain(domains, fullyControlled, written, target, full: true);
+                }
+            }
+
+            for (int i = 0; i < grantCount && written < domains.Length; i++)
+            {
+                Entity target = _grantScratch[i];
+                if (_world.IsAlive(target) &&
+                    !_world.Has<PlayerIdentity>(target) &&
+                    TryResolveControlDomain(target, out Entity unitDomain))
+                {
+                    written = AppendUniqueDomain(domains, fullyControlled, written, unitDomain, full: false);
+                }
+            }
+
+            return written;
+        }
+
+        /// <summary>
         /// Returns true when the target would appear in <see cref="CollectControlled"/> for the controller rep:
         /// it sits in the controller's owns subtree, is a directly granted non-rep entity, or sits in the owns
-        /// subtree of a granted domain rep.
+        /// subtree of a granted domain rep. Edge membership is resolved through the reverse index so per-row
+        /// filtering (partial-domain projection) stays allocation-free.
         /// </summary>
         public bool IsControllableBy(Entity controllerRep, Entity target)
         {
@@ -131,21 +183,21 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            if (!_world.Has<PlayerIdentity>(target) && _relationships.HasLink(controllerRep, target, _controlsTypeId))
+            if (!_world.Has<PlayerIdentity>(target) && HasControlsGrantFrom(controllerRep, target))
             {
                 return true;
             }
 
             Entity current = target;
             int guard = 0;
-            while (_ownership.TryGetDirectOwner(current, out Entity owner))
+            while (TryGetDirectOwnerViaIndex(current, out Entity owner))
             {
                 if (owner == controllerRep)
                 {
                     return true;
                 }
 
-                if (_world.Has<PlayerIdentity>(owner) && _relationships.HasLink(controllerRep, owner, _controlsTypeId))
+                if (_world.Has<PlayerIdentity>(owner) && HasControlsGrantFrom(controllerRep, owner))
                 {
                     return true;
                 }
@@ -227,6 +279,18 @@ namespace Ludots.Core.Gameplay.Relationships
             return hasDomain;
         }
 
+        /// <summary>Grant membership via the reverse index; the index is kept in lockstep with every runtime edge mutation.</summary>
+        private bool HasControlsGrantFrom(Entity controllerRep, Entity target)
+        {
+            return _relationships.ReverseIndex.ContainsIncoming(target, controllerRep, _controlsTypeId);
+        }
+
+        /// <summary>Direct owner via the reverse index (owns edges have at most one live source per target).</summary>
+        private bool TryGetDirectOwnerViaIndex(Entity owned, out Entity owner)
+        {
+            return _relationships.ReverseIndex.TryGetFirstIncoming(owned, _ownership.OwnsTypeId, out owner);
+        }
+
         private int AppendOwnedSubtree(Entity owner, Span<Entity> buffer, int written)
         {
             _ownedScratch.Clear();
@@ -257,6 +321,27 @@ namespace Ludots.Core.Gameplay.Relationships
         {
             public Entity DomainRep;
             public bool HasDomain;
+        }
+
+        private static int AppendUniqueDomain(
+            Span<Entity> domains,
+            Span<bool> fullyControlled,
+            int written,
+            Entity candidate,
+            bool full)
+        {
+            for (int i = 0; i < written; i++)
+            {
+                if (domains[i] == candidate)
+                {
+                    // Full entries are appended before partial ones, so an existing entry is never weaker.
+                    return written;
+                }
+            }
+
+            domains[written] = candidate;
+            fullyControlled[written] = full;
+            return written + 1;
         }
 
         private static int AppendUnique(Span<Entity> buffer, int written, Entity candidate)

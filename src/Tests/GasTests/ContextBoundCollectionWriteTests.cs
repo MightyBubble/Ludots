@@ -154,6 +154,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CommitCast_PassThroughFrame_ThrowsWhenRawContainsDomainlessEntity()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity m01 = world.Create();
+            Entity neutral = world.Create();
+            harness.Ownership.EnsureOwnership(p1Rep, m01);
+
+            // Frame without a filter profile: raw hits pass through, so the configurer owns routability.
+            // A domainless entity reaching the domain-routed command source must fail loudly (semantic guardrail).
+            harness.Stack.Push(InteractionContextFrameDescriptor.Create(
+                "ctx.test.pass_through",
+                EntityCollectionKeys.CommandSource,
+                "view.test.pass_through"));
+
+            Entity[] raw = { m01, neutral };
+            Assert.Throws<InvalidOperationException>(
+                () => harness.Writer.CommitCast(p1Rep, raw, EntityCollectionSourceKind.UiAcquisition));
+
+            Span<Entity> rows = stackalloc Entity[4];
+            Assert.That(harness.Store.TryGet(p1Rep, harness.UiCastRawKeyId, out EntityCollectionHandle rawHandle), Is.True);
+            Assert.That(harness.Store.CopyEntities(rawHandle, 0, rows), Is.EqualTo(2), "Raw capture is a client product and still lands.");
+            Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out _), Is.False, "The rejected routed write must not land.");
+        }
+
+        [Test]
         public void CommitCast_SteadyState_AllocatesZeroAfterWarmup()
         {
             using var world = World.Create();

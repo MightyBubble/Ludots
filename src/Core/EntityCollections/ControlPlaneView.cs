@@ -6,7 +6,9 @@ namespace Ludots.Core.EntityCollections
 {
     /// <summary>
     /// Composite read-only control-plane view (RFC-0065 §5.10 / CTRL-4d). For an anchor rep it concatenates the
-    /// <c>(domainRep, collectionKeyId)</c> collections of every control-reachable domain (anchor first). Nothing is
+    /// <c>(domainRep, collectionKeyId)</c> collections of every control-reachable domain (anchor first). Fully
+    /// controlled domains contribute all rows; partially controlled domains (reached only through a Controls grant
+    /// to a plain unit) contribute only the rows that are themselves controllable by the anchor. Nothing is
     /// materialized: a Controls edge disappearing shrinks the view on the next read while each domain keeps its rows.
     /// </summary>
     public sealed class ControlPlaneView
@@ -14,6 +16,7 @@ namespace Ludots.Core.EntityCollections
         private readonly EntityCollectionStore _store;
         private readonly ControlDomainQuery _domains;
         private Entity[] _domainScratch = new Entity[8];
+        private bool[] _fullyControlledScratch = new bool[8];
 
         public ControlPlaneView(EntityCollectionStore store, ControlDomainQuery domains)
         {
@@ -53,13 +56,35 @@ namespace Ludots.Core.EntityCollections
                     continue;
                 }
 
-                int copied = _store.CopyEntities(handle, 0, entities[written..]);
+                int copied = _fullyControlledScratch[d]
+                    ? _store.CopyEntities(handle, 0, entities[written..])
+                    : CopyControllableRows(anchorRep, handle, entities[written..]);
                 if (!domains.IsEmpty)
                 {
                     domains.Slice(written, copied).Fill(domainRep);
                 }
 
                 written += copied;
+            }
+
+            return written;
+        }
+
+        /// <summary>Row-level projection for a partially controlled domain: only rows the anchor can control.</summary>
+        private int CopyControllableRows(Entity anchorRep, EntityCollectionHandle handle, Span<Entity> destination)
+        {
+            if (!_store.TryGetView(handle, out EntityCollectionView view))
+            {
+                return 0;
+            }
+
+            int written = 0;
+            for (int i = 0; i < view.Count && written < destination.Length; i++)
+            {
+                if (_store.TryGetEntityAt(handle, i, out Entity row) && _domains.IsControllableBy(anchorRep, row))
+                {
+                    destination[written++] = row;
+                }
             }
 
             return written;
@@ -92,13 +117,14 @@ namespace Ludots.Core.EntityCollections
         {
             while (true)
             {
-                int count = _domains.CollectControlledDomains(anchorRep, _domainScratch);
+                int count = _domains.CollectControlledDomains(anchorRep, _domainScratch, _fullyControlledScratch);
                 if (count < _domainScratch.Length)
                 {
                     return count;
                 }
 
                 Array.Resize(ref _domainScratch, _domainScratch.Length * 2);
+                Array.Resize(ref _fullyControlledScratch, _fullyControlledScratch.Length * 2);
             }
         }
 

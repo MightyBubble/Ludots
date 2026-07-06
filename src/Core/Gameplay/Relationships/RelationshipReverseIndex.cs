@@ -15,6 +15,8 @@ namespace Ludots.Core.Gameplay.Relationships
         private int[] _rowCapacities;
         private Entity[] _rowSources;
         private EntityKeyedSoaRow<ReverseSlotPayload>[] _slotScratch;
+        private Entity[] _dedupEntities;
+        private bool[] _dedupUsed;
         private int _rowCursor;
         private uint _revision;
 
@@ -37,6 +39,8 @@ namespace Ludots.Core.Gameplay.Relationships
             _rowCapacities = new int[initialSlotCapacity];
             _rowSources = new Entity[initialRowCapacity];
             _slotScratch = new EntityKeyedSoaRow<ReverseSlotPayload>[16];
+            _dedupEntities = new Entity[64];
+            _dedupUsed = new bool[64];
         }
 
         /// <summary>Monotonically increasing change counter bumped on every mutation, including lazy dead-row reclamation.</summary>
@@ -94,6 +98,60 @@ namespace Ludots.Core.Gameplay.Relationships
             return CopySlotRows(slot, alreadyWritten: 0, destination, deduplicate: false);
         }
 
+        /// <summary>Returns true when a live (source → target) edge row of the given type exists; dead rows encountered while scanning are reclaimed in place. O(in-degree), buffer-free.</summary>
+        public bool ContainsIncoming(Entity target, Entity source, int typeId)
+        {
+            if (!_world.IsAlive(target) || !_world.IsAlive(source) || !TryGetActiveSlot(target, typeId, out int slot))
+            {
+                return false;
+            }
+
+            int index = 0;
+            while (index < _rowCounts[slot])
+            {
+                Entity candidate = _rowSources[_rowStarts[slot] + index];
+                if (!_world.IsAlive(candidate))
+                {
+                    RemoveRowAt(slot, index);
+                    continue;
+                }
+
+                if (candidate == source)
+                {
+                    return true;
+                }
+
+                index++;
+            }
+
+            return false;
+        }
+
+        /// <summary>Returns the first live incoming source for (target, type); dead rows encountered while scanning are reclaimed in place. Buffer-free companion of <see cref="CopyIncoming"/>.</summary>
+        public bool TryGetFirstIncoming(Entity target, int typeId, out Entity source)
+        {
+            source = Entity.Null;
+            if (!_world.IsAlive(target) || !TryGetActiveSlot(target, typeId, out int slot))
+            {
+                return false;
+            }
+
+            while (_rowCounts[slot] > 0)
+            {
+                Entity candidate = _rowSources[_rowStarts[slot]];
+                if (!_world.IsAlive(candidate))
+                {
+                    RemoveRowAt(slot, localIndex: 0);
+                    continue;
+                }
+
+                source = candidate;
+                return true;
+            }
+
+            return false;
+        }
+
         /// <summary>Removes rows referencing dead targets or sources and rebuilds the row pool tightly. Returns the number of reclaimed rows.</summary>
         public int Compact()
         {
@@ -140,6 +198,13 @@ namespace Ludots.Core.Gameplay.Relationships
         private int CopyIncomingAnyType(Entity target, Span<Entity> destination)
         {
             int slotCount = CopySlotsByTarget(target);
+            int totalRows = 0;
+            for (int i = 0; i < slotCount; i++)
+            {
+                totalRows += _rowCounts[_slotScratch[i].Slot];
+            }
+
+            PrepareDedupSet(totalRows);
             int written = 0;
             for (int i = 0; i < slotCount && written < destination.Length; i++)
             {
@@ -176,7 +241,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     continue;
                 }
 
-                if (!deduplicate || !ContainsEntity(destination, written, source))
+                if (!deduplicate || TryAddToDedupSet(source))
                 {
                     destination[written++] = source;
                 }
@@ -187,17 +252,47 @@ namespace Ludots.Core.Gameplay.Relationships
             return written;
         }
 
-        private static bool ContainsEntity(Span<Entity> destination, int count, Entity candidate)
+        /// <summary>
+        /// Prepares the pooled open-addressed dedup set for at most <paramref name="expectedCount"/> insertions;
+        /// the AnyType merge is O(total rows) instead of a quadratic destination scan.
+        /// </summary>
+        private void PrepareDedupSet(int expectedCount)
         {
-            for (int i = 0; i < count; i++)
+            int required = Math.Max(4, expectedCount * 2);
+            if (_dedupEntities.Length < required)
             {
-                if (destination[i] == candidate)
+                int next = _dedupEntities.Length;
+                while (next < required)
                 {
-                    return true;
+                    next *= 2;
                 }
+
+                _dedupEntities = new Entity[next];
+                _dedupUsed = new bool[next];
+            }
+            else
+            {
+                Array.Clear(_dedupUsed, 0, _dedupUsed.Length);
+            }
+        }
+
+        private bool TryAddToDedupSet(Entity candidate)
+        {
+            int mask = _dedupEntities.Length - 1;
+            int slot = (int)((((uint)candidate.Id * 2654435761u) ^ (uint)candidate.WorldId) & (uint)mask);
+            while (_dedupUsed[slot])
+            {
+                if (_dedupEntities[slot] == candidate)
+                {
+                    return false;
+                }
+
+                slot = (slot + 1) & mask;
             }
 
-            return false;
+            _dedupEntities[slot] = candidate;
+            _dedupUsed[slot] = true;
+            return true;
         }
 
         private bool TryGetActiveSlot(Entity target, int typeId, out int slot)

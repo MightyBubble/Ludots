@@ -33,7 +33,8 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01, m99 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
 
             Span<Entity> rows = stackalloc Entity[8];
             Span<Entity> writers = stackalloc Entity[8];
@@ -75,7 +76,8 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01, m99 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
 
             harness.Relationships.RemoveLink(p1Rep, p2Rep, harness.ControlsTypeId);
 
@@ -107,12 +109,14 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01, m99 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
             harness.Writer.ReplaceRouted(
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
 
             Assert.That(harness.Store.TryGet(p2Rep, harness.CommandSourceKeyId, out EntityCollectionHandle p2Handle), Is.True);
             Span<Entity> rows = stackalloc Entity[4];
@@ -124,7 +128,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ReplaceRouted_RoutesDomainlessEntityToTheWriterDomain()
+        public void ReplaceRouted_WriterDomainPolicy_ExplicitlyRoutesDomainlessEntityToTheWriterDomain()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
@@ -136,7 +140,8 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { stray },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.WriterDomain);
 
             Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out EntityCollectionHandle handle), Is.True);
             Span<Entity> rows = stackalloc Entity[4];
@@ -144,6 +149,29 @@ namespace Ludots.Tests.GAS
             Assert.That(rows[0], Is.EqualTo(stray));
             Assert.That(harness.Store.TryGetWriterDomainAt(handle, 0, out Entity writer), Is.True);
             Assert.That(writer, Is.EqualTo(p1Rep));
+        }
+
+        [Test]
+        public void ReplaceRouted_RejectPolicy_ThrowsForDomainlessEntityWithoutWritingAnything()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity owned = world.Create();
+            Entity stray = world.Create();
+            harness.Ownership.EnsureOwnership(p1Rep, owned);
+
+            Entity[] batch = { owned, stray };
+            var exception = Assert.Throws<InvalidOperationException>(() => harness.Writer.ReplaceRouted(
+                p1Rep,
+                harness.CommandSourceKeyId,
+                batch,
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject));
+            Assert.That(exception!.Message, Does.Contain(stray.ToString()).And.Contain(EntityCollectionKeys.CommandSource));
+
+            Assert.That(harness.Store.TryGet(p1Rep, harness.CommandSourceKeyId, out _), Is.False, "A rejected batch must not partially land.");
         }
 
         [Test]
@@ -163,7 +191,8 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
             uint initial = harness.View.ComputeRevision(p1Rep, harness.CommandSourceKeyId);
             Assert.That(harness.View.ComputeRevision(p1Rep, harness.CommandSourceKeyId), Is.EqualTo(initial), "Stable state must yield a stable revision.");
 
@@ -171,7 +200,8 @@ namespace Ludots.Tests.GAS
                 p1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01, m02 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
             uint afterContentChange = harness.View.ComputeRevision(p1Rep, harness.CommandSourceKeyId);
             Assert.That(afterContentChange, Is.Not.EqualTo(initial), "Content change in any domain must move the composite revision.");
 
@@ -205,12 +235,74 @@ namespace Ludots.Tests.GAS
 
             var members = new Entity[32];
             var domains = new Entity[32];
-            harness.Writer.ReplaceRouted(p1Rep, harness.CommandSourceKeyId, selection, EntityCollectionSourceKind.UiAcquisition);
+            harness.Writer.ReplaceRouted(p1Rep, harness.CommandSourceKeyId, selection, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
             harness.View.CopyMembersWithDomain(p1Rep, harness.CommandSourceKeyId, members, domains);
 
             long allocated = MeasureSteadyStateAllocations(harness, p1Rep, selection, members, domains);
             allocated = Math.Min(allocated, MeasureSteadyStateAllocations(harness, p1Rep, selection, members, domains));
             Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ReplaceRouted_ManyDomains_GroupsEveryRowCorrectlyWithZeroSteadyStateAllocations()
+        {
+            // Complexity contract: grouping is one resolve pass + one counting-sort scatter,
+            // O(rows + domains) per write — never rows × domains.
+            const int domainCount = 32;
+            const int unitsPerDomain = 64;
+
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+
+            var domainReps = new Entity[domainCount];
+            var batch = new Entity[domainCount * unitsPerDomain];
+            for (int d = 0; d < domainCount; d++)
+            {
+                domainReps[d] = world.Create(new PlayerIdentity { PlayerId = d + 1 });
+            }
+
+            Entity writerRep = domainReps[0];
+            for (int d = 1; d < domainCount; d++)
+            {
+                harness.Relationships.EnsureLink(writerRep, domainReps[d], harness.ControlsTypeId);
+            }
+
+            // Interleave domains inside the batch so grouping cannot rely on pre-sorted input.
+            for (int i = 0; i < batch.Length; i++)
+            {
+                Entity unit = world.Create();
+                harness.Ownership.EnsureOwnership(domainReps[i % domainCount], unit);
+                batch[i] = unit;
+            }
+
+            harness.Writer.ReplaceRouted(writerRep, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+
+            var rows = new Entity[batch.Length];
+            for (int d = 0; d < domainCount; d++)
+            {
+                Assert.That(harness.Store.TryGet(domainReps[d], harness.CommandSourceKeyId, out EntityCollectionHandle handle), Is.True);
+                int count = harness.Store.CopyEntities(handle, 0, rows);
+                Assert.That(count, Is.EqualTo(unitsPerDomain), $"Domain {d} must receive exactly its own rows.");
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.That(rows[i], Is.EqualTo(batch[(i * domainCount) + d]), "Batch order must be preserved inside each domain partition.");
+                }
+            }
+
+            long allocated = MeasureScaleWriteAllocations(harness, writerRep, batch);
+            allocated = Math.Min(allocated, MeasureScaleWriteAllocations(harness, writerRep, batch));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        private static long MeasureScaleWriteAllocations(Harness harness, Entity writerDomain, Entity[] batch)
+        {
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 32; i++)
+            {
+                harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, batch, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static long MeasureSteadyStateAllocations(
@@ -223,7 +315,7 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, selection, EntityCollectionSourceKind.UiAcquisition);
+                harness.Writer.ReplaceRouted(writerDomain, harness.CommandSourceKeyId, selection, EntityCollectionSourceKind.UiAcquisition, DomainRoutingUnresolvedPolicy.Reject);
                 harness.View.CopyMembersWithDomain(writerDomain, harness.CommandSourceKeyId, members, domains);
                 harness.View.ComputeRevision(writerDomain, harness.CommandSourceKeyId);
             }

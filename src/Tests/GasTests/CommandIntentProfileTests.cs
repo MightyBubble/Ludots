@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -302,11 +303,24 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void KnowledgeCommandTargetGate_MissingResolverOrClock_FailsAtConstruction()
+        {
+            using var world = World.Create();
+            var resolver = new KnowledgeProjectionResolver(new KnowledgeProjectionStore());
+
+            Assert.Throws<ArgumentNullException>(
+                () => _ = new KnowledgeCommandTargetGate(world, resolver: null, new DiscreteClock()),
+                "A missing resolver must fail at startup instead of allowing every live entity.");
+            Assert.Throws<ArgumentNullException>(
+                () => _ = new KnowledgeCommandTargetGate(world, resolver, clock: null));
+        }
+
+        [Test]
         public void TryRoute_KnowledgeCommandTargetGate_UsesViewerProjection()
         {
             using var world = World.Create();
-            var globals = new Dictionary<string, object>();
-            var gate = new KnowledgeCommandTargetGate(world, globals);
+            var store = new KnowledgeProjectionStore();
+            var gate = new KnowledgeCommandTargetGate(world, new KnowledgeProjectionResolver(store), new DiscreteClock());
             Harness harness = Harness.Create(world, gate.CanTarget);
             harness.InstallStandardProfile();
 
@@ -316,7 +330,6 @@ namespace Ludots.Tests.GAS
             Entity knownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
             Entity unknownTarget = harness.CreateTaggedEntity(p2Rep, GarrisonableTag);
 
-            var store = new KnowledgeProjectionStore();
             store.Upsert(p1Rep, knownTarget, new KnowledgeDisclosureRecord(
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live,
@@ -328,7 +341,6 @@ namespace Ludots.Tests.GAS
                 expiryTick: 0,
                 confidencePermille: 1000,
                 revision: 0));
-            globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
 
             var knownFacts = new CommandIntentTargetFacts(knownTarget, HasEntity: true);
             Assert.That(harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in knownFacts, out CommandIntentRoute knownRoute), Is.True);

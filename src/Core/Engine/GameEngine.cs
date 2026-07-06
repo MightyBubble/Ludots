@@ -1191,8 +1191,8 @@ namespace Ludots.Core.Engine
 
             // Pointer command intent routing (RFC-0065 INT-1, DEC-14); installed after order types so
             // rule routes validate their orderTypeKey at load time. Target facts are knowledge-gated
-            // through CanTargetCommand semantics (INT-2).
-            var commandIntentTargetGate = new KnowledgeCommandTargetGate(World, GlobalContext);
+            // through CanTargetCommand semantics (INT-2); the resolver is a hard dependency here.
+            var commandIntentTargetGate = new KnowledgeCommandTargetGate(World, knowledgeProjectionResolver, clock);
             var commandIntentProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var commandIntentProfileRegistry = new CommandIntentProfileRegistry(
                 commandIntentProfileIds,

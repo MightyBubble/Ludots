@@ -183,6 +183,150 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void IrrelevantTagChanges_DoNotTriggerEvaluation()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, CreateProxyProfileCatalog());
+            harness.AddTag(harness.P2Rep, TriggerTag);
+            harness.Runtime.Update();
+            int passesAfterGrant = harness.Runtime.EvaluationPassCount;
+
+            for (int i = 0; i < 16; i++)
+            {
+                harness.AddTag(harness.P1Rep, "test.unrelated");
+                harness.Runtime.Update();
+                harness.RemoveTag(harness.P1Rep, "test.unrelated");
+                harness.Runtime.Update();
+            }
+
+            Assert.That(
+                harness.Runtime.EvaluationPassCount,
+                Is.EqualTo(passesAfterGrant),
+                "Tags no profile predicate references must never trigger an evaluation pass.");
+
+            harness.RemoveTag(harness.P2Rep, TriggerTag);
+            harness.Runtime.Update();
+            Assert.That(harness.Runtime.EvaluationPassCount, Is.EqualTo(passesAfterGrant + 1), "A referenced tag change still evaluates.");
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.False);
+        }
+
+        [Test]
+        public void RuleDisableMaskTagChange_TriggersReevaluation()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world, CreateProxyProfileCatalog());
+            int triggerTagId = TagRegistry.GetId(TriggerTag);
+            int suppressorTagId = TagRegistry.Register("test.suppressor");
+            var ruleSet = new TagRuleSet();
+            unsafe
+            {
+                ruleSet.DisabledIfTags[0] = suppressorTagId;
+                ruleSet.DisabledIfCount = 1;
+            }
+
+            harness.TagOps.RegisterTagRuleSet(triggerTagId, ruleSet);
+
+            harness.AddTag(harness.P2Rep, TriggerTag);
+            harness.Runtime.Update();
+            Assert.That(harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId), Is.True);
+
+            // The suppressor is not referenced by any predicate directly, but it flips the trigger
+            // tag's effective sense; the relevance mask must include the rule's disable bits.
+            harness.AddTag(harness.P2Rep, "test.suppressor");
+            harness.Runtime.Update();
+            Assert.That(
+                harness.Relationships.HasLink(harness.P1Rep, harness.P2Rep, harness.ControlsTypeId),
+                Is.False,
+                "Disabling the trigger tag via a rule must revoke the granted edge.");
+        }
+
+        [Test]
+        public void Loader_DuplicateIdWithinFragment_FailsFast()
+        {
+            string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
+            try
+            {
+                string relationshipsDir = Path.Combine(root, "Configs", "Relationships");
+                Directory.CreateDirectory(relationshipsDir);
+                File.WriteAllText(Path.Combine(relationshipsDir, "control_profiles.json"), """
+                {
+                  "profiles": [
+                    { "id": "profile.control.dup", "when": { "tag": "test.a", "on": "grantor" }, "grant": { "edgeType": "Controls", "from": "grantee", "to": "grantor" } },
+                    { "id": "profile.control.dup", "when": { "tag": "test.b", "on": "grantor" }, "grant": { "edgeType": "Controls", "from": "grantee", "to": "grantor" } }
+                  ]
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
+
+                var exception = Assert.Throws<InvalidOperationException>(
+                    () => new AssociationControlProfilePipelineLoader(pipeline).Load());
+                Assert.That(exception!.Message, Does.Contain("duplicate profile id 'profile.control.dup'"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Loader_SameIdAcrossFragments_LaterFragmentWins_AndConflictReportRecordsWinner()
+        {
+            string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
+            try
+            {
+                // Fragment 1: Core:Configs/... (engine defaults). Fragment 2: Core:... (loaded after,
+                // same position as a mod override in LoadFromAllSources order).
+                string defaultsDir = Path.Combine(root, "Configs", "Relationships");
+                string overrideDir = Path.Combine(root, "Relationships");
+                Directory.CreateDirectory(defaultsDir);
+                Directory.CreateDirectory(overrideDir);
+                File.WriteAllText(Path.Combine(defaultsDir, "control_profiles.json"), """
+                {
+                  "profiles": [
+                    { "id": "profile.control.shared", "when": { "tag": "test.default", "on": "grantor" }, "grant": { "edgeType": "Controls", "from": "grantee", "to": "grantor" } }
+                  ]
+                }
+                """);
+                File.WriteAllText(Path.Combine(overrideDir, "control_profiles.json"), """
+                {
+                  "profiles": [
+                    { "id": "profile.control.shared", "when": { "tag": "test.override", "on": "grantor" }, "grant": { "edgeType": "Controls", "from": "grantee", "to": "grantor" } }
+                  ]
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", root);
+                var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
+                var report = new ConfigConflictReport();
+
+                AssociationControlProfileCatalogConfig catalog =
+                    new AssociationControlProfilePipelineLoader(pipeline).Load(report: report);
+
+                Assert.That(catalog.Profiles, Has.Count.EqualTo(1));
+                Assert.That(catalog.Profiles[0].When!.Tag, Is.EqualTo("test.override"), "The later fragment must win.");
+                Assert.That(
+                    report.TryGetWinner("Relationships/control_profiles.json", "profile.control.shared", out string winner),
+                    Is.True,
+                    "The cross-fragment override must be recorded in the conflict report.");
+                Assert.That(winner, Is.EqualTo("Core:Relationships/control_profiles.json"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void Loader_ReadsProfilesFromJson_AndCoreCarriesNoScenarioLiterals()
         {
             string root = Path.Combine(Path.GetTempPath(), $"ControlProfileTest_{Guid.NewGuid():N}");
@@ -251,7 +395,8 @@ namespace Ludots.Tests.GAS
                 harness.P1Rep,
                 harness.CommandSourceKeyId,
                 stackalloc Entity[] { m01, m99 },
-                EntityCollectionSourceKind.UiAcquisition);
+                EntityCollectionSourceKind.UiAcquisition,
+                DomainRoutingUnresolvedPolicy.Reject);
 
             Assert.That(harness.Store.TryGet(harness.P2Rep, harness.CommandSourceKeyId, out EntityCollectionHandle p2Handle), Is.True);
             Span<Entity> rows = stackalloc Entity[4];

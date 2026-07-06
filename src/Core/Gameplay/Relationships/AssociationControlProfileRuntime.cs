@@ -17,7 +17,9 @@ namespace Ludots.Core.Gameplay.Relationships
     /// allocations. Candidates are the domain reps carrying <see cref="PlayerIdentity"/>, evaluated pairwise
     /// (an O(players²) set). Edges granted by profiles carry the <c>Granted</c> relationship flag so revoke
     /// never touches manually created edges. Re-evaluation is gated by the relationship reverse-index revision
-    /// and an exact tag-bit snapshot of the candidate reps: an unchanged tick does no predicate work.
+    /// and a tag-bit snapshot of the candidate reps projected onto the tags the profile predicates actually
+    /// reference (plus their rule disable masks, since predicates read the effective sense): an unchanged tick
+    /// or a change to an unreferenced tag does no predicate work.
     /// </summary>
     public sealed class AssociationControlProfileRuntime
     {
@@ -33,8 +35,10 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly TagOps _tagOps;
         private readonly int _grantedFlagId;
         private readonly CompiledProfile[] _profiles;
+        private readonly int[] _predicateTagIds;
 
         private readonly List<Entity> _candidates = new(8);
+        private readonly ulong[] _relevantTagMask = new ulong[TagWordCount];
         private ulong[] _tagSnapshot = new ulong[8 * TagWordCount];
         private uint _lastTopologyRevision;
         private bool _hasEvaluated;
@@ -44,13 +48,15 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipRuntime relationships,
             TagOps tagOps,
             int grantedFlagId,
-            CompiledProfile[] profiles)
+            CompiledProfile[] profiles,
+            int[] predicateTagIds)
         {
             _world = world;
             _relationships = relationships;
             _tagOps = tagOps;
             _grantedFlagId = grantedFlagId;
             _profiles = profiles;
+            _predicateTagIds = predicateTagIds;
         }
 
         /// <summary>Number of registered profiles; zero profiles means the runtime is a no-op.</summary>
@@ -84,7 +90,42 @@ namespace Ludots.Core.Gameplay.Relationships
                 compiled[i] = CompileProfile(catalog.Profiles[i], relationshipTypes);
             }
 
-            return new AssociationControlProfileRuntime(world, relationships, tagOps, grantedFlagId, compiled);
+            return new AssociationControlProfileRuntime(
+                world,
+                relationships,
+                tagOps,
+                grantedFlagId,
+                compiled,
+                CollectPredicateTagIds(compiled));
+        }
+
+        private static int[] CollectPredicateTagIds(CompiledProfile[] profiles)
+        {
+            var tagIds = new HashSet<int>();
+            for (int p = 0; p < profiles.Length; p++)
+            {
+                ConditionNode[] nodes = profiles[p].Nodes;
+                for (int n = 0; n < nodes.Length; n++)
+                {
+                    if (nodes[n].Kind != ConditionKind.Tag)
+                    {
+                        continue;
+                    }
+
+                    if ((uint)nodes[n].Id > GameplayTagContainer.MAX_TAG_ID)
+                    {
+                        throw new InvalidOperationException(
+                            $"Control profile '{profiles[p].Id}' references tag id {nodes[n].Id} outside the tag container range.");
+                    }
+
+                    tagIds.Add(nodes[n].Id);
+                }
+            }
+
+            var result = new int[tagIds.Count];
+            tagIds.CopyTo(result);
+            Array.Sort(result);
+            return result;
         }
 
         /// <summary>
@@ -105,6 +146,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 RebuildCandidates();
             }
 
+            RefreshRelevantTagMask();
             bool tagsChanged = RefreshTagSnapshot();
             if (_hasEvaluated && !topologyChanged && !tagsChanged)
             {
@@ -135,6 +177,45 @@ namespace Ludots.Core.Gameplay.Relationships
             Array.Clear(_tagSnapshot, 0, required);
         }
 
+        /// <summary>
+        /// Rebuilds the bitset of tag ids the snapshot cares about: every tag id a profile predicate
+        /// references, widened by that tag's rule disable mask (the effective sense reads those bits).
+        /// Recomputed per tick because tag rules may be registered after this runtime is constructed.
+        /// </summary>
+        private void RefreshRelevantTagMask()
+        {
+            Span<ulong> mask = stackalloc ulong[TagWordCount];
+            for (int i = 0; i < _predicateTagIds.Length; i++)
+            {
+                int tagId = _predicateTagIds[i];
+                mask[tagId >> 6] |= 1UL << (tagId & 63);
+                if (_tagOps.Rules.HasRule(tagId))
+                {
+                    ref readonly TagRuleCompiled rule = ref _tagOps.Rules.Get(tagId);
+                    if (rule.DisabledIfAny != 0)
+                    {
+                        OrBits(in rule.DisabledIfMask, mask);
+                    }
+                }
+            }
+
+            for (int w = 0; w < TagWordCount; w++)
+            {
+                _relevantTagMask[w] = mask[w];
+            }
+        }
+
+        private static unsafe void OrBits(in GameplayTagContainer container, Span<ulong> mask)
+        {
+            fixed (ulong* bits = container.Bits)
+            {
+                for (int w = 0; w < TagWordCount; w++)
+                {
+                    mask[w] |= bits[w];
+                }
+            }
+        }
+
         private unsafe bool RefreshTagSnapshot()
         {
             bool changed = false;
@@ -158,8 +239,9 @@ namespace Ludots.Core.Gameplay.Relationships
                 {
                     for (int w = 0; w < TagWordCount; w++)
                     {
-                        changed |= _tagSnapshot[baseIndex + w] != bits[w];
-                        _tagSnapshot[baseIndex + w] = bits[w];
+                        ulong masked = bits[w] & _relevantTagMask[w];
+                        changed |= _tagSnapshot[baseIndex + w] != masked;
+                        _tagSnapshot[baseIndex + w] = masked;
                     }
                 }
             }

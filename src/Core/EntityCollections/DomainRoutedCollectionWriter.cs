@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Relationships;
@@ -6,20 +7,39 @@ using Ludots.Core.Gameplay.Relationships;
 namespace Ludots.Core.EntityCollections
 {
     /// <summary>
+    /// Caller-selected semantics for routed batch entries whose control domain cannot be resolved
+    /// (RFC-0065 DEC-4). There is no default value on purpose: the writing profile must state its
+    /// choice explicitly — the routing layer never guesses a destination domain.
+    /// </summary>
+    public enum DomainRoutingUnresolvedPolicy
+    {
+        /// <summary>An unresolved entity is a pipeline error; the routed write throws.</summary>
+        Reject = 1,
+
+        /// <summary>Unresolved entities are explicitly declared to land in the writer's own domain.</summary>
+        WriterDomain = 2,
+    }
+
+    /// <summary>
     /// Domain-routed collection write path (RFC-0065 DEC-4 / CTRL-4c). A batch write is split by the control
     /// domain each entity belongs to and lands as one <see cref="EntityCollectionStore.Replace(Entity,in EntityCollectionDescriptor,ReadOnlySpan{Entity},Entity)"/>
-    /// per domain rep, tagged with the maintaining writer domain. Collections never migrate across domains;
-    /// domains written by the previous routed batch but absent from the current one are cleared for the key.
+    /// per domain rep, tagged with the maintaining writer domain. Entities without a resolvable domain are
+    /// handled per the caller's <see cref="DomainRoutingUnresolvedPolicy"/>. Collections never migrate across
+    /// domains; domains written by the previous routed batch but absent from the current one are cleared for the key.
+    /// Grouping is a single pass over the batch (counting-sort layout), O(rows + domains), allocation free at steady state.
     /// </summary>
     public sealed class DomainRoutedCollectionWriter
     {
         private readonly EntityCollectionStore _store;
         private readonly ControlDomainQuery _domains;
         private readonly EntityKeyedSoaTable<RouteRecord> _routes;
+        private readonly Dictionary<Entity, int> _domainIndexMap = new(capacity: 8);
 
-        private Entity[] _resolvedDomains = new Entity[64];
-        private Entity[] _currentDomains = new Entity[8];
+        private int[] _rowDomainIndices = new int[64];
         private Entity[] _memberScratch = new Entity[64];
+        private Entity[] _currentDomains = new Entity[8];
+        private int[] _domainRowCounts = new int[8];
+        private int[] _domainCursors = new int[8];
         private Entity[] _previousDomainPool = new Entity[64];
         private int _previousDomainCursor;
 
@@ -35,32 +55,42 @@ namespace Ludots.Core.EntityCollections
             Entity writerDomain,
             string collectionKey,
             ReadOnlySpan<Entity> entities,
-            EntityCollectionSourceKind sourceKind)
+            EntityCollectionSourceKind sourceKind,
+            DomainRoutingUnresolvedPolicy unresolvedPolicy)
         {
             if (string.IsNullOrWhiteSpace(collectionKey))
             {
                 throw new ArgumentException("Collection key is required.", nameof(collectionKey));
             }
 
-            ReplaceRouted(writerDomain, _store.KeyRegistry.Register(collectionKey), entities, sourceKind);
+            ReplaceRouted(writerDomain, _store.KeyRegistry.Register(collectionKey), entities, sourceKind, unresolvedPolicy);
         }
 
         /// <summary>
         /// Route one batch write: entities are grouped by <see cref="ControlDomainQuery.TryResolveControlDomain"/>
         /// and each group replaces <c>(domainRep, collectionKeyId)</c> with <paramref name="writerDomain"/> as the
-        /// recorded maintainer. Entities without any control domain belong to the writer's own domain (that is a
-        /// topology fact, not a fallback). Domains covered by the writer's previous batch for this key but not by
-        /// this one are cleared so no rows linger.
+        /// recorded maintainer. Entities without any control domain follow <paramref name="unresolvedPolicy"/>:
+        /// <see cref="DomainRoutingUnresolvedPolicy.Reject"/> throws (a domain-routed command source must only
+        /// receive routable entities), <see cref="DomainRoutingUnresolvedPolicy.WriterDomain"/> explicitly lands
+        /// them in the writer's own domain. Domains covered by the writer's previous batch for this key but not
+        /// by this one are cleared so no rows linger.
         /// </summary>
         public void ReplaceRouted(
             Entity writerDomain,
             int collectionKeyId,
             ReadOnlySpan<Entity> entities,
-            EntityCollectionSourceKind sourceKind)
+            EntityCollectionSourceKind sourceKind,
+            DomainRoutingUnresolvedPolicy unresolvedPolicy)
         {
             if (writerDomain == Entity.Null)
             {
                 throw new ArgumentException("Writer domain is required for routed collection writes.", nameof(writerDomain));
+            }
+
+            if (unresolvedPolicy != DomainRoutingUnresolvedPolicy.Reject
+                && unresolvedPolicy != DomainRoutingUnresolvedPolicy.WriterDomain)
+            {
+                throw new ArgumentOutOfRangeException(nameof(unresolvedPolicy), unresolvedPolicy, "Unresolved-entity policy must be an explicit, defined value.");
             }
 
             string key = _store.KeyRegistry.GetName(collectionKeyId);
@@ -74,17 +104,62 @@ namespace Ludots.Core.EntityCollections
                 sourceKind,
                 EntityCollectionRoleKind.CommandSource);
 
-            EnsureResolvedCapacity(entities.Length);
+            // Pass 1: resolve every row's domain once, assigning dense domain indices and per-domain counts.
+            // The last-domain memo skips the hash lookup for the dominant case of batches clustered by domain.
+            EnsureRowCapacity(entities.Length);
+            _domainIndexMap.Clear();
             int currentDomainCount = 0;
+            Entity lastDomain = Entity.Null;
+            int lastDomainIndex = -1;
             for (int i = 0; i < entities.Length; i++)
             {
                 if (!_domains.TryResolveControlDomain(entities[i], out Entity domainRep))
                 {
+                    if (unresolvedPolicy == DomainRoutingUnresolvedPolicy.Reject)
+                    {
+                        throw new InvalidOperationException(
+                            $"Entity {entities[i]} has no control domain; the routed write for collection key '{key}' rejects unresolved entities (policy {nameof(DomainRoutingUnresolvedPolicy.Reject)}).");
+                    }
+
                     domainRep = writerDomain;
                 }
 
-                _resolvedDomains[i] = domainRep;
-                currentDomainCount = AppendUniqueDomain(domainRep, currentDomainCount);
+                int domainIndex;
+                if (domainRep == lastDomain)
+                {
+                    domainIndex = lastDomainIndex;
+                }
+                else
+                {
+                    if (!_domainIndexMap.TryGetValue(domainRep, out domainIndex))
+                    {
+                        domainIndex = currentDomainCount++;
+                        EnsureDomainCapacity(currentDomainCount);
+                        _currentDomains[domainIndex] = domainRep;
+                        _domainRowCounts[domainIndex] = 0;
+                        _domainIndexMap.Add(domainRep, domainIndex);
+                    }
+
+                    lastDomain = domainRep;
+                    lastDomainIndex = domainIndex;
+                }
+
+                _rowDomainIndices[i] = domainIndex;
+                _domainRowCounts[domainIndex]++;
+            }
+
+            // Pass 2: counting-sort layout — scatter rows into one scratch buffer partitioned by domain,
+            // preserving batch order inside each partition.
+            int cursor = 0;
+            for (int d = 0; d < currentDomainCount; d++)
+            {
+                _domainCursors[d] = cursor;
+                cursor += _domainRowCounts[d];
+            }
+
+            for (int i = 0; i < entities.Length; i++)
+            {
+                _memberScratch[_domainCursors[_rowDomainIndices[i]]++] = entities[i];
             }
 
             EntityKeyedSoaKey routeKey = EntityKeyedSoaKey.ForEntityAndDiscriminator(writerDomain, collectionKeyId);
@@ -95,7 +170,7 @@ namespace Ludots.Core.EntityCollections
                 for (int i = 0; i < record.Count; i++)
                 {
                     Entity previousDomain = _previousDomainPool[record.Start + i];
-                    if (!ContainsDomain(previousDomain, currentDomainCount))
+                    if (!_domainIndexMap.ContainsKey(previousDomain))
                     {
                         _store.Replace(previousDomain, descriptor, ReadOnlySpan<Entity>.Empty, writerDomain);
                     }
@@ -104,18 +179,9 @@ namespace Ludots.Core.EntityCollections
 
             for (int d = 0; d < currentDomainCount; d++)
             {
-                Entity domainRep = _currentDomains[d];
-                EnsureMemberCapacity(entities.Length);
-                int memberCount = 0;
-                for (int i = 0; i < entities.Length; i++)
-                {
-                    if (_resolvedDomains[i] == domainRep)
-                    {
-                        _memberScratch[memberCount++] = entities[i];
-                    }
-                }
-
-                _store.Replace(domainRep, descriptor, _memberScratch.AsSpan(0, memberCount), writerDomain);
+                int memberCount = _domainRowCounts[d];
+                int start = _domainCursors[d] - memberCount;
+                _store.Replace(_currentDomains[d], descriptor, _memberScratch.AsSpan(start, memberCount), writerDomain);
             }
 
             StoreRouteRecord(routeKey, hadRecord, in record, currentDomainCount);
@@ -147,63 +213,29 @@ namespace Ludots.Core.EntityCollections
             _routes.Upsert(routeKey, next, expiryTick: 0, payloadChanged: true, out _);
         }
 
-        private int AppendUniqueDomain(Entity domainRep, int count)
+        private void EnsureRowCapacity(int required)
         {
-            for (int i = 0; i < count; i++)
+            if (required > _rowDomainIndices.Length)
             {
-                if (_currentDomains[i] == domainRep)
-                {
-                    return count;
-                }
-            }
-
-            if (count == _currentDomains.Length)
-            {
-                Array.Resize(ref _currentDomains, _currentDomains.Length * 2);
-            }
-
-            _currentDomains[count] = domainRep;
-            return count + 1;
-        }
-
-        private bool ContainsDomain(Entity domainRep, int count)
-        {
-            for (int i = 0; i < count; i++)
-            {
-                if (_currentDomains[i] == domainRep)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void EnsureResolvedCapacity(int required)
-        {
-            if (required > _resolvedDomains.Length)
-            {
-                int next = _resolvedDomains.Length;
+                int next = _rowDomainIndices.Length;
                 while (next < required)
                 {
                     next *= 2;
                 }
 
-                Array.Resize(ref _resolvedDomains, next);
-            }
-        }
-
-        private void EnsureMemberCapacity(int required)
-        {
-            if (required > _memberScratch.Length)
-            {
-                int next = _memberScratch.Length;
-                while (next < required)
-                {
-                    next *= 2;
-                }
-
+                Array.Resize(ref _rowDomainIndices, next);
                 Array.Resize(ref _memberScratch, next);
+            }
+        }
+
+        private void EnsureDomainCapacity(int required)
+        {
+            if (required > _currentDomains.Length)
+            {
+                int next = _currentDomains.Length * 2;
+                Array.Resize(ref _currentDomains, next);
+                Array.Resize(ref _domainRowCounts, next);
+                Array.Resize(ref _domainCursors, next);
             }
         }
 

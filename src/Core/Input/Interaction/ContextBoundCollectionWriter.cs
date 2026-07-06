@@ -36,6 +36,11 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>
         /// Commit one cast batch for the local anchor: store raw hits, evaluate the top frame's
         /// filter profile, and domain-route the survivors into the frame's active collection key.
+        /// Routed writes use <see cref="DomainRoutingUnresolvedPolicy.Reject"/>: an entity without a
+        /// control domain reaching the routed command source is a pipeline error. Frames with
+        /// <c>FilterProfileId == 0</c> pass the raw hits through unfiltered, so their configurers
+        /// must guarantee the cast result is routable (RFC-0065 DEC-4: a domainless entity has no
+        /// place in a domain-routed command source).
         /// </summary>
         public void CommitCast(Entity localAnchorRep, ReadOnlySpan<Entity> rawHits, EntityCollectionSourceKind sourceKind)
         {
@@ -64,7 +69,12 @@ namespace Ludots.Core.Input.Interaction
                 routed = _filteredScratch.AsSpan(0, filteredCount);
             }
 
-            _routedWriter.ReplaceRouted(localAnchorRep, frame.ActiveCollectionKeyId, routed, sourceKind);
+            _routedWriter.ReplaceRouted(
+                localAnchorRep,
+                frame.ActiveCollectionKeyId,
+                routed,
+                sourceKind,
+                DomainRoutingUnresolvedPolicy.Reject);
         }
 
         private void EnsureScratch(int required)

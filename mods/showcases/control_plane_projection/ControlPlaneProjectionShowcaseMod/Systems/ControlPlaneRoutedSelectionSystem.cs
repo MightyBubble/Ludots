@@ -69,11 +69,13 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 
             EnsureScratchCapacity(descriptor.MemberCount);
             int count = selection.CopySelection(_state.P1Rep, SelectionSetKeys.LivePrimary, _selectionScratch);
+            // Every unit on this map is owned by a domain rep, so unresolved entities are a scenario bug.
             writer.ReplaceRouted(
                 _state.P1Rep,
                 frame.ActiveCollectionKeyId,
                 _selectionScratch.AsSpan(0, count),
-                EntityCollectionSourceKind.SelectionView);
+                EntityCollectionSourceKind.SelectionView,
+                DomainRoutingUnresolvedPolicy.Reject);
 
             _lastSelectionRevision = descriptor.Revision;
             _hasRoutedOnce = true;
