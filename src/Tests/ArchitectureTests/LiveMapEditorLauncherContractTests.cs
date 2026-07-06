@@ -876,7 +876,7 @@ public sealed class LiveMapEditorLauncherContractTests
                 },
                 Layers = new()
                 {
-                    new NavLayerConfig { Id = "Ground", Layer = 0 }
+                    new NavLayerConfig { Id = "EditorWalkable", Layer = 0 }
                 },
                 Areas = new()
                 {
