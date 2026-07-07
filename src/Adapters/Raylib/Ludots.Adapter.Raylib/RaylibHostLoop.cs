@@ -308,11 +308,14 @@ namespace Ludots.Adapter.Raylib
                 string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
                     ? null
                     : Path.GetFileName(screenshotTargetPath);
-                string? screenshotWorkingPath = string.IsNullOrWhiteSpace(screenshotFileName)
-                    ? null
-                    : Path.Combine(Environment.CurrentDirectory, screenshotFileName);
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName);
-                int screenshotFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
+                int[] screenshotFrames = ReadEnvFrameList("LUDOTS_TAKE_SCREENSHOT_FRAMES");
+                int screenshotSequenceIndex = 0;
+                bool screenshotSequenceEnabled = screenshotFrames.Length > 0;
+                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName) &&
+                                         (!screenshotSequenceEnabled || screenshotFrames.Length > 0);
+                int screenshotFrame = screenshotSequenceEnabled
+                    ? screenshotFrames[0]
+                    : int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
@@ -414,6 +417,7 @@ namespace Ludots.Adapter.Raylib
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
+                        engine.SetService(CoreServiceKeys.HostFrameIndex, frameIndex);
                         engine.Tick(dt);
                         long postTickStart = Stopwatch.GetTimestamp();
                         if (autoOrbitDegPerSecond != 0f)
@@ -673,7 +677,11 @@ namespace Ludots.Adapter.Raylib
                         if (screenshotPending && frameIndex >= screenshotFrame &&
                             runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
-                            string fullScreenshotPath = screenshotTargetPath!;
+                            string fullScreenshotPath = screenshotSequenceEnabled
+                                ? BuildSequencedScreenshotPath(screenshotTargetPath!, screenshotSequenceIndex, screenshotFrame)
+                                : screenshotTargetPath!;
+                            string screenshotFile = Path.GetFileName(fullScreenshotPath);
+                            string screenshotWorkingFilePath = Path.Combine(Environment.CurrentDirectory, screenshotFile);
                             string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
                             if (!string.IsNullOrWhiteSpace(screenshotDirectory))
                             {
@@ -693,17 +701,28 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
                             long screenshotStart = Stopwatch.GetTimestamp();
-                            Rl.TakeScreenshot(screenshotFileName!);
-                            if (!string.IsNullOrWhiteSpace(screenshotWorkingPath) &&
-                                !string.Equals(screenshotWorkingPath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
-                                File.Exists(screenshotWorkingPath))
+                            Rl.TakeScreenshot(screenshotFile);
+                            if (!string.Equals(screenshotWorkingFilePath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
+                                File.Exists(screenshotWorkingFilePath))
                             {
-                                File.Copy(screenshotWorkingPath, fullScreenshotPath, overwrite: true);
-                                File.Delete(screenshotWorkingPath);
+                                File.Copy(screenshotWorkingFilePath, fullScreenshotPath, overwrite: true);
+                                File.Delete(screenshotWorkingFilePath);
                             }
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
-                            screenshotPending = false;
+                            if (screenshotSequenceEnabled)
+                            {
+                                screenshotSequenceIndex++;
+                                screenshotPending = screenshotSequenceIndex < screenshotFrames.Length;
+                                if (screenshotPending)
+                                {
+                                    screenshotFrame = screenshotFrames[screenshotSequenceIndex];
+                                }
+                            }
+                            else
+                            {
+                                screenshotPending = false;
+                            }
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
                         }
 
@@ -837,6 +856,50 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int[] ReadEnvFrameList(string key)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return Array.Empty<int>();
+            }
+
+            string[] parts = raw.Split(
+                new[] { ',', ';', ' ', '\t', '\r', '\n' },
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var frames = new List<int>(parts.Length);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (int.TryParse(parts[i], out int frame))
+                {
+                    frames.Add(Math.Max(1, frame));
+                }
+            }
+
+            return frames.ToArray();
+        }
+
+        private static string BuildSequencedScreenshotPath(string targetPath, int sequenceIndex, int frame)
+        {
+            string directory = Path.GetDirectoryName(targetPath) ?? string.Empty;
+            string extension = Path.GetExtension(targetPath);
+            if (string.IsNullOrWhiteSpace(extension))
+            {
+                extension = ".png";
+            }
+
+            string fileName = Path.GetFileNameWithoutExtension(targetPath);
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                fileName = "screenshot";
+            }
+
+            string sequencedFileName = $"{fileName}_{sequenceIndex + 1:000}_f{frame:0000}{extension}";
+            return string.IsNullOrWhiteSpace(directory)
+                ? Path.GetFullPath(sequencedFileName)
+                : Path.Combine(directory, sequencedFileName);
         }
 
         private static SyntheticUiPlayback ReadSyntheticUiPlayback()

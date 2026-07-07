@@ -20,6 +20,10 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
         public Entity P1Rep { get; set; }
         public Entity P2Rep { get; set; }
         public Entity TeamRep { get; set; }
+        public Entity RefereeRep { get; set; }
+        public Entity ForeignRep { get; set; }
+        public Entity RefereeOwnedMarker { get; set; }
+        public Entity ForeignMarker { get; set; }
         public Entity[] P1Units { get; } = new Entity[ControlPlaneProjectionShowcaseIds.P1UnitInstanceIds.Length];
         public Entity[] P2Units { get; } = new Entity[ControlPlaneProjectionShowcaseIds.P2UnitInstanceIds.Length];
 
@@ -32,6 +36,10 @@ namespace ControlPlaneProjectionShowcaseMod.Runtime
         public int CommandSourceKeyId { get; set; }
         public int OwnedProjectionKeyId { get; set; }
         public int ProxiedProjectionKeyId { get; set; }
+        public int RefereePhase0ProjectionKeyId { get; set; }
+        public int RefereePhase1ProjectionKeyId { get; set; }
+        public bool RefereeReady { get; set; }
+        public bool RefereeP2GrantActive { get; set; }
 
         /// <summary>
         /// Whether the trigger tag is currently present on P2Rep. The Controls(P1Rep→P2Rep) grant itself is

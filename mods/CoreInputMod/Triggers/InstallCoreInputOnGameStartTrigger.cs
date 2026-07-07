@@ -53,39 +53,46 @@ namespace CoreInputMod.Triggers
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
 
-            var selectionRules = engine.GetService(CoreServiceKeys.SelectionRuleRegistry)
-                ?? throw new InvalidOperationException("SelectionRuleRegistry must be registered before CoreInputMod installs.");
-            var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
+            engine.TryGetService(CoreServiceKeys.SelectionRuleRegistry, out var selectionRules);
+            engine.TryGetService(CoreServiceKeys.SelectionRuntime, out var selectionRuntime);
             var entityCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
-            engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
-            engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
-
-            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime, entityCollections);
-            currentSelection.OnEntitySelected = (worldCm, entity) =>
+            if (selectionRuntime != null)
             {
-                foreach (var cb in selectionCallbacks) cb(worldCm, entity);
-            };
-            engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(currentSelection, SystemGroup.InputCollection);
+                engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
+                engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 
-            var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
-            gasSelection.OnSelectionTriggered = (req, worldCm) =>
-            {
-                foreach (var cb in triggeredCallbacks) cb(req, worldCm);
-            };
-            engine.RegisterSystem(gasSelection, SystemGroup.InputCollection);
+                var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime, entityCollections);
+                currentSelection.OnEntitySelected = (worldCm, entity) =>
+                {
+                    foreach (var cb in selectionCallbacks) cb(worldCm, entity);
+                };
+                engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(currentSelection, SystemGroup.InputCollection);
+
+                if (selectionRules != null)
+                {
+                    var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
+                    gasSelection.OnSelectionTriggered = (req, worldCm) =>
+                    {
+                        foreach (var cb in triggeredCallbacks) cb(req, worldCm);
+                    };
+                    engine.RegisterSystem(gasSelection, SystemGroup.InputCollection);
+                }
+            }
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new SkillBarOverlaySystem(engine.World, engine.GlobalContext));
             engine.RegisterPresentationSystem(new SelectionBoxOverlaySystem(engine.World, engine.GlobalContext));
             engine.InsertPresentationSystemBefore<EntityCollectionPresentationEventSystem>(new AbilityAimPresentationProjectionSystem(engine.World, engine.GlobalContext));
-            engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
-            engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            if (selectionRuntime != null)
+            {
+                engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
+                engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
+            }
 
             var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);

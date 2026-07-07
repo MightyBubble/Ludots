@@ -22,6 +22,8 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
         private readonly ControlPlaneProjectionScenarioState _state;
         private EntityCollectionDescriptor _ownedDescriptor;
         private EntityCollectionDescriptor _proxiedDescriptor;
+        private EntityCollectionDescriptor _refereePhase0Descriptor;
+        private EntityCollectionDescriptor _refereePhase1Descriptor;
         private bool _descriptorsReady;
         private Entity[] _memberScratch = new Entity[64];
         private Entity[] _domainScratch = new Entity[64];
@@ -29,6 +31,8 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
         private Entity[] _proxiedScratch = new Entity[64];
         private uint _lastViewRevision;
         private bool _hasProjectedOnce;
+        private uint _lastRefereeViewRevision;
+        private bool _hasProjectedRefereeOnce;
 
         public ControlPlaneMarkerProjectionSystem(GameEngine engine, ControlPlaneProjectionScenarioState state)
         {
@@ -58,33 +62,29 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 return;
             }
 
-            uint revision = view.ComputeRevision(_state.P1Rep, _state.CommandSourceKeyId);
-            if (_hasProjectedOnce && revision == _lastViewRevision)
-            {
-                return;
-            }
-
-            int count = CopyView(view);
-            int ownedCount = 0;
-            int proxiedCount = 0;
-            for (int i = 0; i < count; i++)
-            {
-                if (_domainScratch[i] == _state.P1Rep)
-                {
-                    _ownedScratch[ownedCount++] = _memberScratch[i];
-                }
-                else
-                {
-                    _proxiedScratch[proxiedCount++] = _memberScratch[i];
-                }
-            }
-
             EnsureDescriptors();
-            store.Replace(_state.P1Rep, in _ownedDescriptor, _ownedScratch.AsSpan(0, ownedCount), _state.P1Rep);
-            store.Replace(_state.P1Rep, in _proxiedDescriptor, _proxiedScratch.AsSpan(0, proxiedCount), _state.P1Rep);
+            ProjectForViewer(
+                view,
+                store,
+                _state.P1Rep,
+                _state.P1Rep,
+                in _ownedDescriptor,
+                in _proxiedDescriptor,
+                ref _lastViewRevision,
+                ref _hasProjectedOnce);
 
-            _lastViewRevision = revision;
-            _hasProjectedOnce = true;
+            if (_state.RefereeReady)
+            {
+                ProjectForViewer(
+                    view,
+                    store,
+                    _state.RefereeRep,
+                    _state.RefereeRep,
+                    in _refereePhase0Descriptor,
+                    in _refereePhase1Descriptor,
+                    ref _lastRefereeViewRevision,
+                    ref _hasProjectedRefereeOnce);
+            }
         }
 
         public void AfterUpdate(in float dt)
@@ -95,12 +95,50 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
         {
         }
 
-        private int CopyView(ControlPlaneView view)
+        private void ProjectForViewer(
+            ControlPlaneView view,
+            EntityCollectionStore store,
+            Entity viewer,
+            Entity ownDomain,
+            in EntityCollectionDescriptor ownedDescriptor,
+            in EntityCollectionDescriptor proxiedDescriptor,
+            ref uint lastRevision,
+            ref bool hasProjectedOnce)
+        {
+            uint revision = view.ComputeRevision(viewer, _state.CommandSourceKeyId);
+            if (hasProjectedOnce && revision == lastRevision)
+            {
+                return;
+            }
+
+            int count = CopyView(view, viewer);
+            int ownedCount = 0;
+            int proxiedCount = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (_domainScratch[i] == ownDomain)
+                {
+                    _ownedScratch[ownedCount++] = _memberScratch[i];
+                }
+                else
+                {
+                    _proxiedScratch[proxiedCount++] = _memberScratch[i];
+                }
+            }
+
+            store.Replace(viewer, in ownedDescriptor, _ownedScratch.AsSpan(0, ownedCount), viewer);
+            store.Replace(viewer, in proxiedDescriptor, _proxiedScratch.AsSpan(0, proxiedCount), viewer);
+
+            lastRevision = revision;
+            hasProjectedOnce = true;
+        }
+
+        private int CopyView(ControlPlaneView view, Entity viewer)
         {
             while (true)
             {
                 int count = view.CopyMembersWithDomain(
-                    _state.P1Rep,
+                    viewer,
                     _state.CommandSourceKeyId,
                     _memberScratch,
                     _domainScratch);
@@ -137,6 +175,18 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 EntityCollectionRoleKind.Display,
                 title: "Control plane proxied projection",
                 summary: "Command-source members reached only through Controls grants.");
+            _refereePhase0Descriptor = EntityCollectionDescriptor.Create(
+                ControlPlaneProjectionShowcaseIds.RefereePhase0ProjectionCollectionKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.Display,
+                title: "SHOW-3 referee phase0 projection",
+                summary: "Referee-owned marker rows rendered with the phase0 palette.");
+            _refereePhase1Descriptor = EntityCollectionDescriptor.Create(
+                ControlPlaneProjectionShowcaseIds.RefereePhase1ProjectionCollectionKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.Display,
+                title: "SHOW-3 referee phase1 projection",
+                summary: "Controls-reachable referee rows rendered with the phase1 palette.");
             _descriptorsReady = true;
         }
     }

@@ -133,6 +133,21 @@ namespace Ludots.Core.Input.Orders
         public float? F1 { get; set; }
         public float? F2 { get; set; }
         public float? F3 { get; set; }
+
+        public OrderArgsTemplate Clone()
+        {
+            return new OrderArgsTemplate
+            {
+                I0 = I0,
+                I1 = I1,
+                I2 = I2,
+                I3 = I3,
+                F0 = F0,
+                F1 = F1,
+                F2 = F2,
+                F3 = F3
+            };
+        }
     }
     
     /// <summary>
@@ -231,6 +246,18 @@ namespace Ludots.Core.Input.Orders
         public int? AbilitySlotIndex { get; set; }
         public string? AbilityIdKey { get; set; }
         public string? AbilityIdKeySuffix { get; set; }
+
+        public ActorOrderRoutingMatch Clone()
+        {
+            return new ActorOrderRoutingMatch
+            {
+                RequiredAllTags = new List<string>(RequiredAllTags),
+                BlockedAnyTags = new List<string>(BlockedAnyTags),
+                AbilitySlotIndex = AbilitySlotIndex,
+                AbilityIdKey = AbilityIdKey,
+                AbilityIdKeySuffix = AbilityIdKeySuffix
+            };
+        }
     }
 
     public sealed class ActorOrderRoutingCandidate
@@ -244,11 +271,33 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public OrderSelectionType? SelectionType { get; set; }
+
+        public ActorOrderRoutingCandidate Clone()
+        {
+            return new ActorOrderRoutingCandidate
+            {
+                OrderTypeKey = OrderTypeKey,
+                Priority = Priority,
+                Match = Match?.Clone() ?? new ActorOrderRoutingMatch(),
+                SelectionType = SelectionType
+            };
+        }
     }
 
     public sealed class ActorOrderRoutingSettings
     {
         public List<ActorOrderRoutingCandidate> Candidates { get; set; } = new();
+
+        public ActorOrderRoutingSettings Clone()
+        {
+            var candidates = new List<ActorOrderRoutingCandidate>(Candidates.Count);
+            for (int i = 0; i < Candidates.Count; i++)
+            {
+                candidates.Add(Candidates[i].Clone());
+            }
+
+            return new ActorOrderRoutingSettings { Candidates = candidates };
+        }
     }
     
     /// <summary>
@@ -364,6 +413,30 @@ namespace Ludots.Core.Input.Orders
         /// Only meaningful when <see cref="CursorTargetPolicy"/> is not None.
         /// </summary>
         public int CursorTargetRangeCm { get; set; } = 0;
+
+        public InputOrderMapping Clone()
+        {
+            return new InputOrderMapping
+            {
+                ActionId = ActionId,
+                Trigger = Trigger,
+                DoubleTapWindowSeconds = DoubleTapWindowSeconds,
+                OrderTypeKey = OrderTypeKey,
+                ActorOrderRouting = ActorOrderRouting?.Clone(),
+                ArgsTemplate = ArgsTemplate?.Clone() ?? new OrderArgsTemplate(),
+                RequireSelection = RequireSelection,
+                SelectionSetKey = SelectionSetKey,
+                SelectionType = SelectionType,
+                ModifierBehavior = ModifierBehavior,
+                IsSkillMapping = IsSkillMapping,
+                HeldPolicy = HeldPolicy,
+                CastModeOverride = CastModeOverride,
+                AutoTargetPolicy = AutoTargetPolicy,
+                AutoTargetRangeCm = AutoTargetRangeCm,
+                CursorTargetPolicy = CursorTargetPolicy,
+                CursorTargetRangeCm = CursorTargetRangeCm
+            };
+        }
     }
     
     /// <summary>

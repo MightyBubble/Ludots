@@ -9,6 +9,8 @@ namespace CoreInputMod.Systems
 {
     public sealed class ViewModeSwitchSystem : ISystem<float>
     {
+        public const string ViewModeHudEnabledKey = "CoreInputMod.ViewModeHudEnabled";
+
         private const string NextAction = "ViewModeNext";
         private const string PrevAction = "ViewModePrev";
 
@@ -68,6 +70,13 @@ namespace CoreInputMod.Systems
 
         private void RenderModeHud(ViewModeManager manager)
         {
+            if (_globals.TryGetValue(ViewModeHudEnabledKey, out var enabledObj) &&
+                enabledObj is bool enabled &&
+                !enabled)
+            {
+                return;
+            }
+
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenOverlayBuffer.Name, out var overlayObj) || overlayObj is not ScreenOverlayBuffer overlay)
             {
                 return;

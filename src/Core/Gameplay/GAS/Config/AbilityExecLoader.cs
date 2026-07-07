@@ -105,6 +105,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.ExecCallerParamsPool = pool;
                 def.HasExecCallerParamsPool = hasPool;
             }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'exec' is required.");
+            }
 
             // ── onActivateEffects ──
             if (obj["onActivateEffects"] is JsonArray effectArr)
@@ -276,11 +281,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // items
             if (execObj["items"] is JsonArray itemsArr)
             {
+                if (itemsArr.Count > AbilityExecSpec.MAX_ITEMS)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items' contains {itemsArr.Count} items, max {AbilityExecSpec.MAX_ITEMS}.");
+                }
+
                 int idx = 0;
                 foreach (var itemNode in itemsArr)
                 {
-                    if (idx >= AbilityExecSpec.MAX_ITEMS) break;
-                    if (itemNode is not JsonObject itemObj) continue;
+                    if (itemNode is not JsonObject itemObj)
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'exec.items[{idx}]' must be an object.");
+                    }
+
                     CompileItem(itemObj, ref spec, idx, id, path);
                     idx++;
                 }

@@ -243,6 +243,68 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void MassNavigationCore_ConsumesOrdersNotInputOrSelectionAuthority()
+        {
+            string repoRoot = FindRepoRoot();
+            string massNavigationRoot = Path.Combine(repoRoot, "src", "Core", "MassNavigation");
+            Assert.That(Directory.Exists(massNavigationRoot), Is.True, $"Missing {massNavigationRoot}");
+
+            string[] forbidden =
+            {
+                "SelectionRuntime",
+                "SelectionSetKeys",
+                "LivePrimary",
+                "CurrentSelection",
+                "EntityCollectionKeys.CommandSource",
+                "InteractionContextStack",
+                "OrderSelectionReference",
+                "MassNavigationSelectionSync",
+                "MassNavigationLocalCommandInputSystem"
+            };
+
+            var violations = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(massNavigationRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065: MassNavigation is an execution domain. It must ingest explicit OrderBuffer move orders " +
+                "and must not resolve command actors from Selection, command-source collections, or interaction context APIs:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void InteractionShowcase_DoesNotBridgeLiveSelectionIntoCommandSource()
+        {
+            string repoRoot = FindRepoRoot();
+            string runtimePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "interaction",
+                "InteractionShowcaseMod",
+                "Runtime",
+                "InteractionShowcaseRuntime.cs");
+            Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
+
+            string source = File.ReadAllText(runtimePath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(source, Does.Not.Contain("PublishCommandSourceFromLiveSelection"),
+                    "The interaction showcase must seed command-source rows directly, not copy SelectionRuntime.LivePrimary.");
+                Assert.That(source, Does.Not.Contain("EntityCollectionSourceKind.SelectionView"),
+                    "The command-source descriptor must not identify SelectionView as its source.");
+                Assert.That(source, Does.Not.Contain("Live selection projected"),
+                    "The old Selection -> CommandSource bridge summary must not return.");
+                Assert.That(source, Does.Contain("EntityCollectionSourceKind.Explicit"),
+                    "The showcase command-source descriptor should remain an explicit host-seeded collection.");
+            });
+        }
+
+        [Test]
         public void RelationshipEdgeMutations_OnlyHappenInsideRelationshipRuntime()
         {
             string repoRoot = FindRepoRoot();

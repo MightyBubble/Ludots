@@ -1,11 +1,15 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.UI;
 using Ludots.UI.Browser;
+using Ludots.UI.Compose;
+using Ludots.UI.Surface;
 using Ludots.WebUI.Browser;
 using Ludots.WebUI.DataPlane;
 using ControlPlaneProjectionShowcaseMod.Runtime;
@@ -20,7 +24,13 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
     /// </summary>
     public static class ControlPlaneProjectionDataPlaneInstaller
     {
-        public static async Task<bool> TryInstallAsync(
+        private const string AssetIndexPath = "ControlPlaneProjectionShowcaseMod:assets/control-plane-app/index.html";
+        private const string CefAutoTimelineEnvKey = "LUDOTS_CONTROL_PLANE_PROJECTION_CEF_AUTO_TIMELINE";
+        private const string RefereeUatQuery = "uat=referee-palette";
+        private const int BrowserPanelWidth = 420;
+        private const int BrowserPanelHeight = 420;
+
+        public static async Task<ControlPlaneProjectionDataPlaneInstallation?> TryInstallAsync(
             GameEngine engine,
             ControlPlaneProjectionScenarioState state,
             IModContext modContext)
@@ -33,14 +43,17 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
             if (!engine.TryGetService(runtimeKey, out IBrowserRuntime browserRuntime) || browserRuntime == null)
             {
                 modContext.Log("[ControlPlaneProjectionShowcaseMod] No browser runtime capability; dataplane stays inactive.");
-                return false;
+                return null;
             }
 
+            IUiSurfaceHost surfaceHost = engine.GetService(CoreServiceKeys.UiSurfaceHost) as IUiSurfaceHost
+                ?? throw new InvalidOperationException("UiSurfaceHost service is missing.");
             EntityCollectionStore store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             ControlPlaneView controlPlaneView = engine.GetService(CoreServiceKeys.ControlPlaneView)
                 ?? throw new InvalidOperationException("ControlPlaneView is missing.");
 
+            string assetRoot = ResolveAssetRoot(engine);
             var producer = new ControlPlaneProjectionDataPlane(engine.World, store, controlPlaneView, state);
             var router = new WebUiCommandRouter(
                 new ControlPlaneProjectionGenerationResolver(),
@@ -51,10 +64,10 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
             var dataPlaneRuntime = new WebUiDataPlaneRuntime(dispatcher);
             dataPlaneRuntime.RegisterTopic(producer);
 
-            // No HTML app ships with this showcase; the surface exists so a CEF-hosted client can
-            // subscribe to the topic over the message bridge once it navigates its own app.
+            var resolver = new BrowserAppResourceResolver(assetRoot);
+            var viewport = new BrowserViewport(BrowserPanelWidth, BrowserPanelHeight);
             IBrowserSurface surface = await browserRuntime
-                .CreateSurfaceAsync(new BrowserViewport(1280, 720))
+                .CreateSurfaceAsync(viewport, resolver)
                 .ConfigureAwait(false);
             dataPlaneRuntime.AttachSession(
                 ControlPlaneProjectionShowcaseIds.WebUiSessionId,
@@ -62,9 +75,69 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
 
             var pump = new WebUiDataPlaneTickPump(dataPlaneRuntime, dispatcher);
             pump.TrackTopic(ControlPlaneProjectionShowcaseIds.WebUiTopic);
-            engine.RegisterSystem(new ControlPlaneProjectionDataPlanePumpSystem(pump), SystemGroup.InputCollection);
+            var pumpSystem = new ControlPlaneProjectionDataPlanePumpSystem(pump);
+            engine.RegisterSystem(pumpSystem, SystemGroup.InputCollection);
+
+            var browserContent = new BrowserSurfaceCanvasContent(
+                surface,
+                hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
+            UiSurfaceLeaseHandle lease = surfaceHost.Acquire(new UiSurfaceLeaseRequest(
+                "ControlPlaneProjection.Showcase",
+                UiSurfaceSegment.Overlay,
+                priority: 45));
+            surfaceHost.Publish(
+                lease,
+                UiSurfaceContribution.FromBuilder(() => BuildBrowserRoot(browserContent)));
+
+            Uri navigationUri = IsEnabled(ControlPlaneProjectionShowcaseIds.RefereeUatEnvKey)
+                ? BrowserLocalAppUri.Create("/", RefereeUatQuery)
+                : IsEnabled(CefAutoTimelineEnvKey)
+                ? BrowserLocalAppUri.Create("/", "uat=toggle-revoke")
+                : BrowserLocalAppUri.Root;
+            await surface.NavigateAsync(new BrowserNavigationRequest(navigationUri)).ConfigureAwait(false);
+
             modContext.Log("[ControlPlaneProjectionShowcaseMod] Dataplane active: topic " + ControlPlaneProjectionShowcaseIds.WebUiTopic);
-            return true;
+            return new ControlPlaneProjectionDataPlaneInstallation(
+                surface,
+                browserContent,
+                dataPlaneRuntime,
+                dispatcher,
+                pumpSystem,
+                surfaceHost,
+                lease);
+        }
+
+        private static UiElementBuilder BuildBrowserRoot(BrowserSurfaceCanvasContent browserContent)
+        {
+            return Ui.Canvas(browserContent)
+                .Id("control-plane-projection-browser-surface")
+                .Width(BrowserPanelWidth)
+                .Height(BrowserPanelHeight)
+                .Absolute(18f, 96f)
+                .ZIndex(35);
+        }
+
+        private static string ResolveAssetRoot(GameEngine engine)
+        {
+            if (engine.VFS != null &&
+                engine.VFS.TryResolveFullPath(AssetIndexPath, out string indexPath))
+            {
+                string? root = Path.GetDirectoryName(indexPath);
+                if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
+                {
+                    return root;
+                }
+            }
+
+            throw new DirectoryNotFoundException($"Control plane projection browser app assets were not found: {AssetIndexPath}");
+        }
+
+        private static bool IsEnabled(string key)
+        {
+            string? value = Environment.GetEnvironmentVariable(key);
+            return string.Equals(value, "1", StringComparison.Ordinal) ||
+                   string.Equals(value, "true", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
         }
     }
 
@@ -114,6 +187,57 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
         public void Dispose()
         {
             _disposed = true;
+        }
+    }
+
+    public sealed class ControlPlaneProjectionDataPlaneInstallation : IDisposable
+    {
+        private readonly IBrowserSurface _surface;
+        private readonly BrowserSurfaceCanvasContent _browserContent;
+        private readonly WebUiDataPlaneRuntime _dataPlaneRuntime;
+        private readonly WebUiQueuedCommandDispatcher _dispatcher;
+        private readonly ControlPlaneProjectionDataPlanePumpSystem _pumpSystem;
+        private IUiSurfaceHost? _surfaceHost;
+        private UiSurfaceLeaseHandle _lease;
+        private bool _disposed;
+
+        internal ControlPlaneProjectionDataPlaneInstallation(
+            IBrowserSurface surface,
+            BrowserSurfaceCanvasContent browserContent,
+            WebUiDataPlaneRuntime dataPlaneRuntime,
+            WebUiQueuedCommandDispatcher dispatcher,
+            ControlPlaneProjectionDataPlanePumpSystem pumpSystem,
+            IUiSurfaceHost surfaceHost,
+            UiSurfaceLeaseHandle lease)
+        {
+            _surface = surface ?? throw new ArgumentNullException(nameof(surface));
+            _browserContent = browserContent ?? throw new ArgumentNullException(nameof(browserContent));
+            _dataPlaneRuntime = dataPlaneRuntime ?? throw new ArgumentNullException(nameof(dataPlaneRuntime));
+            _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+            _pumpSystem = pumpSystem ?? throw new ArgumentNullException(nameof(pumpSystem));
+            _surfaceHost = surfaceHost ?? throw new ArgumentNullException(nameof(surfaceHost));
+            _lease = lease;
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            _disposed = true;
+            _pumpSystem.Dispose();
+            if (_lease.IsValid && _surfaceHost != null)
+            {
+                _surfaceHost.ReleaseLease(ref _lease);
+            }
+
+            _surfaceHost = null;
+            _browserContent.Dispose();
+            _dataPlaneRuntime.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            _dispatcher.Dispose();
+            _surface.DisposeAsync().AsTask().GetAwaiter().GetResult();
         }
     }
 }

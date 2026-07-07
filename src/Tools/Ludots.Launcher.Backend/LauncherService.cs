@@ -896,27 +896,42 @@ public sealed class LauncherService
             string.Equals(item.Id, runtime.Provider, StringComparison.OrdinalIgnoreCase));
         if (provider == null)
         {
-            if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath) &&
-                string.IsNullOrWhiteSpace(runtime.ProviderProjectPath))
-            {
-                throw new InvalidOperationException(
-                    $"browserRuntime provider '{runtime.Provider}' is not registered in launcher.config.json browserRuntimeProviders.");
-            }
-
-            return runtime;
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{runtime.Provider}' is not registered in launcher.config.json browserRuntimeProviders.");
         }
 
-        if (string.IsNullOrWhiteSpace(runtime.ProviderProjectPath) &&
-            !string.IsNullOrWhiteSpace(provider.ProjectPath))
+        if (!string.IsNullOrWhiteSpace(provider.ProjectPath))
         {
             runtime.ProviderProjectPath = ResolveRepoRelativePath(provider.ProjectPath);
         }
 
-        if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath) &&
-            !string.IsNullOrWhiteSpace(provider.AssemblyPath))
+        if (!string.IsNullOrWhiteSpace(provider.AssemblyPath))
         {
             runtime.ProviderAssemblyPath = ResolveRepoRelativePath(provider.AssemblyPath);
         }
+
+        if (!string.IsNullOrWhiteSpace(provider.HostTypeName))
+        {
+            runtime.ProviderHostTypeName = provider.HostTypeName.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath))
+        {
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{runtime.Provider}' is registered without an assemblyPath.");
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.ProviderHostTypeName))
+        {
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{runtime.Provider}' is registered without a hostTypeName.");
+        }
+
+        runtime.UseCollectibleLoadContext = provider.UseCollectibleLoadContext;
+        runtime.ProcessSharedAssemblyNamePrefixes = provider.ProcessSharedAssemblyNamePrefixes
+            .Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+            .Select(prefix => prefix.Trim())
+            .ToArray();
 
         return runtime;
     }
@@ -929,9 +944,12 @@ public sealed class LauncherService
             Required = source.Required,
             Provider = source.Provider,
             ProviderAssemblyPath = source.ProviderAssemblyPath,
+            ProviderHostTypeName = source.ProviderHostTypeName,
             ProviderProjectPath = source.ProviderProjectPath,
             RuntimeRootPath = source.RuntimeRootPath,
-            CacheRootPath = source.CacheRootPath
+            CacheRootPath = source.CacheRootPath,
+            UseCollectibleLoadContext = source.UseCollectibleLoadContext,
+            ProcessSharedAssemblyNamePrefixes = source.ProcessSharedAssemblyNamePrefixes?.ToArray() ?? Array.Empty<string>()
         };
     }
 

@@ -381,6 +381,7 @@ namespace Ludots.Core.Input.Selection
             {
                 case SelectionAcquisitionMode.Replace:
                     _selection.ReplaceSelection(owner, formalSetKey, hits);
+                    PublishCommandSource(owner, hits, mode);
                     return;
 
                 case SelectionAcquisitionMode.Additive:
@@ -388,6 +389,7 @@ namespace Ludots.Core.Input.Selection
                     {
                         _selection.AddToSelection(owner, formalSetKey, hits[i]);
                     }
+                    PublishCommandSourceFromFormalSelection(owner, formalSetKey, mode);
                     return;
 
                 case SelectionAcquisitionMode.Toggle:
@@ -403,11 +405,35 @@ namespace Ludots.Core.Input.Selection
                             _selection.AddToSelection(owner, formalSetKey, target);
                         }
                     }
+                    PublishCommandSourceFromFormalSelection(owner, formalSetKey, mode);
                     return;
 
                 default:
                     throw new InvalidOperationException($"Unsupported selection acquisition mode '{mode}'.");
             }
+        }
+
+        private void PublishCommandSourceFromFormalSelection(Entity owner, string formalSetKey, SelectionAcquisitionMode mode)
+        {
+            int count = _selection.GetSelectionCount(owner, formalSetKey);
+            EnsureSelectionScratchCapacity(Math.Max(1, count));
+            int written = count > 0
+                ? _selection.CopySelection(owner, formalSetKey, _selectionScratch)
+                : 0;
+            PublishCommandSource(owner, _selectionScratch.AsSpan(0, written), mode);
+        }
+
+        private void PublishCommandSource(Entity owner, ReadOnlySpan<Entity> members, SelectionAcquisitionMode mode)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                members.Length > 0 ? members[0] : Entity.Null,
+                "Command source",
+                $"{mode} | {members.Length} actor(s)");
+            _entityCollections.Replace(owner, descriptor, members, owner);
         }
 
         private bool SelectionContains(Entity owner, Entity target)

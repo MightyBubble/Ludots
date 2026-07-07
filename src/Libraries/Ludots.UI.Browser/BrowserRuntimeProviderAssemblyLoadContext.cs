@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -10,12 +11,15 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 {
 	private readonly AssemblyDependencyResolver _dependencyResolver;
 	private readonly Dictionary<string, Assembly> _sharedAssemblies;
+	private readonly string[] _processSharedAssemblyNamePrefixes;
 
 	public BrowserRuntimeProviderAssemblyLoadContext(
 		string name,
 		string providerAssemblyPath,
-		IEnumerable<Assembly> sharedAssemblies)
-		: base(name, isCollectible: true)
+		IEnumerable<Assembly> sharedAssemblies,
+		IEnumerable<string>? processSharedAssemblyNamePrefixes = null,
+		bool isCollectible = true)
+		: base(name, isCollectible)
 	{
 		if (string.IsNullOrWhiteSpace(providerAssemblyPath))
 		{
@@ -38,6 +42,12 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 				_sharedAssemblies[assemblyName] = assembly;
 			}
 		}
+
+		_processSharedAssemblyNamePrefixes = processSharedAssemblyNamePrefixes?
+			.Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+			.Select(prefix => prefix.Trim())
+			.ToArray()
+			?? Array.Empty<string>();
 	}
 
 	protected override Assembly? Load(AssemblyName assemblyName)
@@ -49,6 +59,11 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 		}
 
 		string? assemblyPath = _dependencyResolver.ResolveAssemblyToPath(assemblyName);
+		if (ShouldShareWithProcess(assemblyName.Name))
+		{
+			return ResolveProcessSharedAssembly(assemblyName, assemblyPath);
+		}
+
 		return string.IsNullOrWhiteSpace(assemblyPath)
 			? null
 			: LoadFromAssemblyPath(assemblyPath);
@@ -60,5 +75,37 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 		return string.IsNullOrWhiteSpace(unmanagedDllPath)
 			? IntPtr.Zero
 			: LoadUnmanagedDllFromPath(unmanagedDllPath);
+	}
+
+	private bool ShouldShareWithProcess(string? assemblyName)
+	{
+		if (string.IsNullOrWhiteSpace(assemblyName))
+		{
+			return false;
+		}
+
+		for (int i = 0; i < _processSharedAssemblyNamePrefixes.Length; i++)
+		{
+			if (assemblyName.StartsWith(_processSharedAssemblyNamePrefixes[i], StringComparison.OrdinalIgnoreCase))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	private static Assembly? ResolveProcessSharedAssembly(AssemblyName assemblyName, string? assemblyPath)
+	{
+		Assembly? loaded = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
+			AssemblyName.ReferenceMatchesDefinition(candidate.GetName(), assemblyName));
+		if (loaded != null)
+		{
+			return loaded;
+		}
+
+		return string.IsNullOrWhiteSpace(assemblyPath)
+			? null
+			: AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
 	}
 }

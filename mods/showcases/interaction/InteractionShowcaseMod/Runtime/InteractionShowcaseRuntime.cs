@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Arch.Core;
+using CoreInputMod.Systems;
 using EntityInfoPanelsMod;
 using EntityInfoPanelsMod.Commands;
 using CoreInputMod.ViewMode;
@@ -8,11 +9,13 @@ using InteractionShowcaseMod.Input;
 using InteractionShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -27,6 +30,8 @@ namespace InteractionShowcaseMod.Runtime
 
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
+        private bool _showcaseHudSuppressed;
+        private int _visibleUatFrame;
 
         public InteractionShowcaseRuntime()
         {
@@ -47,17 +52,20 @@ namespace InteractionShowcaseMod.Runtime
 
             if (showcaseActive)
             {
+                _visibleUatFrame = 0;
                 ActivateInputContext(input);
                 EnsureDefaultShowcaseMode(engine);
+                SuppressNonEssentialHud(engine);
                 EnsureShowcaseLocalPlayer(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!);
                 EnsureShowcaseSelectionView(engine);
-                EnsureEntityInfoPanels(context, engine);
+                CloseEntityInfoPanels(context);
                 RefreshPanel(engine);
             }
             else
             {
                 CloseEntityInfoPanels(context);
+                RestoreSuppressedHud(engine);
                 ClearShowcaseModeIfOwned(engine);
                 DeactivateInputContext(input);
                 ClearPanelIfOwned(context);
@@ -82,6 +90,7 @@ namespace InteractionShowcaseMod.Runtime
 
             ClearShowcaseModeIfOwned(engine);
             CloseEntityInfoPanels(context);
+            RestoreSuppressedHud(engine);
             DeactivateInputContext(context.Get(CoreServiceKeys.InputHandler));
             ClearPanelIfOwned(context);
             return Task.CompletedTask;
@@ -96,6 +105,8 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
+            ApplyVisibleUatTimelines(engine);
+
             if (engine.GlobalContext.TryGetValue(InteractionShowcaseIds.SuppressUiPanelKey, out var suppressObj) &&
                 suppressObj is bool suppress &&
                 suppress)
@@ -104,12 +115,47 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
+            TrySeedHoverTargetFromLiveSelectionForVisibleUat(engine);
+
             if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
             {
                 return;
             }
 
             _panelController.MountOrRefresh(root, engine, activeMapId!);
+        }
+
+        private void ApplyVisibleUatTimelines(GameEngine engine)
+        {
+            bool schemeTimelineEnabled = IsEnabled(InteractionShowcaseIds.AutoSchemeTimelineEnvKey);
+            bool blinkTimelineEnabled = IsEnabled(InteractionShowcaseIds.AutoBlinkTimelineEnvKey);
+            if (!schemeTimelineEnabled && !blinkTimelineEnabled)
+            {
+                return;
+            }
+
+            _visibleUatFrame++;
+            engine.GlobalContext[InteractionShowcaseIds.VisibleUatFrameKey] = _visibleUatFrame;
+
+            if (!schemeTimelineEnabled ||
+                engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not ControlSchemeRuntime schemes)
+            {
+                return;
+            }
+
+            string targetScheme = _visibleUatFrame >= 90
+                ? "scheme.wasd_move"
+                : "scheme.default";
+            if (schemes.SchemeIdRegistry.TryGetId(targetScheme, out int schemeId) &&
+                schemes.ActiveSchemeId != schemeId)
+            {
+                schemes.TrySwitch(schemeId);
+            }
+        }
+
+        private static bool IsEnabled(string key)
+        {
+            return string.Equals(Environment.GetEnvironmentVariable(key), "1", StringComparison.Ordinal);
         }
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
@@ -382,6 +428,30 @@ namespace InteractionShowcaseMod.Runtime
             }
         }
 
+        private void SuppressNonEssentialHud(GameEngine engine)
+        {
+            if (_showcaseHudSuppressed)
+            {
+                return;
+            }
+
+            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = false;
+            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = false;
+            _showcaseHudSuppressed = true;
+        }
+
+        private void RestoreSuppressedHud(GameEngine engine)
+        {
+            if (!_showcaseHudSuppressed)
+            {
+                return;
+            }
+
+            engine.GlobalContext[ViewModeSwitchSystem.ViewModeHudEnabledKey] = true;
+            engine.GlobalContext[SkillBarOverlaySystem.SkillBarEnabledKey] = true;
+            _showcaseHudSuppressed = false;
+        }
+
         private static void EnsureShowcaseInputSchema(PlayerInputHandler input)
         {
             if (!input.HasContext(InteractionShowcaseInputContexts.Showcase))
@@ -451,6 +521,11 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
+            if (TryResolveBoundLocalPlayer(engine, out _))
+            {
+                return;
+            }
+
             Entity firstCandidate = Entity.Null;
             Entity preferredCandidate = Entity.Null;
             int firstPlayerId = 0;
@@ -500,6 +575,23 @@ namespace InteractionShowcaseMod.Runtime
 
             localPlayer = existing;
             PublishShowcaseLocalPlayer(engine, existing, owner.PlayerId);
+            return true;
+        }
+
+        private static bool TryResolveBoundLocalPlayer(GameEngine engine, out Entity localPlayer)
+        {
+            localPlayer = Entity.Null;
+            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
+                lookup == null ||
+                !lookup.TryGet(ShowcaseLocalPlayerId, out Entity bound) ||
+                bound == Entity.Null ||
+                !engine.World.IsAlive(bound))
+            {
+                return false;
+            }
+
+            localPlayer = bound;
+            PublishShowcaseLocalPlayer(engine, bound, ShowcaseLocalPlayerId);
             return true;
         }
 
@@ -589,6 +681,122 @@ namespace InteractionShowcaseMod.Runtime
             {
                 engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
             }
+
+            Span<Entity> initialSelection = stackalloc Entity[3];
+            int count = 0;
+            AddInitialSelection(engine, InteractionShowcaseIds.ArcweaverName, initialSelection, ref count);
+            AddInitialSelection(engine, InteractionShowcaseIds.VanguardName, initialSelection, ref count);
+            AddInitialSelection(engine, InteractionShowcaseIds.CommanderName, initialSelection, ref count);
+            if (count > 0)
+            {
+                if (selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary) <= 0)
+                {
+                    selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, initialSelection[..count]);
+                }
+
+                if (!IsSpecializedInteractionShowcaseActive(engine))
+                {
+                    PublishShowcaseCommandSource(engine, viewer, initialSelection[..count]);
+                    TrySeedHoverTargetForVisibleUat(engine, viewer, initialSelection[..count]);
+                }
+            }
+        }
+
+        private static bool IsSpecializedInteractionShowcaseActive(GameEngine engine)
+        {
+            return engine.GlobalContext.ContainsKey("SuperweaponContextShowcase.RuntimeState");
+        }
+
+        private static void PublishShowcaseCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
+        {
+            if (actors.IsEmpty ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+            {
+                return;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: actors[0],
+                title: "Active hero command group",
+                summary: "The showcase starts with these heroes ready for pointer commands.");
+            collections.Replace(owner, in descriptor, actors, owner);
+        }
+
+        private static void TrySeedHoverTargetForVisibleUat(GameEngine engine, Entity owner, ReadOnlySpan<Entity> actors)
+        {
+            if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
+                actors.Length < 2 ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+            {
+                return;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.HoveredEntity,
+                EntityCollectionSourceKind.UiHover,
+                EntityCollectionRoleKind.Display,
+                contextEntity: owner,
+                primaryEntity: actors[1],
+                title: "Ground command hover check",
+                summary: "A hovered hero is present so the screenshot proves the ground command still goes to the ground.");
+            ReadOnlySpan<Entity> rows = stackalloc[] { actors[1] };
+            collections.Replace(owner, in descriptor, rows, owner);
+        }
+
+        private static void TrySeedHoverTargetFromLiveSelectionForVisibleUat(GameEngine engine)
+        {
+            if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
+                !TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer) ||
+                !selection.TryGetSelectionAt(viewer, SelectionSetKeys.LivePrimary, 1, out Entity hovered) ||
+                hovered == Entity.Null ||
+                !engine.World.IsAlive(hovered) ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+            {
+                return;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.HoveredEntity,
+                EntityCollectionSourceKind.UiHover,
+                EntityCollectionRoleKind.Display,
+                contextEntity: viewer,
+                primaryEntity: hovered,
+                title: "Ground command hover check",
+                summary: "A hovered hero is present so the screenshot proves the ground command still goes to the ground.");
+            ReadOnlySpan<Entity> rows = stackalloc[] { hovered };
+            collections.Replace(viewer, in descriptor, rows, viewer);
+        }
+
+        private static void AddInitialSelection(GameEngine engine, string entityName, Span<Entity> destination, ref int count)
+        {
+            if ((uint)count >= (uint)destination.Length)
+            {
+                return;
+            }
+
+            Entity entity = ResolveNamedEntity(engine, entityName);
+            if (entity != Entity.Null && engine.World.IsAlive(entity))
+            {
+                destination[count++] = entity;
+            }
+        }
+
+        private static Entity ResolveNamedEntity(GameEngine engine, string entityName)
+        {
+            Entity result = Entity.Null;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, entityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    result = entity;
+                }
+            });
+            return result;
         }
     }
 }

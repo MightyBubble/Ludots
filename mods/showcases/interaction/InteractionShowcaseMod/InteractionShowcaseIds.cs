@@ -45,6 +45,9 @@ namespace InteractionShowcaseMod
         public const string ActiveControlGroupKey = "InteractionShowcase.Selection.ActiveGroup";
         public const string LiveSelectionButtonId = "InteractionShowcase.Selection.Live";
         public const string FormationSelectionButtonId = "InteractionShowcase.Selection.Formation";
+        public const string VisibleUatFrameKey = "InteractionShowcase.VisibleUat.Frame";
+        public const string AutoSchemeTimelineEnvKey = "LUDOTS_INTERACTION_SHOWCASE_AUTO_SCHEME_TIMELINE";
+        public const string AutoBlinkTimelineEnvKey = "LUDOTS_INTERACTION_SHOWCASE_AUTO_BLINK_TIMELINE";
 
         public static bool IsShowcaseMap(string? mapId)
         {

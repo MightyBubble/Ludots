@@ -1,4 +1,6 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
 
@@ -6,9 +8,11 @@ namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, §5.11, DEC-15). Schemes are
-    /// declared in <c>Input/control_schemes.json</c> and compiled at install time: default command
+    /// declared in <c>Input/control_schemes.json</c> and compiled at install time: axis move
+    /// <c>orderTypeKey</c> references resolve against <see cref="OrderTypeRegistry"/>, default command
     /// intent ids must be installed <see cref="CommandIntentProfileRegistry"/> profiles and register
-    /// into the <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space, so
+    /// into the <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space, while
+    /// default dispatch profile ids must be installed <see cref="CastDispatchProfileRegistry"/> profiles, so
     /// <see cref="ActiveDefaultCommandIntentId"/> is directly comparable with
     /// <see cref="InteractionContextFrame.CommandIntentProfileId"/> (the space
     /// <see cref="CommandIntentArbiter"/> resolves in). Switching pops the previous scheme's IMC
@@ -23,6 +27,9 @@ namespace Ludots.Core.Input.Interaction
         private readonly StringIntRegistry _schemeIds;
         private readonly InteractionContextStack _stack;
         private readonly CommandIntentProfileRegistry _commandIntents;
+        private readonly CastDispatchProfileRegistry _castDispatchProfiles;
+        private readonly OrderTypeRegistry _orderTypes;
+        private readonly InputConfigRoot _inputConfig;
         private readonly Func<PlayerInputHandler> _handlerProvider;
         private readonly ClientCastPreferenceStore _preferences;
 
@@ -31,17 +38,24 @@ namespace Ludots.Core.Input.Interaction
         private bool[] _allowed = Array.Empty<bool>();
         private int _activeSchemeId;
         private int _activeDefaultCommandIntentId;
+        private int _activeDefaultCastDispatchProfileId;
 
         public ControlSchemeRuntime(
             StringIntRegistry schemeIdRegistry,
             InteractionContextStack stack,
             CommandIntentProfileRegistry commandIntents,
+            CastDispatchProfileRegistry castDispatchProfiles,
+            OrderTypeRegistry orderTypes,
             Func<PlayerInputHandler> handlerProvider = null,
-            ClientCastPreferenceStore preferences = null)
+            ClientCastPreferenceStore preferences = null,
+            InputConfigRoot inputConfig = null)
         {
             _schemeIds = schemeIdRegistry ?? throw new ArgumentNullException(nameof(schemeIdRegistry));
             _stack = stack ?? throw new ArgumentNullException(nameof(stack));
             _commandIntents = commandIntents ?? throw new ArgumentNullException(nameof(commandIntents));
+            _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
+            _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
+            _inputConfig = inputConfig;
             _handlerProvider = handlerProvider;
             _preferences = preferences;
         }
@@ -60,12 +74,39 @@ namespace Ludots.Core.Input.Interaction
         /// </summary>
         public int ActiveDefaultCommandIntentId => _activeDefaultCommandIntentId;
 
+        /// <summary>
+        /// The active scheme's default cast-dispatch profile, in
+        /// <see cref="CastDispatchProfileRegistry.ProfileIdRegistry"/> id space. 0 when no scheme
+        /// is active; routed pointer commands then fail fast instead of inventing a Core default.
+        /// </summary>
+        public int ActiveDefaultCastDispatchProfileId => _activeDefaultCastDispatchProfileId;
+
         /// <summary>Bumped on every successful switch.</summary>
         public uint Revision { get; private set; }
 
         /// <summary>
+        /// The active scheme's axis move declaration with the order type key pre-resolved at
+        /// <see cref="Install"/>. Returns false when no scheme is active or the active scheme
+        /// declares no axis move: the current scheme has no axis movement, not a fallback path.
+        /// </summary>
+        public bool TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding axisMove)
+        {
+            if (_activeSchemeId == 0 || !_schemes[_activeSchemeId].HasAxisMove)
+            {
+                axisMove = default;
+                return false;
+            }
+
+            axisMove = _schemes[_activeSchemeId].AxisMove;
+            return true;
+        }
+
+        /// <summary>
         /// Compile and install every scheme in the config. Fails fast on duplicate installs and on
         /// <c>defaults.commandIntentId</c> references that are not installed command intent profiles.
+        /// After installation, activates the persisted active scheme when present; otherwise it
+        /// activates the first allowed declaration so production startup has a scheme-owned intent
+        /// default without test-only calls.
         /// </summary>
         public void Install(ControlSchemesConfig config)
         {
@@ -90,6 +131,8 @@ namespace Ludots.Core.Input.Interaction
                     _allowed[schemeId] = true;
                 }
             }
+
+            ActivateInitialScheme(config);
         }
 
         /// <summary>True when the scheme id has been compiled and can activate.</summary>
@@ -144,6 +187,7 @@ namespace Ludots.Core.Input.Interaction
 
             _activeSchemeId = schemeId;
             _activeDefaultCommandIntentId = _schemes[schemeId].DefaultCommandIntentId;
+            _activeDefaultCastDispatchProfileId = _schemes[schemeId].DefaultCastDispatchProfileId;
             _preferences?.SetActiveScheme(_schemeIds.GetName(schemeId));
             Revision++;
             return true;
@@ -166,6 +210,15 @@ namespace Ludots.Core.Input.Interaction
                     $"'{commandIntentId}' which is not installed.");
             }
 
+            string castDispatchProfileId = definition.Defaults.CastDispatchProfileId;
+            if (!_castDispatchProfiles.ProfileIdRegistry.TryGetId(castDispatchProfileId, out int dispatchRegistryId) ||
+                !_castDispatchProfiles.IsInstalled(dispatchRegistryId))
+            {
+                throw new InvalidOperationException(
+                    $"Control scheme '{definition.Id}' defaults.castDispatchProfileId references cast dispatch profile " +
+                    $"'{castDispatchProfileId}' which is not installed.");
+            }
+
             var contexts = new string[definition.InputContexts.Count];
             for (int i = 0; i < contexts.Length; i++)
             {
@@ -176,7 +229,27 @@ namespace Ludots.Core.Input.Interaction
             {
                 InputContexts = contexts,
                 DefaultCommandIntentId = _stack.CommandIntentProfileIdRegistry.Register(commandIntentId),
+                DefaultCastDispatchProfileId = dispatchRegistryId,
             };
+
+            if (definition.AxisMove != null)
+            {
+                ValidateAxisMoveAction(definition);
+
+                if (!_orderTypes.TryGetId(definition.AxisMove.OrderTypeKey, out int orderTypeId))
+                {
+                    throw new InvalidOperationException(
+                        $"Control scheme '{definition.Id}' axisMove.orderTypeKey references unknown order type " +
+                        $"'{definition.AxisMove.OrderTypeKey}'.");
+                }
+
+                scheme.HasAxisMove = true;
+                scheme.AxisMove = new ControlSchemeAxisMoveBinding(
+                    definition.AxisMove.ActionId,
+                    orderTypeId,
+                    definition.AxisMove.ThrottleTicks,
+                    definition.AxisMove.StepDistanceCm);
+            }
 
             if (schemeId >= _schemes.Length)
             {
@@ -192,6 +265,36 @@ namespace Ludots.Core.Input.Interaction
             _schemes[schemeId] = scheme;
         }
 
+        private void ValidateAxisMoveAction(ControlSchemeDefinition definition)
+        {
+            if (_inputConfig?.Actions == null)
+            {
+                return;
+            }
+
+            string actionId = definition.AxisMove.ActionId;
+            for (int i = 0; i < _inputConfig.Actions.Count; i++)
+            {
+                InputActionDef action = _inputConfig.Actions[i];
+                if (action == null || !string.Equals(action.Id, actionId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (action.Type != InputActionType.Axis2D)
+                {
+                    throw new InvalidOperationException(
+                        $"Control scheme '{definition.Id}' axisMove.actionId references input action '{actionId}' " +
+                        $"with type '{action.Type}'; axisMove requires an Axis2D action.");
+                }
+
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Control scheme '{definition.Id}' axisMove.actionId references unknown input action '{actionId}'.");
+        }
+
         private void EnsureAllowedCapacity(int schemeId)
         {
             if (schemeId >= _allowed.Length)
@@ -200,10 +303,76 @@ namespace Ludots.Core.Input.Interaction
             }
         }
 
+        private void ActivateInitialScheme(ControlSchemesConfig config)
+        {
+            if (_activeSchemeId != 0 || config.Schemes.Count == 0)
+            {
+                return;
+            }
+
+            if (_preferences != null && !string.IsNullOrWhiteSpace(_preferences.ActiveSchemeId))
+            {
+                string preferredScheme = _preferences.ActiveSchemeId.Trim();
+                if (!_schemeIds.TryGetId(preferredScheme, out int preferredSchemeId))
+                {
+                    throw new InvalidOperationException(
+                        $"Persisted control scheme '{preferredScheme}' is not installed.");
+                }
+
+                if (!TrySwitch(preferredSchemeId))
+                {
+                    throw new InvalidOperationException(
+                        $"Persisted control scheme '{preferredScheme}' is not allowed.");
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < config.Schemes.Count; i++)
+            {
+                int schemeId = _schemeIds.GetId(config.Schemes[i].Id);
+                if (IsAllowed(schemeId))
+                {
+                    if (!TrySwitch(schemeId))
+                    {
+                        throw new InvalidOperationException(
+                            $"Initial control scheme '{config.Schemes[i].Id}' is installed but could not activate.");
+                    }
+
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException("Control scheme config leaves no installed scheme allowed for startup.");
+        }
+
         private sealed class CompiledScheme
         {
             public string[] InputContexts = Array.Empty<string>();
             public int DefaultCommandIntentId;
+            public int DefaultCastDispatchProfileId;
+            public bool HasAxisMove;
+            public ControlSchemeAxisMoveBinding AxisMove;
+        }
+    }
+
+    /// <summary>
+    /// Compiled axis move declaration of the active control scheme: the raw Axis2D action id plus
+    /// the order parameters, with <c>orderTypeKey</c> resolved to an <c>OrderTypeRegistry</c> id.
+    /// </summary>
+    public readonly struct ControlSchemeAxisMoveBinding
+    {
+        public readonly string ActionId;
+        public readonly int OrderTypeId;
+        public readonly int ThrottleTicks;
+        public readonly int StepDistanceCm;
+
+        public ControlSchemeAxisMoveBinding(string actionId, int orderTypeId, int throttleTicks, int stepDistanceCm)
+        {
+            ActionId = actionId;
+            OrderTypeId = orderTypeId;
+            ThrottleTicks = throttleTicks;
+            StepDistanceCm = stepDistanceCm;
         }
     }
 }

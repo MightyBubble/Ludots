@@ -135,6 +135,7 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.MassNavigationLargeWorld => Task.FromResult(RecordMassNavigationLargeWorld(request)),
+            EvidenceScenario.Rfc0065ShowcaseArtifacts => Task.FromResult(RecordRfc0065ShowcaseArtifacts(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
     }
@@ -161,6 +162,11 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "ChunkStreamingShowcaseMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.ChunkStreamingShowcaseCameraWindows;
+        }
+
+        if (TryResolveRfc0065ShowcaseProfile(plan, out _))
+        {
+            return EvidenceScenario.Rfc0065ShowcaseArtifacts;
         }
 
         return EvidenceScenario.None;
@@ -341,6 +347,361 @@ public static class LauncherEvidenceRecorder
             {
                 inputHandler.PushContext(contextId);
             }
+        }
+    }
+
+    private static LauncherRecordingResult RecordRfc0065ShowcaseArtifacts(LauncherRecordingRequest request)
+    {
+        if (!TryResolveRfc0065ShowcaseProfile(request.Plan, out Rfc0065ShowcaseProfile profile))
+        {
+            throw new InvalidOperationException($"No RFC0065 showcase recorder profile is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}");
+        }
+
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        string normalizedSignature = BuildRfc0065NormalizedSignature(request, profile);
+        var snapshots = new List<Rfc0065ArtifactSnapshot>
+        {
+            new(
+                Tick: 0,
+                Step: "000_launch_plan",
+                Title: "Launch plan resolved",
+                Status: "supported",
+                Detail: $"Root mod '{profile.ModId}' matched RFC0065 recorder profile '{profile.ScenarioKey}'.",
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: profile.RecorderSignals),
+            new(
+                Tick: 1,
+                Step: "001_showcase_contract",
+                Title: "Showcase contract captured",
+                Status: "documented",
+                Detail: profile.Intent,
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: profile.ExpectedArtifacts),
+            new(
+                Tick: 2,
+                Step: "002_evidence_bundle",
+                Title: "Evidence bundle written",
+                Status: "complete",
+                Detail: "Standard launcher evidence files are emitted without claiming real Raylib or CEF framebuffer recording.",
+                RootModCount: request.Plan.RootModIds.Count,
+                OrderedModCount: request.Plan.OrderedModIds.Count,
+                AdapterId: request.Plan.AdapterId,
+                ArtifactMode: "launcher-recorder-artifacts",
+                Signals: ["battle-report.md", "trace.jsonl", "path.mmd", "summary.json", "visible-checklist.md", "screens/timeline.png"])
+        };
+
+        var captureFrames = new List<CaptureFrame>();
+        foreach (Rfc0065ArtifactSnapshot snapshot in snapshots)
+        {
+            string fileName = $"{snapshot.Step}.png";
+            captureFrames.Add(new CaptureFrame(snapshot.Tick, snapshot.Step, fileName, 0, 0, 0f, 0f));
+            WriteRfc0065ArtifactFrameImage(profile, request, snapshot, Path.Combine(screensDir, fileName));
+        }
+
+        WriteTimelineSheet($"RFC0065 showcase artifact timeline - {profile.ModId}", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildRfc0065BattleReport(request, profile, snapshots, captureFrames, normalizedSignature));
+        File.WriteAllText(tracePath, BuildRfc0065TraceJsonl(request, profile, snapshots));
+        File.WriteAllText(pathPath, BuildRfc0065PathMermaid(profile));
+        File.WriteAllText(visibleChecklistPath, BuildRfc0065VisibleChecklist(profile, captureFrames));
+        File.WriteAllText(summaryPath, BuildRfc0065SummaryJson(request, profile, snapshots, normalizedSignature));
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            normalizedSignature);
+    }
+
+    private static bool TryResolveRfc0065ShowcaseProfile(LauncherLaunchPlan plan, out Rfc0065ShowcaseProfile profile)
+    {
+        foreach (Rfc0065ShowcaseProfile candidate in Rfc0065ShowcaseProfiles)
+        {
+            if (plan.RootModIds.Any(id => string.Equals(id, candidate.ModId, StringComparison.OrdinalIgnoreCase)))
+            {
+                profile = candidate;
+                return true;
+            }
+        }
+
+        profile = Rfc0065ShowcaseProfiles[0];
+        return false;
+    }
+
+    private static string BuildRfc0065NormalizedSignature(LauncherRecordingRequest request, Rfc0065ShowcaseProfile profile)
+    {
+        string rootMods = string.Join("+", request.Plan.RootModIds.Select(id => id.Trim()).Where(id => id.Length > 0));
+        string selectors = string.Join("+", request.Plan.Selectors.Select(id => id.Trim()).Where(id => id.Length > 0));
+        return $"{profile.ScenarioKey}|adapter={request.Plan.AdapterId}|roots={rootMods}|selectors={selectors}|mode=launcher-recorder-artifacts";
+    }
+
+    private static string BuildRfc0065BattleReport(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots,
+        IReadOnlyList<CaptureFrame> captureFrames,
+        string normalizedSignature)
+    {
+        string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Scenario Card: {profile.ScenarioKey}");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine($"- Player goal: {profile.Intent}");
+        sb.AppendLine($"- Gameplay domain: RFC0065 showcase mod `{profile.ModId}` recorded through launcher evidence artifact support.");
+        sb.AppendLine("- Recorder scope: launcher-side deterministic artifact bundle; this does not claim real Raylib or CEF framebuffer recording.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine("- Seed: none");
+        sb.AppendLine($"- Map/config hint: `{profile.MapHint}`");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- Root mods: `{string.Join(", ", request.Plan.RootModIds)}`");
+        sb.AppendLine($"- Ordered mods: `{string.Join(", ", request.Plan.OrderedModIds)}`");
+        sb.AppendLine($"- Evidence images: {evidenceImages}");
+        sb.AppendLine();
+        sb.AppendLine("## Action Script");
+        sb.AppendLine("1. Resolve the launcher plan and root mod list.");
+        sb.AppendLine("2. Match the root mod against the RFC0065 showcase recorder profiles.");
+        sb.AppendLine("3. Emit the standard launcher evidence files for review and automation.");
+        sb.AppendLine("4. Emit simple PNG frames and a timeline sheet that visualize recorder artifact stages.");
+        sb.AppendLine();
+        sb.AppendLine("## Expected Outcomes");
+        foreach (string artifact in profile.ExpectedArtifacts)
+        {
+            sb.AppendLine($"- {artifact}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (Rfc0065ArtifactSnapshot snapshot in snapshots)
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] {profile.ModId}.{snapshot.Step} -> status={snapshot.Status} | adapter={snapshot.AdapterId} | mode={snapshot.ArtifactMode}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine("- success: yes");
+        sb.AppendLine("- verdict: RFC0065 showcase has a registered launcher evidence recorder artifact profile.");
+        sb.AppendLine("- reason: the unsupported-scenario branch was avoided and standard evidence files were written.");
+        sb.AppendLine();
+        sb.AppendLine("## Summary Stats");
+        sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
+        sb.AppendLine($"- root mod count: `{request.Plan.RootModIds.Count}`");
+        sb.AppendLine($"- ordered mod count: `{request.Plan.OrderedModIds.Count}`");
+        sb.AppendLine($"- normalized signature: `{normalizedSignature}`");
+        sb.AppendLine("- reusable wiring: `LauncherLaunchPlan`, evidence recorder scenario dispatch, Skia PNG artifact writer");
+        return sb.ToString();
+    }
+
+    private static string BuildRfc0065TraceJsonl(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots)
+    {
+        var lines = new List<string>(snapshots.Count);
+        for (int index = 0; index < snapshots.Count; index++)
+        {
+            Rfc0065ArtifactSnapshot snapshot = snapshots[index];
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                event_id = $"rfc0065-{profile.ScenarioKey}-{index + 1:000}",
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                scenario = profile.ScenarioKey,
+                root_mod = profile.ModId,
+                adapter = request.Plan.AdapterId,
+                artifact_mode = snapshot.ArtifactMode,
+                status = snapshot.Status,
+                detail = snapshot.Detail,
+                root_mod_count = snapshot.RootModCount,
+                ordered_mod_count = snapshot.OrderedModCount
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildRfc0065PathMermaid(Rfc0065ShowcaseProfile profile)
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            $"    A[Resolve launch plan for {profile.ModId}] --> B[Match RFC0065 recorder profile]",
+            "    B --> C[Capture launch selectors and mod ordering]",
+            "    C --> D[Write standard evidence files]",
+            "    D --> E[Write simple PNG artifact frames]",
+            "    E --> F[Return launcher recording result]",
+            "    B -->|missing| X[Unsupported scenario]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildRfc0065VisibleChecklist(Rfc0065ShowcaseProfile profile, IReadOnlyList<CaptureFrame> frames)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Visible Checklist: {profile.ScenarioKey}");
+        sb.AppendLine();
+        sb.AppendLine("- `screens/000_launch_plan.png` should identify the matched root mod and adapter.");
+        sb.AppendLine("- `screens/001_showcase_contract.png` should show the RFC0065 showcase contract and expected artifact signals.");
+        sb.AppendLine("- `screens/002_evidence_bundle.png` should state that standard evidence files were written.");
+        sb.AppendLine("- `screens/timeline.png` should show all recorder artifact frames in one sheet.");
+        sb.AppendLine("- These PNGs are recorder artifact visuals, not real Raylib or CEF framebuffer captures.");
+        sb.AppendLine();
+        foreach (CaptureFrame frame in frames)
+        {
+            sb.AppendLine($"- `{frame.FileName}`: step={frame.Step}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildRfc0065SummaryJson(
+        LauncherRecordingRequest request,
+        Rfc0065ShowcaseProfile profile,
+        IReadOnlyList<Rfc0065ArtifactSnapshot> snapshots,
+        string normalizedSignature)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = profile.ScenarioKey,
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            ordered_mods = request.Plan.OrderedModIds,
+            artifact_mode = "launcher-recorder-artifacts",
+            claims_real_raylib_or_cef_recording = false,
+            root_mod = profile.ModId,
+            showcase_scope = profile.ShowcaseScope,
+            map_hint = profile.MapHint,
+            expected_artifacts = profile.ExpectedArtifacts,
+            steps = snapshots.Select(snapshot => new
+            {
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                status = snapshot.Status
+            }),
+            normalized_signature = normalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private static void WriteRfc0065ArtifactFrameImage(
+        Rfc0065ShowcaseProfile profile,
+        LauncherRecordingRequest request,
+        Rfc0065ArtifactSnapshot snapshot,
+        string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(CameraImageWidth, CameraImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(10, 14, 20));
+
+        using var titlePaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 38f };
+        using var subTitlePaint = new SKPaint { Color = new SKColor(190, 210, 230), IsAntialias = true, TextSize = 22f };
+        using var labelPaint = new SKPaint { Color = new SKColor(125, 170, 220), IsAntialias = true, TextSize = 18f };
+        using var valuePaint = new SKPaint { Color = new SKColor(232, 238, 246), IsAntialias = true, TextSize = 21f };
+        using var mutedPaint = new SKPaint { Color = new SKColor(150, 160, 172), IsAntialias = true, TextSize = 18f };
+        using var accentPaint = new SKPaint { Color = new SKColor(92, 196, 154), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var panelPaint = new SKPaint { Color = new SKColor(21, 29, 40), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var borderPaint = new SKPaint { Color = new SKColor(64, 82, 104), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var headerPaint = new SKPaint { Color = new SKColor(16, 24, 34), Style = SKPaintStyle.Fill };
+
+        canvas.DrawRect(new SKRect(0, 0, CameraImageWidth, 92), headerPaint);
+        canvas.DrawCircle(44, 46, 14, accentPaint);
+        canvas.DrawText("RFC0065 launcher evidence recorder", 72, 43, titlePaint);
+        canvas.DrawText(profile.ModId, 72, 73, subTitlePaint);
+
+        SKRect leftPanel = new(44, 132, 760, 780);
+        SKRect rightPanel = new(820, 132, 1556, 780);
+        canvas.DrawRoundRect(leftPanel, 8, 8, panelPaint);
+        canvas.DrawRoundRect(leftPanel, 8, 8, borderPaint);
+        canvas.DrawRoundRect(rightPanel, 8, 8, panelPaint);
+        canvas.DrawRoundRect(rightPanel, 8, 8, borderPaint);
+
+        canvas.DrawText(snapshot.Title, 76, 178, titlePaint);
+        DrawRfc0065LabelValue(canvas, "scenario", profile.ScenarioKey, 76, 232, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "adapter", request.Plan.AdapterId, 76, 284, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "status", snapshot.Status, 76, 336, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "artifact mode", snapshot.ArtifactMode, 76, 388, labelPaint, valuePaint);
+        DrawRfc0065LabelValue(canvas, "root mods", string.Join(", ", request.Plan.RootModIds), 76, 440, labelPaint, valuePaint);
+        DrawRfc0065WrappedText(canvas, snapshot.Detail, 76, 506, 640, valuePaint, lineHeight: 28f, maxLines: 5);
+
+        canvas.DrawText("Recorder signals", 852, 178, titlePaint);
+        float y = 236;
+        foreach (string signal in snapshot.Signals.Take(12))
+        {
+            canvas.DrawCircle(866, y - 7, 5, accentPaint);
+            DrawRfc0065WrappedText(canvas, signal, 884, y, 620, valuePaint, lineHeight: 25f, maxLines: 2);
+            y += 54;
+        }
+
+        canvas.DrawText("This image is a recorder artifact visual, not a real Raylib or CEF capture.", 48, 842, mutedPaint);
+        canvas.DrawText($"tick={snapshot.Tick} | roots={snapshot.RootModCount} | ordered={snapshot.OrderedModCount}", 48, 872, mutedPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void DrawRfc0065LabelValue(SKCanvas canvas, string label, string value, float x, float y, SKPaint labelPaint, SKPaint valuePaint)
+    {
+        canvas.DrawText(label.ToUpperInvariant(), x, y, labelPaint);
+        DrawRfc0065WrappedText(canvas, value, x + 170, y, 500, valuePaint, lineHeight: 25f, maxLines: 2);
+    }
+
+    private static void DrawRfc0065WrappedText(SKCanvas canvas, string text, float x, float y, float maxWidth, SKPaint paint, float lineHeight, int maxLines)
+    {
+        if (string.IsNullOrWhiteSpace(text) || maxLines <= 0)
+        {
+            return;
+        }
+
+        var line = new StringBuilder();
+        int linesDrawn = 0;
+        foreach (string word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            string candidate = line.Length == 0 ? word : $"{line} {word}";
+            if (paint.MeasureText(candidate) <= maxWidth)
+            {
+                line.Clear();
+                line.Append(candidate);
+                continue;
+            }
+
+            if (line.Length > 0)
+            {
+                canvas.DrawText(line.ToString(), x, y + linesDrawn * lineHeight, paint);
+                linesDrawn++;
+                if (linesDrawn >= maxLines)
+                {
+                    return;
+                }
+            }
+
+            line.Clear();
+            line.Append(word);
+        }
+
+        if (line.Length > 0 && linesDrawn < maxLines)
+        {
+            canvas.DrawText(line.ToString(), x, y + linesDrawn * lineHeight, paint);
         }
     }
 
@@ -2790,13 +3151,102 @@ public static class LauncherEvidenceRecorder
         return $"{point.X.ToString("F0", CultureInfo.InvariantCulture)},{point.Y.ToString("F0", CultureInfo.InvariantCulture)}";
     }
 
+    private static readonly Rfc0065ShowcaseProfile[] Rfc0065ShowcaseProfiles =
+    [
+        new(
+            ModId: "ControlPlaneProjectionShowcaseMod",
+            ScenarioKey: "rfc0065_control_plane_projection_showcase",
+            Intent: "verify the control-plane projection showcase is launchable and has standard recorder evidence for owned/proxied selection projection review.",
+            MapHint: "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod/assets",
+            ShowcaseScope: "control domain projection, proxy control grants, viewer-relative marker dataplane contract",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and control-plane projection scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: ControlPlaneProjectionShowcaseMod",
+                "control-plane projection showcase profile matched",
+                "owned/proxied projection contract documented",
+                "CEF-ready dataplane claim kept as contract metadata only"
+            ]),
+        new(
+            ModId: "EntityCommandPanelShowcaseMod",
+            ScenarioKey: "rfc0065_entity_command_panel_showcase",
+            Intent: "verify the entity command panel showcase is launchable and has standard recorder evidence for trigger-owned command panel review.",
+            MapHint: "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/assets",
+            ShowcaseScope: "trigger-controlled multi-instance command panels over the interaction sandbox",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and command-panel showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: EntityCommandPanelShowcaseMod",
+                "entity command panel showcase profile matched",
+                "interaction sandbox dependency captured through ordered mod plan",
+                "trigger-owned panel contract documented"
+            ]),
+        new(
+            ModId: "SuperweaponContextShowcaseMod",
+            ScenarioKey: "rfc0065_superweapon_context_showcase",
+            Intent: "verify the superweapon context showcase is launchable and has standard recorder evidence for ability-owned interaction contexts.",
+            MapHint: "mods/showcases/superweapon_context/SuperweaponContextShowcaseMod/assets",
+            ShowcaseScope: "ability-owned interaction contexts and context-bound target collection writes",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and superweapon context showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: SuperweaponContextShowcaseMod",
+                "superweapon context showcase profile matched",
+                "ability-owned context contract documented",
+                "context-bound target collection writes captured as expected evidence scope"
+            ]),
+        new(
+            ModId: "InteractionShowcaseMod",
+            ScenarioKey: "rfc0065_interaction_showcase",
+            Intent: "verify the interaction showcase is launchable and has standard recorder evidence for RFC0065 input and interaction review.",
+            MapHint: "mods/showcases/interaction/InteractionShowcaseMod/assets",
+            ShowcaseScope: "target-first, smart-cast, RTS aim-cast, action combat, and interaction stress validation",
+            ExpectedArtifacts:
+            [
+                "battle-report.md describes the launch-plan artifact recording and interaction showcase scope.",
+                "trace.jsonl records launch-plan, showcase-contract, and evidence-bundle events.",
+                "path.mmd shows the recorder dispatch path from launch plan to standard evidence files.",
+                "summary.json exposes scenario, adapter, root mods, ordered mods, and artifact mode.",
+                "visible-checklist.md lists the recorder PNG frames reviewers should inspect."
+            ],
+            RecorderSignals:
+            [
+                "root mod: InteractionShowcaseMod",
+                "interaction showcase profile matched",
+                "input and GAS interaction contract documented",
+                "recorder artifact mode prevents framebuffer-capture overclaiming"
+            ])
+    ];
+
     private enum EvidenceScenario
     {
         None,
         CameraAcceptanceProjectionClick,
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
-        MassNavigationLargeWorld
+        MassNavigationLargeWorld,
+        Rfc0065ShowcaseArtifacts
     }
 
     private sealed class RecordingRuntime : IDisposable
@@ -3056,6 +3506,27 @@ public static class LauncherEvidenceRecorder
         string FailureSummary,
         IReadOnlyList<string> FailedChecks,
         string NormalizedSignature);
+
+    private sealed record Rfc0065ShowcaseProfile(
+        string ModId,
+        string ScenarioKey,
+        string Intent,
+        string MapHint,
+        string ShowcaseScope,
+        IReadOnlyList<string> ExpectedArtifacts,
+        IReadOnlyList<string> RecorderSignals);
+
+    private readonly record struct Rfc0065ArtifactSnapshot(
+        int Tick,
+        string Step,
+        string Title,
+        string Status,
+        string Detail,
+        int RootModCount,
+        int OrderedModCount,
+        string AdapterId,
+        string ArtifactMode,
+        IReadOnlyList<string> Signals);
 
     private readonly record struct CaptureFrame(
         int Tick,

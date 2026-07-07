@@ -107,10 +107,11 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
                 _activeTokens.Add(token);
                 MassNavigationMoveOrderArgs moveArgs = MassNavigationMoveOrderArgs.Decode(in order);
                 OrderBucket bucket = _buckets[bucketIndex];
-                bucket.TeamId = teams[index].Id;
-                bucket.Destination = moveArgs.DestinationCm;
-                bucket.FormationMode = moveArgs.FormationMode;
-                bucket.RotationRadians = moveArgs.RotationRadians;
+                bucket.AssignOrValidatePayload(
+                    teams[index].Id,
+                    moveArgs.DestinationCm,
+                    moveArgs.FormationMode,
+                    moveArgs.RotationRadians);
                 if (bucket.Members.Count >= _bucketMemberCapacity)
                 {
                     throw new InvalidOperationException(
@@ -323,6 +324,34 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         public MassNavigationFormationMode FormationMode { get; set; }
         public float RotationRadians { get; set; }
         public List<int> Members { get; }
+        private bool HasPayload { get; set; }
+
+        public void AssignOrValidatePayload(
+            int teamId,
+            Vector2 destination,
+            MassNavigationFormationMode formationMode,
+            float rotationRadians)
+        {
+            if (!HasPayload)
+            {
+                TeamId = teamId;
+                Destination = destination;
+                FormationMode = formationMode;
+                RotationRadians = rotationRadians;
+                HasPayload = true;
+                return;
+            }
+
+            if (TeamId != teamId ||
+                Destination.X != destination.X ||
+                Destination.Y != destination.Y ||
+                FormationMode != formationMode ||
+                RotationRadians != rotationRadians)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation order ingestion token {Token} has conflicting move-order payloads. Shared order ids must carry one team, destination, formation, and rotation.");
+            }
+        }
 
         public void Reset()
         {
@@ -331,6 +360,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Destination = default;
             FormationMode = MassNavigationFormationMode.None;
             RotationRadians = 0f;
+            HasPayload = false;
             Members.Clear();
         }
 
@@ -341,6 +371,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
             Destination = default;
             FormationMode = MassNavigationFormationMode.None;
             RotationRadians = 0f;
+            HasPayload = false;
             Members.Clear();
         }
     }

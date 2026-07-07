@@ -43,10 +43,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             {
                 long targetStart = Stopwatch.GetTimestamp();
                 _simulation.NavGroupRuntime.UpdateTargets(
-                    _engine.World,
                     _simulation.MassNavigationFlow,
-                    _simulation.AgentState,
-                    _simulation.SelectedEntities,
                     _simulation.FrameIndex);
                 ApplyRouteExecutionTargets();
                 _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);

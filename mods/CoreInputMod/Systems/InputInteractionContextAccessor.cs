@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
@@ -22,9 +23,14 @@ namespace CoreInputMod.Systems
 {
     internal sealed class InputInteractionContextAccessor
     {
+        private const int InitialEntityScratchCapacity = 16;
+
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime _selection;
+        private readonly SelectionRuntime? _selection;
+        private readonly EntityCollectionStore? _entityCollections;
+        private readonly InteractionContextStack? _interactionContextStack;
+        private Entity[] _selectedScratch = new Entity[InitialEntityScratchCapacity];
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
@@ -33,8 +39,15 @@ namespace CoreInputMod.Systems
             _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
                          selectionObj is SelectionRuntime selection
                 ? selection
-                : throw new InvalidOperationException(
-                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
+                : null;
+            _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                                 collectionsObj is EntityCollectionStore collections
+                ? collections
+                : null;
+            _interactionContextStack = globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) &&
+                                       stackObj is InteractionContextStack stack
+                ? stack
+                : null;
         }
 
         public bool TryGetEntity(string key, out Entity entity)
@@ -91,6 +104,14 @@ namespace CoreInputMod.Systems
                 return default;
             }
 
+            if (TryGetCommandSourcePrimary(out var commandSourcePrimary) &&
+                _world.IsAlive(commandSourcePrimary) &&
+                _world.TryGet(commandSourcePrimary, out PlayerOwner commandSourceOwner) &&
+                commandSourceOwner.PlayerId == playerId)
+            {
+                return commandSourcePrimary;
+            }
+
             if (TryGetSelectedEntity(SelectionSetKeys.LivePrimary, out var selected) &&
                 _world.IsAlive(selected) &&
                 _world.TryGet(selected, out PlayerOwner owner) &&
@@ -121,6 +142,11 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
+            if (_selection == null)
+            {
+                return false;
+            }
+
             if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
@@ -132,6 +158,11 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedContainer(string setKey, out Entity container)
         {
             container = default;
+            if (_selection == null)
+            {
+                return false;
+            }
+
             if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
@@ -143,6 +174,11 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
+            if (_selection == null)
+            {
+                return false;
+            }
+
             if (!TryGetSelectionOwner(out var owner))
             {
                 return false;
@@ -154,11 +190,11 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            Entity[] selected = new Entity[selectionCount];
-            int count = _selection.CopySelection(owner, setKey, selected);
+            EnsureSelectedScratch(selectionCount);
+            int count = _selection.CopySelection(owner, setKey, _selectedScratch);
             for (int i = 0; i < count; i++)
             {
-                Entity entity = selected[i];
+                Entity entity = _selectedScratch[i];
                 if (_world.IsAlive(entity))
                 {
                     entities.Add(entity);
@@ -166,6 +202,99 @@ namespace CoreInputMod.Systems
             }
 
             return entities.Count > 0;
+        }
+
+        private void EnsureSelectedScratch(int required)
+        {
+            if (_selectedScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _selectedScratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _selectedScratch, next);
+        }
+
+        public bool TryGetCommandSourceOwner(out Entity owner)
+        {
+            owner = default;
+            if (_interactionContextStack != null &&
+                _interactionContextStack.TryPeek(out InteractionContextFrame frame) &&
+                HasEntityValue(frame.ContextEntity))
+            {
+                if (!_world.IsAlive(frame.ContextEntity))
+                {
+                    return false;
+                }
+
+                owner = frame.ContextEntity;
+                return true;
+            }
+
+            return TryGetSelectionOwner(out owner);
+        }
+
+        private static bool HasEntityValue(Entity entity)
+        {
+            return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
+        }
+
+        public bool TryGetCommandSourcePrimary(out Entity entity)
+        {
+            entity = default;
+            if (!TryResolveActiveCommandSource(out EntityCollectionHandle handle) ||
+                _entityCollections == null ||
+                !_entityCollections.TryGetEntityAt(handle, 0, out Entity candidate) ||
+                !_world.IsAlive(candidate))
+            {
+                return false;
+            }
+
+            entity = candidate;
+            return true;
+        }
+
+        public bool TryCopyCommandSourceEntities(List<Entity> entities)
+        {
+            entities.Clear();
+            if (!TryResolveActiveCommandSource(out EntityCollectionHandle handle) ||
+                _entityCollections == null ||
+                !_entityCollections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < view.Count; i++)
+            {
+                if (!_entityCollections.TryGetEntityAt(handle, i, out Entity entity))
+                {
+                    continue;
+                }
+
+                if (_world.IsAlive(entity))
+                {
+                    entities.Add(entity);
+                }
+            }
+
+            return entities.Count > 0;
+        }
+
+        private bool TryResolveActiveCommandSource(out EntityCollectionHandle handle)
+        {
+            handle = EntityCollectionHandle.Invalid;
+            return _entityCollections != null &&
+                   _interactionContextStack != null &&
+                   TryGetCommandSourceOwner(out Entity owner) &&
+                   owner != Entity.Null &&
+                   _interactionContextStack.TryPeek(out InteractionContextFrame frame) &&
+                   _entityCollections.TryGet(owner, frame.ActiveCollectionKeyId, out handle);
         }
 
         public bool TryGetHoveredEntity(out Entity entity)

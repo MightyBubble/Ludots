@@ -2,20 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -378,7 +382,7 @@ namespace Ludots.Tests.GAS
             var system = new InputOrderMappingSystem(input, config);
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
-            system.CommandActionId = "Command";
+            system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(producer, 1);
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
@@ -469,7 +473,7 @@ namespace Ludots.Tests.GAS
             var system = new InputOrderMappingSystem(input, config);
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
-            system.CommandActionId = "Command";
+            system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(producer, 1);
             system.SetOrderTypeKeyResolver(key =>
                 key switch
@@ -548,7 +552,7 @@ namespace Ludots.Tests.GAS
             var system = new InputOrderMappingSystem(input, config);
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
-            system.CommandActionId = "Command";
+            system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
@@ -647,7 +651,7 @@ namespace Ludots.Tests.GAS
             var system = new InputOrderMappingSystem(input, config);
             system.ConfirmActionId = "Confirm";
             system.CancelActionId = "Cancel";
-            system.CommandActionId = "Command";
+            system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetSelectedEntityListProvider((_, list) =>
@@ -696,6 +700,502 @@ namespace Ludots.Tests.GAS
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 InputOrderMappingLoader.Validate(config, "test.json"));
             Assert.That(ex!.Message, Does.Contain("groupMoveFormation.orderTypeKeys"));
+        }
+
+        [Test]
+        public void Remap_PreservesRfc0065MappingSemanticsExceptOrderAndArgs()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.DoubleTap,
+                        DoubleTapWindowSeconds = 0.17f,
+                        OrderTypeKey = "moveTo",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 3, F1 = 2.5f },
+                        RequireSelection = true,
+                        SelectionSetKey = "selection.command",
+                        SelectionType = OrderSelectionType.Position,
+                        ModifierBehavior = ModifierSubmitBehavior.AlwaysQueued,
+                        IsSkillMapping = false,
+                        HeldPolicy = HeldPolicy.EveryFrame,
+                        CastModeOverride = InteractionModeType.AimCast,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 640,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
+                        CursorTargetRangeCm = 320,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "setSpawnTarget",
+                                    Priority = 20,
+                                    SelectionType = OrderSelectionType.HoveredEntityOrPosition,
+                                    Match = new ActorOrderRoutingMatch
+                                    {
+                                        RequiredAllTags = new List<string> { "producer" },
+                                        BlockedAnyTags = new List<string> { "stunned" },
+                                        AbilitySlotIndex = 2,
+                                        AbilityIdKey = "ability.train",
+                                        AbilityIdKeySuffix = ".Train"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetOrderTypeKeyResolver(key => key switch
+            {
+                "moveTo" => 9,
+                "attackMove" => 10,
+                "setSpawnTarget" => 11,
+                _ => 0,
+            });
+            var overrideArgs = new OrderArgsTemplate { I1 = 9, F2 = 4.5f };
+
+            system.Remap("Command", "attackMove", overrideArgs);
+
+            InputOrderMapping remapped = system.GetMapping("Command")
+                ?? throw new InvalidOperationException("Missing remapped Command action.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(remapped.ActionId, Is.EqualTo("Command"));
+                Assert.That(remapped.Trigger, Is.EqualTo(InputTriggerType.DoubleTap));
+                Assert.That(remapped.DoubleTapWindowSeconds, Is.EqualTo(0.17f));
+                Assert.That(remapped.OrderTypeKey, Is.EqualTo("attackMove"));
+                Assert.That(remapped.ArgsTemplate.I1, Is.EqualTo(9));
+                Assert.That(remapped.ArgsTemplate.F2, Is.EqualTo(4.5f));
+                Assert.That(remapped.ArgsTemplate.I0, Is.Null);
+                Assert.That(remapped.RequireSelection, Is.True);
+                Assert.That(remapped.SelectionSetKey, Is.EqualTo("selection.command"));
+                Assert.That(remapped.SelectionType, Is.EqualTo(OrderSelectionType.Position));
+                Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
+                Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
+                Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
+                Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+                Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
+                Assert.That(remapped.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
+                Assert.That(remapped.CursorTargetRangeCm, Is.EqualTo(320));
+                Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
+                Assert.That(remapped.ActorOrderRouting!.Candidates.Count, Is.EqualTo(1));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].OrderTypeKey, Is.EqualTo("setSpawnTarget"));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].SelectionType, Is.EqualTo(OrderSelectionType.HoveredEntityOrPosition));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.RequiredAllTags, Is.EquivalentTo(new[] { "producer" }));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.BlockedAnyTags, Is.EquivalentTo(new[] { "stunned" }));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.AbilitySlotIndex, Is.EqualTo(2));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.AbilityIdKey, Is.EqualTo("ability.train"));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.AbilityIdKeySuffix, Is.EqualTo(".Train"));
+            });
+
+            remapped.ActorOrderRouting.Candidates[0].Match.RequiredAllTags.Add("mutated");
+            InputOrderMapping original = config.Mappings[0];
+            Assert.That(original.ActorOrderRouting!.Candidates[0].Match.RequiredAllTags, Is.EquivalentTo(new[] { "producer" }),
+                "Remap must deep-copy nested routing data instead of aliasing the source mapping.");
+        }
+
+        [Test]
+        public void Rfc0065CommandRouting_UnconfiguredCommandActionFailsBeforeSelectedProvider()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create();
+            Entity selectedActor = world.Create();
+            var orders = new List<Order>();
+            bool selectedProviderCalled = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetSelectedEntityListProvider((_, list) =>
+            {
+                selectedProviderCalled = true;
+                list.Add(selectedActor);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            Assert.That(ex.Message, Does.Contain("RFC-0065 command routing"));
+            Assert.That(selectedProviderCalled, Is.False,
+                "Command actions must fail fast before consulting selected-provider fallback paths.");
+            Assert.That(orders, Is.Empty);
+        }
+
+        [Test]
+        public void Rfc0065CommandRouting_ActiveIntentZeroConsumesCommandWithoutLegacyFallback()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create();
+            Entity actor = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetSelectedEntityListProvider((_, list) =>
+            {
+                list.Add(actor);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                "interaction.context.ability.test",
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var commandIntents = CommandIntentProfileTests.Harness.Create(world).Intents;
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandIntents,
+                dispatch,
+                orderTypes);
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
+            system.SetRfc0065CommandRouting(
+                world,
+                stack,
+                schemes,
+                commandIntents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            system.Update(0f);
+
+            Assert.That(orders, Is.Empty,
+                "A Command action with RFC-0065 routing installed and no active command intent must be consumed, not rerouted through legacy moveTo mapping.");
+        }
+
+        [Test]
+        public void Rfc0065CommandRouting_ProgrammaticCommandActivationUsesCommandSource()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity commandActor = world.Create();
+            var orders = new List<Order>();
+            bool selectedProviderCalled = false;
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(100f, 0f, 200f);
+                return true;
+            });
+            system.SetSelectedEntityProvider((string _, out Entity selected) =>
+            {
+                selectedProviderCalled = true;
+                selected = commandActor;
+                return true;
+            });
+            system.SetSelectedEntityListProvider((_, list) =>
+            {
+                selectedProviderCalled = true;
+                list.Add(commandActor);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 42);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, commandActor);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.programmatic",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.programmatic",
+                            CastDispatchProfileId = "dispatch.all_together",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
+            system.SetRfc0065CommandRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            bool activated = system.TryActivateMappedAction("Command");
+
+            Assert.That(activated, Is.True);
+            Assert.That(selectedProviderCalled, Is.False,
+                "Programmatic Command activation must use the command-source collection, not selected-provider fallback.");
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void Rfc0065CommandRouting_DispatchSeesOnlyRoutedActors()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireSelection = true,
+                        SelectionType = OrderSelectionType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity unroutedNearActor = world.Create(WorldPositionCm.FromCm(10, 0));
+            Entity routedFarActor = world.Create(new AbilityStateBuffer(), WorldPositionCm.FromCm(5000, 0));
+            ref AbilityStateBuffer routedAbilities = ref world.Get<AbilityStateBuffer>(routedFarActor);
+            routedAbilities.AddAbility(2);
+
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(0f, 0f, 0f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 9001);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, unroutedNearActor);
+            commandHarness.Ownership.EnsureOwnership(localPlayer, routedFarActor);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.routed_only",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 10,
+                        Actor = new CommandIntentActorPredicateDefinition { HasAbilityWithTag = "ability.catalog.weapon" },
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
+                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "moveTo" },
+                    },
+                },
+            }));
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.nearest_one",
+                Selector = new CastDispatchSelectorDefinition { Kind = "topN", N = 1 },
+                Scorer = new CastDispatchScorerDefinition
+                {
+                    Kind = "utility",
+                    Considerations = new List<string> { "distanceToTarget:invert" },
+                },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.routed_only",
+                            CastDispatchProfileId = "dispatch.nearest_one",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
+            system.SetRfc0065CommandRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            system.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1),
+                "Dispatch must rank only actors that kept a CommandIntent route; an unrouted nearer actor must not consume topN capacity.");
+            Assert.That(orders[0].Actor, Is.EqualTo(routedFarActor));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildHandler()

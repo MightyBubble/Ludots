@@ -87,8 +87,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
       "argsTemplate": {},
-      "requireSelection": true,
-      "selectionType": "Position",
+      "requireSelection": false,
+      "selectionType": "None",
       "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier"
     },

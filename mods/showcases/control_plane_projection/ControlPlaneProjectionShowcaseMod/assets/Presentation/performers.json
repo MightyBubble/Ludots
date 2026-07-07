@@ -146,6 +146,64 @@
     ]
   },
   {
+    "id": "control_plane.visual.referee_phase0_marker",
+    "defaultColor": [0.95, 0.12, 0.14, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.72, 1.72, 1.72]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.05, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "control_plane.visual.referee_phase1_marker",
+    "defaultColor": [1.0, 0.54, 0.08, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.72, 1.72, 1.72]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0, 0.05, 0],
+          "rotationOffset": [0, 0, 0, 1],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
     "id": "control_plane.visual.marker.rules",
     "rules": [
       {
@@ -177,6 +235,38 @@
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "control_plane.visual.proxied_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase0" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "control_plane.visual.referee_phase0_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase0" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "control_plane.visual.referee_phase0_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase1" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "control_plane.visual.referee_phase1_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase1" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "control_plane.visual.referee_phase1_marker",
           "scopeSource": "SourceStableId"
         }
       }

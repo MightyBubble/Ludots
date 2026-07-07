@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using CoreInputMod.ViewMode;
 using EntityInfoPanelsMod;
@@ -7,6 +8,8 @@ using EntityInfoPanelsMod.UI;
 using InteractionShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -71,9 +74,7 @@ namespace InteractionShowcaseMod.UI
         private UiElementBuilder BuildRoot(ReactiveContext<InteractionShowcasePanelState> context)
         {
             var state = context.State;
-            return Ui.Column(
-                    BuildMainPanel(state),
-                    BuildEntityInfoLayer(context))
+            return Ui.Column(BuildMainPanel(state))
                 .WidthPercent(100f)
                 .HeightPercent(100f)
                 .Absolute(0f, 0f)
@@ -84,16 +85,13 @@ namespace InteractionShowcaseMod.UI
         {
             return Ui.Column(
                     BuildHeroStrip(state),
-                    BuildModeCard(state),
-                    BuildSelectionCard(state),
-                    BuildSelectionDockCard(state),
-                    BuildCoverageCard(state),
-                    state.IsStressMap ? BuildStressCard(state) : BuildSkillCard(state))
-                .Width(472f)
-                .Padding(16f)
-                .Gap(10f)
-                .Radius(24f)
-                .Background("#08111A")
+                    BuildWorkflowCard(state),
+                    BuildDispatchCard(state))
+                .Width(430f)
+                .Padding(14f)
+                .Gap(8f)
+                .Radius(8f)
+                .Background("#071019")
                 .Absolute(16f, 16f)
                 .ZIndex(30);
         }
@@ -111,11 +109,11 @@ namespace InteractionShowcaseMod.UI
         private UiElementBuilder BuildHeroStrip(InteractionShowcasePanelState state)
         {
             return Ui.Card(
-                    Ui.Text("Ludots Interaction Showcase")
+                    Ui.Text("Hero Commands")
                         .FontSize(25f)
                         .Bold()
                         .Color("#F5F7FA"),
-                    Ui.Text(state.MapDescription)
+                    Ui.Text("Right-click move, blink routing, and command mode proof")
                         .FontSize(12f)
                         .Color("#B8C4D4")
                         .WhiteSpace(UiWhiteSpace.Normal),
@@ -124,11 +122,102 @@ namespace InteractionShowcaseMod.UI
                             BuildHeroChip(InteractionShowcaseIds.VanguardName, state.SelectedLabel.Contains(InteractionShowcaseIds.VanguardName, StringComparison.OrdinalIgnoreCase)),
                             BuildHeroChip(InteractionShowcaseIds.CommanderName, state.SelectedLabel.Contains(InteractionShowcaseIds.CommanderName, StringComparison.OrdinalIgnoreCase)))
                         .Wrap()
+                        .Gap(8f),
+                    Ui.Row(
+                            BuildMapButton("Hub", state.MapId == InteractionShowcaseIds.HubMapId, _ => LoadShowcaseMap(InteractionShowcaseIds.HubMapId)),
+                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
+                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
+                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
+                        .Wrap()
                         .Gap(8f))
-                .Gap(10f)
+                .Gap(8f)
                 .Padding(14f)
-                .Radius(18f)
+                .Radius(8f)
                 .Background("#0D1824");
+        }
+
+        private UiElementBuilder BuildWorkflowCard(InteractionShowcasePanelState state)
+        {
+            return Ui.Card(
+                    Ui.Text("Given")
+                        .FontSize(11f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Text($"{state.LiveCount} hero(es) ready in {state.SelectionViewLabel}; leader = {state.SelectedLabel}")
+                        .FontSize(13f)
+                        .Color("#F5F7FA")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text("When")
+                        .FontSize(11f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Text(state.WorkflowWhen)
+                        .FontSize(13f)
+                        .Color("#D7E1EC")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text("Then")
+                        .FontSize(11f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Text(state.WorkflowThen)
+                        .FontSize(13f)
+                        .Color("#9EE493")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                .Gap(7f)
+                .Padding(12f)
+                .Radius(8f)
+                .Background("#101A24");
+        }
+
+        private UiElementBuilder BuildDispatchCard(InteractionShowcasePanelState state)
+        {
+            return Ui.Card(
+                    Ui.Text("Command Routing")
+                        .FontSize(12f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Row(
+                            BuildStatusChip("command", state.ActiveCommandIntentLabel, true),
+                            BuildStatusChip("target", state.PointerTargetFactsLabel, true),
+                            BuildStatusChip("mode", state.DispatchProfileLabel, true))
+                        .Gap(8f)
+                        .Wrap(),
+                    Ui.Text(state.CommandSourceSummary)
+                        .FontSize(12f)
+                        .Color("#F5F7FA")
+                        .WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text(state.SchemeSummary)
+                        .FontSize(12f)
+                        .Color("#C7D0DD")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                .Gap(8f)
+                .Padding(12f)
+                .Radius(8f)
+                .Background("#0D1822");
+        }
+
+        private UiElementBuilder BuildSchemeCard(InteractionShowcasePanelState state)
+        {
+            return Ui.Card(
+                    Ui.Text("Necessary Switches")
+                        .FontSize(12f)
+                        .Bold()
+                        .Color("#F0C36B"),
+                    Ui.Row(
+                            BuildMapButton("Hub", state.MapId == InteractionShowcaseIds.HubMapId, _ => LoadShowcaseMap(InteractionShowcaseIds.HubMapId)),
+                            BuildActionButton("LoL", state.ActiveModeId == InteractionShowcaseIds.LolModeId, _ => SwitchMode(InteractionShowcaseIds.LolModeId)),
+                            BuildActionButton("SC2", state.ActiveModeId == InteractionShowcaseIds.Sc2ModeId, _ => SwitchMode(InteractionShowcaseIds.Sc2ModeId)),
+                            BuildActionButton("Action", state.ActiveModeId == InteractionShowcaseIds.ActionModeId, _ => SwitchMode(InteractionShowcaseIds.ActionModeId)))
+                        .Wrap()
+                        .Gap(8f),
+                    Ui.Text(state.SchemeSummary)
+                        .FontSize(12f)
+                        .Color("#C7D0DD")
+                        .WhiteSpace(UiWhiteSpace.Normal))
+                .Gap(8f)
+                .Padding(12f)
+                .Radius(8f)
+                .Background("#101E2B");
         }
 
         private UiElementBuilder BuildModeCard(InteractionShowcasePanelState state)
@@ -161,18 +250,18 @@ namespace InteractionShowcaseMod.UI
         private UiElementBuilder BuildSelectionCard(InteractionShowcasePanelState state)
         {
             return Ui.Card(
-                    Ui.Text("Selection + Orders").FontSize(12f).Bold().Color("#F0C36B"),
-                    Ui.Text($"View: {state.SelectionViewLabel}")
+                    Ui.Text("Command Roster").FontSize(12f).Bold().Color("#F0C36B"),
+                    Ui.Text($"Roster: {state.SelectionViewLabel}")
                         .FontSize(12f)
                         .Color("#F0C36B"),
-                    Ui.Text($"Primary: {state.SelectedLabel}")
+                    Ui.Text($"Leader: {state.SelectedLabel}")
                         .FontSize(12f)
                         .Color("#F5F7FA"),
                     Ui.Text(state.SelectionSummary)
                         .FontSize(12f)
                         .Color("#C7D0DD")
                         .WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text("Select a hero to open the inspector stack on the right and a dense RTS-style roster panel at the bottom.")
+                    Ui.Text("Choose a hero to open the inspector stack on the right and the RTS roster panel at the bottom.")
                         .FontSize(12f)
                         .Color("#E2C27A")
                         .WhiteSpace(UiWhiteSpace.Normal),
@@ -189,10 +278,10 @@ namespace InteractionShowcaseMod.UI
         private UiElementBuilder BuildSelectionDockCard(InteractionShowcasePanelState state)
         {
             return Ui.Card(
-                    Ui.Text("RTS Selection Dock").FontSize(12f).Bold().Color("#F0C36B"),
+                    Ui.Text("Control Groups").FontSize(12f).Bold().Color("#F0C36B"),
                     Ui.Row(
                             BuildSelectionViewButton("LIVE", state.LiveCount, state.SelectionViewMode == SelectionViewMode.Live, InteractionShowcaseIds.LiveSelectionButtonId, _ => ShowLiveSelection()),
-                            BuildSelectionViewButton("FORM", state.FormationCount, state.SelectionViewMode == SelectionViewMode.Formation, InteractionShowcaseIds.FormationSelectionButtonId, _ => ShowFormationSelection()))
+                            BuildSelectionViewButton("SAVED", state.FormationCount, state.SelectionViewMode == SelectionViewMode.Formation, InteractionShowcaseIds.FormationSelectionButtonId, _ => ShowFormationSelection()))
                         .Gap(8f)
                         .Wrap(),
                     Ui.Row(
@@ -202,7 +291,7 @@ namespace InteractionShowcaseMod.UI
                             BuildControlGroupButton(4, state.ActiveControlGroup == 4, state.Group4))
                         .Gap(8f)
                         .Wrap(),
-                    Ui.Text("Click G1-G4 to recall the saved formation into live selection. The FORM view tracks the last saved or recalled group snapshot.")
+                    Ui.Text("Click G1-G4 to recall a saved group into the active roster. Saved view shows the last stored group.")
                         .FontSize(11f)
                         .Color("#93A4B8")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -277,7 +366,17 @@ namespace InteractionShowcaseMod.UI
                 .Color(active ? "#08111A" : "#D5DEE8")
                 .Background(active ? "#F0C36B" : "#1A2A3A")
                 .Padding(8f, 6f)
-                .Radius(999f);
+                .Radius(8f);
+        }
+
+        private static UiElementBuilder BuildStatusChip(string label, string value, bool active)
+        {
+            return Ui.Text($"{label}: {value}")
+                .FontSize(12f)
+                .Color(active ? "#071019" : "#C7D0DD")
+                .Background(active ? "#9EE493" : "#142230")
+                .Padding(8f, 6f)
+                .Radius(8f);
         }
 
         private static UiElementBuilder BuildMapButton(string label, bool active, Action<UiActionContext> onClick)
@@ -388,6 +487,7 @@ namespace InteractionShowcaseMod.UI
                 : "Unassigned";
 
             var telemetry = ResolveStressTelemetry(engine);
+            BlinkDispatchEvidence blinkEvidence = ResolveBlinkDispatchEvidence(engine);
             return new InteractionShowcasePanelState(
                 MapId: mapId,
                 MapDescription: InteractionShowcaseIds.DescribeMap(mapId),
@@ -409,6 +509,13 @@ namespace InteractionShowcaseMod.UI
                 CoverageSummary: ResolveCoverageSummary(selectedLabel),
                 SkillSummary: skillSummary,
                 IsStressMap: mapId == InteractionShowcaseIds.StressMapId,
+                WorkflowWhen: ResolveWorkflowWhen(activeModeId, blinkEvidence),
+                WorkflowThen: ResolveWorkflowThen(liveCount, selectedLabel, blinkEvidence),
+                ActiveCommandIntentLabel: ResolveActiveCommandIntentLabel(engine),
+                PointerTargetFactsLabel: ResolvePointerTargetFactsLabel(engine),
+                DispatchProfileLabel: ResolveDispatchProfileLabel(blinkEvidence),
+                CommandSourceSummary: ResolveCommandSourceSummary(engine, blinkEvidence),
+                SchemeSummary: ResolveSchemeSummary(engine, blinkEvidence),
                 DesiredPerSide: telemetry?.DesiredPerSide ?? 0,
                 RequestedRed: telemetry?.RequestedRed ?? 0,
                 RequestedBlue: telemetry?.RequestedBlue ?? 0,
@@ -449,7 +556,7 @@ namespace InteractionShowcaseMod.UI
             Entity[] selection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
             if (selection.Length <= 0)
             {
-                return "Selection is empty. Drag a box around heroes to test RTS-style multi-cast fan-out.";
+                return "Roster is empty. Drag a box around heroes to test RTS-style multi-cast fan-out.";
             }
 
             var names = new List<string>(selection.Length);
@@ -468,9 +575,9 @@ namespace InteractionShowcaseMod.UI
             }
 
             string preview = names.Count == 0
-                ? $"{selection.Length} units selected."
+                ? $"{selection.Length} units active."
                 : string.Join(" | ", names);
-            return $"{selection.Length} units selected. {preview}";
+            return $"{selection.Length} units active. {preview}";
         }
 
         private static void ResolveSelectionDockState(
@@ -530,14 +637,14 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectionViewLabel(GameEngine engine, SelectionViewMode mode)
         {
-            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
+            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out _))
             {
                 return mode == SelectionViewMode.Formation ? "Formation view" : "Live view";
             }
 
             return mode == SelectionViewMode.Formation
-                ? $"Formation view via {descriptor.Container.SetKey}"
-                : $"Live view via {descriptor.Container.SetKey}";
+                ? "Formation view"
+                : "Live view";
         }
 
         private static int ResolveActiveControlGroup(GameEngine engine)
@@ -574,9 +681,291 @@ namespace InteractionShowcaseMod.UI
                 InteractionShowcaseIds.LolModeId => "Smart-cast: key press immediately resolves hovered unit or cursor ground point. This matches LoL quick cast.",
                 InteractionShowcaseIds.Sc2ModeId => "Aim-cast: key arms the skill, left click confirms, right click cancels. This matches RTS/MOBA confirm flows.",
                 InteractionShowcaseIds.IndicatorModeId => "Indicator-release: hold to preview ring/line/cone overlays, release to fire. This matches quick-cast with indicator.",
-                InteractionShowcaseIds.ActionModeId => "Context-scored: Space routes through ContextGroup scoring and picks the best slot + target from live ECS state.",
+                InteractionShowcaseIds.ActionModeId => "Context-scored: Space picks the best action and target from the current combat state.",
                 _ => "Switch modes to compare the same data-driven ability mappings under different interaction semantics."
             };
+        }
+
+        private static string ResolveWorkflowWhen(string activeModeId, BlinkDispatchEvidence blinkEvidence)
+        {
+            if (blinkEvidence.Enabled)
+            {
+                return blinkEvidence.ProfileId switch
+                {
+                    "dispatch.all_together" => "Blink W uses All Together routing; every hero should blink together.",
+                    "dispatch.one_by_one" => "Blink W uses One By One routing; this trigger should pick one hero.",
+                    "dispatch.nearest_top_n" => "Blink W uses Nearest Top-N routing; the target point ranks the heroes.",
+                    _ => "Blink W is resolving from the active hero group."
+                };
+            }
+
+            return activeModeId switch
+            {
+                InteractionShowcaseIds.Sc2ModeId => "Press W to arm, confirm with LMB/RMB; the aim stays active until confirmed.",
+                InteractionShowcaseIds.ActionModeId => "Press Space; the best available action and target are chosen.",
+                _ => "Right-click ground or press WASD; the active command mode chooses the order.",
+            };
+        }
+
+        private static string ResolveWorkflowThen(int liveCount, string selectedLabel, BlinkDispatchEvidence blinkEvidence)
+        {
+            if (blinkEvidence.Enabled)
+            {
+                if (!blinkEvidence.Valid)
+                {
+                    return blinkEvidence.SelectedNames;
+                }
+
+                return $"{blinkEvidence.SelectedCount}/{blinkEvidence.ActorCount} hero(es) blink: {blinkEvidence.SelectedNames}. Routing = {blinkEvidence.RoutingLabel}.";
+            }
+
+            if (liveCount <= 0)
+            {
+                return "No hero is active yet; this capture is not valid player evidence.";
+            }
+
+            return $"{liveCount} hero(es) receive the command; leader {selectedLabel} remains visible.";
+        }
+
+        private static string ResolveDispatchProfileLabel(BlinkDispatchEvidence blinkEvidence)
+        {
+            if (!blinkEvidence.Enabled)
+            {
+                return "All Together";
+            }
+
+            if (!blinkEvidence.Valid)
+            {
+                return "Blink not ready";
+            }
+
+            return $"{ResolveDispatchDisplayName(blinkEvidence.ProfileId)} {blinkEvidence.SelectedCount}/{blinkEvidence.ActorCount} {blinkEvidence.RoutingLabel}";
+        }
+
+        private static string ResolveActiveCommandIntentLabel(GameEngine engine)
+        {
+            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
+                engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes)
+            {
+                return "missing";
+            }
+
+            int intentId = Ludots.Core.Input.Interaction.CommandIntentArbiter.ResolveActiveCommandIntent(stack, schemes);
+            return intentId == 0 ? "none" : ResolveIntentDisplayName(stack.CommandIntentProfileIdRegistry.GetName(intentId));
+        }
+
+        private static string ResolvePointerTargetFactsLabel(GameEngine engine)
+        {
+            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+                   hovered != Entity.Null &&
+                   engine.World.IsAlive(hovered)
+                ? "ground; hover ignored"
+                : "ground";
+        }
+
+        private static string ResolveCommandSourceSummary(GameEngine engine, BlinkDispatchEvidence blinkEvidence)
+        {
+            if (blinkEvidence.Enabled && blinkEvidence.Valid)
+            {
+                return $"Command group: {blinkEvidence.ActorCount} mixed hero(es): {blinkEvidence.ActorNames}.";
+            }
+
+            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not Ludots.Core.Input.Interaction.InteractionContextStack stack ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not Ludots.Core.EntityCollections.EntityCollectionStore collections ||
+                !stack.TryPeek(out Ludots.Core.Input.Interaction.InteractionContextFrame frame))
+            {
+                return "Command group is not ready.";
+            }
+
+            Entity owner = Entity.Null;
+            if (frame.ContextEntity != Entity.Null &&
+                engine.World.IsAlive(frame.ContextEntity) &&
+                collections.TryGet(frame.ContextEntity, frame.ActiveCollectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle contextHandle) &&
+                collections.TryGetView(contextHandle, out Ludots.Core.EntityCollections.EntityCollectionView contextView))
+            {
+                owner = frame.ContextEntity;
+                return $"Command group: {contextView.Count} hero(es).";
+            }
+
+            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+                localPlayer != Entity.Null &&
+                engine.World.IsAlive(localPlayer) &&
+                collections.TryGet(localPlayer, frame.ActiveCollectionKeyId, out Ludots.Core.EntityCollections.EntityCollectionHandle localHandle) &&
+                collections.TryGetView(localHandle, out Ludots.Core.EntityCollections.EntityCollectionView localView))
+            {
+                return $"Command group: {localView.Count} hero(es).";
+            }
+
+            return "Command group is empty; this capture is not valid player evidence.";
+        }
+
+        private static string ResolveSchemeSummary(GameEngine engine, BlinkDispatchEvidence blinkEvidence)
+        {
+            if (engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not Ludots.Core.Input.Interaction.ControlSchemeRuntime schemes ||
+                schemes.ActiveSchemeId == 0)
+            {
+                return "No active command mode; input is waiting for a mode.";
+            }
+
+            string scheme = schemes.SchemeIdRegistry.GetName(schemes.ActiveSchemeId);
+            string movement = schemes.TryGetActiveAxisMove(out _) ? "WASD movement on" : "WASD movement off";
+            if (blinkEvidence.Enabled)
+            {
+                return $"{ResolveSchemeDisplayName(scheme)}: {movement}; blink lands at the marked ground point.";
+            }
+
+            return $"{ResolveSchemeDisplayName(scheme)}: {movement}";
+        }
+
+        private static string ResolveDispatchDisplayName(string profileId)
+        {
+            return profileId switch
+            {
+                "dispatch.all_together" => "All Together",
+                "dispatch.one_by_one" => "One By One",
+                "dispatch.nearest_top_n" => "Nearest Top-N",
+                _ => "Dispatch"
+            };
+        }
+
+        private static string ResolveIntentDisplayName(string intentId)
+        {
+            return intentId switch
+            {
+                "intent.command.default" => "Ground Command",
+                _ => "Command"
+            };
+        }
+
+        private static string ResolveSchemeDisplayName(string schemeId)
+        {
+            return schemeId switch
+            {
+                "scheme.default" => "Default Command",
+                "scheme.wasd_move" => "WASD Move",
+                _ => "Active Scheme"
+            };
+        }
+
+        private static BlinkDispatchEvidence ResolveBlinkDispatchEvidence(GameEngine engine)
+        {
+            if (!string.Equals(Environment.GetEnvironmentVariable(InteractionShowcaseIds.AutoBlinkTimelineEnvKey), "1", StringComparison.Ordinal))
+            {
+                return BlinkDispatchEvidence.Disabled;
+            }
+
+            int frame = ResolveVisibleUatFrame(engine);
+            string profileId = frame < 90
+                ? "dispatch.all_together"
+                : frame < 180
+                    ? "dispatch.one_by_one"
+                    : "dispatch.nearest_top_n";
+
+            if (!TrySnapshotCommandSourceActors(engine, out Entity[] actors) || actors.Length <= 0)
+            {
+                return BlinkDispatchEvidence.Invalid(frame, profileId, "Blink proof is not ready: the active hero group is empty.");
+            }
+
+            if (engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry) is not CastDispatchProfileRegistry dispatch)
+            {
+                return BlinkDispatchEvidence.Invalid(frame, profileId, "Blink proof is not ready: routing data is missing.");
+            }
+
+            if (!dispatch.ProfileIdRegistry.TryGetId(profileId, out int registryId))
+            {
+                return BlinkDispatchEvidence.Invalid(frame, profileId, "Blink proof is not ready: this routing mode is unavailable.");
+            }
+
+            var ctx = new CastDispatchContext(engine.World, new Vector3(2080f, 0f, 1080f), groupKey: 581_650L);
+            var selected = new Entity[actors.Length];
+            int selectedCount = dispatch.SelectDispatchTargets(registryId, actors, in ctx, selected, out CastDispatchRouting routing);
+            return new BlinkDispatchEvidence(
+                Enabled: true,
+                Valid: true,
+                Frame: frame,
+                ProfileId: profileId,
+                RegistryId: registryId,
+                ActorCount: actors.Length,
+                ActorNames: FormatEntityNames(engine.World, actors.AsSpan()),
+                SelectedCount: selectedCount,
+                SelectedNames: FormatEntityNames(engine.World, selected.AsSpan(0, selectedCount)),
+                SharedOrderId: routing.SharedOrderId,
+                Sequential: routing.Sequential);
+        }
+
+        private static int ResolveVisibleUatFrame(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(InteractionShowcaseIds.VisibleUatFrameKey, out object? frameObj) &&
+                   frameObj is int frame
+                ? frame
+                : 0;
+        }
+
+        private static bool TrySnapshotCommandSourceActors(GameEngine engine, out Entity[] actors)
+        {
+            actors = Array.Empty<Entity>();
+            if (engine.GetService(CoreServiceKeys.InteractionContextStack) is not InteractionContextStack stack ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !stack.TryPeek(out InteractionContextFrame frame))
+            {
+                return false;
+            }
+
+            Entity owner = Entity.Null;
+            if (frame.ContextEntity != Entity.Null && engine.World.IsAlive(frame.ContextEntity))
+            {
+                owner = frame.ContextEntity;
+            }
+            else if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+                     localPlayer != Entity.Null &&
+                     engine.World.IsAlive(localPlayer))
+            {
+                owner = localPlayer;
+            }
+
+            if (owner == Entity.Null ||
+                !collections.TryGet(owner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return false;
+            }
+
+            actors = new Entity[view.Count];
+            int copied = collections.CopyEntities(handle, 0, actors);
+            if (copied == actors.Length)
+            {
+                return true;
+            }
+
+            Array.Resize(ref actors, copied);
+            return copied > 0;
+        }
+
+        private static string FormatEntityNames(World world, ReadOnlySpan<Entity> entities)
+        {
+            if (entities.IsEmpty)
+            {
+                return "(none)";
+            }
+
+            var names = new List<string>(entities.Length);
+            for (int i = 0; i < entities.Length; i++)
+            {
+                Entity entity = entities[i];
+                if (entity == Entity.Null || !world.IsAlive(entity))
+                {
+                    continue;
+                }
+
+                names.Add(world.TryGet(entity, out Name name)
+                    ? name.Value
+                    : $"Entity#{entity.Id}");
+            }
+
+            return names.Count == 0
+                ? "(none)"
+                : string.Join(" | ", names);
         }
 
         private static string ResolveCoverageSummary(string selectedLabel)
@@ -640,6 +1029,13 @@ namespace InteractionShowcaseMod.UI
             string CoverageSummary,
             string SkillSummary,
             bool IsStressMap,
+            string WorkflowWhen,
+            string WorkflowThen,
+            string ActiveCommandIntentLabel,
+            string PointerTargetFactsLabel,
+            string DispatchProfileLabel,
+            string CommandSourceSummary,
+            string SchemeSummary,
             int DesiredPerSide,
             int RequestedRed,
             int RequestedBlue,
@@ -653,6 +1049,52 @@ namespace InteractionShowcaseMod.UI
             float RedAnchorHealth,
             float BlueAnchorHealth,
             int EntityInfoUiRevision);
+
+        private readonly record struct BlinkDispatchEvidence(
+            bool Enabled,
+            bool Valid,
+            int Frame,
+            string ProfileId,
+            int RegistryId,
+            int ActorCount,
+            string ActorNames,
+            int SelectedCount,
+            string SelectedNames,
+            bool SharedOrderId,
+            bool Sequential)
+        {
+            public static BlinkDispatchEvidence Disabled => new(
+                Enabled: false,
+                Valid: false,
+                Frame: 0,
+                ProfileId: string.Empty,
+                RegistryId: 0,
+                ActorCount: 0,
+                ActorNames: string.Empty,
+                SelectedCount: 0,
+                SelectedNames: string.Empty,
+                SharedOrderId: false,
+                Sequential: false);
+
+            public static BlinkDispatchEvidence Invalid(int frame, string profileId, string message) => new(
+                Enabled: true,
+                Valid: false,
+                Frame: frame,
+                ProfileId: profileId,
+                RegistryId: 0,
+                ActorCount: 0,
+                ActorNames: string.Empty,
+                SelectedCount: 0,
+                SelectedNames: message,
+                SharedOrderId: false,
+                Sequential: false);
+
+            public string RoutingLabel => Sequential
+                ? "sequential"
+                : SharedOrderId
+                    ? "shared parallel"
+                    : "parallel";
+        }
 
         private readonly record struct SelectionGroupSummary(int Count, string PrimaryLabel)
         {

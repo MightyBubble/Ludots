@@ -13,10 +13,14 @@ namespace ControlPlaneProjectionShowcaseMod.Triggers
     internal sealed class InstallControlPlaneProjectionShowcaseOnGameStartTrigger : Trigger
     {
         private readonly IModContext _context;
+        private readonly Action<ControlPlaneProjectionDataPlaneInstallation?> _onDataPlaneInstalled;
 
-        public InstallControlPlaneProjectionShowcaseOnGameStartTrigger(IModContext context)
+        public InstallControlPlaneProjectionShowcaseOnGameStartTrigger(
+            IModContext context,
+            Action<ControlPlaneProjectionDataPlaneInstallation?> onDataPlaneInstalled)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _onDataPlaneInstalled = onDataPlaneInstalled ?? throw new ArgumentNullException(nameof(onDataPlaneInstalled));
             EventKey = GameEvents.GameStart;
         }
 
@@ -45,7 +49,9 @@ namespace ControlPlaneProjectionShowcaseMod.Triggers
             engine.RegisterSystem(new ControlPlaneRoutedSelectionSystem(engine, state), SystemGroup.PostMovement);
             engine.RegisterSystem(new ControlPlaneMarkerProjectionSystem(engine, state), SystemGroup.PostMovement);
 
-            await ControlPlaneProjectionDataPlaneInstaller.TryInstallAsync(engine, state, _context).ConfigureAwait(false);
+            ControlPlaneProjectionDataPlaneInstallation? installation =
+                await ControlPlaneProjectionDataPlaneInstaller.TryInstallAsync(engine, state, _context).ConfigureAwait(false);
+            _onDataPlaneInstalled(installation);
 
             _context.Log("[ControlPlaneProjectionShowcaseMod] Systems installed.");
         }

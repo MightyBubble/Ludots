@@ -3,6 +3,11 @@
   "windowWidth": 1600,
   "windowHeight": 900,
   "targetFps": 0,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  },
   "startupMapId": "control_plane_projection",
   "startupInputContexts": ["Default_Gameplay", "ControlPlaneProjection.Controls"],
   "selection": {

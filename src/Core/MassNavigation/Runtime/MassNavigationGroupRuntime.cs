@@ -751,15 +751,12 @@ public sealed class MassNavigationGroupRuntime
     }
 
     public void UpdateTargets(
-        World world,
         MassNavigationFlowSolverState simulation,
-        MassNavigationAgentState agentState,
-        ReadOnlySpan<Entity> selected,
         int frameIndex)
     {
         if ((frameIndex & 1) == 0)
         {
-            RefreshSelectedRotation(world, agentState, selected);
+            RefreshActiveGroupRotation();
         }
 
         for (int groupId = 0; groupId < _groups.Count; groupId++)
@@ -839,7 +836,22 @@ public sealed class MassNavigationGroupRuntime
         }
 
         ActiveGroupCount = CountActiveGroups();
-        RefreshSelectedRotation(world, agentState, selected);
+        RefreshActiveGroupRotation();
+    }
+
+    private void RefreshActiveGroupRotation()
+    {
+        for (int groupId = 0; groupId < _groups.Count; groupId++)
+        {
+            NavGroupState? group = _groups[groupId];
+            if (group == null || group.MemberCount <= 0)
+            {
+                continue;
+            }
+
+            SelectedRotationRadians = group.RotationRadians;
+            return;
+        }
     }
 
     private void EnsureMembershipCapacity(int count)

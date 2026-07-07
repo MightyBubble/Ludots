@@ -17,7 +17,7 @@ Adapters reuse:
 - `IBrowserRuntime` as the host-visible browser runtime contract.
 - `IBrowserRuntimeHostLifecycle` as the terminal host-exit lifecycle hook.
 - `BrowserRuntimeServiceNames.BrowserRuntime` and `BrowserRuntimeServiceNames.HostLifecycle` in the host service dictionary.
-- `BrowserRuntimeProviderLoader` and `BrowserRuntimeProviderLoadOptions` for shadow-copy loading and collectible ALC ownership.
+- `BrowserRuntimeProviderLoader` and `BrowserRuntimeProviderLoadOptions` for shadow-copy loading and provider ALC ownership. Default managed providers use a collectible ALC; CEF uses a non-collectible provider ALC because CefSharp includes mixed/native runtime assemblies that cannot be loaded into a collectible ALC. CEF also declares `CefSharp` as a process-shared assembly prefix so CefSharp managed/runtime callback assemblies load once in the Default ALC from the shadow-copied provider package, while the provider host assembly itself stays in the provider ALC.
 - `browserRuntime.providerAssemblyPath`, `browserRuntime.runtimeRootPath`, and `browserRuntime.cacheRootPath` from the resolved launcher/runtime config.
 - `BrowserSurfaceCanvasContent` / `UIRoot` for browser input, focus, resize, and alpha hit-test routing.
 
@@ -45,6 +45,8 @@ BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
         "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost")
     {
         ProviderId = "cef",
+        UseCollectibleLoadContext = false,
+        ProcessSharedAssemblyNamePrefixes = new[] { "CefSharp" },
         RuntimeRootPath = runtimeRootPath,
         BrowserCacheRootPath = cacheRootPath,
         ShadowCopyRootPath = optionalAdapterCacheRoot,
@@ -73,7 +75,7 @@ if (services.TryGetValue(BrowserRuntimeServiceNames.HostLifecycle, out object? l
 }
 ```
 
-The loader lifecycle disposes the provider runtime, calls the provider terminal lifecycle, restores/removes loader-owned services, unloads the collectible ALC, runs collection, and logs whether the ALC was collected.
+The loader lifecycle disposes the provider runtime, calls the provider terminal lifecycle, restores/removes loader-owned services, and then follows the provider ALC policy. Collectible provider ALCs are unloaded and collection is logged. Non-collectible provider ALCs are kept process-scoped and logged as such.
 
 Long-lived editor hosts should install the provider once per host process or own an explicit process-level provider handle. Do not create a fresh CEF provider for every play session and then call terminal shutdown on each session end.
 
@@ -110,7 +112,7 @@ Before an adapter change is accepted:
 - Provider private dependencies resolve from the shadow-copied provider package.
 - Changing a provider-private DLL/native file creates a new shadow-copy cache entry.
 - The source provider DLL can be overwritten or deleted while the host process remains alive.
-- Terminal host exit logs `collectible ALC collected=...`.
+- Terminal host exit logs either `collectible ALC collected=...` or `non-collectible provider ALC`, depending on the provider ALC policy.
 - Adapter installer source does not contain direct Default ALC provider loads.
 - Browser input still flows through `UIRoot`; direct texture rendering does not bypass hit-test or focus ownership.
 - Web app source uses Ludots facades only.

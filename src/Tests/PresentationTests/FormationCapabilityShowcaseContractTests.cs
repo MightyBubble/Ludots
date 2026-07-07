@@ -2692,12 +2692,10 @@ namespace Ludots.Tests.Presentation
             var orderWorld = World.Create();
             try
             {
-                Entity selectionContainer = orderWorld.Create();
                 var args = MassNavigationMoveOrderArgs.Encode(
                     new Vector2(1500f, 2500f),
                     MassNavigationFormationMode.Line,
-                    rotationRadians: 0.5f,
-                    selectionContainer: selectionContainer);
+                    rotationRadians: 0.5f);
                 var order = new Order
                 {
                     OrderId = 55,
@@ -3047,8 +3045,7 @@ namespace Ludots.Tests.Presentation
                 Args = MassNavigationMoveOrderArgs.Encode(
                     new Vector2(2000f + (agentIndex * 100f), 2500f),
                     MassNavigationFormationMode.Line,
-                    rotationRadians: 0f,
-                    selectionContainer: selectionContainer),
+                    rotationRadians: 0f),
             };
             OrderBuffer orders = OrderBuffer.CreateEmpty();
             orders.SetActiveDirect(in order, priority: 100);

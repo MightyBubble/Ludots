@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -135,10 +136,12 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
+            RequireConfigureRfc0065CommandRouting(mapping);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
             mapping.CancelActionId = bindings.CancelActionId;
             mapping.CommandActionId = bindings.CommandActionId;
+            mapping.SetOrderIdentityAssigner((ref Order order) => _orders.EnsureOrderId(ref order));
             mapping.SetOrderSubmitHandler((in Order order) =>
             {
                 _globals[LastOrderDebugKey] = DescribeOrder(in order);
@@ -180,6 +183,33 @@ namespace CoreInputMod.Systems
             return mapping;
         }
 
+        private void RequireConfigureRfc0065CommandRouting(InputOrderMappingSystem mapping)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
+                stackObj is not InteractionContextStack stack ||
+                !_globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out var schemeObj) ||
+                schemeObj is not ControlSchemeRuntime schemes ||
+                !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
+                intentsObj is not CommandIntentProfileRegistry intents ||
+                !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
+                dispatchObj is not CastDispatchProfileRegistry dispatch ||
+                !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
+                collectionsObj is not EntityCollectionStore collections)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires RFC-0065 command routing services before input-order mappings install.");
+            }
+
+            mapping.SetRfc0065CommandRouting(
+                _world,
+                stack,
+                schemes,
+                intents,
+                dispatch,
+                collections,
+                TryGetCommandSourceOwner);
+        }
+
         public bool TryGetLocalPlayerId(out int playerId)
         {
             return _context.TryGetLocalPlayerId(out playerId);
@@ -204,6 +234,40 @@ namespace CoreInputMod.Systems
             return TryGetLocalPlayerId(out int playerId)
                 ? _context.GetControlledActor(playerId)
                 : default;
+        }
+
+        private bool TryGetCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
+                stackObj is InteractionContextStack stack &&
+                stack.TryPeek(out InteractionContextFrame frame) &&
+                HasEntityValue(frame.ContextEntity))
+            {
+                if (!_world.IsAlive(frame.ContextEntity))
+                {
+                    return false;
+                }
+
+                owner = frame.ContextEntity;
+                return true;
+            }
+
+            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                localObj is Entity local &&
+                local != Entity.Null &&
+                _world.IsAlive(local))
+            {
+                owner = local;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasEntityValue(Entity entity)
+        {
+            return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
         }
 
         private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)

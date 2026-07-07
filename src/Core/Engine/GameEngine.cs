@@ -40,6 +40,7 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Core.Input.Selection;
@@ -885,6 +886,9 @@ namespace Ludots.Core.Engine
                 InteractionContextIds.Default,
                 EntityCollectionKeys.CommandSource,
                 EntityViewKeys.ControlPlaneCommand));
+            interactionContextStack.AddTransitionListener(new InteractionContextInputContextBridge(
+                interactionContextStack,
+                () => GetService(CoreServiceKeys.InputHandler)));
             var filterProfileRegistry = new FilterProfileRegistry(interactionContextStack.FilterProfileIdRegistry, World, tagOps);
             // Association expansion is a control-plane provider injected into the filter registry (RFC-0065 DEC-8).
             filterProfileRegistry.RegisterExpander(
@@ -1164,6 +1168,7 @@ namespace Ludots.Core.Engine
             var authoritativePointerButtons = new AuthoritativePointerButtonSnapshot();
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
             var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
+            var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
@@ -1239,6 +1244,12 @@ namespace Ludots.Core.Engine
                 AbilityFormSetIdRegistry.GetName);
             clientCastPreferences.InstallLocks(new ClientCastPreferenceConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
+            // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
+            var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
+            castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
+
             // Control scheme catalog + hot-switch runtime (RFC-0065 INT-5, DEC-15). The player input
             // handler is adapter-bound after engine init, so it is resolved per switch (null tolerated).
             var controlSchemeIds = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1246,15 +1257,12 @@ namespace Ludots.Core.Engine
                 controlSchemeIds,
                 interactionContextStack,
                 commandIntentProfileRegistry,
+                castDispatchProfileRegistry,
+                orderTypeRegistry,
                 () => GetService(CoreServiceKeys.InputHandler),
-                clientCastPreferences);
+                clientCastPreferences,
+                inputConfig: inputConfigRoot);
             controlSchemeRuntime.Install(new ControlSchemeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
-
-            // Cast dispatch kernel (RFC-0065 DSP-1/2/4, DEC-9/DEC-11).
-            var castDispatchProfileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castDispatchAdvanceEventIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var castDispatchProfileRegistry = new CastDispatchProfileRegistry(castDispatchProfileIds, castDispatchAdvanceEventIds);
-            castDispatchProfileRegistry.Install(new CastDispatchProfileConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport));
 
             // Ability panel aggregation kernel (RFC-0065 PNL-1/2, DEC-10); installed after abilities.json
             // so catalog tag prefixes compile against the loaded definitions.
@@ -1474,14 +1482,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
-            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6, DEC-15).
+            // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
+            // DEC-15); enablement and parameters come from the active control scheme's axisMove
+            // declaration (single source of truth, hot-switch aware).
             RegisterSystem(
-                new AxisMoveOrderSystem(
-                    World,
-                    GlobalContext,
-                    new AxisMoveConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport),
-                    orderQueue,
-                    orderTypeRegistry),
+                new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);

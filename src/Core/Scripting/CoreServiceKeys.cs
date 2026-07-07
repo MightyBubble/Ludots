@@ -92,6 +92,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GameSession> GameSession = new("GameSession");
         public static readonly ServiceKey<GameEngine> Engine = new("Engine");
         public static readonly ServiceKey<GameConfig> GameConfig = new("GameConfig");
+        public static readonly ServiceKey<int> HostFrameIndex = new("HostFrameIndex");
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");

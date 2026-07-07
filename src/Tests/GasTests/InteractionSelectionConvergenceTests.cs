@@ -811,6 +811,49 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_AcquisitionPublishesCommandSourceCollection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+
+            AssertSelection(selectionRuntime, local, first);
+            AssertCommandSource(globals, local, first);
+
+            input.InjectAction(SelectionModifierActionIds.Additive, Vector3.One);
+            Click(system, globals, input, new Vector2(2600f, 1600f));
+
+            AssertSelection(selectionRuntime, local, first, second);
+            AssertCommandSource(globals, local, first, second);
+
+            input.InjectAction(SelectionModifierActionIds.Additive, Vector3.Zero);
+            input.InjectAction(SelectionModifierActionIds.Toggle, Vector3.One);
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+
+            AssertSelection(selectionRuntime, local, second);
+            AssertCommandSource(globals, local, second);
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_ClickEmptyGround_ClearsSelection()
         {
             using var world = World.Create();
@@ -1514,6 +1557,25 @@ namespace Ludots.Tests.GAS
             That(selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.LivePrimary), Is.EqualTo(expected.Length));
             Entity[] actual = new Entity[expected.Length];
             int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.LivePrimary, actual);
+            That(written, Is.EqualTo(expected.Length));
+            for (int i = 0; i < expected.Length; i++)
+            {
+                That(actual[i], Is.EqualTo(expected[i]));
+            }
+        }
+
+        private static void AssertCommandSource(Dictionary<string, object> globals, Entity owner, params Entity[] expected)
+        {
+            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            That(collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+            That(collections.TryGetView(handle, out EntityCollectionView view), Is.True);
+            That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.UiAcquisition));
+            That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
+            That(view.PrimaryEntity, Is.EqualTo(expected.Length > 0 ? expected[0] : Entity.Null));
+            That(view.Count, Is.EqualTo(expected.Length));
+
+            Entity[] actual = new Entity[expected.Length];
+            int written = collections.CopyEntities(handle, 0, actual);
             That(written, Is.EqualTo(expected.Length));
             for (int i = 0; i < expected.Length; i++)
             {

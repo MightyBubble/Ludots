@@ -3,7 +3,10 @@
     {
       "id": "scheme.default",
       "inputContexts": [],
-      "defaults": { "commandIntentId": "intent.command.default" }
+      "defaults": {
+        "commandIntentId": "intent.command.default",
+        "castDispatchProfileId": "dispatch.all_together"
+      }
     }
   ],
   "allowedSchemes": []

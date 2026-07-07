@@ -9,10 +9,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Layers;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
-using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Registry;
@@ -66,7 +64,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(orders.ActiveOrder.Order.PlayerId, Is.EqualTo(1));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(target.X));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z, Is.EqualTo(target.Y));
-            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.Not.EqualTo(Entity.Null));
+            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null),
+                "MassNavigation move orders must be self-contained and must not reference a selection container.");
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
             Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
@@ -170,17 +169,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RightClickMove_WithSelectionRequiresCurrentSelectionContainer()
+        public void RightClickMove_WithSelectionDoesNotRequireCurrentSelectionContainer()
         {
             using TestContextScope context = CreateContext();
             context.Select(context.Agent);
             context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => context.SubmitMoveCommand(new Vector2(1600f, 1800f)))!;
+            MassNavigationMoveCommandResult result = context.SubmitMoveCommand(new Vector2(1600f, 1800f));
 
-            Assert.That(ex.Message, Does.Contain("current selection container"));
-            Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
+            Assert.That(result, Is.EqualTo(MassNavigationMoveCommandResult.Submitted));
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null));
         }
 
         [Test]
@@ -284,19 +282,7 @@ namespace Ludots.Tests.Presentation
                 },
                 new[] { true, true });
 
-            var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
-            var selection = new SelectionRuntime(
-                world,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                selectionRegistry);
-            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.SelectionRuntime, selection);
-            engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.SelectionViewKey, SelectionViewKeys.Primary);
 
             var orderTypes = new OrderTypeRegistry();
             if (registerFormalMoveOrder)
@@ -344,8 +330,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
             engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
 
-            MassNavigationSelectionSync.SyncIfChanged(world, engine.GlobalContext, selection, simulation);
-            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, selection, simulation, orderBuffer, orderTypes);
+            return new TestContextScope(engine, world, localPlayer, agent, enemyAgent, simulation, orderBuffer, orderTypes);
         }
 
         private static unsafe void RegisterMoveBlockedByBlockingOrder(OrderRuleRegistry orderRules)
@@ -536,7 +521,6 @@ namespace Ludots.Tests.Presentation
                 Entity localPlayer,
                 Entity agent,
                 Entity enemyAgent,
-                SelectionRuntime selection,
                 MassNavigationSimulationRuntime simulation,
                 OrderBufferSystem orderBufferSystem,
                 OrderTypeRegistry orderTypeRegistry)
@@ -546,7 +530,6 @@ namespace Ludots.Tests.Presentation
                 LocalPlayer = localPlayer;
                 Agent = agent;
                 EnemyAgent = enemyAgent;
-                Selection = selection;
                 Simulation = simulation;
                 OrderBufferSystem = orderBufferSystem;
                 OrderTypeRegistry = orderTypeRegistry;
@@ -557,30 +540,80 @@ namespace Ludots.Tests.Presentation
             public Entity LocalPlayer { get; }
             public Entity Agent { get; }
             public Entity EnemyAgent { get; }
-            public SelectionRuntime Selection { get; }
             public MassNavigationSimulationRuntime Simulation { get; }
             public OrderBufferSystem OrderBufferSystem { get; }
             public OrderTypeRegistry OrderTypeRegistry { get; }
 
             public MassNavigationMoveCommandResult SubmitMoveCommand(Vector2 centerCm)
             {
-                return Simulation.SubmitMoveCommand(
-                    World,
-                    Engine.GlobalContext,
-                    OrderBufferSystem,
-                    OrderTypeRegistry,
-                    centerCm,
-                    LocalPlayerId);
+                if (!Simulation.ContainsWorldPoint(centerCm.X, centerCm.Y))
+                {
+                    Simulation.RejectCommandOutsideWorld(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.OutsideWorld;
+                }
+
+                ReadOnlySpan<Entity> actors = Simulation.SelectedEntities;
+                if (actors.Length <= 0)
+                {
+                    Simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.EmptySelection;
+                }
+
+                if (!CanLocalPlayerCommand(World, actors))
+                {
+                    Simulation.RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.UnauthorizedSelection;
+                }
+
+                if (!OrderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+                {
+                    throw new InvalidOperationException($"MassNavigation runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+                }
+
+                int sharedOrderId = Simulation.AllocateSharedOrderId();
+                int submitted = 0;
+                for (int i = 0; i < actors.Length; i++)
+                {
+                    Entity actor = actors[i];
+                    if (!World.IsAlive(actor))
+                    {
+                        continue;
+                    }
+
+                    var order = new Order
+                    {
+                        OrderId = sharedOrderId,
+                        OrderTypeId = moveOrderTypeId,
+                        PlayerId = LocalPlayerId,
+                        Actor = actor,
+                        SubmitMode = OrderSubmitMode.Immediate,
+                        Args = MassNavigationMoveOrderArgs.Encode(
+                            centerCm,
+                            Simulation.FormationMode,
+                            Simulation.NavGroupRuntime.SelectedRotationRadians)
+                    };
+
+                    OrderSubmitResult result = OrderBufferSystem.SubmitOrder(actor, in order);
+                    if (result == OrderSubmitResult.Activated || result == OrderSubmitResult.Queued)
+                    {
+                        submitted++;
+                    }
+                }
+
+                if (submitted <= 0)
+                {
+                    Simulation.RejectCommandOrderSubmit(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.OrderSubmitRejected;
+                }
+
+                Simulation.FocusCommandTarget(centerCm, actors);
+                Simulation.MarkCommandApply();
+                return MassNavigationMoveCommandResult.Submitted;
             }
 
             public void Select(Entity entity)
             {
-                if (!Selection.ReplaceSelection(LocalPlayer, SelectionSetKeys.LivePrimary, new[] { entity }))
-                {
-                    throw new InvalidOperationException("Failed to write test selection.");
-                }
-
-                MassNavigationSelectionSync.SyncIfChanged(World, Engine.GlobalContext, Selection, Simulation);
+                Simulation.SetSelection(new[] { entity }, revision: Simulation.SelectionRevision + 1);
             }
 
             public void SetActiveOrder(Entity entity, int orderTypeId)
@@ -600,6 +633,29 @@ namespace Ludots.Tests.Presentation
             public void Dispose()
             {
                 Engine.Dispose();
+            }
+
+            private static bool CanLocalPlayerCommand(World world, ReadOnlySpan<Entity> actors)
+            {
+                int liveActors = 0;
+                for (int i = 0; i < actors.Length; i++)
+                {
+                    Entity actor = actors[i];
+                    if (!world.IsAlive(actor))
+                    {
+                        continue;
+                    }
+
+                    if (!world.TryGet(actor, out PlayerOwner owner) ||
+                        owner.PlayerId != LocalPlayerId)
+                    {
+                        return false;
+                    }
+
+                    liveActors++;
+                }
+
+                return liveActors > 0;
             }
         }
     }

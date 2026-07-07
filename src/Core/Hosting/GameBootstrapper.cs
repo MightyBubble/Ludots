@@ -286,9 +286,32 @@ namespace Ludots.Core.Hosting
                 left.Required == right.Required &&
                 string.Equals(left.Provider, right.Provider, StringComparison.Ordinal) &&
                 string.Equals(left.ProviderAssemblyPath, right.ProviderAssemblyPath, StringComparison.Ordinal) &&
+                string.Equals(left.ProviderHostTypeName, right.ProviderHostTypeName, StringComparison.Ordinal) &&
                 string.Equals(left.ProviderProjectPath, right.ProviderProjectPath, StringComparison.Ordinal) &&
                 string.Equals(left.RuntimeRootPath, right.RuntimeRootPath, StringComparison.Ordinal) &&
-                string.Equals(left.CacheRootPath, right.CacheRootPath, StringComparison.Ordinal);
+                string.Equals(left.CacheRootPath, right.CacheRootPath, StringComparison.Ordinal) &&
+                left.UseCollectibleLoadContext == right.UseCollectibleLoadContext &&
+                BrowserRuntimeStringArraysEqual(left.ProcessSharedAssemblyNamePrefixes, right.ProcessSharedAssemblyNamePrefixes);
+        }
+
+        private static bool BrowserRuntimeStringArraysEqual(string[]? left, string[]? right)
+        {
+            left ??= Array.Empty<string>();
+            right ??= Array.Empty<string>();
+            if (left.Length != right.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < left.Length; i++)
+            {
+                if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static void ValidateGraphArtifactFreshness(string graphPath, string bootstrapPath, LauncherGraphDocument graphConfig)

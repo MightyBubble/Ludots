@@ -1,0 +1,15 @@
+{
+  "name": "SuperweaponContextShowcaseMod",
+  "version": "1.0.0",
+  "description": "Showcase for an ability-owned targeting flow that builds a temporary target list and confirms it through player input.",
+  "main": "bin/net8.0/SuperweaponContextShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "InteractionShowcaseMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "interaction-context", "targeting", "gas"]
+}

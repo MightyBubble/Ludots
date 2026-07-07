@@ -25,6 +25,9 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
         private readonly ControlPlaneView _controlPlaneView;
         private readonly ControlPlaneProjectionScenarioState _state;
         private Entity[] _memberScratch = new Entity[64];
+        private Entity[] _domainScratch = new Entity[64];
+        private Entity[] _ownedScratch = new Entity[64];
+        private Entity[] _proxiedScratch = new Entity[64];
 
         public ControlPlaneProjectionDataPlane(
             World world,
@@ -48,12 +51,9 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
                 return false;
             }
 
-            var snapshot = new ControlPlaneProjectionSnapshot(
-                _state.ProxyActive,
-                CopyMembers(_state.P1Rep, _state.OwnedProjectionKeyId),
-                CopyMembers(_state.P1Rep, _state.ProxiedProjectionKeyId),
-                CopyMembers(_state.P2Rep, _state.CommandSourceKeyId),
-                _controlPlaneView.ComputeRevision(_state.P1Rep, _state.CommandSourceKeyId));
+            ControlPlaneProjectionSnapshot snapshot = _state.RefereeReady
+                ? CreateRefereeSnapshot()
+                : CreateP1Snapshot();
             byte[] payload = JsonSerializer.SerializeToUtf8Bytes(snapshot, JsonOptions);
             packet = new WebUiOutboundPacket(
                 context.SessionId,
@@ -64,6 +64,52 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
                 "application/json",
                 context.RequestId);
             return true;
+        }
+
+        private ControlPlaneProjectionSnapshot CreateP1Snapshot()
+        {
+            int viewCount = CopyControlPlaneView(_state.P1Rep);
+            return new ControlPlaneProjectionSnapshot(
+                "control-plane",
+                "Command Grant",
+                _state.ProxyActive,
+                CopyMembers(_ownedScratch.AsSpan(0, CountDomainMatches(viewCount, _state.P1Rep, matchesOwnDomain: true))),
+                CopyMembers(_proxiedScratch.AsSpan(0, CountDomainMatches(viewCount, _state.P1Rep, matchesOwnDomain: false))),
+                CopyMembers(_state.P2Rep, _state.CommandSourceKeyId),
+                _controlPlaneView.ComputeRevision(_state.P1Rep, _state.CommandSourceKeyId),
+                "My squad starts with one owned unit and one temporary ally grant",
+                _state.ProxyActive ? "The ally command grant is on" : "The ally command grant is off",
+                _state.ProxyActive
+                    ? "Owned units and temporary allies are commandable together"
+                    : "Only my owned units are commandable",
+                "My Units",
+                "Always under my command",
+                "Temporary Allies",
+                "Granted by the scenario",
+                "Ally Roster");
+        }
+
+        private ControlPlaneProjectionSnapshot CreateRefereeSnapshot()
+        {
+            int viewCount = CopyControlPlaneView(_state.RefereeRep);
+            int ownedCount = CountDomainMatches(viewCount, _state.RefereeRep, matchesOwnDomain: true);
+            int proxiedCount = CountDomainMatches(viewCount, _state.RefereeRep, matchesOwnDomain: false);
+            return new ControlPlaneProjectionSnapshot(
+                "referee",
+                "Referee Command",
+                _state.RefereeP2GrantActive,
+                CopyMembers(_ownedScratch.AsSpan(0, ownedCount)),
+                CopyMembers(_proxiedScratch.AsSpan(0, proxiedCount)),
+                CopyMembers(_state.ForeignRep, _state.CommandSourceKeyId),
+                _controlPlaneView.ComputeRevision(_state.RefereeRep, _state.CommandSourceKeyId),
+                "The referee can command marked units but outsiders stay excluded",
+                _state.RefereeP2GrantActive ? "The second ally grant is active" : "The second ally grant was revoked",
+                $"The referee sees {ownedCount} marked unit(s) and {proxiedCount} granted unit(s)",
+                "Referee Units",
+                "Marked for direct command",
+                "Granted Allies",
+                "Reachable through control grants",
+                "Excluded Outsiders");
         }
 
         public WebUiCommandResult ApplyCommand(WebUiCommandRequest request)
@@ -112,14 +158,84 @@ namespace ControlPlaneProjectionShowcaseMod.DataPlane
 
             return members;
         }
+
+        private ControlPlaneProjectionMemberView[] CopyMembers(ReadOnlySpan<Entity> entities)
+        {
+            var members = new ControlPlaneProjectionMemberView[entities.Length];
+            for (int i = 0; i < entities.Length; i++)
+            {
+                Entity entity = entities[i];
+                string name = _world.IsAlive(entity) && _world.TryGet(entity, out Name resolvedName)
+                    ? resolvedName.Value
+                    : string.Empty;
+                members[i] = new ControlPlaneProjectionMemberView(entity.Id, entity.WorldId, entity.Version, name);
+            }
+
+            return members;
+        }
+
+        private int CopyControlPlaneView(Entity viewer)
+        {
+            while (true)
+            {
+                int count = _controlPlaneView.CopyMembersWithDomain(
+                    viewer,
+                    _state.CommandSourceKeyId,
+                    _memberScratch,
+                    _domainScratch);
+                if (count < _memberScratch.Length)
+                {
+                    return count;
+                }
+
+                int next = _memberScratch.Length * 2;
+                Array.Resize(ref _memberScratch, next);
+                Array.Resize(ref _domainScratch, next);
+                Array.Resize(ref _ownedScratch, next);
+                Array.Resize(ref _proxiedScratch, next);
+            }
+        }
+
+        private int CountDomainMatches(int viewCount, Entity ownDomain, bool matchesOwnDomain)
+        {
+            int written = 0;
+            for (int i = 0; i < viewCount; i++)
+            {
+                bool isOwnDomain = _domainScratch[i] == ownDomain;
+                if (isOwnDomain == matchesOwnDomain)
+                {
+                    Entity entity = _memberScratch[i];
+                    if (matchesOwnDomain)
+                    {
+                        _ownedScratch[written++] = entity;
+                    }
+                    else
+                    {
+                        _proxiedScratch[written++] = entity;
+                    }
+                }
+            }
+
+            return written;
+        }
     }
 
     public sealed record ControlPlaneProjectionSnapshot(
+        string Mode,
+        string Title,
         bool ProxyActive,
         ControlPlaneProjectionMemberView[] OwnedMembers,
         ControlPlaneProjectionMemberView[] ProxiedMembers,
         ControlPlaneProjectionMemberView[] P2DomainMembers,
-        uint Revision);
+        uint Revision,
+        string GivenText,
+        string WhenText,
+        string ThenText,
+        string OwnedTitle,
+        string OwnedSubtitle,
+        string ProxyTitle,
+        string ProxySubtitle,
+        string DomainTitle);
 
     public sealed record ControlPlaneProjectionMemberView(int EntityId, int WorldId, int Version, string Name);
 

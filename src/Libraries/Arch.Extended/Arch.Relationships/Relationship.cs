@@ -1,5 +1,3 @@
-using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using Arch.Core;
 
@@ -102,8 +100,7 @@ public class Relationship<T> : IRelationship
         int index = FindEntityIndex(entity);
         if (index >= 0)
         {
-            SortedListValueAccessor<T>.GetValues(Elements)[index] = data;
-            SortedListValueAccessor<T>.BumpVersion(Elements);
+            Elements[entity] = data;
             return;
         }
 
@@ -135,7 +132,7 @@ public class Relationship<T> : IRelationship
             throw new KeyNotFoundException();
         }
 
-        return SortedListValueAccessor<T>.GetValues(Elements)[index];
+        return Elements.Values[index];
     }
 
     /// <summary>
@@ -166,7 +163,7 @@ public class Relationship<T> : IRelationship
             int comparison = keys[mid].CompareTo(entity);
             if (comparison == 0)
             {
-                value = SortedListValueAccessor<T>.GetValues(Elements)[mid];
+                value = Elements.Values[mid];
                 return true;
             }
 
@@ -254,49 +251,4 @@ public class Relationship<T> : IRelationship
         return new SortedListEnumerator<T>(Elements);
     }
 
-    private static class SortedListValueAccessor<TValue>
-    {
-        public static readonly Func<SortedList<Entity, TValue>, TValue[]> GetValues = CreateGetter();
-        public static readonly Action<SortedList<Entity, TValue>> BumpVersion = CreateVersionBumper();
-
-        // Relationship<T> must keep Elements as the live SortedList backing store because persistence and
-        // relationship cleanup mutate it directly. The public SortedList key APIs allocate on hot struct-key
-        // paths, so existing-entry updates write through the backing array after our own binary key lookup.
-        private static Func<SortedList<Entity, TValue>, TValue[]> CreateGetter()
-        {
-            FieldInfo? field = typeof(SortedList<Entity, TValue>).GetField(
-                "values",
-                BindingFlags.NonPublic | BindingFlags.Instance);
-            if (field == null)
-            {
-                throw new MissingFieldException(
-                    typeof(SortedList<Entity, TValue>).FullName,
-                    "values");
-            }
-
-            ParameterExpression list = Expression.Parameter(typeof(SortedList<Entity, TValue>), "list");
-            return Expression.Lambda<Func<SortedList<Entity, TValue>, TValue[]>>(
-                Expression.Field(list, field),
-                list).Compile();
-        }
-
-        private static Action<SortedList<Entity, TValue>> CreateVersionBumper()
-        {
-            FieldInfo? field = typeof(SortedList<Entity, TValue>).GetField(
-                "version",
-                BindingFlags.NonPublic | BindingFlags.Instance);
-            if (field == null)
-            {
-                throw new MissingFieldException(
-                    typeof(SortedList<Entity, TValue>).FullName,
-                    "version");
-            }
-
-            ParameterExpression list = Expression.Parameter(typeof(SortedList<Entity, TValue>), "list");
-            MemberExpression version = Expression.Field(list, field);
-            return Expression.Lambda<Action<SortedList<Entity, TValue>>>(
-                Expression.PreIncrementAssign(version),
-                list).Compile();
-        }
-    }
 };

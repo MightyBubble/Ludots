@@ -8,8 +8,9 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, §5.11). Follows the
     /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
-    /// through the shared <see cref="ConfigPipeline"/>. Command intent references resolve at
-    /// <see cref="ControlSchemeRuntime.Install"/> (fail fast on uninstalled profiles).
+    /// through the shared <see cref="ConfigPipeline"/>. Command intent and axis move order type
+    /// references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast on uninstalled
+    /// command intent profiles, cast dispatch profiles, or unknown order type keys).
     /// </summary>
     public sealed class ControlSchemeConfigLoader
     {
@@ -87,6 +88,22 @@ namespace Ludots.Core.Input.Interaction
                 }
 
                 RequireTrimmedNonEmpty(scheme.Defaults.CommandIntentId, $"{path}.defaults.commandIntentId");
+                RequireTrimmedNonEmpty(scheme.Defaults.CastDispatchProfileId, $"{path}.defaults.castDispatchProfileId");
+
+                if (scheme.AxisMove != null)
+                {
+                    RequireTrimmedNonEmpty(scheme.AxisMove.ActionId, $"{path}.axisMove.actionId");
+                    RequireTrimmedNonEmpty(scheme.AxisMove.OrderTypeKey, $"{path}.axisMove.orderTypeKey");
+                    if (scheme.AxisMove.ThrottleTicks < 1)
+                    {
+                        throw new InvalidOperationException($"{path}.axisMove.throttleTicks must be >= 1.");
+                    }
+
+                    if (scheme.AxisMove.StepDistanceCm <= 0)
+                    {
+                        throw new InvalidOperationException($"{path}.axisMove.stepDistanceCm must be positive.");
+                    }
+                }
             }
 
             if (config.AllowedSchemes != null)

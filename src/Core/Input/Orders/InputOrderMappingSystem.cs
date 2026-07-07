@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
@@ -22,6 +23,16 @@ namespace Ludots.Core.Input.Orders
     /// Delegate for resolving the acting entity for an order.
     /// </summary>
     public delegate bool ActorProvider(out Entity entity);
+
+    /// <summary>
+    /// Delegate for resolving the local command-source collection owner.
+    /// </summary>
+    public delegate bool CommandSourceOwnerProvider(out Entity owner);
+
+    /// <summary>
+    /// Delegate for assigning an order id before submission when a dispatch profile requires shared fan-out.
+    /// </summary>
+    public delegate void OrderIdentityAssigner(ref Order order);
 
     /// <summary>
     /// Delegate for getting the selected entity from a named selection set.
@@ -144,6 +155,8 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public sealed class InputOrderMappingSystem
     {
+        private const int InitialScratchCapacity = 16;
+
         private readonly struct HeldStartEndState
         {
             public HeldStartEndState(Entity actor, InputOrderMapping mapping)
@@ -190,12 +203,23 @@ namespace Ludots.Core.Input.Orders
         private ContextScoredResolutionProvider? _contextScoredProvider;
         private SkillMappingOverrideProvider? _skillMappingOverrideProvider;
         private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
+
+        // RFC-0065 pointer command routing. These are injected by production wiring so the
+        // legacy mapping path remains available for mods that have not opted into the new chain.
+        private World? _rfc0065World;
+        private InteractionContextStack? _interactionContextStack;
+        private ControlSchemeRuntime? _controlSchemeRuntime;
+        private CommandIntentProfileRegistry? _commandIntentProfiles;
+        private CastDispatchProfileRegistry? _castDispatchProfiles;
+        private EntityCollectionStore? _entityCollections;
+        private CommandSourceOwnerProvider? _commandSourceOwnerProvider;
+        private OrderIdentityAssigner? _orderIdentityAssigner;
         
         // Context
         private Entity _localPlayer;
         private int _playerId;
         private float _elapsedSeconds;
-        private readonly List<Entity> _selectedActorsScratch = new(16);
+        private readonly List<Entity> _selectedActorsScratch = new(InitialScratchCapacity);
 
         private readonly struct RoutedOrderSubmission
         {
@@ -209,7 +233,12 @@ namespace Ludots.Core.Input.Orders
             public string OrderTypeKey { get; }
         }
 
-        private readonly List<RoutedOrderSubmission> _routedOrdersScratch = new(16);
+        private readonly List<RoutedOrderSubmission> _routedOrdersScratch = new(InitialScratchCapacity);
+        private Entity[] _rfc0065ActorsScratch = new Entity[InitialScratchCapacity];
+        private Entity[] _rfc0065RoutedActorsScratch = new Entity[InitialScratchCapacity];
+        private CommandIntentRoute[] _rfc0065RoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
+        private CommandIntentRoute[] _rfc0065RoutedRoutesScratch = new CommandIntentRoute[InitialScratchCapacity];
+        private Entity[] _rfc0065SelectedScratch = new Entity[InitialScratchCapacity];
 
         // Aiming state (AimCast mode)
         private bool _isAiming;
@@ -352,6 +381,27 @@ namespace Ludots.Core.Input.Orders
             _actorOrderRoutingResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         public void SetSkillMappingOverrideProvider(SkillMappingOverrideProvider provider) => _skillMappingOverrideProvider = provider;
 
+        public void SetRfc0065CommandRouting(
+            World world,
+            InteractionContextStack stack,
+            ControlSchemeRuntime controlSchemeRuntime,
+            CommandIntentProfileRegistry commandIntentProfiles,
+            CastDispatchProfileRegistry castDispatchProfiles,
+            EntityCollectionStore entityCollections,
+            CommandSourceOwnerProvider? commandSourceOwnerProvider = null)
+        {
+            _rfc0065World = world ?? throw new ArgumentNullException(nameof(world));
+            _interactionContextStack = stack ?? throw new ArgumentNullException(nameof(stack));
+            _controlSchemeRuntime = controlSchemeRuntime ?? throw new ArgumentNullException(nameof(controlSchemeRuntime));
+            _commandIntentProfiles = commandIntentProfiles ?? throw new ArgumentNullException(nameof(commandIntentProfiles));
+            _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
+            _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            _commandSourceOwnerProvider = commandSourceOwnerProvider;
+        }
+
+        public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
+            _orderIdentityAssigner = assigner ?? throw new ArgumentNullException(nameof(assigner));
+
         public void SetInteractionActionBindings(InteractionActionBindings bindings)
         {
             if (bindings == null)
@@ -441,6 +491,12 @@ namespace Ludots.Core.Input.Orders
                 }
                 
                 if (!CheckTrigger(actionId, effectiveMapping)) continue;
+
+                if (IsCommandAction(actionId))
+                {
+                    SubmitRfc0065Command(effectiveMapping);
+                    continue;
+                }
 
                 // Skill mappings are affected by InteractionMode; non-skill mappings always go through immediately.
                 // Per-ability CastModeOverride takes precedence over the global InteractionMode.
@@ -995,8 +1051,9 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Build order for SmartCast: prefer hovered entity, then cursor ground position,
-        /// then fall back to selected entity.
+        /// Build order for legacy skill/cast SmartCast paths: prefer hovered entity,
+        /// then cursor ground position, then the selected entity provider.
+        /// RFC-0065 Command actions bypass this method and never use selected-provider authority.
         /// </summary>
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, out Order order)
         {
@@ -1012,7 +1069,7 @@ namespace Ludots.Core.Input.Orders
             // SmartCast targeting priority:
             //   1. Hovered entity (entity under cursor)
             //   2. Auto-target (nearest in range, if configured)
-            //   3. Selected entity (fallback)
+            //   3. Selected entity (legacy skill/cast blocker, not command authority)
             switch (mapping.SelectionType)
             {
                 case OrderSelectionType.Entity:
@@ -1323,6 +1380,280 @@ namespace Ludots.Core.Input.Orders
             }
         }
 
+        private bool SubmitRfc0065Command(InputOrderMapping mapping)
+        {
+            if (_rfc0065World == null ||
+                _interactionContextStack == null ||
+                _controlSchemeRuntime == null ||
+                _commandIntentProfiles == null ||
+                _castDispatchProfiles == null ||
+                _entityCollections == null)
+            {
+                throw new InvalidOperationException(
+                    "RFC-0065 command routing is partially configured; Command actions must not fall back to legacy input-order mappings.");
+            }
+
+            int activeStackIntentId = CommandIntentArbiter.ResolveActiveCommandIntent(
+                _interactionContextStack,
+                _controlSchemeRuntime);
+            if (activeStackIntentId == 0)
+            {
+                return false;
+            }
+
+            if (!_interactionContextStack.TryPeek(out InteractionContextFrame frame))
+            {
+                throw new InvalidOperationException(
+                    "RFC-0065 command routing requires a non-empty interaction context stack.");
+            }
+
+            string intentName = _interactionContextStack.CommandIntentProfileIdRegistry.GetName(activeStackIntentId);
+            if (!_commandIntentProfiles.ProfileIdRegistry.TryGetId(intentName, out int commandIntentProfileId) ||
+                !_commandIntentProfiles.IsInstalled(commandIntentProfileId))
+            {
+                throw new InvalidOperationException(
+                    $"Active command intent '{intentName}' is not installed in the command intent registry.");
+            }
+
+            if (!HasExplicitLocalPlayer())
+            {
+                return false;
+            }
+
+            if (_groundPositionProvider == null || !_groundPositionProvider(out Vector3 groundWorldCm))
+            {
+                return false;
+            }
+
+            Entity commandSourceOwner = ResolveCommandSourceOwner();
+            if (commandSourceOwner == Entity.Null)
+            {
+                return false;
+            }
+
+            if (!_entityCollections.TryGet(commandSourceOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+            {
+                return false;
+            }
+
+            EnsureRfc0065Scratch(handle);
+            int actorCount = _entityCollections.CopyEntities(handle, 0, _rfc0065ActorsScratch);
+            if (actorCount <= 0)
+            {
+                return false;
+            }
+
+            Span<Entity> actors = _rfc0065ActorsScratch.AsSpan(0, actorCount);
+            Span<CommandIntentRoute> routes = _rfc0065RoutesScratch.AsSpan(0, actorCount);
+            _commandIntentProfiles.RouteGroup(
+                commandIntentProfileId,
+                actors,
+                commandSourceOwner,
+                new CommandIntentTargetFacts(Entity.Null, HasEntity: false),
+                routes);
+
+            EnsureEntityScratch(ref _rfc0065RoutedActorsScratch, actorCount);
+            EnsureRouteScratch(ref _rfc0065RoutedRoutesScratch, actorCount);
+            int routedCount = CompactRoutedActors(
+                actors,
+                routes,
+                _rfc0065RoutedActorsScratch,
+                _rfc0065RoutedRoutesScratch);
+            if (routedCount <= 0)
+            {
+                return false;
+            }
+
+            Span<Entity> routedActors = _rfc0065RoutedActorsScratch.AsSpan(0, routedCount);
+            Span<CommandIntentRoute> routedRoutes = _rfc0065RoutedRoutesScratch.AsSpan(0, routedCount);
+            int dispatchProfileId = _controlSchemeRuntime.ActiveDefaultCastDispatchProfileId;
+            if (dispatchProfileId == 0)
+            {
+                throw new InvalidOperationException(
+                    "RFC-0065 command routing requires the active control scheme to declare defaults.castDispatchProfileId.");
+            }
+
+            int dispatchCount = _castDispatchProfiles.SelectDispatchTargets(
+                dispatchProfileId,
+                routedActors,
+                new CastDispatchContext(_rfc0065World, groundWorldCm, frame.OwnerToken),
+                _rfc0065SelectedScratch.AsSpan(0, routedCount),
+                out CastDispatchRouting routing);
+
+            if (dispatchCount <= 0)
+            {
+                return false;
+            }
+
+            if (routing.Sequential && dispatchCount > 1)
+            {
+                throw new InvalidOperationException(
+                    "RFC-0065 command dispatch profile returned multiple actors for a sequential router; sequential dispatch must select exactly one actor per trigger.");
+            }
+
+            int sharedOrderId = 0;
+            for (int selectedIndex = 0; selectedIndex < dispatchCount; selectedIndex++)
+            {
+                Entity selectedActor = _rfc0065SelectedScratch[selectedIndex];
+                int actorIndex = IndexOfEntity(routedActors, selectedActor);
+                if (actorIndex < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Cast dispatch selected actor '{selectedActor}' that was not present in the routed actor group.");
+                }
+
+                CommandIntentRoute route = routedRoutes[actorIndex];
+
+                var args = new OrderArgs();
+                ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+                args.Spatial.Kind = OrderSpatialKind.WorldCm;
+                args.Spatial.Mode = OrderCollectionMode.Single;
+                args.Spatial.WorldCm = groundWorldCm;
+
+                var order = new Order
+                {
+                    OrderTypeId = route.OrderTypeId,
+                    PlayerId = _playerId,
+                    Actor = selectedActor,
+                    Args = args,
+                    SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior)
+                };
+
+                if (routing.SharedOrderId)
+                {
+                    if (sharedOrderId == 0)
+                    {
+                        if (_orderIdentityAssigner == null)
+                        {
+                            throw new InvalidOperationException(
+                                "RFC-0065 command dispatch profile requires shared order ids, but no order identity assigner is configured.");
+                        }
+
+                        _orderIdentityAssigner(ref order);
+                        sharedOrderId = order.OrderId;
+                    }
+
+                    order.OrderId = sharedOrderId;
+                }
+
+                _orderSubmitHandler!(in order);
+            }
+            return true;
+        }
+
+        private Entity ResolveCommandSourceOwner()
+        {
+            if (_commandSourceOwnerProvider != null)
+            {
+                if (_commandSourceOwnerProvider(out Entity owner) &&
+                    owner != Entity.Null)
+                {
+                    return owner;
+                }
+
+                return Entity.Null;
+            }
+
+            if (_localPlayer != Entity.Null)
+            {
+                return _localPlayer;
+            }
+
+            return Entity.Null;
+        }
+
+        private bool IsCommandAction(string actionId)
+        {
+            return !string.IsNullOrWhiteSpace(_commandActionId) &&
+                   string.Equals(actionId, _commandActionId, StringComparison.Ordinal);
+        }
+
+        private void EnsureRfc0065Scratch(EntityCollectionHandle handle)
+        {
+            if (_entityCollections == null)
+            {
+                return;
+            }
+
+            if (!_entityCollections.TryGetView(handle, out EntityCollectionView view))
+            {
+                throw new InvalidOperationException("RFC-0065 command routing received an invalid active collection handle.");
+            }
+
+            EnsureEntityScratch(ref _rfc0065ActorsScratch, view.Count);
+            EnsureRouteScratch(ref _rfc0065RoutesScratch, view.Count);
+            EnsureEntityScratch(ref _rfc0065SelectedScratch, view.Count);
+        }
+
+        private static int IndexOfEntity(ReadOnlySpan<Entity> entities, Entity value)
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (entities[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int CompactRoutedActors(
+            ReadOnlySpan<Entity> actors,
+            ReadOnlySpan<CommandIntentRoute> routes,
+            Entity[] routedActors,
+            CommandIntentRoute[] routedRoutes)
+        {
+            int routedCount = 0;
+            int count = Math.Min(actors.Length, routes.Length);
+            for (int i = 0; i < count; i++)
+            {
+                CommandIntentRoute route = routes[i];
+                if (!route.HasRoute)
+                {
+                    continue;
+                }
+
+                routedActors[routedCount] = actors[i];
+                routedRoutes[routedCount] = route;
+                routedCount++;
+            }
+
+            return routedCount;
+        }
+
+        private static void EnsureEntityScratch(ref Entity[] scratch, int required)
+        {
+            if (scratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = scratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref scratch, next);
+        }
+
+        private static void EnsureRouteScratch(ref CommandIntentRoute[] scratch, int required)
+        {
+            if (scratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = scratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref scratch, next);
+        }
+
         private Entity ResolvePrimaryActor(InputOrderMapping mapping)
         {
             if (_actorProvider != null && _actorProvider(out var actor) && actor != default)
@@ -1500,19 +1831,10 @@ namespace Ludots.Core.Input.Orders
                 throw new ArgumentException($"No mapping found for action: {actionId}");
             }
             
-            var newMapping = new InputOrderMapping
-            {
-                ActionId = actionId,
-                Trigger = original.Trigger,
-                OrderTypeKey = orderTypeKey,
-                ArgsTemplate = argsTemplate ?? original.ArgsTemplate,
-                RequireSelection = original.RequireSelection,
-                SelectionSetKey = original.SelectionSetKey,
-                SelectionType = original.SelectionType,
-                IsSkillMapping = original.IsSkillMapping,
-                CursorTargetPolicy = original.CursorTargetPolicy,
-                CursorTargetRangeCm = original.CursorTargetRangeCm
-            };
+            var newMapping = original.Clone();
+            newMapping.ActionId = actionId;
+            newMapping.OrderTypeKey = orderTypeKey;
+            newMapping.ArgsTemplate = argsTemplate?.Clone() ?? original.ArgsTemplate.Clone();
 
             InputOrderMappingLoader.Validate(
                 new InputOrderMappingConfig { Mappings = new List<InputOrderMapping> { newMapping } },
@@ -1620,6 +1942,11 @@ namespace Ludots.Core.Input.Orders
 
                 SubmitOrder(effectiveMapping, in startOrder);
                 return true;
+            }
+
+            if (IsCommandAction(actionId))
+            {
+                return SubmitRfc0065Command(effectiveMapping);
             }
 
             if (effectiveMapping.IsSkillMapping)

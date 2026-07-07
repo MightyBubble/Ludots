@@ -82,6 +82,15 @@ public sealed class LauncherBrowserRuntimeProvider
 
     [JsonPropertyName("assemblyPath")]
     public string AssemblyPath { get; set; } = string.Empty;
+
+    [JsonPropertyName("hostTypeName")]
+    public string HostTypeName { get; set; } = string.Empty;
+
+    [JsonPropertyName("useCollectibleLoadContext")]
+    public bool UseCollectibleLoadContext { get; set; } = true;
+
+    [JsonPropertyName("processSharedAssemblyNamePrefixes")]
+    public List<string> ProcessSharedAssemblyNamePrefixes { get; set; } = new();
 }
 
 public sealed class LauncherAdapterDefaults

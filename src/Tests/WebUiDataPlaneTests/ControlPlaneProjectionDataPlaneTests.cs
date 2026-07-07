@@ -2,6 +2,7 @@ using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -70,17 +71,19 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 	public void ApplyCommand_ToggleProxy_FlipsTriggerTagOnly_AndRejectsUnknownCommands()
 	{
 		using var harness = Harness.Create(bindRuntime: true);
+		bool hadControlsEdge = harness.HasAnyControlsEdge();
 
 		WebUiCommandResult on = harness.Producer.ApplyCommand(ToggleRequest());
 		Assert.That(on.Success, Is.True);
 		Assert.That(harness.State.ProxyActive, Is.True, "toggleProxy must flip ProxyActive on.");
 		Assert.That(harness.HasOfflineTag(harness.State.P2Rep), Is.True, "toggleProxy must add the trigger tag on P2Rep.");
-		Assert.That(harness.HasAnyControlsEdge(), Is.False, "The dataplane command is tag-only; no Controls edge may be written directly.");
+		Assert.That(harness.HasAnyControlsEdge(), Is.EqualTo(hadControlsEdge), "The dataplane command is tag-only; Controls edges may not be written directly.");
 
 		WebUiCommandResult off = harness.Producer.ApplyCommand(ToggleRequest());
 		Assert.That(off.Success, Is.True);
 		Assert.That(harness.State.ProxyActive, Is.False, "toggleProxy must flip ProxyActive off.");
 		Assert.That(harness.HasOfflineTag(harness.State.P2Rep), Is.False, "toggleProxy must remove the trigger tag from P2Rep.");
+		Assert.That(harness.HasAnyControlsEdge(), Is.EqualTo(hadControlsEdge), "The dataplane command must not revoke or create Controls edges.");
 
 		WebUiCommandResult unknown = harness.Producer.ApplyCommand(CommandRequest("teleportEverything"));
 		Assert.That(unknown.Success, Is.False);
@@ -176,8 +179,8 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 
 			var state = new ControlPlaneProjectionScenarioState
 			{
-				P1Rep = world.Create(new GameplayTagContainer(), new TagCountContainer()),
-				P2Rep = world.Create(new GameplayTagContainer(), new TagCountContainer()),
+				P1Rep = world.Create(new PlayerIdentity { PlayerId = 1 }, new GameplayTagContainer(), new TagCountContainer()),
+				P2Rep = world.Create(new PlayerIdentity { PlayerId = 2 }, new GameplayTagContainer(), new TagCountContainer()),
 				OfflineTagId = TagRegistry.Register(ControlPlaneProjectionShowcaseIds.OfflineTag),
 				CommandSourceKeyId = keys.Register(EntityCollectionKeys.CommandSource),
 				OwnedProjectionKeyId = keys.Register(ControlPlaneProjectionShowcaseIds.OwnedProjectionCollectionKey),
@@ -186,22 +189,17 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 
 			Entity ownedUnit = world.Create(new Name { Value = "Owned Unit" });
 			Entity proxiedUnit = world.Create(new Name { Value = "Proxied Unit" });
+			relationships.EnsureLink(state.P1Rep, ownedUnit, ownsTypeId);
+			relationships.EnsureLink(state.P2Rep, proxiedUnit, ownsTypeId);
+			relationships.EnsureLink(state.P1Rep, state.P2Rep, controlsTypeId);
 			store.Replace(
 				state.P1Rep,
 				EntityCollectionDescriptor.Create(
-					ControlPlaneProjectionShowcaseIds.OwnedProjectionCollectionKey,
-					EntityCollectionSourceKind.RelationDerived,
-					EntityCollectionRoleKind.Display,
+					EntityCollectionKeys.CommandSource,
+					EntityCollectionSourceKind.SelectionView,
+					EntityCollectionRoleKind.CommandSource,
 					state.P1Rep),
 				new[] { ownedUnit });
-			store.Replace(
-				state.P1Rep,
-				EntityCollectionDescriptor.Create(
-					ControlPlaneProjectionShowcaseIds.ProxiedProjectionCollectionKey,
-					EntityCollectionSourceKind.RelationDerived,
-					EntityCollectionRoleKind.Display,
-					state.P1Rep),
-				new[] { proxiedUnit });
 			store.Replace(
 				state.P2Rep,
 				EntityCollectionDescriptor.Create(

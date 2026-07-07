@@ -1,0 +1,33 @@
+[
+  { "id": "Ability.Interaction.Arcweaver.DuelBolt", "catalogTags": [ "castFamily.primary" ] },
+  { "id": "Ability.Interaction.Vanguard.Challenge", "catalogTags": [ "castFamily.primary" ] },
+  { "id": "Ability.Interaction.Commander.SupportBeam", "catalogTags": [ "castFamily.primary" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.BlinkStep", "catalogTags": [ "castFamily.mobility" ] },
+  { "id": "Ability.Interaction.Vanguard.BannerLeap", "catalogTags": [ "castFamily.mobility" ] },
+  { "id": "Ability.Interaction.Commander.TacticalJump", "catalogTags": [ "castFamily.mobility" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.FireLance", "catalogTags": [ "castFamily.directional" ] },
+  { "id": "Ability.Interaction.Vanguard.CleaveCone", "catalogTags": [ "castFamily.directional" ] },
+  { "id": "Ability.Interaction.Commander.VolleyLine", "catalogTags": [ "castFamily.directional" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.NovaPulse", "catalogTags": [ "castFamily.area" ] },
+  { "id": "Ability.Interaction.Vanguard.Shockwave", "catalogTags": [ "castFamily.area" ] },
+  { "id": "Ability.Interaction.Commander.Overclock", "catalogTags": [ "castFamily.area" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.ArcDash", "catalogTags": [ "castFamily.dash" ] },
+  { "id": "Ability.Interaction.Vanguard.ChargeDash", "catalogTags": [ "castFamily.dash" ] },
+  { "id": "Ability.Interaction.Commander.ThrustJump", "catalogTags": [ "castFamily.dash" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.GuardToggle", "catalogTags": [ "castFamily.toggle" ] },
+  { "id": "Ability.Interaction.Vanguard.IronWall", "catalogTags": [ "castFamily.toggle" ] },
+  { "id": "Ability.Interaction.Commander.ShieldNet", "catalogTags": [ "castFamily.toggle" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.ActionContext", "catalogTags": [ "castFamily.context" ] },
+  { "id": "Ability.Interaction.Vanguard.ActionContext", "catalogTags": [ "castFamily.context" ] },
+  { "id": "Ability.Interaction.Commander.ActionContext", "catalogTags": [ "castFamily.context" ] },
+
+  { "id": "Ability.Interaction.Arcweaver.RuneBurst", "catalogTags": [ "castFamily.advanced" ] },
+  { "id": "Ability.Interaction.Vanguard.GroundSlam", "catalogTags": [ "castFamily.advanced" ] },
+  { "id": "Ability.Interaction.Commander.OrbitalStrike", "catalogTags": [ "castFamily.advanced" ] }
+]

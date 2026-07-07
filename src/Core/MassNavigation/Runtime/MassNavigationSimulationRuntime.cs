@@ -6,9 +6,6 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Systems;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
@@ -502,49 +499,6 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkCommandApply();
     }
 
-    public bool RotateSelectedFormation(World world, float deltaRadians, int localPlayerId)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        if (_selectedCount <= 0 ||
-            !(MathF.Abs(deltaRadians) > Config.Semantics.Group.FormationRotationEpsilonRadians))
-        {
-            return false;
-        }
-
-        if (!CanLocalPlayerCommandSelection(world, SelectedEntities, localPlayerId))
-        {
-            Telemetry.MarkCommandRejected();
-            return false;
-        }
-
-        NavGroupRuntime.RotateSelected(world, AgentState, SelectedEntities, deltaRadians);
-        MarkCommandApply();
-        return true;
-    }
-
-    private static bool CanLocalPlayerCommandSelection(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
-    {
-        int liveCommandableActors = 0;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity actor = selected[i];
-            if (!world.IsAlive(actor))
-            {
-                continue;
-            }
-
-            if (!world.TryGet(actor, out PlayerOwner owner) ||
-                owner.PlayerId != localPlayerId)
-            {
-                return false;
-            }
-
-            liveCommandableActors++;
-        }
-
-        return liveCommandableActors > 0;
-    }
-
     public void MarkScenarioSpawned()
     {
         Telemetry.MarkScenarioSpawned();
@@ -822,8 +776,8 @@ public sealed class MassNavigationSimulationRuntime
             _simWindowWidthCm,
             _simWindowHeightCm,
             selectedEntities,
-            selectedEntities.Length > 0 ? "selection command" : "team command");
-        MoveSolverWindow(ResolveSolverFocusForWorkArea(), selectedEntities.Length > 0 ? "selection command" : "team command");
+            selectedEntities.Length > 0 ? "actor command" : "team command");
+        MoveSolverWindow(ResolveSolverFocusForWorkArea(), selectedEntities.Length > 0 ? "actor command" : "team command");
         UpdateStreamingWindow(ResolveStreamingFocus());
     }
 
@@ -1199,91 +1153,6 @@ public sealed class MassNavigationSimulationRuntime
         return PerformerParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
     }
 
-    public MassNavigationMoveCommandResult SubmitMoveCommand(
-        World world,
-        Dictionary<string, object> globals,
-        OrderBufferSystem orderBufferSystem,
-        OrderTypeRegistry orderTypeRegistry,
-        Vector2 centerCm,
-        int playerId)
-    {
-        ArgumentNullException.ThrowIfNull(world);
-        ArgumentNullException.ThrowIfNull(globals);
-        ArgumentNullException.ThrowIfNull(orderBufferSystem);
-        ArgumentNullException.ThrowIfNull(orderTypeRegistry);
-
-        if (!ContainsWorldPoint(centerCm.X, centerCm.Y))
-        {
-            RejectCommandOutsideWorld(centerCm.X, centerCm.Y);
-            return MassNavigationMoveCommandResult.OutsideWorld;
-        }
-
-        ReadOnlySpan<Entity> selected = SelectedEntities;
-        if (selected.Length <= 0)
-        {
-            RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
-            return MassNavigationMoveCommandResult.EmptySelection;
-        }
-
-        if (!CanSubmitSelectionMoveOrders(world, selected, playerId))
-        {
-            RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
-            return MassNavigationMoveCommandResult.UnauthorizedSelection;
-        }
-
-        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
-        {
-            throw new InvalidOperationException("MassNavigation runtime requires a current selection container before submitting move orders.");
-        }
-
-        if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
-        {
-            throw new InvalidOperationException($"MassNavigation runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
-        }
-
-        int sharedOrderId = AllocateSharedOrderId();
-        int submitted = 0;
-        float rotationRadians = NavGroupRuntime.SelectedRotationRadians;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity actor = selected[i];
-            if (!world.IsAlive(actor))
-            {
-                continue;
-            }
-
-            var order = new Order
-            {
-                OrderId = sharedOrderId,
-                OrderTypeId = moveOrderTypeId,
-                PlayerId = playerId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Immediate,
-                Args = MassNavigationMoveOrderArgs.Encode(
-                    centerCm,
-                    FormationMode,
-                    rotationRadians,
-                    selectionContainer)
-            };
-
-            OrderSubmitResult result = orderBufferSystem.SubmitOrder(actor, in order);
-            if (IsAcceptedOrderSubmit(result))
-            {
-                submitted++;
-            }
-        }
-
-        if (submitted <= 0)
-        {
-            RejectCommandOrderSubmit(centerCm.X, centerCm.Y);
-            return MassNavigationMoveCommandResult.OrderSubmitRejected;
-        }
-
-        FocusCommandTarget(centerCm, selected);
-        MarkCommandApply();
-        return MassNavigationMoveCommandResult.Submitted;
-    }
-
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
         WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
@@ -1528,40 +1397,6 @@ public sealed class MassNavigationSimulationRuntime
             float worldY = ToWorldYCm(MassNavigationFlow.GetPositionY(unitIndex));
             IncludePoint(ref minX, ref maxX, ref minY, ref maxY, worldX, worldY);
         }
-    }
-
-    private static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
-    {
-        int liveCommandableActors = 0;
-        for (int i = 0; i < selected.Length; i++)
-        {
-            Entity actor = selected[i];
-            if (!world.IsAlive(actor))
-            {
-                continue;
-            }
-
-            if (!CanLocalPlayerCommand(world, actor, localPlayerId))
-            {
-                return false;
-            }
-
-            liveCommandableActors++;
-        }
-
-        return liveCommandableActors > 0;
-    }
-
-    private static bool CanLocalPlayerCommand(World world, Entity actor, int localPlayerId)
-    {
-        return world.TryGet(actor, out PlayerOwner owner) &&
-               owner.PlayerId == localPlayerId;
-    }
-
-    private static bool IsAcceptedOrderSubmit(OrderSubmitResult result)
-    {
-        return result == OrderSubmitResult.Activated ||
-               result == OrderSubmitResult.Queued;
     }
 
     private void ClampWorkArea(ref float minX, ref float maxX, ref float minY, ref float maxY)
