@@ -5,6 +5,7 @@ using System.IO;
 using System.Numerics;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -15,6 +16,7 @@ namespace Ludots.Client.Raylib.Rendering
     {
         private readonly Dictionary<long, ChunkGpu> _chunks = new(1024);
         private readonly List<long> _evictKeys = new(256);
+        private readonly ChunkMeshWriteBuffer _waterMeshData = new();
 
         private Shader _terrainShader;
         private Material _terrainMaterial;
@@ -22,6 +24,14 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locTerrainViewPos;
         private int _locTerrainAmbient;
         private int _locTerrainIntensity;
+
+        private Shader _waterShader;
+        private Material _waterMaterial;
+        private int _locWaterLightPos;
+        private int _locWaterViewPos;
+        private int _locWaterAmbient;
+        private int _locWaterIntensity;
+
         private bool _initialized;
         private int _frameIndex;
 
@@ -32,6 +42,8 @@ namespace Ludots.Client.Raylib.Rendering
         public int MissingChunkCountLastFrame { get; private set; }
 
         public int TerrainVertexCountLastFrame { get; private set; }
+
+        public int WaterVertexCountLastFrame { get; private set; }
 
         public double ChunkBuildMsLastFrame { get; private set; }
 
@@ -60,7 +72,9 @@ namespace Ludots.Client.Raylib.Rendering
             BuiltChunkCountLastFrame = 0;
             MissingChunkCountLastFrame = 0;
             TerrainVertexCountLastFrame = 0;
+            WaterVertexCountLastFrame = 0;
             ChunkBuildMsLastFrame = 0d;
+            IVisualTerrainRenderFeatureSource? featureSource = source as IVisualTerrainRenderFeatureSource;
 
             int minChunkX = ResolveChunkIndex((camera.target.X * 100f) - VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
             int maxChunkX = ResolveChunkIndex((camera.target.X * 100f) + VisibleRadiusCm, source.Bounds.Left, source.Bounds.Width, source.ChunkColumns);
@@ -77,11 +91,24 @@ namespace Ludots.Client.Raylib.Rendering
                         continue;
                     }
 
-                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk);
+                    ref ChunkGpu gpu = ref GetOrCreateChunk(in chunk, featureSource);
                     gpu.LastUsedFrame = _frameIndex;
                     RaylibMatrix identity = RaylibMatrix.Identity;
                     Rl.rlDisableBackfaceCulling();
                     Rl.DrawMesh(gpu.Mesh, _terrainMaterial, identity);
+                    if (gpu.WaterMesh.vertexCount > 0)
+                    {
+                        Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
+                        Rl.DrawMesh(gpu.WaterMesh, _waterMaterial, identity);
+                        Rl.EndBlendMode();
+                        WaterVertexCountLastFrame += gpu.WaterMesh.vertexCount;
+                    }
+
+                    if (featureSource != null)
+                    {
+                        DrawFeatureEdges(in chunk, featureSource);
+                    }
+
                     Rl.rlEnableBackfaceCulling();
 
                     DrawnChunkCountLastFrame++;
@@ -112,6 +139,19 @@ namespace Ludots.Client.Raylib.Rendering
             _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
             _locTerrainAmbient = Rl.GetShaderLocation(_terrainShader, "uAmbient");
             _locTerrainIntensity = Rl.GetShaderLocation(_terrainShader, "uLightIntensity");
+
+            _waterShader = Rl.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
+            if (_waterShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load visual heightmap water shader (shader.id == 0).");
+            }
+
+            _waterMaterial = Rl.LoadMaterialDefault();
+            _waterMaterial.shader = _waterShader;
+            _locWaterLightPos = Rl.GetShaderLocation(_waterShader, "uLightPos");
+            _locWaterViewPos = Rl.GetShaderLocation(_waterShader, "uViewPos");
+            _locWaterAmbient = Rl.GetShaderLocation(_waterShader, "uAmbient");
+            _locWaterIntensity = Rl.GetShaderLocation(_waterShader, "uLightIntensity");
             _initialized = true;
         }
 
@@ -126,14 +166,21 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_terrainShader, _locTerrainAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_terrainShader, _locTerrainIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+
+            Rl.SetShaderValue(_waterShader, _locWaterLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
-        private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)
+        private ref ChunkGpu GetOrCreateChunk(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource? featureSource)
         {
             long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
             if (_chunks.TryGetValue(key, out ChunkGpu existing))
             {
-                if (existing.Revision == chunk.Revision)
+                if (existing.Matches(in chunk, featureSource != null))
                 {
                     _chunks[key] = existing;
                     return ref _chunks.GetValueRefOrNullRef(key);
@@ -146,8 +193,13 @@ namespace Ludots.Client.Raylib.Rendering
             long buildStart = Stopwatch.GetTimestamp();
             ChunkGpu gpu = new()
             {
-                Mesh = CreateChunkMesh(in chunk),
+                Mesh = CreateChunkMesh(in chunk, featureSource),
+                WaterMesh = featureSource != null ? CreateWaterMesh(in chunk, featureSource, _waterMeshData) : default,
                 Revision = chunk.Revision,
+                Bounds = chunk.Bounds,
+                SampleColumns = chunk.SampleColumns,
+                SampleRows = chunk.SampleRows,
+                HasFeatures = featureSource != null,
                 LastUsedFrame = _frameIndex,
             };
             BuiltChunkCountLastFrame++;
@@ -156,7 +208,9 @@ namespace Ludots.Client.Raylib.Rendering
             return ref _chunks.GetValueRefOrNullRef(key);
         }
 
-        private static Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
+        private static Mesh CreateChunkMesh(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource? featureSource)
         {
             int columns = chunk.SampleColumns;
             int rows = chunk.SampleRows;
@@ -203,9 +257,18 @@ namespace Ludots.Client.Raylib.Rendering
                     mesh.normals[f + 2] = normal.Z;
 
                     int c = vertex * 4;
-                    float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
-                    float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
-                    ResolveTerrainColor(heightBand, slope, out byte red, out byte green, out byte blue);
+                    ResolveVertexColor(
+                        in chunk,
+                        featureSource,
+                        x,
+                        y,
+                        heightCm,
+                        minHeightCm,
+                        heightRangeCm,
+                        normal,
+                        out byte red,
+                        out byte green,
+                        out byte blue);
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
@@ -261,6 +324,117 @@ namespace Ludots.Client.Raylib.Rendering
                 minHeightCm = 0f;
                 maxHeightCm = 1f;
             }
+        }
+
+        private static void ResolveVertexColor(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource? featureSource,
+            int sampleX,
+            int sampleY,
+            float heightCm,
+            float minHeightCm,
+            float heightRangeCm,
+            in Vector3 normal,
+            out byte red,
+            out byte green,
+            out byte blue)
+        {
+            if (featureSource != null &&
+                TryResolveFeatureCorner(in chunk, featureSource, sampleX, sampleY, out int cornerX, out int cornerY))
+            {
+                Vector4 sum = default;
+                int count = 0;
+                for (int dy = -1; dy <= 0; dy++)
+                {
+                    for (int dx = -1; dx <= 0; dx++)
+                    {
+                        if (!featureSource.TryReadFeatureCell(cornerX + dx, cornerY + dy, out VisualTerrainRenderCell cell))
+                        {
+                            continue;
+                        }
+
+                        sum += TerrainVisualRules.GetTerrainFeatureColor(in cell);
+                        count++;
+                    }
+                }
+
+                if (count > 0)
+                {
+                    float inv = 1f / count;
+                    red = ClampUnitToByte(sum.X * inv);
+                    green = ClampUnitToByte(sum.Y * inv);
+                    blue = ClampUnitToByte(sum.Z * inv);
+                    return;
+                }
+            }
+
+            float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+            float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
+            ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
+        }
+
+        private static Mesh CreateWaterMesh(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource featureSource,
+            ChunkMeshWriteBuffer buffer)
+        {
+            buffer.Clear();
+            int cellColumns = chunk.SampleColumns - 1;
+            int cellRows = chunk.SampleRows - 1;
+            Vector3 normal = Vector3.UnitY;
+            Vector4 color = new(0x4F / 255f, 0xC3 / 255f, 0xF7 / 255f, 0.6f);
+
+            for (int y = 0; y < cellRows; y++)
+            {
+                for (int x = 0; x < cellColumns; x++)
+                {
+                    if (!TryResolveFeatureCell(in chunk, featureSource, x, y, out int cellX, out int cellY) ||
+                        !featureSource.TryReadFeatureCell(cellX, cellY, out VisualTerrainRenderCell cell) ||
+                        !cell.HasWater ||
+                        cell.WaterHeightCm <= cell.SurfaceHeightCm)
+                    {
+                        continue;
+                    }
+
+                    float x0 = (chunk.Bounds.Left + (x * chunk.SampleStepXCm)) * 0.01f;
+                    float x1 = (chunk.Bounds.Left + ((x + 1) * chunk.SampleStepXCm)) * 0.01f;
+                    float z0 = (chunk.Bounds.Top + (y * chunk.SampleStepYCm)) * 0.01f;
+                    float z1 = (chunk.Bounds.Top + ((y + 1) * chunk.SampleStepYCm)) * 0.01f;
+                    float waterY = (cell.WaterHeightCm * 0.01f) + 0.003f;
+
+                    buffer.EnsureAdditionalVertices(6);
+                    buffer.AppendVertex(new Vector3(x0, waterY, z0), normal, color);
+                    buffer.AppendVertex(new Vector3(x1, waterY, z0), normal, color);
+                    buffer.AppendVertex(new Vector3(x1, waterY, z1), normal, color);
+                    buffer.AppendVertex(new Vector3(x0, waterY, z0), normal, color);
+                    buffer.AppendVertex(new Vector3(x1, waterY, z1), normal, color);
+                    buffer.AppendVertex(new Vector3(x0, waterY, z1), normal, color);
+                }
+            }
+
+            return buffer.VertexCount > 0 ? CreateUnindexedMesh(buffer) : default;
+        }
+
+        private static Mesh CreateUnindexedMesh(ChunkMeshWriteBuffer src)
+        {
+            Mesh mesh = new()
+            {
+                vertexCount = src.VertexCount,
+                triangleCount = src.VertexCount / 3,
+            };
+
+            int vertexFloatCount = src.VertexCount * 3;
+            int colorByteCount = src.VertexCount * 4;
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * vertexFloatCount);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colorByteCount);
+
+            src.Vertices.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.vertices, vertexFloatCount));
+            src.Normals.AsSpan(0, vertexFloatCount).CopyTo(new Span<float>(mesh.normals, vertexFloatCount));
+            src.Colors.AsSpan(0, colorByteCount).CopyTo(new Span<byte>(mesh.colors, colorByteCount));
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
         }
 
         private static void ResolveTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
@@ -327,10 +501,149 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        private static void DrawFeatureEdges(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource featureSource)
+        {
+            int cellColumns = chunk.SampleColumns - 1;
+            int cellRows = chunk.SampleRows - 1;
+            for (int y = 0; y < cellRows; y++)
+            {
+                for (int x = 0; x < cellColumns; x++)
+                {
+                    if (!TryResolveFeatureCell(in chunk, featureSource, x, y, out int cellX, out int cellY) ||
+                        !featureSource.TryReadFeatureCell(cellX, cellY, out VisualTerrainRenderCell cell))
+                    {
+                        continue;
+                    }
+
+                    if (featureSource.TryReadFeatureCell(cellX + 1, cellY, out VisualTerrainRenderCell right) &&
+                        right.HeightLevel != cell.HeightLevel)
+                    {
+                        float edgeX = (chunk.Bounds.Left + ((x + 1) * chunk.SampleStepXCm)) * 0.01f;
+                        float z0 = (chunk.Bounds.Top + (y * chunk.SampleStepYCm)) * 0.01f;
+                        float z1 = (chunk.Bounds.Top + ((y + 1) * chunk.SampleStepYCm)) * 0.01f;
+                        float edgeY = ResolveEdgeY(cell, right);
+                        Rl.DrawLine3D(
+                            new Vector3(edgeX, edgeY, z0),
+                            new Vector3(edgeX, edgeY, z1),
+                            ResolveEdgeColor(cell, right));
+                    }
+
+                    if (featureSource.TryReadFeatureCell(cellX, cellY + 1, out VisualTerrainRenderCell bottom) &&
+                        bottom.HeightLevel != cell.HeightLevel)
+                    {
+                        float x0 = (chunk.Bounds.Left + (x * chunk.SampleStepXCm)) * 0.01f;
+                        float x1 = (chunk.Bounds.Left + ((x + 1) * chunk.SampleStepXCm)) * 0.01f;
+                        float edgeZ = (chunk.Bounds.Top + ((y + 1) * chunk.SampleStepYCm)) * 0.01f;
+                        float edgeY = ResolveEdgeY(cell, bottom);
+                        Rl.DrawLine3D(
+                            new Vector3(x0, edgeY, edgeZ),
+                            new Vector3(x1, edgeY, edgeZ),
+                            ResolveEdgeColor(cell, bottom));
+                    }
+                }
+            }
+        }
+
+        private static float ResolveEdgeY(
+            in VisualTerrainRenderCell a,
+            in VisualTerrainRenderCell b)
+            => (Math.Max(a.SurfaceHeightCm, b.SurfaceHeightCm) * 0.01f) + 0.04f;
+
+        private static Color ResolveEdgeColor(
+            in VisualTerrainRenderCell a,
+            in VisualTerrainRenderCell b)
+            => a.IsRamp || b.IsRamp
+                ? new Color(70, 190, 116, 255)
+                : new Color(214, 76, 76, 255);
+
+        private static bool TryResolveFeatureCell(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource featureSource,
+            int localCellX,
+            int localCellY,
+            out int cellX,
+            out int cellY)
+        {
+            float worldXCm = chunk.Bounds.Left + (localCellX * chunk.SampleStepXCm);
+            float worldYCm = chunk.Bounds.Top + (localCellY * chunk.SampleStepYCm);
+            return TryResolveFeatureCellIndex(featureSource, worldXCm, worldYCm, useCornerRounding: false, out cellX, out cellY);
+        }
+
+        private static bool TryResolveFeatureCorner(
+            in VisualHeightmapRenderChunk chunk,
+            IVisualTerrainRenderFeatureSource featureSource,
+            int localSampleX,
+            int localSampleY,
+            out int cornerX,
+            out int cornerY)
+        {
+            float worldXCm = chunk.Bounds.Left + (localSampleX * chunk.SampleStepXCm);
+            float worldYCm = chunk.Bounds.Top + (localSampleY * chunk.SampleStepYCm);
+            return TryResolveFeatureCellIndex(featureSource, worldXCm, worldYCm, useCornerRounding: true, out cornerX, out cornerY);
+        }
+
+        private static bool TryResolveFeatureCellIndex(
+            IVisualTerrainRenderFeatureSource featureSource,
+            float worldXCm,
+            float worldYCm,
+            bool useCornerRounding,
+            out int cellX,
+            out int cellY)
+        {
+            cellX = default;
+            cellY = default;
+            if (featureSource.FeatureCellColumns <= 0 ||
+                featureSource.FeatureCellRows <= 0 ||
+                featureSource.FeatureBounds.Width <= 0 ||
+                featureSource.FeatureBounds.Height <= 0)
+            {
+                return false;
+            }
+
+            float cellWidthCm = featureSource.FeatureBounds.Width / (float)featureSource.FeatureCellColumns;
+            float cellHeightCm = featureSource.FeatureBounds.Height / (float)featureSource.FeatureCellRows;
+            if (!float.IsFinite(cellWidthCm) ||
+                !float.IsFinite(cellHeightCm) ||
+                cellWidthCm <= 0f ||
+                cellHeightCm <= 0f)
+            {
+                return false;
+            }
+
+            float x = (worldXCm - featureSource.FeatureBounds.Left) / cellWidthCm;
+            float y = (worldYCm - featureSource.FeatureBounds.Top) / cellHeightCm;
+            if (!float.IsFinite(x) || !float.IsFinite(y))
+            {
+                return false;
+            }
+
+            if (useCornerRounding)
+            {
+                cellX = Math.Clamp((int)MathF.Round(x), 0, featureSource.FeatureCellColumns);
+                cellY = Math.Clamp((int)MathF.Round(y), 0, featureSource.FeatureCellRows);
+            }
+            else
+            {
+                cellX = Math.Clamp((int)MathF.Floor(x + 0.0001f), 0, featureSource.FeatureCellColumns - 1);
+                cellY = Math.Clamp((int)MathF.Floor(y + 0.0001f), 0, featureSource.FeatureCellRows - 1);
+            }
+
+            return true;
+        }
+
         private static int ResolveChunkIndex(float worldCm, int minCm, int sizeCm, int chunkCount)
         {
             float normalized = (worldCm - minCm) / Math.Max(1f, sizeCm);
             return Math.Clamp((int)MathF.Floor(normalized * chunkCount), 0, chunkCount - 1);
+        }
+
+        private static byte ClampUnitToByte(float value)
+        {
+            if (value <= 0f) return 0;
+            if (value >= 1f) return 255;
+            return (byte)MathF.Round(value * 255f);
         }
 
         private static byte ClampToByte(float value)
@@ -354,20 +667,40 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial.shader = default;
             Rl.UnloadMaterial(_terrainMaterial);
             Rl.UnloadShader(_terrainShader);
+            _waterMaterial.shader = default;
+            Rl.UnloadMaterial(_waterMaterial);
+            Rl.UnloadShader(_waterShader);
             _initialized = false;
         }
 
         private struct ChunkGpu : IDisposable
         {
             public Mesh Mesh;
+            public Mesh WaterMesh;
             public int Revision;
+            public WorldAabbCm Bounds;
+            public int SampleColumns;
+            public int SampleRows;
+            public bool HasFeatures;
             public int LastUsedFrame;
+
+            public bool Matches(in VisualHeightmapRenderChunk chunk, bool hasFeatures)
+                => Revision == chunk.Revision &&
+                   Bounds == chunk.Bounds &&
+                   SampleColumns == chunk.SampleColumns &&
+                   SampleRows == chunk.SampleRows &&
+                   HasFeatures == hasFeatures;
 
             public void Dispose()
             {
                 if (Mesh.vertexCount > 0)
                 {
                     Rl.UnloadMesh(Mesh);
+                }
+
+                if (WaterMesh.vertexCount > 0)
+                {
+                    Rl.UnloadMesh(WaterMesh);
                 }
             }
         }

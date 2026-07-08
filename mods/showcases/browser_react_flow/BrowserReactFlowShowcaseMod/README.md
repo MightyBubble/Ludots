@@ -14,9 +14,15 @@ This mod is the browser UI integration showcase for a real packaged React app.
 
 In alpha mode, the transparent web cutout at `520,300` / `320x160` lets clicks pass through to the native Ludots panel below it. In bounds mode, the same transparent area is still owned by the browser canvas.
 
-## Keyboard Synthetic UAT
+## Keyboard Automation UAT
 
-Raylib synthetic UI playback supports pointer, scroll, and keyboard injection through the same `UIRoot` path used by real input.
+Use the Ludots-wide input automation entry point for new keyboard and mouse UAT:
+
+- `LUDOTS_INPUT_AUTOMATION_SCRIPT`: path to a host-neutral input automation JSON script.
+
+The script is consumed by Core `InputAutomationPlayer` and then forwarded by each host adapter through the same `UIRoot` path used by real input.
+
+Legacy Raylib-only synthetic UI playback remains available for older captures, but new UAT should not add more `LUDOTS_RAYLIB_SYNTHETIC_UI_*` variables.
 
 - `LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_FRAME`: frame that injects keyboard input.
 - `LUDOTS_RAYLIB_SYNTHETIC_UI_KEY`: control key routed as `Down`/`Up`, for example `Backspace`, `Enter`, or `ArrowLeft`.

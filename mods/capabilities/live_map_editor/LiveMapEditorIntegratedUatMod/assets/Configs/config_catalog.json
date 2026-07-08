@@ -1,0 +1,6 @@
+[
+  { "Path": "Navigation/agent_profiles.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" },
+  { "Path": "TransportNetwork/transport_network.json", "Policy": "Replace" }
+]

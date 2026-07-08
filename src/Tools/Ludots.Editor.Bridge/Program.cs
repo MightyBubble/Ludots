@@ -594,7 +594,17 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
         var board = EditorRepo.ResolveRequiredBoardByName(mapR.Map, boardName);
         var dataFile = board.DataFile;
         if (string.IsNullOrWhiteSpace(dataFile))
+        {
+            if (EditorRepo.CanServeVirtualEmptyTerrain(mapId, board))
+            {
+                return Results.File(
+                    EditorRepo.CreateEmptyReactTerrainHeader(board),
+                    "application/octet-stream",
+                    fileDownloadName: $"{mapId}_{board.Name}_map_data.bin");
+            }
+
             return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
+        }
 
         if (!EditorRepo.TryResolveDataFile(ctx, dataFile, out var fullPath, out var checkedPaths))
         {
@@ -611,6 +621,16 @@ app.MapGet("/api/mods/{modId}/maps/{mapId}/terrain-react", (string modId, string
 
         if (EditorRepo.IsGridBoard(board))
         {
+            if (EditorRepo.IsLogicTerrainDataFile(dataFile))
+            {
+                using var fs = File.OpenRead(fullPath);
+                LogicTerrainField terrain = LogicTerrainBinary.Read(fs);
+                return Results.File(
+                    EditorRepo.WriteReactTerrainBinary(terrain),
+                    "application/octet-stream",
+                    fileDownloadName: $"{mapId}_{board.Name}_map_data.bin");
+            }
+
             using var validation = File.OpenRead(fullPath);
             _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
                 fullPath,
@@ -663,8 +683,18 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
     }
 
     var dataFile = board.DataFile;
+    bool mapConfigDataFileAssigned = false;
     if (string.IsNullOrWhiteSpace(dataFile))
-        return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
+    {
+        if (!EditorRepo.CanServeVirtualEmptyTerrain(mapId, board))
+        {
+            return Results.BadRequest(new { ok = false, error = $"MapConfig.Boards['{board.Name}'].DataFile is empty." });
+        }
+
+        dataFile = EditorRepo.BuildDefaultBoardDataFile(mapId, board.Name, EditorRepo.NormalizeSpatialType(board));
+        board.DataFile = dataFile;
+        mapConfigDataFileAssigned = true;
+    }
 
     string outFile = EditorRepo.ResolveWritableDataFilePath(ctx, dataFile);
     Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
@@ -680,12 +710,20 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
         if (EditorRepo.IsGridBoard(board))
         {
             await using var validation = File.OpenRead(tempPath);
-            _ = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+            LogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
                 tempPath,
                 validation,
                 EditorRepo.RequireGridCellSizeCm(board));
 
-            File.Copy(tempPath, outFile, overwrite: true);
+            if (EditorRepo.IsLogicTerrainDataFile(dataFile))
+            {
+                await using var outFs = File.Create(outFile);
+                LogicTerrainBinary.Write(outFs, terrain);
+            }
+            else
+            {
+                File.Copy(tempPath, outFile, overwrite: true);
+            }
         }
         else if (EditorRepo.IsHexGridBoard(board))
         {
@@ -706,7 +744,11 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
         try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
     }
 
-    return Results.Ok(new { ok = true, path = outFile });
+    string? mapPath = mapConfigDataFileAssigned
+        ? EditorRepo.WriteWritableMapConfig(ctx, mapId, mapR.Map)
+        : null;
+
+    return Results.Ok(new { ok = true, path = outFile, mapPath });
 });
 
 app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
@@ -886,11 +928,12 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             for (int i = 0; i < navBakeResult.Entries.Count; i++)
             {
                 var r = navBakeResult.Entries[i];
-                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
-                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                using (var fs = File.Create(outFile))
+                if (writeArtifact)
                 {
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
+                    string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+                    using var fs = File.Create(outFile);
                     NavTileBinary.Write(fs, r.Tile);
                 }
 
@@ -1727,8 +1770,8 @@ static bool TryBuildEditorUploadRecastContext(
             Targets = targets,
             BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
             TileVersion = (uint)tileVersion,
-            Mode = bakeConfig.ParsedMode,
-            Algorithm = bakeConfig.ParsedAlgorithm,
+            Mode = NavBakeMode.Offline,
+            Algorithm = NavBakeAlgorithmKind.Recast,
             Execution = new NavBakeExecutionOptions
             {
                 Parallel = parallel,
@@ -2311,7 +2354,7 @@ static class EditorRepo
         bool dataFileExists = hasDataFile && TryResolveDataFile(ctx, board.DataFile, out _, out _);
         bool chunkSizeEditable = chunkSizeCells == Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells;
         bool canUseVirtualEmptyTerrain = topologyError == null && !dataFileExists && CanServeVirtualEmptyTerrain(mapId, board);
-        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && hasDataFile && (dataFileExists || canUseVirtualEmptyTerrain);
+        bool canEditTerrain = topologyError == null && supportedTerrainTopology && chunkSizeEditable && (dataFileExists || canUseVirtualEmptyTerrain);
         bool canBake = canEditTerrain && board.NavigationEnabled;
         string reason =
             topologyError != null ? topologyError :
@@ -2757,7 +2800,7 @@ static class EditorRepo
         return Path.Combine(mod.RootPath, "assets", "Data", "Maps", rel);
     }
 
-    private static string WriteWritableMapConfig(ModContext ctx, string mapId, Ludots.Core.Config.MapConfig map)
+    public static string WriteWritableMapConfig(ModContext ctx, string mapId, Ludots.Core.Config.MapConfig map)
     {
         map.Id = mapId;
         string outFile = ResolveWritableMapConfigPath(ctx, mapId);
@@ -2818,26 +2861,114 @@ static class EditorRepo
         }
     }
 
-    private static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
+    public static string BuildDefaultBoardDataFile(string mapId, string boardName, string spatialType)
     {
-        string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".vtxm" : ".bin";
+        string extension = string.Equals(spatialType, "HexGrid", StringComparison.Ordinal) ? ".vtxm" : ".ltrn";
         return $"{SanitizeId(mapId)}_{SanitizeId(boardName)}{extension}";
     }
 
     public static bool CanServeVirtualEmptyTerrain(string mapId, Ludots.Core.Map.Board.BoardConfig board)
     {
         if (string.IsNullOrWhiteSpace(mapId)) return false;
-        if (string.IsNullOrWhiteSpace(board.DataFile)) return false;
         if (board.WidthInMacroTiles <= 0 || board.HeightInMacroTiles <= 0) return false;
         string spatialType = NormalizeSpatialType(board);
-        if (!string.Equals(spatialType, "Grid", StringComparison.Ordinal) &&
-            !string.Equals(spatialType, "HexGrid", StringComparison.Ordinal))
+        if (!string.Equals(spatialType, "Grid", StringComparison.Ordinal))
         {
             return false;
         }
 
+        if (string.IsNullOrWhiteSpace(board.DataFile)) return true;
+
         string defaultDataFile = BuildDefaultBoardDataFile(mapId, board.Name, spatialType);
         return string.Equals(board.DataFile.Trim(), defaultDataFile, StringComparison.Ordinal);
+    }
+
+    public static bool IsLogicTerrainDataFile(string dataFile)
+    {
+        return string.Equals(Path.GetExtension(dataFile), ".ltrn", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static byte[] WriteReactTerrainBinary(LogicTerrainField terrain)
+    {
+        if (terrain == null) throw new ArgumentNullException(nameof(terrain));
+        if (terrain.Topology != LogicTerrainTopology.Grid)
+        {
+            throw new InvalidOperationException($"React terrain export only supports Grid LogicTerrain, got '{terrain.Topology}'.");
+        }
+
+        int chunkSize = terrain.ChunkSizeCells;
+        if (chunkSize != Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells)
+        {
+            throw new InvalidOperationException(
+                $"React terrain export requires ChunkSizeCells={Ludots.Core.Spatial.SpatialScaleDefaults.TerrainChunkCells}; terrain uses {chunkSize}.");
+        }
+
+        const int reactCellStride = 4;
+        int cellsPerChunk = checked(chunkSize * chunkSize);
+        int reactChunkBytes = checked(cellsPerChunk * reactCellStride);
+        using var ms = new MemoryStream();
+        using var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true);
+        bw.Write(terrain.WidthChunks);
+        bw.Write(terrain.HeightChunks);
+        bw.Write(ReactMapDataBinConverter.ReactSparseFormatVersion);
+
+        using var body = new MemoryStream();
+        using var bodyWriter = new BinaryWriter(body, Encoding.UTF8, leaveOpen: true);
+        int residentChunkCount = 0;
+        byte[] chunkBytes = new byte[reactChunkBytes];
+
+        for (int cy = 0; cy < terrain.HeightChunks; cy++)
+        {
+            for (int cx = 0; cx < terrain.WidthChunks; cx++)
+            {
+                Array.Clear(chunkBytes, 0, chunkBytes.Length);
+                bool hasAuthoredCell = false;
+                for (int ly = 0; ly < chunkSize; ly++)
+                {
+                    int row = cy * chunkSize + ly;
+                    for (int lx = 0; lx < chunkSize; lx++)
+                    {
+                        int col = cx * chunkSize + lx;
+                        if (!terrain.IsInBounds(col, row))
+                        {
+                            continue;
+                        }
+
+                        LogicTerrainCell cell = terrain.GetCell(col, row);
+                        int index = ((ly * chunkSize) + lx) * reactCellStride;
+                        byte height = (byte)Math.Min(15, (int)cell.HeightLevel);
+                        byte water = (byte)Math.Min(15, (int)cell.WaterHeightLevel);
+                        byte flags = 0;
+                        if (cell.IsRamp) flags |= 0b1000_0000;
+                        if (cell.IsBlocked) flags |= 0b0000_1000;
+
+                        chunkBytes[index] = (byte)((height << 4) | water);
+                        chunkBytes[index + 2] = flags;
+                        chunkBytes[index + 3] = cell.AreaId;
+                        hasAuthoredCell |= height != 0 ||
+                            water != 0 ||
+                            flags != 0 ||
+                            cell.AreaId != 0;
+                    }
+                }
+
+                if (!hasAuthoredCell)
+                {
+                    continue;
+                }
+
+                bodyWriter.Write(cx);
+                bodyWriter.Write(cy);
+                bodyWriter.Write(chunkBytes);
+                residentChunkCount++;
+            }
+        }
+
+        bw.Write(residentChunkCount);
+        body.Position = 0;
+        body.CopyTo(ms);
+        bw.Flush();
+        return ms.ToArray();
     }
 
     public static byte[] CreateEmptyReactTerrainHeader(Ludots.Core.Map.Board.BoardConfig board)
@@ -2873,7 +3004,20 @@ static class EditorRepo
             WriteEmptyReactTerrainBin(tempReactPath, widthChunks, heightChunks);
             if (string.Equals(board.SpatialType, "Grid", StringComparison.Ordinal))
             {
-                File.Copy(tempReactPath, outFile, overwrite: false);
+                if (IsLogicTerrainDataFile(board.DataFile))
+                {
+                    using var input = File.OpenRead(tempReactPath);
+                    LogicTerrainField terrain = ReactMapDataBinConverter.ReadGridLogicTerrainField(
+                        tempReactPath,
+                        input,
+                        board.GridCellSizeCm > 0 ? board.GridCellSizeCm : Ludots.Core.Spatial.SpatialScaleDefaults.CellCm);
+                    using var output = File.Create(outFile);
+                    LogicTerrainBinary.Write(output, terrain);
+                }
+                else
+                {
+                    File.Copy(tempReactPath, outFile, overwrite: false);
+                }
                 return;
             }
 

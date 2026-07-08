@@ -7,6 +7,8 @@
 *   [ADR-0001 文档 SSOT 分层结构](ADR-0001-docs-ssot-layout.md)
 *   [ADR-0002 统一 UI Runtime 与三前端写法](ADR-0002-unified-ui-runtime-and-authoring-models.md)
 *   [ADR-0003 Exchange Operation 与 Scope Key 身份模型](ADR-0003-exchange-operation-scope-key.md)
+*   [ADR-0004 In-session Transport Network Editor Boundary](ADR-0004-transport-network-editor-boundary.md)
+*   [ADR-0005 Live Map Editor Phase 2 Parity Boundary](ADR-0005-live-map-editor-phase2-parity-boundary.md)
 
 ## 2 编写规则
 

@@ -1,8 +1,8 @@
 {
   "agentTypes": [
     {
-      "id": "Humanoid",
-      "profileId": "Small",
+      "id": "Transport.FootScout",
+      "profileId": "Transport.FootScout",
       "selection": {
         "mode": "PreferGraph",
         "graphBias": 0.0,
@@ -18,8 +18,60 @@
       "nodeGraph": {
         "projectionMaxRadiusCm": 200000,
         "useDynamicOverlay": true,
-        "forbiddenTagsAny": [],
+        "forbiddenTagsAny": ["Transport.Area.Water"],
         "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "Transport.Area.Crossing", "costMul": 1.0, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "Transport.ShallowBoat",
+      "profileId": "Transport.ShallowBoat",
+      "selection": {
+        "mode": "PreferGraph",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": true,
+        "forbiddenTagsAny": ["Transport.Area.Land", "Transport.Area.Crossing"],
+        "requiredTagsAll": ["Transport.Area.Water"],
+        "tagCostRules": [
+          { "tag": "Transport.Flow.Downstream", "costMul": 1.0, "costAdd": 0.0, "block": false },
+          { "tag": "Transport.Flow.Upstream", "costMul": 2.0, "costAdd": 0.0, "block": false },
+          { "tag": "Transport.Area.DeepWater", "costMul": 1.12, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "Transport.DeepDraftShip",
+      "profileId": "Transport.DeepDraftShip",
+      "selection": {
+        "mode": "PreferGraph",
+        "graphBias": 0.0,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 200000,
+        "useDynamicOverlay": true,
+        "forbiddenTagsAny": ["Transport.Area.Land", "Transport.Area.Crossing"],
+        "requiredTagsAll": ["Transport.Area.Water"],
         "tagCostRules": [
           { "tag": "Transport.Flow.Downstream", "costMul": 1.0, "costAdd": 0.0, "block": false },
           { "tag": "Transport.Flow.Upstream", "costMul": 2.0, "costAdd": 0.0, "block": false }

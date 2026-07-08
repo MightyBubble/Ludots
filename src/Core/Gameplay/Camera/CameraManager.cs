@@ -67,6 +67,14 @@ namespace Ludots.Core.Gameplay.Camera
             CopyState(State, PreviousState);
         }
 
+        public void UpdateRuntimeProviders(
+            Func<WorldAabbCm>? targetBoundsProvider = null,
+            Func<IVisualHeightmap?>? visualHeightmapProvider = null)
+        {
+            _targetBoundsProvider = targetBoundsProvider;
+            _visualHeightmapProvider = visualHeightmapProvider;
+        }
+
         public void SetVirtualCameraRegistry(VirtualCameraRegistry registry)
         {
             VirtualCameraBrain = new VirtualCameraBrain(registry);

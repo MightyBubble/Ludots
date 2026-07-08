@@ -1,0 +1,14 @@
+{
+  "name": "LiveMapEditorIntegratedUatMod",
+  "version": "1.0.0",
+  "description": "Resource-only integrated UAT map for live terrain, navmesh, and transport network editing in one session.",
+  "main": "",
+  "priority": -10,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "LiveMapEditorMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["uat", "map-editor", "navigation", "transport-network"]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "LiveMapEditor.Camera.IntegratedNavTransport",
+    "displayName": "Live Map Editor Integrated Nav Transport",
+    "priority": 110,
+    "rigKind": "Orbit",
+    "targetHeightMode": "VisualHeightmap",
+    "distanceCm": 18000,
+    "pitch": 50,
+    "fovYDeg": 55,
+    "yaw": 180,
+    "minDistanceCm": 6000,
+    "maxDistanceCm": 48000,
+    "minPitchDeg": 35,
+    "maxPitchDeg": 72,
+    "panMode": "Keyboard",
+    "panCmPerSecond": 12000,
+    "enableGrabDrag": true,
+    "rotateMode": "None",
+    "enableZoom": true,
+    "zoomCmPerWheel": 3000,
+    "followMode": "None",
+    "confineTargetToWorldBounds": true,
+    "confinePaddingCm": 0,
+    "allowUserInput": true
+  }
+]

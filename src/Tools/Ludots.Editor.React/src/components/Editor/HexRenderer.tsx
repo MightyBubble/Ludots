@@ -607,7 +607,10 @@ export const HexRenderer: React.FC = () => {
         if (navQueryPointGroupRef.current) navQueryPointGroupRef.current.visible = canvasCanSim;
         if (cursorMeshRef.current && !canvasHasVisibleSession) cursorMeshRef.current.visible = false;
         if (controlsRef.current) controlsRef.current.enabled = canvasHasVisibleSession;
-        if (rendererRef.current) rendererRef.current.domElement.style.visibility = canvasHasVisibleSession ? 'visible' : 'hidden';
+        if (rendererRef.current) {
+            rendererRef.current.domElement.style.visibility = canvasHasVisibleSession ? 'visible' : 'hidden';
+            rendererRef.current.domElement.style.pointerEvents = canvasHasVisibleSession ? 'auto' : 'none';
+        }
     }, [canvasHasVisibleSession, canvasCanSim]);
 
     useEffect(() => {
@@ -1574,6 +1577,14 @@ export const HexRenderer: React.FC = () => {
     };
 
     const handleMouseDown = (e: React.MouseEvent) => {
+        if (!canvasHasVisibleSession) {
+            e.preventDefault();
+            e.stopPropagation();
+            isDraggingRef.current = false;
+            lastDragCellRef.current = null;
+            return;
+        }
+
         if (canvasInputLocked) {
             if (e.button === 0 || e.button === 2) {
                 e.preventDefault();
@@ -1619,6 +1630,11 @@ export const HexRenderer: React.FC = () => {
     };
 
     const handleMouseMove = (e: React.MouseEvent) => {
+        if (!canvasHasVisibleSession) {
+            if (cursorMeshRef.current) cursorMeshRef.current.visible = false;
+            return;
+        }
+
         const cell = getCellFromEvent(e.clientX, e.clientY);
         
         // Update Cursor
@@ -1657,6 +1673,13 @@ export const HexRenderer: React.FC = () => {
         lastDragCellRef.current = null;
     };
 
+    const stopCanvasOverlayMouseEvent = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDraggingRef.current = false;
+        lastDragCellRef.current = null;
+    };
+
     return (
         <div 
             ref={containerRef} 
@@ -1670,7 +1693,13 @@ export const HexRenderer: React.FC = () => {
             }}
         >
             {!canvasHasVisibleSession ? (
-                <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950">
+                <div
+                    className="pointer-events-auto absolute inset-0 z-20 flex items-center justify-center bg-slate-950"
+                    onMouseDown={stopCanvasOverlayMouseEvent}
+                    onMouseMove={stopCanvasOverlayMouseEvent}
+                    onMouseUp={stopCanvasOverlayMouseEvent}
+                    onContextMenu={stopCanvasOverlayMouseEvent}
+                >
                     <div className="max-w-[420px] rounded-lg border border-slate-700 bg-slate-900/95 p-5 text-center text-slate-200 shadow-2xl">
                         <div className="text-sm font-semibold text-white">No Board Open</div>
                         <div className="mt-2 text-xs leading-5 text-slate-400">
@@ -1679,7 +1708,13 @@ export const HexRenderer: React.FC = () => {
                     </div>
                 </div>
             ) : canvasInputLocked ? (
-                <div className="pointer-events-none absolute left-1/2 top-28 z-20 w-[340px] -translate-x-1/2 rounded-lg border border-amber-700/70 bg-slate-950/90 p-3 text-center text-amber-100 shadow-2xl backdrop-blur-md">
+                <div
+                    className="pointer-events-auto absolute left-1/2 top-28 z-20 w-[340px] -translate-x-1/2 rounded-lg border border-amber-700/70 bg-slate-950/90 p-3 text-center text-amber-100 shadow-2xl backdrop-blur-md"
+                    onMouseDown={stopCanvasOverlayMouseEvent}
+                    onMouseMove={stopCanvasOverlayMouseEvent}
+                    onMouseUp={stopCanvasOverlayMouseEvent}
+                    onContextMenu={stopCanvasOverlayMouseEvent}
+                >
                     <div className="text-xs font-semibold">{canvasLockTitle}</div>
                     <div className="mt-1 text-[11px] leading-4 text-amber-100/80">{canvasLockMessage}</div>
                 </div>

@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "LiveMapEditor_TogglePanel", "name": "LiveMapEditor_TogglePanel", "type": "Button" },
+    { "id": "LiveMapEditor_Primary", "name": "LiveMapEditor_Primary", "type": "Button" },
+    { "id": "LiveMapEditor_Secondary", "name": "LiveMapEditor_Secondary", "type": "Button" },
+    { "id": "LiveMapEditor_Pointer", "name": "LiveMapEditor_Pointer", "type": "Axis2D" }
+  ],
+  "contexts": [
+    {
+      "id": "LiveMapEditor_Viewport",
+      "name": "Live Map Editor Viewport",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "LiveMapEditor_TogglePanel", "path": "<Keyboard>/f4" },
+        { "actionId": "LiveMapEditor_Primary", "path": "<Mouse>/leftButton" },
+        { "actionId": "LiveMapEditor_Secondary", "path": "<Mouse>/rightButton" },
+        { "actionId": "LiveMapEditor_Pointer", "path": "<Mouse>/Position" }
+      ]
+    }
+  ]
+}

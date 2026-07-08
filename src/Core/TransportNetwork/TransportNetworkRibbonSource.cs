@@ -16,6 +16,15 @@ namespace Ludots.Core.TransportNetwork
 
         public IReadOnlyDictionary<long, int> ActiveScopes => _activeScopes;
 
+        public static int ComposeDefaultSurfaceScopeId(long chunkKey)
+        {
+            unchecked
+            {
+                int mixed = (int)(chunkKey ^ (chunkKey >> 32));
+                return 700000000 + Math.Abs(mixed % 100000000);
+            }
+        }
+
         public void SyncPayloads(
             IEnumerable<long> activeChunkKeys,
             SurfaceSourcePayloadRegistry payloads,

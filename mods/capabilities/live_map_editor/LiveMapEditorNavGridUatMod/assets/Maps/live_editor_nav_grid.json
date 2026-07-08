@@ -1,0 +1,39 @@
+{
+  "Id": "live_editor_nav_grid",
+  "ParentId": "nav_editor_grid",
+  "Tags": ["Feature.NavMesh:On"],
+  "Metadata": {
+    "liveMapEditor": {
+      "saveTarget": true
+    }
+  },
+  "DefaultCamera": {
+    "VirtualCameraId": "LiveMapEditor.Camera.AuthoringGrid",
+    "TargetXCm": 12800,
+    "TargetYCm": 12800,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 18000,
+    "FovYDeg": 55
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "NavigationEnabled": true
+    },
+    {
+      "Name": "board_2",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 16,
+      "HeightInMacroTiles": 16,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "NavigationEnabled": true
+    }
+  ]
+}

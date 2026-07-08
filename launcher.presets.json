@@ -192,6 +192,51 @@
       }
     },
     {
+      "id": "live_map_editor_nav_grid_cef_raylib",
+      "name": "Live Map Editor Nav Grid CEF Raylib",
+      "selectors": [
+        "$live_map_editor_nav_grid_uat",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "live_map_editor_integrated_nav_transport_cef_raylib",
+      "name": "Live Map Editor Integrated Nav + Transport CEF Raylib",
+      "selectors": [
+        "$live_map_editor_integrated_nav_transport_uat",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
+      "id": "live_map_editor_transport_network_cef_raylib",
+      "name": "Live Map Editor Transport Network Debug Only CEF Raylib",
+      "selectors": [
+        "$capability_standard_transport_network",
+        "$live_map_editor"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

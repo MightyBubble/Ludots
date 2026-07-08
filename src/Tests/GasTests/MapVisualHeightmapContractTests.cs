@@ -196,6 +196,40 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_WhenGridTerrainHasNoVisualHeightmapDeclared_BindsDerivedLogicTerrainRenderSource()
+        {
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "boards": [
+                {
+                  "name": "default",
+                  "spatialType": "Grid",
+                  "widthInMacroTiles": 1,
+                  "heightInMacroTiles": 1,
+                  "gridCellSizeCm": 100,
+                  "chunkSizeCells": 4,
+                  "navigationEnabled": false
+                }
+              ]
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.Multiple(() =>
+            {
+                Assert.That(heightmap.GetType().FullName, Is.EqualTo("Ludots.Core.Presentation.Terrain.LogicTerrainVisualHeightmapAdapter"));
+                Assert.That(engine.CurrentMapSession.VisualHeightmap, Is.SameAs(heightmap));
+                Assert.That(heightmap, Is.AssignableTo<IVisualTerrainRenderFeatureSource>());
+                Assert.That(heightmap.TrySampleHeightCm(50f, 50f, out float heightCm), Is.True);
+                Assert.That(heightCm, Is.EqualTo(0f).Within(0.001f));
+            });
+        }
+
+        [Test]
         public void PushAndPopMap_WhenOuterMapHasNoVisualHeightmap_ClearsFocusedTruthOnRestore()
         {
             WriteHeightmap("inner.vhtm", 125);

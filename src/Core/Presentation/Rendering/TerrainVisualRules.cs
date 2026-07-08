@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Presentation.Terrain;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -55,6 +56,30 @@ namespace Ludots.Core.Presentation.Rendering
                 float hue = (extraByte0 * 137.508f) % 360f;
                 Vector3 tCol = HslToRgb(hue / 360f, 0.7f, 0.5f);
                 rgb = Vector3.Lerp(rgb, tCol, 0.3f);
+            }
+
+            return new Vector4(rgb, 1f);
+        }
+
+        public static Vector4 GetTerrainFeatureColor(in VisualTerrainRenderCell cell)
+        {
+            Vector4 baseColor = GetVertexColor(
+                cell.HeightLevel,
+                biome: 0,
+                extraFlag0: false,
+                extraFlag1: false,
+                extraFlag2: false,
+                cell.AreaId);
+            Vector3 rgb = new(baseColor.X, baseColor.Y, baseColor.Z);
+
+            if (cell.HasWater && cell.WaterHeightCm > cell.SurfaceHeightCm)
+            {
+                rgb = Vector3.Lerp(rgb, HexToRgb(0x1D4ED8), 0.18f);
+            }
+
+            if (cell.IsBlocked)
+            {
+                rgb = Vector3.Lerp(rgb, HexToRgb(0x7F1D1D), 0.75f);
             }
 
             return new Vector4(rgb, 1f);
@@ -146,4 +171,3 @@ namespace Ludots.Core.Presentation.Rendering
         }
     }
 }
-

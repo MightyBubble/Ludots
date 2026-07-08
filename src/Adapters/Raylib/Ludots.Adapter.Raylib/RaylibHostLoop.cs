@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Input.Automation;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
@@ -135,6 +136,19 @@ namespace Ludots.Adapter.Raylib
             public string Key { get; init; } = string.Empty;
 
             public string KeyText { get; init; } = string.Empty;
+        }
+
+        private sealed class FrameCaptureConfig
+        {
+            public bool Enabled { get; init; }
+
+            public string Directory { get; init; } = string.Empty;
+
+            public int StartFrame { get; init; }
+
+            public int EndFrame { get; init; }
+
+            public int EveryFrames { get; init; }
         }
 
         private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
@@ -305,13 +319,7 @@ namespace Ludots.Adapter.Raylib
                 string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
                     ? null
                     : Path.GetFullPath(screenshotPath);
-                string? screenshotFileName = string.IsNullOrWhiteSpace(screenshotTargetPath)
-                    ? null
-                    : Path.GetFileName(screenshotTargetPath);
-                string? screenshotWorkingPath = string.IsNullOrWhiteSpace(screenshotFileName)
-                    ? null
-                    : Path.Combine(Environment.CurrentDirectory, screenshotFileName);
-                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotFileName);
+                bool screenshotPending = !string.IsNullOrWhiteSpace(screenshotTargetPath);
                 int screenshotFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
@@ -334,6 +342,7 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                FrameCaptureConfig frameCapture = ReadFrameCaptureConfig();
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
@@ -394,10 +403,17 @@ namespace Ludots.Adapter.Raylib
                         bool uiCaptured = false;
                         bool uiWheelCaptured = false;
                         bool uiInputHandled = false;
+                        InputAutomationPlayer? inputAutomationPlayer = engine.GetService(CoreServiceKeys.InputAutomationPlayer);
+                        if (inputAutomationPlayer != null)
+                        {
+                            inputAutomationPlayer.UsesExternalFrameClock = true;
+                            inputAutomationPlayer.SetFrame(frameIndex);
+                        }
+
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath, inputAutomationPlayer);
                             uiCaptured = uiInput.PointerCaptured;
                             uiWheelCaptured = uiInput.WheelCaptured;
                             uiInputHandled = uiInput.Handled;
@@ -674,11 +690,6 @@ namespace Ludots.Adapter.Raylib
                             runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotTargetPath!;
-                            string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
-                            if (!string.IsNullOrWhiteSpace(screenshotDirectory))
-                            {
-                                Directory.CreateDirectory(screenshotDirectory);
-                            }
 
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
@@ -693,18 +704,26 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
                             long screenshotStart = Stopwatch.GetTimestamp();
-                            Rl.TakeScreenshot(screenshotFileName!);
-                            if (!string.IsNullOrWhiteSpace(screenshotWorkingPath) &&
-                                !string.Equals(screenshotWorkingPath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
-                                File.Exists(screenshotWorkingPath))
-                            {
-                                File.Copy(screenshotWorkingPath, fullScreenshotPath, overwrite: true);
-                                File.Delete(screenshotWorkingPath);
-                            }
+                            SaveRaylibScreenshot(fullScreenshotPath);
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             screenshotPending = false;
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
+                        }
+
+                        if (frameCapture.Enabled &&
+                            frameIndex >= frameCapture.StartFrame &&
+                            (frameCapture.EndFrame <= 0 || frameIndex <= frameCapture.EndFrame) &&
+                            ((frameIndex - frameCapture.StartFrame) % frameCapture.EveryFrames) == 0)
+                        {
+                            string framePath = Path.Combine(frameCapture.Directory, $"frame-{frameIndex:D06}.png");
+                            long screenshotStart = Stopwatch.GetTimestamp();
+                            SaveRaylibScreenshot(framePath);
+                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
+                            if (timingLogIntervalFrames > 0)
+                            {
+                                AppendRaylibDiagnostic(diagnosticPath, $"frame-capture frame={frameIndex} path={framePath}");
+                            }
                         }
 
                         if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
@@ -837,6 +856,55 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static FrameCaptureConfig ReadFrameCaptureConfig()
+        {
+            string? rawDirectory = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_FRAME_CAPTURE_DIR");
+            if (string.IsNullOrWhiteSpace(rawDirectory))
+            {
+                return new FrameCaptureConfig();
+            }
+
+            string directory = Path.GetFullPath(rawDirectory);
+            Directory.CreateDirectory(directory);
+            int startFrame = Math.Max(1, ReadEnvIntOrDefault("LUDOTS_RAYLIB_FRAME_CAPTURE_START_FRAME", 1));
+            int endFrame = Math.Max(0, ReadEnvIntOrDefault("LUDOTS_RAYLIB_FRAME_CAPTURE_END_FRAME", 0));
+            int everyFrames = Math.Max(1, ReadEnvIntOrDefault("LUDOTS_RAYLIB_FRAME_CAPTURE_EVERY_FRAMES", 1));
+            return new FrameCaptureConfig
+            {
+                Enabled = true,
+                Directory = directory,
+                StartFrame = startFrame,
+                EndFrame = endFrame,
+                EveryFrames = everyFrames
+            };
+        }
+
+        private static void SaveRaylibScreenshot(string fullPath)
+        {
+            string targetPath = Path.GetFullPath(fullPath);
+            string? directory = Path.GetDirectoryName(targetPath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string fileName = Path.GetFileName(targetPath);
+            string workingPath = Path.Combine(Environment.CurrentDirectory, fileName);
+            if (File.Exists(workingPath) &&
+                !string.Equals(workingPath, targetPath, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Delete(workingPath);
+            }
+
+            Rl.TakeScreenshot(fileName);
+            if (!string.Equals(workingPath, targetPath, StringComparison.OrdinalIgnoreCase) &&
+                File.Exists(workingPath))
+            {
+                File.Copy(workingPath, targetPath, overwrite: true);
+                File.Delete(workingPath);
+            }
         }
 
         private static SyntheticUiPlayback ReadSyntheticUiPlayback()
@@ -1091,8 +1159,14 @@ namespace Ludots.Adapter.Raylib
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
-        private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath)
+        private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath, InputAutomationPlayer? automationPlayer)
         {
+            if (automationPlayer != null &&
+                InputAutomationUiForwarder.Forward(uiRoot, automationPlayer, out bool automationPointerCaptured, out bool automationWheelCaptured))
+            {
+                return new UiInputFrameResult(Handled: true, PointerCaptured: automationPointerCaptured, WheelCaptured: automationWheelCaptured);
+            }
+
             if (syntheticUiPlayback.Enabled &&
                 HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath) is { Handled: true } syntheticResult)
             {

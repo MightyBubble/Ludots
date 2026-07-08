@@ -1,0 +1,53 @@
+{
+  "id": "live_editor.integrated_nav_transport",
+  "sampleStepCm": 600,
+  "defaultVisualWidthMeters": 2.2,
+  "nodes": [
+    { "id": "west_port", "xcm": 7200, "ycm": 12800, "kind": "Port", "tags": [] },
+    { "id": "east_port", "xcm": 18400, "ycm": 12800, "kind": "Port", "tags": [] },
+    { "id": "north_deep", "xcm": 12800, "ycm": 18400, "kind": "Normal", "tags": [] },
+    { "id": "south_ford", "xcm": 12800, "ycm": 7200, "kind": "Ford", "tags": [] },
+    { "id": "bridge", "xcm": 12800, "ycm": 12800, "kind": "Bridge", "tags": [] }
+  ],
+  "segments": [
+    {
+      "id": "river_shallow",
+      "points": [ { "nodeId": "west_port" }, { "nodeId": "bridge" }, { "nodeId": "east_port" } ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "Forward",
+      "areaId": "Transport.Area.Shallow",
+      "tags": ["Transport.Area.Water", "Transport.Area.River"],
+      "depthCm": 120,
+      "widthCm": 360,
+      "laneCount": 0,
+      "visualWidthMeters": 2.2
+    },
+    {
+      "id": "deep_channel",
+      "points": [ { "nodeId": "west_port" }, { "nodeId": "north_deep" }, { "nodeId": "east_port" } ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "None",
+      "areaId": "Transport.Area.DeepWater",
+      "tags": ["Transport.Area.Water", "Transport.Area.OpenSea"],
+      "depthCm": 600,
+      "widthCm": 1600,
+      "laneCount": 0,
+      "visualWidthMeters": 2.8
+    },
+    {
+      "id": "ford_link",
+      "points": [ { "nodeId": "west_port" }, { "nodeId": "south_ford" }, { "nodeId": "east_port" } ],
+      "sampleStepCm": 0,
+      "direction": "Bidirectional",
+      "flowDirection": "None",
+      "areaId": "Transport.Area.Land",
+      "tags": ["Transport.Area.Crossing"],
+      "depthCm": 0,
+      "widthCm": 0,
+      "laneCount": 0,
+      "visualWidthMeters": 1.5
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "Small",
+    "radiusCm": 30.0,
+    "heightCm": 180.0,
+    "clearanceCm": 40.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
+    "mass": 1.0,
+    "layer": 0
+  },
+  {
+    "id": "Transport.FootScout",
+    "radiusCm": 30.0,
+    "heightCm": 180.0,
+    "clearanceCm": 40.0,
+    "draftCm": 0.0,
+    "beamCm": 0.0,
+    "mass": 1.0,
+    "layer": 0
+  },
+  {
+    "id": "Transport.ShallowBoat",
+    "radiusCm": 80.0,
+    "heightCm": 180.0,
+    "clearanceCm": 20.0,
+    "draftCm": 100.0,
+    "beamCm": 300.0,
+    "mass": 6.0,
+    "layer": 0
+  },
+  {
+    "id": "Transport.DeepDraftShip",
+    "radiusCm": 180.0,
+    "heightCm": 420.0,
+    "clearanceCm": 80.0,
+    "draftCm": 500.0,
+    "beamCm": 1200.0,
+    "mass": 32.0,
+    "layer": 0
+  }
+]

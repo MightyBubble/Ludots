@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ludots Live Map Editor</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <strong>Live Map Editor</strong>
+          <span id="map-id">No map</span>
+        </div>
+        <div class="status-row">
+          <span id="transport-status">connecting</span>
+          <span id="command-status">command idle</span>
+          <span id="save-status">save idle</span>
+          <button id="new-map" type="button">New Map</button>
+          <button id="save-map" type="button">Save</button>
+        </div>
+      </header>
+
+      <aside class="panel left">
+        <section>
+          <h2>Tool</h2>
+          <div class="segmented" id="tool-tabs">
+            <button data-tool="inspect" type="button">Inspect</button>
+            <button data-tool="paint" type="button">Paint</button>
+            <button data-tool="entity" type="button">Entity</button>
+            <button data-tool="obstacle" type="button">Obstacle</button>
+            <button data-tool="sim" type="button">Sim</button>
+            <button data-tool="config" type="button">Config</button>
+            <button data-tool="map" type="button">Map</button>
+            <button data-tool="minimap" type="button">Minimap</button>
+            <button data-tool="transport" type="button">Transport</button>
+          </div>
+        </section>
+        <section>
+          <h2>Brush</h2>
+          <div class="segmented compact" id="brush-mode-tabs">
+            <button data-brush-mode="set" type="button">Set</button>
+            <button data-brush-mode="raise" type="button">Raise</button>
+            <button data-brush-mode="lower" type="button">Lower</button>
+          </div>
+          <label>Target
+            <select id="brush-target">
+              <option value="all">All</option>
+              <option value="height">Height</option>
+              <option value="water">Water</option>
+              <option value="area">Area</option>
+              <option value="cost">Cost</option>
+              <option value="blocked">Blocked</option>
+              <option value="ramp">Ramp</option>
+            </select>
+          </label>
+          <label>Radius cells <input id="brush-radius" type="number" min="0" max="64" value="2" /></label>
+          <label>Height level <input id="brush-height" type="number" min="0" max="255" value="0" /></label>
+          <label>Water height <input id="brush-water-height" type="number" min="0" max="255" value="0" /></label>
+          <label>Area id <input id="brush-area" type="number" min="0" max="255" value="0" /></label>
+          <label>Cost <input id="brush-cost" type="number" min="0.01" step="0.1" value="1" /></label>
+          <div class="checks">
+            <label><input id="brush-blocked" type="checkbox" /> Blocked</label>
+            <label><input id="brush-water" type="checkbox" /> Water</label>
+            <label><input id="brush-ramp" type="checkbox" /> Ramp</label>
+          </div>
+          <div class="button-grid">
+            <button id="paint-picked" type="button" disabled>Paint Picked</button>
+            <button id="water-bucket" type="button" disabled>Water Bucket</button>
+          </div>
+          <p class="command-message" id="brush-status">No picked cell</p>
+        </section>
+        <section>
+          <h2>View</h2>
+          <div class="checks stacked">
+            <label><input data-view-toggle="grid" type="checkbox" checked /> Grid</label>
+            <label><input data-view-toggle="chunks" type="checkbox" checked /> Chunks</label>
+            <label><input data-view-toggle="navmesh" type="checkbox" checked /> Navmesh</label>
+            <label><input data-view-toggle="path" type="checkbox" checked /> Path</label>
+            <label><input data-view-toggle="transport" type="checkbox" checked /> Transport</label>
+            <label><input data-view-toggle="entities" type="checkbox" checked /> Entities</label>
+            <label><input data-view-toggle="minimap" type="checkbox" checked /> Minimap</label>
+          </div>
+        </section>
+        <section>
+          <h2>Entity</h2>
+          <label>Template <input id="entity-template" type="text" value="unit.scout" list="entity-template-options" /></label>
+          <datalist id="entity-template-options"></datalist>
+          <button id="place-picked" type="button">Place At Pick</button>
+          <button id="select-picked" type="button">Select Near Pick</button>
+          <button id="remove-selected" type="button">Remove Selected</button>
+          <label>Override component <input id="entity-override-component" type="text" placeholder="WorldPositionCm" /></label>
+          <label>Override JSON <textarea id="entity-override-json" rows="5" spellcheck="false">{}</textarea></label>
+          <div class="button-grid">
+            <button id="set-entity-override" type="button">Set Override</button>
+            <button id="delete-entity-override" type="button">Delete Override</button>
+          </div>
+          <pre class="listbox" id="entity-overrides">No overrides</pre>
+        </section>
+        <section>
+          <h2>Obstacle</h2>
+          <label>Template <input id="obstacle-template" type="text" value="live_map_editor_obstacle" list="entity-template-options" /></label>
+          <label>Shape
+            <select id="obstacle-shape">
+              <option value="circle">Circle</option>
+              <option value="box">Box</option>
+              <option value="polygon">Polygon</option>
+            </select>
+          </label>
+          <div class="two-col">
+            <label>Radius cm <input id="obstacle-radius" type="number" min="1" value="120" /></label>
+            <label>Nav radius cm <input id="obstacle-nav-radius" type="number" min="1" value="120" /></label>
+          </div>
+          <div class="two-col">
+            <label>Half width cm <input id="obstacle-half-width" type="number" min="1" value="120" /></label>
+            <label>Half height cm <input id="obstacle-half-height" type="number" min="1" value="120" /></label>
+          </div>
+          <div class="checks stacked">
+            <label><input id="obstacle-sink-physics" type="checkbox" checked /> Physics</label>
+            <label><input id="obstacle-sink-nav" type="checkbox" checked /> Nav</label>
+          </div>
+          <label>Polygon local cm <textarea id="obstacle-polygon" rows="3" spellcheck="false">-120,-120 120,-120 120,120 -120,120</textarea></label>
+          <div class="button-grid">
+            <button id="set-obstacle" type="button">Apply</button>
+            <button id="place-obstacle" type="button">Place</button>
+            <button id="erase-obstacle" type="button">Erase</button>
+          </div>
+        </section>
+        <section>
+          <h2>Transport</h2>
+          <p class="hint unavailable-message" id="transport-unavailable">Transport unavailable</p>
+          <div class="segmented compact" id="transport-mode-tabs">
+            <button data-transport-mode="node" type="button">Node</button>
+            <button data-transport-mode="segment" type="button">Segment</button>
+            <button data-transport-mode="route" type="button">Route</button>
+          </div>
+          <label>Sample step cm <input id="transport-sample-step" type="number" min="1" value="600" /></label>
+          <label>Visual width m <input id="transport-default-width" type="number" min="0.01" step="0.1" value="2.2" /></label>
+          <button id="transport-apply-root" type="button">Apply Root</button>
+
+          <div class="subpanel">
+            <h3>Node</h3>
+            <label>Id <input id="transport-node-id" type="text" placeholder="auto" /></label>
+            <label>Kind
+              <select id="transport-node-kind">
+                <option>Normal</option>
+                <option>Port</option>
+                <option>Embark</option>
+                <option>Bridge</option>
+                <option>Ford</option>
+              </select>
+            </label>
+            <label>Tags <input id="transport-node-tags" type="text" placeholder="Transport.Hub" /></label>
+            <div class="button-grid">
+              <button id="transport-add-node" type="button">Add</button>
+              <button id="transport-select-node" type="button">Select</button>
+              <button id="transport-update-node" type="button">Update</button>
+              <button id="transport-move-node" type="button">Move</button>
+              <button id="transport-delete-node" type="button">Delete</button>
+            </div>
+          </div>
+
+          <div class="subpanel">
+            <h3>Segment</h3>
+            <label>Id <input id="transport-segment-id" type="text" placeholder="auto" /></label>
+            <label>Area id <input id="transport-segment-area" type="text" value="Transport.Area.River" /></label>
+            <label>Tags <input id="transport-segment-tags" type="text" value="Transport.Area.Water,Transport.Area.River" /></label>
+            <div class="two-col">
+              <label>Direction
+                <select id="transport-segment-direction">
+                  <option>Bidirectional</option>
+                  <option>ForwardOnly</option>
+                  <option>ReverseOnly</option>
+                </select>
+              </label>
+              <label>Flow
+                <select id="transport-segment-flow">
+                  <option>None</option>
+                  <option>Forward</option>
+                  <option>Reverse</option>
+                </select>
+              </label>
+            </div>
+            <div class="two-col">
+              <label>Depth cm <input id="transport-segment-depth" type="number" min="0" value="300" /></label>
+              <label>Width cm <input id="transport-segment-width" type="number" min="0" value="800" /></label>
+            </div>
+            <div class="two-col">
+              <label>Lanes <input id="transport-segment-lanes" type="number" min="0" value="0" /></label>
+              <label>Visual m <input id="transport-segment-visual" type="number" min="0" step="0.1" value="2.2" /></label>
+            </div>
+            <label>Sample step cm <input id="transport-segment-sample" type="number" min="0" value="0" /></label>
+            <div class="button-grid">
+              <button id="transport-begin-segment" type="button">Begin</button>
+              <button id="transport-add-point" type="button">Point</button>
+              <button id="transport-add-node-point" type="button">Snap Point</button>
+              <button id="transport-undo-point" type="button">Undo</button>
+              <button id="transport-commit-segment" type="button">Commit</button>
+              <button id="transport-select-segment" type="button">Select</button>
+              <button id="transport-update-segment" type="button">Update</button>
+              <button id="transport-insert-point" type="button">Insert Pt</button>
+              <button id="transport-move-point" type="button">Move Pt</button>
+              <button id="transport-delete-point" type="button">Del Pt</button>
+              <button id="transport-delete-segment" type="button">Delete</button>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <aside class="panel right">
+        <section id="map-section">
+          <h2>Map</h2>
+          <dl id="map-summary"></dl>
+          <dl id="map-lifecycle-summary"></dl>
+          <div class="subpanel">
+            <h3>Create New Map</h3>
+            <label>Map id <input id="create-map-id" type="text" value="live_editor_new_map" /></label>
+            <label>Board name <input id="create-map-board" type="text" value="default" /></label>
+            <div class="two-col">
+              <label>Topology
+                <select id="create-map-topology">
+                  <option value="Grid">Grid</option>
+                  <option value="HexGrid">HexGrid</option>
+                </select>
+              </label>
+              <label>Navigation <input id="create-map-nav" type="checkbox" checked /></label>
+            </div>
+            <div class="two-col">
+              <label>Width m <input id="create-map-width" type="number" min="0.01" step="0.1" value="512" /></label>
+              <label>Height m <input id="create-map-height" type="number" min="0.01" step="0.1" value="512" /></label>
+            </div>
+            <div class="two-col">
+              <label>Cell cm <input id="create-map-cell" type="number" min="1" value="100" /></label>
+              <label>Hex edge cm <input id="create-map-hex" type="number" min="1" value="400" /></label>
+            </div>
+            <dl class="allocation-preview" id="create-map-preview"></dl>
+            <div class="button-grid">
+              <button id="preview-create-map" type="button">Preview</button>
+              <button id="create-map" type="button">Create Map</button>
+              <button id="create-map-load" class="wide" type="button">Create &amp; Load</button>
+            </div>
+          </div>
+          <div class="subpanel">
+            <h3>Board Stack</h3>
+            <div class="listbox board-stack" id="board-stack">No authored boards</div>
+            <div class="two-col">
+              <label>Cell cm <input id="board-edit-cell" type="number" min="1" value="100" /></label>
+              <label>Hex edge cm <input id="board-edit-hex" type="number" min="1" value="400" /></label>
+            </div>
+            <div class="checks stacked">
+              <label><input id="board-edit-nav" type="checkbox" /> Navigation enabled</label>
+            </div>
+            <div class="button-grid">
+              <button id="update-board" type="button">Apply Board</button>
+              <button id="delete-board" type="button">Delete Board</button>
+              <button id="reload-map" type="button">Reload Map</button>
+            </div>
+          </div>
+          <div class="subpanel">
+            <h3>Add Board</h3>
+            <label>Name <input id="add-board-name" type="text" value="secondary" /></label>
+            <div class="two-col">
+              <label>Topology
+                <select id="add-board-topology">
+                  <option value="Grid">Grid</option>
+                  <option value="HexGrid">HexGrid</option>
+                </select>
+              </label>
+              <label>Navigation <input id="add-board-nav" type="checkbox" checked /></label>
+            </div>
+            <div class="two-col">
+              <label>Width m <input id="add-board-width" type="number" min="0.01" step="0.1" value="512" /></label>
+              <label>Height m <input id="add-board-height" type="number" min="0.01" step="0.1" value="512" /></label>
+            </div>
+            <div class="two-col">
+              <label>Cell cm <input id="add-board-cell" type="number" min="1" value="100" /></label>
+              <label>Hex edge cm <input id="add-board-hex" type="number" min="1" value="400" /></label>
+            </div>
+            <dl class="allocation-preview" id="add-board-preview"></dl>
+            <div class="button-grid">
+              <button id="preview-add-board" type="button">Preview</button>
+              <button id="add-board" type="button">Add Board</button>
+            </div>
+          </div>
+        </section>
+        <section>
+          <h2>Navigation</h2>
+          <dl id="nav-summary"></dl>
+          <div class="subpanel">
+            <h3>Config</h3>
+            <dl id="nav-config-summary"></dl>
+            <div class="two-col">
+              <label>Mode
+                <select id="nav-config-mode">
+                  <option value="runtime-incremental">Runtime CDT</option>
+                  <option value="offline">Offline</option>
+                </select>
+              </label>
+              <label>Algorithm
+                <select id="nav-config-algorithm">
+                  <option value="cdt">CDT</option>
+                  <option value="recast" disabled>Recast</option>
+                </select>
+              </label>
+            </div>
+            <div class="two-col">
+              <label>Tick tiles <input id="nav-runtime-budget" type="number" min="1" value="4" /></label>
+              <label>Height scale <input id="nav-runtime-height-scale" type="number" min="0.01" step="0.1" value="1" /></label>
+            </div>
+            <div class="two-col">
+              <label>Min up dot <input id="nav-runtime-up-dot" type="number" min="-1" max="1" step="0.01" value="0.6" /></label>
+              <label>Cliff level <input id="nav-runtime-cliff" type="number" min="0" value="1" /></label>
+            </div>
+            <div class="checks stacked">
+              <label><input id="nav-runtime-neighbors" type="checkbox" checked /> Runtime neighbors</label>
+            </div>
+            <div class="button-grid">
+              <button id="nav-config-save" type="button">Save Config</button>
+              <button id="nav-config-reload" type="button">Reload Config</button>
+            </div>
+
+            <div class="subpanel">
+              <h3>Agent Profile</h3>
+              <label>Id <input id="nav-agent-id" type="text" value="Small" /></label>
+              <div class="two-col">
+                <label>Radius cm <input id="nav-agent-radius" type="number" min="0.01" step="0.1" value="40" /></label>
+                <label>Height cm <input id="nav-agent-height" type="number" min="0.01" step="0.1" value="180" /></label>
+              </div>
+              <div class="two-col">
+                <label>Clearance cm <input id="nav-agent-clearance" type="number" min="0" step="0.1" value="40" /></label>
+                <label>Mass <input id="nav-agent-mass" type="number" min="0.01" step="0.1" value="1" /></label>
+              </div>
+              <div class="two-col">
+                <label>Draft cm <input id="nav-agent-draft" type="number" min="0" step="0.1" value="0" /></label>
+                <label>Beam cm <input id="nav-agent-beam" type="number" min="0" step="0.1" value="0" /></label>
+              </div>
+              <label>Layer <input id="nav-agent-layer" type="number" min="0" max="31" value="0" /></label>
+              <div class="button-grid">
+                <button id="nav-agent-upsert" type="button">Upsert Agent</button>
+                <button id="nav-agent-delete" type="button">Delete Agent</button>
+              </div>
+              <pre class="listbox" id="nav-agent-profiles">No agent profiles</pre>
+            </div>
+
+            <div class="subpanel">
+              <h3>Bake Profile</h3>
+              <label>Id <input id="nav-bake-profile-id" type="text" value="Small" /></label>
+              <div class="two-col">
+                <label>Max climb cm <input id="nav-bake-profile-climb" type="number" min="0" value="40" /></label>
+                <label>Max slope deg <input id="nav-bake-profile-slope" type="number" min="0" max="89" step="0.1" value="45" /></label>
+              </div>
+              <div class="button-grid">
+                <button id="nav-bake-profile-upsert" type="button">Upsert Bake</button>
+                <button id="nav-bake-profile-delete" type="button">Delete Bake</button>
+              </div>
+              <pre class="listbox" id="nav-bake-profiles">No bake profiles</pre>
+            </div>
+
+            <div class="two-col subpanel">
+              <div>
+                <h3>Layer</h3>
+                <label>Id <input id="nav-layer-id" type="text" value="Ground" /></label>
+                <label>Layer <input id="nav-layer-value" type="number" min="0" max="31" value="0" /></label>
+                <div class="button-grid">
+                  <button id="nav-layer-upsert" type="button">Upsert Layer</button>
+                  <button id="nav-layer-delete" type="button">Delete Layer</button>
+                </div>
+                <pre class="listbox" id="nav-layers">No layers</pre>
+              </div>
+              <div>
+                <h3>Area</h3>
+                <label>Id <input id="nav-area-id" type="text" value="Default" /></label>
+                <label>Area id <input id="nav-area-value" type="number" min="0" max="255" value="0" /></label>
+                <label>Cost <input id="nav-area-cost" type="number" min="0.01" step="0.1" value="1" /></label>
+                <div class="button-grid">
+                  <button id="nav-area-upsert" type="button">Upsert Area</button>
+                  <button id="nav-area-delete" type="button">Delete Area</button>
+                </div>
+                <pre class="listbox" id="nav-areas">No areas</pre>
+              </div>
+            </div>
+          </div>
+          <div class="two-col">
+            <label>Scope
+              <select id="bake-scope">
+                <option value="dirty">Dirty</option>
+                <option value="dirtyNeighbors">Dirty+N</option>
+                <option value="full">Full</option>
+              </select>
+            </label>
+            <label>Budget <input id="bake-budget" type="number" min="1" max="512" value="16" /></label>
+          </div>
+          <div class="checks">
+            <label><input id="bake-neighbors" type="checkbox" checked /> Neighbors</label>
+            <label><input id="bake-parallel" type="checkbox" /> Parallel</label>
+          </div>
+          <div class="button-grid">
+            <button id="estimate-bake" type="button">Estimate</button>
+            <button id="rebake" type="button">Bake</button>
+            <button id="clear-nav" type="button">Clear</button>
+          </div>
+          <div class="two-col">
+            <label>Profile
+              <select id="path-profile"></select>
+            </label>
+            <label>Layer <input id="path-layer" type="number" min="0" max="31" value="0" /></label>
+          </div>
+          <label>Max portals <input id="path-max-portals" type="number" min="1" max="4096" value="256" /></label>
+          <button id="query-path" type="button">Query Path</button>
+        </section>
+        <section>
+          <h2>Transport Network</h2>
+          <dl id="transport-summary"></dl>
+          <div class="button-grid">
+            <button id="transport-rebake" type="button">Bake</button>
+            <button id="transport-save" type="button">Save Asset</button>
+          </div>
+          <label>Agent
+            <select id="transport-agent"></select>
+          </label>
+          <button id="transport-query-route" type="button">Requery Route</button>
+          <p class="hint">Transport Route mode uses left click for start and right click for goal in the Raylib viewport.</p>
+          <div class="listbox" id="transport-nodes">No nodes</div>
+          <div class="listbox" id="transport-segments">No segments</div>
+        </section>
+        <section>
+          <h2>Simulation</h2>
+          <p id="sim-summary">Pick start with left click, goal with right click in Sim.</p>
+        </section>
+        <section>
+          <h2>Minimap</h2>
+          <canvas id="minimap" width="260" height="180"></canvas>
+        </section>
+      </aside>
+
+      <footer class="bottombar">
+        <span id="pick-status">No pick</span>
+        <span id="entity-status">No selection</span>
+        <span id="nav-status">Nav idle</span>
+      </footer>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
