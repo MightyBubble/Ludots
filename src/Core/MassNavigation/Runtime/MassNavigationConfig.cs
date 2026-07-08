@@ -327,6 +327,8 @@ public sealed class MassNavigationConfig
             "flowObstacleNeighborRadiusCells",
             "flowObstacleNeighborWeight",
             "flowObstacleAvoidanceWeight",
+            "crowdStampCenterCost",
+            "crowdStampNeighborCost",
             "coincidentPairHashBucketCount",
             "coincidentPairHashPrimeA",
             "coincidentPairHashPrimeB");

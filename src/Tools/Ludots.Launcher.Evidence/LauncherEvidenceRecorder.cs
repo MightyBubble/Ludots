@@ -97,6 +97,11 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationRemoteSettleTicks = 20;
     private const int MassNavigationReturnSettleTicks = 20;
     private const int MassNavigationSelectionSampleCount = 128;
+    private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
+    private const int MassNavigationAvoidanceExtraOrderTicks = 210;
+    private const int MassNavigationAvoidanceCrossingTicks = 420;
+    private const float MassNavigationAvoidanceZoomWidthCm = 4000f;
+    private const float MassNavigationAvoidanceCrossingScale = 0.2f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
     private static readonly Vector2 RoadSelectionWorldCm = new(-9800f, 0f);
     private static readonly Vector2 RoadCommandWorldCm = new(0f, 0f);
@@ -1947,12 +1952,29 @@ public static class LauncherEvidenceRecorder
 
         Entity[] selected = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
+        // The flow work area follows command focus, so capture the pre-command center now:
+        // the later crossing order mirrors the first target through this fixed point.
+        Vector2 initialWorkAreaCenter = new(simulation.FlowWorkAreaCenterXCm, simulation.FlowWorkAreaCenterYCm);
         Vector2 commandTarget = new(
-            simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
-            simulation.FlowWorkAreaCenterYCm + (simulation.SolverWindowHeightCm * 0.18f));
+            initialWorkAreaCenter.X + (simulation.SolverWindowWidthCm * 0.34f),
+            initialWorkAreaCenter.Y + (simulation.SolverWindowHeightCm * 0.18f));
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, commandTarget);
-        Tick(runtime, MassNavigationCommandSettleTicks, frameTimesMs);
+        string avoidanceDir = Path.Combine(screensDir, "avoidance");
+        Directory.CreateDirectory(avoidanceDir);
+        var avoidanceMetrics = new List<MassNavigationAvoidanceFrameMetrics>();
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_selection_order", captureImage: true);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
+
+        WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, minSettledFraction: 0.8f, maxTicks: 1800);
+        // March the commanded group back across the settled central crowd. The crossing target
+        // mirrors the first order target through the pre-command work-area center, scaled down so
+        // the destination-following solver window keeps the whole march inside the active play
+        // area (hard resolve is intentionally skipped outside it).
+        Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
+        SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, crossingTarget);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
+        WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
         Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
         MassNavigationHotZoneConfig remoteZone = ResolveRemoteHotZone(simulation);
@@ -2128,6 +2150,250 @@ public static class LauncherEvidenceRecorder
         }
 
         simulation.FocusCommandTarget(targetCm, selected);
+    }
+
+    private static void WaitForMassNavigationCrowdSettle(
+        RecordingRuntime runtime,
+        MassNavigationSimulationRuntime simulation,
+        List<double> frameTimesMs,
+        float minSettledFraction,
+        int maxTicks)
+    {
+        MassNavigationFlowSolverState flow = simulation.GetFlowSolverForTests();
+        for (int i = 0; i < maxTicks; i++)
+        {
+            if (flow.UnitCount > 0 && flow.SettledUnitCount >= flow.UnitCount * minSettledFraction)
+            {
+                return;
+            }
+
+            Tick(runtime, 1, frameTimesMs);
+        }
+    }
+
+    private static void CaptureMassNavigationAvoidanceSequence(
+        RecordingRuntime runtime,
+        MassNavigationSimulationRuntime simulation,
+        Vector2 commandTargetCm,
+        string framesDir,
+        List<double> frameTimesMs,
+        List<MassNavigationAvoidanceFrameMetrics> metrics,
+        int tickCount)
+    {
+        for (int i = 0; i < tickCount; i++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            if (i % MassNavigationAvoidanceFrameIntervalTicks != 0)
+            {
+                continue;
+            }
+
+            CaptureMassNavigationAvoidanceZoomFrame(simulation, commandTargetCm, framesDir, metrics);
+        }
+    }
+
+    private static void CaptureMassNavigationAvoidanceZoomFrame(
+        MassNavigationSimulationRuntime simulation,
+        Vector2 commandTargetCm,
+        string framesDir,
+        List<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        MassNavigationFlowSolverState flow = simulation.GetFlowSolverForTests();
+        int unitCount = flow.UnitCount;
+        if (unitCount <= 0)
+        {
+            return;
+        }
+
+        float centroidX = 0f;
+        float centroidY = 0f;
+        int selectedCount = 0;
+        for (int i = 0; i < unitCount; i++)
+        {
+            if (!flow.IsSelected(i))
+            {
+                continue;
+            }
+
+            centroidX += simulation.ToWorldXCm(flow.GetPositionX(i));
+            centroidY += simulation.ToWorldYCm(flow.GetPositionY(i));
+            selectedCount++;
+        }
+
+        if (selectedCount <= 0)
+        {
+            return;
+        }
+
+        centroidX /= selectedCount;
+        centroidY /= selectedCount;
+
+        float zoomWidthCm = MassNavigationAvoidanceZoomWidthCm;
+        float zoomHeightCm = zoomWidthCm * 9f / 16f;
+        float minXCm = centroidX - (zoomWidthCm * 0.5f);
+        float maxXCm = centroidX + (zoomWidthCm * 0.5f);
+        float minYCm = centroidY - (zoomHeightCm * 0.5f);
+        float maxYCm = centroidY + (zoomHeightCm * 0.5f);
+
+        const int imageWidth = 1280;
+        const int imageHeight = 720;
+        float pxPerCm = imageWidth / zoomWidthCm;
+
+        bool IsInsideActiveField(int agentIndex)
+        {
+            float localX = flow.GetPositionX(agentIndex);
+            float localY = flow.GetPositionY(agentIndex);
+            return localX >= flow.PlayAreaMinXCm && localX <= flow.PlayAreaMaxXCm &&
+                localY >= flow.PlayAreaMinYCm && localY <= flow.PlayAreaMaxYCm;
+        }
+
+        var visibleAgents = new List<int>(512);
+        var inFieldAgents = new List<int>(512);
+        for (int i = 0; i < unitCount; i++)
+        {
+            float worldX = simulation.ToWorldXCm(flow.GetPositionX(i));
+            float worldY = simulation.ToWorldYCm(flow.GetPositionY(i));
+            if (worldX >= minXCm && worldX <= maxXCm && worldY >= minYCm && worldY <= maxYCm)
+            {
+                visibleAgents.Add(i);
+                if (IsInsideActiveField(i))
+                {
+                    inFieldAgents.Add(i);
+                }
+            }
+        }
+
+        // Hard resolve intentionally skips agents outside the solver play area
+        // (IsInsideTacticalField), so overlap metrics only cover in-field agents;
+        // out-of-field agents are drawn dimmed to keep the evidence honest.
+        float maxPenetrationCm = 0f;
+        float maxPenetrationRatio = 0f;
+        int deepOverlapPairs = 0;
+        for (int a = 0; a < inFieldAgents.Count; a++)
+        {
+            int i = inFieldAgents[a];
+            float xi = flow.GetPositionX(i);
+            float yi = flow.GetPositionY(i);
+            float ri = flow.GetBodyRadiusCm(i);
+            for (int b = a + 1; b < inFieldAgents.Count; b++)
+            {
+                int j = inFieldAgents[b];
+                float dx = xi - flow.GetPositionX(j);
+                float dy = yi - flow.GetPositionY(j);
+                float minDistance = ri + flow.GetBodyRadiusCm(j);
+                float distanceSq = (dx * dx) + (dy * dy);
+                if (distanceSq >= minDistance * minDistance)
+                {
+                    continue;
+                }
+
+                float penetration = minDistance - MathF.Sqrt(distanceSq);
+                float ratio = penetration / minDistance;
+                maxPenetrationCm = MathF.Max(maxPenetrationCm, penetration);
+                maxPenetrationRatio = MathF.Max(maxPenetrationRatio, ratio);
+                if (ratio > 0.10f)
+                {
+                    deepOverlapPairs++;
+                }
+            }
+        }
+
+        int settledCount = 0;
+        int heavyCount = 0;
+        for (int a = 0; a < inFieldAgents.Count; a++)
+        {
+            int i = inFieldAgents[a];
+            if (flow.IsUnitSettled(i))
+            {
+                settledCount++;
+            }
+
+            if (flow.IsHeavyProfile(i))
+            {
+                heavyCount++;
+            }
+        }
+
+        int frameIndex = metrics.Count;
+        metrics.Add(new MassNavigationAvoidanceFrameMetrics(
+            frameIndex,
+            centroidX,
+            centroidY,
+            visibleAgents.Count,
+            heavyCount,
+            settledCount,
+            maxPenetrationCm,
+            maxPenetrationRatio,
+            deepOverlapPairs));
+
+        using var surface = SKSurface.Create(new SKImageInfo(imageWidth, imageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(8, 12, 18));
+
+        using var obstaclePaint = new SKPaint { Color = new SKColor(120, 128, 138, 210), IsAntialias = true, Style = SKPaintStyle.Fill };
+        using var heavyRingPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+        using var targetPaint = new SKPaint { Color = new SKColor(255, 92, 92), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
+        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 22f };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 205, 216), IsAntialias = true, TextSize = 17f };
+
+        float ToScreenX(float worldXCm) => (worldXCm - minXCm) * pxPerCm;
+        float ToScreenY(float worldYCm) => imageHeight - ((worldYCm - minYCm) * pxPerCm);
+
+        for (int i = 0; i < flow.ObstacleCount; i++)
+        {
+            float ox = flow.GetObstacleWorldX(i);
+            float oy = flow.GetObstacleWorldY(i);
+            float radius = flow.GetObstacleRadius(i);
+            if (ox + radius < minXCm || ox - radius > maxXCm || oy + radius < minYCm || oy - radius > maxYCm)
+            {
+                continue;
+            }
+
+            canvas.DrawCircle(ToScreenX(ox), ToScreenY(oy), radius * pxPerCm, obstaclePaint);
+        }
+
+        for (int a = 0; a < visibleAgents.Count; a++)
+        {
+            int i = visibleAgents[a];
+            float worldX = simulation.ToWorldXCm(flow.GetPositionX(i));
+            float worldY = simulation.ToWorldYCm(flow.GetPositionY(i));
+            float radiusPx = MathF.Max(1.5f, flow.GetBodyRadiusCm(i) * pxPerCm);
+            bool inField = IsInsideActiveField(i);
+            SKColor teamColor = ResolveMassNavigationTeamColor(flow.GetTeam(i));
+            using var agentPaint = new SKPaint { Color = teamColor.WithAlpha(inField ? (byte)220 : (byte)70), IsAntialias = true, Style = SKPaintStyle.Fill };
+            float screenX = ToScreenX(worldX);
+            float screenY = ToScreenY(worldY);
+            canvas.DrawCircle(screenX, screenY, radiusPx, agentPaint);
+            if (inField && flow.IsHeavyProfile(i))
+            {
+                canvas.DrawCircle(screenX, screenY, radiusPx + 1.5f, heavyRingPaint);
+            }
+        }
+
+        if (commandTargetCm.X >= minXCm && commandTargetCm.X <= maxXCm && commandTargetCm.Y >= minYCm && commandTargetCm.Y <= maxYCm)
+        {
+            DrawCrosshair(canvas, new SKPoint(ToScreenX(commandTargetCm.X), ToScreenY(commandTargetCm.Y)), 14f, targetPaint);
+        }
+
+        canvas.DrawText($"MassNavigation avoidance zoom | frame={frameIndex:D4} | window {zoomWidthCm:F0}x{zoomHeightCm:F0} cm @ ({centroidX:F0}, {centroidY:F0})", 24, 34, textPaint);
+        canvas.DrawText($"Agents={visibleAgents.Count} heavy(ringed)={heavyCount} settled={settledCount} | circles are true bodyRadiusCm", 24, 62, minorTextPaint);
+        canvas.DrawText($"maxPenetration={maxPenetrationCm:F1}cm ({maxPenetrationRatio:P1} of pair radius) deepOverlapPairs(>10%)={deepOverlapPairs}", 24, 86, minorTextPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(Path.Combine(framesDir, $"frame_{frameIndex:D4}.png"), FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void WriteMassNavigationAvoidanceMetrics(string path, IReadOnlyList<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        var sb = new StringBuilder();
+        for (int i = 0; i < metrics.Count; i++)
+        {
+            sb.AppendLine(JsonSerializer.Serialize(metrics[i]));
+        }
+
+        File.WriteAllText(path, sb.ToString());
     }
 
     private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
@@ -2995,6 +3261,17 @@ public static class LauncherEvidenceRecorder
     private readonly record struct MassNavigationAgentSample(
         int TeamId,
         Vector2 WorldCm);
+
+    private readonly record struct MassNavigationAvoidanceFrameMetrics(
+        int FrameIndex,
+        float WindowCenterXCm,
+        float WindowCenterYCm,
+        int VisibleAgentCount,
+        int HeavyAgentCount,
+        int SettledAgentCount,
+        float MaxPenetrationCm,
+        float MaxPenetrationRatio,
+        int DeepOverlapPairCount);
 
     private readonly record struct MassNavigationSnapshot(
         int Tick,

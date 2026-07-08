@@ -13,6 +13,10 @@ var setup = gameHost.Setup;
 
 var cts = new CancellationTokenSource();
 var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
+// The web host keeps serving HTTP if the loop dies; without this the fault is silently swallowed.
+gameLoopTask.ContinueWith(
+    t => Console.Error.WriteLine($"[GameLoop FAULTED] {t.Exception}"),
+    TaskContinuationOptions.OnlyOnFaulted);
 
 app.UseWebSockets();
 

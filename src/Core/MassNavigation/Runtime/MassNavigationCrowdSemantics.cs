@@ -267,6 +267,8 @@ public sealed class MassNavigationSolverSemantics
     public int FlowObstacleNeighborRadiusCells { get; set; }
     public float FlowObstacleNeighborWeight { get; set; }
     public float FlowObstacleAvoidanceWeight { get; set; }
+    public float CrowdStampCenterCost { get; set; }
+    public float CrowdStampNeighborCost { get; set; }
     public int CoincidentPairHashBucketCount { get; set; }
     public int CoincidentPairHashPrimeA { get; set; }
     public int CoincidentPairHashPrimeB { get; set; }
@@ -290,6 +292,8 @@ public sealed class MassNavigationSolverSemantics
         FlowObstacleNeighborRadiusCells = source.FlowObstacleNeighborRadiusCells;
         FlowObstacleNeighborWeight = source.FlowObstacleNeighborWeight;
         FlowObstacleAvoidanceWeight = source.FlowObstacleAvoidanceWeight;
+        CrowdStampCenterCost = source.CrowdStampCenterCost;
+        CrowdStampNeighborCost = source.CrowdStampNeighborCost;
         CoincidentPairHashBucketCount = source.CoincidentPairHashBucketCount;
         CoincidentPairHashPrimeA = source.CoincidentPairHashPrimeA;
         CoincidentPairHashPrimeB = source.CoincidentPairHashPrimeB;
@@ -318,6 +322,8 @@ public sealed class MassNavigationSolverSemantics
         RequireNonNegative(FlowObstacleNeighborRadiusCells, nameof(FlowObstacleNeighborRadiusCells));
         RequireNonNegative(FlowObstacleNeighborWeight, nameof(FlowObstacleNeighborWeight));
         RequireNonNegative(FlowObstacleAvoidanceWeight, nameof(FlowObstacleAvoidanceWeight));
+        RequirePositive(CrowdStampCenterCost, nameof(CrowdStampCenterCost));
+        RequirePositive(CrowdStampNeighborCost, nameof(CrowdStampNeighborCost));
         RequirePowerOfTwo(CoincidentPairHashBucketCount, nameof(CoincidentPairHashBucketCount));
         RequirePositive(CoincidentPairHashPrimeA, nameof(CoincidentPairHashPrimeA));
         RequirePositive(CoincidentPairHashPrimeB, nameof(CoincidentPairHashPrimeB));
