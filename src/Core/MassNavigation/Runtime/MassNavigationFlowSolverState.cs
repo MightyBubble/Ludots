@@ -76,7 +76,7 @@ public sealed partial class MassNavigationFlowSolverState
     private float[] _unitTargetsCm = Array.Empty<float>();
     private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
-    private byte[] _selectedFlags = Array.Empty<byte>();
+    private byte[] _commandActorFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
     private byte[] _heavyProfileFlags = Array.Empty<byte>();
     private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
@@ -149,7 +149,7 @@ public sealed partial class MassNavigationFlowSolverState
     public float PlayAreaMaxYCm => _playAreaMaxYCm;
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
-    public ReadOnlySpan<byte> SelectedFlags => _selectedFlags.AsSpan(0, UnitCount);
+    public ReadOnlySpan<byte> CommandActorFlags => _commandActorFlags.AsSpan(0, UnitCount);
     public float WorldOriginXCm => _worldOriginXCm;
     public float WorldOriginYCm => _worldOriginYCm;
 
@@ -241,7 +241,7 @@ public sealed partial class MassNavigationFlowSolverState
     public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
     public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
-    public bool IsSelected(int index) => _selectedFlags[index] != 0;
+    public bool IsCommandActor(int index) => _commandActorFlags[index] != 0;
     public bool HasUnitTarget(int index) => (uint)index < (uint)UnitCount && _hasUnitTarget[index] != 0;
     public bool IsUnitSettled(int index) => (uint)index < (uint)UnitCount && _unitSettledFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
@@ -426,7 +426,7 @@ public sealed partial class MassNavigationFlowSolverState
             _unitTargetsCm[i2 + 1] = 0f;
             _unitTargetStopThresholdsCm[unitIndex] = 0f;
             _hasUnitTarget[unitIndex] = 0;
-            _selectedFlags[unitIndex] = 0;
+            _commandActorFlags[unitIndex] = 0;
             _unitProgressAnchorCm[i2] = _positionsCm[i2];
             _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
@@ -864,20 +864,20 @@ public sealed partial class MassNavigationFlowSolverState
         MarkEntityDirty(index);
     }
 
-    public void SetSelectedFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> selectedEntities)
+    public void SetCommandActorFlags(MassNavigationAgentState agentState, ReadOnlySpan<Entity> commandActors)
     {
         if (UnitCount <= 0)
         {
             return;
         }
 
-        Array.Clear(_selectedFlags, 0, UnitCount);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        Array.Clear(_commandActorFlags, 0, UnitCount);
+        for (int i = 0; i < commandActors.Length; i++)
         {
-            if (agentState.TryGetControllableIndex(selectedEntities[i], out int index) &&
+            if (agentState.TryGetControllableIndex(commandActors[i], out int index) &&
                 (uint)index < (uint)UnitCount)
             {
-                _selectedFlags[index] = 1;
+                _commandActorFlags[index] = 1;
             }
         }
     }
@@ -1179,7 +1179,7 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _unitTargetStopThresholdsCm, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
-            Array.Resize(ref _selectedFlags, unitCount);
+            Array.Resize(ref _commandActorFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
             Array.Resize(ref _heavyProfileFlags, unitCount);
             Array.Resize(ref _entitySyncDirtyFlags, unitCount);
@@ -1304,7 +1304,7 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -1521,7 +1521,7 @@ public sealed partial class MassNavigationFlowSolverState
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
-        Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_commandActorFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_bodyRadiiCm, 0, UnitCount);
         Array.Clear(_speedsCmPerSecond, 0, UnitCount);
@@ -2468,6 +2468,7 @@ public sealed partial class MassNavigationFlowSolverState
             return;
         }
 
+        RecomputeMaxInteractingBodyRadiiCmIfDirty();
         BuildHardResolveHash(_positionsCm);
         float invHashCell = 1f / _hardResolveHashCellSizeCm;
         int hwm1 = _hardResolveHashWidth - 1;
@@ -2475,11 +2476,6 @@ public sealed partial class MassNavigationFlowSolverState
 
         for (int i = 0; i < UnitCount; i++)
         {
-            if (_useCandidateGating && _hardResolveCandidates[i] == 0)
-            {
-                continue;
-            }
-
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
@@ -2499,6 +2495,13 @@ public sealed partial class MassNavigationFlowSolverState
             int minX = Math.Max(0, cellX - hardResolveSearchRadius);
             int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);
 
+            if (_useCandidateGating &&
+                _hardResolveCandidates[i] == 0 &&
+                !HasHardResolveAgentPenetrationCandidate(i, minX, maxX, minY, maxY))
+            {
+                continue;
+            }
+
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
                 int rowBase = neighborY * _hardResolveHashWidth;
@@ -2512,7 +2515,7 @@ public sealed partial class MassNavigationFlowSolverState
                         int j = _hardResolveAgents[hashIndex];
                         if (j > i)
                         {
-                            if (!CanAgentsInteract(i, j))
+                            if (!CanAgentsInteract(i, j) || !AreAgentsPenetrating(i, j))
                             {
                                 continue;
                             }
@@ -2525,6 +2528,45 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         ResolveObstaclePenetration();
+    }
+
+    private bool HasHardResolveAgentPenetrationCandidate(int i, int minX, int maxX, int minY, int maxY)
+    {
+        for (int neighborY = minY; neighborY <= maxY; neighborY++)
+        {
+            int rowBase = neighborY * _hardResolveHashWidth;
+            for (int neighborX = minX; neighborX <= maxX; neighborX++)
+            {
+                int cell = rowBase + neighborX;
+                int start = _hardResolveCellOffsets[cell];
+                int end = start + _hardResolveCellCounts[cell];
+                for (int hashIndex = start; hashIndex < end; hashIndex++)
+                {
+                    int j = _hardResolveAgents[hashIndex];
+                    if (j <= i || !CanAgentsInteract(i, j))
+                    {
+                        continue;
+                    }
+
+                    if (AreAgentsPenetrating(i, j))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private bool AreAgentsPenetrating(int i, int j)
+    {
+        int i2 = i << 1;
+        int j2 = j << 1;
+        float dx = _positionsCm[i2] - _positionsCm[j2];
+        float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
+        float minDistance = ResolvePairBodyRadiusSumCm(i, j);
+        return (dx * dx) + (dy * dy) < minDistance * minDistance;
     }
 
     private void SeparateAgents(int i, int j)

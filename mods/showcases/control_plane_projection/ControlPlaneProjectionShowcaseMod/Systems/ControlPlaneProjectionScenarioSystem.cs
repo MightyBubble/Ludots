@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -19,7 +18,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
     /// Bootstraps the showcase world once the map session is live (CTRL-2 slice: Owns/MemberOf/Ally
-    /// edges via RelationshipRuntime.EnsureLink), binds P1Rep as the local player selection owner,
+    /// edges via RelationshipRuntime.EnsureLink), binds P1Rep as the local command-source owner,
     /// and services the ToggleProxy input action.
     /// </summary>
     internal sealed class ControlPlaneProjectionScenarioSystem : ISystem<float>
@@ -104,8 +103,6 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 ?? throw new InvalidOperationException("TagOps is missing.");
             StringIntRegistry collectionKeys = _engine.GetService(CoreServiceKeys.EntityCollectionKeyRegistry)
                 ?? throw new InvalidOperationException("EntityCollectionKeyRegistry is missing.");
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
 
             _state.P1Rep = session.PlayerEntityLookup.Get(1);
             _state.P2Rep = session.PlayerEntityLookup.Get(2);
@@ -126,7 +123,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             _state.RefereePhase1ProjectionKeyId = collectionKeys.Register(ControlPlaneProjectionShowcaseIds.RefereePhase1ProjectionCollectionKey);
 
             BuildRelationshipEdges(relationships);
-            BindLocalPlayer(selection);
+            BindLocalPlayer();
 
             _state.BindRuntime(_world, tagOps);
         }
@@ -181,7 +178,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
-                EntityCollectionSourceKind.SelectionView,
+                EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 title: "SHOW-3 referee command-source fixture",
                 summary: "Visible UAT rows for referee projection evidence; projection still reads through ControlPlaneView.");
@@ -213,8 +210,8 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 return;
             }
 
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
 
             if (!_cefAutoTimelineEnabled && !_state.ProxyActive)
             {
@@ -224,10 +221,15 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             Span<Entity> selected = stackalloc Entity[2];
             selected[0] = _state.P1Units[0];
             selected[1] = _state.P2Units[0];
-            if (!selection.ReplaceSelection(_state.P1Rep, SelectionSetKeys.LivePrimary, selected))
-            {
-                throw new InvalidOperationException("Control plane projection auto demo failed to publish mixed selection.");
-            }
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                _state.P1Rep,
+                selected[0],
+                "Control plane command source",
+                "Auto demo mixed command source.");
+            collections.Replace(_state.P1Rep, descriptor, selected, _state.P1Rep);
 
             _engine.GlobalContext[ControlPlaneProjectionShowcaseIds.AutoDemoAppliedKey] = true;
             _autoDemoApplied = true;
@@ -250,24 +252,10 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
             relationships.EnsureLink(_state.P1Rep, _state.P2Rep, _state.AllyTypeId);
         }
 
-        private void BindLocalPlayer(SelectionRuntime selection)
+        private void BindLocalPlayer()
         {
             _engine.SetService(CoreServiceKeys.LocalPlayerEntity, _state.P1Rep);
             _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
-
-            selection.TryGetOrCreateSelectionEntity(_state.P1Rep, SelectionSetKeys.LivePrimary, out _);
-            if (!SelectionContextRuntime.TrySetCurrentView(
-                    _world,
-                    _engine.GlobalContext,
-                    selection,
-                    _state.P1Rep,
-                    SelectionViewKeys.Primary,
-                    _state.P1Rep,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
-            {
-                throw new InvalidOperationException("Control plane projection showcase failed to bind the primary selection view.");
-            }
         }
 
         private static void ResolveUnits(MapSession session, string[] instanceIds, Entity[] destination)

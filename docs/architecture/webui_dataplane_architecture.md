@@ -1,3 +1,6 @@
+> Update required / superseded selection boundary: formal SelectionRuntime is retired.
+> WebUI topics and commands must use EntityCollectionStore and `collection.command.source` for
+> current command actors, with no fallback to SelectionRuntime.
 # WebUI DataPlane Architecture
 
 This document defines the higher-level WebUI DataPlane that sits above the browser surface runtime. It is the contract shape for feeding Ludots-owned runtime data into WebUI panels without turning browser engines, UE5 adapters, or web applications into Core data owners.
@@ -33,6 +36,7 @@ The DataPlane must reuse existing infrastructure before adding new stores:
 | Mod event API | `IWebUIBridge`, `IWebUIBridgeFactory`, `ModWebEventScope` | Keep Mod-facing lifecycle and event registration in `Ludots.WebUI`. |
 
 Missing services or unknown topic/query ids must fail explicitly at the consuming boundary. Silent fallback to selection, current panel state, adapter-local cache, or browser-side state is forbidden.
+Browser adapters must not become selection truth; user-facing selection remains a derived label for explicit `EntityCollectionStore` topics such as `collection.command.source`.
 
 ## 3 Entity Collection Topics
 
@@ -52,7 +56,7 @@ Required behavior:
 - Use `EntityCollectionView.Revision` as the change token for web-side cache invalidation.
 - Send windows instead of whole collections when panels only display a visible range.
 - Preserve `EntityCollectionSourceKind` and `EntityCollectionRoleKind` as descriptors in the payload.
-- Keep formal selection owned by `SelectionRuntime`; collection topics can display selection views but must not become selection truth.
+- Treat user-facing selection as shorthand for explicit entity collection topics; current command actors are `collection.command.source`, with no `SelectionRuntime` fallback.
 - Use explicit collection keys for WebUI panels. Unknown keys are errors.
 
 This lets WebUI panels reuse the same collection truth used by EntityInfo, command panels, acquisition previews, debug views, spatial query results, and GAS graph results.

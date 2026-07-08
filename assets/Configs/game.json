@@ -11,7 +11,7 @@
   "gridCellSizeCm": 100,
   "worldWidthInMacroTiles": 64,
   "worldHeightInMacroTiles": 64,
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "All" },
     "clickPickRadiusPixels": 20,
     "dragThresholdPixels": 8

@@ -46,7 +46,7 @@ InputOrderMapping:
 | InteractionModeType (4种) | ✅ 已有 |
 | Entity Tag System | ✅ 已有 |
 | Blackboard System | ✅ 已有 |
-| SelectionRuleRegistry | ✅ 已有 |
+| FilterProfileRegistry / target filter profiles | ✅ 已有 |
 
 ## 新增需求
 

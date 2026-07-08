@@ -30,10 +30,10 @@ using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Map;
@@ -223,21 +223,16 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<int> RelationshipEventReasonId = new("RelationshipEvent.ReasonId");
         public static readonly ServiceKey<int> RelationshipEventCount = new("RelationshipEvent.Count");
 
-        // --- GAS Input / Selection / Orders ---
+        // --- GAS Input / Command Sources / Orders ---
         public static readonly ServiceKey<InputRequestQueue> InputRequestQueue = new("InputRequestQueue");
         public static readonly ServiceKey<InputRequestQueue> AbilityInputRequestQueue = new("AbilityInputRequestQueue");
         public static readonly ServiceKey<InputResponseBuffer> InputResponseBuffer = new("InputResponseBuffer");
-        public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
-        public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleQueue> RuntimeEntityLifecycleQueue = new("RuntimeEntityLifecycleQueue");
         public static readonly ServiceKey<RuntimeEntityLifecycleReceiptQueue> RuntimeEntityLifecycleReceiptQueue = new("RuntimeEntityLifecycleReceiptQueue");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");
         public static readonly ServiceKey<EntityTemplateKeyRegistry> EntityTemplateKeyRegistry = new("EntityTemplateKeyRegistry");
-        public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
-        public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
-        public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
-        public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
+        public static readonly ServiceKey<CommandSourceAcquisitionConfig> CommandSourceAcquisitionConfig = new("CommandSourceAcquisitionConfig");
         public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
         public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");
         public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
@@ -352,12 +347,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");
 
-        // --- Entity Selection (presentation-layer) ---
+        // --- Local Command Source (presentation-layer) ---
         public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
-        public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
-        public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

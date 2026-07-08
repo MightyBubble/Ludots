@@ -1,3 +1,5 @@
+> Update required / superseded selection boundary: examples mentioning SelectionRuntime are historical.
+> Current command/selection shorthand flows through EntityCollectionStore and `collection.command.source`.
 # Spatial Geometry SSOT
 
 ## Scope
@@ -29,8 +31,8 @@ Core separates authored geometry intent from derived runtime state.
 | `Collider2D` | derived physics collider state | Physics2D runtime |
 | `MassNavigationFlowObstacleProjection` | derived navigation obstacle projection state | MassNavigation runtime |
 | `CompoundObstacle2DState` | derived materialized obstacle slots | Physics2D/navigation bridge runtime |
-| `SelectionSelectableTag` | selection eligibility marker | Selection runtime |
-| `SelectionAcquisitionMode` | input acquisition policy | Selection runtime |
+| `CommandSourceSelectableTag` | command-source acquisition eligibility marker | Command-source acquisition |
+| `CommandSourceAcquisitionMode` | input acquisition policy | Command-source acquisition |
 
 ## Selection Rule
 
@@ -38,7 +40,7 @@ Selection must not define a low-level geometry truth.
 
 Selection acquisition combines:
 
-- eligibility: `SelectionSelectableTag`, `SelectionSelectableState`, and `SelectionEligibility`
+- eligibility: `CommandSourceSelectableTag`, `CommandSourceSelectableState`, and `CommandSourceEligibility`
 - generic projection geometry: `SpatialBounds`, `SpatialBox3D`, `SpatialFootprint2D`, and `SpatialBoundsUtility`
 - acquisition policy: replace, additive, toggle, and deterministic tie-breaking
 
@@ -79,13 +81,13 @@ CompoundObstacle2D or ManifestationObstacleIntent2D
   -> Collider2D / MassNavigationFlowObstacleProjection / CompoundObstacle2DState
 ```
 
-For selection:
+For command-source acquisition:
 
 ```text
-SelectionSelectableTag + SpatialBounds/SpatialFootprint2D
-  -> CurrentSelectionApplySystem
+CommandSourceSelectableTag + SpatialBounds/SpatialFootprint2D
+  -> CommandSourceAcquisitionSystem
   -> SpatialBoundsUtility
-  -> SelectionRuntime container mutation
+  -> EntityCollectionStore[collection.command.source]
 ```
 
 For GAS hit or target regions:

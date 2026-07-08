@@ -108,7 +108,7 @@ Effect 模板示例：
 |------|------|------|
 | InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
 | ContextGroup | `src/Core/Input/Context/ContextGroup.cs` | ❌ P1 — 需新增 ContextGroup 评分机制 |
-| SelectionSystem | `src/Core/Input/Selection/SelectionSystem.cs` | ❌ P2 — 需支持 Direction selectionType |
+| CommandSourceAcquisitionSystem | `src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs` | ❌ P2 — 需支持 Direction acquisition profile |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 
 ---

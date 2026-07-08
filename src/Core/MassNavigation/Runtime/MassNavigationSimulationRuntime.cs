@@ -97,12 +97,12 @@ public sealed class MassNavigationSimulationRuntime
 {
     public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
 
-    private readonly int _initialSelectedTeamId;
+    private readonly int _initialActiveTeamId;
     private int[] _teamIds = Array.Empty<int>();
-    private Entity[] _selectionScratch = Array.Empty<Entity>();
-    private Entity[] _selectedEntities = Array.Empty<Entity>();
-    private int _selectedCount;
-    private uint _selectionRevision;
+    private Entity[] _commandActorScratch = Array.Empty<Entity>();
+    private Entity[] _commandActors = Array.Empty<Entity>();
+    private int _commandActorCount;
+    private uint _commandActorSnapshotRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
     private int _nextSharedOrderId = 1;
@@ -126,7 +126,7 @@ public sealed class MassNavigationSimulationRuntime
     private bool _hasCommandFocus;
     private float _lastCommandFocusXCm;
     private float _lastCommandFocusYCm;
-    private int _lastCommandSelectionCount;
+    private int _lastCommandActorCount;
     private float _flowWorkAreaCenterXCm;
     private float _flowWorkAreaCenterYCm;
     private float _flowWorkAreaWidthCm;
@@ -136,7 +136,7 @@ public sealed class MassNavigationSimulationRuntime
     private string _solverWindowDriver = "initial nav area";
 
     public MassNavigationTelemetry Telemetry { get; } = new();
-    public int SelectionSnapshotCountFrame => Telemetry.SelectionSnapshotCountFrame;
+    public int CommandActorSnapshotCountFrame => Telemetry.CommandActorSnapshotCountFrame;
     public int CommandCountFrame => Telemetry.CommandCountFrame;
     public int StructuralChangesFrame => Telemetry.StructuralChangesFrame;
     public int StructuralChangeRevision => Telemetry.StructuralChangeRevision;
@@ -145,7 +145,7 @@ public sealed class MassNavigationSimulationRuntime
     public int SolverWindowMovesFrame => Telemetry.SolverWindowMovesFrame;
     public float FrameMs => Telemetry.FrameMs;
     public float Fps => Telemetry.Fps;
-    public float SelectionSyncMs => Telemetry.SelectionSyncMs;
+    public float CommandSourceSyncMs => Telemetry.CommandSourceSyncMs;
     public float FormationTargetMs => Telemetry.FormationTargetMs;
     public float FlowFieldRebuildMs => Telemetry.FlowFieldRebuildMs;
     public float StepPrepMs => Telemetry.StepPrepMs;
@@ -154,7 +154,7 @@ public sealed class MassNavigationSimulationRuntime
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
     public float PerformerCommandMs => Telemetry.PerformerCommandMs;
-    public float SelectionSyncHzObserved => Telemetry.SelectionSyncHzObserved;
+    public float CommandSourceSyncHzObserved => Telemetry.CommandSourceSyncHzObserved;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
     public float SimHzObserved => Telemetry.SimHzObserved;
@@ -189,14 +189,14 @@ public sealed class MassNavigationSimulationRuntime
 
     public int NavigationAgentCount => MassNavigationFlow.UnitCount;
     public int NavigationObstacleCount => MassNavigationFlow.ObstacleCount;
-    public int SelectedCount => _selectedCount;
-    public uint SelectionRevision => _selectionRevision;
-    public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities.AsSpan(0, _selectedCount);
+    public int CommandActorCount => _commandActorCount;
+    public uint CommandActorSnapshotRevision => _commandActorSnapshotRevision;
+    public ReadOnlySpan<Entity> CommandActors => _commandActors.AsSpan(0, _commandActorCount);
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
     public int AgentsPerTeam { get; private set; }
-    public int SelectedTeamId { get; private set; }
+    public int ActiveTeamId { get; private set; }
     public MassNavigationFormationMode FormationMode { get; private set; } = MassNavigationFormationMode.None;
     public int LoadedChunkCount => _loadedChunks.ActiveChunkKeys.Count;
     public int StreamingChunkSizeCm => _loadedChunks.ChunkSizeCm;
@@ -222,7 +222,7 @@ public sealed class MassNavigationSimulationRuntime
     public bool HasCommandFocus => _hasCommandFocus && _commandFocusTicksRemaining > 0;
     public float CommandFocusXCm => _lastCommandFocusXCm;
     public float CommandFocusYCm => _lastCommandFocusYCm;
-    public int LastCommandSelectionCount => _lastCommandSelectionCount;
+    public int LastCommandActorCount => _lastCommandActorCount;
     public float HotZoneMinXCm => SolverWindowMinXCm;
     public float HotZoneMinYCm => SolverWindowMinYCm;
     public float HotZoneMaxXCm => SolverWindowMaxXCm;
@@ -243,8 +243,8 @@ public sealed class MassNavigationSimulationRuntime
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
-        _selectionScratch = new Entity[config.ScenarioRuntime.InitialSelectionScratchCapacity];
-        _selectedEntities = new Entity[config.ScenarioRuntime.InitialSelectedEntityCapacity];
+        _commandActorScratch = new Entity[config.ScenarioRuntime.InitialCommandActorScratchCapacity];
+        _commandActors = new Entity[config.ScenarioRuntime.InitialCommandActorSnapshotCapacity];
         _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
         _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
         _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
@@ -261,9 +261,9 @@ public sealed class MassNavigationSimulationRuntime
         FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
         NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime, config.ScenarioRuntime.RuntimeCapacity);
         AgentsPerTeam = config.Scenario.AgentsPerTeam;
-        _initialSelectedTeamId = config.Scenario.InitialSelectedTeamId;
+        _initialActiveTeamId = config.Scenario.InitialActiveTeamId;
         ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
-        SelectedTeamId = _initialSelectedTeamId;
+        ActiveTeamId = _initialActiveTeamId;
         MassNavigationFlow.ArrivalTuning.CopyFrom(config.Arrival);
         MassNavigationFlow.AvoidanceTuning.CopyFrom(config.Avoidance);
         MassNavigationFlow.Semantics.CopyFrom(config.Semantics);
@@ -317,7 +317,7 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    public void ObserveSelectionSync(double sampleMs) => Telemetry.ObserveSelectionSync(sampleMs);
+    public void ObserveCommandSourceSync(double sampleMs) => Telemetry.ObserveCommandSourceSync(sampleMs);
     public void ObserveFormationTargets(double sampleMs) => Telemetry.ObserveFormationTargets(sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
     public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
@@ -442,51 +442,51 @@ public sealed class MassNavigationSimulationRuntime
             performerDroppedCount);
     }
 
-    public void ObserveSelectionSyncTick() => Telemetry.ObserveSelectionSyncTick();
+    public void ObserveCommandSourceSyncTick() => Telemetry.ObserveCommandSourceSyncTick();
     public void ObserveControlTick() => Telemetry.ObserveControlTick();
     public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
     public void ObserveSimTick() => Telemetry.ObserveSimTick();
     public void ObservePerformerTick() => Telemetry.ObservePerformerTick();
     public void ObservePanelTick() => Telemetry.ObservePanelTick();
 
-    public Span<Entity> EnsureSelectionScratch(int required)
+    public Span<Entity> EnsureCommandActorScratch(int required)
     {
-        if (required > _selectionScratch.Length)
+        if (required > _commandActorScratch.Length)
         {
             throw new InvalidOperationException(
-                $"MassNavigation selection scratch required {required} entities, exceeding configured scenarioRuntime.initialSelectionScratchCapacity {_selectionScratch.Length}.");
+                $"MassNavigation command actor scratch required {required} entities, exceeding configured scenarioRuntime.initialCommandActorScratchCapacity {_commandActorScratch.Length}.");
         }
 
-        return _selectionScratch.AsSpan(0, required);
+        return _commandActorScratch.AsSpan(0, required);
     }
 
-    public void SetSelection(ReadOnlySpan<Entity> entities, uint revision)
+    public void SetCommandActorSnapshot(ReadOnlySpan<Entity> entities, uint revision)
     {
-        if (entities.Length > _selectedEntities.Length)
+        if (entities.Length > _commandActors.Length)
         {
             throw new InvalidOperationException(
-                $"MassNavigation selected entity snapshot required {entities.Length} entities, exceeding configured scenarioRuntime.initialSelectedEntityCapacity {_selectedEntities.Length}.");
+                $"MassNavigation command actor snapshot required {entities.Length} entities, exceeding configured scenarioRuntime.initialCommandActorSnapshotCapacity {_commandActors.Length}.");
         }
 
-        entities.CopyTo(_selectedEntities.AsSpan(0, entities.Length));
-        _selectedCount = entities.Length;
-        _selectionRevision = revision;
-        Telemetry.MarkSelectionSnapshot();
-        MassNavigationFlow.SetSelectedFlags(AgentState, _selectedEntities.AsSpan(0, _selectedCount));
+        entities.CopyTo(_commandActors.AsSpan(0, entities.Length));
+        _commandActorCount = entities.Length;
+        _commandActorSnapshotRevision = revision;
+        Telemetry.MarkCommandActorSnapshot();
+        MassNavigationFlow.SetCommandActorFlags(AgentState, _commandActors.AsSpan(0, _commandActorCount));
     }
 
-    public void ClearSelection()
+    public void ClearCommandActorSnapshot()
     {
-        if (_selectedCount == 0)
+        if (_commandActorCount == 0)
         {
-            MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
+            MassNavigationFlow.SetCommandActorFlags(AgentState, ReadOnlySpan<Entity>.Empty);
             return;
         }
 
-        _selectedCount = 0;
-        _selectionRevision++;
-        Telemetry.MarkSelectionSnapshot();
-        MassNavigationFlow.SetSelectedFlags(AgentState, ReadOnlySpan<Entity>.Empty);
+        _commandActorCount = 0;
+        _commandActorSnapshotRevision++;
+        Telemetry.MarkCommandActorSnapshot();
+        MassNavigationFlow.SetCommandActorFlags(AgentState, ReadOnlySpan<Entity>.Empty);
     }
 
     public void MarkStructuralChange()
@@ -550,14 +550,14 @@ public sealed class MassNavigationSimulationRuntime
         RequestSceneReset();
     }
 
-    public void SetSelectedTeam(int teamId)
+    public void SetActiveTeam(int teamId)
     {
         if (Array.IndexOf(_teamIds, teamId) < 0)
         {
             throw new InvalidOperationException($"MassNavigationSimulationRuntime selected team {teamId} is not configured.");
         }
 
-        SelectedTeamId = teamId;
+        ActiveTeamId = teamId;
     }
 
     public void ConfigureScenarioTeams(ReadOnlySpan<int> teamIds)
@@ -573,14 +573,14 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         teamIds.CopyTo(_teamIds);
-        if (Array.IndexOf(_teamIds, SelectedTeamId) < 0)
+        if (Array.IndexOf(_teamIds, ActiveTeamId) < 0)
         {
-            if (Array.IndexOf(_teamIds, _initialSelectedTeamId) < 0)
+            if (Array.IndexOf(_teamIds, _initialActiveTeamId) < 0)
             {
                 throw new InvalidOperationException("MassNavigationSimulationRuntime configured teams do not include the initial selected team.");
             }
 
-            SelectedTeamId = _initialSelectedTeamId;
+            ActiveTeamId = _initialActiveTeamId;
         }
     }
 
@@ -596,21 +596,21 @@ public sealed class MassNavigationSimulationRuntime
         return next;
     }
 
-    public void CycleSelectedTeam()
+    public void CycleActiveTeam()
     {
         if (_teamIds.Length <= 0)
         {
             return;
         }
 
-        int index = Array.IndexOf(_teamIds, SelectedTeamId);
+        int index = Array.IndexOf(_teamIds, ActiveTeamId);
         if (index < 0)
         {
-            SelectedTeamId = _initialSelectedTeamId;
+            ActiveTeamId = _initialActiveTeamId;
             return;
         }
 
-        SelectedTeamId = _teamIds[(index + 1) % _teamIds.Length];
+        ActiveTeamId = _teamIds[(index + 1) % _teamIds.Length];
     }
 
     public void SetFormationMode(MassNavigationFormationMode mode)
@@ -631,7 +631,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ResetRuntimeState(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearSelection();
+        ClearCommandActorSnapshot();
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
         MarkAuthoredRuntimeBindingChanged();
@@ -646,7 +646,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ClearAuthoredRuntimeBindings(World world)
     {
         ArgumentNullException.ThrowIfNull(world);
-        ClearSelection();
+        ClearCommandActorSnapshot();
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
         MassNavigationFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
@@ -671,14 +671,14 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation authored rebuild required {agentSeeds.Length} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {membershipCapacity}.");
         }
 
-        int previousSelectedCount = _selectedCount;
-        uint previousSelectionRevision = _selectionRevision;
-        Span<Entity> previousSelectedEntities = previousSelectedCount > 0
-            ? EnsureSelectionScratch(previousSelectedCount)
+        int previousCommandActorCount = _commandActorCount;
+        uint previousCommandActorSnapshotRevision = _commandActorSnapshotRevision;
+        Span<Entity> previousCommandActors = previousCommandActorCount > 0
+            ? EnsureCommandActorScratch(previousCommandActorCount)
             : Span<Entity>.Empty;
-        if (previousSelectedCount > 0)
+        if (previousCommandActorCount > 0)
         {
-            _selectedEntities.AsSpan(0, previousSelectedCount).CopyTo(previousSelectedEntities);
+            _commandActors.AsSpan(0, previousCommandActorCount).CopyTo(previousCommandActors);
         }
 
         var previousGroupSnapshot = NavGroupRuntime.CaptureAuthoredRebuildSnapshot();
@@ -690,7 +690,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         NavGroupRuntime.RestoreAuthoredRebuildSnapshot(world, MassNavigationFlow, AgentState, previousGroupSnapshot);
-        RestoreSelectionAfterAuthoredRebuild(world, previousSelectedEntities, previousSelectionRevision);
+        RestoreCommandActorSnapshotAfterAuthoredRebuild(world, previousCommandActors, previousCommandActorSnapshotRevision);
         MarkStructuralChange();
     }
 
@@ -728,21 +728,21 @@ public sealed class MassNavigationSimulationRuntime
         MarkStructuralChange();
     }
 
-    private void RestoreSelectionAfterAuthoredRebuild(
+    private void RestoreCommandActorSnapshotAfterAuthoredRebuild(
         World world,
-        ReadOnlySpan<Entity> previousSelectedEntities,
-        uint previousSelectionRevision)
+        ReadOnlySpan<Entity> previousCommandActors,
+        uint previousCommandActorSnapshotRevision)
     {
-        if (previousSelectedEntities.Length <= 0)
+        if (previousCommandActors.Length <= 0)
         {
             return;
         }
 
         int restoredCount = 0;
-        Span<Entity> restored = EnsureSelectionScratch(previousSelectedEntities.Length);
-        for (int i = 0; i < previousSelectedEntities.Length; i++)
+        Span<Entity> restored = EnsureCommandActorScratch(previousCommandActors.Length);
+        for (int i = 0; i < previousCommandActors.Length; i++)
         {
-            Entity entity = previousSelectedEntities[i];
+            Entity entity = previousCommandActors[i];
             if (world.IsAlive(entity) && AgentState.TryGetControllableIndex(entity, out _))
             {
                 restored[restoredCount++] = entity;
@@ -754,7 +754,7 @@ public sealed class MassNavigationSimulationRuntime
             return;
         }
 
-        SetSelection(restored[..restoredCount], previousSelectionRevision);
+        SetCommandActorSnapshot(restored[..restoredCount], previousCommandActorSnapshotRevision);
     }
 
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
@@ -764,26 +764,26 @@ public sealed class MassNavigationSimulationRuntime
         UpdateStreamingWindow(ResolveStreamingFocus());
     }
 
-    public void FocusCommandTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> selectedEntities)
+    public void FocusCommandTarget(System.Numerics.Vector2 worldCenterCm, ReadOnlySpan<Entity> commandActors)
     {
         _hasCommandFocus = true;
         _lastCommandFocusXCm = worldCenterCm.X;
         _lastCommandFocusYCm = worldCenterCm.Y;
-        _lastCommandSelectionCount = selectedEntities.Length;
+        _lastCommandActorCount = commandActors.Length;
         _commandFocusTicksRemaining = WorldConfig.CommandFocusHoldTicks;
         ObserveFlowWorkArea(
             worldCenterCm,
             _simWindowWidthCm,
             _simWindowHeightCm,
-            selectedEntities,
-            selectedEntities.Length > 0 ? "actor command" : "team command");
-        MoveSolverWindow(ResolveSolverFocusForWorkArea(), selectedEntities.Length > 0 ? "actor command" : "team command");
+            commandActors,
+            commandActors.Length > 0 ? "actor command" : "team command");
+        MoveSolverWindow(ResolveSolverFocusForWorkArea(), commandActors.Length > 0 ? "actor command" : "team command");
         UpdateStreamingWindow(ResolveStreamingFocus());
     }
 
-    public void FocusCommandTargetForEntities(System.Numerics.Vector2 worldCenterCm, Entity[] selectedEntities)
+    public void FocusCommandTargetForEntities(System.Numerics.Vector2 worldCenterCm, Entity[] commandActors)
     {
-        FocusCommandTarget(worldCenterCm, selectedEntities.AsSpan());
+        FocusCommandTarget(worldCenterCm, commandActors.AsSpan());
     }
 
     public void ObserveRuntimeFocus(System.Numerics.Vector2 focusCenterCm, float focusWidthCm, float focusHeightCm)
@@ -1333,7 +1333,7 @@ public sealed class MassNavigationSimulationRuntime
         System.Numerics.Vector2 focusCm,
         float focusWidthCm,
         float focusHeightCm,
-        ReadOnlySpan<Entity> selectedEntities,
+        ReadOnlySpan<Entity> commandActors,
         string reason)
     {
         float clampedWidth = MathF.Max(1f, focusWidthCm);
@@ -1348,9 +1348,9 @@ public sealed class MassNavigationSimulationRuntime
             IncludePoint(ref minX, ref maxX, ref minY, ref maxY, _lastCommandFocusXCm, _lastCommandFocusYCm);
         }
 
-        if (selectedEntities.Length > 0)
+        if (commandActors.Length > 0)
         {
-            IncludeSelectedBounds(ref minX, ref maxX, ref minY, ref maxY, selectedEntities);
+            IncludeCommandActorBounds(ref minX, ref maxX, ref minY, ref maxY, commandActors);
         }
 
         float padding = WorldConfig.WorkAreaPaddingCm;
@@ -1383,11 +1383,11 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaRevision++;
     }
 
-    private void IncludeSelectedBounds(ref float minX, ref float maxX, ref float minY, ref float maxY, ReadOnlySpan<Entity> selectedEntities)
+    private void IncludeCommandActorBounds(ref float minX, ref float maxX, ref float minY, ref float maxY, ReadOnlySpan<Entity> commandActors)
     {
-        for (int i = 0; i < selectedEntities.Length; i++)
+        for (int i = 0; i < commandActors.Length; i++)
         {
-            if (!AgentState.TryGetControllableIndex(selectedEntities[i], out int unitIndex) ||
+            if (!AgentState.TryGetControllableIndex(commandActors[i], out int unitIndex) ||
                 (uint)unitIndex >= (uint)MassNavigationFlow.UnitCount)
             {
                 continue;

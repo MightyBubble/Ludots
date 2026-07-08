@@ -1,5 +1,5 @@
 mtllib mass_navigation_materials.mtl
-o mass_navigation_selection_marker
+o mass_navigation_command_marker
 usemtl mass_navigation_surface
 v 0.000 0.000 1.000
 v 1.000 0.000 0.000

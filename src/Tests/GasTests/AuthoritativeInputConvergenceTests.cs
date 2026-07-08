@@ -1,14 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
@@ -137,14 +138,22 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create();
             var local = world.Create();
-            var selection = new SelectionRuntime(
-                world,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, new[] { target }), Is.True);
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var collections = new EntityCollectionStore(collectionKeys);
+            Span<Entity> commandSource = stackalloc Entity[1];
+            commandSource[0] = target;
+            collections.Replace(
+                local,
+                EntityCollectionDescriptor.Create(
+                    EntityCollectionKeys.CommandSource,
+                    EntityCollectionSourceKind.UiAcquisition,
+                    EntityCollectionRoleKind.CommandSource,
+                    local,
+                    target,
+                    "Command source",
+                    "Seed | 1 actor(s)"),
+                commandSource,
+                local);
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = liveInput,
@@ -153,7 +162,8 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
-                [CoreServiceKeys.SelectionRuntime.Name] = selection,
+                [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+                [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
             ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(

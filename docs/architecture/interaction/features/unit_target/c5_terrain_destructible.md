@@ -49,7 +49,7 @@ InputOrderMapping:
 | InteractionModeType (4种) | ✅ 已有 |
 | QueryFilterLayer Graph op | ✅ 已有 (op 115) |
 | EntityLayer 系统 | ✅ 已有 |
-| SelectionRuleRegistry | ✅ 已有 |
+| FilterProfileRegistry / target filter profiles | ✅ 已有 |
 
 ## 新增需求
 

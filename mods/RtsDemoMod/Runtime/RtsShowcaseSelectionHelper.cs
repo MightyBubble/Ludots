@@ -4,9 +4,9 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Runtime
@@ -15,22 +15,17 @@ namespace RtsDemoMod.Runtime
     {
         public static void EnsureSelectionViewBinding(GameEngine engine)
         {
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
             Entity owner = ResolveSelectionOwner(engine);
-            if (selection == null || !engine.World.IsAlive(owner))
+            if (!engine.World.IsAlive(owner))
             {
                 return;
             }
-
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         public static bool TrySelectAndFocus(GameEngine engine, Entity target, bool snapCamera)
         {
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null || !engine.World.IsAlive(target))
+            if (!engine.World.IsAlive(target) ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
             {
                 return false;
             }
@@ -43,10 +38,33 @@ namespace RtsDemoMod.Runtime
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                target,
+                "RTS command source",
+                "1 actor");
+            collections.Replace(owner, descriptor, next, owner);
             EnsureSelectionViewBinding(engine);
             WriteCameraFocusRequests(engine, target, snapCamera);
             return true;
+        }
+
+        public static bool TryGetCurrentPrimary(GameEngine engine, out Entity primary)
+        {
+            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetCurrentPrimary(
+                engine.World,
+                engine.GlobalContext,
+                out primary);
+        }
+
+        public static int GetCurrentCount(GameEngine engine)
+        {
+            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCurrentCount(
+                engine.World,
+                engine.GlobalContext);
         }
 
         public static void WriteCameraFocusRequests(GameEngine engine, Entity target, bool snapCamera)

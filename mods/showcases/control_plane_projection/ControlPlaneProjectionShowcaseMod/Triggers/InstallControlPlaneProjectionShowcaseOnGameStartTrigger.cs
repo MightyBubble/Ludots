@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using ControlPlaneProjectionShowcaseMod.DataPlane;
@@ -43,9 +42,7 @@ namespace ControlPlaneProjectionShowcaseMod.Triggers
             engine.GlobalContext[ControlPlaneProjectionShowcaseIds.InstalledKey] = true;
             engine.GlobalContext[ControlPlaneProjectionShowcaseIds.StateKey] = state;
 
-            engine.InsertSystemBeforeRequired<CurrentSelectionApplySystem>(
-                new ControlPlaneProjectionScenarioSystem(engine, state),
-                SystemGroup.InputCollection);
+            engine.RegisterSystem(new ControlPlaneProjectionScenarioSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterSystem(new ControlPlaneRoutedSelectionSystem(engine, state), SystemGroup.PostMovement);
             engine.RegisterSystem(new ControlPlaneMarkerProjectionSystem(engine, state), SystemGroup.PostMovement);
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,13 +9,14 @@ using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
@@ -108,7 +109,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => SelectionContextRuntime.TryGetCurrentPrimary(world, engine.GlobalContext, out Entity selected) &&
+                () => EntityCollectionContextRuntime.TryGetCurrentPrimary(world, engine.GlobalContext, out Entity selected) &&
                       ReadName(world, selected) == scenario.ProducerName,
                 12,
                 $"{scenario.ProducerName} should be auto-selected.");
@@ -407,18 +408,24 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SelectEntity(GameEngine engine, Entity target)
         {
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime service is missing.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Assert.That(engine.World.IsAlive(owner), Is.True);
             Assert.That(engine.World.IsAlive(target), Is.True);
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: target,
+                title: "RTS training command source",
+                summary: "1 actor");
+            collections.Replace(owner, in descriptor, next, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
         }
 
         private static string ReadName(World world, Entity entity)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -6,12 +6,13 @@ using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation;
@@ -195,19 +196,19 @@ namespace Ludots.Tests.GAS
         private sealed class SelectedMovePathFixture : IDisposable
         {
             private readonly Entity _viewer;
-            private readonly SelectionRuntime _selection;
+            private readonly EntityCollectionStore _collections;
 
             private SelectedMovePathFixture(
                 World world,
                 Entity viewer,
-                SelectionRuntime selection,
+                EntityCollectionStore collections,
                 PresentationEventStream events,
                 SelectedMovePathPresentationSystem system,
                 PerformerMovePathFixture performers)
             {
                 World = world;
                 _viewer = viewer;
-                _selection = selection;
+                _collections = collections;
                 Events = events;
                 System = system;
                 Performers = performers;
@@ -221,33 +222,31 @@ namespace Ludots.Tests.GAS
             public static SelectedMovePathFixture Create(params string[] previewOrderTypeKeys)
             {
                 World world = World.Create();
-                var selectionConfig = new SelectionRuntimeConfig
+                var commandSourceConfig = new CommandSourceAcquisitionConfig
                 {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                    TargetFilter = new CommandSourceTargetFilterConfig { RelationFilter = "All" },
                     MovePathPreviewOrderTypeKeys = previewOrderTypeKeys,
                 };
-                var selection = new SelectionRuntime(
-                    world,
-                    selectionConfig,
-                    new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+                var collectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var collections = new EntityCollectionStore(collectionKeys);
                 Entity viewer = world.Create();
-                Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
 
                 var events = new PresentationEventStream(512);
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.PresentationEventStream.Name] = events,
                     [CoreServiceKeys.GameSession.Name] = new GameSession(),
-                    [CoreServiceKeys.GameConfig.Name] = new GameConfig { Selection = selectionConfig },
+                    [CoreServiceKeys.GameConfig.Name] = new GameConfig { CommandSource = commandSourceConfig },
                     [CoreServiceKeys.OrderTypeRegistry.Name] = CreateOrderTypeRegistry(),
-                    [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-                    [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                    [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+                    [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 };
-                var system = new SelectedMovePathPresentationSystem(world, globals, selection);
+                var system = new SelectedMovePathPresentationSystem(world, globals);
                 return new SelectedMovePathFixture(
                     world,
                     viewer,
-                    selection,
+                    collections,
                     events,
                     system,
                     new PerformerMovePathFixture(world, events));
@@ -256,7 +255,15 @@ namespace Ludots.Tests.GAS
             public Entity CreateSelectedActor(WorldPositionCm position)
             {
                 Entity actor = World.Create(position, OrderBuffer.CreateEmpty());
-                Assert.That(_selection.ReplaceSelection(_viewer, SelectionSetKeys.LivePrimary, new[] { actor }), Is.True);
+                var descriptor = EntityCollectionDescriptor.Create(
+                    EntityCollectionKeys.CommandSource,
+                    EntityCollectionSourceKind.Explicit,
+                    EntityCollectionRoleKind.CommandSource,
+                    contextEntity: _viewer,
+                    primaryEntity: actor,
+                    title: "Selected move path command source",
+                    summary: "Test-owned command source collection.");
+                _collections.Replace(_viewer, in descriptor, new[] { actor }, _viewer);
                 return actor;
             }
 

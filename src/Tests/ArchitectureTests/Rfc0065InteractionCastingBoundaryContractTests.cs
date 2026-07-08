@@ -154,6 +154,125 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void CommandSourceAuthority_IsEntityCollectionBackedByDefault()
+        {
+            string repoRoot = FindRepoRoot();
+            string entityCollectionTypesPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "EntityCollectionTypes.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+            string contextRuntimePath = Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "EntityCollectionContextRuntime.cs");
+            Assert.That(File.Exists(entityCollectionTypesPath), Is.True, $"Missing {entityCollectionTypesPath}");
+            Assert.That(File.Exists(gameEnginePath), Is.True, $"Missing {gameEnginePath}");
+            Assert.That(File.Exists(contextRuntimePath), Is.True, $"Missing {contextRuntimePath}");
+
+            string entityCollectionTypes = File.ReadAllText(entityCollectionTypesPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+            string contextRuntime = File.ReadAllText(contextRuntimePath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(EntityCollectionKeys.CommandSource, Is.EqualTo("collection.command.source"));
+                Assert.That(entityCollectionTypes, Does.Contain("public const string CommandSource = \"collection.command.source\""),
+                    "The command-source authority key must remain a first-class EntityCollectionKeys constant.");
+                Assert.That(gameEngine, Does.Contain("registry.Register(EntityCollectionKeys.CommandSource)"),
+                    "GameEngine must register the command-source collection key with EntityCollectionStore.");
+                Assert.That(gameEngine, Does.Contain("InteractionContextFrameDescriptor.Create("),
+                    "GameEngine must create a default interaction context frame for command routing.");
+                Assert.That(gameEngine, Does.Contain("EntityCollectionKeys.CommandSource"),
+                    "The default interaction context must use EntityCollectionKeys.CommandSource.");
+                Assert.That(gameEngine, Does.Contain("EntityViewKeys.ControlPlaneCommand"),
+                    "The default interaction context must bind command-source authority to the control-plane command view.");
+                Assert.That(contextRuntime, Does.Contain("collections.KeyRegistry.Register(EntityCollectionKeys.CommandSource)"),
+                    "EntityCollectionContextRuntime must fall back to collection.command.source when no explicit interaction frame is active.");
+            });
+        }
+
+        [Test]
+        public void RetiredFormalInputApis_DoNotAppearRepoWide()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] forbidden =
+            {
+                Join("Ludots.Core.Input.", "Selection"),
+                Join("Selection", "Runtime"),
+                Join("Selection", "Request"),
+                Join("Selection", "Response"),
+                Join("Selection", "SetKeys"),
+                Join("Selection", "ViewKeys"),
+                Join("Selection", "ContainerKind"),
+                Join("Selection", "Eligibility"),
+                Join("Order", "Selection", "Reference")
+            };
+
+            var violations = new List<string>();
+            foreach (string rootName in new[] { "src", "mods" })
+            {
+                string root = Path.Combine(repoRoot, rootName);
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    if (!IsScannedRepoFile(repoRoot, file))
+                    {
+                        continue;
+                    }
+
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "Formal input authority must be retired repo-wide; use EntityCollectionStore, " +
+                "EntityCollectionKeys.CommandSource, and collection.command.source instead:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
+        public void GameJsonCommandSourceConfig_DoesNotUseRetiredTopLevelSelectionSection()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "assets"),
+                Path.Combine(repoRoot, "mods")
+            };
+
+            var violations = new List<string>();
+            foreach (string root in roots)
+            {
+                if (!Directory.Exists(root))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(root, "game.json", SearchOption.AllDirectories))
+                {
+                    if (!IsScannedRepoFile(repoRoot, file))
+                    {
+                        continue;
+                    }
+
+                    JsonNode? node = JsonNode.Parse(File.ReadAllText(file));
+                    if (node is JsonObject obj && obj.ContainsKey("selection"))
+                    {
+                        violations.Add($"{ToRepoRelativePath(repoRoot, file)}: top-level game.json selection section must be commandSource");
+                    }
+                }
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "Move path preview, acquisition, and target-filter config belong under game.commandSource " +
+                "so command-source authority is backed by EntityCollectionStore:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
         public void InteractionInputLayer_ContainsNoCastingStateMachine()
         {
             string repoRoot = FindRepoRoot();
@@ -227,8 +346,8 @@ namespace Ludots.Tests.Architecture
             {
                 Assert.That(localOrderSource, Does.Contain("KnowledgeCommandTargetGate"),
                     "CoreInputMod command target paths must use the explicit resolver-backed knowledge gate.");
-                Assert.That(localOrderSource, Does.Not.Contain("SelectionEligibility.CanTargetCommand("),
-                    "CoreInputMod hover/auto-target command paths must not call the globals overload, which allows all targets when no resolver is registered.");
+                Assert.That(localOrderSource, Does.Not.Contain("CommandSourceEligibility.CanTargetCommand("),
+                    "CoreInputMod hover/auto-target command paths must go through KnowledgeCommandTargetGate, not the raw command-source eligibility helper.");
 
                 Assert.That(commandIntentRegistry, Does.Not.Contain("targetGate = null"),
                     "CommandIntentProfileRegistry must not make the target gate optional.");
@@ -243,7 +362,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void MassNavigationCore_ConsumesOrdersNotInputOrSelectionAuthority()
+        public void MassNavigationCore_ConsumesOrdersNotInputOrCommandSourceAuthority()
         {
             string repoRoot = FindRepoRoot();
             string massNavigationRoot = Path.Combine(repoRoot, "src", "Core", "MassNavigation");
@@ -251,14 +370,13 @@ namespace Ludots.Tests.Architecture
 
             string[] forbidden =
             {
-                "SelectionRuntime",
-                "SelectionSetKeys",
-                "LivePrimary",
-                "CurrentSelection",
+                "EntityCollectionStore",
                 "EntityCollectionKeys.CommandSource",
+                "\"collection.command.source\"",
+                "EntityCollectionContextRuntime",
                 "InteractionContextStack",
-                "OrderSelectionReference",
-                "MassNavigationSelectionSync",
+                "CommandSourceAcquisition",
+                "InputOrderMappingSystem",
                 "MassNavigationLocalCommandInputSystem"
             };
 
@@ -272,12 +390,12 @@ namespace Ludots.Tests.Architecture
                 violations,
                 Is.Empty,
                 "RFC-0065: MassNavigation is an execution domain. It must ingest explicit OrderBuffer move orders " +
-                "and must not resolve command actors from Selection, command-source collections, or interaction context APIs:\n" +
+                "and must not resolve command actors from input, command-source collections, or interaction context APIs:\n" +
                 string.Join(Environment.NewLine, violations));
         }
 
         [Test]
-        public void InteractionShowcase_DoesNotBridgeLiveSelectionIntoCommandSource()
+        public void InteractionShowcase_SeedsCommandSourceAuthorityDirectly()
         {
             string repoRoot = FindRepoRoot();
             string runtimePath = Path.Combine(
@@ -293,14 +411,16 @@ namespace Ludots.Tests.Architecture
             string source = File.ReadAllText(runtimePath);
             Assert.Multiple(() =>
             {
-                Assert.That(source, Does.Not.Contain("PublishCommandSourceFromLiveSelection"),
-                    "The interaction showcase must seed command-source rows directly, not copy SelectionRuntime.LivePrimary.");
-                Assert.That(source, Does.Not.Contain("EntityCollectionSourceKind.SelectionView"),
-                    "The command-source descriptor must not identify SelectionView as its source.");
-                Assert.That(source, Does.Not.Contain("Live selection projected"),
-                    "The old Selection -> CommandSource bridge summary must not return.");
+                Assert.That(source, Does.Contain("EntityCollectionStore"),
+                    "The interaction showcase must publish through EntityCollectionStore.");
+                Assert.That(source, Does.Contain("EntityCollectionKeys.CommandSource"),
+                    "The interaction showcase must target collection.command.source explicitly.");
+                Assert.That(source, Does.Contain("EntityCollectionRoleKind.CommandSource"),
+                    "The interaction showcase descriptor must mark the collection as command-source authority.");
                 Assert.That(source, Does.Contain("EntityCollectionSourceKind.Explicit"),
                     "The showcase command-source descriptor should remain an explicit host-seeded collection.");
+                Assert.That(source, Does.Contain("collections.Replace(owner, in descriptor, actors, owner)"),
+                    "The writer domain must be recorded as the local command-source owner.");
             });
         }
 
@@ -641,6 +761,20 @@ namespace Ludots.Tests.Architecture
                     }
                 }
             }
+        }
+
+        private static string Join(params string[] parts)
+        {
+            return string.Concat(parts);
+        }
+
+        private static bool IsScannedRepoFile(string repoRoot, string file)
+        {
+            string relative = ToRepoRelativePath(repoRoot, file);
+            return !relative.Contains("/bin/", StringComparison.OrdinalIgnoreCase) &&
+                   !relative.Contains("/obj/", StringComparison.OrdinalIgnoreCase) &&
+                   !relative.Contains("/node_modules/", StringComparison.OrdinalIgnoreCase) &&
+                   !relative.Contains("/.git/", StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FindRepoRoot()

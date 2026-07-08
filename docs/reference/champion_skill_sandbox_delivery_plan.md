@@ -52,7 +52,7 @@ Implemented in the sandbox branch:
   - `SmartCastWithIndicator`
   - `PressReleaseAimCast`
 - command panel toolbar mode switching
-- selection marker and hover marker
+- command marker and hover marker
 - camera confine and edge-pan safety for the sandbox tactical camera
 - camera reset button
 - camera toolbar follow modes:
@@ -75,7 +75,7 @@ Recent projectile / presentation slices:
 Recent sandbox interaction / feedback slices:
 
 - `92776b3 feat(champion-sandbox): add movement and hover target marker`
-- `964c11e feat(champion-sandbox): add selection marker and cast feedback`
+- `964c11e feat(champion-sandbox): add command marker and cast feedback`
 - `8a444f7 feat(champion-sandbox): add camera reset and tactical confine`
 
 ## Confirmed Architecture Outcome
@@ -203,7 +203,7 @@ Required evidence:
 - targeted unit/config tests
 - runnable raylib sandbox launch
 - visual verification of:
-  - selection marker
+  - command marker
   - hover marker
   - cast mode switching
   - projectile spawn/travel/hit visibility

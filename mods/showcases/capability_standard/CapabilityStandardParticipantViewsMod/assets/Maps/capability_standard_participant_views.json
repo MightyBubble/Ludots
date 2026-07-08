@@ -49,7 +49,7 @@
             "AllComponents": [
               "MapEntity",
               "PlayerOwner",
-              "SelectionSelectableTag"
+              "CommandSourceSelectableTag"
             ],
             "NoneComponents": [
               "PlayerIdentity"
@@ -79,7 +79,7 @@
             "AllComponents": [
               "MapEntity",
               "Team",
-              "SelectionSelectableTag"
+              "CommandSourceSelectableTag"
             ],
             "NoneComponents": [
               "TeamIdentity",
@@ -110,7 +110,7 @@
             "AllComponents": [
               "MapEntity",
               "Team",
-              "SelectionSelectableTag"
+              "CommandSourceSelectableTag"
             ],
             "NoneComponents": [
               "TeamIdentity",
@@ -141,7 +141,7 @@
             "AllComponents": [
               "MapEntity",
               "Team",
-              "SelectionSelectableTag"
+              "CommandSourceSelectableTag"
             ],
             "NoneComponents": [
               "TeamIdentity",
@@ -172,7 +172,7 @@
             "AllComponents": [
               "MapEntity",
               "Team",
-              "SelectionSelectableTag"
+              "CommandSourceSelectableTag"
             ],
             "NoneComponents": [
               "TeamIdentity",

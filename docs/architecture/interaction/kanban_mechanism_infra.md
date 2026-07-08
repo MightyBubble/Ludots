@@ -94,7 +94,7 @@
 |---|------|--------|------|------|------|
 | SY10 | CursorDirectionBlackboardWriter | P1 | 🔴 | F1, F3, F5, G11 | 每帧将鼠标/摇杆方向写入施法者 Blackboard（`CursorDirectionRad`） |
 | SY11 | ContextGroup Scoring Mechanism | P1 | 🔴 | S3, G3 | ContextGroup 注册 → Scorer 调用 → 候选排序 → 最高分 Ability 路由 |
-| SY12 | DoubleTap Detection (SelectionSystem) | P2 | 🔴 | S2 | InputTriggerType.DoubleTap 已废弃；需 SelectionSystem 层追踪按压间隔判断 |
+| SY12 | DoubleTap Detection (command-source input) | P2 | 🔴 | S2 | InputTriggerType.DoubleTap 已废弃；需在 command-source/input profile 层追踪按压间隔判断 |
 | SY13 | ModifierBehavior.forceTargetSelf | P2 | 🔴 | S4 | Alt 键状态检测 → Order.Target 强制设为 caster |
 | SY14 | Input Focus / Actor Routing | P2 | 🟡 | K7, R1, R2, R4, R6 | `actorOrderRouting` 已实现本地选中 actor 路由；Camera Focus / 非本地玩家路由仍待补 |
 | SY15 | Input Profile Remapping | P2 | 🔴 | K7 | 不同实体不同控制映射（投射物操控时） |

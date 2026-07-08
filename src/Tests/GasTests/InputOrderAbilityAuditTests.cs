@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Text.Json.Nodes;
@@ -607,8 +607,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: 100,
@@ -687,8 +685,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 effectRequests,
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -741,8 +737,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -825,8 +819,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -909,8 +901,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 new EffectRequestQueue(),
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,

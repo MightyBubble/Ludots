@@ -6,7 +6,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -661,7 +661,7 @@ internal sealed class UxPrototypeScenarioState
 
     private Entity ResolveSelectedEntity(GameEngine engine)
     {
-        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity)
+        return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity)
             ? entity
             : Entity.Null;
     }

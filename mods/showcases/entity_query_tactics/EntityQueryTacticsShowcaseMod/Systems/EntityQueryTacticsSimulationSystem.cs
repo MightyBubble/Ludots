@@ -13,7 +13,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
@@ -30,7 +30,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
     internal sealed class EntityQueryTacticsSimulationSystem : ISystem<float>
     {
         private static readonly QueryDescription NamedMapEntityQuery = new QueryDescription().WithAll<Name, MapEntity>();
-        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly GameEngine _engine;
         private readonly World _world;
@@ -58,11 +58,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         private int _hostileThreatsGraphId;
         private int _formationCacheGraphId;
         private uint _randomSeed = 0xEC51A11u;
-        private uint _lastSyncedLiveSelectionRevision;
-        private uint _lastMirroredLiveSelectionRevision;
-        private bool _formalSelectionMirrorReady;
+        private uint _lastSyncedCommandSourceRevision;
+        private uint _lastMirroredCommandSourceRevision;
+        private bool _commandSourceMirrorReady;
         private string _uiBoxNames = string.Empty;
-        private string _formalSelectionNames = string.Empty;
+        private string _commandSourceNames = string.Empty;
         private string _formationInputNames = string.Empty;
         private string _formationResultNames = string.Empty;
         private string _hostileThreatNames = string.Empty;
@@ -109,7 +109,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             _state.AdvanceFrame();
             PublishSelectableKnowledge(ScenarioContext.Owner);
-            MirrorFormalSelectionToCollection();
+            MirrorCommandSourceToCollection();
             MaintainFormationSnapshotFromSelectionChange();
             RunDemoPlayback();
 
@@ -150,7 +150,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             InitializeIdentifiers();
             PrepareEntities(context);
             SeedRelationshipRuntime(context);
-            BindSelectionRuntime(context.Owner);
+            BindCommandSourceOwner(context.Owner);
             PublishSelectableKnowledge(context.Owner);
             _state.SetScenarioContext(context);
             _engine.GlobalContext[EntityQueryTacticsShowcaseIds.ScenarioKey] = context;
@@ -158,7 +158,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             _demoPlaybackEnabled = IsDemoPlaybackEnabled();
             _nextDemoStepIndex = 0;
 
-            MirrorFormalSelectionToCollection(force: true);
+            MirrorCommandSourceToCollection(force: true);
             MaintainFormationSnapshotFromSelectionChange(force: true);
             ExecuteGraphs();
             RefreshScenarioState();
@@ -372,7 +372,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             var empty = KnowledgeIdMask256.Empty;
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
             string mapId = Config.MapId;
-            _world.Query(in SelectableKnowledgeQuery, (Entity target, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            _world.Query(in SelectableKnowledgeQuery, (Entity target, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
             {
                 if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -653,30 +653,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             return flagId;
         }
 
-        private void BindSelectionRuntime(Entity owner)
+        private void BindCommandSourceOwner(Entity owner)
         {
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-
             _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
             if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
                 _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
-            }
-
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.FormationPrimary, out _);
-            if (!SelectionContextRuntime.TrySetCurrentView(
-                    _world,
-                    _engine.GlobalContext,
-                    selection,
-                    owner,
-                    SelectionViewKeys.Primary,
-                    owner,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
-            {
-                throw new InvalidOperationException("Entity query tactics showcase failed to bind primary selection view.");
             }
         }
 
@@ -716,42 +698,40 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
         }
 
-        private void MirrorFormalSelectionToCollection(bool force = false)
+        private void MirrorCommandSourceToCollection(bool force = false)
         {
             if (ScenarioContext == null)
             {
                 return;
             }
 
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            uint liveRevision = selection.TryDescribeSelection(
+            uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    SelectionSetKeys.LivePrimary,
-                    out SelectionContainerDescriptor selectionDescriptor)
-                ? selectionDescriptor.Revision
+                    EntityCollectionKeys.CommandSource,
+                    out EntityCollectionView commandSourceView)
+                ? commandSourceView.Revision
                 : 0u;
             if (!force &&
-                _formalSelectionMirrorReady &&
-                liveRevision == _lastMirroredLiveSelectionRevision)
+                _commandSourceMirrorReady &&
+                commandSourceRevision == _lastMirroredCommandSourceRevision)
             {
                 return;
             }
 
-            int count = selection.CopySelection(ScenarioContext.Owner, SelectionSetKeys.LivePrimary, _selectionScratch);
+            int count = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _selectionScratch);
             var descriptor = EntityCollectionDescriptor.Create(
-                Config.Collections.FormalSelectionMirror,
-                EntityCollectionSourceKind.SelectionContainer,
-                EntityCollectionRoleKind.FormalSelection,
+                Config.Collections.CommandSourceMirror,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
                 contextEntity: ScenarioContext.Owner,
                 primaryEntity: count > 0 ? _selectionScratch[0] : Entity.Null,
-                title: "Formal selection mirror",
-                summary: $"SelectionRuntime live primary | {count} entities");
+                title: "Command source mirror",
+                summary: $"collection.command.source | {count} entities");
             collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), default, BuildPrimaryFlags(count));
-            _lastMirroredLiveSelectionRevision = liveRevision;
-            _formalSelectionMirrorReady = true;
+            _lastMirroredCommandSourceRevision = commandSourceRevision;
+            _commandSourceMirrorReady = true;
         }
 
         private void CommitSelectionFromUiBox(bool requireNonEmpty = false)
@@ -763,8 +743,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             int count = collections.CopyEntities(ScenarioContext.Owner, Config.Collections.UiBox, _selectionScratch);
             if (requireNonEmpty && count == 0)
             {
@@ -772,19 +750,23 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                     $"Entity query tactics demo playback could not commit '{Config.Collections.UiBox}' because it is empty.");
             }
 
-            if (!selection.ReplaceSelection(ScenarioContext.Owner, SelectionSetKeys.LivePrimary, _selectionScratch.AsSpan(0, count)))
-            {
-                throw new InvalidOperationException("Entity query tactics showcase failed to replace SelectionRuntime live primary.");
-            }
-
-            int committed = selection.GetSelectionCount(ScenarioContext.Owner, SelectionSetKeys.LivePrimary);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                ScenarioContext.Owner,
+                count > 0 ? _selectionScratch[0] : Entity.Null,
+                "Command source",
+                $"Committed UI box | {count} entities");
+            collections.Replace(ScenarioContext.Owner, descriptor, _selectionScratch.AsSpan(0, count), ScenarioContext.Owner);
+            int committed = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _collectionScratch);
             if (committed != count)
             {
                 throw new InvalidOperationException(
-                    $"Entity query tactics showcase SelectionRuntime committed {committed} entities, expected {count}.");
+                    $"Entity query tactics showcase command source committed {committed} entities, expected {count}.");
             }
 
-            MirrorFormalSelectionToCollection(force: true);
+            MirrorCommandSourceToCollection(force: true);
             MaintainFormationSnapshotFromSelectionChange(force: true);
         }
 
@@ -807,25 +789,22 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
-            uint liveRevision = selection.TryDescribeSelection(
+            uint commandSourceRevision = collections.TryGetView(
                     ScenarioContext.Owner,
-                    SelectionSetKeys.LivePrimary,
-                    out SelectionContainerDescriptor descriptor)
+                    EntityCollectionKeys.CommandSource,
+                    out EntityCollectionView descriptor)
                 ? descriptor.Revision
                 : 0u;
-            if (!force && liveRevision == _lastSyncedLiveSelectionRevision)
+            if (!force && commandSourceRevision == _lastSyncedCommandSourceRevision)
             {
                 return;
             }
 
-            int count = selection.CopySelection(ScenarioContext.Owner, SelectionSetKeys.LivePrimary, _formationScratch);
-            selection.ReplaceSelection(ScenarioContext.Owner, SelectionSetKeys.FormationPrimary, _formationScratch.AsSpan(0, count));
+            int count = collections.CopyEntities(ScenarioContext.Owner, EntityCollectionKeys.CommandSource, _formationScratch);
             WriteFormationCollection(count);
-            _lastSyncedLiveSelectionRevision = liveRevision;
+            _lastSyncedCommandSourceRevision = commandSourceRevision;
         }
 
         private void WriteFormationCollection(int count)
@@ -839,7 +818,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             var descriptor = EntityCollectionDescriptor.Create(
                 Config.Collections.FormationPrimary,
-                EntityCollectionSourceKind.SelectionView,
+                EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource,
                 contextEntity: ScenarioContext.Owner,
                 primaryEntity: count > 0 ? _formationScratch[0] : Entity.Null,
@@ -856,9 +835,9 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-            int count = selection.CopySelection(ScenarioContext.Owner, SelectionSetKeys.FormationPrimary, _formationScratch);
+            EntityCollectionStore collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
+            int count = collections.CopyEntities(ScenarioContext.Owner, Config.Collections.FormationPrimary, _formationScratch);
             if (count > 1)
             {
                 Entity first = _formationScratch[0];
@@ -870,7 +849,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 _formationScratch[count - 1] = first;
             }
 
-            selection.ReplaceSelection(ScenarioContext.Owner, SelectionSetKeys.FormationPrimary, _formationScratch.AsSpan(0, count));
             WriteFormationCollection(count);
         }
 
@@ -988,17 +966,17 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("GraphOutputValueStore is missing.");
 
             ReadCollectionState(collections, Config.Collections.UiBox, _state.UiBoxRevision, ref _uiBoxNames, out uint uiBoxRevision, out int uiBoxCount);
-            ReadCollectionState(collections, Config.Collections.FormalSelectionMirror, _state.FormalSelectionRevision, ref _formalSelectionNames, out uint formalSelectionRevision, out int formalSelectionCount);
+            ReadCollectionState(collections, Config.Collections.CommandSourceMirror, _state.CommandSourceRevision, ref _commandSourceNames, out uint commandSourceRevision, out int commandSourceCount);
             ReadCollectionState(collections, Config.Collections.FormationPrimary, _state.FormationRevision, ref _formationInputNames, out uint formationRevision, out _);
             ReadCollectionState(collections, Config.Collections.FormationCacheResult, _state.FormationResultRevision, ref _formationResultNames, out uint formationResultRevision, out int formationCount);
             ReadCollectionState(collections, Config.Collections.HostileThreatResult, _state.HostileResultRevision, ref _hostileThreatNames, out uint hostileResultRevision, out int threatCount);
             _state.UiBoxRevision = uiBoxRevision;
             _state.UiBoxCount = uiBoxCount;
             _state.UiBoxNames = _uiBoxNames;
-            _state.FormalSelectionRevision = formalSelectionRevision;
-            _state.FormalSelectionCount = formalSelectionCount;
+            _state.CommandSourceRevision = commandSourceRevision;
+            _state.CommandSourceCount = commandSourceCount;
             _state.FormationRevision = formationRevision;
-            _state.SelectedNames = _formalSelectionNames;
+            _state.SelectedNames = _commandSourceNames;
             _state.FormationResultRevision = formationResultRevision;
             _state.FormationCount = formationCount;
             _state.FormationNames = string.IsNullOrWhiteSpace(_formationResultNames) ? _formationInputNames : _formationResultNames;

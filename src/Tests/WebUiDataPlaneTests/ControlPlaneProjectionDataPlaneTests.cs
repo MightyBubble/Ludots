@@ -196,7 +196,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 				state.P1Rep,
 				EntityCollectionDescriptor.Create(
 					EntityCollectionKeys.CommandSource,
-					EntityCollectionSourceKind.SelectionView,
+					EntityCollectionSourceKind.Explicit,
 					EntityCollectionRoleKind.CommandSource,
 					state.P1Rep),
 				new[] { ownedUnit });
@@ -204,7 +204,7 @@ public sealed class ControlPlaneProjectionDataPlaneTests
 				state.P2Rep,
 				EntityCollectionDescriptor.Create(
 					EntityCollectionKeys.CommandSource,
-					EntityCollectionSourceKind.SelectionView,
+					EntityCollectionSourceKind.Explicit,
 					EntityCollectionRoleKind.CommandSource,
 					state.P2Rep),
 				new[] { proxiedUnit });

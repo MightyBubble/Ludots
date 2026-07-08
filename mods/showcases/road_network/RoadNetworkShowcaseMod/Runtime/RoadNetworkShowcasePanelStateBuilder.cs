@@ -8,7 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
@@ -36,10 +36,10 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         public RoadNetworkShowcasePanelState Build()
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _engine.GlobalContext);
+            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(_world, _engine.GlobalContext);
             int selectedCount = selected.Length;
             Entity primary = Entity.Null;
-            SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out primary);
+            EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out primary);
 
             var actors = new RoadNetworkShowcaseActorPanelState[selectedCount];
             for (int i = 0; i < selectedCount; i++)

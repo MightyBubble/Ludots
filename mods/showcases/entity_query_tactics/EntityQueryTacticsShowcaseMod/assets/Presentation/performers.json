@@ -150,7 +150,7 @@
         "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
       },
       {
-        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "entityquery.tactics.visual.selection.marker",
@@ -158,7 +158,7 @@
         }
       },
       {
-        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "entityquery.tactics.visual.selection.marker",

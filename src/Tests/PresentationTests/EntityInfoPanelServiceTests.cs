@@ -9,7 +9,6 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -262,22 +261,15 @@ public sealed class EntityInfoPanelServiceTests
         Entity second = world.Create(new Name { Value = "Arcweaver 02" });
         Entity third = world.Create(new Name { Value = "Vanguard 01" });
 
-        var selectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
-        var selection = new SelectionRuntime(
-            world,
-            new SelectionRuntimeConfig
-            {
-                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-            },
-            selectionRegistry);
-        Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { first, second, third }), Is.True);
-        Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
+        var collectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var collections = new EntityCollectionStore(collectionRegistry);
+        ReplaceCommandSource(collections, viewer, new[] { first, second, third }, "Command source | 3 entities");
 
         var globals = new Dictionary<string, object>
         {
-            [CoreServiceKeys.SelectionRuntime.Name] = selection,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+            [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+            [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+            [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
 
         var service = new EntityInfoPanelService();
@@ -292,8 +284,8 @@ public sealed class EntityInfoPanelServiceTests
         service.Refresh(world, globals);
 
         Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(3));
-        Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo(SelectionViewKeys.Primary));
-        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo(SelectionSetKeys.LivePrimary));
+        Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo(EntityCollectionKeys.CommandSource));
+        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo(EntityCollectionKeys.CommandSource));
         Assert.That(service.GetSubtitle(handle.Slot), Does.Contain("3 entities"));
         Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 0, out EntityCollectionPanelRow firstRow), Is.True);
         Assert.That(firstRow.EntityId, Is.EqualTo(first.Id));
@@ -324,19 +316,9 @@ public sealed class EntityInfoPanelServiceTests
         Entity queryFirst = world.Create(new Name { Value = "Query Vanguard" });
         Entity querySecond = world.Create(new Name { Value = "Query Scout" });
 
-        var selectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
-        var selection = new SelectionRuntime(
-            world,
-            new SelectionRuntimeConfig
-            {
-                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-            },
-            selectionRegistry);
-        Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { selected }), Is.True);
-        Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
-
         var collectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
         var collections = new EntityCollectionStore(collectionRegistry);
+        ReplaceCommandSource(collections, viewer, new[] { selected }, "Command source | 1 entity");
         const string queryKey = "tests.entityinfo.query";
         collections.Replace(
             viewer,
@@ -352,9 +334,7 @@ public sealed class EntityInfoPanelServiceTests
 
         var globals = new Dictionary<string, object>
         {
-            [CoreServiceKeys.SelectionRuntime.Name] = selection,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
-            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+            [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             [CoreServiceKeys.EntityCollectionStore.Name] = collections,
             [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
         };
@@ -370,8 +350,8 @@ public sealed class EntityInfoPanelServiceTests
 
         service.Refresh(world, globals);
 
-        Assert.That(selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary), Is.EqualTo(1));
-        Assert.That(selection.TryGetSelectionAt(viewer, SelectionSetKeys.LivePrimary, 0, out Entity stillSelected), Is.True);
+        Assert.That(collections.TryGet(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionHandle commandSource), Is.True);
+        Assert.That(collections.TryGetEntityAt(commandSource, 0, out Entity stillSelected), Is.True);
         Assert.That(stillSelected, Is.EqualTo(selected));
         Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(2));
         Assert.That(service.GetEntityCollectionSourceTitle(handle.Slot), Is.EqualTo("Relation query"));
@@ -385,6 +365,23 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(secondRow.EntityId, Is.EqualTo(querySecond.Id));
         Assert.That(secondRow.Name, Is.EqualTo("Query Scout"));
         Assert.That(secondRow.IsPrimary, Is.False);
+    }
+
+    private static EntityCollectionHandle ReplaceCommandSource(
+        EntityCollectionStore collections,
+        Entity viewer,
+        ReadOnlySpan<Entity> members,
+        string summary)
+    {
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            viewer,
+            members.Length > 0 ? members[0] : Entity.Null,
+            "Command source",
+            summary);
+        return collections.Replace(viewer, descriptor, members, viewer);
     }
 
     [Test]

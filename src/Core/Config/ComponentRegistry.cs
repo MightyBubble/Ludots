@@ -26,7 +26,7 @@ using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
 
@@ -74,9 +74,9 @@ namespace Ludots.Core.Config
             Register<TagCountContainer>("TagCountContainer");
             Register<TimedTagBuffer>("TimedTagBuffer");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
-            Register<SelectionSelectableTag>("SelectionSelectableTag");
-            Register("SelectionSelectableState", SetSelectionSelectableState, null, Component<SelectionSelectableState>.ComponentType);
-            Register<SelectionDragState>("SelectionDragState");
+            Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
+            Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
+            Register<CommandSourceDragState>("CommandSourceDragState");
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
@@ -534,17 +534,17 @@ namespace Ludots.Core.Config
             });
         }
 
-        private static void SetSelectionSelectableState(Entity entity, JsonNode data)
+        private static void SetCommandSourceSelectableState(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("SelectionSelectableState requires an object payload.");
+                throw new InvalidOperationException("CommandSourceSelectableState requires an object payload.");
             }
 
-            ValidateProperties(obj, "SelectionSelectableState", "IsEnabled");
-            JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", "SelectionSelectableState");
-            byte enabled = ParseSelectionEnabled(isEnabledNode, "SelectionSelectableState.IsEnabled");
-            entity.Add(new SelectionSelectableState { IsEnabled = enabled });
+            ValidateProperties(obj, "CommandSourceSelectableState", "IsEnabled");
+            JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", "CommandSourceSelectableState");
+            byte enabled = ParseSelectionEnabled(isEnabledNode, "CommandSourceSelectableState.IsEnabled");
+            entity.Add(new CommandSourceSelectableState { IsEnabled = enabled });
         }
 
         private static void SetSpatialBounds(Entity entity, JsonNode data)

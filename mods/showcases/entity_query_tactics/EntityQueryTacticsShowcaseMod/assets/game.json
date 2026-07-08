@@ -5,14 +5,12 @@
   "targetFps": 0,
   "startupMapId": "entity_query_tactics_showcase",
   "startupInputContexts": ["Default_Gameplay", "EntityQueryTactics.Controls"],
-  "selection": {
+  "commandSource": {
     "targetFilter": {
       "relationFilter": "Friendly"
     },
     "acquisition": {
       "collectionKey": "entityquery.collection.ui.box",
-      "commitToFormalSelection": false,
-      "formalSelectionSetKey": "selection.live.primary",
       "title": "UI box acquisition"
     }
   }

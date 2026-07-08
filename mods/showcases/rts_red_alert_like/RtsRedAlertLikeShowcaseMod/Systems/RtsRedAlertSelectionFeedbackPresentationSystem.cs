@@ -4,7 +4,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -38,7 +38,7 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
     {
         _elapsedSeconds += MathF.Max(0f, dt);
         if (!IsRedAlertMapActive() ||
-            !SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected) ||
+            !EntityCollectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected) ||
             !_engine.World.IsAlive(selected) ||
             !TryResolveWorldPosition(selected, out Vector3 center))
         {

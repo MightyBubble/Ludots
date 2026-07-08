@@ -469,8 +469,8 @@ z
     <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(500.038453 302.298778)">GAS -&gt; EventStream</text>
    </g>
    <g id="text_10">
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(469.951031 366.871303)">SelectionPresentationEventSystem</text>
-    <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(489.64275 377.643741)">Selection -&gt; EventStream</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(469.951031 366.871303)">EntityCollectionEventProjection</text>
+    <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(489.64275 377.643741)">Collections -&gt; EventStream</text>
    </g>
    <g id="text_11">
     <text style="font-weight: 700; font-size: 9px; font-family: 'Noto Sans SC', 'Microsoft YaHei', 'SimHei', 'PingFang SC', 'SimSun', 'Arial', sans-serif; fill: #2d2a26" transform="translate(496.230328 442.328062)">PerformerRuleSystem</text>

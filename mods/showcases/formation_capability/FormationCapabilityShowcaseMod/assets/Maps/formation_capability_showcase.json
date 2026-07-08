@@ -17,6 +17,7 @@
   ],
   "Entities": [
     {
+      "InstanceId": "formation.local_player",
       "Template": "mass_navigation_local_player",
       "Overrides": {
         "Team": {
@@ -129,5 +130,11 @@
         }
       }
     }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "formation.local_player" }
   ]
 }

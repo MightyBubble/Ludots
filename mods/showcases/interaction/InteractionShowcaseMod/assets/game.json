@@ -1,6 +1,6 @@
 {
   "startupMapId": "interaction_showcase_hub",
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" }
   }
 }

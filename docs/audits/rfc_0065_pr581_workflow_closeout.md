@@ -1,18 +1,24 @@
 # RFC-0065 PR581 Workflow Closeout
 
+> Current closeout note. Older audit sections in this file captured the pre-retirement
+> transition state; they are superseded by this pass. Formal `SelectionRuntime`,
+> `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`,
+> `OrderSelectionReference`, `SelectionRequest`, and `SelectionResponse` are retired; `EntityCollectionStore`
+> / `collection.command.source` is the authoritative model.
+
 Date: 2026-07-07
 
 Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, PR head `2417820e9`, `docs/audits/rfc-0065-implementation-handoff.md`, and `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`.
 
 ## Executive Status
 
-PR581 is not at the RFC-0065 terminal state.
+PR581 has reached the current RFC-0065 closeout target for formal Selection retirement and visible showcase evidence. Remaining RFC follow-ups are explicitly scoped below and are not fallback permission.
 
 | Question | Status | Evidence |
 |---|---|---|
 | Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 timeline, A4 command-source/scheme, A4 blink/mixed-selection UI timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
 | Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable timelines. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
-| Is Selection retired? | No | Selection is not retired repo-wide. PR581 retires Selection from the RFC-0065 ground `Command` authority path and closes the MassNavigation core/input-arbitration coupling, but `SelectionRuntime`, `CurrentSelectionApplySystem`, selection presentation, minimap/UI readers, and legacy skill/cast selected-provider paths remain live. |
+| Is Selection retired? | Yes for formal Selection APIs repo-wide | Production and test code now use `EntityCollectionStore`, `EntityCollectionKeys.CommandSource`, `EntityCollectionContextRuntime`, and `CommandSourceAcquisitionSystem`. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
 
 Latest PR review checked on 2026-07-06:
 
@@ -21,7 +27,7 @@ Latest PR review checked on 2026-07-06:
 | 2026-07-06 02:52 | `dc3c1758a8f2dddbb360dc85b58204fc707c3641` | Request-changes-equivalent comment: fail-fast, control-plane, loader, knowledge gate, and benchmark concerns. |
 | 2026-07-06 04:26 | `dc62547c047e0d5c2351f7883f15f66d38a3bbbb` | Request-changes-equivalent comment: multi-profile grants, multi-writer domain semantics, partial projection, association churn, reverse-index wrapper, and Team/PlayerOwner sequencing. |
 | 2026-07-06 07:15 | `132d742563a2358e72f42a07c7108405701005f3` | Request-changes-equivalent comment: benchmark hardening still missing, old Selection target path still present, and partial-domain budget not fixed in repo tests. |
-| 2026-07-06 07:33 | `132d742563a2358e72f42a07c7108405701005f3` | Supplemental audit: Selection is not retired; PR581 is a dual-track transition. |
+| 2026-07-06 07:33 | `132d742563a2358e72f42a07c7108405701005f3` | Superseded supplemental audit: at that older commit Selection was still dual-track. Current closeout retires the formal Selection APIs. |
 | after latest review | `2417820e9ed225aff3761737f861f234094985d5` | Latest commit folds axis-move into per-scheme `ControlScheme.axisMove`, deletes global `axis_move.json` / `AxisMoveConfig`, and removes the global toggle dual-truth. No submitted review covers this commit yet. |
 
 ## Workflow A - Visible UAT And Showcase
@@ -297,9 +303,9 @@ bench.relationship_runtime_collect_specific sources=4096 iterations=400 elapsed_
 bench.relationship_runtime_collect_any sources=4096 edge_types_per_source=4 iterations=400 elapsed_ms=36.44 ns_per_source=22.2 alloc_bytes=0
 ```
 
-## Selection Retirement Second Audit - 2026-07-07
+## Superseded Selection Retirement Audit - 2026-07-07
 
-Verdict: Selection is **not repo-wide retired**. PR581 has improved the RFC-0065 command-source path, and the final closeout removes the interaction-showcase `LivePrimary` command-source bridge plus MassNavigation core authority reads. The repository is still in a dual-track transition: formal `SelectionRuntime` remains a registered core service and several production systems still read it for view/UI or legacy skill/cast paths.
+Current verdict: formal Selection APIs are retired repo-wide in the current closeout pass. The text below records the old 2026-07-07 audit method and why the final pass had to remove the remaining formal APIs rather than documenting a dual-track state.
 
 Search commands used for this pass:
 
@@ -312,26 +318,26 @@ rg -n "Selected|Selection|SelectionContextRuntime|SelectionViewRuntime|LivePrima
 | Audit question | Finding | Evidence |
 |---|---|---|
 | Does the RFC-0065 ground `Command` command-source path depend on Selection? | No for the routed `Command` slice when RFC-0065 services are installed. It reads the active interaction frame, `ControlSchemeRuntime`, command intent profiles, dispatch profiles, and `EntityCollectionStore`; it copies actors from the active collection and never calls the selected-provider path. | `src/Core/Input/Orders/InputOrderMappingSystem.cs` routes command actions to `SubmitRfc0065Command`; that method resolves `frame.ActiveCollectionKeyId`, copies actors from `EntityCollectionStore`, routes through `CommandIntentProfileRegistry.RouteGroup`, dispatches through `CastDispatchProfileRegistry.SelectDispatchTargets`, then submits orders. `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs` fail-fast configures these services instead of silently falling back. |
-| Is repo-wide Selection retired? | No. **Selection is not repo-wide retired.** | `src/Core/Engine/GameEngine.cs` still constructs and registers `SelectionRequestQueue`, `SelectionResponseBuffer`, `SelectionRuntime`, `SelectionRuleRegistry`, and `SelectionPresentationEventSystem`. `src/Core/Input/Selection/*` remains active infrastructure. |
+| Is repo-wide Selection retired? | Yes in the current closeout pass. | The old `src/Core/Input/Selection/*` infrastructure is deleted; `GameEngine` no longer registers formal Selection services; command authority uses `EntityCollectionStore` and explicit command-source collections. |
 | Is the EntityCommandPanel command-source path selection-free? | The aggregation source is command-source based. | `mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs` resolves `context.TargetEntity + config.CollectionKey` through `EntityCollectionStore`; no `SelectionRuntime` read is present in that source. The showcase host still has to publish `collection.command.source`, but the panel source itself does not use Selection as its command source. |
-| Which Selection consumers are still legitimate in the current repo state? | Formal selection acquisition/view/control-group code, presentation readers, camera/minimap readers, participant-view/showcase projections, and legacy skill/cast targeting remain live consumers. They are not proof of retirement; they are allowed only because repo-wide retirement is not complete. | `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`, `mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs`, `mods/CoreInputMod/Systems/SkillBarOverlaySystem.cs`, `mods/CoreInputMod/Systems/SelectionBoxOverlaySystem.cs`, `src/Core/Presentation/Minimap/MinimapRuntime.cs`, `src/Core/Gameplay/Camera/FollowTargets/ViewedSelectionPrimaryFollowTarget.cs`, `src/Core/Gameplay/Camera/FollowTargets/SelectedGroupFollowTarget.cs`, `mods/capabilities/participant_view/**`, and road/camera showcase code. |
+| Which old Selection consumers were migrated? | Acquisition/view/control-group, presentation readers, camera/minimap readers, participant-view/showcase projections, and legacy skill/cast tests now resolve through explicit entity collections or command-source helpers. | Current production and test scans ban `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionViewRuntime`, `SelectionControlGroupRuntime`, `OrderSelectionReference`, and request/response queues. |
 
-Fallback / dual-truth findings:
+Superseded fallback / dual-truth findings:
 
-- `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs` remains a dual-track adapter: `TryGetSelectedEntity`, `TryGetSelectedEntities`, and `GetControlledActor` prefer the active command-source collection, then fall back to `SelectionRuntime` / local player. This is not used by the routed RFC-0065 ground `Command` slice after `SubmitRfc0065Command` takes over, but it is still an architecture smell for terminal retirement because the provider name hides two truths.
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs` still has the selected-entity fallback in `TryBuildOrderSmartCast`. This is legacy skill/cast targeting, not the RFC-0065 ground-command route, but it blocks any claim that selected-provider semantics are retired.
-- `mods/showcases/interaction/InteractionShowcaseMod/Runtime/InteractionShowcaseRuntime.cs` no longer projects `SelectionSetKeys.LivePrimary` into `collection.command.source`; the showcase seeds command-source rows directly for the RFC-0065 command path.
+- `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs` was tightened to command-source collection helpers and no longer bridges formal Selection services.
+- `src/Core/Input/Orders/InputOrderMappingSystem.cs` must not rebuild selected-provider fallback semantics; command actions route through explicit command-source collections.
+- `mods/showcases/interaction/InteractionShowcaseMod/Runtime/InteractionShowcaseRuntime.cs` seeds command-source rows directly for the RFC-0065 command path.
 - `src/Core/MassNavigation/**` no longer references Selection/CommandSource/InteractionContextStack authority APIs. It consumes explicit `OrderBuffer` move orders; remaining MassNavigation follow-up work is the separate `PlayerOwner`/`Team` domain migration.
-- `mods/capabilities/participant_view/**` projects participant membership into `SelectionRuntime.LivePrimary`; minimap/camera/UI readers consume the current selection view. These are valid readers for the current state, but they are not RFC-0065 command-source ownership.
+- `mods/capabilities/participant_view/**`, minimap, camera, and UI readers are collection readers; they must not depend on formal Selection APIs.
 
-Remaining tasks before anyone can claim repo-wide Selection retirement:
+Remaining guard tasks after repo-wide formal Selection retirement:
 
-- Split the selected-provider API into explicit command-source-only and selection-backed providers. The ground `Command` route should keep using only `InteractionContextStack + EntityCollectionStore`; legacy skill/cast paths may keep selection-backed providers until their own migration lands.
-- Add a focused guard that a `Command` action with missing active command-source collection / missing active intent does not route through `TryGetSelectedEntity`, `TryGetSelectedEntities`, or `SelectionRuntime`.
-- Keep the interaction showcase command-source direct-seeding path guarded; do not reintroduce a `LivePrimary -> collection.command.source` bridge.
+- Keep command-source-only provider names explicit and forbid selected-provider fallbacks in `Command` actions.
+- Keep a focused guard that a `Command` action with missing active command-source collection / missing active intent fails instead of routing through any retired formal Selection name.
+- Keep the interaction showcase command-source direct-seeding path guarded; do not introduce any `LivePrimary -> collection.command.source` bridge.
 - Keep MassNavigation on explicit OrderQueue ingestion; do not migrate it to CommandSource or InteractionContext reads.
-- Migrate or explicitly scope minimap, camera, participant-view, skill-bar, selection-box, entity-info, and showcase readers before deleting `SelectionRuntime`.
-- Only after the above lands, add architecture bans that prevent new `SelectionRuntime` readers outside the remaining allowed selection infrastructure.
+- Keep minimap, camera, participant-view, skill-bar, selection-box, entity-info, and showcase readers on explicit entity collections.
+- Keep architecture bans that prevent reintroducing formal Selection APIs.
 
 Small fixes made during this audit:
 
@@ -430,27 +436,27 @@ Current status: discovery complete; broad migrations intentionally not performed
 |---|---|---|
 | C1 CTRL-3 consumer migration and embodied `PlayerOwner`/`Team` deletion | Not safe in PR581 | Actual consumers span GAS targeting, projectile hit checks, queries, AI predicates, input/Selection, presentation, visibility, participant view, MassNavigation, lifecycle, save, and spawn. This must be split into independent breaking PRs, each with post-migration zero-old-component assertions. |
 | C2 input main-chain wiring | Partially wired; terminal migration blocked | The RFC-0065 `Command` ground path now resolves through `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue`, with focused acceptance coverage. The broader skill/cast fan-out path and `InteractionModeType` retirement still depend on PR #535 vs #577 arbitration and must stay as follow-up migration work. |
-| C3 presentation/provider follow-ups | Not safe in PR581 | `VisibilityCondition` graph emit still throws on graph visibility; marker/referee/palette still need production wiring plus visible UAT. |
+| C3 presentation/provider follow-ups | Not safe in PR581 | `VisibilityCondition` graph emit still throws on graph visibility and still needs production wiring. SHOW-3 GUI marker/referee/palette UAT is complete and is not a remaining visible-evidence blocker. |
 | C4 INT-8, M10, DOC-1 | Deferred by design | Tag/stance knowledge-fact projection is new infrastructure; replay acceptance needs a replay harness; gitbook rewrite waits for RFC acceptance. |
 
-Selection double-check result: not retired repo-wide. Local source audit still finds live production paths through `GameEngine` (`SelectionRuntime` creation/service registration and `SelectionPresentationEventSystem`), `CoreInputMod` selection installers, `InputInteractionContextAccessor`, legacy `InputOrderMappingSystem` selected-provider skill/cast paths, `OrderSelectionReference` infrastructure outside MassNavigation, and minimap/entity-info/Raylib UI readers. The RFC-0065 ground `Command` route and MassNavigation core boundary are now Selection-free command-authority slices, but repo-wide Selection retirement is not complete.
+Selection double-check result: formal Selection APIs are retired repo-wide in the current closeout pass. Local source audit must stay clean for `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionViewRuntime`, `SelectionControlGroupRuntime`, `SelectionRequest`, `SelectionResponse`, `OrderSelectionReference`, and related formal-service globals. The RFC-0065 ground `Command` route and MassNavigation core boundary remain Selection-free command-authority slices.
 
 Workflow C source blockers rechecked on 2026-07-07:
 
 - C1 cannot delete embodied `PlayerOwner`/`Team` yet. Live consumers still include `src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs`, `src/Core/Gameplay/GAS/Systems/ProjectileRuntimeSystem.cs`, `src/Core/Gameplay/GAS/Systems/EffectProposalProcessingSystem.cs`, `src/Core/Gameplay/GAS/BuiltinHandlers.cs`, `src/Core/Gameplay/Lifecycle/LifecycleSnapshot.cs`, `src/Core/Gameplay/Lifecycle/EntityLifecycleAtomicOps.cs`, `src/Core/NodeLibraries/GASGraph/Host/GasGraphRuntimeApi.cs`, `src/Core/Gameplay/AI/Utility/UtilityAiRuntimeEvaluator.cs`, `src/Core/ParticipantVisibility/DynamicParticipantVisibilityPublisher.cs`, `mods/capabilities/participant_view/ParticipantViewCapabilityMod/Runtime/ParticipantViewProjection.cs`, `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs`, and the MassNavigation runtime/systems under `src/Core/MassNavigation/`.
 - C2 cannot retire `InteractionModeType` in PR581. Live consumers still include `src/Core/Input/Orders/InputOrderMapping.cs`, `src/Core/Input/Orders/InputOrderMappingSystem.cs`, `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs`, `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs`, `mods/CoreInputMod/ViewMode/ViewModeManager.cs`, `mods/EntityCommandPanelMod/Runtime/GasEntityCommandPanelSource.cs`, `mods/EntityCommandPanelMod/UI/EntityCommandPanelController.cs`, and `mods/MobaDemoMod/Systems/MobaLocalOrderSourceSystem.cs`.
-- C3 graph visibility emit remains intentionally fail-fast, not wired. `src/Core/Presentation/Systems/PerformerEmitSystem.cs` still throws when `PerformerDefinition.VisibilityCondition.GraphProgramId > 0`; wiring it requires a per-viewer graph visibility contract and visible SHOW-3/palette evidence.
-- Selection remains a live view/UI/runtime service, not retired repo-wide. `src/Core/Engine/GameEngine.cs` still constructs/registers `SelectionRuntime` and `SelectionPresentationEventSystem`; `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs` and `mods/CoreInputMod/Systems/SelectedMovePathPresentationSystem.cs` still consume formal selection for selection acquisition/presentation. The interaction showcase no longer bridges `LivePrimary` into command-source rows.
+- C3 graph visibility emit remains intentionally fail-fast, not wired. `src/Core/Presentation/Systems/PerformerEmitSystem.cs` still throws when `PerformerDefinition.VisibilityCondition.GraphProgramId > 0`; wiring it requires a per-viewer graph visibility contract. SHOW-3 marker/referee/palette visible UAT is already complete.
+- Formal Selection runtime/view/control-group services are retired. `GameEngine`, CoreInputMod, showcase code, minimap/camera/UI readers, and tests must use `EntityCollectionStore` / explicit collection keys without formal Selection fallback.
 
 Safe follow-up slices:
 
-- Move `SelectionEligibility.CanAcquire` off `Team` as a narrow headless PR.
+- Continue moving `CommandSourceEligibility.CanAcquire` and related consumers off embodied `Team` as narrow headless PRs.
 - Migrate GAS targeting/projectile/query/AI consumers to `ControlDomainQuery` and `DomainStanceQuery`.
 - Migrate participant visibility and ParticipantView to participant bindings and relationship topology.
 - Migrate presentation phase/palette after C3 topology and palette contracts are complete.
 - Continue MassNavigation's separate `PlayerOwner`/`Team` domain migration after command intake and OrderQueue ownership remain guarded; MassNavigation core now consumes explicit move orders and has no Selection/CommandSource/InteractionContextStack authority reads.
 
-Do not delete `PlayerOwner`, `Team`, `TeamManager`, `SelectionRuntime`, or `InteractionModeType` in PR581 without the corresponding migration and architecture bans.
+Do not delete `PlayerOwner`, `Team`, `TeamManager`, or `InteractionModeType` in PR581 without the corresponding migration and architecture bans. Formal Selection APIs are already retired and must not be reintroduced.
 
 ## Closeout Decision
 
@@ -469,7 +475,7 @@ Completed now:
 - MassNavigation core is decoupled from input arbitration: it consumes explicit `OrderBuffer` move orders, no longer references Selection/CommandSource/InteractionContextStack/`OrderSelectionReference`, and its self-contained move orders encode a null selection reference through the shared `OrderArgs` factory.
 - B1 benchmark hardening completed for the missing repo tests.
 - B2 current-workstation Debug and Release reruns passed 41/41 with all reported benchmark windows at `alloc_bytes=0`; Release is the preferred local evidence set.
-- Selection status corrected and double-checked: not retired, dual-track transition only, with live production consumers still present.
+- Selection status corrected and double-checked: formal Selection APIs are retired; user-facing plain-language "selection" wording may remain only as shorthand for explicit entity collections. The command-authority slices are Selection-free.
 
 Still open by dependency:
 

@@ -506,7 +506,7 @@ namespace Ludots.Core.Presentation.Systems
                 return NormalizeOptionalEntity(evt.PerformerEntity);
             }
 
-            if (evt.Kind is PresentationEventKind.SelectionMemberAdded or PresentationEventKind.SelectionMemberRemoved &&
+            if (evt.Kind is PresentationEventKind.EntityCollectionMemberAdded or PresentationEventKind.EntityCollectionMemberRemoved &&
                 World.IsAlive(evt.Source) &&
                 World.Has<PresentationOwnerHasPerformerPayload>(evt.Source))
             {
@@ -520,8 +520,8 @@ namespace Ludots.Core.Presentation.Systems
         private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)
         {
             return kind is PresentationEventKind.TagEffectiveChanged
-                or PresentationEventKind.SelectionMemberAdded
-                or PresentationEventKind.SelectionMemberRemoved
+                or PresentationEventKind.EntityCollectionMemberAdded
+                or PresentationEventKind.EntityCollectionMemberRemoved
                 or PresentationEventKind.GlobalDayNight
                 or PresentationEventKind.GlobalRegionChanged
                 or PresentationEventKind.GlobalWeather

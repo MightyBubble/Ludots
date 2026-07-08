@@ -17,8 +17,8 @@
         "AngleRad": 0
       },
       "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "AttributeBuffer": {

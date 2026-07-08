@@ -35,19 +35,14 @@ namespace Ludots.Core.Input.Orders
     public delegate void OrderIdentityAssigner(ref Order order);
 
     /// <summary>
-    /// Delegate for getting the selected entity from a named selection set.
+    /// Delegate for getting the primary entity from a named command-source collection.
     /// </summary>
-    public delegate bool SelectedEntityProvider(string selectionSetKey, out Entity entity);
+    public delegate bool SelectedEntityProvider(string collectionKey, out Entity entity);
 
     /// <summary>
-    /// Delegate for getting the current selected container snapshot from a named selection set.
+    /// Delegate for copying the current command-source entities into a reusable list.
     /// </summary>
-    public delegate bool SelectedContainerProvider(string selectionSetKey, out Entity container);
-
-    /// <summary>
-    /// Delegate for copying the current selected entities into a reusable list.
-    /// </summary>
-    public delegate bool SelectedEntityListProvider(string selectionSetKey, List<Entity> entities);
+    public delegate bool SelectedEntityListProvider(string collectionKey, List<Entity> entities);
 
     /// <summary>
     /// Delegate for getting the entity currently under the cursor (for SmartCast).
@@ -190,7 +185,6 @@ namespace Ludots.Core.Input.Orders
         private GroundPositionProvider? _groundPositionProvider;
         private ActorProvider? _actorProvider;
         private SelectedEntityProvider? _selectedEntityProvider;
-        private SelectedContainerProvider? _selectedContainerProvider;
         private SelectedEntityListProvider? _selectedEntityListProvider;
         private HoveredEntityProvider? _hoveredEntityProvider;
         private OrderSubmitHandler? _orderSubmitHandler;
@@ -366,7 +360,6 @@ namespace Ludots.Core.Input.Orders
         public void SetGroundPositionProvider(GroundPositionProvider provider) => _groundPositionProvider = provider;
         public void SetActorProvider(ActorProvider provider) => _actorProvider = provider;
         public void SetSelectedEntityProvider(SelectedEntityProvider provider) => _selectedEntityProvider = provider;
-        public void SetSelectedContainerProvider(SelectedContainerProvider provider) => _selectedContainerProvider = provider;
         public void SetSelectedEntityListProvider(SelectedEntityListProvider provider) => _selectedEntityListProvider = provider;
         public void SetHoveredEntityProvider(HoveredEntityProvider provider) => _hoveredEntityProvider = provider;
         public void SetOrderSubmitHandler(OrderSubmitHandler handler) => _orderSubmitHandler = handler;
@@ -949,7 +942,7 @@ namespace Ludots.Core.Input.Orders
             }
             else if (mapping.SelectionType == OrderSelectionType.Entities)
             {
-                TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
+                TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch);
             }
 
             order.OrderTypeId = orderTypeId;
@@ -1141,11 +1134,8 @@ namespace Ludots.Core.Input.Orders
                     break;
 
                 case OrderSelectionType.Entities:
-                    if (_selectedContainerProvider != null)
-                    {
-                        TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
-                    }
-                    else if (mapping.RequireSelection)
+                    if (!TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch) &&
+                        mapping.RequireSelection)
                     {
                         return false;
                     }
@@ -1268,7 +1258,7 @@ namespace Ludots.Core.Input.Orders
                         break;
                         
                     case OrderSelectionType.Entities:
-                        if (!TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection))
+                        if (!TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch))
                         {
                             return false;
                         }
@@ -1284,7 +1274,7 @@ namespace Ludots.Core.Input.Orders
             }
             else if (selectionType == OrderSelectionType.Entities)
             {
-                TryCaptureSelectedContainer(mapping.SelectionSetKey, ref args.Selection);
+                TryCaptureSelectedActors(mapping.SelectionSetKey, _selectedActorsScratch);
             }
             
             order.OrderTypeId = orderTypeId;
@@ -1680,14 +1670,6 @@ namespace Ludots.Core.Input.Orders
         private bool HasExplicitLocalPlayer()
         {
             return _playerId > 0 && _localPlayer != Entity.Null;
-        }
-
-        private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)
-        {
-            selection = default;
-            return _selectedContainerProvider != null &&
-                   _selectedContainerProvider(selectionSetKey, out selection.Container) &&
-                   selection.HasContainer;
         }
 
         private bool TryCaptureSelectedActors(string selectionSetKey, List<Entity> entities)

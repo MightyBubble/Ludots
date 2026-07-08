@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Input.Selection;
-using Ludots.Core.Scripting;
+using Ludots.Core.Input.CommandSources;
 
 namespace Ludots.Core.Gameplay.Camera.FollowTargets
 {
@@ -12,17 +11,12 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
         private Entity[] _scratch = new Entity[16];
 
         public SelectedGroupFollowTarget(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : null;
         }
 
         public bool TryGetPosition(out Vector2 positionCm)
@@ -33,19 +27,14 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
         private bool TryGetSelectionCentroid(out Vector2 positionCm)
         {
             positionCm = default;
-            if (_selection == null)
-            {
-                return false;
-            }
-
-            int count = SelectionViewRuntime.GetViewedSelectionCount(_world, _globals, _selection);
+            int count = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
             if (count <= 0)
             {
                 return false;
             }
 
             EnsureScratchCapacity(count);
-            count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _scratch);
+            count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, _scratch);
 
             Vector2 weightedSum = Vector2.Zero;
             float totalWeight = 0f;

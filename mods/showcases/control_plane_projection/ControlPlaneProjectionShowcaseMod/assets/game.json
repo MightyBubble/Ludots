@@ -10,14 +10,12 @@
   },
   "startupMapId": "control_plane_projection",
   "startupInputContexts": ["Default_Gameplay", "ControlPlaneProjection.Controls"],
-  "selection": {
+  "commandSource": {
     "targetFilter": {
       "relationFilter": "All"
     },
     "acquisition": {
       "collectionKey": "controlplane.collection.ui.box",
-      "commitToFormalSelection": true,
-      "formalSelectionSetKey": "selection.live.primary",
       "title": "Control plane box acquisition"
     }
   }

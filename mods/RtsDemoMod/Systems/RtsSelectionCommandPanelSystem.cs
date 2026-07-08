@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using RtsDemoMod.Runtime;
@@ -53,7 +52,7 @@ namespace RtsDemoMod.Systems
 
             RtsShowcaseSelectionHelper.EnsureSelectionViewBinding(_engine);
 
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity current)
+            Entity selected = RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity current)
                 ? current
                 : Entity.Null;
             if (!IsPanelTarget(selected) && !_seededDefaultSelection)

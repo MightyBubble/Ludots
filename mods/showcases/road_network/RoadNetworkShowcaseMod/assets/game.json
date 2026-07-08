@@ -7,7 +7,7 @@
       "roadMoveFollow": 171
     }
   },
-  "selection": {
+  "commandSource": {
     "clickPickRadiusPixels": 32.0
   }
 }

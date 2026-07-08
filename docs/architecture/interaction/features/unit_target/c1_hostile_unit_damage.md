@@ -98,7 +98,7 @@ Effect 模板示例：
 | BlackboardFloatBuffer | `src/Core/Gameplay/GAS/Components/BlackboardFloatBuffer.cs` | ✅ 已有 |
 | GraphOps | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| SelectionRuleRegistry | `src/Core/Input/Selection/SelectionRuleRegistry.cs` | ✅ 已有 |
+| FilterProfileRegistry / target filter profiles | `src/Core/Input/Interaction/` | ✅ 已有 |
 | TargetFilter.Hostile | `src/Core/Gameplay/GAS/TargetFilter.cs` | ✅ 已有 |
 | ModifyAttributeAdd (op 210) | `src/Core/NodeLibraries/GASGraph/GraphOps.cs` | ✅ 已有 |
 | AutoTargetPolicy.NearestEnemyInRange | `src/Core/Input/Orders/AutoTargetPolicy.cs` | ✅ 已有 |

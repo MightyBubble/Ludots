@@ -6,7 +6,7 @@
   "windowWidth": 1440,
   "windowHeight": 900,
   "windowResizable": true,
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "All" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },

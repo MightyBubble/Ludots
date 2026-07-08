@@ -8,7 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
@@ -303,7 +303,7 @@ internal sealed class ParticipantViewPanelController
             return new[]
             {
                 Ui.Card(
-                        Ui.Text("No members projected into SelectionRuntime.LivePrimary.")
+                        Ui.Text("No members projected into the command source.")
                             .FontSize(11f)
                             .Color("#92A0B1")
                             .WhiteSpace(UiWhiteSpace.Normal))
@@ -373,11 +373,11 @@ internal sealed class ParticipantViewPanelController
             ? BuildPlayerSelectionDetail(engine, session, _runtime.SelectedPlayerId)
             : BuildTeamSelectionDetail(engine, session, _runtime.SelectedTeamId);
 
-        int currentMemberCount = SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+        int currentMemberCount = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,
             MapLabel: $"Map: {session.MapId.Value}",
-            Summary: "View mode swaps formal selection between map-owned player/team representative projections.",
+            Summary: "View mode swaps the command source between map-owned player/team representative projections.",
             Mode: _runtime.Mode,
             ParticipantCount: options.Length,
             CurrentMemberCount: currentMemberCount,
@@ -489,7 +489,7 @@ internal sealed class ParticipantViewPanelController
         {
             $"Map session: {session.MapId.Value}",
             $"Representative excluded from projection: yes",
-            $"SelectionRuntime.LivePrimary count: {members.Length}"
+            $"Command source count: {members.Length}"
         };
 
         KnowledgeRowSnapshot[] knowledgeRows = BuildKnowledgeSnapshots(engine, session, representative);
@@ -497,7 +497,7 @@ internal sealed class ParticipantViewPanelController
         string[] resourceLines = BuildResourceLines(engine.World, representative);
         string memberHeader = members.Length == 0
             ? "No runtime members were projected."
-            : $"{members.Length} entity(s) currently projected into SelectionRuntime.LivePrimary.";
+            : $"{members.Length} entity(s) currently projected into the command source.";
         string[] memberLines =
         {
             "Each row below is a live ECS entity, not an authored string list."

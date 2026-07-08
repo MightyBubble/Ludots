@@ -8,11 +8,14 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation;
@@ -24,11 +27,16 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using FormationCapabilityShowcaseMod.Systems;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
 internal sealed class FormationCapabilityShowcaseRuntime
 {
+    private const string RotateLeftActionId = "MassNavigation_RotateLeft";
+    private const string RotateRightActionId = "MassNavigation_RotateRight";
+    private const float RotateStepRadians = MathF.PI / 8f;
+
     private static readonly float DiscSlotGoldenAngleRadians = MathF.PI * (3f - MathF.Sqrt(5f));
     private static readonly QueryDescription FormationAnchorCandidateQuery = new QueryDescription()
         .WithAll<MassNavigationFormationAnchor, MassNavigationAgentIndex>();
@@ -37,6 +45,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private static readonly QueryDescription ObstacleOverlayCandidateQuery = new QueryDescription()
         .WithAll<EntityTemplateKeyRef, WorldPositionCm>();
 
+    private readonly Ludots.Core.Modding.IModContext? _context;
     private FormationCapabilityShowcaseConfig? _config;
     private FormationCapabilityShowcaseSoldierAgentSpawnPlan[] _soldierAgentPlans = Array.Empty<FormationCapabilityShowcaseSoldierAgentSpawnPlan>();
     private FormationCapabilityShowcaseFormationPlan[] _formationPlans = Array.Empty<FormationCapabilityShowcaseFormationPlan>();
@@ -44,18 +53,27 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private Entity[] _formationEntities = Array.Empty<Entity>();
     private Entity[] _soldierEntitiesByPlanIndex = Array.Empty<Entity>();
     private Entity[] _obstacleOverlayEntities = Array.Empty<Entity>();
-    private Entity[] _initialSelectionScratch = Array.Empty<Entity>();
+    private Entity[] _initialCommandSourceScratch = Array.Empty<Entity>();
     private readonly List<PendingFormationBinding> _pendingFormationBindings = new();
     private readonly List<PendingSoldierBinding> _pendingSoldierBindings = new();
     private readonly List<PendingObstacleOverlayBinding> _pendingObstacleOverlayBindings = new();
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private bool _obstacleOverlaySpawnsQueued;
-    private bool _initialSelectionApplied;
+    private bool _initialCommandSourceApplied;
     private int _observedSceneResetCount;
 
     public FormationCapabilityShowcaseConfig ActiveConfig => _config
         ?? throw new InvalidOperationException("Formation Capability showcase config has not been loaded.");
+
+    public FormationCapabilityShowcaseRuntime()
+    {
+    }
+
+    public FormationCapabilityShowcaseRuntime(Ludots.Core.Modding.IModContext context)
+    {
+        _context = context ?? throw new ArgumentNullException(nameof(context));
+    }
 
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
@@ -66,7 +84,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
-        EnsureInitialSelectionScratch(config);
+        EnsureInitialCommandSourceScratch(config);
         string mapId = context.Get(CoreServiceKeys.MapId).Value;
         if (!string.Equals(mapId, config.MapId, StringComparison.Ordinal))
         {
@@ -98,7 +116,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         _scenarioSpawned = false;
         _obstacleOverlaySpawnsQueued = false;
-        _initialSelectionApplied = false;
+        _initialCommandSourceApplied = false;
         RemovePendingScenarioSpawns(engine, config);
         MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
         simulation.ResetRuntimeState(engine.World);
@@ -138,6 +156,16 @@ internal sealed class FormationCapabilityShowcaseRuntime
         engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
             new FormationCapabilityShowcaseFormationRuntimeSystem(engine, this, simulation),
             SystemGroup.PostMovement);
+        OrderQueue orders = engine.GetService(CoreServiceKeys.OrderQueue)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires OrderQueue.");
+        Ludots.Core.Modding.IModContext context = _context
+            ?? throw new InvalidOperationException("Formation Capability showcase requires IModContext before installing local order source.");
+        engine.RegisterSystem(
+            new FormationCapabilityLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, context),
+            SystemGroup.InputCollection);
+        engine.RegisterSystem(
+            new FormationCapabilityCommandSourceRotateSystem(engine, simulation),
+            SystemGroup.InputCollection);
         FormationCapabilityShowcaseConfig config = EnsureConfig(engine);
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseFormationOutlinePresentationSystem(engine, this, config));
         engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new FormationCapabilityShowcaseObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
@@ -163,7 +191,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             _observedSceneResetCount = simulation.SceneResetCount;
             _scenarioSpawned = false;
             _obstacleOverlaySpawnsQueued = false;
-            _initialSelectionApplied = false;
+            _initialCommandSourceApplied = false;
             RemovePendingScenarioSpawns(engine, config);
             DestroyShowcaseOwnedEntities(engine);
             ClearFormationCaches();
@@ -177,7 +205,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         SyncFormationStates(engine, simulation);
         PublishLocalFormationKnowledge(engine);
-        TryApplyInitialSelection(engine, config);
+        TryApplyInitialCommandSource(engine, config);
     }
 
     private void SpawnScenario(GameEngine engine, FormationCapabilityShowcaseConfig config)
@@ -186,7 +214,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("Formation Capability showcase requires RuntimeEntitySpawnQueue.");
 
-        ClearSelection(engine);
+        ClearCommandActorSnapshot(engine);
         BuildAgentPlans(engine, simulation, config);
         DestroyShowcaseOwnedEntities(engine);
 
@@ -249,7 +277,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         _scenarioSpawned = true;
         _obstacleOverlaySpawnsQueued = false;
-        _initialSelectionApplied = false;
+        _initialCommandSourceApplied = false;
         _observedSceneResetCount = simulation.SceneResetCount;
         simulation.MarkScenarioSpawned();
         simulation.MarkStructuralChange();
@@ -327,8 +355,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
         UpsertComponent(engine.World, entity, formation.Outline.ToComponent(plan.Id));
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialBounds());
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialFootprint(plan.Id));
-        UpsertComponent(engine.World, entity, default(SelectionSelectableTag));
-        UpsertComponent(engine.World, entity, SelectionSelectableState.EnabledByDefault);
+        UpsertComponent(engine.World, entity, default(CommandSourceSelectableTag));
+        UpsertComponent(engine.World, entity, CommandSourceSelectableState.EnabledByDefault);
         UpsertComponent(engine.World, entity, new Team { Id = formation.TeamId });
         UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = formation.OwnerPlayerId });
     }
@@ -450,7 +478,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
             Entity formation = _formationEntities[i];
             if (!engine.World.IsAlive(formation) ||
                 engine.World.Has<PresentationDestroyPending>(formation) ||
-                !SelectionEligibility.IsSelectableNow(engine.World, formation) ||
+                !CommandSourceEligibility.IsSelectableNow(engine.World, formation) ||
                 !engine.World.TryGet(formation, out Team formationTeam) ||
                 formationTeam.Id != viewerTeam.Id)
             {
@@ -961,23 +989,23 @@ internal sealed class FormationCapabilityShowcaseRuntime
         return engine.World.Get<FacingDirection>(formation).AngleRad;
     }
 
-    private void TryApplyInitialSelection(GameEngine engine, FormationCapabilityShowcaseConfig config)
+    private void TryApplyInitialCommandSource(GameEngine engine, FormationCapabilityShowcaseConfig config)
     {
-        if (_initialSelectionApplied)
+        if (_initialCommandSourceApplied)
         {
             return;
         }
 
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("Formation Capability showcase requires SelectionRuntime before applying configured initial selection.");
-        Entity owner = ResolveLocalSelectionOwner(engine);
-        int formationIndex = ResolveFormationIndex(config.InitialSelectionFormationId);
-        EnsureInitialSelectionScratch(config);
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before applying configured initial command source.");
+        Entity owner = ResolveLocalCommandSourceOwner(engine);
+        int formationIndex = ResolveFormationIndex(config.InitialCommandSourceFormationId);
+        EnsureInitialCommandSourceScratch(config);
 
         if ((uint)formationIndex >= (uint)_formationEntities.Length)
         {
             throw new InvalidOperationException(
-                $"Formation Capability showcase initial selection formation index {formationIndex} exceeds bound formation entity cache {_formationEntities.Length}.");
+                $"Formation Capability showcase initial command-source formation index {formationIndex} exceeds bound formation entity cache {_formationEntities.Length}.");
         }
 
         Entity formation = _formationEntities[formationIndex];
@@ -986,52 +1014,34 @@ internal sealed class FormationCapabilityShowcaseRuntime
             return;
         }
 
-        if (!SelectionEligibility.CanAcquire(engine.World, owner, formation, selection.TargetRelationFilter))
+        if (!CommandSourceEligibility.CanAcquire(engine.World, engine.GlobalContext, owner, formation, default))
         {
             throw new InvalidOperationException(
-                $"Formation Capability showcase initial selection formation '{config.InitialSelectionFormationId}' must pass selection.targetFilter.relationFilter '{selection.TargetRelationFilter}'.");
+                $"Formation Capability showcase initial command source formation '{config.InitialCommandSourceFormationId}' must be command-source acquireable.");
         }
 
-        _initialSelectionScratch[0] = formation;
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, _initialSelectionScratch.AsSpan(0, 1)))
-        {
-            throw new InvalidOperationException("Formation Capability showcase failed to author its configured initial selection.");
-        }
+        _initialCommandSourceScratch[0] = formation;
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            formation,
+            "Formation capability command source",
+            "Configured initial formation command source.");
+        collections.Replace(owner, descriptor, _initialCommandSourceScratch.AsSpan(0, 1), owner);
 
-        if (!SelectionContextRuntime.TrySetCurrentView(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                owner,
-                SelectionViewKeys.Primary,
-                owner,
-                SelectionSetKeys.LivePrimary,
-                out SelectionViewDescriptor viewDescriptor))
-        {
-            throw new InvalidOperationException("Formation Capability showcase failed to bind LivePrimary as the primary selection view.");
-        }
-
-        if (!selection.TryDescribeSelection(owner, SelectionSetKeys.LivePrimary, out SelectionContainerDescriptor descriptor))
-        {
-            throw new InvalidOperationException("Formation Capability showcase failed to describe the initial selection it just authored.");
-        }
-
-        if (viewDescriptor.Container.Container != descriptor.Container)
-        {
-            throw new InvalidOperationException("Formation Capability showcase initial selection view does not resolve to LivePrimary.");
-        }
-
-        _initialSelectionApplied = true;
+        _initialCommandSourceApplied = true;
     }
 
-    private void EnsureInitialSelectionScratch(FormationCapabilityShowcaseConfig config)
+    private void EnsureInitialCommandSourceScratch(FormationCapabilityShowcaseConfig config)
     {
-        if (_initialSelectionScratch.Length == config.InitialSelectionEntityCapacity)
+        if (_initialCommandSourceScratch.Length == config.InitialCommandSourceEntityCapacity)
         {
             return;
         }
 
-        _initialSelectionScratch = new Entity[config.InitialSelectionEntityCapacity];
+        _initialCommandSourceScratch = new Entity[config.InitialCommandSourceEntityCapacity];
     }
 
     private int ResolveFormationIndex(string formationId)
@@ -1112,22 +1122,22 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         simulation.ConfigureScenarioTeams(teamIds);
-        simulation.SetSelectedTeam(ResolveInitialSelectionTeamId(config));
+        simulation.SetActiveTeam(ResolveInitialCommandSourceTeamId(config));
     }
 
-    private static int ResolveInitialSelectionTeamId(FormationCapabilityShowcaseConfig config)
+    private static int ResolveInitialCommandSourceTeamId(FormationCapabilityShowcaseConfig config)
     {
         for (int i = 0; i < config.Formations.Length; i++)
         {
             FormationCapabilityShowcaseFormationConfig formation = config.Formations[i];
-            if (string.Equals(formation.Id, config.InitialSelectionFormationId, StringComparison.Ordinal))
+            if (string.Equals(formation.Id, config.InitialCommandSourceFormationId, StringComparison.Ordinal))
             {
                 return formation.TeamId;
             }
         }
 
         throw new InvalidOperationException(
-            $"Formation Capability showcase initial selection formation '{config.InitialSelectionFormationId}' is not configured.");
+            $"Formation Capability showcase initial command-source formation '{config.InitialCommandSourceFormationId}' is not configured.");
     }
 
     private static void ConfigureRelationships(MassNavigationConfig config)
@@ -1213,24 +1223,21 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
     }
 
-    private static void ClearSelection(GameEngine engine)
+    private static void ClearCommandActorSnapshot(GameEngine engine)
     {
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("Formation Capability showcase requires SelectionRuntime before clearing selection.");
-        Entity owner = ResolveLocalSelectionOwner(engine);
-        selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
-        selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
-        selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
-        selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing command source.");
+        Entity owner = ResolveLocalCommandSourceOwner(engine);
+        collections.Remove(owner, EntityCollectionKeys.CommandSource);
     }
 
-    private static Entity ResolveLocalSelectionOwner(GameEngine engine)
+    private static Entity ResolveLocalCommandSourceOwner(GameEngine engine)
     {
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localPlayerObj) ||
             localPlayerObj is not Entity local ||
             !engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before mutating selection.");
+            throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before mutating command source.");
         }
 
         return local;
@@ -1251,6 +1258,127 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         return owner.PlayerId;
+    }
+
+    private sealed class FormationCapabilityCommandSourceRotateSystem : Arch.System.ISystem<float>
+    {
+        private readonly GameEngine _engine;
+        private readonly MassNavigationSimulationRuntime _simulation;
+        private Entity[] _actorsScratch = Array.Empty<Entity>();
+
+        public FormationCapabilityCommandSourceRotateSystem(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation)
+        {
+            _engine = engine;
+            _simulation = simulation;
+        }
+
+        public void Initialize()
+        {
+        }
+
+        public void BeforeUpdate(in float dt)
+        {
+        }
+
+        public void Update(in float dt)
+        {
+            if (!MassNavigationIds.IsCurrentNavigationRuntimeReady(_engine) ||
+                _engine.GetService(CoreServiceKeys.AuthoritativeInput) is not IInputActionReader input)
+            {
+                return;
+            }
+
+            float deltaRadians = 0f;
+            if (input.PressedThisFrame(RotateLeftActionId))
+            {
+                deltaRadians -= RotateStepRadians;
+            }
+
+            if (input.PressedThisFrame(RotateRightActionId))
+            {
+                deltaRadians += RotateStepRadians;
+            }
+
+            if (!(MathF.Abs(deltaRadians) > 0f))
+            {
+                return;
+            }
+
+            EnsureActorScratchCapacity(EntityCollectionContextRuntime.GetCurrentCount(_engine.World, _engine.GlobalContext));
+            int actorCount = EntityCollectionContextRuntime.CopyCurrent(
+                _engine.World,
+                _engine.GlobalContext,
+                _actorsScratch);
+            if (actorCount <= 0 ||
+                !CanLocalPlayerCommand(_engine, _actorsScratch.AsSpan(0, actorCount)))
+            {
+                _simulation.RejectCommandUnauthorizedSelection(0f, 0f);
+                return;
+            }
+
+            _simulation.NavGroupRuntime.RotateCommandActors(
+                _engine.World,
+                _simulation.AgentState,
+                _actorsScratch.AsSpan(0, actorCount),
+                deltaRadians);
+        }
+
+        public void AfterUpdate(in float dt)
+        {
+        }
+
+        public void Dispose()
+        {
+        }
+
+        private static bool CanLocalPlayerCommand(GameEngine engine, ReadOnlySpan<Entity> actors)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+                localObj is not Entity local ||
+                !engine.World.IsAlive(local) ||
+                !engine.World.TryGet(local, out PlayerOwner localOwner))
+            {
+                return false;
+            }
+
+            int liveActors = 0;
+            for (int i = 0; i < actors.Length; i++)
+            {
+                Entity actor = actors[i];
+                if (!engine.World.IsAlive(actor))
+                {
+                    continue;
+                }
+
+                if (!engine.World.TryGet(actor, out PlayerOwner owner) ||
+                    owner.PlayerId != localOwner.PlayerId)
+                {
+                    return false;
+                }
+
+                liveActors++;
+            }
+
+            return liveActors > 0;
+        }
+
+        private void EnsureActorScratchCapacity(int required)
+        {
+            if (_actorsScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _actorsScratch.Length == 0 ? 4 : _actorsScratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _actorsScratch, next);
+        }
     }
 
     private readonly struct FormationCapabilityShowcaseFormationPlan

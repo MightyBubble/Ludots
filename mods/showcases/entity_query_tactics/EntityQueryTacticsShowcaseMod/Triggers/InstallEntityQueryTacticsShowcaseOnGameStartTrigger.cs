@@ -4,7 +4,6 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -53,9 +52,7 @@ namespace EntityQueryTacticsShowcaseMod.Triggers
             RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, lookup, config.Scenario.EnemyTeamId, config.Scenario.EnemyTeamName);
             TeamManager.SetRelationshipSymmetric(config.Scenario.PlayerTeamId, config.Scenario.EnemyTeamId, TeamRelationship.Hostile);
 
-            engine.InsertSystemBeforeRequired<CurrentSelectionApplySystem>(
-                new EntityQueryTacticsSelectionBindingSystem(engine, state),
-                SystemGroup.InputCollection);
+            engine.RegisterSystem(new EntityQueryTacticsSelectionBindingSystem(engine, state), SystemGroup.InputCollection);
             engine.RegisterSystem(new EntityQueryTacticsSimulationSystem(engine, state), SystemGroup.PostMovement);
             engine.InsertPresentationSystemBefore<PerformerRuleSystem>(new EntityQueryTacticsPresentationSystem(engine, state));
 

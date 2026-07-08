@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -17,7 +17,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
@@ -107,7 +107,7 @@ namespace Ludots.Tests.GAS.Production
                 "Interaction showcase startup must seed collection.command.source directly for command routing.");
             Assert.That(CopyCollection(collections, sourceHandle), Is.EquivalentTo(actors));
             PublishHoveredEntity(collections, localPlayer, vanguard);
-            Assert.That(SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered), Is.True);
+            Assert.That(EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered), Is.True);
             Assert.That(hovered, Is.EqualTo(vanguard));
 
             Assert.That(engine.GetService(CoreServiceKeys.ActiveInputOrderMapping), Is.Not.Null,

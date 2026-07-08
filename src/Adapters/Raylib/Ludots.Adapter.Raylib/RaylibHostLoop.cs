@@ -9,7 +9,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
@@ -484,7 +484,6 @@ namespace Ludots.Adapter.Raylib
                             Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
                         }
 
-                        // 閿氬畾鍒?target锛岀綉鏍间互瑙傚療鐐逛负涓績锛沨alfCount 瓒婂ぇ杈圭晫瓒婅繙
                         if (drawVisualHeightmap &&
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
@@ -1591,14 +1590,14 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
             }
 
             string selectedSummary = "selected=(none)";
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 selected != Entity.Null)
             {
                 selectedSummary = $"selected={DescribeEntity(engine, selected)}";
@@ -1610,9 +1609,9 @@ namespace Ludots.Adapter.Raylib
             string dragSummary = "drag=inactive";
             if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
-                engine.World.Has<SelectionDragState>(localPlayer))
+                engine.World.Has<CommandSourceDragState>(localPlayer))
             {
-                ref SelectionDragState drag = ref engine.World.Get<SelectionDragState>(localPlayer);
+                ref CommandSourceDragState drag = ref engine.World.Get<CommandSourceDragState>(localPlayer);
                 dragSummary = drag.Active
                     ? $"drag=active({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})->({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})"
                     : "drag=idle";

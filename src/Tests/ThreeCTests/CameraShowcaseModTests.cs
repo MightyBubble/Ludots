@@ -7,10 +7,10 @@ using CameraShowcaseMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -307,13 +307,18 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static void SetLivePrimarySelection(GameEngine engine, params Entity[] entities)
         {
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
             Entity local = GetLocalPlayer(engine);
-            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities), Is.True);
-            selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: local,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Camera showcase command source",
+                summary: "Test-owned command source collection.");
+            collections.Replace(local, in descriptor, entities, local);
         }
 
         private static void ClearLivePrimarySelection(GameEngine engine)

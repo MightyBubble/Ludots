@@ -2,9 +2,10 @@ using System.Numerics;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Gameplay.Camera;
@@ -179,40 +180,44 @@ namespace Ludots.Tests.ThreeC
         {
             using var world = World.Create();
             var globals = new Dictionary<string, object>();
-            var selectionRuntime = new SelectionRuntime(
-                world,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
             globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionRuntime.Name] = selectionRuntime;
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = selector;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });
             Entity heavy = world.Create(
                 new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(4000, 5000) },
                 new CameraFollowWeight { Value = 3f });
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light, heavy }), Is.True);
-            Assert.That(selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.LivePrimary), Is.True);
+            ReplaceCommandSource(collections, selector, light, heavy);
 
             var target = new SelectedGroupFollowTarget(world, globals);
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light }), Is.True);
-            Assert.That(SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
+            ReplaceCommandSource(collections, selector, light);
+            Assert.That(EntityCollectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 
             Assert.That(target.TryGetPosition(out var fallback), Is.True);
             Assert.That(fallback.X, Is.EqualTo(1000f).Within(0.01f));
             Assert.That(fallback.Y, Is.EqualTo(2000f).Within(0.01f));
+        }
+
+        private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, params Entity[] entities)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Camera runtime command source",
+                summary: "Test-owned command source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
         }
 
         [Test]

@@ -3,9 +3,10 @@ using Ludots.Core.Components;
 using System.Threading.Tasks;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
@@ -22,7 +23,7 @@ namespace RoadNetworkShowcaseMod.Runtime
     internal sealed class RoadNetworkShowcaseRuntime
     {
         private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription()
-            .WithAll<SelectionSelectableTag, MapEntity>();
+            .WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private const string PrimaryPlayerColumnName = "Blue Vanguard";
         private const string TacticalCameraModeId = "Camera.Mode.Tactical";
@@ -264,14 +265,22 @@ namespace RoadNetworkShowcaseMod.Runtime
                 engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
 
-            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection)
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
             {
-                EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
-                if (ShouldSeedLivePrimarySelection(engine.World, selection, owner))
+                EnsureCommandSourceComponents(engine.World, owner);
+                if (ShouldSeedCommandSource(engine.World, collections, owner))
                 {
                     Span<Entity> initialSelection = stackalloc Entity[1];
                     initialSelection[0] = owner;
-                    selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, initialSelection);
+                    var descriptor = EntityCollectionDescriptor.Create(
+                        EntityCollectionKeys.CommandSource,
+                        EntityCollectionSourceKind.Explicit,
+                        EntityCollectionRoleKind.CommandSource,
+                        owner,
+                        owner,
+                        "Road network command source",
+                        "Primary road-network actor.");
+                    collections.Replace(owner, descriptor, initialSelection, owner);
                 }
             }
         }
@@ -313,17 +322,12 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
         }
 
-        private static void EnsureSelectionComponents(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
+        private static void EnsureCommandSourceComponents(World world, Entity owner)
         {
-            if (!world.Has<SelectionDragState>(owner))
+            if (!world.Has<CommandSourceDragState>(owner))
             {
-                world.Add(owner, default(SelectionDragState));
+                world.Add(owner, default(CommandSourceDragState));
             }
-
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private void PublishSelectableKnowledge(GameEngine engine)
@@ -341,7 +345,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             var empty = KnowledgeIdMask256.Empty;
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
             string activeMapId = _activeMapId;
-            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
             {
                 if (!string.Equals(mapEntity.MapId.Value, activeMapId, System.StringComparison.OrdinalIgnoreCase))
                 {
@@ -365,21 +369,20 @@ namespace RoadNetworkShowcaseMod.Runtime
             });
         }
 
-        private static bool ShouldSeedLivePrimarySelection(World world, SelectionRuntime selection, Entity owner)
+        private static bool ShouldSeedCommandSource(World world, EntityCollectionStore collections, Entity owner)
         {
-            if (!selection.TryGetSelectionEntity(owner, SelectionSetKeys.LivePrimary, out Entity container))
+            if (!collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
             {
                 return true;
             }
 
-            int count = selection.GetSelectionCount(container);
-            if (count <= 0)
+            if (view.Count <= 0)
             {
                 return true;
             }
 
-            var selected = new Entity[count];
-            int written = selection.CopySelection(container, selected);
+            var selected = new Entity[view.Count];
+            int written = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, selected);
             for (int i = 0; i < written; i++)
             {
                 if (world.IsAlive(selected[i]))
@@ -550,7 +553,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 engine.World.IsAlive(selected))
             {
                 return selected;

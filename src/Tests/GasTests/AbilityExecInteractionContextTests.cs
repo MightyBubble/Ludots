@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
@@ -289,8 +289,6 @@ namespace Ludots.Tests.GAS
                     new DiscreteClock(),
                     new InputRequestQueue(),
                     new InputResponseBuffer(),
-                    new SelectionRequestQueue(),
-                    new SelectionResponseBuffer(),
                     new EffectRequestQueue(),
                     definitions,
                     eventBus,

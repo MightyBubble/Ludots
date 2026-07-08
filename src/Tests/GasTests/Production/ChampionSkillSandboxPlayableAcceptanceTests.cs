@@ -13,6 +13,7 @@ using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -25,7 +26,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Camera;
@@ -64,6 +65,7 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string CommandPreviewCollectionKey = "collection.champion.command.preview";
         private const string TestInputBackendKey = "Tests.ChampionSkillSandbox.InputBackend";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandbox.HeadlessCamera";
         private const string RightClickPressDiagnosticsKey = "Tests.ChampionSkillSandbox.RightClickPressDiagnostics";
@@ -651,8 +653,6 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue missing.");
 
@@ -692,7 +692,7 @@ namespace Ludots.Tests.GAS.Production
                 FindEntityByName(engine.World, "StressPriestA"),
                 FindEntityByName(engine.World, "StressWarriorA"),
             };
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, playerSelection);
+            ReplaceCommandSource(engine, localPlayer, playerSelection);
             toolbar.Activate(PlayerSelectionToolbarButtonId);
             Tick(engine, 2, frameTimesMs);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
@@ -730,26 +730,20 @@ namespace Ludots.Tests.GAS.Production
                         Kind = OrderSpatialKind.WorldCm,
                         Mode = OrderCollectionMode.Single,
                         WorldCm = new Vector3(2200f, 0f, 1480f)
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshotContainer)
-                            ? snapshotContainer
-                            : Entity.Null
                     }
                 }
             };
-            Assert.That(snapshotOrder.Args.Selection.HasContainer, Is.True);
+            Assert.That(snapshotOrder.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(orderQueue.TryEnqueue(in snapshotOrder), Is.True);
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            ReplaceCommandSource(engine, localPlayer, FindEntityByName(engine.World, "StressLaserMageA"));
             toolbar.Activate(CommandSnapshotToolbarButtonId);
             Tick(engine, 4, frameTimesMs);
             Assert.That(
                 ReadViewedSelectionNames(engine),
-                Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }),
+                Is.EqualTo(new[] { "StressLaserMageA" }),
                 BuildStressSelectionDiagnostics(engine, localPlayer, orderQueue));
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "command_snapshot_view");
-            timeline.Add("[T+006] View=Command Snapshot | queued move order holds the original three-unit selection after live selection mutates to LaserMageA");
+            timeline.Add("[T+006] View=Command Snapshot | command preview mirrors the current command-source entity after self-contained move order enqueue");
 
             var healthHistory = ReadStressEntityHealthMap(engine.World);
             bool sawHeal = false;
@@ -1015,9 +1009,6 @@ namespace Ludots.Tests.GAS.Production
         private static void SelectNamedEntity(GameEngine engine, TestInputBackend backend, string name, List<double> frameTimesMs)
         {
             Entity target = FindEntityByName(engine.World, name);
-            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
-
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (!engine.World.IsAlive(owner))
             {
@@ -1027,13 +1018,34 @@ namespace Ludots.Tests.GAS.Production
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
+            ReplaceCommandSource(engine, owner, next);
             TickUntilFixedTickAdvances(engine, frameTimesMs);
             TickUntil(
                 engine,
                 frameTimesMs,
                 () => string.Equals(GetSelectedEntityName(engine), name, StringComparison.Ordinal),
                 maxFrames: 12);
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, params Entity[] entities)
+        {
+            ReplaceCommandSource(engine, owner, entities.AsSpan());
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> entities)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Champion command source",
+                summary: "Test-owned command-source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
         }
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)
@@ -1830,7 +1842,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
             return selected.Select(entity => ReadEntityName(engine.World, entity))
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToArray();
@@ -1877,7 +1889,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -1973,7 +1985,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadHoveredEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            return EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.TryGet(hovered, out Name name)
                 ? name.Value
@@ -2244,7 +2256,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(child.Parent, Is.EqualTo(parent));
             Assert.That(world.TryGet(entity, out MapEntity map), Is.True, $"{entityLabel} should stay scoped to the sandbox map.");
             Assert.That(map.MapId.Value, Is.EqualTo(MapId));
-            Assert.That(world.Has<SelectionSelectableTag>(entity), Is.True, $"{entityLabel} should stay formally selectable.");
+            Assert.That(world.Has<CommandSourceSelectableTag>(entity), Is.True, $"{entityLabel} should stay formally selectable.");
         }
 
         private static void AssertBlockerManifestationBridge(World world, string entityName)
@@ -2611,7 +2623,7 @@ namespace Ludots.Tests.GAS.Production
                 $"selected={GetSelectedEntityName(engine)}"
             };
 
-            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -2656,8 +2668,8 @@ namespace Ludots.Tests.GAS.Production
 
         private static string BuildStressSelectionDiagnostics(GameEngine engine, Entity localPlayer, OrderQueue orderQueue)
         {
-            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
             var details = new List<string>
             {
                 $"viewed=[{string.Join(",", ReadViewedSelectionNames(engine))}]",
@@ -2665,79 +2677,82 @@ namespace Ludots.Tests.GAS.Production
                 $"orderQueue={orderQueue.Count}"
             };
 
-            if (SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor currentView))
+            if (EntityCollectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out EntityCollectionView currentView))
             {
-                details.Add($"currentView viewer={DescribeEntity(engine.World, currentView.Viewer)} key={currentView.ViewKey} container={DescribeSelectionContainer(engine, selection, currentView.Container.Container)}");
+                details.Add($"currentView owner={DescribeEntity(engine.World, currentView.Owner)} key={currentView.Key} count={currentView.Count} primary={DescribeEntity(engine.World, currentView.PrimaryEntity)}");
             }
             else
             {
                 details.Add("currentView=<none>");
             }
 
-            details.Add($"localLive={DescribeSelectionByOwner(engine, selection, localPlayer, SelectionSetKeys.LivePrimary)}");
-            details.Add($"localCommandSnapshot={DescribeSelectionByOwner(engine, selection, localPlayer, SelectionSetKeys.CommandSnapshot)}");
+            details.Add($"localCommandSource={DescribeCollection(engine, collections, localPlayer, EntityCollectionKeys.CommandSource)}");
+            details.Add($"commandPreview={DescribeCollectionByKey(engine, collections, CommandPreviewCollectionKey)}");
 
-            var queueContainers = new HashSet<Entity>();
-            orderQueue.CollectSelectionContainers(queueContainers);
-            details.Add($"queueSelectionContainers=[{string.Join(";", queueContainers.Select(container => DescribeSelectionContainer(engine, selection, container)))}]");
-
-            details.Add($"orderBufferSelectionContainers=[{BuildOrderBufferSelectionContainerDiagnostics(engine, selection)}]");
+            details.Add($"orderBufferSpatial=[{BuildOrderBufferSpatialDiagnostics(engine)}]");
             return string.Join(" || ", details);
         }
 
-        private static string BuildOrderBufferSelectionContainerDiagnostics(GameEngine engine, SelectionRuntime selection)
+        private static string BuildOrderBufferSpatialDiagnostics(GameEngine engine)
         {
             var samples = new List<string>(8);
             var query = new QueryDescription().WithAll<Name, OrderBuffer>();
             engine.World.Query(in query, (Entity _, ref Name name, ref OrderBuffer orders) =>
             {
-                AddOrderSelectionSample(engine, selection, samples, name.Value, "active", orders.ActiveOrder.Order, orders.HasActive);
-                AddOrderSelectionSample(engine, selection, samples, name.Value, "pending", orders.PendingOrder.Order, orders.HasPending);
+                AddOrderSpatialSample(samples, name.Value, "active", orders.ActiveOrder.Order, orders.HasActive);
+                AddOrderSpatialSample(samples, name.Value, "pending", orders.PendingOrder.Order, orders.HasPending);
                 for (int i = 0; i < orders.QueuedCount; i++)
                 {
-                    AddOrderSelectionSample(engine, selection, samples, name.Value, $"queued{i}", orders.GetQueued(i).Order, include: true);
+                    AddOrderSpatialSample(samples, name.Value, $"queued{i}", orders.GetQueued(i).Order, include: true);
                 }
             });
 
             return string.Join(";", samples);
         }
 
-        private static void AddOrderSelectionSample(
-            GameEngine engine,
-            SelectionRuntime selection,
+        private static void AddOrderSpatialSample(
             List<string> samples,
             string actorName,
             string orderLabel,
             in Order order,
             bool include)
         {
-            if (!include || !order.Args.Selection.HasContainer || samples.Count >= 8)
+            if (!include || order.Args.Spatial.Kind == OrderSpatialKind.None || samples.Count >= 8)
             {
                 return;
             }
 
-            samples.Add($"{actorName}:{orderLabel}:order={order.OrderId}:container={DescribeSelectionContainer(engine, selection, order.Args.Selection.Container)}");
+            samples.Add($"{actorName}:{orderLabel}:order={order.OrderId}:spatial={order.Args.Spatial.Kind}/{order.Args.Spatial.Mode}@{order.Args.Spatial.WorldCm}");
         }
 
-        private static string DescribeSelectionByOwner(GameEngine engine, SelectionRuntime selection, Entity owner, string setKey)
+        private static string DescribeCollectionByKey(GameEngine engine, EntityCollectionStore collections, string key)
         {
-            return selection.TryGetSelectionEntity(owner, setKey, out Entity container)
-                ? DescribeSelectionContainer(engine, selection, container)
-                : "<none>";
-        }
-
-        private static string DescribeSelectionContainer(GameEngine engine, SelectionRuntime selection, Entity container)
-        {
-            if (!selection.TryDescribeContainer(container, out SelectionContainerDescriptor descriptor))
+            Span<EntityCollectionHandle> handles = stackalloc EntityCollectionHandle[Math.Max(collections.CollectionCount, 1)];
+            int count = collections.CopyActiveHandles(handles);
+            for (int i = 0; i < count; i++)
             {
-                return $"{container.Id}:<dead-or-missing>";
+                if (collections.TryGetView(handles[i], out EntityCollectionView view) &&
+                    string.Equals(view.Key, key, StringComparison.Ordinal))
+                {
+                    return DescribeCollection(engine, collections, view.Owner, key);
+                }
             }
 
-            int count = selection.GetSelectionCount(container);
-            Entity[] members = count > 0 ? new Entity[count] : Array.Empty<Entity>();
-            int written = count > 0 ? selection.CopySelection(container, members) : 0;
+            return "<none>";
+        }
+
+        private static string DescribeCollection(GameEngine engine, EntityCollectionStore collections, Entity owner, string key)
+        {
+            if (!collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view))
+            {
+                return "<none>";
+            }
+
+            Entity[] members = view.Count > 0 ? new Entity[view.Count] : Array.Empty<Entity>();
+            int written = view.Count > 0 ? collections.CopyEntities(handle, 0, members) : 0;
             string names = string.Join(",", members.Take(written).Select(entity => ReadEntityName(engine.World, entity)));
-            return $"{container.Id}:owner={DescribeEntity(engine.World, descriptor.Owner)},set={descriptor.SetKey},kind={descriptor.Kind},count={descriptor.MemberCount},primary={DescribeEntity(engine.World, descriptor.Primary)},members=[{names}]";
+            return $"owner={DescribeEntity(engine.World, view.Owner)},key={view.Key},role={view.Role},count={view.Count},primary={DescribeEntity(engine.World, view.PrimaryEntity)},members=[{names}]";
         }
 
         private static string DescribeEntity(World world, Entity entity)

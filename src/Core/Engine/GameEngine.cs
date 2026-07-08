@@ -43,7 +43,6 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.UI.EntityCommandPanels;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Events;
@@ -618,8 +617,7 @@ namespace Ludots.Core.Engine
 
         private static void RegisterBuiltInEntityCollectionKeys(StringIntRegistry registry)
         {
-            registry.Register(EntityCollectionKeys.SelectionLivePrimary);
-            registry.Register(EntityCollectionKeys.UiSelectionAcquisition);
+            registry.Register(EntityCollectionKeys.UiCommandAcquisition);
             registry.Register(EntityCollectionKeys.HoveredEntity);
             registry.Register(EntityCollectionKeys.AbilityAimHover);
             registry.Register(EntityCollectionKeys.AbilityAimAffected);
@@ -874,12 +872,8 @@ namespace Ludots.Core.Engine
             var inputRequestQueue = new InputRequestQueue();
             var abilityInputRequestQueue = new InputRequestQueue();
             var inputResponseBuffer = new InputResponseBuffer();
-            var selectionRequestQueue = new SelectionRequestQueue();
-            var selectionResponseBuffer = new SelectionResponseBuffer();
-            var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var selectionConfig = config.Selection
-                ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
-            var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
+            var commandSourceConfig = config.CommandSource
+                ?? throw new InvalidOperationException("game.json commandSource must be explicitly configured.");
             var interactionActionBindings = new InteractionActionBindings();
             var interactionContextStack = new InteractionContextStack(entityCollectionKeyRegistry);
             interactionContextStack.Push(InteractionContextFrameDescriptor.Create(
@@ -901,7 +895,6 @@ namespace Ludots.Core.Engine
                 filterProfileRegistry,
                 domainRoutedCollectionWriter,
                 entityCollectionStore);
-            var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var presentationConfig = config.Presentation
                 ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
@@ -1009,8 +1002,6 @@ namespace Ludots.Core.Engine
                     PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
                     PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
                     PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
-                    PresentationEventKind.SelectionMemberAdded => selectionSetKeyRegistry.GetId(key),
-                    PresentationEventKind.SelectionMemberRemoved => selectionSetKeyRegistry.GetId(key),
                     PresentationEventKind.GlobalDayNight => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalRegionChanged => TagRegistry.GetId(key),
                     PresentationEventKind.GlobalWeather => TagRegistry.GetId(key),
@@ -1124,7 +1115,6 @@ namespace Ludots.Core.Engine
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
                 },
-                selectionSetKeyRegistry.Register,
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
             performerDefinitions.RebuildCompiledViews();
@@ -1274,7 +1264,7 @@ namespace Ludots.Core.Engine
                 World, clock, orderTypeRegistry, orderRuleRegistry,
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
+            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
@@ -1317,11 +1307,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
             SetService(CoreServiceKeys.AbilityInputRequestQueue, abilityInputRequestQueue);
             SetService(CoreServiceKeys.InputResponseBuffer, inputResponseBuffer);
-            SetService(CoreServiceKeys.SelectionRequestQueue, selectionRequestQueue);
-            SetService(CoreServiceKeys.SelectionResponseBuffer, selectionResponseBuffer);
-            SetService(CoreServiceKeys.SelectionRuntime, selectionRuntime);
-            SetService(CoreServiceKeys.SelectionConfig, selectionConfig);
-            SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
+            SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
@@ -1336,7 +1322,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.VisionResolver, visionResolver);
             SetService(CoreServiceKeys.FogKnowledgeProjector, fogKnowledgeProjector);
             SetService(CoreServiceKeys.KnowledgeAreaRevealRuntime, knowledgeAreaRevealRuntime);
-            SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             SetService(CoreServiceKeys.InteractionContextStack, interactionContextStack);
             SetService(CoreServiceKeys.FilterProfileRegistry, filterProfileRegistry);
@@ -1556,7 +1541,6 @@ namespace Ludots.Core.Engine
                 MapLoader.TemplateRegistry,
                 MapLoader.EntityTemplateKeys,
                 presentationStableIds,
-                selectionRuntime,
                 performerRuntime,
                 performerDefinitions,
                 componentAuthoringContext);
@@ -1665,7 +1649,6 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);
-            RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
             RegisterPresentationSystem(new EntityCollectionPresentationEventSystem(World, entityCollectionStore, presentationEventStream, GameSession));
             RegisterPresentationSystem(new InstancedBatchBehaviorSystem(
                 World,

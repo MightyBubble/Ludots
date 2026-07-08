@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod;
@@ -8,17 +7,13 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
-using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using MobaDemoMod.GAS;
 using MobaDemoMod.Systems;
@@ -78,10 +73,6 @@ namespace MobaDemoMod.Triggers
             }
 
             // Selection feedback hooks are provided by CoreInputMod; MOBA injects only the visual callbacks here.
-            TransientMarkerBuffer markerBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
-                markerBuffer = tmb;
-
             PerformerCommandBuffer cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
                 cmdBuffer = pcb;
@@ -112,24 +103,6 @@ namespace MobaDemoMod.Triggers
                 });
             }
 
-            if (CoreInputRuntimeServices.TryGetSelectionTriggeredCallbacks(engine, out List<System.Action<SelectionRequest, WorldCmInt2>> triggeredCallbacks))
-            {
-                var capturedMarkerBuffer = markerBuffer;
-                var meshReg = context.Get(CoreServiceKeys.PresentationMeshAssetRegistry) as MeshAssetRegistry;
-                int sphereMeshId = meshReg?.GetId(WellKnownMeshKeys.Sphere) ?? 0;
-                triggeredCallbacks.Add((req, worldCm) =>
-                {
-                    if (capturedMarkerBuffer != null && req.RequestTagId == SelectionRequestTags.CircleEnemy)
-                    {
-                        var mk = mobaConfig.Presentation.CircleEnemyMarker;
-                        var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
-                        var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
-                        var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAddMesh(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
-                    }
-                });
-            }
-
             // 鍗曚綅娓叉煋鐢?performers.json 瀹氫箟 moba_unit_marker锛坋ntity-scoped Marker3D锛夐┍鍔?
             // 鍥㈤槦棰滆壊鐢?EntityColor 缁戝畾瑙ｆ瀽
 
@@ -137,4 +110,3 @@ namespace MobaDemoMod.Triggers
         }
     }
 }
-

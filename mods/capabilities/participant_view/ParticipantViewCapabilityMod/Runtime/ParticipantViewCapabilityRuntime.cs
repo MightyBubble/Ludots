@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -159,15 +159,15 @@ internal sealed class ParticipantViewCapabilityRuntime
     {
         var session = engine.CurrentMapSession;
         if (session == null ||
-            engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selection)
+            engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
         {
             return;
         }
 
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity selectionOwner ||
-            selectionOwner == Entity.Null ||
-            !engine.World.IsAlive(selectionOwner))
+            localObj is not Entity commandSourceOwner ||
+            commandSourceOwner == Entity.Null ||
+            !engine.World.IsAlive(commandSourceOwner))
         {
             return;
         }
@@ -186,19 +186,7 @@ internal sealed class ParticipantViewCapabilityRuntime
                 ? ParticipantViewProjection.ResolveTeamMembers(engine.World, session, _selectedTeamId)
                 : Array.Empty<Entity>();
 
-        ReplaceSelectionIfChanged(selection, selectionOwner, members);
-        if (!SelectionContextRuntime.TrySetCurrentView(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                viewViewer,
-                SelectionViewKeys.Primary,
-                selectionOwner,
-                SelectionSetKeys.LivePrimary,
-                out _))
-        {
-            throw new InvalidOperationException("ParticipantViewCapabilityMod failed to bind LivePrimary as the primary selection view.");
-        }
+        PublishCommandSourceProjection(collections, commandSourceOwner, viewViewer, members);
     }
 
     private void RefreshMountedPanel(GameEngine engine)
@@ -294,35 +282,20 @@ internal sealed class ParticipantViewCapabilityRuntime
         return Entity.Null;
     }
 
-    private static void ReplaceSelectionIfChanged(
-        SelectionRuntime selection,
-        Entity viewer,
+    private static void PublishCommandSourceProjection(
+        EntityCollectionStore collections,
+        Entity owner,
+        Entity contextEntity,
         Entity[] members)
     {
-        int currentCount = selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary);
-        if (currentCount == members.Length)
-        {
-            var current = new Entity[currentCount];
-            int written = selection.CopySelection(viewer, SelectionSetKeys.LivePrimary, current);
-            if (written == members.Length)
-            {
-                bool equal = true;
-                for (int i = 0; i < members.Length; i++)
-                {
-                    if (current[i] != members[i])
-                    {
-                        equal = false;
-                        break;
-                    }
-                }
-
-                if (equal)
-                {
-                    return;
-                }
-            }
-        }
-
-        selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, members);
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.DynamicParticipant,
+            EntityCollectionRoleKind.CommandSource,
+            contextEntity,
+            members.Length > 0 ? members[0] : Entity.Null,
+            "Participant projection",
+            $"{members.Length} member(s)");
+        collections.Replace(owner, descriptor, members, owner);
     }
 }

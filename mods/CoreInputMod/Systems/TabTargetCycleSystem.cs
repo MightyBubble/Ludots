@@ -3,8 +3,8 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 
@@ -21,7 +21,7 @@ namespace CoreInputMod.Systems
         private readonly Entity[] _candidateScratch = new Entity[64];
         private readonly float[] _distanceScratch = new float[64];
         private int _lastCycleIndex = -1;
-        private static readonly QueryDescription CandidateQuery = new QueryDescription().WithAll<VisualTransform, SelectionSelectableTag>();
+        private static readonly QueryDescription CandidateQuery = new QueryDescription().WithAll<VisualTransform, CommandSourceSelectableTag>();
 
         public TabTargetCycleSystem(World world, Dictionary<string, object> globals, int searchRadiusCm = 3000)
         {
@@ -62,14 +62,14 @@ namespace CoreInputMod.Systems
 
             int count = 0;
 
-            _world.Query(in CandidateQuery, (Entity entity, ref VisualTransform transform, ref SelectionSelectableTag selectable) =>
+            _world.Query(in CandidateQuery, (Entity entity, ref VisualTransform transform, ref CommandSourceSelectableTag selectable) =>
             {
-                if (count >= 64 || entity.Id == local.Id || !SelectionEligibility.IsSelectableNow(_world, entity))
+                if (count >= 64 || entity.Id == local.Id || !CommandSourceEligibility.IsSelectableNow(_world, entity))
                 {
                     return;
                 }
 
-                if (!SelectionEligibility.CanInspectLive(_world, _globals, local, entity))
+                if (!CommandSourceEligibility.CanInspectLive(_world, _globals, local, entity))
                 {
                     return;
                 }

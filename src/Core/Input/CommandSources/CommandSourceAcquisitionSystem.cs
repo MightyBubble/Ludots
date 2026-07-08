@@ -7,53 +7,57 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
-namespace Ludots.Core.Input.Selection
+namespace Ludots.Core.Input.CommandSources
 {
     /// <summary>
-    /// Shared selection runtime for single-click and screen-space box selection.
-    /// Formal selection writes only to the selector's live primary selection set.
+    /// Shared command-source acquisition for single-click and screen-space box gestures.
+    /// The authoritative output is an owner-keyed entity collection.
     /// </summary>
-    public sealed class CurrentSelectionApplySystem : ISystem<float>
+    public sealed class CommandSourceAcquisitionSystem : ISystem<float>
     {
-        private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, SelectionSelectableTag>();
+        private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, CommandSourceSelectableTag>();
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime _selection;
+        private readonly CommandSourceAcquisitionConfig _config;
+        private readonly Ludots.Core.Gameplay.Teams.RelationshipFilter _targetRelationFilter;
         private readonly EntityCollectionStore _entityCollections;
         private Entity[] _boxSelectionScratch = new Entity[16];
-        private Entity[] _selectionScratch = new Entity[16];
+        private Entity[] _commandSourceScratch = new Entity[16];
         private bool _suppressConfirmRelease;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
-        public CurrentSelectionApplySystem(
+        public CommandSourceAcquisitionSystem(
             World world,
             Dictionary<string, object> globals,
-            SelectionRuntime selection,
+            CommandSourceAcquisitionConfig config,
             EntityCollectionStore entityCollections)
         {
             _world = world;
             _globals = globals;
-            _selection = selection;
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
+                "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
         }
 
-        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
-            : this(world, globals, selection, ResolveEntityCollectionStore(globals))
+        public CommandSourceAcquisitionSystem(World world, Dictionary<string, object> globals, CommandSourceAcquisitionConfig config)
+            : this(world, globals, config, ResolveEntityCollectionStore(globals))
         {
         }
 
-        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals)
+        public CommandSourceAcquisitionSystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
-            _selection = ResolveSelectionRuntime(world, globals);
+            _config = ResolveCommandSourceAcquisitionConfig(globals);
+            _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
+                "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = ResolveEntityCollectionStore(globals);
         }
 
@@ -66,16 +70,16 @@ namespace Ludots.Core.Input.Selection
                 return;
             }
 
-            bool selectionSuppressed = IsSelectionSuppressed();
+            bool acquisitionSuppressed = IsAcquisitionSuppressed();
 
-            if (selectionSuppressed && pointer.Confirm.PressedThisFrame)
+            if (acquisitionSuppressed && pointer.Confirm.PressedThisFrame)
             {
                 _suppressConfirmRelease = true;
             }
 
-            bool hasOwner = TryGetSelectionOwner(out var owner);
+            bool hasOwner = TryGetCommandSourceOwner(out var owner);
             Entity hovered = hasOwner
-                ? FindNearestEntity(owner, pointer.Pointer, _selection.Config.ClickPickRadiusPixels)
+                ? FindNearestEntity(owner, pointer.Pointer, _config.ClickPickRadiusPixels)
                 : Entity.Null;
             UpdateHoveredEntity(hovered);
 
@@ -90,10 +94,10 @@ namespace Ludots.Core.Input.Selection
                 return;
             }
 
-            EnsureSelectionComponents(owner);
-            ref var drag = ref _world.Get<SelectionDragState>(owner);
+            EnsureCommandSourceComponents(owner);
+            ref var drag = ref _world.Get<CommandSourceDragState>(owner);
 
-            if (selectionSuppressed || _suppressConfirmRelease)
+            if (acquisitionSuppressed || _suppressConfirmRelease)
             {
                 if (drag.Active)
                 {
@@ -135,7 +139,7 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private bool TryGetSelectionOwner(out Entity owner)
+        private bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = default;
             return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
@@ -144,11 +148,11 @@ namespace Ludots.Core.Input.Selection
                    (owner = local) != Entity.Null;
         }
 
-        private void ApplyCompletedSelectionGesture(Entity owner, in SelectionDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
+        private void ApplyCompletedSelectionGesture(Entity owner, in CommandSourceDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
         {
-            SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
+            CommandSourceAcquisitionMode acquisitionMode = drag.AcquisitionMode;
 
-            if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
+            if (drag.ExceedsThreshold(_config.DragThresholdPixels))
             {
                 ApplyBoxSelection(owner, in drag, acquisitionMode);
                 return;
@@ -162,55 +166,25 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private bool IsSelectionSuppressed()
+        private bool IsAcquisitionSuppressed()
         {
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
                    mapping.IsAiming;
         }
 
-        private void EnsureSelectionComponents(Entity owner)
+        private void EnsureCommandSourceComponents(Entity owner)
         {
-            if (!_world.Has<SelectionDragState>(owner))
+            if (!_world.Has<CommandSourceDragState>(owner))
             {
-                _world.Add(owner, default(SelectionDragState));
-            }
-
-            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            EnsureLivePrimarySelectionView(owner);
-        }
-
-        private void EnsureLivePrimarySelectionView(Entity owner)
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewerObj) &&
-                viewerObj is Entity viewer &&
-                _world.IsAlive(viewer) &&
-                _globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var viewKeyObj) &&
-                viewKeyObj is string viewKey &&
-                !string.IsNullOrWhiteSpace(viewKey) &&
-                SelectionContextRuntime.TryDescribeCurrentView(_world, _globals, out _))
-            {
-                return;
-            }
-
-            if (!SelectionContextRuntime.TrySetCurrentView(
-                    _world,
-                    _globals,
-                    _selection,
-                    owner,
-                    SelectionViewKeys.Primary,
-                    owner,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
-            {
-                throw new InvalidOperationException("CurrentSelectionApplySystem failed to bind LivePrimary as the primary selection view.");
+                _world.Add(owner, default(CommandSourceDragState));
             }
         }
 
         private void UpdateHoveredEntity(Entity hovered)
         {
-            SelectionAcquisitionConfig acquisition = _selection.Config.Acquisition
-                ?? throw new InvalidOperationException("selection.acquisition must be explicitly configured.");
+            CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
+                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
             Entity owner = _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var ownerObj) && ownerObj is Entity local && _world.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -239,7 +213,7 @@ namespace Ludots.Core.Input.Selection
             _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
-        private void ApplyClickSelection(Entity owner, Entity clicked, SelectionAcquisitionMode acquisitionMode)
+        private void ApplyClickSelection(Entity owner, Entity clicked, CommandSourceAcquisitionMode acquisitionMode)
         {
             if (_world.IsAlive(clicked))
             {
@@ -249,13 +223,13 @@ namespace Ludots.Core.Input.Selection
                 return;
             }
 
-            if (acquisitionMode == SelectionAcquisitionMode.Replace)
+            if (acquisitionMode == CommandSourceAcquisitionMode.Replace)
             {
                 ApplyAcquisition(owner, ReadOnlySpan<Entity>.Empty, acquisitionMode);
             }
         }
 
-        private void ApplyBoxSelection(Entity owner, in SelectionDragState drag, SelectionAcquisitionMode acquisitionMode)
+        private void ApplyBoxSelection(Entity owner, in CommandSourceDragState drag, CommandSourceAcquisitionMode acquisitionMode)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
@@ -263,13 +237,11 @@ namespace Ludots.Core.Input.Selection
             }
 
             ScreenRect marquee = ScreenRect.FromPoints(drag.StartScreen, drag.CurrentScreen);
-            var targetRelationFilter = _selection.TargetRelationFilter;
-
             int nextCount = 0;
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
+            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
             {
                 if (!cull.IsVisible ||
-                    !SelectionEligibility.CanAcquire(_world, _globals, owner, entity, targetRelationFilter))
+                    !CommandSourceEligibility.CanAcquire(_world, _globals, owner, entity, _targetRelationFilter))
                 {
                     return;
                 }
@@ -314,14 +286,14 @@ namespace Ludots.Core.Input.Selection
             ScreenRect bestBounds = default;
             bool hasBestBounds = false;
 
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
+            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
             {
                 if (!cull.IsVisible)
                 {
                     return;
                 }
 
-                if (!SelectionEligibility.CanInspectLive(_world, _globals, owner, entity))
+                if (!CommandSourceEligibility.CanInspectLive(_world, _globals, owner, entity))
                 {
                     return;
                 }
@@ -351,61 +323,38 @@ namespace Ludots.Core.Input.Selection
 
         private Entity ResolveClickAcquisition(Entity owner, Entity hovered)
         {
-            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, _globals, owner, hovered, _selection.TargetRelationFilter)
+            return _world.IsAlive(hovered) && CommandSourceEligibility.CanAcquire(_world, _globals, owner, hovered, _targetRelationFilter)
                 ? hovered
                 : Entity.Null;
         }
 
-        private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, SelectionAcquisitionMode mode)
+        private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, CommandSourceAcquisitionMode mode)
         {
-            SelectionAcquisitionConfig acquisition = _selection.Config.Acquisition
-                ?? throw new InvalidOperationException("selection.acquisition must be explicitly configured.");
-            string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "selection.acquisition.collectionKey");
-            string formalSetKey = RequireConfiguredKey(acquisition.FormalSelectionSetKey, "selection.acquisition.formalSelectionSetKey");
+            CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
+                ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
+            string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "commandSource.acquisition.collectionKey");
             var descriptor = EntityCollectionDescriptor.Create(
                 collectionKey,
                 EntityCollectionSourceKind.UiAcquisition,
                 EntityCollectionRoleKind.AcquisitionPreview,
                 owner,
                 hits.Length > 0 ? hits[0] : Entity.Null,
-                string.IsNullOrWhiteSpace(acquisition.Title) ? "UI acquisition" : acquisition.Title,
+                string.IsNullOrWhiteSpace(acquisition.Title) ? "Command acquisition" : acquisition.Title,
                 $"{mode} | {hits.Length} entities");
             _entityCollections.Replace(owner, descriptor, hits);
 
-            if (!acquisition.CommitToFormalSelection)
-            {
-                return;
-            }
-
             switch (mode)
             {
-                case SelectionAcquisitionMode.Replace:
-                    _selection.ReplaceSelection(owner, formalSetKey, hits);
+                case CommandSourceAcquisitionMode.Replace:
                     PublishCommandSource(owner, hits, mode);
                     return;
 
-                case SelectionAcquisitionMode.Additive:
-                    for (int i = 0; i < hits.Length; i++)
-                    {
-                        _selection.AddToSelection(owner, formalSetKey, hits[i]);
-                    }
-                    PublishCommandSourceFromFormalSelection(owner, formalSetKey, mode);
+                case CommandSourceAcquisitionMode.Additive:
+                    PublishMergedCommandSource(owner, hits, mode);
                     return;
 
-                case SelectionAcquisitionMode.Toggle:
-                    for (int i = 0; i < hits.Length; i++)
-                    {
-                        Entity target = hits[i];
-                        if (SelectionContains(owner, target))
-                        {
-                            _selection.RemoveFromSelection(owner, formalSetKey, target);
-                        }
-                        else
-                        {
-                            _selection.AddToSelection(owner, formalSetKey, target);
-                        }
-                    }
-                    PublishCommandSourceFromFormalSelection(owner, formalSetKey, mode);
+                case CommandSourceAcquisitionMode.Toggle:
+                    PublishMergedCommandSource(owner, hits, mode);
                     return;
 
                 default:
@@ -413,17 +362,35 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private void PublishCommandSourceFromFormalSelection(Entity owner, string formalSetKey, SelectionAcquisitionMode mode)
+        private void PublishMergedCommandSource(Entity owner, ReadOnlySpan<Entity> hits, CommandSourceAcquisitionMode mode)
         {
-            int count = _selection.GetSelectionCount(owner, formalSetKey);
-            EnsureSelectionScratchCapacity(Math.Max(1, count));
-            int written = count > 0
-                ? _selection.CopySelection(owner, formalSetKey, _selectionScratch)
-                : 0;
-            PublishCommandSource(owner, _selectionScratch.AsSpan(0, written), mode);
+            int count = CopyCurrentCommandSource(owner);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                Entity hit = hits[i];
+                if (!_world.IsAlive(hit))
+                {
+                    continue;
+                }
+
+                int existingIndex = IndexOf(_commandSourceScratch.AsSpan(0, count), hit);
+                if (mode == CommandSourceAcquisitionMode.Toggle && existingIndex >= 0)
+                {
+                    count = RemoveAt(_commandSourceScratch, count, existingIndex);
+                    continue;
+                }
+
+                if (existingIndex < 0)
+                {
+                    EnsureCommandSourceScratchCapacity(count + 1);
+                    _commandSourceScratch[count++] = hit;
+                }
+            }
+
+            PublishCommandSource(owner, _commandSourceScratch.AsSpan(0, count), mode);
         }
 
-        private void PublishCommandSource(Entity owner, ReadOnlySpan<Entity> members, SelectionAcquisitionMode mode)
+        private void PublishCommandSource(Entity owner, ReadOnlySpan<Entity> members, CommandSourceAcquisitionMode mode)
         {
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.CommandSource,
@@ -436,65 +403,54 @@ namespace Ludots.Core.Input.Selection
             _entityCollections.Replace(owner, descriptor, members, owner);
         }
 
-        private bool SelectionContains(Entity owner, Entity target)
+        private int CopyCurrentCommandSource(Entity owner)
         {
-            string formalSetKey = RequireConfiguredKey(
-                _selection.Config.Acquisition?.FormalSelectionSetKey,
-                "selection.acquisition.formalSelectionSetKey");
-            int count = _selection.GetSelectionCount(owner, formalSetKey);
-            if (count <= 0)
+            if (!_entityCollections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle) ||
+                !_entityCollections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
-                return false;
+                return 0;
             }
 
-            EnsureSelectionScratchCapacity(count);
-            int written = _selection.CopySelection(owner, formalSetKey, _selectionScratch);
-            for (int i = 0; i < written; i++)
-            {
-                if (_selectionScratch[i] == target)
-                {
-                    return true;
-                }
-            }
-
-            return false;
+            EnsureCommandSourceScratchCapacity(view.Count);
+            return _entityCollections.CopyEntities(handle, 0, _commandSourceScratch.AsSpan(0, view.Count));
         }
 
-        private SelectionAcquisitionMode ResolveAcquisitionMode()
+        private CommandSourceAcquisitionMode ResolveAcquisitionMode()
         {
             if (_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
                 inputObj is Ludots.Core.Input.Runtime.IInputActionReader input)
             {
-                bool additive = input.IsDown(SelectionModifierActionIds.Additive);
-                bool toggle = input.IsDown(SelectionModifierActionIds.Toggle);
+                bool additive = input.IsDown(CommandSourceModifierActionIds.Additive);
+                bool toggle = input.IsDown(CommandSourceModifierActionIds.Toggle);
                 if (toggle)
                 {
-                    return SelectionAcquisitionMode.Toggle;
+                    return CommandSourceAcquisitionMode.Toggle;
                 }
 
                 if (additive)
                 {
-                    return SelectionAcquisitionMode.Additive;
+                    return CommandSourceAcquisitionMode.Additive;
                 }
             }
 
-            return SelectionAcquisitionMode.Replace;
+            return CommandSourceAcquisitionMode.Replace;
         }
 
-        private void EnsureSelectionScratchCapacity(int required)
+        private void EnsureCommandSourceScratchCapacity(int required)
         {
-            if (required <= _selectionScratch.Length)
+            if (required <= _commandSourceScratch.Length)
             {
                 return;
             }
 
-            int nextSize = _selectionScratch.Length;
+            int nextSize = _commandSourceScratch.Length;
             while (nextSize < required)
             {
                 nextSize *= 2;
             }
 
-            Array.Resize(ref _selectionScratch, nextSize);
+            Array.Resize(ref _commandSourceScratch, nextSize);
         }
 
         private static int CompareProjectedBounds(in ScreenRect candidate, in ScreenRect best, Vector2 pointer)
@@ -536,20 +492,50 @@ namespace Ludots.Core.Input.Selection
             return worldCmp != 0 ? worldCmp : a.Id.CompareTo(b.Id);
         }
 
+        private static int IndexOf(ReadOnlySpan<Entity> entities, Entity value)
+        {
+            for (int i = 0; i < entities.Length; i++)
+            {
+                if (entities[i] == value)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static int RemoveAt(Entity[] entities, int count, int index)
+        {
+            if ((uint)index >= (uint)count)
+            {
+                return count;
+            }
+
+            int tail = count - index - 1;
+            if (tail > 0)
+            {
+                Array.Copy(entities, index + 1, entities, index, tail);
+            }
+
+            entities[count - 1] = Entity.Null;
+            return count - 1;
+        }
+
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
 
-        private static SelectionRuntime ResolveSelectionRuntime(World world, Dictionary<string, object> globals)
+        private static CommandSourceAcquisitionConfig ResolveCommandSourceAcquisitionConfig(Dictionary<string, object> globals)
         {
-            if (globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var runtimeObj) &&
-                runtimeObj is SelectionRuntime runtime)
+            if (globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out var configObj) &&
+                configObj is CommandSourceAcquisitionConfig config)
             {
-                return runtime;
+                return config;
             }
 
             throw new InvalidOperationException(
-                $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered before construction.");
+                $"{nameof(CommandSourceAcquisitionSystem)} requires {CoreServiceKeys.CommandSourceAcquisitionConfig.Name} to be registered before construction.");
         }
 
         private static EntityCollectionStore ResolveEntityCollectionStore(Dictionary<string, object> globals)
@@ -561,7 +547,7 @@ namespace Ludots.Core.Input.Selection
             }
 
             throw new InvalidOperationException(
-                $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered before construction.");
+                $"{nameof(CommandSourceAcquisitionSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered before construction.");
         }
 
         private static string RequireConfiguredKey(string? value, string path)
@@ -573,18 +559,5 @@ namespace Ludots.Core.Input.Selection
 
             return value.Trim();
         }
-    }
-
-    public enum SelectionAcquisitionMode : byte
-    {
-        Replace = 0,
-        Additive = 1,
-        Toggle = 2,
-    }
-
-    public static class SelectionModifierActionIds
-    {
-        public const string Additive = "QueueModifier";
-        public const string Toggle = "PrecisionModifier";
     }
 }

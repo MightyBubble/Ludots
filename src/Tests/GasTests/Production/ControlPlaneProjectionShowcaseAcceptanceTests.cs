@@ -13,7 +13,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Registry;
@@ -102,8 +102,6 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         int grantedFlagId = relationshipFlags.GetId(AssociationControlProfileRuntime.GrantedFlagName);
         EntityCollectionStore store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("EntityCollectionStore missing.");
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("SelectionRuntime missing.");
         TestInputBackend input = GetInputBackend(engine);
 
         Entity p1Unit = state.P1Units[0];
@@ -160,11 +158,19 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
                 granted_flag = true
             }));
 
-        // Simulate the committed box selection: replace P1Rep's formal selection with a mixed set.
+        // Simulate the committed box acquisition: replace P1Rep's CommandSource collection with a mixed set.
         Span<Entity> selected = stackalloc Entity[2];
         selected[0] = p1Unit;
         selected[1] = p2Unit;
-        Assert.That(selection.ReplaceSelection(state.P1Rep, SelectionSetKeys.LivePrimary, selected), Is.True);
+        var mixedCommandSourceDescriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.UiAcquisition,
+            EntityCollectionRoleKind.CommandSource,
+            contextEntity: state.P1Rep,
+            primaryEntity: p1Unit,
+            title: "Control-plane command source",
+            summary: "Mixed-domain acquisition fixture.");
+        Assert.That(store.Replace(state.P1Rep, in mixedCommandSourceDescriptor, selected, state.P1Rep).IsValid, Is.True);
         Tick(engine, 4);
 
         // M3: the routed write split the batch per control domain — no cross-domain rows.
@@ -182,13 +188,13 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
             "Owned projection must hold P1Rep-domain members.");
         Assert.That(proxiedProjection, Is.EquivalentTo(new[] { p2Unit }),
             "Proxied projection must hold members reached through the Controls grant.");
-        timeline.Add("[T+024] SelectionRuntime.ReplaceSelection(P1 + P2) -> DomainRoutedCollectionWriter split rows | P1=1 P2=1");
+        timeline.Add("[T+024] EntityCollectionStore.Replace(P1 mixed CommandSource) -> DomainRoutedCollectionWriter split rows | P1=1 P2=1");
         timeline.Add("[T+028] ControlPlaneView.Project(P1Rep) -> Marker buckets | owned=1 proxied=1");
         traces.Add(Trace(
             "a1-024-selection-routed",
             "T+024",
-            "selection",
-            "mixed formal selection split into command-source rows by control domain",
+            "command-source",
+            "mixed command-source acquisition split into command-source rows by control domain",
             new
             {
                 selected = 2,
@@ -217,8 +223,8 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
         Entity[] p2CommandSourceAfterRevoke = CopyCollection(store, state.P2Rep, state.CommandSourceKeyId);
         Entity[] ownedProjectionAfterRevoke = CopyCollection(store, state.P1Rep, state.OwnedProjectionKeyId);
         Entity[] proxiedProjectionAfterRevoke = CopyCollection(store, state.P1Rep, state.ProxiedProjectionKeyId);
-        Assert.That(p2CommandSourceAfterRevoke, Is.EquivalentTo(new[] { p2Unit }),
-            "(P2Rep, CommandSource) must be preserved after the Controls grant disappears (collections never migrate).");
+        Assert.That(p2CommandSourceAfterRevoke, Is.Empty,
+            "(P2Rep, CommandSource) must clear once the command-source replay can no longer reach the proxied control domain.");
         Assert.That(ownedProjectionAfterRevoke, Is.EquivalentTo(new[] { p1Unit }),
             "Owned projection must survive the proxy toggle.");
         Assert.That(proxiedProjectionAfterRevoke, Is.Empty,
@@ -233,7 +239,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
             {
                 proxy_active = state.ProxyActive,
                 controls_edge = false,
-                p2_command_rows_preserved = p2CommandSourceAfterRevoke.Length,
+                p2_command_rows_after_revoke = p2CommandSourceAfterRevoke.Length,
                 owned_projection = ownedProjectionAfterRevoke.Length,
                 proxied_projection = proxiedProjectionAfterRevoke.Length
             }));
@@ -294,7 +300,7 @@ public sealed class ControlPlaneProjectionShowcaseAcceptanceTests
 
         var commandSourceDescriptor = EntityCollectionDescriptor.Create(
             EntityCollectionKeys.CommandSource,
-            EntityCollectionSourceKind.SelectionView,
+            EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
             title: "SHOW-3 referee command-source fixture",
             summary: "Fixture rows for referee projection evidence; projection still reads through ControlPlaneView.");

@@ -3,7 +3,7 @@
     "id": "control_plane_projection_player",
     "components": {
       "Name": { "Value": "ControlPlane.Player" },
-      "SelectionDragState": {},
+      "CommandSourceDragState": {},
       "AttributeBuffer": { "base": {} },
       "GameplayTagContainer": {},
       "TagCountContainer": {}
@@ -33,7 +33,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 85, "halfSizeZCm": 50 }
     }
@@ -53,7 +53,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
     }

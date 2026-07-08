@@ -4,8 +4,8 @@ using Arch.Core;
 using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -310,7 +310,7 @@ internal sealed class UxPrototypeRuntime
 
     private static Entity ResolveSelectedEntity(GameEngine engine)
     {
-        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
+        return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
             ? selected
             : Entity.Null;
     }

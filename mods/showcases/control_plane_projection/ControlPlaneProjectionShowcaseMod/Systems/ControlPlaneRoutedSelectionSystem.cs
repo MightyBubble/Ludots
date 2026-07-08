@@ -3,16 +3,14 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using ControlPlaneProjectionShowcaseMod.Runtime;
 
 namespace ControlPlaneProjectionShowcaseMod.Systems
 {
     /// <summary>
-    /// M3 live demo of domain-routed writes (RFC-0065 DEC-4 / CTRL-4c): whenever P1Rep's formal
-    /// selection changes, the selected set is replayed through DomainRoutedCollectionWriter so each
+    /// M3 live demo of domain-routed writes (RFC-0065 DEC-4 / CTRL-4c): whenever P1Rep's command
+    /// source changes, the source set is replayed through DomainRoutedCollectionWriter so each
     /// entity lands in its own control domain's (domainRep, CommandSource) collection.
     /// </summary>
     internal sealed class ControlPlaneRoutedSelectionSystem : ISystem<float>
@@ -44,40 +42,34 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
                 return;
             }
 
-            SelectionRuntime? selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
+            EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
             DomainRoutedCollectionWriter? writer = _engine.GetService(CoreServiceKeys.DomainRoutedCollectionWriter);
-            InteractionContextStack? contexts = _engine.GetService(CoreServiceKeys.InteractionContextStack);
-            if (selection == null || writer == null || contexts == null)
+            if (collections == null || writer == null)
             {
                 return;
             }
 
-            if (!selection.TryDescribeSelection(_state.P1Rep, SelectionSetKeys.LivePrimary, out SelectionContainerDescriptor descriptor))
+            if (!collections.TryGetView(_state.P1Rep, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
             {
                 return;
             }
 
-            if (_hasRoutedOnce && descriptor.Revision == _lastSelectionRevision)
+            if (_hasRoutedOnce && view.Revision == _lastSelectionRevision)
             {
                 return;
             }
 
-            if (!contexts.TryPeek(out InteractionContextFrame frame))
-            {
-                return;
-            }
-
-            EnsureScratchCapacity(descriptor.MemberCount);
-            int count = selection.CopySelection(_state.P1Rep, SelectionSetKeys.LivePrimary, _selectionScratch);
+            EnsureScratchCapacity(view.Count);
+            int count = collections.CopyEntities(_state.P1Rep, EntityCollectionKeys.CommandSource, _selectionScratch);
             // Every unit on this map is owned by a domain rep, so unresolved entities are a scenario bug.
             writer.ReplaceRouted(
                 _state.P1Rep,
-                frame.ActiveCollectionKeyId,
+                _state.CommandSourceKeyId,
                 _selectionScratch.AsSpan(0, count),
-                EntityCollectionSourceKind.SelectionView,
+                EntityCollectionSourceKind.UiAcquisition,
                 DomainRoutingUnresolvedPolicy.Reject);
 
-            _lastSelectionRevision = descriptor.Revision;
+            _lastSelectionRevision = view.Revision;
             _hasRoutedOnce = true;
         }
 

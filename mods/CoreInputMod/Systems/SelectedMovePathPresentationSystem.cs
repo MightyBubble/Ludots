@@ -6,11 +6,12 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
@@ -37,7 +38,6 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime _selection;
         private readonly Dictionary<ActorKey, ActorScopeState> _activeScopesByActor = new();
         private readonly List<ActorKey> _actorRemovalScratch = new(16);
         private Entity[] _selected = new Entity[16];
@@ -86,11 +86,10 @@ namespace CoreInputMod.Systems
             public int TouchedFrame;
         }
 
-        public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
-            _selection = selection ?? throw new ArgumentNullException(nameof(selection));
         }
 
         public void Initialize() { }
@@ -100,12 +99,11 @@ namespace CoreInputMod.Systems
 
         public void Update(in float dt)
         {
-            Entity selectionViewer = Entity.Null;
-            string selectionViewKey = SelectionViewKeys.Primary;
-            Entity viewedContainer = Entity.Null;
-            SelectionViewRuntime.TryResolveViewedSelection(_world, _globals, _selection, out selectionViewer, out selectionViewKey, out viewedContainer);
-            Entity primaryViewed = SelectionViewRuntime.TryGetViewedPrimary(_world, _globals, _selection, out var primary)
-                ? primary
+            Entity collectionOwner = Entity.Null;
+            string collectionKey = string.Empty;
+            Entity collectionContext = Entity.Null;
+            Entity primaryViewed = EntityCollectionContextRuntime.TryDescribeCurrentView(_world, _globals, out EntityCollectionView currentView)
+                ? ResolveCurrentViewSummary(in currentView, out collectionOwner, out collectionKey, out collectionContext)
                 : Entity.Null;
 
             int emittedLines = 0;
@@ -117,17 +115,17 @@ namespace CoreInputMod.Systems
                     selectionCount: 0,
                     emittedLines: 0,
                     emittedWaypoints: 0,
-                    selectionViewer,
-                    selectionViewKey,
-                    viewedContainer,
+                    collectionOwner,
+                    collectionKey,
+                    collectionContext,
                     primaryViewed);
                 return;
             }
 
             int frameId = _session?.CurrentTick ?? Environment.TickCount;
-            int viewedCount = SelectionViewRuntime.GetViewedSelectionCount(_world, _globals, _selection);
+            int viewedCount = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
             EnsureSelectedCapacity(viewedCount);
-            int count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _selected);
+            int count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, _selected);
             if (count > 0)
             {
                 int emittedEntities = 0;
@@ -152,10 +150,22 @@ namespace CoreInputMod.Systems
                 selectionCount: count,
                 emittedLines,
                 emittedWaypoints,
-                selectionViewer,
-                selectionViewKey,
-                viewedContainer,
+                collectionOwner,
+                collectionKey,
+                collectionContext,
                 primaryViewed);
+        }
+
+        private static Entity ResolveCurrentViewSummary(
+            in EntityCollectionView view,
+            out Entity owner,
+            out string key,
+            out Entity contextEntity)
+        {
+            owner = view.Owner;
+            key = view.Key;
+            contextEntity = view.ContextEntity;
+            return view.PrimaryEntity;
         }
 
         private bool TryResolveRuntime()
@@ -507,18 +517,18 @@ namespace CoreInputMod.Systems
             int selectionCount,
             int emittedLines,
             int emittedWaypoints,
-            Entity selectionViewer,
-            string selectionViewKey,
-            Entity viewedContainer,
+            Entity collectionOwner,
+            string collectionKey,
+            Entity collectionContext,
             Entity primaryViewed)
         {
             string summary = BuildDebugSummary(
                 selectionCount,
                 emittedLines,
                 emittedWaypoints,
-                selectionViewer,
-                selectionViewKey,
-                viewedContainer,
+                collectionOwner,
+                collectionKey,
+                collectionContext,
                 primaryViewed);
             _globals[DebugSummaryKey] = summary;
         }
@@ -527,9 +537,9 @@ namespace CoreInputMod.Systems
             int selectionCount,
             int emittedLines,
             int emittedWaypoints,
-            Entity selectionViewer,
-            string selectionViewKey,
-            Entity viewedContainer,
+            Entity collectionOwner,
+            string collectionKey,
+            Entity collectionContext,
             Entity primaryViewed)
         {
             Entity inspected = primaryViewed;
@@ -573,7 +583,7 @@ namespace CoreInputMod.Systems
 
             return
                 $"{_lastProjectionSummary} " +
-                $"viewer={DescribeEntity(selectionViewer)} view={selectionViewKey} container={DescribeEntity(viewedContainer)} " +
+                $"owner={DescribeEntity(collectionOwner)} collection={collectionKey} context={DescribeEntity(collectionContext)} " +
                 $"selCount={selectionCount} primary={DescribeEntity(primaryViewed)} " +
                 $"inspect={DescribeEntity(inspected)} orderBuf={hasOrderBuffer} activeMove={activeMoveCount} queuedMove={queuedMoveCount} " +
                 $"pos2D={hasPosition2D} {positionSummary} {worldSummary} " +
@@ -601,26 +611,26 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            SelectionRuntimeConfig? selectionConfig = config.Selection;
-            if (selectionConfig == null)
+            CommandSourceAcquisitionConfig? commandSourceConfig = config.CommandSource;
+            if (commandSourceConfig == null)
             {
                 throw new InvalidOperationException(
-                    "game.selection must be configured before SelectedMovePathPresentationSystem resolves move path preview order types.");
+                    "game.commandSource must be configured before SelectedMovePathPresentationSystem resolves move path preview order types.");
             }
 
-            moveOrderTypeIds = ResolveMoveOrderTypeIds(selectionConfig, orderTypes);
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(commandSourceConfig, orderTypes);
             _moveOrderTypeIds = moveOrderTypeIds;
             _moveOrderTypeIdsResolved = true;
             return moveOrderTypeIds.Length > 0;
         }
 
-        private static int[] ResolveMoveOrderTypeIds(SelectionRuntimeConfig config, OrderTypeRegistry orderTypes)
+        private static int[] ResolveMoveOrderTypeIds(CommandSourceAcquisitionConfig config, OrderTypeRegistry orderTypes)
         {
             string[] orderTypeKeys = config.MovePathPreviewOrderTypeKeys;
             if (orderTypeKeys.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "selection.movePathPreviewOrderTypeKeys must explicitly list order types that SelectedMovePathPresentationSystem may preview.");
+                    "commandSource.movePathPreviewOrderTypeKeys must explicitly list order types that SelectedMovePathPresentationSystem may preview.");
             }
 
             int[] ids = new int[orderTypeKeys.Length];
@@ -631,20 +641,20 @@ namespace CoreInputMod.Systems
                 if (string.IsNullOrWhiteSpace(orderTypeKey))
                 {
                     throw new InvalidOperationException(
-                        "selection.movePathPreviewOrderTypeKeys must not contain blank order type keys.");
+                        "commandSource.movePathPreviewOrderTypeKeys must not contain blank order type keys.");
                 }
 
                 if (!orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
                     orderTypeId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"selection.movePathPreviewOrderTypeKeys references unknown OrderTypeRegistry key '{orderTypeKey}'.");
+                        $"commandSource.movePathPreviewOrderTypeKeys references unknown OrderTypeRegistry key '{orderTypeKey}'.");
                 }
 
                 if (Contains(ids.AsSpan(0, count), orderTypeId))
                 {
                     throw new InvalidOperationException(
-                        $"selection.movePathPreviewOrderTypeKeys resolves duplicate order type id {orderTypeId} from key '{orderTypeKey}'.");
+                        $"commandSource.movePathPreviewOrderTypeKeys resolves duplicate order type id {orderTypeId} from key '{orderTypeKey}'.");
                 }
 
                 ids[count++] = orderTypeId;

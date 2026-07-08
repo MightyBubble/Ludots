@@ -9,7 +9,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 
@@ -247,8 +247,8 @@ namespace RtsDemoMod.Systems
 
         private void SyncSelectionAvailability()
         {
-            var selectableQuery = new QueryDescription().WithAll<SelectionSelectableTag>();
-            _world.Query(in selectableQuery, (Entity entity, ref SelectionSelectableTag _) =>
+            var selectableQuery = new QueryDescription().WithAll<CommandSourceSelectableTag>();
+            _world.Query(in selectableQuery, (Entity entity, ref CommandSourceSelectableTag _) =>
             {
                 bool disabled =
                     _world.Has<ChildOf>(entity) ||
@@ -257,14 +257,14 @@ namespace RtsDemoMod.Systems
                     HasTag(entity, _builderAttachedTagId) ||
                     HasTag(entity, _morphConsumedTagId);
 
-                if (_world.Has<SelectionSelectableState>(entity))
+                if (_world.Has<CommandSourceSelectableState>(entity))
                 {
-                    ref var state = ref _world.Get<SelectionSelectableState>(entity);
-                    state = disabled ? SelectionSelectableState.Disabled : SelectionSelectableState.EnabledByDefault;
+                    ref var state = ref _world.Get<CommandSourceSelectableState>(entity);
+                    state = disabled ? CommandSourceSelectableState.Disabled : CommandSourceSelectableState.EnabledByDefault;
                 }
                 else
                 {
-                    _world.Add(entity, disabled ? SelectionSelectableState.Disabled : SelectionSelectableState.EnabledByDefault);
+                    _world.Add(entity, disabled ? CommandSourceSelectableState.Disabled : CommandSourceSelectableState.EnabledByDefault);
                 }
             });
         }

@@ -92,9 +92,6 @@ public sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationFormationFollowerSystem(engine, simulation),
             SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-            new MassNavigationOrderIngestionSystem(engine, simulation),
-            SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, simulation),
             SystemGroup.RuntimeEntityBinding);
@@ -104,6 +101,9 @@ public sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
+        engine.RegisterSystem(
+            new MassNavigationOrderIngestionSystem(engine, simulation),
+            SystemGroup.AbilityActivation);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
         _systemsInstalled = true;

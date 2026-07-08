@@ -3,7 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 
@@ -12,7 +12,7 @@ namespace RtsRedAlertLikeShowcaseMod.Systems;
 internal sealed class RtsRedAlertKnowledgeProjectionSystem : ISystem<float>
 {
     private static readonly QueryDescription SelectableMapEntityQuery = new QueryDescription()
-        .WithAll<MapEntity, SelectionSelectableTag>();
+        .WithAll<MapEntity, CommandSourceSelectableTag>();
 
     private readonly GameEngine _engine;
     private readonly KnowledgeProjectionStore _knowledge;
@@ -52,10 +52,10 @@ internal sealed class RtsRedAlertKnowledgeProjectionSystem : ISystem<float>
         KnowledgeIdMask256 empty = KnowledgeIdMask256.Empty;
         var currentMapId = session.MapId;
 
-        _engine.World.Query(in SelectableMapEntityQuery, (Entity entity, ref MapEntity mapEntity, ref SelectionSelectableTag _) =>
+        _engine.World.Query(in SelectableMapEntityQuery, (Entity entity, ref MapEntity mapEntity, ref CommandSourceSelectableTag _) =>
         {
             if (mapEntity.MapId != currentMapId ||
-                !SelectionEligibility.IsSelectableNow(_engine.World, entity))
+                !CommandSourceEligibility.IsSelectableNow(_engine.World, entity))
             {
                 return;
             }

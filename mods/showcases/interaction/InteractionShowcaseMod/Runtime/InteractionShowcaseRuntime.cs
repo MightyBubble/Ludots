@@ -13,9 +13,9 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -26,12 +26,14 @@ namespace InteractionShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription().WithAll<Name, PlayerOwner, MapEntity, AbilityStateBuffer>();
-        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly InteractionShowcasePanelController _panelController;
         private bool _inputContextActive;
         private bool _showcaseHudSuppressed;
         private int _visibleUatFrame;
+
+        internal const string SavedCollectionKey = "showcase.interaction.command.saved";
 
         public InteractionShowcaseRuntime()
         {
@@ -160,73 +162,96 @@ namespace InteractionShowcaseMod.Runtime
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
             {
                 return false;
             }
 
-            bool saved = SelectionControlGroupRuntime.TrySaveViewedSelectionToGroup(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                viewer,
-                groupIndex,
-                mirrorToFormation: true);
-            if (saved)
+            Entity[] current = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            if (current.Length <= 0)
             {
-                engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
+                return false;
             }
 
-            return saved;
+            PublishCollection(collections, viewer, ControlGroupCollectionKey(groupIndex), current, "Saved command group", $"{current.Length} hero(es)");
+            PublishCollection(collections, viewer, SavedCollectionKey, current, "Saved command group", $"{current.Length} hero(es)");
+            engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            return true;
         }
 
         public bool RecallControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) ||
+                !collections.TryGetView(viewer, ControlGroupCollectionKey(groupIndex), out EntityCollectionView group) ||
+                group.Count <= 0)
             {
                 return false;
             }
 
-            bool recalled = SelectionControlGroupRuntime.TryRecallGroupToLive(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                viewer,
-                groupIndex,
-                mirrorToFormation: true);
-            if (recalled)
-            {
-                engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
-            }
+            Entity[] members = new Entity[group.Count];
+            int count = collections.CopyEntities(viewer, ControlGroupCollectionKey(groupIndex), members);
+            if (count <= 0) return false;
+            if (count != members.Length) Array.Resize(ref members, count);
 
-            return recalled;
+            PublishShowcaseCommandSource(engine, viewer, members);
+            PublishCollection(collections, viewer, SavedCollectionKey, members, "Saved command group", $"{members.Length} hero(es)");
+            engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            return true;
         }
 
         public bool ShowLiveSelection(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
-            {
-                return false;
-            }
-
-            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-            return true;
+            engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 0;
+            return EntityCollectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out _);
         }
 
         public bool ShowFormationSelection(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            return TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) &&
+                   collections.TryGetView(viewer, SavedCollectionKey, out EntityCollectionView view) &&
+                   view.Count > 0;
+        }
+
+        internal static string ControlGroupCollectionKey(int groupIndex) => $"showcase.interaction.command.group.{groupIndex}";
+
+        private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity owner)
+        {
+            collections = default!;
+            owner = Entity.Null;
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store)
             {
                 return false;
             }
 
-            selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
-            selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity localViewer ||
+                !engine.World.IsAlive(localViewer))
+            {
+                return false;
+            }
+
+            collections = store;
+            owner = localViewer;
             return true;
+        }
+
+        private static void PublishCollection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string key,
+            ReadOnlySpan<Entity> actors,
+            string title,
+            string summary)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                key,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: actors.Length > 0 ? actors[0] : Entity.Null,
+                title: title,
+                summary: summary);
+            collections.Replace(owner, in descriptor, actors, owner);
         }
 
         private void ActivateInputContext(PlayerInputHandler? input)
@@ -345,7 +370,7 @@ namespace InteractionShowcaseMod.Runtime
 
         private static EntityInfoPanelTarget? TryResolveSelectedTarget(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Arch.Core.Entity selected) ||
+            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Arch.Core.Entity selected) ||
                 selected == Arch.Core.Entity.Null ||
                 !engine.World.IsAlive(selected))
             {
@@ -493,27 +518,6 @@ namespace InteractionShowcaseMod.Runtime
             }
         }
 
-        private static bool TryResolveSelectionContext(GameEngine engine, out SelectionRuntime selection, out Arch.Core.Entity viewer)
-        {
-            selection = default!;
-            viewer = Arch.Core.Entity.Null;
-            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime runtime)
-            {
-                return false;
-            }
-
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Arch.Core.Entity localViewer ||
-                !engine.World.IsAlive(localViewer))
-            {
-                return false;
-            }
-
-            selection = runtime;
-            viewer = localViewer;
-            return true;
-        }
-
         private static void EnsureShowcaseLocalPlayer(GameEngine engine, string activeMapId)
         {
             if (TryResolveExistingLocalPlayer(engine, activeMapId, out _))
@@ -632,7 +636,7 @@ namespace InteractionShowcaseMod.Runtime
                 ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
             var empty = KnowledgeIdMask256.Empty;
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
-            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
             {
                 if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -664,22 +668,9 @@ namespace InteractionShowcaseMod.Runtime
 
         private void EnsureShowcaseSelectionView(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Arch.Core.Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
             {
                 return;
-            }
-
-            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
-            selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewViewerEntity.Name))
-            {
-                engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            }
-
-            if (!engine.GlobalContext.ContainsKey(CoreServiceKeys.SelectionViewKey.Name))
-            {
-                engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
             }
 
             Span<Entity> initialSelection = stackalloc Entity[3];
@@ -689,9 +680,10 @@ namespace InteractionShowcaseMod.Runtime
             AddInitialSelection(engine, InteractionShowcaseIds.CommanderName, initialSelection, ref count);
             if (count > 0)
             {
-                if (selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary) <= 0)
+                if (!collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView commandView) ||
+                    commandView.Count <= 0)
                 {
-                    selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, initialSelection[..count]);
+                    PublishShowcaseCommandSource(engine, viewer, initialSelection[..count]);
                 }
 
                 if (!IsSpecializedInteractionShowcaseActive(engine))
@@ -750,8 +742,9 @@ namespace InteractionShowcaseMod.Runtime
         private static void TrySeedHoverTargetFromLiveSelectionForVisibleUat(GameEngine engine)
         {
             if (!string.Equals(Environment.GetEnvironmentVariable("LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET"), "1", StringComparison.Ordinal) ||
-                !TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer) ||
-                !selection.TryGetSelectionAt(viewer, SelectionSetKeys.LivePrimary, 1, out Entity hovered) ||
+                !TryResolveCollectionContext(engine, out EntityCollectionStore commandCollections, out Entity viewer) ||
+                !commandCollections.TryGet(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionHandle commandHandle) ||
+                !commandCollections.TryGetEntityAt(commandHandle, 1, out Entity hovered) ||
                 hovered == Entity.Null ||
                 !engine.World.IsAlive(hovered) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)

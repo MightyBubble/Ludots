@@ -6,26 +6,25 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 
-namespace Ludots.Core.Input.Selection
+namespace Ludots.Core.Input.CommandSources
 {
     /// <summary>
-    /// Formal selection candidate checks shared by click/box/tab input.
+    /// Candidate checks shared by click, box, tab, and command targeting.
     /// </summary>
-    public static class SelectionEligibility
+    public static class CommandSourceEligibility
     {
-        // Mirrors KnowledgeProjectionConsumer's relation-grant scratch buffer capacities.
         private const int RelationSourceBufferCapacity = 32;
         private const int RelationTargetBufferCapacity = 64;
 
         public static bool IsSelectableNow(World world, Entity entity)
         {
-            if (!world.IsAlive(entity) || !world.Has<SelectionSelectableTag>(entity))
+            if (!world.IsAlive(entity) || !world.Has<CommandSourceSelectableTag>(entity))
             {
                 return false;
             }
 
-            return !world.Has<SelectionSelectableState>(entity) ||
-                   world.Get<SelectionSelectableState>(entity).Enabled;
+            return !world.Has<CommandSourceSelectableState>(entity) ||
+                   world.Get<CommandSourceSelectableState>(entity).Enabled;
         }
 
         public static bool CanAcquire(World world, Entity selector, Entity candidate, RelationshipFilter relationFilter)
@@ -118,10 +117,6 @@ namespace Ludots.Core.Input.Selection
                 out _);
         }
 
-        /// <summary>
-        /// Command-target gate against an explicit <see cref="KnowledgeProjectionResolver"/> (no globals
-        /// lookup, no allow-all fallback when the resolver is absent). Allocation free per call.
-        /// </summary>
         public static bool CanTargetCommand(
             World world,
             KnowledgeProjectionResolver resolver,

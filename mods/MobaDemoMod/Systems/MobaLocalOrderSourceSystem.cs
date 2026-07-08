@@ -5,11 +5,12 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
@@ -35,7 +36,6 @@ namespace MobaDemoMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
-        private readonly SelectionRuntime _selection;
         private readonly int _castAbilityOrderTypeId;
         private readonly int _stopOrderTypeId;
         
@@ -62,11 +62,11 @@ namespace MobaDemoMod.Systems
                     "Ensure game.json constants.orderTypeIds is properly configured.");
             }
 
-            _selection = _globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
+            _ = _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                collectionsObj is EntityCollectionStore
+                ? true
                 : throw new InvalidOperationException(
-                    $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered.");
+                    $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
         }
 
         public void Initialize() { }
@@ -121,10 +121,6 @@ namespace MobaDemoMod.Systems
             _inputOrderMapping.SetSelectedEntityProvider((string setKey, out Entity entity) =>
             {
                 return TryGetSelected(setKey, out entity);
-            });
-            _inputOrderMapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
-            {
-                return TryGetSelectedContainer(setKey, out container);
             });
             _inputOrderMapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) =>
             {
@@ -240,7 +236,7 @@ namespace MobaDemoMod.Systems
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
-            if (TryGetSelected(SelectionSetKeys.LivePrimary, out var selected))
+            if (TryGetSelected(EntityCollectionKeys.CommandSource, out var selected))
             {
                 if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
                     return selected;
@@ -251,47 +247,20 @@ namespace MobaDemoMod.Systems
         private bool TryGetSelected(string setKey, out Entity target)
         {
             target = default;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
-                actorObj is not Entity owner ||
-                !_world.IsAlive(owner))
-            {
-                return false;
-            }
-
-            return _selection.TryGetPrimary(owner, setKey, out target);
-        }
-
-        private bool TryGetSelectedContainer(string setKey, out Entity container)
-        {
-            container = default;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
-                actorObj is not Entity owner ||
-                !_world.IsAlive(owner))
-            {
-                return false;
-            }
-
-            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+            return EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out target);
         }
 
         private bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) ||
-                actorObj is not Entity owner ||
-                !_world.IsAlive(owner))
-            {
-                return false;
-            }
-
-            int selectionCount = _selection.GetSelectionCount(owner, setKey);
+            int selectionCount = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
             if (selectionCount <= 0)
             {
                 return false;
             }
 
             Entity[] selected = new Entity[selectionCount];
-            int count = _selection.CopySelection(owner, setKey, selected);
+            int count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, selected);
             for (int i = 0; i < count; i++)
             {
                 Entity entity = selected[i];
@@ -307,7 +276,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetHovered(out Entity target)
         {
             target = default;
-            return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out target);
+            return EntityCollectionContextRuntime.TryGetHovered(_world, _globals, out target);
         }
 
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)

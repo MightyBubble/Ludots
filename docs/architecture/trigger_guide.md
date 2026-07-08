@@ -82,7 +82,7 @@ context.OnEvent(GameEvents.MapLoaded, ctx =>
 约束：
 
 - 消费玩家**逻辑输入**的 system 必须注册到 `SystemGroup.InputCollection`，并读取 `CoreServiceKeys.AuthoritativeInput`。
-- `CurrentSelectionApplySystem`、`GasSelectionResponseSystem`、`GasInputResponseSystem` 位于 `src/Core/Input/...`，属于 fixed-step 输入系统，不应作为 presentation system 注册。
+- `CommandSourceAcquisitionSystem`、`GasInputResponseSystem` 位于 `src/Core/Input/...`，属于 fixed-step 输入系统，不应作为 presentation system 注册。
 - presentation system 只承载 HUD / overlay / performer 等渲染侧逻辑，不直接消费 live `PlayerInputHandler`。
 
 ### 2.3 TriggerDecoratorRegistry — Mod 修饰 Map Trigger

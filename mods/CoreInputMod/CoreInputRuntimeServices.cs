@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Mathematics;
 
 namespace CoreInputMod
@@ -15,13 +14,6 @@ namespace CoreInputMod
             out List<Action<WorldCmInt2, Entity>> callbacks)
         {
             return engine.TryGetService(CoreInputServiceKeys.EntitySelectionCallbacks, out callbacks);
-        }
-
-        public static bool TryGetSelectionTriggeredCallbacks(
-            GameEngine engine,
-            out List<Action<SelectionRequest, WorldCmInt2>> callbacks)
-        {
-            return engine.TryGetService(CoreInputServiceKeys.SelectionTriggeredCallbacks, out callbacks);
         }
 
         public static bool TryGetViewModeManager(GameEngine engine, out ViewModeManager manager)

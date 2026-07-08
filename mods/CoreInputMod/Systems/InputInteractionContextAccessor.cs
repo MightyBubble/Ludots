@@ -7,10 +7,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -27,7 +27,6 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly InteractionContextStack? _interactionContextStack;
         private Entity[] _selectedScratch = new Entity[InitialEntityScratchCapacity];
@@ -36,10 +35,6 @@ namespace CoreInputMod.Systems
         {
             _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : null;
             _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                                  collectionsObj is EntityCollectionStore collections
                 ? collections
@@ -112,7 +107,7 @@ namespace CoreInputMod.Systems
                 return commandSourcePrimary;
             }
 
-            if (TryGetSelectedEntity(SelectionSetKeys.LivePrimary, out var selected) &&
+            if (TryGetSelectedEntity(EntityCollectionKeys.CommandSource, out var selected) &&
                 _world.IsAlive(selected) &&
                 _world.TryGet(selected, out PlayerOwner owner) &&
                 owner.PlayerId == playerId)
@@ -142,56 +137,20 @@ namespace CoreInputMod.Systems
         public bool TryGetSelectedEntity(string setKey, out Entity entity)
         {
             entity = default;
-            if (_selection == null)
-            {
-                return false;
-            }
-
-            if (!TryGetSelectionOwner(out var owner))
-            {
-                return false;
-            }
-
-            return _selection.TryGetPrimary(owner, setKey, out entity);
-        }
-
-        public bool TryGetSelectedContainer(string setKey, out Entity container)
-        {
-            container = default;
-            if (_selection == null)
-            {
-                return false;
-            }
-
-            if (!TryGetSelectionOwner(out var owner))
-            {
-                return false;
-            }
-
-            return _selection.TryCreateSnapshotLease(owner, setKey, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container);
+            return EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out entity);
         }
 
         public bool TryGetSelectedEntities(string setKey, List<Entity> entities)
         {
             entities.Clear();
-            if (_selection == null)
-            {
-                return false;
-            }
-
-            if (!TryGetSelectionOwner(out var owner))
-            {
-                return false;
-            }
-
-            int selectionCount = _selection.GetSelectionCount(owner, setKey);
+            int selectionCount = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
             if (selectionCount <= 0)
             {
                 return false;
             }
 
             EnsureSelectedScratch(selectionCount);
-            int count = _selection.CopySelection(owner, setKey, _selectedScratch);
+            int count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, _selectedScratch);
             for (int i = 0; i < count; i++)
             {
                 Entity entity = _selectedScratch[i];
@@ -299,7 +258,7 @@ namespace CoreInputMod.Systems
 
         public bool TryGetHoveredEntity(out Entity entity)
         {
-            return SelectionContextRuntime.TryGetCurrentHovered(_world, _globals, out entity);
+            return EntityCollectionContextRuntime.TryGetHovered(_world, _globals, out entity);
         }
 
         public bool TryGetAbilityDefinitionRegistry(out AbilityDefinitionRegistry registry)

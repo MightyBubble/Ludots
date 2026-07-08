@@ -41,7 +41,7 @@ InputOrderMapping:
      b. RemoveTag("dead"), SetAttribute(health, base_health * 0.5)
 ```
 
-- **需要**: `SelectionRuleRegistry` 新增 DeadFriendly filter, 或 SelectionRule.RelationshipFilter 扩展
+- **需要**: `FilterProfileRegistry` / target filter profile 新增 DeadFriendly filter，或 relationship filter 扩展
 
 ## 依赖组件
 
@@ -57,5 +57,5 @@ InputOrderMapping:
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| SelectionRule 支持 DeadFriendly filter | P1 | 需要扩展 SelectionRuleRegistry 或 RelationshipFilter |
+| Target filter profile 支持 DeadFriendly filter | P1 | 需要扩展 FilterProfileRegistry 或 relationship filter |
 | 死亡单位保留机制 | P1 | 死亡时添加 "dead" tag 而非立即销毁 Entity |

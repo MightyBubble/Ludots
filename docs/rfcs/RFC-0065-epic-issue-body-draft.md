@@ -1,3 +1,6 @@
+> Historical issue draft. The current architecture has passed the planned endpoint:
+> no formal SelectionRuntime fallback, no SelectionSetKeys/OrderSelectionReference for command
+> authority, and default command source is `collection.command.source`.
 <!-- 建议 Issue 标题： -->
 <!-- [Epic] 统一交互—集合—施法架构：Context Stack / Control Plane / Provenance / Panel Router / Cast Dispatch（整合 #536 #537 #538，修订 #522 遗留） -->
 
@@ -155,7 +158,7 @@ Feature: M3 代理控制是纯拓扑投影 [showcase]
 ```gherkin
 Feature: M4 Provenance marker（深绿/浅绿）[showcase]
   Scenario: 本地玩家看混合控制域 marker（relationKind 拓扑现算）
-    Given performer selection marker catalog 已加载
+    Given performer command marker catalog 已加载
     And 玩家1 的 ControlPlaneView 含 m01（住在 P1Rep 域）与 m99（住在 P2Rep 域）
     Then m01 渲染 palette.self.deep（深绿）ring   # viewer==域 → Owns
     And m99 渲染 palette.self.light（浅绿）ring   # viewer→域 走 Controls 边 → 现算为 proxy

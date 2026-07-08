@@ -4,7 +4,7 @@
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
-  "selection": {
+  "commandSource": {
     "movePathPreviewOrderTypeKeys": [
       "massNavigationMove"
     ]

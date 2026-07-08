@@ -11,7 +11,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -1259,7 +1259,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
+            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
                 !engine.World.IsAlive(entity) ||
                 !engine.World.Has<Name>(entity))
             {

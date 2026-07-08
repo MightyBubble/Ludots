@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Interaction
@@ -10,13 +10,12 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>
     /// Generic GAS input-response system.
     /// Resolves InputRequest to InputResponse using the current interaction bindings
-    /// and the live primary selection of the active local selector.
+    /// and the current command-source collection of the active local player.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
         private InputRequest _active;
         private bool _hasActive;
 
@@ -24,10 +23,6 @@ namespace Ludots.Core.Input.Interaction
         {
             _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : null;
         }
 
         public void Initialize() { }
@@ -49,11 +44,7 @@ namespace Ludots.Core.Input.Interaction
             if (!pointer.Confirm.PressedThisFrame) return;
 
             Entity target = default;
-            if (_selection != null &&
-                _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
-                _world.IsAlive(local) &&
-                _selection.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var selected))
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out var selected))
             {
                 target = selected;
             }

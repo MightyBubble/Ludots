@@ -7,7 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
@@ -259,7 +259,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 for (int i = 0; i < columnChunk.Count; i++)
                 {
                     Entity entity = columnChunk.Entity(i);
-                    bool isSelected = SelectionContextRuntime.ContainsCurrentSelection(_world, _engine.GlobalContext, entity);
+                    bool isSelected = EntityCollectionContextRuntime.ContainsCurrent(_world, _engine.GlobalContext, entity);
                     _primitives.TryAdd(new PrimitiveDrawItem
                     {
                         MeshAssetId = _sphereMeshId,
@@ -334,13 +334,13 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private string DescribeSelectionSummary()
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _engine.GlobalContext);
+            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(_world, _engine.GlobalContext);
             if (selected.Length <= 0)
             {
                 return "Selection 0 | Primary <none>";
             }
 
-            string primary = SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity actor) && _world.IsAlive(actor)
+            string primary = EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity actor) && _world.IsAlive(actor)
                 ? DescribeActorLabel(actor)
                 : "<none>";
 
@@ -368,7 +368,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private bool TryResolveObservedActor(out Entity actor)
         {
             actor = default;
-            if (SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity selected) &&
                 _world.IsAlive(selected))
             {
                 actor = selected;

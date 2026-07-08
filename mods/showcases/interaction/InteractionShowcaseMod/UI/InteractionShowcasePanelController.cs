@@ -9,8 +9,8 @@ using InteractionShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -541,7 +541,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectedLabel(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected))
+            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected))
             {
                 return "(none)";
             }
@@ -553,7 +553,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectionSummary(GameEngine engine, string selectedLabel)
         {
-            Entity[] selection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selection = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
             if (selection.Length <= 0)
             {
                 return "Roster is empty. Drag a box around heroes to test RTS-style multi-cast fan-out.";
@@ -596,55 +596,19 @@ namespace InteractionShowcaseMod.UI
             group3 = SelectionGroupSummary.Empty;
             group4 = SelectionGroupSummary.Empty;
 
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Entity viewer ||
-                !engine.World.IsAlive(viewer) ||
-                engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selection)
-            {
-                return;
-            }
-
-            liveCount = selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary);
-            formationCount = selection.GetSelectionCount(viewer, SelectionSetKeys.FormationPrimary);
-            group1 = ResolveControlGroupSummary(engine, selection, viewer, 1);
-            group2 = ResolveControlGroupSummary(engine, selection, viewer, 2);
-            group3 = ResolveControlGroupSummary(engine, selection, viewer, 3);
-            group4 = ResolveControlGroupSummary(engine, selection, viewer, 4);
-        }
-
-        private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, SelectionRuntime selection, Entity viewer, int groupIndex)
-        {
-            if (!SelectionControlGroupRuntime.TryDescribeControlGroup(engine.World, selection, viewer, groupIndex, out SelectionContainerDescriptor descriptor))
-            {
-                return SelectionGroupSummary.Empty;
-            }
-
-            string primaryLabel = descriptor.Primary != Entity.Null && engine.World.IsAlive(descriptor.Primary) && engine.World.TryGet(descriptor.Primary, out Name name)
-                ? name.Value
-                : descriptor.MemberCount > 0
-                    ? $"#{descriptor.Primary.Id}"
-                    : string.Empty;
-            return new SelectionGroupSummary(descriptor.MemberCount, primaryLabel);
+            liveCount = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
         }
 
         private static SelectionViewMode ResolveSelectionViewMode(GameEngine engine)
         {
-            return SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor) &&
-                   string.Equals(descriptor.ViewKey, SelectionViewKeys.Formation, StringComparison.Ordinal)
-                ? SelectionViewMode.Formation
-                : SelectionViewMode.Live;
+            return SelectionViewMode.Live;
         }
 
         private static string ResolveSelectionViewLabel(GameEngine engine, SelectionViewMode mode)
         {
-            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out _))
-            {
-                return mode == SelectionViewMode.Formation ? "Formation view" : "Live view";
-            }
-
             return mode == SelectionViewMode.Formation
-                ? "Formation view"
-                : "Live view";
+                ? "Formation command source"
+                : "Command source";
         }
 
         private static int ResolveActiveControlGroup(GameEngine engine)
@@ -756,7 +720,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolvePointerTargetFactsLabel(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            return EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
                 ? "ground; hover ignored"

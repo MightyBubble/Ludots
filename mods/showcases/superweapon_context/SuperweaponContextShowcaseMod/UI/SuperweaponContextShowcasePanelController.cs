@@ -230,15 +230,15 @@ namespace SuperweaponContextShowcaseMod.UI
 
         private static string ResolveActiveGroupSummary(GameEngine engine)
         {
-            if (!Ludots.Core.Input.Selection.SelectionContextRuntime.TryDescribeCurrentView(
-                    engine.World,
-                    engine.GlobalContext,
-                    out Ludots.Core.Input.Selection.SelectionViewDescriptor descriptor))
+            int count = Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCurrentCount(
+                engine.World,
+                engine.GlobalContext);
+            if (count <= 0)
             {
                 return "no active heroes";
             }
 
-            return $"{descriptor.Container.MemberCount} active hero(es)";
+            return $"{count} active hero(es)";
         }
 
         private sealed record PanelState(

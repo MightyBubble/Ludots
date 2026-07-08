@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -11,6 +11,7 @@ using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -18,7 +19,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -1415,7 +1416,7 @@ namespace Ludots.Tests.GAS.Production
             details.Add($"selected={string.Join(",", GetSelectedNames(engine))}");
             details.Add($"primary={GetSelectedEntityName(engine)}");
 
-            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -1427,9 +1428,9 @@ namespace Ludots.Tests.GAS.Production
             }
 
             Entity localPlayer = GetLocalPlayer(engine);
-            if (engine.World.Has<SelectionDragState>(localPlayer))
+            if (engine.World.Has<CommandSourceDragState>(localPlayer))
             {
-                ref var drag = ref engine.World.Get<SelectionDragState>(localPlayer);
+                ref var drag = ref engine.World.Get<CommandSourceDragState>(localPlayer);
                 details.Add($"dragActive={drag.Active}");
                 details.Add($"dragStart=({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})");
                 details.Add($"dragCurrent=({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})");
@@ -1527,15 +1528,17 @@ namespace Ludots.Tests.GAS.Production
                     : $"{names[i]} screen=({screen.X:0.##},{screen.Y:0.##}) visible={visible} intersects={intersects} bounds=<none>");
             }
 
-            if (engine.GetService(CoreServiceKeys.SelectionRuntime) is SelectionRuntime selection &&
-                SelectionViewRuntime.TryResolveViewedSelection(engine.World, engine.GlobalContext, selection, out Entity viewer, out string viewKey, out Entity container) &&
-                selection.TryDescribeContainer(container, out SelectionContainerDescriptor descriptor))
+            if (EntityCollectionContextRuntime.TryDescribeCurrentView(
+                    engine.World,
+                    engine.GlobalContext,
+                    out EntityCollectionView view))
             {
-                details.Add($"selectionView viewer={viewer.Id} view={viewKey} owner={descriptor.Owner.Id} set={descriptor.SetKey} members={descriptor.MemberCount}");
+                details.Add(
+                    $"commandSource owner={view.Owner.Id} key={view.Key} source={view.SourceKind} role={view.Role} primary={view.PrimaryEntity.Id} members={view.Count}");
             }
             else
             {
-                details.Add("selectionView=<none>");
+                details.Add("commandSource=<none>");
             }
 
             bool uiCaptured = engine.GlobalContext.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
@@ -1951,7 +1954,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final live per side: `{finalStress.LiveRed}` red / `{finalStress.LiveBlue}` blue");
             sb.AppendLine($"- peak projectile count: `{finalStress.PeakProjectileCount}`");
             sb.AppendLine($"- final queue depth: `{finalStress.QueueDepth}`");
-            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `CurrentSelectionApplySystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
+            sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `ViewModeManager`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `OrderBuffer`, `GroundOverlayBuffer`, `ReactivePage<TState>`");
             return sb.ToString();
         }
 
@@ -2001,7 +2004,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -2012,7 +2015,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity[] GetSelectionSnapshot(GameEngine engine)
         {
-            return SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            return EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)

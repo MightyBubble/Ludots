@@ -52,14 +52,14 @@
 
 ### 当前分支已证明
 
-- shared selection fan-out：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
-- 现有输入与 order pipeline：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Input/Selection/CurrentSelectionApplySystem.cs`
+- shared command-source fan-out：`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`
+- 现有输入与 order pipeline：`src/Core/Input/Orders/InputOrderMappingSystem.cs`、`src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs`
 
 ### 当前结论
 
 | Slice | 当前状态 | 说明 |
 |------|----------|------|
-| R1/R3 多单位共享下指令 | `implemented + verified baseline` | 当前 showcase 已证明 shared selection fan-out，不等于完整 companion feature family |
+| R1/R3 多单位共享下指令 | `implemented + verified baseline` | 当前 showcase 已证明 shared command-source fan-out，不等于完整 companion feature family |
 | R2 companion 模式切换 | `design backlog` | 需要更具体的 actor routing / behavior authoring |
 | R4 装载 / R6 集结点 | `design backlog on existing order pipeline` | 可复用现有 order / blackboard，但未 branch-closed |
 | R5 合并 / sacrifice / spawn | `design backlog with structural-change guardrail` | 必须经 handler / spawn queue，不能在 Graph 中写结构变更伪代码 |
@@ -143,7 +143,7 @@
 
 这五组 feature 的文档边界应这样理解：
 
-- **已实现 showcase/runtime**：special input 的若干核心路径、shared selection fan-out、ContextScored baseline、tag-gated ability activation、tag-duration cooldown baseline
+- **已实现 showcase/runtime**：special input 的若干核心路径、shared command-source fan-out、ContextScored baseline、tag-gated ability activation、tag-duration cooldown baseline
 - **已有 primitive 但未闭环**：finisher 的空间/数值判定、companion 专用 actor routing、environment family、resource refill timer
 - **明确不该再提的平行底座**：`AbilityConditionSystem`、通用 `CooldownTickSystem`
 

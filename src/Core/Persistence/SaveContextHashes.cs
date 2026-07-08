@@ -78,11 +78,6 @@ namespace Ludots.Core.Persistence
                 AppendRegistry(builder, "graphOutputValueKey", graphOutputValueKeys.SnapshotMappings());
             }
 
-            if (engine.TryGetService(CoreServiceKeys.SelectionSetKeyRegistry, out StringIntRegistry selectionSetKeys))
-            {
-                AppendRegistry(builder, "selectionSetKey", selectionSetKeys.SnapshotMappings());
-            }
-
             if (engine.TryGetService(CoreServiceKeys.EntityCollectionKeyRegistry, out StringIntRegistry entityCollectionKeys))
             {
                 AppendRegistry(builder, "entityCollectionKey", entityCollectionKeys.SnapshotMappings());

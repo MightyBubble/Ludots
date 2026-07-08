@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.EntityCollections;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -346,7 +346,7 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Named selection set supplying entity targets for this mapping.
         /// </summary>
-        public string SelectionSetKey { get; set; } = SelectionSetKeys.LivePrimary;
+        public string SelectionSetKey { get; set; } = EntityCollectionKeys.CommandSource;
         
         /// <summary>
         /// The type of selection required.

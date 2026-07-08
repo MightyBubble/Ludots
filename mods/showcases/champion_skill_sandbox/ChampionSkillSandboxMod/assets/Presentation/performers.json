@@ -256,8 +256,8 @@
     "rules": [
       {
         "event": {
-          "kind": "SelectionMemberAdded",
-          "key": "selection.live.primary"
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.command.source"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -270,8 +270,8 @@
       },
       {
         "event": {
-          "kind": "SelectionMemberRemoved",
-          "key": "selection.live.primary"
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.command.source"
         },
         "command": {
           "kind": "DestroyScopedPerformer",
@@ -349,7 +349,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberAdded",
-          "key": "collection.ui.selection.hover"
+          "key": "collection.ui.command.hover"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -364,7 +364,7 @@
       {
         "event": {
           "kind": "EntityCollectionMemberRemoved",
-          "key": "collection.ui.selection.hover"
+          "key": "collection.ui.command.hover"
         },
         "command": {
           "kind": "DestroyScopedPerformer",

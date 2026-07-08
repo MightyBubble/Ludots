@@ -83,7 +83,7 @@ EffectTemplate:
      b. RemoveTag("dead"), SetAttribute(health, base_health * 0.5)
 ```
 
-- **需要**: `SelectionRuleRegistry` 新增 DeadFriendly filter, 或 SelectionRule.RelationshipFilter 扩展
+- **需要**: `FilterProfileRegistry` / target filter profile 新增 DeadFriendly filter，或 relationship filter 扩展
 
 ### C5: 地形/可破坏物
 
@@ -152,7 +152,7 @@ AbilityExecSpec:
 | InputOrderMapping.Entity | ✅ 已有 |
 | InteractionModeType (4种) | ✅ 已有 |
 | AutoTargetPolicy | ✅ 已有 (NearestInRange, NearestEnemyInRange) |
-| SelectionRuleRegistry | ✅ 已有 |
+| FilterProfileRegistry / target filter profiles | ✅ 已有 |
 | GetRelationship() | ✅ 已有 |
 | QueryFilterLayer | ✅ 已有 |
 

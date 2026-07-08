@@ -1,3 +1,7 @@
+> Historical RFC. Its terminal direction is now current architecture: "selection" is only
+> user-facing shorthand, formal SelectionRuntime is retired, and EntityCollectionStore /
+> `collection.command.source` is authoritative. Any remaining text describing dual-track
+> SelectionRuntime transition is historical context, not permission to add fallback.
 # RFC-0065 统一交互—集合—施法架构（Unified Interaction · Entity Collection · Casting）
 
 Status: Proposed（新 Epic SSOT，整合并取代 RFC-0061/0062/0063/0064 的分散叙述）
@@ -86,7 +90,7 @@ Parent Epics being consolidated: #522 / #536 / #537 / #538
 
 1. **OrderQueue 唯一 intake**：MassNav / AI / input / evidence 不得旁路 `SubmitOrder`。
 2. **MassNav 只消费 OrderBuffer**：零 Input / Selection 读取。
-3. **Selection 概念退役（终态约束）**：「selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 不得作为 hub；Order payload 不得引用 selection 容器实体，须自包含目标集或引用 `(owner, collectionKey, revision)`。PR581 第一批实现仍是双轨过渡：`SelectionRuntime` 继续承载正式框选 SSOT，Core 级 command-intake 迁移归 ORD-5/CTX-5 后续单。
+3. **Selection 概念退役（终态约束）**：「selection」只是 default context 下 `collection.command.source` 的俗名；`SelectionRuntime` 不得作为 hub；Order payload 不得引用 selection 容器实体，须自包含目标集或引用 `(owner, collectionKey, revision)`。PR581 closeout 已退役 formal Selection APIs；任何双轨过渡描述都仅是历史审计上下文，不允许作为 fallback 依据。
 4. **Embodied entity 零 `PlayerOwner` / `Team` / `PlayerIdentity`**：归属只存在于 relationship 边。
 5. **控制平面只走 `ControlDomainQuery`**；阵营/敌我判定只走 `DomainStanceQuery`（缓存投影，relationship revision 失效；stance key 是 catalog 数据，Core 无 "hostile" 字面语义）。
 6. **代理控制只增删 `controls` 边**：不迁移 collection、不改 `owns`、不写 unit 组件。
@@ -439,7 +443,7 @@ profile 只声明两件事：激活 slot 时执行什么 op 序列；若 push �
 
 `selector.kind` / `scorer.kind` / `router.kind` 均为 **registry 注册项**（DEC-11）；`advanceOn` 是事件 key（registry id）；`considerations` 直接引用 AttributeRegistry 注册的属性 id。
 
-### 5.9 Performer selection marker rules（对齐现有 PerformerRule 结构）
+### 5.9 Performer command marker rules（对齐现有 PerformerRule 结构）
 
 现有基建事实：`PerformerRule = EventFilter(kind+key) + ConditionRef(inline | graphProgramId) + PerformerCommand`；`EntityCollectionPresentationEventSystem` 发布的 `EntityCollectionMemberAdded/Removed` 事件 **已携带** collection KeyId、owner（Target）、成员 entity（Source）、roleId、revision（FloatD）、scope hash（PayloadA）——RFC-0064「复用现有事件」成立，marker 规则直接落在这套结构上：
 

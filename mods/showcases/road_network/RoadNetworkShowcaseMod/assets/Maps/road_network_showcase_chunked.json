@@ -28,7 +28,7 @@
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "North Watch" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": 9000 } } } },
     { "Template": "road_fort_red", "Overrides": { "Name": { "Value": "South Watch" }, "WorldPositionCm": { "Value": { "X": 9000, "Y": -9000 } } } },
 
-    { "InstanceId": "road.player.blue", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue Vanguard" }, "PlayerOwner": { "PlayerId": 1 }, "SelectionDragState": {}, "WorldPositionCm": { "Value": { "X": -9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
+    { "InstanceId": "road.player.blue", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue Vanguard" }, "PlayerOwner": { "PlayerId": 1 }, "CommandSourceDragState": {}, "WorldPositionCm": { "Value": { "X": -9800, "Y": 0 } }, "RoadMoveProfileRef": { "PlannerPresetId": 1, "ExecutionPresetId": 1, "PreviewPaletteId": 1 } } },
     { "InstanceId": "road.player.blue.north", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue North Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": 700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 2, "ExecutionPresetId": 2, "PreviewPaletteId": 2 } } },
     { "InstanceId": "road.player.blue.south", "Template": "road_column_player", "Overrides": { "Name": { "Value": "Blue South Column" }, "WorldPositionCm": { "Value": { "X": -9400, "Y": -700 } }, "RoadMoveProfileRef": { "PlannerPresetId": 3, "ExecutionPresetId": 3, "PreviewPaletteId": 3 } } },
 

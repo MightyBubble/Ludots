@@ -30,8 +30,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly InputRequestQueue _inputRequests;
         private readonly InputResponseBuffer _inputResponses;
-        private readonly SelectionRequestQueue _selectionRequests;
-        private readonly SelectionResponseBuffer _selectionResponses;
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasPresentationEventBuffer _presentationEvents;
         private readonly EffectPhaseExecutor _phaseExecutor;
@@ -63,8 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IClock clock,
             InputRequestQueue inputRequests,
             InputResponseBuffer inputResponses,
-            SelectionRequestQueue selectionRequests,
-            SelectionResponseBuffer selectionResponses,
             EffectRequestQueue effectRequests,
             AbilityDefinitionRegistry abilityDefinitions = null,
             GameplayEventBus eventBus = null,
@@ -82,8 +78,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _clock = clock;
             _inputRequests = inputRequests;
             _inputResponses = inputResponses;
-            _selectionRequests = selectionRequests;
-            _selectionResponses = selectionResponses;
             _effectRequests = effectRequests;
             _abilityDefinitions = abilityDefinitions;
             _eventBus = eventBus;
@@ -1035,12 +1029,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
                     inst.WaitRequestId = requestId;
-                    _selectionRequests?.TryEnqueue(new SelectionRequest
+                    _inputRequests?.TryEnqueue(new InputRequest
                     {
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
-                        Origin = actor,
-                        TargetContext = inst.TargetContext,
+                        Source = actor,
+                        Context = inst.TargetContext,
                     });
                     break;
                 }
@@ -1090,31 +1084,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 case ExecItemKind.SelectionGate:
                 {
-                    if (_selectionResponses == null) return;
-                    if (_selectionResponses.TryConsume(inst.WaitRequestId, out var resp))
+                    if (_inputResponses == null) return;
+                    if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))
                     {
-                        int copyCount = resp.Count;
-                        if (copyCount > 64) copyCount = 64;
-                        inst.MultiTargetCount = copyCount;
-                        unsafe
+                        inst.MultiTargetCount = 0;
+                        if (World.IsAlive(resp.Target))
                         {
-                            fixed (int* idsDst = inst.MultiTargetIds)
-                            fixed (int* widsDst = inst.MultiTargetWorldIds)
-                            fixed (int* verDst = inst.MultiTargetVersions)
+                            inst.Target = resp.Target;
+                            inst.MultiTargetCount = 1;
+                            unsafe
                             {
-                                for (int i = 0; i < copyCount; i++)
+                                fixed (int* idsDst = inst.MultiTargetIds)
+                                fixed (int* widsDst = inst.MultiTargetWorldIds)
+                                fixed (int* verDst = inst.MultiTargetVersions)
                                 {
-                                    var e = resp.GetEntity(i);
-                                    idsDst[i] = e.Id;
-                                    widsDst[i] = e.WorldId;
-                                    verDst[i] = e.Version;
+                                    idsDst[0] = resp.Target.Id;
+                                    widsDst[0] = resp.Target.WorldId;
+                                    verDst[0] = resp.Target.Version;
                                 }
                             }
-                        }
-                        if (copyCount > 0)
-                        {
-                            var chosen = resp.GetEntity(0);
-                            if (World.IsAlive(chosen)) inst.Target = chosen;
                         }
                         if (World.IsAlive(resp.TargetContext))
                         {
@@ -1123,11 +1111,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
                         {
                             return;
-                        }
-                        if (resp.TryGetWorldPoint(out var worldPoint))
-                        {
-                            inst.TargetPosCm = Fix64Vec2.FromInt(worldPoint.X, worldPoint.Y);
-                            inst.HasTargetPos = 1;
                         }
                         inst.WaitRequestId = 0;
                         inst.NextItemIndex++;

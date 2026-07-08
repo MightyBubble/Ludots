@@ -29,6 +29,9 @@ namespace CoreInputMod.Systems
 {
     public sealed class LocalOrderSourceHelper
     {
+        public delegate bool OrderSubmissionFilter(in Order order);
+        public delegate void OrderAcceptedHandler(in Order order);
+
         public const string LastGroundWorldDebugKey = "CoreInputMod.Debug.LastGroundWorldCm";
         public const string LastOrderDebugKey = "CoreInputMod.Debug.LastOrder";
 
@@ -44,6 +47,8 @@ namespace CoreInputMod.Systems
         public int CastAbilityOrderTypeId { get; }
         public int MoveToOrderTypeId { get; }
         public int StopOrderTypeId { get; }
+        public OrderSubmissionFilter? BeforeOrderSubmit { get; set; }
+        public OrderAcceptedHandler? AfterOrderAccepted { get; set; }
 
         public LocalOrderSourceHelper(World world, Dictionary<string, object> globals, OrderQueue orders)
         {
@@ -132,7 +137,6 @@ namespace CoreInputMod.Systems
                 return _world.IsAlive(entity);
             });
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
-            mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
@@ -146,11 +150,18 @@ namespace CoreInputMod.Systems
             {
                 _globals[LastOrderDebugKey] = DescribeOrder(in order);
 
-                if (_planner != null && _planner.TrySubmit(in order))
+                if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in order))
                 {
                     return;
                 }
-                _orders.TryEnqueue(order);
+
+                bool accepted = _planner != null
+                    ? _planner.TrySubmit(in order)
+                    : _orders.TryEnqueue(order);
+                if (accepted)
+                {
+                    AfterOrderAccepted?.Invoke(in order);
+                }
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {
@@ -456,35 +467,7 @@ namespace CoreInputMod.Systems
 
             private static InputOrderMapping CloneMapping(InputOrderMapping mapping)
             {
-                return new InputOrderMapping
-                {
-                    ActionId = mapping.ActionId,
-                    Trigger = mapping.Trigger,
-                    DoubleTapWindowSeconds = mapping.DoubleTapWindowSeconds,
-                    OrderTypeKey = mapping.OrderTypeKey,
-                    ArgsTemplate = new OrderArgsTemplate
-                    {
-                        I0 = mapping.ArgsTemplate.I0,
-                        I1 = mapping.ArgsTemplate.I1,
-                        I2 = mapping.ArgsTemplate.I2,
-                        I3 = mapping.ArgsTemplate.I3,
-                        F0 = mapping.ArgsTemplate.F0,
-                        F1 = mapping.ArgsTemplate.F1,
-                        F2 = mapping.ArgsTemplate.F2,
-                        F3 = mapping.ArgsTemplate.F3,
-                    },
-                    RequireSelection = mapping.RequireSelection,
-                    SelectionSetKey = mapping.SelectionSetKey,
-                    SelectionType = mapping.SelectionType,
-                    ModifierBehavior = mapping.ModifierBehavior,
-                    IsSkillMapping = mapping.IsSkillMapping,
-                    HeldPolicy = mapping.HeldPolicy,
-                    CastModeOverride = mapping.CastModeOverride,
-                    AutoTargetPolicy = mapping.AutoTargetPolicy,
-                    AutoTargetRangeCm = mapping.AutoTargetRangeCm,
-                    CursorTargetPolicy = mapping.CursorTargetPolicy,
-                    CursorTargetRangeCm = mapping.CursorTargetRangeCm
-                };
+                return mapping.Clone();
             }
         }
 

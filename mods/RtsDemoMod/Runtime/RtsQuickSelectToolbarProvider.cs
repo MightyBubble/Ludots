@@ -4,7 +4,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -121,7 +120,7 @@ namespace RtsDemoMod.Runtime
 
         private string ResolveCurrentPrimaryName()
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity primary) ||
+            if (!RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity primary) ||
                 !_engine.World.IsAlive(primary) ||
                 !_engine.World.Has<Name>(primary))
             {

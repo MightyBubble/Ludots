@@ -252,7 +252,7 @@ namespace Ludots.Tests.Presentation
             {
                 NavigationGroupCapacity = 8,
                 GroupMembershipAgentCapacity = agentCapacity,
-                SelectionMemberScratchCapacity = groupMemberCapacity,
+                CommandActorScratchCapacity = groupMemberCapacity,
                 GroupMemberCapacity = groupMemberCapacity,
                 OrderIngestionTokenCapacity = 8,
                 OrderIngestionMemberCapacity = groupMemberCapacity,

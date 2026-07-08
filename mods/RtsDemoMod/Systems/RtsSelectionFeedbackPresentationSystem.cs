@@ -8,10 +8,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Scripting;
+using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Systems
 {
@@ -55,7 +55,7 @@ namespace RtsDemoMod.Systems
         {
             _elapsedSeconds += MathF.Max(0f, dt);
             if (!IsRtsMapActive() ||
-                !SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected) ||
+                !RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity selected) ||
                 !_engine.World.IsAlive(selected) ||
                 !TryResolveWorldPosition(selected, out Vector3 center))
             {

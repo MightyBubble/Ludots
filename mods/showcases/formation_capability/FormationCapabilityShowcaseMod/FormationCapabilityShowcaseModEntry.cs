@@ -10,7 +10,7 @@ public sealed class FormationCapabilityShowcaseModEntry : IMod
     {
         context.Log("[FormationCapabilityShowcaseMod] Loaded");
         FormationCapabilityShowcaseComponentAuthoring.Register(context.ModId);
-        var runtime = new FormationCapabilityShowcaseRuntime();
+        var runtime = new FormationCapabilityShowcaseRuntime(context);
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
         context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
         context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);

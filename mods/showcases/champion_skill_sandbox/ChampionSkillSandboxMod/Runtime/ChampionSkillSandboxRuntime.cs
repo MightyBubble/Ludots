@@ -7,15 +7,16 @@ using CoreInputMod.ViewMode;
 using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -27,12 +28,16 @@ namespace ChampionSkillSandboxMod.Runtime
     {
         private static readonly QueryDescription StressSelectableQuery = new QueryDescription().WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
         private static readonly QueryDescription StressOrderBufferQuery = new QueryDescription().WithAll<Team, MapEntity, OrderBuffer>();
-        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
         private static readonly Vector4 SelectionPanelFill = new(0.05f, 0.08f, 0.11f, 0.88f);
         private static readonly Vector4 SelectionPanelBorder = new(0.41f, 0.74f, 0.89f, 0.95f);
         private static readonly Vector4 SelectionPanelTitle = new(0.94f, 0.83f, 0.47f, 1f);
         private static readonly Vector4 SelectionPanelText = new(0.90f, 0.94f, 0.98f, 1f);
         private static readonly Vector4 SelectionPanelHint = new(0.70f, 0.78f, 0.86f, 1f);
+        private const string PlayerFormationCollectionKey = "collection.champion.player.formation";
+        private const string AiTargetsCollectionKey = "collection.champion.ai.targets";
+        private const string AiFormationCollectionKey = "collection.champion.ai.formation";
+        private const string CommandPreviewCollectionKey = "collection.champion.command.preview";
 
         private EntityCommandPanelHandle _focusPanelHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastPanelTarget = Entity.Null;
@@ -107,15 +112,15 @@ namespace ChampionSkillSandboxMod.Runtime
             SyncFocusPanel(engine);
         }
 
-        public void CaptureCommandSnapshot(GameEngine engine, Entity commandSnapshot)
+        public void CaptureCommandSnapshot(GameEngine engine)
         {
             if (!ChampionSkillSandboxIds.IsStressMap(engine.CurrentMapSession?.MapId.Value))
             {
                 return;
             }
 
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null || !IsUsableSelectionContainer(selection, commandSnapshot))
+            EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
+            if (collections == null)
             {
                 return;
             }
@@ -130,7 +135,9 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            SyncCommandPreviewSelection(selection, _debugViewer, commandSnapshot);
+            Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            Entity[] snapshot = SnapshotCollection(collections, playerViewer, EntityCollectionKeys.CommandSource);
+            ReplaceCollection(collections, _debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, snapshot, "Command preview");
         }
 
         private void EnsureScenarioState(GameEngine engine)
@@ -176,9 +183,9 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void SyncSelectionViews(GameEngine engine, bool drawOverlay)
         {
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
+            EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
             Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
-            if (selection == null || playerViewer == Entity.Null || !engine.World.IsAlive(playerViewer))
+            if (collections == null || playerViewer == Entity.Null || !engine.World.IsAlive(playerViewer))
             {
                 return;
             }
@@ -199,11 +206,11 @@ namespace ChampionSkillSandboxMod.Runtime
 
             CollectStressSelectionState(engine);
             PublishSelectableKnowledge(engine, playerViewer, _teamBViewer, _debugViewer);
-            BindStressSelectionViews(engine, selection, playerViewer, _teamBViewer, _debugViewer);
+            BindStressCollections(collections, playerViewer, _teamBViewer, _debugViewer);
             ApplySelectionViewChoice(engine, playerViewer, _teamBViewer, _debugViewer);
             if (drawOverlay)
             {
-                DrawStressSelectionOverlay(engine, selection);
+                DrawStressSelectionOverlay(engine, collections);
             }
         }
 
@@ -223,7 +230,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
             var empty = KnowledgeIdMask256.Empty;
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
-            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity target, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
             {
                 if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.Ordinal))
                 {
@@ -309,74 +316,28 @@ namespace ChampionSkillSandboxMod.Runtime
             });
         }
 
-        private void BindStressSelectionViews(
-            GameEngine engine,
-            SelectionRuntime selection,
+        private void BindStressCollections(
+            EntityCollectionStore collections,
             Entity playerViewer,
             Entity aiViewer,
             Entity debugViewer)
         {
-            selection.ReplaceSelection(playerViewer, SelectionSetKeys.FormationPrimary, _teamAFormation.ToArray());
-            selection.TryBindView(playerViewer, SelectionViewKeys.Formation, playerViewer, SelectionSetKeys.FormationPrimary);
+            ReplaceCollection(collections, playerViewer, PlayerFormationCollectionKey, EntityCollectionRoleKind.Display, _teamAFormation.ToArray(), "Player formation");
+            ReplaceCollection(collections, aiViewer, AiTargetsCollectionKey, EntityCollectionRoleKind.Display, _teamBTargets.ToArray(), "AI command targets");
+            ReplaceCollection(collections, aiViewer, AiFormationCollectionKey, EntityCollectionRoleKind.Display, _teamBFormation.ToArray(), "AI formation");
 
-            selection.ReplaceSelection(aiViewer, SelectionSetKeys.LivePrimary, _teamBTargets.ToArray());
-            selection.TryBindView(aiViewer, SelectionViewKeys.Primary, aiViewer, SelectionSetKeys.LivePrimary);
-            selection.ReplaceSelection(aiViewer, SelectionSetKeys.FormationPrimary, _teamBFormation.ToArray());
-            selection.TryBindView(aiViewer, SelectionViewKeys.Formation, aiViewer, SelectionSetKeys.FormationPrimary);
-
-            Entity commandSnapshot = ResolveLatestSelectionSnapshotContainer(engine, selection);
-            if (commandSnapshot != Entity.Null)
-            {
-                SyncCommandPreviewSelection(selection, debugViewer, commandSnapshot);
-            }
-            else
-            {
-                BindExistingCommandPreviewSelection(selection, debugViewer);
-            }
+            Entity[] commandSource = SnapshotCollection(collections, playerViewer, EntityCollectionKeys.CommandSource);
+            ReplaceCollection(collections, debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, commandSource, "Command preview");
         }
 
         private void ApplySelectionViewChoice(GameEngine engine, Entity playerViewer, Entity aiViewer, Entity debugViewer)
         {
-            string choice = ResolveSelectionViewChoice(engine);
-            switch (choice)
-            {
-                case ChampionSkillSandboxIds.PlayerFormationToolbarButtonId:
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerViewer;
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
-                    break;
-
-                case ChampionSkillSandboxIds.AiTargetToolbarButtonId:
-                    if (aiViewer != Entity.Null)
-                    {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = aiViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-                    }
-                    break;
-
-                case ChampionSkillSandboxIds.AiFormationToolbarButtonId:
-                    if (aiViewer != Entity.Null)
-                    {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = aiViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
-                    }
-                    break;
-
-                case ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId:
-                    if (debugViewer != Entity.Null)
-                    {
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = debugViewer;
-                        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.CommandPreview;
-                    }
-                    break;
-
-                default:
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerViewer;
-                    engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
-                    break;
-            }
+            ResolveActiveCollectionChoice(engine, playerViewer, aiViewer, debugViewer, out Entity owner, out string key);
+            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
+            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = key;
         }
 
-        private void DrawStressSelectionOverlay(GameEngine engine, SelectionRuntime selection)
+        private void DrawStressSelectionOverlay(GameEngine engine, EntityCollectionStore collections)
         {
             ScreenOverlayBuffer? overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
             if (overlay == null)
@@ -389,18 +350,18 @@ namespace ChampionSkillSandboxMod.Runtime
             overlay.AddRect(x, y, 520, 182, SelectionPanelFill, SelectionPanelBorder, stableId: 42100, dirtySerial: 1);
             overlay.AddText(x + 16, y + 26, "Selection SSOT", 20, SelectionPanelTitle, stableId: 42101, dirtySerial: 1);
 
-            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor current))
+            if (!TryResolveActiveCollection(engine, collections, out Entity owner, out EntityCollectionHandle handle, out EntityCollectionView current))
             {
                 overlay.AddText(x + 16, y + 54, "No active selection view.", 15, SelectionPanelText, stableId: 42102, dirtySerial: 1);
                 return;
             }
 
-            string viewerLabel = ResolveEntityLabel(engine.World, current.Viewer) ?? $"Entity#{current.Viewer.Id}";
-            string primaryLabel = ResolveEntityLabel(engine.World, current.Container.Primary) ?? "(none)";
-            string members = BuildSelectionMemberPreview(engine.World, selection, current.Container.Container);
+            string viewerLabel = ResolveEntityLabel(engine.World, owner) ?? $"Entity#{owner.Id}";
+            string primaryLabel = ResolveEntityLabel(engine.World, current.PrimaryEntity) ?? "(none)";
+            string members = BuildSelectionMemberPreview(engine.World, collections, handle, current.Count);
 
-            overlay.AddText(x + 16, y + 54, $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveSelectionViewChoice(engine))} | viewer={viewerLabel} | key={current.ViewKey}", 15, SelectionPanelText, stableId: 42103, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 78, $"Container {current.Container.SetKey} | kind={current.Container.Kind} | rev={current.Container.Revision} | count={current.Container.MemberCount}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
+            overlay.AddText(x + 16, y + 54, $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveSelectionViewChoice(engine))} | owner={viewerLabel} | key={current.Key}", 15, SelectionPanelText, stableId: 42103, dirtySerial: 1);
+            overlay.AddText(x + 16, y + 78, $"Collection {current.Key} | role={current.Role} | rev={current.Revision} | count={current.Count}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
             overlay.AddText(x + 16, y + 100, $"Primary {primaryLabel}", 14, SelectionPanelText, stableId: 42105, dirtySerial: 1);
             overlay.AddText(x + 16, y + 122, $"Members {members}", 13, SelectionPanelHint, stableId: 42106, dirtySerial: 1);
             overlay.AddText(x + 16, y + 146, "Buttons: P1/P1F | AI/AIF | CMD", 13, SelectionPanelHint, stableId: 42107, dirtySerial: 1);
@@ -422,20 +383,20 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static bool SeedInitialSelection(GameEngine engine)
         {
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
+            EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
             Entity initialSelection = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
             Entity owner = ResolveOrAssignLocalPlayer(engine, initialSelection);
-            if (selection == null || owner == Entity.Null || !engine.World.IsAlive(owner))
+            if (collections == null || owner == Entity.Null || !engine.World.IsAlive(owner))
             {
                 return false;
             }
 
-            if (selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity selected) &&
-                engine.World.IsAlive(selected))
+            if (collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView existing) &&
+                existing.PrimaryEntity != Entity.Null &&
+                engine.World.IsAlive(existing.PrimaryEntity))
             {
-                selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-                engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-                engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+                engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
+                engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
                 return true;
             }
 
@@ -446,10 +407,15 @@ namespace ChampionSkillSandboxMod.Runtime
 
             Span<Entity> selectionBuffer = stackalloc Entity[1];
             selectionBuffer[0] = initialSelection;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectionBuffer);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            ReplaceCollection(
+                collections,
+                owner,
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionRoleKind.CommandSource,
+                selectionBuffer,
+                "Initial command source");
+            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
+            engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
             return true;
         }
 
@@ -700,7 +666,7 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static Entity ResolvePanelTarget(GameEngine engine)
         {
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
+            Entity selected = EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
                 ? current
                 : Entity.Null;
             if (IsCommandPanelTarget(engine, selected))
@@ -776,125 +742,6 @@ namespace ChampionSkillSandboxMod.Runtime
             destination.Add(order.Target);
         }
 
-        private static Entity ResolveLatestSelectionSnapshotContainer(GameEngine engine, SelectionRuntime selection)
-        {
-            Entity bestContainer = Entity.Null;
-            int bestOrderId = 0;
-
-            if (engine.GetService(CoreServiceKeys.OrderQueue) is OrderQueue queue &&
-                TryResolveQueuedSelectionContainer(queue, selection, out Entity queuedContainer))
-            {
-                return queuedContainer;
-            }
-
-            string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
-            engine.World.Query(in StressOrderBufferQuery, (Entity entity, ref Team team, ref MapEntity mapEntity, ref OrderBuffer orders) =>
-            {
-                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                ConsiderOrderSelection(selection, orders.ActiveOrder.Order, orders.HasActive, ref bestOrderId, ref bestContainer);
-                ConsiderOrderSelection(selection, orders.PendingOrder.Order, orders.HasPending, ref bestOrderId, ref bestContainer);
-                for (int i = 0; i < orders.QueuedCount; i++)
-                {
-                    ConsiderOrderSelection(selection, orders.GetQueued(i).Order, include: true, ref bestOrderId, ref bestContainer);
-                }
-            });
-
-            return bestContainer;
-        }
-
-        private static bool TryResolveQueuedSelectionContainer(
-            OrderQueue queue,
-            SelectionRuntime selection,
-            out Entity container)
-        {
-            container = Entity.Null;
-            var liveContainers = new HashSet<Entity>();
-            queue.CollectSelectionContainers(liveContainers);
-            foreach (Entity candidate in liveContainers)
-            {
-                if (IsUsableSelectionContainer(selection, candidate))
-                {
-                    container = candidate;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static void ConsiderOrderSelection(
-            SelectionRuntime selection,
-            in Order order,
-            bool include,
-            ref int bestOrderId,
-            ref Entity bestContainer)
-        {
-            if (!include ||
-                !order.Args.Selection.HasContainer ||
-                !IsUsableSelectionContainer(selection, order.Args.Selection.Container))
-            {
-                return;
-            }
-
-            if (order.OrderId >= bestOrderId)
-            {
-                bestOrderId = order.OrderId;
-                bestContainer = order.Args.Selection.Container;
-            }
-        }
-
-        private static bool IsUsableSelectionContainer(SelectionRuntime selection, Entity container)
-        {
-            return container != Entity.Null &&
-                   selection.TryDescribeContainer(container, out _);
-        }
-
-        private static void SyncCommandPreviewSelection(
-            SelectionRuntime selection,
-            Entity debugViewer,
-            Entity commandSnapshot)
-        {
-            if (commandSnapshot == Entity.Null ||
-                !selection.TryGetOrCreateContainer(
-                    debugViewer,
-                    SelectionSetKeys.CommandPreview,
-                    SelectionContainerKind.CommandBinding,
-                    out Entity previewContainer))
-            {
-                return;
-            }
-
-            int count = selection.GetSelectionCount(commandSnapshot);
-            if (count <= 0)
-            {
-                selection.ReplaceSelection(previewContainer, Array.Empty<Entity>());
-                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, previewContainer);
-                return;
-            }
-
-            Entity[] snapshot = new Entity[count];
-            int written = selection.CopySelection(commandSnapshot, snapshot);
-            selection.ReplaceSelection(previewContainer, snapshot.AsSpan(0, written));
-            selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, previewContainer);
-        }
-
-        private static void BindExistingCommandPreviewSelection(SelectionRuntime selection, Entity debugViewer)
-        {
-            if (selection.TryGetSelectionEntity(debugViewer, SelectionSetKeys.CommandPreview, out Entity existingPreview) ||
-                selection.TryGetOrCreateContainer(
-                    debugViewer,
-                    SelectionSetKeys.CommandPreview,
-                    SelectionContainerKind.CommandBinding,
-                    out existingPreview))
-            {
-                selection.TryBindView(debugViewer, SelectionViewKeys.CommandPreview, existingPreview);
-            }
-        }
-
         private static int CompareEntitiesByName(World world, Entity left, Entity right)
         {
             string leftName = ResolveEntityLabel(world, left) ?? string.Empty;
@@ -903,16 +750,138 @@ namespace ChampionSkillSandboxMod.Runtime
             return byName != 0 ? byName : left.Id.CompareTo(right.Id);
         }
 
-        private static string BuildSelectionMemberPreview(World world, SelectionRuntime selection, Entity container)
+        private static void ResolveActiveCollectionChoice(
+            GameEngine engine,
+            Entity playerViewer,
+            Entity aiViewer,
+            Entity debugViewer,
+            out Entity owner,
+            out string key)
         {
-            int count = selection.GetSelectionCount(container);
+            string choice = ResolveSelectionViewChoice(engine);
+            owner = playerViewer;
+            key = EntityCollectionKeys.CommandSource;
+
+            if (string.Equals(choice, ChampionSkillSandboxIds.PlayerFormationToolbarButtonId, StringComparison.Ordinal))
+            {
+                key = PlayerFormationCollectionKey;
+                return;
+            }
+
+            if (string.Equals(choice, ChampionSkillSandboxIds.AiTargetToolbarButtonId, StringComparison.Ordinal) &&
+                aiViewer != Entity.Null)
+            {
+                owner = aiViewer;
+                key = AiTargetsCollectionKey;
+                return;
+            }
+
+            if (string.Equals(choice, ChampionSkillSandboxIds.AiFormationToolbarButtonId, StringComparison.Ordinal) &&
+                aiViewer != Entity.Null)
+            {
+                owner = aiViewer;
+                key = AiFormationCollectionKey;
+                return;
+            }
+
+            if (string.Equals(choice, ChampionSkillSandboxIds.CommandSnapshotToolbarButtonId, StringComparison.Ordinal) &&
+                debugViewer != Entity.Null)
+            {
+                owner = debugViewer;
+                key = CommandPreviewCollectionKey;
+            }
+        }
+
+        private static bool TryResolveActiveCollection(
+            GameEngine engine,
+            EntityCollectionStore collections,
+            out Entity owner,
+            out EntityCollectionHandle handle,
+            out EntityCollectionView view)
+        {
+            owner = Entity.Null;
+            handle = EntityCollectionHandle.Invalid;
+            view = default;
+
+            if (engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ActiveCollectionOwnerKey, out object? ownerObj) &&
+                ownerObj is Entity storedOwner &&
+                engine.World.IsAlive(storedOwner))
+            {
+                owner = storedOwner;
+            }
+            else
+            {
+                owner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            }
+
+            string key = engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ActiveCollectionKey, out object? keyObj) &&
+                         keyObj is string storedKey &&
+                         !string.IsNullOrWhiteSpace(storedKey)
+                ? storedKey
+                : EntityCollectionKeys.CommandSource;
+
+            return owner != Entity.Null &&
+                   collections.TryGet(owner, key, out handle) &&
+                   collections.TryGetView(handle, out view);
+        }
+
+        private static Entity[] SnapshotCollection(EntityCollectionStore collections, Entity owner, string key)
+        {
+            if (owner == Entity.Null ||
+                !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            var members = new Entity[view.Count];
+            int written = collections.CopyEntities(handle, 0, members);
+            if (written != members.Length)
+            {
+                Array.Resize(ref members, written);
+            }
+
+            return members;
+        }
+
+        private static void ReplaceCollection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string key,
+            EntityCollectionRoleKind role,
+            ReadOnlySpan<Entity> members,
+            string title)
+        {
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                key,
+                EntityCollectionSourceKind.Explicit,
+                role,
+                owner,
+                members.Length > 0 ? members[0] : Entity.Null,
+                title,
+                $"{members.Length} entity(s)");
+            collections.Replace(owner, descriptor, members, owner);
+        }
+
+        private static string BuildSelectionMemberPreview(
+            World world,
+            EntityCollectionStore collections,
+            EntityCollectionHandle handle,
+            int count)
+        {
             if (count <= 0)
             {
                 return "(empty)";
             }
 
             Entity[] members = new Entity[count];
-            int written = selection.CopySelection(container, members);
+            int written = collections.CopyEntities(handle, 0, members);
             int previewCount = Math.Min(5, written);
             var labels = new List<string>(previewCount + 1);
             for (int i = 0; i < previewCount; i++)
@@ -1005,8 +974,8 @@ namespace ChampionSkillSandboxMod.Runtime
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.ResetCameraRequestKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.CameraFollowModeKey);
             engine.GlobalContext.Remove(ChampionSkillSandboxIds.SelectionViewChoiceKey);
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewViewerEntity.Name);
-            engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
+            engine.GlobalContext.Remove(ChampionSkillSandboxIds.ActiveCollectionOwnerKey);
+            engine.GlobalContext.Remove(ChampionSkillSandboxIds.ActiveCollectionKey);
         }
     }
 }

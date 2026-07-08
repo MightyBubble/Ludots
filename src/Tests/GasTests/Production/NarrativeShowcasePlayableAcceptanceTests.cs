@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -15,7 +15,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
@@ -348,7 +348,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private static int GetSelectionCount(GameEngine engine)
-            => SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length;
+            => EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext).Length;
 
         private static bool UiContains(UIRoot root, string text)
         {
@@ -358,7 +358,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) && engine.World.TryGet(selected, out Name name)
+            return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) && engine.World.TryGet(selected, out Name name)
                 ? name.Value
                 : string.Empty;
         }
@@ -518,7 +518,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final quest: `{final.QuestSummary}`");
             sb.AppendLine($"- final variables: `{final.VariableSummary}`");
             sb.AppendLine($"- final dialogue card: `{final.DialogueSummary}`");
-            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `SelectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
+            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- total_actions: `{timeline.Count}`");
@@ -606,6 +606,5 @@ namespace Ludots.Tests.GAS.Production
         }
     }
 }
-
 
 

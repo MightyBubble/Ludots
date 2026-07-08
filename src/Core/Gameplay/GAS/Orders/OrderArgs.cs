@@ -47,15 +47,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
     }
  
-    public struct OrderSelectionReference
-    {
-        public static OrderSelectionReference None => new() { Container = Entity.Null };
-
-        public Entity Container;
-
-        public readonly bool HasContainer => Container != Entity.Null;
-    }
- 
     public struct OrderArgs
     {
         public static OrderArgs CreateSingleWorldCm(Vector3 worldCm)
@@ -67,8 +58,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     Kind = OrderSpatialKind.WorldCm,
                     Mode = OrderCollectionMode.Single,
                     WorldCm = worldCm
-                },
-                Selection = OrderSelectionReference.None
+                }
             };
         }
 
@@ -83,6 +73,5 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public float F3;
 
         public OrderSpatial Spatial;
-        public OrderSelectionReference Selection;
     }
 }

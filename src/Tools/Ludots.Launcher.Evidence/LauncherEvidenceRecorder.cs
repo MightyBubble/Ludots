@@ -10,6 +10,7 @@ using Ludots.Adapter.Web.Services;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -17,7 +18,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.MassNavigation;
@@ -75,7 +76,7 @@ public static class LauncherEvidenceRecorder
         .WithAll<MassNavigationAgent, MassNavigationAgentIndex, WorldPositionCm>();
 
     private static readonly QueryDescription OrderableMassNavigationAgentQuery = new QueryDescription()
-        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
+        .WithAll<MassNavigationAgent, MassNavigationAgentIndex, Team, OrderBuffer, WorldPositionCm, CommandSourceSelectableTag, PresentationOwnerHasPerformerPayload>();
 
     private static readonly QueryDescription MassNavigationBlockerQuery = new QueryDescription()
         .WithAll<MassNavigationBlocker, MassNavigationBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
@@ -1244,9 +1245,9 @@ public static class LauncherEvidenceRecorder
         AssertRoadOverlay(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
         CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "000_start", null);
 
-        ClickPrimaryUntilSelected(runtime, "Blue Vanguard", frameTimesMs);
+        ClickPrimaryUntilCommandSource(runtime, "Blue Vanguard", frameTimesMs);
         Tick(runtime, 6, frameTimesMs);
-        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_selected", null);
+        CaptureRoadSnapshot(runtime, screensDir, frameTimesMs, timeline, captureFrames, "001_command_source", null);
 
         Vector2 commandScreen = runtime.ProjectWorldCm(RoadCommandWorldCm);
         ClickSecondary(runtime, commandScreen, frameTimesMs);
@@ -1304,7 +1305,7 @@ public static class LauncherEvidenceRecorder
         timeline.Add(snapshot);
         string fileName = $"{step}.png";
         WriteRoadSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SelectedNames.Count, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.CommandActorNames.Count, 0f, 0f));
     }
 
     private static RoadSnapshot SampleRoadSnapshot(RecordingRuntime runtime, string step, double tickMs, Vector2? commandTargetWorldCm)
@@ -1318,19 +1319,19 @@ public static class LauncherEvidenceRecorder
             }
         });
 
-        var selectedNames = new List<string>();
-        Entity[] selectedEntities = SelectionContextRuntime.SnapshotCurrentSelection(runtime.Engine.World, runtime.Engine.GlobalContext);
-        for (int i = 0; i < selectedEntities.Length; i++)
+        var commandActorNames = new List<string>();
+        Entity[] commandActors = EntityCollectionContextRuntime.SnapshotCurrent(runtime.Engine.World, runtime.Engine.GlobalContext);
+        for (int i = 0; i < commandActors.Length; i++)
         {
-            Entity selected = selectedEntities[i];
-            if (!runtime.Engine.World.IsAlive(selected) || !runtime.Engine.World.Has<Name>(selected))
+            Entity commandActor = commandActors[i];
+            if (!runtime.Engine.World.IsAlive(commandActor) || !runtime.Engine.World.Has<Name>(commandActor))
             {
                 continue;
             }
 
-            selectedNames.Add(runtime.Engine.World.Get<Name>(selected).Value);
+            commandActorNames.Add(runtime.Engine.World.Get<Name>(commandActor).Value);
         }
-        selectedNames.Sort(StringComparer.OrdinalIgnoreCase);
+        commandActorNames.Sort(StringComparer.OrdinalIgnoreCase);
 
         PrimitiveDrawBuffer? primitives = runtime.Engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
         bool cueMarkerPresent = false;
@@ -1390,7 +1391,7 @@ public static class LauncherEvidenceRecorder
             ActiveChunkSignature: string.Join(",", activeChunkKeys),
             RoadSplineCount: roads?.Count ?? 0,
             NamedEntities: namedEntities,
-            SelectedNames: selectedNames,
+            CommandActorNames: commandActorNames,
             CueMarkerPresent: cueMarkerPresent,
             CueMarkerWorldCm: cueMarkerWorldCm,
             ControlledActorName: controlledActorName,
@@ -1448,14 +1449,14 @@ public static class LauncherEvidenceRecorder
     private static RoadAcceptanceResult EvaluateRoadAcceptance(IReadOnlyList<RoadSnapshot> timeline)
     {
         RoadSnapshot start = timeline[0];
-        RoadSnapshot selected = timeline[1];
+        RoadSnapshot commandSource = timeline[1];
         RoadSnapshot accepted = timeline[2];
         RoadSnapshot moved = timeline[3];
         RoadSnapshot shifted = timeline[4];
 
         var failures = new List<string>();
-        AddAcceptanceCheck(selected.SelectedNames.Contains("Blue Vanguard", StringComparer.OrdinalIgnoreCase),
-            "Left-click should select Blue Vanguard before the road command is issued.", failures);
+        AddAcceptanceCheck(commandSource.CommandActorNames.Contains("Blue Vanguard", StringComparer.OrdinalIgnoreCase),
+            "Left-click should publish Blue Vanguard as the command actor before the road command is issued.", failures);
         AddAcceptanceCheck(string.Equals(accepted.ControlledActorName, "Blue Vanguard", StringComparison.OrdinalIgnoreCase),
             $"Road showcase should route local commands through Blue Vanguard, but controlled actor was '{accepted.ControlledActorName}'.", failures);
         AddAcceptanceCheck(IsAcceptedRoadStatus(accepted.StatusLine),
@@ -1478,7 +1479,7 @@ public static class LauncherEvidenceRecorder
         string normalizedSignature = string.Join("|", new[]
         {
             "road_network_showcase_command_and_chunking",
-            $"selected:{string.Join("+", selected.SelectedNames)}",
+            $"commandActors:{string.Join("+", commandSource.CommandActorNames)}",
             $"controlled:{accepted.ControlledActorName}",
             $"status:{accepted.StatusLine}",
             $"blue:{MathF.Round(accepted.ControlledActorWorldCm.X):F0}->{MathF.Round(moved.ControlledActorWorldCm.X):F0}",
@@ -1488,8 +1489,8 @@ public static class LauncherEvidenceRecorder
         });
 
         string verdict = failures.Count == 0
-            ? "Road showcase passes: selection, road command feedback, spline rendering, movement, and chunk-window migration all behaved as designed."
-            : "Road showcase fails: selection, road command acceptance, movement, or chunk streaming diverged from the intended playable demo.";
+            ? "Road showcase passes: command source acquisition, road command feedback, spline rendering, movement, and chunk-window migration all behaved as designed."
+            : "Road showcase fails: command source acquisition, road command acceptance, movement, or chunk streaming diverged from the intended playable demo.";
         string failureSummary = failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures);
 
         return new RoadAcceptanceResult(
@@ -1497,7 +1498,7 @@ public static class LauncherEvidenceRecorder
             Verdict: verdict,
             FailureSummary: failureSummary,
             FailedChecks: failures,
-            SelectedNames: selected.SelectedNames,
+            CommandActorNames: commandSource.CommandActorNames,
             ControlledActorName: accepted.ControlledActorName,
             AcceptedStatus: accepted.StatusLine,
             StartControlledActorWorldCm: accepted.ControlledActorWorldCm,
@@ -1523,7 +1524,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Scenario Card: road-network-showcase-command-and-chunking");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: select a road column, right-click a fort along the road network, see immediate command feedback, and watch chunk streaming react when the camera shifts east.");
+        sb.AppendLine("- Player goal: focus a road column as the command source, right-click a fort along the road network, see immediate command feedback, and watch chunk streaming react when the camera shifts east.");
         sb.AppendLine("- Gameplay domain: real launcher bootstrap, real input mapping, real graph-only auto path service, real road spline performer, and real loaded-chunk window updates.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
@@ -1531,7 +1532,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("- Map: `mods/showcases/road_network/RoadNetworkShowcaseMod/assets/Maps/road_network_showcase_chunked.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
         sb.AppendLine($"- Launch command: `{request.CommandText}`");
-        sb.AppendLine($"- Selection point: `{FormatPoint(RoadSelectionWorldCm)}`");
+        sb.AppendLine($"- Command-source click point: `{FormatPoint(RoadSelectionWorldCm)}`");
         sb.AppendLine($"- Command target: `{FormatPoint(RoadCommandWorldCm)}`");
         sb.AppendLine($"- Chunk probe camera target: `{FormatPoint(RoadChunkShiftTargetCm)}`");
         sb.AppendLine("- Clock profile: fixed `1/60s`");
@@ -1540,7 +1541,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("## Timeline");
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | selected={string.Join(", ", snapshot.SelectedNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] RoadShowcase.{snapshot.Step} -> status={snapshot.StatusLine} | commandActors={string.Join(", ", snapshot.CommandActorNames)} | controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)} | vanguard={FormatPoint(snapshot.BlueVanguardWorldCm)} | north={FormatPoint(snapshot.BlueNorthWorldCm)} | south={FormatPoint(snapshot.BlueSouthWorldCm)} | chunks={snapshot.LoadedChunkCount} | nodes={snapshot.LoadedNodeCount} | roads={snapshot.RoadSplineCount} | cue={(snapshot.CueMarkerPresent ? "On" : "Off")} | camera={FormatPoint(snapshot.CameraTargetCm)} | tick={snapshot.TickMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -1552,14 +1553,14 @@ public static class LauncherEvidenceRecorder
             sb.AppendLine($"- failed-check: {failedCheck}");
         }
 
-        sb.AppendLine($"- reason: selected=`{string.Join(", ", acceptance.SelectedNames)}` controlled=`{acceptance.ControlledActorName}` status=`{acceptance.AcceptedStatus}` controlled actor `{FormatPoint(acceptance.StartControlledActorWorldCm)}` -> `{FormatPoint(acceptance.FinalControlledActorWorldCm)}` chunk signature `{acceptance.StartChunkSignature}` -> `{acceptance.FinalChunkSignature}` cue={(acceptance.CueMarkerVisible ? "visible" : "hidden")}.");
+        sb.AppendLine($"- reason: commandActors=`{string.Join(", ", acceptance.CommandActorNames)}` controlled=`{acceptance.ControlledActorName}` status=`{acceptance.AcceptedStatus}` controlled actor `{FormatPoint(acceptance.StartControlledActorWorldCm)}` -> `{FormatPoint(acceptance.FinalControlledActorWorldCm)}` chunk signature `{acceptance.StartChunkSignature}` -> `{acceptance.FinalChunkSignature}` cue={(acceptance.CueMarkerVisible ? "visible" : "hidden")}.");
         sb.AppendLine();
         sb.AppendLine("## Summary Stats");
         sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CurrentSelectionApplySystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
+        sb.AppendLine("- reusable wiring: `launcher.runtime.json`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `InputOrderMappingSystem`, `AutoPathService`, `RoadSplineBuffer`, `LoadedChunksSource`");
         return sb.ToString();
     }
 
@@ -1575,7 +1576,7 @@ public static class LauncherEvidenceRecorder
                 tick = snapshot.Tick,
                 step = snapshot.Step,
                 status_line = snapshot.StatusLine,
-                selected = snapshot.SelectedNames,
+                command_actors = snapshot.CommandActorNames,
                 controlled_actor = snapshot.ControlledActorName,
                 controlled_actor_x = Math.Round(snapshot.ControlledActorWorldCm.X, 2),
                 controlled_actor_y = Math.Round(snapshot.ControlledActorWorldCm.Y, 2),
@@ -1606,13 +1607,13 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot launcher runtime for RoadNetworkShowcaseMod] --> B[Settle tactical camera and chunk window]",
             "    B --> C[Project Blue Vanguard visual pivot and inject left-click]",
-            "    C --> D{Selection contains Blue Vanguard?}",
+            "    C --> D{Command source contains Blue Vanguard?}",
             "    D -->|yes| E[Project Central Crossing and inject right-click]",
-            "    E --> F{HUD shows an accepted route selection and cue marker is visible?}",
+            "    E --> F{HUD shows an accepted route command and cue marker is visible?}",
             "    F -->|yes| G[Advance simulation until the controlled blue column moves east]",
             "    G --> H[Apply east camera target and wait for loaded chunk signature to change]",
             "    H --> I[Write battle-report + trace + path + PNG timeline]",
-            "    D -->|no| X[Fail acceptance: selection bridge diverged]",
+            "    D -->|no| X[Fail acceptance: command source bridge diverged]",
             "    F -->|no| Y[Fail acceptance: road command still invalid or marker missing]"
         }) + Environment.NewLine;
     }
@@ -1623,14 +1624,14 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine("# Visible Checklist: road-network-showcase-command-and-chunking");
         sb.AppendLine();
         sb.AppendLine("- `000_start` should show the initial central loaded chunk window and visible road splines.");
-        sb.AppendLine("- `001_selected` should highlight Blue Vanguard as selected.");
+        sb.AppendLine("- `001_command_source` should highlight Blue Vanguard as the command actor.");
         sb.AppendLine("- `002_command_accepted` should show a cue marker at Central Crossing and a valid accepted route HUD status instead of `error 2`.");
         sb.AppendLine("- `003_column_advancing` should show the controlled blue column shifted east along the road.");
         sb.AppendLine("- `004_chunk_shifted` should show the camera moved east and a different loaded chunk window.");
         sb.AppendLine();
         foreach (RoadSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` selected=`{string.Join(", ", snapshot.SelectedNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
+            sb.AppendLine($"- `{snapshot.Step}.png`: status=`{snapshot.StatusLine}` commandActors=`{string.Join(", ", snapshot.CommandActorNames)}` chunks={snapshot.LoadedChunkCount} roads={snapshot.RoadSplineCount} cue={(snapshot.CueMarkerPresent ? "visible" : "hidden")}");
         }
 
         return sb.ToString();
@@ -1644,7 +1645,7 @@ public static class LauncherEvidenceRecorder
             adapter = request.Plan.AdapterId,
             selectors = request.Plan.Selectors,
             root_mods = request.Plan.RootModIds,
-            selected = acceptance.SelectedNames,
+            command_actors = acceptance.CommandActorNames,
             controlled_actor = acceptance.ControlledActorName,
             accepted_status = acceptance.AcceptedStatus,
             cue_visible = acceptance.CueMarkerVisible,
@@ -1715,7 +1716,7 @@ public static class LauncherEvidenceRecorder
                 ? 10f
                 : 7f;
             canvas.DrawCircle(point.X, point.Y, radius, fill);
-            if (snapshot.SelectedNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            if (snapshot.CommandActorNames.Contains(name, StringComparer.OrdinalIgnoreCase))
             {
                 canvas.DrawCircle(point.X, point.Y, radius + 5f, selectedPaint);
             }
@@ -1732,7 +1733,7 @@ public static class LauncherEvidenceRecorder
 
         canvas.DrawText($"Road Network Showcase | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, labelPaint);
         canvas.DrawText($"Status={snapshot.StatusLine}", 24, 64, minorTextPaint);
-        canvas.DrawText($"Selected={string.Join(", ", snapshot.SelectedNames)}", 24, 92, minorTextPaint);
+        canvas.DrawText($"CommandActors={string.Join(", ", snapshot.CommandActorNames)}", 24, 92, minorTextPaint);
         canvas.DrawText($"Controlled={snapshot.ControlledActorName} {FormatPoint(snapshot.ControlledActorWorldCm)}  Camera={FormatPoint(snapshot.CameraTargetCm)}", 24, 120, minorTextPaint);
         canvas.DrawText($"BlueVanguard={FormatPoint(snapshot.BlueVanguardWorldCm)}  North={FormatPoint(snapshot.BlueNorthWorldCm)}  South={FormatPoint(snapshot.BlueSouthWorldCm)}", 24, 148, minorTextPaint);
         canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount}  LoadedNodes={snapshot.LoadedNodeCount}  RoadSplines={snapshot.RoadSplineCount}  Tick={snapshot.TickMs:F3}ms", 24, 176, minorTextPaint);
@@ -1825,10 +1826,10 @@ public static class LauncherEvidenceRecorder
         }
     }
 
-    private static void ClickPrimaryUntilSelected(RecordingRuntime runtime, string targetName, List<double> frameTimesMs)
+    private static void ClickPrimaryUntilCommandSource(RecordingRuntime runtime, string targetName, List<double> frameTimesMs)
     {
         if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
-            .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+            .CommandActorNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
         {
             return;
         }
@@ -1842,7 +1843,7 @@ public static class LauncherEvidenceRecorder
             ClickPrimary(runtime, baseScreen + offset, frameTimesMs);
             Tick(runtime, 2, frameTimesMs);
             if (SampleRoadSnapshot(runtime, "probe_select", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d, null)
-                .SelectedNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
+                .CommandActorNames.Contains(targetName, StringComparer.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -2385,8 +2386,8 @@ public static class LauncherEvidenceRecorder
 
     private static Entity[] SelectFirstOrderableMassNavigationAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
 
         Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
         if (owner == Entity.Null || !engine.World.IsAlive(owner))
@@ -2406,10 +2407,15 @@ public static class LauncherEvidenceRecorder
             selected[i] = simulation.AgentState.ControllableAgentSlots[i];
         }
 
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected))
-        {
-            throw new InvalidOperationException("MassNavigation UAT failed to write SelectionRuntime LivePrimary selection.");
-        }
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.UiAcquisition,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            selected.Length > 0 ? selected[0] : Entity.Null,
+            "MassNavigation command source",
+            $"{selected.Length} agent(s)");
+        collections.Replace(owner, descriptor, selected, owner);
 
         return selected;
     }
@@ -2437,12 +2443,6 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
         }
 
-        SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
-        if (selectionContainer == Entity.Null)
-        {
-            throw new InvalidOperationException("MassNavigation UAT requires a current SelectionRuntime container.");
-        }
-
         int sharedOrderId = simulation.AllocateSharedOrderId();
         int submitted = 0;
         for (int i = 0; i < selected.Length; i++)
@@ -2460,21 +2460,7 @@ public static class LauncherEvidenceRecorder
                 PlayerId = 1,
                 Actor = entity,
                 SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
-                {
-                    I0 = (int)MassNavigationFormationMode.Square,
-                    F0 = 0f,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetCm.X, 0f, targetCm.Y),
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selectionContainer
-                    }
-                }
+                Args = MassNavigationMoveOrderArgs.Encode(targetCm, MassNavigationFormationMode.Square, rotationRadians: 0f)
             };
 
             if (orderBufferSystem.SubmitOrder(entity, in order) != OrderSubmitResult.InvalidEntity)
@@ -2638,7 +2624,7 @@ public static class LauncherEvidenceRecorder
             MinimapCenterCm: new Vector2(minimapSnapshot.CenterXcm, minimapSnapshot.CenterYcm),
             MinimapHalfExtentCm: minimapSnapshot.HalfExtentCm,
             MinimapCameraTargetCm: new Vector2(minimapSnapshot.CameraTargetXcm, minimapSnapshot.CameraTargetYcm),
-            SelectedCount: simulation.SelectedCount,
+            CommandActorCount: simulation.CommandActorCount,
             ActiveGroups: simulation.NavGroupRuntime.ActiveGroupCount,
             ActiveOrderGroups: simulation.NavGroupRuntime.ActiveOrderGroupCount,
             ScenarioSpawnCount: simulation.ScenarioSpawnCount,
@@ -2652,7 +2638,7 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavigationMs: simulation.SelectionSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.CommandSourceSyncMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
@@ -2678,7 +2664,7 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(string.Equals(boot.MinimapPreset, MinimapPreset.RtsFullMap.ToString(), StringComparison.Ordinal), $"Expected core minimap RtsFullMap preset, got {boot.MinimapPreset}.", failures);
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
-        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "SelectionRuntime LivePrimary selection was not observed by MassNavigation.", failures);
+        AddAcceptanceCheck(afterOrder.CommandActorCount > 0, "Command-source agents were not observed by MassNavigation.", failures);
         AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavigationMove order did not create an active NavGroup.", failures);
         AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNavigation rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
@@ -2728,7 +2714,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Intent");
         sb.AppendLine("- Player goal: verify MassNavigation is the MassNavigationFlow SSOT and runs through performer + core minimap on a 64km RTS map.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassNavigation binding, EntityCollectionStore command source, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
@@ -2738,14 +2724,14 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Action Script");
         sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassNavigation runtime binding to settle.");
-        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
+        sb.AppendLine("2. Seed `collection.command.source` through EntityCollectionStore and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
         foreach (MassNavigationSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
+            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} commandActors={snapshot.CommandActorCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -2770,7 +2756,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
+        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `EntityCollectionStore`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
     }
 
@@ -2793,7 +2779,7 @@ public static class LauncherEvidenceRecorder
                 agents = snapshot.AgentCount,
                 ecs_agents = snapshot.EcsAgentCount,
                 teams = snapshot.TeamCount,
-                selected = snapshot.SelectedCount,
+                command_actors = snapshot.CommandActorCount,
                 groups = snapshot.ActiveGroups,
                 order_groups = snapshot.ActiveOrderGroups,
                 blockers = snapshot.BlockerCount,
@@ -2831,7 +2817,7 @@ public static class LauncherEvidenceRecorder
             "flowchart TD",
             "    A[Boot mass_navigation launcher] --> B[Run core MassNavigation runtime binding]",
             "    B --> C[Verify performer owners and minimap markers]",
-            "    C --> D[Write LivePrimary selection]",
+            "    C --> D[Seed collection.command.source]",
             "    D --> E[Submit massNavigationMove through OrderBuffer]",
             "    E --> F[Jump core minimap camera to remote 64km coordinate]",
             "    F --> G[Jump back to original area]",
@@ -2924,7 +2910,7 @@ public static class LauncherEvidenceRecorder
 
         canvas.DrawText($"MassNavigation Large World | {snapshot.Step} | tick={snapshot.Tick}", 36, 38, textPaint);
         canvas.DrawText($"World={snapshot.WorldWidthCm / 100000f:F1}km x {snapshot.WorldHeightCm / 100000f:F1}km  Camera={FormatPoint(snapshot.CameraTargetCm)}", 36, 68, minorTextPaint);
-        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} Selected={snapshot.SelectedCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
+        canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} CommandActors={snapshot.CommandActorCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
         canvas.DrawText($"Performers={snapshot.PerformerActiveCount} Payloads={snapshot.PerformerPayloadCount} Blockers={snapshot.BlockerCount} Hotspots={snapshot.HotspotMarkerCount}", 830, 160, minorTextPaint);
         canvas.DrawText($"Minimap visible={snapshot.MinimapVisible} preset={snapshot.MinimapPreset} markers={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} buffer={snapshot.MinimapBufferCount} dropped={snapshot.MinimapDroppedTotal}", 830, 190, minorTextPaint);
         canvas.DrawText($"Solver center={FormatPoint(snapshot.SolverWindowCenterCm)} driver={snapshot.SolverWindowDriver}", 830, 220, minorTextPaint);
@@ -3389,7 +3375,7 @@ public static class LauncherEvidenceRecorder
         string ActiveChunkSignature,
         int RoadSplineCount,
         IReadOnlyDictionary<string, Vector2> NamedEntities,
-        IReadOnlyList<string> SelectedNames,
+        IReadOnlyList<string> CommandActorNames,
         bool CueMarkerPresent,
         Vector2 CueMarkerWorldCm,
         string ControlledActorName,
@@ -3406,7 +3392,7 @@ public static class LauncherEvidenceRecorder
         string Verdict,
         string FailureSummary,
         IReadOnlyList<string> FailedChecks,
-        IReadOnlyList<string> SelectedNames,
+        IReadOnlyList<string> CommandActorNames,
         string ControlledActorName,
         string AcceptedStatus,
         Vector2 StartControlledActorWorldCm,
@@ -3483,7 +3469,7 @@ public static class LauncherEvidenceRecorder
         Vector2 MinimapCenterCm,
         float MinimapHalfExtentCm,
         Vector2 MinimapCameraTargetCm,
-        int SelectedCount,
+        int CommandActorCount,
         int ActiveGroups,
         int ActiveOrderGroups,
         int ScenarioSpawnCount,

@@ -9,6 +9,7 @@ using EntityCommandPanelMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -21,7 +22,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Hosting;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
@@ -64,6 +65,8 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
+        private const string ActiveCollectionKey = "ChampionSkillSandbox.Collection.ActiveKey";
         private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
@@ -225,7 +228,7 @@ namespace Ludots.Tests.GAS.Production
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
             AssertEntityHasTag(engine.World, "Jayce Hammer", "State.Champion.Jayce.Hammer");
 
-            Entity selected = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+            Entity selected = EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
                 ? currentPrimary
                 : Entity.Null;
             Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
@@ -387,12 +390,7 @@ namespace Ludots.Tests.GAS.Production
             Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { ezreal, garenAlpha });
-            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = localPlayer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            ReplaceCommandSource(engine, localPlayer, ezreal, garenAlpha);
 
             engine.World.Add(ezreal, new CameraFollowWeight { Value = 1f });
             engine.World.Add(garenAlpha, new CameraFollowWeight { Value = 3f });
@@ -613,8 +611,6 @@ namespace Ludots.Tests.GAS.Production
 
             var toolbar = engine.GetService(CoreServiceKeys.EntityCommandPanelToolbarProvider)
                 ?? throw new InvalidOperationException("Toolbar provider missing.");
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime missing.");
 
             TickUntil(engine, () =>
             {
@@ -629,13 +625,13 @@ namespace Ludots.Tests.GAS.Production
                 FindEntityByName(engine.World, "StressPriestA"),
                 FindEntityByName(engine.World, "StressWarriorA"),
             };
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, teamASelection);
+            ReplaceCommandSource(engine, localPlayer, teamASelection);
             Tick(engine, 2);
 
             toolbar.Activate(PlayerSelectionToolbarButtonId);
             Tick(engine, 2);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
-            Assert.That(ReadEntityName(engine.World, SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
+            Assert.That(ReadEntityName(engine.World, EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
 
             toolbar.Activate(PlayerFormationToolbarButtonId);
             Tick(engine, 2);
@@ -676,24 +672,18 @@ namespace Ludots.Tests.GAS.Production
                         Kind = OrderSpatialKind.WorldCm,
                         Mode = OrderCollectionMode.Single,
                         WorldCm = new Vector3(2200f, 0f, 1480f)
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selection.TryCreateSnapshotLease(localPlayer, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out Entity snapshot)
-                            ? snapshot
-                            : Entity.Null
                     }
                 }
             };
 
-            Assert.That(order.Args.Selection.HasContainer, Is.True);
+            Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(orderQueue.TryEnqueue(in order), Is.True);
-            selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, new[] { FindEntityByName(engine.World, "StressLaserMageA") });
+            ReplaceCommandSource(engine, localPlayer, FindEntityByName(engine.World, "StressLaserMageA"));
             Tick(engine, 4);
 
             toolbar.Activate(CommandSnapshotToolbarButtonId);
             Tick(engine, 2);
-            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
+            Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressLaserMageA" }));
         }
 
         [Test]
@@ -1692,12 +1682,66 @@ namespace Ludots.Tests.GAS.Production
                 : string.Empty;
         }
 
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, params Entity[] entities)
+        {
+            ReplaceCommandSource(engine, owner, entities.AsSpan());
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> entities)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Champion command source",
+                summary: "Test-owned command-source collection.");
+            collections.Replace(owner, in descriptor, entities, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+        }
+
         private static string[] ReadViewedSelectionNames(GameEngine engine)
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Entity[] selected = SnapshotActiveCollection(engine);
             return selected.Select(entity => ReadEntityName(engine.World, entity))
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToArray();
+        }
+
+        private static Entity[] SnapshotActiveCollection(GameEngine engine)
+        {
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Entity owner = engine.GlobalContext.TryGetValue(ActiveCollectionOwnerKey, out object? ownerObj) &&
+                           ownerObj is Entity activeOwner &&
+                           engine.World.IsAlive(activeOwner)
+                ? activeOwner
+                : engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            string key = engine.GlobalContext.TryGetValue(ActiveCollectionKey, out object? keyObj) &&
+                         keyObj is string activeKey &&
+                         !string.IsNullOrWhiteSpace(activeKey)
+                ? activeKey
+                : EntityCollectionKeys.CommandSource;
+
+            if (owner == Entity.Null ||
+                !collections.TryGet(owner, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            var members = new Entity[view.Count];
+            int written = collections.CopyEntities(handle, 0, members);
+            if (written != members.Length)
+            {
+                Array.Resize(ref members, written);
+            }
+
+            return members;
         }
 
         private static float ReadHealth(World world, string entityName)

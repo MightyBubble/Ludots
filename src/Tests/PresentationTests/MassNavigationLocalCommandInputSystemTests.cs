@@ -43,7 +43,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
             Assert.That(context.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
             Assert.That(context.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandActorCount, Is.EqualTo(0));
 
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
@@ -62,13 +62,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(orders.ActiveOrder.Order.OrderTypeId, Is.EqualTo(MoveOrderTypeId));
             Assert.That(orders.ActiveOrder.Order.OrderId, Is.GreaterThan(0));
             Assert.That(orders.ActiveOrder.Order.PlayerId, Is.EqualTo(1));
+            Assert.That(orders.ActiveOrder.Order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(target.X));
             Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z, Is.EqualTo(target.Y));
-            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null),
-                "MassNavigation move orders must be self-contained and must not reference a selection container.");
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
+            Assert.That(context.Simulation.LastCommandActorCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -133,7 +132,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandActorCount, Is.EqualTo(0));
             Assert.That(context.World.Get<OrderBuffer>(context.EnemyAgent).HasActive, Is.False);
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
@@ -150,7 +149,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
             Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
-            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandActorCount, Is.EqualTo(0));
             Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
         }
 
@@ -169,16 +168,15 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RightClickMove_WithSelectionDoesNotRequireCurrentSelectionContainer()
+        public void RightClickMove_WithCommandSourceDoesNotRequireLegacySelectionContainer()
         {
             using TestContextScope context = CreateContext();
             context.Select(context.Agent);
-            context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
 
             MassNavigationMoveCommandResult result = context.SubmitMoveCommand(new Vector2(1600f, 1800f));
 
             Assert.That(result, Is.EqualTo(MassNavigationMoveCommandResult.Submitted));
-            Assert.That(context.World.Get<OrderBuffer>(context.Agent).ActiveOrder.Order.Args.Selection.Container, Is.EqualTo(Entity.Null));
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).ActiveOrder.Order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
         }
 
         [Test]
@@ -211,17 +209,17 @@ namespace Ludots.Tests.Presentation
         public void SelectionScratchAndSnapshot_OverflowFailFastWithoutArrayResize()
         {
             MassNavigationConfig config = CreateConfigForTests();
-            config.ScenarioRuntime.InitialSelectionScratchCapacity = 1;
-            config.ScenarioRuntime.InitialSelectedEntityCapacity = 1;
+            config.ScenarioRuntime.InitialCommandActorScratchCapacity = 1;
+            config.ScenarioRuntime.InitialCommandActorSnapshotCapacity = 1;
             var simulation = new MassNavigationSimulationRuntime(config);
 
             InvalidOperationException scratchEx = Assert.Throws<InvalidOperationException>(
-                () => simulation.EnsureSelectionScratch(2))!;
-            Assert.That(scratchEx.Message, Does.Contain("scenarioRuntime.initialSelectionScratchCapacity"));
+                () => simulation.EnsureCommandActorScratch(2))!;
+            Assert.That(scratchEx.Message, Does.Contain("scenarioRuntime.initialCommandActorScratchCapacity"));
 
             InvalidOperationException selectedEx = Assert.Throws<InvalidOperationException>(
-                () => simulation.SetSelection(new[] { Entity.Null, Entity.Null }, revision: 1))!;
-            Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
+                () => simulation.SetCommandActorSnapshot(new[] { Entity.Null, Entity.Null }, revision: 1))!;
+            Assert.That(selectedEx.Message, Does.Contain("scenarioRuntime.initialCommandActorSnapshotCapacity"));
         }
 
         private static TestContextScope CreateContext(
@@ -400,7 +398,7 @@ namespace Ludots.Tests.Presentation
                 Scenario = new MassNavigationScenarioConfig
                 {
                     AgentsPerTeam = 1,
-                    InitialSelectedTeamId = LocalTeamId,
+                    InitialActiveTeamId = LocalTeamId,
                     Teams = new[]
                     {
                         new MassNavigationScenarioTeamConfig { Id = LocalTeamId, Name = "Team 1" },
@@ -415,13 +413,13 @@ namespace Ludots.Tests.Presentation
                 ScenarioRuntime = new MassNavigationScenarioRuntimeConfig
                 {
                     AutoSpawnConfiguredScenario = true,
-                    InitialSelectionScratchCapacity = 8,
-                    InitialSelectedEntityCapacity = 8,
+                    InitialCommandActorScratchCapacity = 8,
+                    InitialCommandActorSnapshotCapacity = 8,
                     RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
                     {
                         NavigationGroupCapacity = 8,
                         GroupMembershipAgentCapacity = 16,
-                        SelectionMemberScratchCapacity = 8,
+                        CommandActorScratchCapacity = 8,
                         GroupMemberCapacity = 8,
                         OrderIngestionTokenCapacity = 8,
                         OrderIngestionMemberCapacity = 8,
@@ -552,7 +550,7 @@ namespace Ludots.Tests.Presentation
                     return MassNavigationMoveCommandResult.OutsideWorld;
                 }
 
-                ReadOnlySpan<Entity> actors = Simulation.SelectedEntities;
+                ReadOnlySpan<Entity> actors = Simulation.CommandActors;
                 if (actors.Length <= 0)
                 {
                     Simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
@@ -590,7 +588,7 @@ namespace Ludots.Tests.Presentation
                         Args = MassNavigationMoveOrderArgs.Encode(
                             centerCm,
                             Simulation.FormationMode,
-                            Simulation.NavGroupRuntime.SelectedRotationRadians)
+                            Simulation.NavGroupRuntime.CommandActorRotationRadians)
                     };
 
                     OrderSubmitResult result = OrderBufferSystem.SubmitOrder(actor, in order);
@@ -613,7 +611,7 @@ namespace Ludots.Tests.Presentation
 
             public void Select(Entity entity)
             {
-                Simulation.SetSelection(new[] { entity }, revision: Simulation.SelectionRevision + 1);
+                Simulation.SetCommandActorSnapshot(new[] { entity }, revision: Simulation.CommandActorSnapshotRevision + 1);
             }
 
             public void SetActiveOrder(Entity entity, int orderTypeId)

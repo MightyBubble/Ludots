@@ -109,18 +109,18 @@
     "defaultColor": [0.92, 0.94, 0.86, 1.0],
     "rules": [
       {
-        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
         "command": {
           "kind": "CreatePerformer",
-          "definitionId": "formation_capability_showcase_formation_selection_marker",
+          "definitionId": "formation_capability_showcase_formation_command_marker",
           "scopeSource": "SourceStableId"
         }
       },
       {
-        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
         "command": {
           "kind": "DestroyScopedPerformer",
-          "definitionId": "formation_capability_showcase_formation_selection_marker",
+          "definitionId": "formation_capability_showcase_formation_command_marker",
           "scopeSource": "SourceStableId"
         }
       }
@@ -295,8 +295,8 @@
     ]
   },
   {
-    "id": "formation_capability_showcase_formation_selection_marker",
-    "extends": "mass_navigation_agent_selection_marker_heavy",
+    "id": "formation_capability_showcase_formation_command_marker",
+    "extends": "mass_navigation_agent_command_marker_heavy",
     "behaviors": [
       {
         "slot": "body",
@@ -304,7 +304,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": "mass_navigation.selection.marker",
+          "assetId": "mass_navigation.command.marker",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",

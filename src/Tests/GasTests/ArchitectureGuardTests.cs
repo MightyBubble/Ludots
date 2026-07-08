@@ -495,9 +495,9 @@ namespace GasTests
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionConsumer.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "SelectionEligibility.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "CurrentSelectionApplySystem.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "GasSelectionResponseSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "GasInputResponseSystem.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
@@ -1361,7 +1361,7 @@ namespace GasTests
         public void Issue244_PendingCompositionContracts()
         {
             var repoRoot = FindRepoRoot();
-            string selectionPath = Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "SelectionEligibility.cs");
+            string commandSourceEligibilityPath = Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs");
             string resolverPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs");
             string exchangeModelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
             string exchangeRuntimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
@@ -1370,7 +1370,7 @@ namespace GasTests
             string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
             string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
 
-            string selection = File.ReadAllText(selectionPath);
+            string commandSourceEligibility = File.ReadAllText(commandSourceEligibilityPath);
             string resolver = File.ReadAllText(resolverPath);
             string exchangeModel = File.ReadAllText(exchangeModelPath);
             string exchangeRuntime = File.ReadAllText(exchangeRuntimePath);
@@ -1381,8 +1381,8 @@ namespace GasTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(selection, Does.Contain("KnowledgeProjectionConsumer"));
-                Assert.That(selection, Does.Contain("CanInspectLive"));
+                Assert.That(commandSourceEligibility, Does.Contain("KnowledgeProjectionConsumer"));
+                Assert.That(commandSourceEligibility, Does.Contain("CanInspectLive"));
                 Assert.That(resolver, Does.Contain("ScopeKey"));
                 Assert.That(exchangeRuntime, Does.Contain("RelationshipRuntime"));
                 Assert.That(exchangeRuntime, Does.Contain("ValidateRelationships"));

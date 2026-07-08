@@ -32,7 +32,6 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAnimatorControllerId;
         private readonly Func<string, int> _resolveAnimationProfileId;
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
-        private readonly Func<string, int> _resolveSelectionSetKeyId;
         private readonly Func<string, int> _resolveEntityCollectionKeyId;
         private readonly Func<string, int> _resolveInstancedBatchAssetId;
 
@@ -48,7 +47,6 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveAnimatorControllerId = null,
             Func<string, int> resolveAnimationProfileId = null,
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
-            Func<string, int> resolveSelectionSetKeyId = null,
             Func<string, int> resolveInstancedBatchAssetId = null,
             Func<string, int> resolveEntityCollectionKeyId = null)
         {
@@ -63,7 +61,6 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimatorControllerId = resolveAnimatorControllerId ?? (_ => 0);
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
-            _resolveSelectionSetKeyId = resolveSelectionSetKeyId ?? (_ => 0);
             _resolveEntityCollectionKeyId = resolveEntityCollectionKeyId ?? (_ => 0);
             _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
         }
@@ -538,8 +535,6 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.EffectActivated => ResolveRequired(_resolveEffectTemplateId(key), kind, "effect template", key),
                 PresentationEventKind.CastCommitted => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
                 PresentationEventKind.CastFailed => ResolveRequired(AbilityIdRegistry.GetId(key), kind, "ability", key),
-                PresentationEventKind.SelectionMemberAdded => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
-                PresentationEventKind.SelectionMemberRemoved => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
                 PresentationEventKind.EntityCollectionMemberAdded => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.EntityCollectionMemberRemoved => ResolveRequired(_resolveEntityCollectionKeyId(key), kind, "entity collection", key),
                 PresentationEventKind.AbilityAimBegun => TagRegistry.Register(key),

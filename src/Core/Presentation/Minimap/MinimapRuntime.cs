@@ -5,7 +5,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
@@ -1004,7 +1004,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private static Entity ResolveSelectedEntity(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
+            return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
                 ? selected
                 : Entity.Null;
         }

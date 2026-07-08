@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
@@ -18,16 +18,11 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime? _selection;
 
         public SelectionBoxOverlaySystem(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
-            _selection = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var selectionObj) &&
-                         selectionObj is SelectionRuntime selection
-                ? selection
-                : null;
         }
 
         public void Initialize() { }
@@ -44,13 +39,13 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            if (!_world.Has<SelectionDragState>(local))
+            if (!_world.Has<CommandSourceDragState>(local))
             {
                 return;
             }
 
-            ref var drag = ref _world.Get<SelectionDragState>(local);
-            float threshold = _selection?.Config.DragThresholdPixels ?? 8f;
+            ref var drag = ref _world.Get<CommandSourceDragState>(local);
+            float threshold = ResolveDragThreshold();
             if (!drag.Active || !drag.ExceedsThreshold(threshold))
             {
                 return;
@@ -74,5 +69,13 @@ namespace CoreInputMod.Systems
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
+
+        private float ResolveDragThreshold()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out var configObj) &&
+                   configObj is CommandSourceAcquisitionConfig config
+                ? config.DragThresholdPixels
+                : 8f;
+        }
     }
 }

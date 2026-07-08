@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
@@ -393,7 +393,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             };
 
             Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);

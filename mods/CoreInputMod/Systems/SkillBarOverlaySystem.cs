@@ -3,7 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -97,7 +97,7 @@ namespace CoreInputMod.Systems
 
         private Entity GetControlledEntity()
         {
-            if (SelectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out Entity selected) &&
+            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out Entity selected) &&
                 _world.IsAlive(selected) &&
                 _world.Has<AbilityStateBuffer>(selected))
             {
