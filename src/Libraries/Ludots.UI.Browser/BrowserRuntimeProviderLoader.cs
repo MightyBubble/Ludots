@@ -223,13 +223,11 @@ public static class BrowserRuntimeProviderLoader
 				?? throw new InvalidOperationException(
 					$"Browser runtime provider host type '{options.ProviderHostTypeName}' was not found.");
 
-			string? effectiveRuntimeRootPath = string.IsNullOrWhiteSpace(options.RuntimeRootPath)
-				? null
-				: shadowCopy.MapSourcePath(options.RuntimeRootPath);
-			MethodInfo installMethod = ResolveInstallMethod(providerHostType, effectiveRuntimeRootPath != null);
-			object?[] arguments = effectiveRuntimeRootPath != null
-				? new object?[] { options.Services, effectiveRuntimeRootPath, options.BrowserCacheRootPath }
-				: new object?[] { options.Services, options.BrowserCacheRootPath };
+			string effectiveRuntimeRootPath = shadowCopy.MapRequiredSourcePath(
+				options.RuntimeRootPath,
+				"browserRuntime.runtimeRootPath");
+			MethodInfo installMethod = ResolveInstallMethod(providerHostType);
+			object?[] arguments = { options.Services, effectiveRuntimeRootPath, options.BrowserCacheRootPath };
 
 			object? installed = InvokeInstallMethod(installMethod, arguments);
 			if (installed is not IBrowserRuntime runtime)
@@ -275,12 +273,10 @@ public static class BrowserRuntimeProviderLoader
 		yield return typeof(IBrowserRuntimeHostLifecycle).Assembly;
 	}
 
-	private static MethodInfo ResolveInstallMethod(Type providerHostType, bool hasRuntimeRootPath)
+	private static MethodInfo ResolveInstallMethod(Type providerHostType)
 	{
-		string methodName = hasRuntimeRootPath ? "Install" : "InstallFromAssemblyLocation";
-		Type[] parameterTypes = hasRuntimeRootPath
-			? new[] { typeof(IDictionary<string, object>), typeof(string), typeof(string) }
-			: new[] { typeof(IDictionary<string, object>), typeof(string) };
+		const string methodName = "Install";
+		Type[] parameterTypes = { typeof(IDictionary<string, object>), typeof(string), typeof(string) };
 		return providerHostType.GetMethod(
 			methodName,
 			BindingFlags.Public | BindingFlags.Static,
@@ -483,12 +479,20 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			shadowDirectoryPath);
 	}
 
-	public string MapSourcePath(string path)
+	public string MapRequiredSourcePath(string? path, string optionName)
 	{
+		if (string.IsNullOrWhiteSpace(path))
+		{
+			throw new InvalidOperationException(
+				$"{optionName} is required when loading a browser runtime provider. Host bootstrap must pass the provider package root explicitly.");
+		}
+
 		string fullPath = Path.GetFullPath(path);
 		if (!IsSameOrChildPath(SourceDirectoryPath, fullPath))
 		{
-			return fullPath;
+			throw new InvalidOperationException(
+				$"{optionName} must be inside the browser runtime provider package. " +
+				$"runtimeRootPath='{fullPath}', providerPackageRoot='{SourceDirectoryPath}'.");
 		}
 
 		string relativePath = Path.GetRelativePath(SourceDirectoryPath, fullPath);

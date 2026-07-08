@@ -19,6 +19,7 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 	public CefBrowserRuntime(CefBrowserRuntimeOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
+		CefRuntimeLayoutPreflight.EnsureComplete(options.RuntimeRootPath);
 		CefProcessRuntime.AcquireRuntimeOwner(options);
 		Info = new BrowserRuntimeInfo(
 			BrowserEngineKind.Cef,
@@ -31,6 +32,7 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 
 	public static void PrepareAssemblyResolution(string runtimeRootPath)
 	{
+		CefRuntimeLayoutPreflight.EnsureComplete(runtimeRootPath);
 		CefProcessRuntime.PrepareAssemblyResolution(runtimeRootPath);
 	}
 

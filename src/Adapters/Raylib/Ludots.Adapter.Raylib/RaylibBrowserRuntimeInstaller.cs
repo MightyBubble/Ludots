@@ -37,7 +37,10 @@ namespace Ludots.Adapter.Raylib
             }
 
             string providerAssemblyPath = ResolveProviderAssemblyPath(baseDirectory, runtimeConfig);
-            string? runtimeRootPath = ResolveOptionalPath(baseDirectory, runtimeConfig.RuntimeRootPath);
+            string runtimeRootPath = ResolveRequiredPath(
+                baseDirectory,
+                runtimeConfig.RuntimeRootPath,
+                "browserRuntime.runtimeRootPath is required for CefSharp.");
             string? cacheRootPath = ResolveOptionalPath(baseDirectory, runtimeConfig.CacheRootPath);
             return InstallCef(engine.GlobalContext, providerAssemblyPath, runtimeRootPath, cacheRootPath);
         }
@@ -63,6 +66,16 @@ namespace Ludots.Adapter.Raylib
             if (string.IsNullOrWhiteSpace(configuredPath))
             {
                 return null;
+            }
+
+            return ResolvePath(baseDirectory, configuredPath);
+        }
+
+        private static string ResolveRequiredPath(string baseDirectory, string configuredPath, string message)
+        {
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                throw new InvalidOperationException(message);
             }
 
             return ResolvePath(baseDirectory, configuredPath);

@@ -33,12 +33,14 @@ internal static class CefProcessRuntime
 
 	public static void PrepareAssemblyResolution(string runtimeRootPath)
 	{
+		CefRuntimeLayoutPreflight.EnsureComplete(runtimeRootPath);
 		EnsureDefaultAssemblyResolution(runtimeRootPath);
 	}
 
 	public static void AcquireRuntimeOwner(CefBrowserRuntimeOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
+		CefRuntimeLayoutPreflight.EnsureComplete(options.RuntimeRootPath);
 		lock (Sync)
 		{
 			EnsureDefaultAssemblyResolution(options.RuntimeRootPath);
@@ -185,21 +187,10 @@ internal static class CefProcessRuntime
 	private static global::CefSharp.OffScreen.CefSettings BuildSettings(CefBrowserRuntimeOptions options)
 	{
 		string runtimeRoot = options.RuntimeRootPath;
-		if (!Directory.Exists(runtimeRoot))
-		{
-			throw new DirectoryNotFoundException($"CEF runtime root was not found: {runtimeRoot}");
-		}
+		CefRuntimeLayoutPreflight.EnsureComplete(runtimeRoot);
 
 		string subprocessPath = Path.Combine(runtimeRoot, "CefSharp.BrowserSubprocess.exe");
 		string localesPath = Path.Combine(runtimeRoot, "locales");
-		if (!File.Exists(subprocessPath))
-		{
-			throw new FileNotFoundException("CEF browser subprocess executable was not found.", subprocessPath);
-		}
-		if (!Directory.Exists(localesPath))
-		{
-			throw new DirectoryNotFoundException($"CEF locales directory was not found: {localesPath}");
-		}
 
 		string cacheRoot = options.CacheRootPath;
 		string cachePath = Path.Combine(cacheRoot, "Default");
