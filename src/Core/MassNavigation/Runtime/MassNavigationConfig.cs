@@ -529,6 +529,24 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 $"MassNavigation scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
+        if (authoredAgentCount > SelectionMemberScratchCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity {SelectionMemberScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > GroupMemberCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity {GroupMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > OrderIngestionMemberCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
         if (teamCount > MetadataTeamCapacity)
         {
             throw new InvalidOperationException(
@@ -1146,6 +1164,19 @@ public sealed class MassNavigationScenarioConfig
         {
             throw new InvalidOperationException(
                 $"MassNavigation config InitialSelectedTeamId {InitialSelectedTeamId} is not present in Scenario.Teams.");
+        }
+
+        long authoredAgentCount = (long)Teams.Length * AgentsPerTeam;
+        if (authoredAgentCount > scenarioRuntime.InitialSelectionScratchCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.initialSelectionScratchCapacity {scenarioRuntime.InitialSelectionScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > scenarioRuntime.InitialSelectedEntityCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.initialSelectedEntityCapacity {scenarioRuntime.InitialSelectedEntityCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);

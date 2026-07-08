@@ -100,10 +100,18 @@ namespace Ludots.Core.Presentation.Performers
                 viewerObj is Entity viewer &&
                 world.IsAlive(viewer))
             {
-                return _phaseResolver.CreateAudienceContext(world, viewer);
+                return _phaseResolver.CreateAudienceContext(world, viewer, ResolveRevealHidden(globals));
             }
 
             return PerformAudienceContext.Default;
+        }
+
+        private static bool ResolveRevealHidden(Dictionary<string, object> globals)
+        {
+            return globals != null &&
+                   globals.TryGetValue(CoreServiceKeys.PresentationAudienceRevealHidden.Name, out object value) &&
+                   value is bool revealHidden &&
+                   revealHidden;
         }
 
         private static PerformProjectionFacts ResolveProjectionFacts(

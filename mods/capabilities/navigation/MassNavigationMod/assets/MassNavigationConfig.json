@@ -135,15 +135,15 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialSelectionScratchCapacity": 256,
-    "initialSelectedEntityCapacity": 128,
+    "initialSelectionScratchCapacity": 10000,
+    "initialSelectedEntityCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
-      "selectionMemberScratchCapacity": 256,
-      "groupMemberCapacity": 256,
+      "selectionMemberScratchCapacity": 10000,
+      "groupMemberCapacity": 10000,
       "orderIngestionTokenCapacity": 256,
-      "orderIngestionMemberCapacity": 256,
+      "orderIngestionMemberCapacity": 10000,
       "loadedChunkCapacity": 256,
       "metadataTeamCapacity": 4
     }

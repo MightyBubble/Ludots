@@ -100,8 +100,16 @@ public static class LauncherEvidenceRecorder
     private const int MassNavigationAvoidanceFrameIntervalTicks = 4;
     private const int MassNavigationAvoidanceExtraOrderTicks = 210;
     private const int MassNavigationAvoidanceCrossingTicks = 420;
+    private const int MassNavigationAvoidanceCrowdSettleTicks = 1800;
+    private const int MassNavigationAvoidanceImageWidth = 1280;
+    private const int MassNavigationAvoidanceImageHeight = 720;
     private const float MassNavigationAvoidanceZoomWidthCm = 4000f;
+    private const float MassNavigationAvoidanceZoomAspectWidth = 16f;
+    private const float MassNavigationAvoidanceZoomAspectHeight = 9f;
     private const float MassNavigationAvoidanceCrossingScale = 0.2f;
+    private const float MassNavigationAvoidanceCrowdSettleFraction = 0.8f;
+    private const float MassNavigationAvoidanceDeepOverlapRatio = 0.10f;
+    private const float MassNavigationAvoidanceFinalMaxPenetrationRatio = 0.10f;
     private static readonly Vector2 CameraProjectionClickWorldCm = new(3200f, 2000f);
     private static readonly Vector2 RoadSelectionWorldCm = new(-9800f, 0f);
     private static readonly Vector2 RoadCommandWorldCm = new(0f, 0f);
@@ -1948,6 +1956,10 @@ public static class LauncherEvidenceRecorder
         MassNavigationSimulationRuntime simulation = runtime.Engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new InvalidOperationException("MassNavigation UAT requires MassNavigationSimulationRuntime.");
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
+        MassNavigationSolverRuntimeConfigSnapshot solverSnapshot = simulation.CaptureSolverRuntimeConfig();
+        var avoidanceScratch = new MassNavigationAvoidanceScratch(
+            simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity,
+            solverSnapshot.MaxObstacleCount);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
         Entity[] selected = SelectFirstOrderableMassNavigationAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
@@ -1962,18 +1974,18 @@ public static class LauncherEvidenceRecorder
         string avoidanceDir = Path.Combine(screensDir, "avoidance");
         Directory.CreateDirectory(avoidanceDir);
         var avoidanceMetrics = new List<MassNavigationAvoidanceFrameMetrics>();
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationCommandSettleTicks);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_selection_order", captureImage: true);
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, commandTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceExtraOrderTicks);
 
-        WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, minSettledFraction: 0.8f, maxTicks: 1800);
+        WaitForMassNavigationCrowdSettle(runtime, simulation, frameTimesMs, MassNavigationAvoidanceCrowdSettleFraction, MassNavigationAvoidanceCrowdSettleTicks);
         // March the commanded group back across the settled central crowd. The crossing target
         // mirrors the first order target through the pre-command work-area center, scaled down so
         // the destination-following solver window keeps the whole march inside the active play
         // area (hard resolve is intentionally skipped outside it).
         Vector2 crossingTarget = initialWorkAreaCenter - ((commandTarget - initialWorkAreaCenter) * MassNavigationAvoidanceCrossingScale);
         SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, crossingTarget);
-        CaptureMassNavigationAvoidanceSequence(runtime, simulation, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
+        CaptureMassNavigationAvoidanceSequence(runtime, simulation, avoidanceScratch, crossingTarget, avoidanceDir, frameTimesMs, avoidanceMetrics, MassNavigationAvoidanceCrossingTicks);
         WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
         Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
@@ -1990,18 +2002,18 @@ public static class LauncherEvidenceRecorder
 
         WriteTimelineSheet("MassNavigation performer + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
-        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation);
+        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation, avoidanceMetrics);
         string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
         string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
         string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
         string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
         string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
 
-        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
+        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, avoidanceMetrics, acceptance));
         File.WriteAllText(tracePath, BuildMassNavigationTraceJsonl(request.Plan.AdapterId, timeline));
         File.WriteAllText(pathPath, BuildMassNavigationPathMermaid());
         File.WriteAllText(visibleChecklistPath, BuildMassNavigationVisibleChecklist(captureFrames));
-        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline));
+        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline, avoidanceMetrics));
 
         if (!acceptance.Success)
         {
@@ -2025,7 +2037,7 @@ public static class LauncherEvidenceRecorder
         List<double> frameTimesMs,
         int maxTicks)
     {
-        int expectedAgents = checked(simulation.AgentsPerTeam * simulation.TeamCount);
+        int expectedAgents = ExpectedMassNavigationScenarioAgentCount(simulation);
         int expectedBlockers = simulation.NavigationObstacleCount;
         int expectedMarkers = simulation.HotZones.Length;
         for (int i = 0; i < maxTicks; i++)
@@ -2042,6 +2054,11 @@ public static class LauncherEvidenceRecorder
 
         throw new InvalidOperationException(
             $"MassNavigation scenario did not finish core-authored MassNavigation binding: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
+    }
+
+    private static int ExpectedMassNavigationScenarioAgentCount(MassNavigationSimulationRuntime simulation)
+    {
+        return checked(simulation.AgentsPerTeam * simulation.TeamCount);
     }
 
     private static Entity[] SelectFirstOrderableMassNavigationAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
@@ -2159,10 +2176,10 @@ public static class LauncherEvidenceRecorder
         float minSettledFraction,
         int maxTicks)
     {
-        MassNavigationFlowSolverState flow = simulation.GetFlowSolverForTests();
         for (int i = 0; i < maxTicks; i++)
         {
-            if (flow.UnitCount > 0 && flow.SettledUnitCount >= flow.UnitCount * minSettledFraction)
+            int unitCount = simulation.NavigationAgentCount;
+            if (unitCount > 0 && simulation.NavigationSettledAgentCount >= unitCount * minSettledFraction)
             {
                 return;
             }
@@ -2174,6 +2191,7 @@ public static class LauncherEvidenceRecorder
     private static void CaptureMassNavigationAvoidanceSequence(
         RecordingRuntime runtime,
         MassNavigationSimulationRuntime simulation,
+        MassNavigationAvoidanceScratch scratch,
         Vector2 commandTargetCm,
         string framesDir,
         List<double> frameTimesMs,
@@ -2188,35 +2206,37 @@ public static class LauncherEvidenceRecorder
                 continue;
             }
 
-            CaptureMassNavigationAvoidanceZoomFrame(simulation, commandTargetCm, framesDir, metrics);
+            CaptureMassNavigationAvoidanceZoomFrame(simulation, scratch, commandTargetCm, framesDir, metrics);
         }
     }
 
     private static void CaptureMassNavigationAvoidanceZoomFrame(
         MassNavigationSimulationRuntime simulation,
+        MassNavigationAvoidanceScratch scratch,
         Vector2 commandTargetCm,
         string framesDir,
         List<MassNavigationAvoidanceFrameMetrics> metrics)
     {
-        MassNavigationFlowSolverState flow = simulation.GetFlowSolverForTests();
-        int unitCount = flow.UnitCount;
-        if (unitCount <= 0)
+        MassNavigationAvoidanceSnapshot snapshot = scratch.Capture(simulation);
+        if (snapshot.UnitCount <= 0)
         {
             return;
         }
 
+        ReadOnlySpan<MassNavigationAvoidanceAgentSnapshot> agents = scratch.Agents(snapshot.UnitCount);
+        ReadOnlySpan<MassNavigationObstacleSnapshot> obstacles = scratch.Obstacles(snapshot.ObstacleCount);
         float centroidX = 0f;
         float centroidY = 0f;
         int selectedCount = 0;
-        for (int i = 0; i < unitCount; i++)
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in agents)
         {
-            if (!flow.IsSelected(i))
+            if (!agent.Selected)
             {
                 continue;
             }
 
-            centroidX += simulation.ToWorldXCm(flow.GetPositionX(i));
-            centroidY += simulation.ToWorldYCm(flow.GetPositionY(i));
+            centroidX += agent.WorldXCm;
+            centroidY += agent.WorldYCm;
             selectedCount++;
         }
 
@@ -2229,58 +2249,45 @@ public static class LauncherEvidenceRecorder
         centroidY /= selectedCount;
 
         float zoomWidthCm = MassNavigationAvoidanceZoomWidthCm;
-        float zoomHeightCm = zoomWidthCm * 9f / 16f;
+        float zoomHeightCm = zoomWidthCm * MassNavigationAvoidanceZoomAspectHeight / MassNavigationAvoidanceZoomAspectWidth;
         float minXCm = centroidX - (zoomWidthCm * 0.5f);
         float maxXCm = centroidX + (zoomWidthCm * 0.5f);
         float minYCm = centroidY - (zoomHeightCm * 0.5f);
         float maxYCm = centroidY + (zoomHeightCm * 0.5f);
 
-        const int imageWidth = 1280;
-        const int imageHeight = 720;
-        float pxPerCm = imageWidth / zoomWidthCm;
+        float pxPerCm = MassNavigationAvoidanceImageWidth / zoomWidthCm;
 
-        bool IsInsideActiveField(int agentIndex)
+        Span<MassNavigationAvoidanceAgentSnapshot> visibleAgents = scratch.VisibleAgents(snapshot.UnitCount);
+        Span<MassNavigationAvoidanceAgentSnapshot> playAreaAgents = scratch.PlayAreaAgents(snapshot.UnitCount);
+        int visibleAgentCount = 0;
+        int playAreaAgentCount = 0;
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in agents)
         {
-            float localX = flow.GetPositionX(agentIndex);
-            float localY = flow.GetPositionY(agentIndex);
-            return localX >= flow.PlayAreaMinXCm && localX <= flow.PlayAreaMaxXCm &&
-                localY >= flow.PlayAreaMinYCm && localY <= flow.PlayAreaMaxYCm;
-        }
-
-        var visibleAgents = new List<int>(512);
-        var inFieldAgents = new List<int>(512);
-        for (int i = 0; i < unitCount; i++)
-        {
-            float worldX = simulation.ToWorldXCm(flow.GetPositionX(i));
-            float worldY = simulation.ToWorldYCm(flow.GetPositionY(i));
-            if (worldX >= minXCm && worldX <= maxXCm && worldY >= minYCm && worldY <= maxYCm)
+            if (agent.WorldXCm >= minXCm && agent.WorldXCm <= maxXCm && agent.WorldYCm >= minYCm && agent.WorldYCm <= maxYCm)
             {
-                visibleAgents.Add(i);
-                if (IsInsideActiveField(i))
+                visibleAgents[visibleAgentCount++] = agent;
+                if (agent.InsidePlayArea)
                 {
-                    inFieldAgents.Add(i);
+                    playAreaAgents[playAreaAgentCount++] = agent;
                 }
             }
         }
 
         // Hard resolve intentionally skips agents outside the solver play area
-        // (IsInsideTacticalField), so overlap metrics only cover in-field agents;
-        // out-of-field agents are drawn dimmed to keep the evidence honest.
+        // (IsInsideTacticalField), so overlap metrics only cover play-area agents;
+        // outside-play-area agents are drawn dimmed so frame review preserves that distinction.
         float maxPenetrationCm = 0f;
         float maxPenetrationRatio = 0f;
         int deepOverlapPairs = 0;
-        for (int a = 0; a < inFieldAgents.Count; a++)
+        for (int a = 0; a < playAreaAgentCount; a++)
         {
-            int i = inFieldAgents[a];
-            float xi = flow.GetPositionX(i);
-            float yi = flow.GetPositionY(i);
-            float ri = flow.GetBodyRadiusCm(i);
-            for (int b = a + 1; b < inFieldAgents.Count; b++)
+            MassNavigationAvoidanceAgentSnapshot first = playAreaAgents[a];
+            for (int b = a + 1; b < playAreaAgentCount; b++)
             {
-                int j = inFieldAgents[b];
-                float dx = xi - flow.GetPositionX(j);
-                float dy = yi - flow.GetPositionY(j);
-                float minDistance = ri + flow.GetBodyRadiusCm(j);
+                MassNavigationAvoidanceAgentSnapshot second = playAreaAgents[b];
+                float dx = first.LocalXCm - second.LocalXCm;
+                float dy = first.LocalYCm - second.LocalYCm;
+                float minDistance = first.BodyRadiusCm + second.BodyRadiusCm;
                 float distanceSq = (dx * dx) + (dy * dy);
                 if (distanceSq >= minDistance * minDistance)
                 {
@@ -2291,7 +2298,7 @@ public static class LauncherEvidenceRecorder
                 float ratio = penetration / minDistance;
                 maxPenetrationCm = MathF.Max(maxPenetrationCm, penetration);
                 maxPenetrationRatio = MathF.Max(maxPenetrationRatio, ratio);
-                if (ratio > 0.10f)
+                if (ratio > MassNavigationAvoidanceDeepOverlapRatio)
                 {
                     deepOverlapPairs++;
                 }
@@ -2300,17 +2307,23 @@ public static class LauncherEvidenceRecorder
 
         int settledCount = 0;
         int heavyCount = 0;
-        for (int a = 0; a < inFieldAgents.Count; a++)
+        int selectedVisibleCount = 0;
+        for (int a = 0; a < playAreaAgentCount; a++)
         {
-            int i = inFieldAgents[a];
-            if (flow.IsUnitSettled(i))
+            MassNavigationAvoidanceAgentSnapshot agent = playAreaAgents[a];
+            if (agent.Settled)
             {
                 settledCount++;
             }
 
-            if (flow.IsHeavyProfile(i))
+            if (agent.HeavyProfile)
             {
                 heavyCount++;
+            }
+
+            if (agent.Selected)
+            {
+                selectedVisibleCount++;
             }
         }
 
@@ -2319,52 +2332,53 @@ public static class LauncherEvidenceRecorder
             frameIndex,
             centroidX,
             centroidY,
-            visibleAgents.Count,
+            snapshot.UnitCount,
+            visibleAgentCount,
+            playAreaAgentCount,
+            selectedVisibleCount,
             heavyCount,
             settledCount,
             maxPenetrationCm,
             maxPenetrationRatio,
             deepOverlapPairs));
 
-        using var surface = SKSurface.Create(new SKImageInfo(imageWidth, imageHeight));
+        using var surface = SKSurface.Create(new SKImageInfo(MassNavigationAvoidanceImageWidth, MassNavigationAvoidanceImageHeight));
         SKCanvas canvas = surface.Canvas;
         canvas.Clear(new SKColor(8, 12, 18));
 
         using var obstaclePaint = new SKPaint { Color = new SKColor(120, 128, 138, 210), IsAntialias = true, Style = SKPaintStyle.Fill };
         using var heavyRingPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
         using var targetPaint = new SKPaint { Color = new SKColor(255, 92, 92), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 3f };
-        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 22f };
-        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 205, 216), IsAntialias = true, TextSize = 17f };
+        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(190, 205, 216), IsAntialias = true };
+        using var textFont = new SKFont { Size = 22f };
+        using var minorTextFont = new SKFont { Size = 17f };
 
         float ToScreenX(float worldXCm) => (worldXCm - minXCm) * pxPerCm;
-        float ToScreenY(float worldYCm) => imageHeight - ((worldYCm - minYCm) * pxPerCm);
+        float ToScreenY(float worldYCm) => MassNavigationAvoidanceImageHeight - ((worldYCm - minYCm) * pxPerCm);
 
-        for (int i = 0; i < flow.ObstacleCount; i++)
+        foreach (MassNavigationObstacleSnapshot obstacle in obstacles)
         {
-            float ox = flow.GetObstacleWorldX(i);
-            float oy = flow.GetObstacleWorldY(i);
-            float radius = flow.GetObstacleRadius(i);
-            if (ox + radius < minXCm || ox - radius > maxXCm || oy + radius < minYCm || oy - radius > maxYCm)
+            if (obstacle.WorldXCm + obstacle.RadiusCm < minXCm ||
+                obstacle.WorldXCm - obstacle.RadiusCm > maxXCm ||
+                obstacle.WorldYCm + obstacle.RadiusCm < minYCm ||
+                obstacle.WorldYCm - obstacle.RadiusCm > maxYCm)
             {
                 continue;
             }
 
-            canvas.DrawCircle(ToScreenX(ox), ToScreenY(oy), radius * pxPerCm, obstaclePaint);
+            canvas.DrawCircle(ToScreenX(obstacle.WorldXCm), ToScreenY(obstacle.WorldYCm), obstacle.RadiusCm * pxPerCm, obstaclePaint);
         }
 
-        for (int a = 0; a < visibleAgents.Count; a++)
+        foreach (MassNavigationAvoidanceAgentSnapshot agent in visibleAgents[..visibleAgentCount])
         {
-            int i = visibleAgents[a];
-            float worldX = simulation.ToWorldXCm(flow.GetPositionX(i));
-            float worldY = simulation.ToWorldYCm(flow.GetPositionY(i));
-            float radiusPx = MathF.Max(1.5f, flow.GetBodyRadiusCm(i) * pxPerCm);
-            bool inField = IsInsideActiveField(i);
-            SKColor teamColor = ResolveMassNavigationTeamColor(flow.GetTeam(i));
-            using var agentPaint = new SKPaint { Color = teamColor.WithAlpha(inField ? (byte)220 : (byte)70), IsAntialias = true, Style = SKPaintStyle.Fill };
-            float screenX = ToScreenX(worldX);
-            float screenY = ToScreenY(worldY);
+            float radiusPx = MathF.Max(1.5f, agent.BodyRadiusCm * pxPerCm);
+            SKColor teamColor = ResolveMassNavigationTeamColor(agent.TeamId);
+            using var agentPaint = new SKPaint { Color = teamColor.WithAlpha(agent.InsidePlayArea ? (byte)220 : (byte)70), IsAntialias = true, Style = SKPaintStyle.Fill };
+            float screenX = ToScreenX(agent.WorldXCm);
+            float screenY = ToScreenY(agent.WorldYCm);
             canvas.DrawCircle(screenX, screenY, radiusPx, agentPaint);
-            if (inField && flow.IsHeavyProfile(i))
+            if (agent.InsidePlayArea && agent.HeavyProfile)
             {
                 canvas.DrawCircle(screenX, screenY, radiusPx + 1.5f, heavyRingPaint);
             }
@@ -2375,9 +2389,9 @@ public static class LauncherEvidenceRecorder
             DrawCrosshair(canvas, new SKPoint(ToScreenX(commandTargetCm.X), ToScreenY(commandTargetCm.Y)), 14f, targetPaint);
         }
 
-        canvas.DrawText($"MassNavigation avoidance zoom | frame={frameIndex:D4} | window {zoomWidthCm:F0}x{zoomHeightCm:F0} cm @ ({centroidX:F0}, {centroidY:F0})", 24, 34, textPaint);
-        canvas.DrawText($"Agents={visibleAgents.Count} heavy(ringed)={heavyCount} settled={settledCount} | circles are true bodyRadiusCm", 24, 62, minorTextPaint);
-        canvas.DrawText($"maxPenetration={maxPenetrationCm:F1}cm ({maxPenetrationRatio:P1} of pair radius) deepOverlapPairs(>10%)={deepOverlapPairs}", 24, 86, minorTextPaint);
+        canvas.DrawText($"MassNavigation avoidance zoom | frame={frameIndex:D4} | window {zoomWidthCm:F0}x{zoomHeightCm:F0} cm @ ({centroidX:F0}, {centroidY:F0})", 24, 34, SKTextAlign.Left, textFont, textPaint);
+        canvas.DrawText($"Agents={visibleAgentCount}/{snapshot.UnitCount} playArea={playAreaAgentCount} selected={selectedVisibleCount} heavyProfile(ringed)={heavyCount} settled={settledCount}", 24, 62, SKTextAlign.Left, minorTextFont, minorTextPaint);
+        canvas.DrawText($"maxPenetration={maxPenetrationCm:F1}cm ({maxPenetrationRatio:P1} of pair radius) deepOverlapPairs(>{MassNavigationAvoidanceDeepOverlapRatio:P0})={deepOverlapPairs}", 24, 86, SKTextAlign.Left, minorTextFont, minorTextPaint);
 
         using SKImage image = surface.Snapshot();
         using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
@@ -2394,6 +2408,52 @@ public static class LauncherEvidenceRecorder
         }
 
         File.WriteAllText(path, sb.ToString());
+    }
+
+    private static MassNavigationAvoidanceSummary SummarizeMassNavigationAvoidance(IReadOnlyList<MassNavigationAvoidanceFrameMetrics> metrics)
+    {
+        if (metrics.Count == 0)
+        {
+            return new MassNavigationAvoidanceSummary(
+                FrameCount: 0,
+                MaxVisibleAgentCount: 0,
+                MaxPlayAreaAgentCount: 0,
+                MaxSelectedVisibleAgentCount: 0,
+                MaxHeavyAgentCount: 0,
+                PeakDeepOverlapPairCount: 0,
+                FinalDeepOverlapPairCount: 0,
+                PeakMaxPenetrationRatio: 0f,
+                FinalMaxPenetrationRatio: 0f);
+        }
+
+        MassNavigationAvoidanceFrameMetrics final = metrics[^1];
+        int maxVisible = 0;
+        int maxPlayArea = 0;
+        int maxSelected = 0;
+        int maxHeavy = 0;
+        int peakDeepOverlap = 0;
+        float peakPenetrationRatio = 0f;
+        for (int i = 0; i < metrics.Count; i++)
+        {
+            MassNavigationAvoidanceFrameMetrics metric = metrics[i];
+            maxVisible = Math.Max(maxVisible, metric.VisibleAgentCount);
+            maxPlayArea = Math.Max(maxPlayArea, metric.PlayAreaAgentCount);
+            maxSelected = Math.Max(maxSelected, metric.SelectedVisibleAgentCount);
+            maxHeavy = Math.Max(maxHeavy, metric.HeavyAgentCount);
+            peakDeepOverlap = Math.Max(peakDeepOverlap, metric.DeepOverlapPairCount);
+            peakPenetrationRatio = MathF.Max(peakPenetrationRatio, metric.MaxPenetrationRatio);
+        }
+
+        return new MassNavigationAvoidanceSummary(
+            FrameCount: metrics.Count,
+            MaxVisibleAgentCount: maxVisible,
+            MaxPlayAreaAgentCount: maxPlayArea,
+            MaxSelectedVisibleAgentCount: maxSelected,
+            MaxHeavyAgentCount: maxHeavy,
+            PeakDeepOverlapPairCount: peakDeepOverlap,
+            FinalDeepOverlapPairCount: final.DeepOverlapPairCount,
+            PeakMaxPenetrationRatio: peakPenetrationRatio,
+            FinalMaxPenetrationRatio: final.MaxPenetrationRatio);
     }
 
     private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
@@ -2561,7 +2621,10 @@ public static class LauncherEvidenceRecorder
             SamplePositions: samplePositions);
     }
 
-    private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(IReadOnlyList<MassNavigationSnapshot> timeline, MassNavigationSimulationRuntime simulation)
+    private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(
+        IReadOnlyList<MassNavigationSnapshot> timeline,
+        MassNavigationSimulationRuntime simulation,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
     {
         var failures = new List<string>();
         MassNavigationSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
@@ -2573,7 +2636,8 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(boot.ActiveMapId == expectedMapId, $"Expected MassNavigation map '{expectedMapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
         AddAcceptanceCheck(boot.TeamCount >= 4, $"Expected at least 4 configured teams, got {boot.TeamCount}.", failures);
-        AddAcceptanceCheck(boot.AgentCount == simulation.AgentsPerTeam * simulation.TeamCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {simulation.AgentsPerTeam * simulation.TeamCount}.", failures);
+        int expectedAgentCount = ExpectedMassNavigationScenarioAgentCount(simulation);
+        AddAcceptanceCheck(boot.AgentCount == expectedAgentCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {expectedAgentCount}.", failures);
         AddAcceptanceCheck(boot.EcsAgentCount == boot.AgentCount, $"ECS controllable agent count mismatch: {boot.EcsAgentCount} vs runtime {boot.AgentCount}.", failures);
         AddAcceptanceCheck(boot.BlockerCount == simulation.NavigationObstacleCount, $"Blocker count mismatch: {boot.BlockerCount} vs solver {simulation.NavigationObstacleCount}.", failures);
         AddAcceptanceCheck(boot.HotspotMarkerCount == simulation.HotZones.Length, $"Hotspot marker count mismatch: {boot.HotspotMarkerCount} vs config {simulation.HotZones.Length}.", failures);
@@ -2591,6 +2655,25 @@ public static class LauncherEvidenceRecorder
         AddAcceptanceCheck(returned.ScenarioSpawnCount == boot.ScenarioSpawnCount, $"Returning to original area re-ran scenario spawn: {boot.ScenarioSpawnCount} -> {returned.ScenarioSpawnCount}.", failures);
         AddAcceptanceCheck(returned.SceneResetCount == boot.SceneResetCount, $"Returning to original area reset the scene: {boot.SceneResetCount} -> {returned.SceneResetCount}.", failures);
 
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
+        AddAcceptanceCheck(avoidance.FrameCount > 0, "MassNavigation avoidance evidence captured zero metric frames.", failures);
+        AddAcceptanceCheck(avoidance.MaxVisibleAgentCount > 0, "MassNavigation avoidance evidence never observed visible agents.", failures);
+        AddAcceptanceCheck(avoidance.MaxSelectedVisibleAgentCount > 0, "MassNavigation avoidance evidence never observed selected agents in the zoom window.", failures);
+        AddAcceptanceCheck(avoidance.MaxHeavyAgentCount > 0, "MassNavigation avoidance evidence never observed heavy-profile agents in the solver play area.", failures);
+        AddAcceptanceCheck(avoidance.MaxPlayAreaAgentCount > 1, "MassNavigation avoidance evidence did not observe enough play-area agents to validate overlap resolution.", failures);
+        AddAcceptanceCheck(avoidance.FinalDeepOverlapPairCount == 0, $"MassNavigation avoidance ended with {avoidance.FinalDeepOverlapPairCount} deep overlap pairs.", failures);
+        AddAcceptanceCheck(
+            avoidance.FinalMaxPenetrationRatio <= MassNavigationAvoidanceFinalMaxPenetrationRatio,
+            $"MassNavigation avoidance final penetration ratio {avoidance.FinalMaxPenetrationRatio:P2} exceeded {MassNavigationAvoidanceFinalMaxPenetrationRatio:P2}.",
+            failures);
+        if (avoidance.FrameCount >= 2 && avoidance.PeakDeepOverlapPairCount > 0)
+        {
+            AddAcceptanceCheck(
+                avoidance.FinalDeepOverlapPairCount < avoidance.PeakDeepOverlapPairCount,
+                $"MassNavigation avoidance deep overlaps did not reduce from peak {avoidance.PeakDeepOverlapPairCount} to final {avoidance.FinalDeepOverlapPairCount}.",
+                failures);
+        }
+
         string normalizedSignature = string.Join("|", new[]
         {
             "mass_navigation_large_world",
@@ -2600,11 +2683,12 @@ public static class LauncherEvidenceRecorder
             $"markers:{boot.MinimapBufferCount}/{boot.MinimapDroppedTotal}",
             $"remote:{MathF.Round(remote.CameraTargetCm.X):F0},{MathF.Round(remote.CameraTargetCm.Y):F0}",
             $"spawns:{boot.ScenarioSpawnCount}->{returned.ScenarioSpawnCount}",
-            $"resets:{boot.SceneResetCount}->{returned.SceneResetCount}"
+            $"resets:{boot.SceneResetCount}->{returned.SceneResetCount}",
+            $"avoidance:{avoidance.FrameCount}/{avoidance.MaxVisibleAgentCount}/{avoidance.MaxHeavyAgentCount}/{avoidance.FinalDeepOverlapPairCount}/{avoidance.FinalMaxPenetrationRatio:0.0000}"
         });
 
         string verdict = failures.Count == 0
-            ? $"MassNavigation passes large-world performer/minimap UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers and {boot.MinimapBufferCount} minimap markers."
+            ? $"MassNavigation passes large-world performer/minimap/avoidance UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers, {boot.MinimapBufferCount} minimap markers and {avoidance.FrameCount} avoidance frames."
             : "MassNavigation large-world performer/minimap UAT failed.";
 
         return new MassNavigationAcceptanceResult(
@@ -2620,10 +2704,12 @@ public static class LauncherEvidenceRecorder
         IReadOnlyList<MassNavigationSnapshot> timeline,
         IReadOnlyList<CaptureFrame> captureFrames,
         IReadOnlyList<double> frameTimesMs,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics,
         MassNavigationAcceptanceResult acceptance)
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         double medianTickMs = Median(frameTimesMs.ToArray());
         double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
         string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
@@ -2672,6 +2758,10 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- minimap markers at boot: `{boot.MinimapBufferCount}` droppedTotal=`{boot.MinimapDroppedTotal}`");
         sb.AppendLine($"- scenario spawn count boot/final: `{boot.ScenarioSpawnCount}` / `{final.ScenarioSpawnCount}`");
         sb.AppendLine($"- scene reset count boot/final: `{boot.SceneResetCount}` / `{final.SceneResetCount}`");
+        sb.AppendLine($"- avoidance frames: `{avoidance.FrameCount}`");
+        sb.AppendLine($"- avoidance max visible/play-area/selected/heavy-profile agents: `{avoidance.MaxVisibleAgentCount}` / `{avoidance.MaxPlayAreaAgentCount}` / `{avoidance.MaxSelectedVisibleAgentCount}` / `{avoidance.MaxHeavyAgentCount}`");
+        sb.AppendLine($"- avoidance peak/final deep overlap pairs: `{avoidance.PeakDeepOverlapPairCount}` / `{avoidance.FinalDeepOverlapPairCount}`");
+        sb.AppendLine($"- avoidance peak/final max penetration ratio: `{avoidance.PeakMaxPenetrationRatio:P2}` / `{avoidance.FinalMaxPenetrationRatio:P2}`");
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
@@ -2765,10 +2855,15 @@ public static class LauncherEvidenceRecorder
         return sb.ToString();
     }
 
-    private static string BuildMassNavigationSummaryJson(LauncherRecordingRequest request, MassNavigationAcceptanceResult acceptance, IReadOnlyList<MassNavigationSnapshot> timeline)
+    private static string BuildMassNavigationSummaryJson(
+        LauncherRecordingRequest request,
+        MassNavigationAcceptanceResult acceptance,
+        IReadOnlyList<MassNavigationSnapshot> timeline,
+        IReadOnlyList<MassNavigationAvoidanceFrameMetrics> avoidanceMetrics)
     {
         MassNavigationSnapshot boot = timeline[0];
         MassNavigationSnapshot final = timeline[^1];
+        MassNavigationAvoidanceSummary avoidance = SummarizeMassNavigationAvoidance(avoidanceMetrics);
         return JsonSerializer.Serialize(new
         {
             scenario = "mass_navigation_large_world",
@@ -2790,6 +2885,15 @@ public static class LauncherEvidenceRecorder
             final_scenario_spawn_count = final.ScenarioSpawnCount,
             boot_scene_reset_count = boot.SceneResetCount,
             final_scene_reset_count = final.SceneResetCount,
+            avoidance_frame_count = avoidance.FrameCount,
+            avoidance_max_visible_agent_count = avoidance.MaxVisibleAgentCount,
+            avoidance_max_play_area_agent_count = avoidance.MaxPlayAreaAgentCount,
+            avoidance_max_selected_visible_agent_count = avoidance.MaxSelectedVisibleAgentCount,
+            avoidance_max_heavy_agent_count = avoidance.MaxHeavyAgentCount,
+            avoidance_peak_deep_overlap_pair_count = avoidance.PeakDeepOverlapPairCount,
+            avoidance_final_deep_overlap_pair_count = avoidance.FinalDeepOverlapPairCount,
+            avoidance_peak_max_penetration_ratio = avoidance.PeakMaxPenetrationRatio,
+            avoidance_final_max_penetration_ratio = avoidance.FinalMaxPenetrationRatio,
             failed_checks = acceptance.FailedChecks
         }, new JsonSerializerOptions { WriteIndented = true });
     }
@@ -3266,12 +3370,67 @@ public static class LauncherEvidenceRecorder
         int FrameIndex,
         float WindowCenterXCm,
         float WindowCenterYCm,
+        int UnitCount,
         int VisibleAgentCount,
+        int PlayAreaAgentCount,
+        int SelectedVisibleAgentCount,
         int HeavyAgentCount,
         int SettledAgentCount,
         float MaxPenetrationCm,
         float MaxPenetrationRatio,
         int DeepOverlapPairCount);
+
+    private readonly record struct MassNavigationAvoidanceSummary(
+        int FrameCount,
+        int MaxVisibleAgentCount,
+        int MaxPlayAreaAgentCount,
+        int MaxSelectedVisibleAgentCount,
+        int MaxHeavyAgentCount,
+        int PeakDeepOverlapPairCount,
+        int FinalDeepOverlapPairCount,
+        float PeakMaxPenetrationRatio,
+        float FinalMaxPenetrationRatio);
+
+    private sealed class MassNavigationAvoidanceScratch
+    {
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _agents;
+        private readonly MassNavigationObstacleSnapshot[] _obstacles;
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _visibleAgents;
+        private readonly MassNavigationAvoidanceAgentSnapshot[] _playAreaAgents;
+
+        public MassNavigationAvoidanceScratch(int agentCapacity, int obstacleCapacity)
+        {
+            _agents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+            _obstacles = new MassNavigationObstacleSnapshot[obstacleCapacity];
+            _visibleAgents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+            _playAreaAgents = new MassNavigationAvoidanceAgentSnapshot[agentCapacity];
+        }
+
+        public MassNavigationAvoidanceSnapshot Capture(MassNavigationSimulationRuntime simulation)
+        {
+            return simulation.CaptureAvoidanceSnapshot(_agents, _obstacles);
+        }
+
+        public ReadOnlySpan<MassNavigationAvoidanceAgentSnapshot> Agents(int count)
+        {
+            return _agents.AsSpan(0, count);
+        }
+
+        public ReadOnlySpan<MassNavigationObstacleSnapshot> Obstacles(int count)
+        {
+            return _obstacles.AsSpan(0, count);
+        }
+
+        public Span<MassNavigationAvoidanceAgentSnapshot> VisibleAgents(int count)
+        {
+            return _visibleAgents.AsSpan(0, count);
+        }
+
+        public Span<MassNavigationAvoidanceAgentSnapshot> PlayAreaAgents(int count)
+        {
+            return _playAreaAgents.AsSpan(0, count);
+        }
+    }
 
     private readonly record struct MassNavigationSnapshot(
         int Tick,

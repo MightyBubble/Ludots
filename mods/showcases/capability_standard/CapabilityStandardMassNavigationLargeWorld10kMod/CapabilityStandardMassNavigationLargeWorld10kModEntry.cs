@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
@@ -9,22 +10,33 @@ namespace CapabilityStandardMassNavigationLargeWorld10kMod;
 
 public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
 {
+    private const string ObserverVisibilitySystemInstalledKey =
+        "CapabilityStandardMassNavigationLargeWorld10k.ObserverVisibilitySystemInstalled";
+
     public void OnLoad(IModContext context)
     {
         context.Log("[CapabilityStandardMassNavigationLargeWorld10kMod] Loaded");
-        context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldUatAsync);
-        context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldUatAsync);
-        context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldUatAsync);
+        context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldShowcaseAsync);
+        context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldShowcaseAsync);
+        context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldShowcaseAsync);
     }
 
     public void OnUnload()
     {
     }
 
-    private static Task ConfigureLargeWorldUatAsync(ScriptContext context)
+    private static Task ConfigureLargeWorldShowcaseAsync(ScriptContext context)
     {
         GameEngine? engine = context.GetEngine();
-        if (engine == null || !IsStartupMapFocused(engine))
+        if (engine == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        EnsureObserverVisibilitySystem(engine);
+        bool mapFocused = CapabilityStandardMassNavigationLargeWorld10kMapFocus.IsStartupMapFocused(engine);
+        engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
+        if (!mapFocused)
         {
             return Task.CompletedTask;
         }
@@ -40,13 +52,16 @@ public sealed class CapabilityStandardMassNavigationLargeWorld10kModEntry : IMod
         return Task.CompletedTask;
     }
 
-    private static bool IsStartupMapFocused(GameEngine engine)
+    private static void EnsureObserverVisibilitySystem(GameEngine engine)
     {
-        string? startupMapId = engine.MergedConfig?.StartupMapId;
-        return !string.IsNullOrWhiteSpace(startupMapId) &&
-               string.Equals(
-                   engine.CurrentMapSession?.MapId.Value,
-                   startupMapId,
-                   StringComparison.Ordinal);
+        if (engine.GlobalContext.ContainsKey(ObserverVisibilitySystemInstalledKey))
+        {
+            return;
+        }
+
+        engine.RegisterSystem(
+            new MassNavigationObserverVisibilityBindingSystem(engine),
+            SystemGroup.RuntimeEntityBinding);
+        engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }
 }

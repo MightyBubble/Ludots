@@ -296,6 +296,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
         public static readonly ServiceKey<ChunkDebugPanelRuntime> ChunkDebugPanelRuntime = new("ChunkDebugPanelRuntime");
         public static readonly ServiceKey<RenderDebugState> RenderDebugState = new("RenderDebugState");
+        public static readonly ServiceKey<bool> PresentationAudienceRevealHidden = new("PresentationAudienceRevealHidden");
         public static readonly ServiceKey<RenderCameraDebugState> RenderCameraDebugState = new("RenderCameraDebugState");
         public static readonly ServiceKey<CameraCullingDebugState> CameraCullingDebugState = new("CameraCullingDebugState");
         public static readonly ServiceKey<PresentationTimingDiagnostics> PresentationTimingDiagnostics = new("PresentationTimingDiagnostics");

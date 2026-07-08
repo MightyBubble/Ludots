@@ -24,7 +24,8 @@ namespace Ludots.Adapter.Web
         WebViewController ViewController,
         WebCameraAdapter CameraAdapter,
         WebUiRuntimeBridge UiBridge,
-        WebTransportLayer Transport
+        WebTransportLayer Transport,
+        WebHostLoopStatus LoopStatus
     );
 
     public static class WebHostComposer
@@ -83,6 +84,7 @@ namespace Ludots.Adapter.Web
             inputBackend.SyncNeutralViewport((int)viewController.Resolution.X, (int)viewController.Resolution.Y);
             var uiBridge = new WebUiRuntimeBridge(uiRoot, inputBackend, viewController);
             var transport = new WebTransportLayer(inputBackend, viewController);
+            var loopStatus = new WebHostLoopStatus();
 
             ValidateRequiredContextBeforeStart(engine);
 
@@ -94,7 +96,8 @@ namespace Ludots.Adapter.Web
                 viewController,
                 cameraAdapter,
                 uiBridge,
-                transport);
+                transport,
+                loopStatus);
         }
 
         private static void ValidateRequiredContextBeforeStart(GameEngine engine)

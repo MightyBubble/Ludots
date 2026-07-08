@@ -25,7 +25,6 @@ namespace Ludots.Tests.Presentation
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
         private const string LargeWorldCameraId = "MassNavigation.Camera.LargeWorldHeightmap";
-        private const int LargeWorldEvidenceSelectionSampleCount = 128;
 
         [Test]
         public void AgentPerformers_UseMassNavigationOwnedGpuSkinnedAsset()
@@ -280,9 +279,15 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ScenarioRuntimeCapacity_CoversLargeWorldEvidenceSelectionSample()
+        public void ScenarioRuntimeCapacity_CoversAuthoredScenarioSelection()
         {
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject scenario = config["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario missing.");
+            JsonArray teams = scenario["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams missing.");
+            int authoredAgentCount = checked(teams.Count * (scenario["agentsPerTeam"]?.GetValue<int>()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam missing.")));
             JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime missing.");
             JsonObject runtimeCapacity = scenarioRuntime["runtimeCapacity"]?.AsObject()
@@ -290,19 +295,19 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(
                 scenarioRuntime["initialSelectedEntityCapacity"]?.GetValue<int>(),
-                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+                Is.EqualTo(authoredAgentCount));
             Assert.That(
                 scenarioRuntime["initialSelectionScratchCapacity"]?.GetValue<int>(),
-                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+                Is.EqualTo(authoredAgentCount));
             Assert.That(
                 runtimeCapacity["selectionMemberScratchCapacity"]?.GetValue<int>(),
-                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+                Is.EqualTo(authoredAgentCount));
             Assert.That(
                 runtimeCapacity["groupMemberCapacity"]?.GetValue<int>(),
-                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+                Is.EqualTo(authoredAgentCount));
             Assert.That(
                 runtimeCapacity["orderIngestionMemberCapacity"]?.GetValue<int>(),
-                Is.GreaterThanOrEqualTo(LargeWorldEvidenceSelectionSampleCount));
+                Is.EqualTo(authoredAgentCount));
         }
 
         [Test]

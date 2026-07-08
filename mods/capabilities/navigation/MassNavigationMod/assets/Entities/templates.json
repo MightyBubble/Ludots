@@ -1,5 +1,13 @@
 [
   {
+    "id": "mass_navigation_player_team",
+    "components": {
+      "Name": {
+        "Value": "MassNavigation.PlayerTeam"
+      }
+    }
+  },
+  {
     "id": "mass_navigation_local_player",
     "components": {
       "Name": {

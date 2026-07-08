@@ -493,7 +493,14 @@ namespace Ludots.Tests.Architecture
                     LauncherBuildMode.Never).Plan,
                     expectedRootModId: "FormationCapabilityShowcaseMod",
                     expectedStartupMapId: "formation_capability_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "FormationCapabilityShowcaseMod" });
+                    allowedModIds: new[]
+                    {
+                        "LudotsCoreMod",
+                        "CoreInputMod",
+                        "CameraProfilesMod",
+                        "FormationCapabilityShowcaseMod"
+                    },
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -508,7 +515,8 @@ namespace Ludots.Tests.Architecture
                         "CoreInputMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
-                    });
+                    },
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "ParticipantViewCapabilityMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
