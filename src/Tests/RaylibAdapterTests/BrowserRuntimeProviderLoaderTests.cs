@@ -98,6 +98,44 @@ public sealed class BrowserRuntimeProviderLoaderTests
     }
 
     [Test]
+    public void Install_WithRuntimeRootMappingDisabledPassesOriginalRuntimeRoot()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string externalRuntimeRoot = CreateTempDirectory();
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+            new BrowserRuntimeProviderLoadOptions(
+                services,
+                sourceAssemblyPath,
+                typeof(FakeProviderHost).FullName!)
+            {
+                ProviderId = "fixture",
+                RuntimeRootPath = externalRuntimeRoot,
+                ShadowCopyRootPath = shadowRoot,
+                MapRuntimeRootToShadowCopy = false
+            });
+
+        try
+        {
+            Assert.That(services["FakeProviderRuntimeRootPath"], Is.EqualTo(Path.GetFullPath(externalRuntimeRoot)));
+            Assert.That((string)services["FakeProviderRuntimeRootPath"], Is.Not.EqualTo(handle.ShadowCopyDirectory));
+            Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.SameAs(handle.Runtime));
+        }
+        finally
+        {
+            handle.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(externalRuntimeRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
     public void ShutdownProcessForHostExit_DisposesRuntimeRemovesServicesAndLogsAlcCollection()
     {
         string sourceRoot = CopyProviderFixtureDirectory();
@@ -333,9 +371,12 @@ public sealed class BrowserRuntimeProviderLoaderTests
 
         Assert.That(loaderSource, Does.Contain("SHA256"));
         Assert.That(loaderSource, Does.Contain("ShadowCopy"));
+        Assert.That(loaderSource, Does.Contain("MapRuntimeRootToShadowCopy"));
         Assert.That(loaderSource, Does.Contain("Unload()"));
         Assert.That(loaderSource, Does.Not.Contain("InstallFromAssemblyLocation"));
         Assert.That(loadContextSource, Does.Contain("AssemblyDependencyResolver"));
+        Assert.That(loadContextSource, Does.Contain("defaultLoadContextAssemblyNamePrefixes"));
+        Assert.That(loadContextSource, Does.Contain("ResolveDefaultLoadContextAssembly"));
         Assert.That(loadContextSource, Does.Contain("isCollectible: true"));
         Assert.That(loadContextSource, Does.Not.Contain("CefSharp"));
     }

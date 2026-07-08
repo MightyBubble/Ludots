@@ -104,6 +104,8 @@ namespace Ludots.Adapter.Raylib
                     ProviderId = CefProviderId,
                     RuntimeRootPath = runtimeRootPath,
                     BrowserCacheRootPath = cacheRootPath,
+                    MapRuntimeRootToShadowCopy = false,
+                    DefaultLoadContextAssemblyNamePrefixes = new[] { "CefSharp" },
                     Log = message => Log.Info(in LogChannels.Engine, message)
                 });
             return handle.Runtime;

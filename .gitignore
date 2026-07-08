@@ -72,6 +72,7 @@ debug_output*.txt
 external/
 # docs/  <-- Un-ignore docs to keep archived documentation
 artifacts/
+BrowserRuntime/
 _temp_export/
 .codex_out/
 

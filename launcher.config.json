@@ -209,7 +209,8 @@
     {
       "id": "cef",
       "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
-      "assemblyPath": "src/Libraries/Ludots.UI.Browser.Cef/bin/Release/net8.0-windows/Ludots.UI.Browser.Cef.dll"
+      "packageRootPath": "BrowserRuntime/cef",
+      "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll"
     }
   ],
   "projectHints": []

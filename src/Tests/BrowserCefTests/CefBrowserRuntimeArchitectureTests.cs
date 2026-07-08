@@ -21,14 +21,24 @@ public sealed class CefBrowserRuntimeArchitectureTests
 			"Libraries",
 			"Ludots.UI.Browser.Cef",
 			"CefProcessRuntime.cs"));
+		string hostSource = File.ReadAllText(Path.Combine(
+			repoRoot,
+			"src",
+			"Libraries",
+			"Ludots.UI.Browser.Cef",
+			"CefBrowserRuntimeHost.cs"));
 
 		Assert.That(runtimeSource, Does.Not.Contain("Cef.Initialize"));
 		Assert.That(runtimeSource, Does.Not.Contain("CefSettings"));
 		Assert.That(runtimeSource, Does.Not.Contain("AssemblyLoadContext.Default.Resolving"));
 		Assert.That(runtimeSource, Does.Not.Contain("CefBrowserSurfaceRegistry = new"));
 		Assert.That(runtimeSource, Does.Not.Contain("Cef.Shutdown"));
+		Assert.That(hostSource, Does.Not.Contain("InstallFromAssemblyLocation"));
 
 		Assert.That(processRuntimeSource, Does.Contain("Cef.Initialize"));
+		Assert.That(processRuntimeSource, Does.Contain("AddDllDirectory"));
+		Assert.That(processRuntimeSource, Does.Contain("LoadLibraryEx"));
+		Assert.That(processRuntimeSource, Does.Contain("performDependencyCheck: false"));
 		Assert.That(processRuntimeSource, Does.Contain("ShutdownForHostExit"));
 		Assert.That(processRuntimeSource, Does.Contain("CEF host exit shutdown has already been requested"));
 		Assert.That(processRuntimeSource, Does.Contain("Cef.Shutdown"));

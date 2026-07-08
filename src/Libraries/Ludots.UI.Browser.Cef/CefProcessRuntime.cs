@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Runtime.InteropServices;
+using System.ComponentModel;
 using CefSharp;
 using Ludots.UI.Browser;
 
@@ -17,6 +19,9 @@ internal static class CefProcessRuntime
 	private static string? _defaultAssemblyRootPath;
 	private static bool _defaultAssemblyResolverRegistered;
 	private static bool _hostExitShutdownRequested;
+	private static string? _nativeRuntimeRootPath;
+	private static IntPtr _dllDirectoryCookie;
+	private static IntPtr _libcefHandle;
 
 	public static CefBrowserSurfaceRegistry SurfaceRegistry => Registry;
 
@@ -57,8 +62,9 @@ internal static class CefProcessRuntime
 
 			if (global::CefSharp.Cef.IsInitialized != true)
 			{
+				PrepareNativeRuntime(options.RuntimeRootPath);
 				global::CefSharp.OffScreen.CefSettings settings = BuildSettings(options);
-				bool initialized = global::CefSharp.Cef.Initialize(settings, performDependencyCheck: true);
+				bool initialized = global::CefSharp.Cef.Initialize(settings, performDependencyCheck: false);
 				if (!initialized)
 				{
 					throw new InvalidOperationException("CEF initialization returned false.");
@@ -98,6 +104,94 @@ internal static class CefProcessRuntime
 
 			RemoveDefaultAssemblyResolution();
 		}
+	}
+
+	private static void PrepareNativeRuntime(string runtimeRootPath)
+	{
+		string fullRuntimeRootPath = Path.GetFullPath(runtimeRootPath);
+		if (_nativeRuntimeRootPath != null)
+		{
+			if (!string.Equals(_nativeRuntimeRootPath, fullRuntimeRootPath, StringComparison.OrdinalIgnoreCase))
+			{
+				throw new InvalidOperationException(
+					$"CEF native runtime was already prepared for '{_nativeRuntimeRootPath}', cannot switch to '{fullRuntimeRootPath}'.");
+			}
+
+			return;
+		}
+
+		CefRuntimeLayoutPreflight.EnsureComplete(fullRuntimeRootPath);
+		string libcefPath = Path.Combine(fullRuntimeRootPath, "libcef.dll");
+		EnsureNoConflictingLoadedLibcef(libcefPath);
+
+		if (OperatingSystem.IsWindows())
+		{
+			_dllDirectoryCookie = WindowsNativeMethods.AddDllDirectory(fullRuntimeRootPath);
+			if (_dllDirectoryCookie == IntPtr.Zero)
+			{
+				throw CreateWin32Exception($"Failed to add CEF runtime directory to DLL search path: {fullRuntimeRootPath}");
+			}
+
+			_libcefHandle = WindowsNativeMethods.LoadLibraryEx(
+				libcefPath,
+				IntPtr.Zero,
+				WindowsNativeMethods.LoadLibrarySearchDefaultDirs | WindowsNativeMethods.LoadLibrarySearchDllLoadDir);
+			if (_libcefHandle == IntPtr.Zero)
+			{
+				throw CreateWin32Exception($"Failed to load CEF native library from '{libcefPath}'.");
+			}
+		}
+		else
+		{
+			_libcefHandle = NativeLibrary.Load(libcefPath);
+		}
+
+		_nativeRuntimeRootPath = fullRuntimeRootPath;
+	}
+
+	private static void EnsureNoConflictingLoadedLibcef(string expectedLibcefPath)
+	{
+		IntPtr loadedModule = OperatingSystem.IsWindows()
+			? WindowsNativeMethods.GetModuleHandle("libcef.dll")
+			: IntPtr.Zero;
+		if (loadedModule == IntPtr.Zero)
+		{
+			return;
+		}
+
+		string loadedPath = ResolveLoadedModulePath(loadedModule);
+		if (!string.Equals(
+			Path.GetFullPath(loadedPath),
+			Path.GetFullPath(expectedLibcefPath),
+			StringComparison.OrdinalIgnoreCase))
+		{
+			throw new InvalidOperationException(
+				$"A different libcef.dll is already loaded in this process: '{loadedPath}'. Expected '{expectedLibcefPath}'.");
+		}
+
+		_libcefHandle = loadedModule;
+	}
+
+	private static string ResolveLoadedModulePath(IntPtr moduleHandle)
+	{
+		if (!OperatingSystem.IsWindows())
+		{
+			return string.Empty;
+		}
+
+		var buffer = new char[32768];
+		int length = WindowsNativeMethods.GetModuleFileName(moduleHandle, buffer, buffer.Length);
+		if (length == 0)
+		{
+			throw CreateWin32Exception("Failed to resolve loaded libcef.dll path.");
+		}
+
+		return new string(buffer, 0, length);
+	}
+
+	private static Exception CreateWin32Exception(string message)
+	{
+		return new Win32Exception(Marshal.GetLastWin32Error(), message);
 	}
 
 	private static void EnsureDefaultAssemblyResolution(string runtimeRootPath)
@@ -221,5 +315,23 @@ internal static class CefProcessRuntime
 		});
 
 		return settings;
+	}
+
+	private static class WindowsNativeMethods
+	{
+		public const uint LoadLibrarySearchDllLoadDir = 0x00000100;
+		public const uint LoadLibrarySearchDefaultDirs = 0x00001000;
+
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+		public static extern IntPtr AddDllDirectory(string newDirectory);
+
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+		public static extern IntPtr LoadLibraryEx(string lpLibFileName, IntPtr hFile, uint dwFlags);
+
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+		public static extern IntPtr GetModuleHandle(string lpModuleName);
+
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+		public static extern int GetModuleFileName(IntPtr hModule, [Out] char[] lpFilename, int nSize);
 	}
 }

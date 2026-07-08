@@ -80,6 +80,9 @@ public sealed class LauncherBrowserRuntimeProvider
     [JsonPropertyName("projectPath")]
     public string ProjectPath { get; set; } = string.Empty;
 
+    [JsonPropertyName("packageRootPath")]
+    public string PackageRootPath { get; set; } = string.Empty;
+
     [JsonPropertyName("assemblyPath")]
     public string AssemblyPath { get; set; } = string.Empty;
 }

@@ -25,19 +25,6 @@ public sealed class CefBrowserRuntimeHostTests
 	}
 
 	[Test]
-	public void InstallFromAssemblyLocation_ReturnsExistingCefRuntime()
-	{
-		var services = new Dictionary<string, object>();
-		var existing = new FakeBrowserRuntime(BrowserEngineKind.Cef);
-		services[BrowserRuntimeServiceNames.BrowserRuntime] = existing;
-
-		IBrowserRuntime installed = CefBrowserRuntimeHost.InstallFromAssemblyLocation(services);
-
-		Assert.That(installed, Is.SameAs(existing));
-		Assert.That(services[BrowserRuntimeServiceNames.HostLifecycle], Is.InstanceOf<IBrowserRuntimeHostLifecycle>());
-	}
-
-	[Test]
 	public void Install_RejectsNonBrowserRuntimeService()
 	{
 		var services = new Dictionary<string, object>
