@@ -142,6 +142,43 @@ public partial class ArrayFormatter : IMessagePackFormatter<Array>
         }
         return array;
     }
+
+    internal Array DeserializeForComponent(
+        ref MessagePackReader reader,
+        MessagePackSerializerOptions options,
+        ComponentType componentType)
+    {
+        Type serializedType = MessagePackSerializer.Deserialize<Type>(ref reader, options);
+        uint size = reader.ReadUInt32();
+        Type expectedType = componentType.Type;
+        if (!HasSameSerializedTypeContract(serializedType, expectedType))
+        {
+            throw new MessagePackSerializationException(
+                $"Serialized component array type '{GetSerializedTypeName(serializedType)}' does not match archetype component type '{GetSerializedTypeName(expectedType)}'.");
+        }
+
+        var array = Array.CreateInstance(expectedType, size);
+        for (var index = 0; index < size; index++)
+        {
+            object? obj = MessagePackSerializer.Deserialize(expectedType, ref reader, options);
+            array.SetValue(obj, index);
+        }
+
+        return array;
+    }
+
+    private static bool HasSameSerializedTypeContract(Type left, Type right)
+    {
+        return string.Equals(
+            GetSerializedTypeName(left),
+            GetSerializedTypeName(right),
+            StringComparison.Ordinal);
+    }
+
+    private static string GetSerializedTypeName(Type type)
+    {
+        return type.AssemblyQualifiedName ?? type.FullName ?? type.Name;
+    }
 }
 
 /// <summary>
@@ -485,11 +522,17 @@ public partial class ChunkFormatter : IMessagePackFormatter<Chunk>
         }
 
         // Persist arrays as an array...
+        var arrayFormatter = options.Resolver.GetFormatter<Array>() as ArrayFormatter;
+        if (arrayFormatter == null)
+        {
+            throw new MessagePackSerializationException("Arch.Persistence ArrayFormatter is required to deserialize chunk component arrays.");
+        }
+
         foreach(var type in Signature.Components)
         {
             // Read array of the type
-            var array = MessagePackSerializer.Deserialize<Array>(ref reader, options);
-            var chunkArray = chunk.GetArray(array.GetType().GetElementType()!);
+            var array = arrayFormatter.DeserializeForComponent(ref reader, options, type);
+            var chunkArray = chunk.GetArray(type);
             Array.Copy(array, chunkArray, (int)size);
         }
 

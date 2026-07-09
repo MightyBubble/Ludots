@@ -1,5 +1,6 @@
 using Arch.Core;
 using Arch.Persistence;
+using MessagePack.Formatters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,12 +9,30 @@ namespace Ludots.Core.Persistence
 {
     public sealed class LudotsBinaryWorldSerializer
     {
+        private readonly IMessagePackFormatter[] _additionalFormatters;
+
+        public LudotsBinaryWorldSerializer()
+            : this(Array.Empty<IMessagePackFormatter>())
+        {
+        }
+
+        internal LudotsBinaryWorldSerializer(params IMessagePackFormatter[] additionalFormatters)
+        {
+            if (additionalFormatters == null) throw new ArgumentNullException(nameof(additionalFormatters));
+            if (additionalFormatters.Any(formatter => formatter == null))
+            {
+                throw new ArgumentException("Additional persistence formatters cannot contain null entries.", nameof(additionalFormatters));
+            }
+
+            _additionalFormatters = additionalFormatters.ToArray();
+        }
+
         public byte[] Serialize(World world)
         {
             if (world == null) throw new ArgumentNullException(nameof(world));
 
             EnsureWorldComponentFormatters(world);
-            ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
+            ArchBinarySerializer serializer = CreateSerializer();
             using World filteredWorld = CloneIncludedWorld(world);
             EnsureWorldComponentFormatters(filteredWorld);
             return serializer.Serialize(filteredWorld);
@@ -23,7 +42,7 @@ namespace Ludots.Core.Persistence
         {
             if (bytes == null) throw new ArgumentNullException(nameof(bytes));
 
-            ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
+            ArchBinarySerializer serializer = CreateSerializer();
             World world = serializer.Deserialize(bytes);
             SaveEntityWorldIdNormalizer.Normalize(world);
             SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default);
@@ -34,7 +53,7 @@ namespace Ludots.Core.Persistence
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
 
-            ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
+            ArchBinarySerializer serializer = CreateSerializer();
             World filtered = serializer.Deserialize(serializer.Serialize(source));
             SaveEntityWorldIdNormalizer.Normalize(filtered);
 
@@ -58,6 +77,19 @@ namespace Ludots.Core.Persistence
 
             SaveEntityReferenceValidator.Validate(filtered, policy);
             return filtered;
+        }
+
+        private ArchBinarySerializer CreateSerializer()
+        {
+            if (_additionalFormatters.Length == 0)
+            {
+                return LudotsCorePersistenceFormatters.CreateBinarySerializer();
+            }
+
+            return new ArchBinarySerializer(
+                LudotsCorePersistenceFormatters.CreateFormatters()
+                    .Concat(_additionalFormatters)
+                    .ToArray());
         }
 
         public static void EnsureWorldComponentFormatters(World world)

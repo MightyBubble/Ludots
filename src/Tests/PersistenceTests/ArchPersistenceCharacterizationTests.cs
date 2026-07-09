@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Persistence;
+using MessagePack;
 using NUnit.Framework;
 using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 
@@ -316,6 +317,58 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void ArchBinarySerializerReadsComponentArrayPayloadsThroughSignatureComponentContract()
+    {
+        var loadContext = new CrossLoadContextTypeTestHarness.DuplicateAssemblyLoadContext();
+        try
+        {
+            Type duplicateNameType = CrossLoadContextTypeTestHarness.LoadDuplicateType(loadContext, typeof(Name));
+            Assert.That(duplicateNameType, Is.Not.SameAs(typeof(Name)));
+            using World world = World.Create();
+            world.Create(new Name { Value = "cross-alc-name" });
+            var typeFormatter = new CrossLoadContextTypeTestHarness.SubstitutingTypeFormatter(
+                typeof(Name),
+                duplicateNameType);
+            var serializer = new ArchBinarySerializer(
+                new NameFormatter(),
+                typeFormatter);
+
+            byte[] bytes = serializer.Serialize(world);
+            using World restored = serializer.Deserialize(bytes);
+            Entity restoredEntity = FindSingle<Name>(restored);
+
+            Assert.That(restored.Get<Name>(restoredEntity).Value, Is.EqualTo("cross-alc-name"));
+            Assert.That(typeFormatter.SubstitutionHitCount, Is.GreaterThan(0));
+        }
+        finally
+        {
+            loadContext.Unload();
+        }
+    }
+
+    [Test]
+    public void ArchBinarySerializerRejectsComponentArrayPayloadWhenSerializedTypeContractDiffersFromSignature()
+    {
+        using World world = World.Create();
+        world.Create(new Name { Value = "wrong-contract" });
+        var typeFormatter = new CrossLoadContextTypeTestHarness.SubstitutingTypeFormatter(
+            typeof(Name),
+            typeof(WorldPositionCm));
+        var serializer = new ArchBinarySerializer(
+            new NameFormatter(),
+            typeFormatter);
+
+        byte[] bytes = serializer.Serialize(world);
+        var error = Assert.Throws<MessagePackSerializationException>(() => serializer.Deserialize(bytes));
+
+        string diagnostic = FlattenExceptionMessages(error!);
+        Assert.That(diagnostic, Does.Contain("does not match archetype component type"));
+        Assert.That(diagnostic, Does.Contain(nameof(Name)));
+        Assert.That(diagnostic, Does.Contain(nameof(WorldPositionCm)));
+        Assert.That(typeFormatter.SubstitutionHitCount, Is.GreaterThan(0));
+    }
+
+    [Test]
     public void CoreBinarySerializerRejectsRelationshipsPointingAtExcludedEntities()
     {
         using World world = World.Create();
@@ -445,6 +498,17 @@ public sealed class ArchPersistenceCharacterizationTests
         return result;
     }
 
+    private static string FlattenExceptionMessages(Exception exception)
+    {
+        var messages = new List<string>();
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            messages.Add(current.Message);
+        }
+
+        return string.Join(" | ", messages);
+    }
+
     private static Entity FindByName(World world, string name)
     {
         var query = new QueryDescription().WithAll<Name>();
@@ -527,4 +591,5 @@ public sealed class ArchPersistenceCharacterizationTests
 
         public UnsupportedManagedPayload Payload { get; }
     }
+
 }

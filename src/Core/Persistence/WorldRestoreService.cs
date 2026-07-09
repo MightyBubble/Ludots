@@ -33,13 +33,31 @@ namespace Ludots.Core.Persistence
             }
             catch (Exception ex) when (ex is not SaveContextException)
             {
-                throw new SaveContextException($"Save world.bin is invalid: {ex.Message}");
+                throw new SaveContextException(
+                    $"Save world.bin is invalid: {GetDiagnosticMessage(ex)}",
+                    ex);
             }
 
             using (restoredWorld)
             {
                 engine.RestoreWorldSnapshot(restoredWorld, snapshot.Domains);
             }
+        }
+
+        private static string GetDiagnosticMessage(Exception exception)
+        {
+            Exception root = exception;
+            while (root.InnerException != null)
+            {
+                root = root.InnerException;
+            }
+
+            if (!string.Equals(root.Message, exception.Message, StringComparison.Ordinal))
+            {
+                return $"{exception.Message}: {root.Message}";
+            }
+
+            return exception.Message;
         }
     }
 }
