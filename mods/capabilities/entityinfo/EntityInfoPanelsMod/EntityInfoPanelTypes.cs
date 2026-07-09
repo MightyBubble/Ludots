@@ -40,7 +40,6 @@ public enum EntityInfoPanelTargetKind : byte
 {
     FixedEntity = 0,
     GlobalEntityKey = 1,
-    CurrentSelectionView = 2,
     EntityCollection = 3,
 }
 
@@ -94,9 +93,6 @@ public readonly record struct EntityInfoPanelTarget(
 
     public static EntityInfoPanelTarget Global(string key) =>
         new(EntityInfoPanelTargetKind.GlobalEntityKey, Entity.Null, key ?? string.Empty);
-
-    public static EntityInfoPanelTarget CurrentSelectionView() =>
-        new(EntityInfoPanelTargetKind.CurrentSelectionView, Entity.Null, string.Empty);
 
     public static EntityInfoPanelTarget EntityCollection(Entity owner, string collectionKey) =>
         new(EntityInfoPanelTargetKind.EntityCollection, owner, collectionKey ?? string.Empty);

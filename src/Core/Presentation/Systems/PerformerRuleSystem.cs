@@ -197,7 +197,7 @@ namespace Ludots.Core.Presentation.Systems
 
             // Graph path
             if (cond.GraphProgramId > 0)
-                return EvaluateGraph(cond.GraphProgramId, evt.Source, evt.Target);
+                return EvaluateGraph(cond.GraphProgramId, in evt);
 
             // Default: always true
             return true;
@@ -317,7 +317,7 @@ namespace Ludots.Core.Presentation.Systems
         /// Execute a Graph program and read B[0] as the boolean result.
         /// Same register setup pattern as EffectPhaseExecutor.ExecuteGraph().
         /// </summary>
-        private bool EvaluateGraph(int graphProgramId, Entity source, Entity target)
+        private bool EvaluateGraph(int graphProgramId, in PresentationEvent evt)
         {
             if (!_programs.TryGetProgram(graphProgramId, out var program))
             {
@@ -329,21 +329,45 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
             }
 
+            ExecuteEventGraph(program, in evt);
+
+            // Convention: B[0] holds the boolean condition result
+            return _boolRegs[0] != 0;
+        }
+
+        /// <summary>
+        /// Executes a graph program with the event evaluation context (RFC-0065 PROV-4b):
+        /// E[0]=Source, E[1]=Target, E[2]=Viewer, plus the event payload slots
+        /// readable through LoadEventPayloadInt/Float ops.
+        /// </summary>
+        private void ExecuteEventGraph(ReadOnlySpan<GraphInstruction> program, in PresentationEvent evt)
+        {
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);
             Array.Clear(_boolRegs, 0, _boolRegs.Length);
             Array.Clear(_entityRegs, 0, _entityRegs.Length);
 
-            _entityRegs[0] = source;
-            _entityRegs[1] = target;
+            _entityRegs[0] = evt.Source;
+            _entityRegs[1] = evt.Target;
+            _entityRegs[2] = evt.Viewer;
 
             var targetList = new GraphTargetList(_targets);
 
             var state = new GraphExecutionState
             {
                 World = World,
-                Caster = source,
-                ExplicitTarget = target,
+                Caster = evt.Source,
+                ExplicitTarget = evt.Target,
+                Viewer = evt.Viewer,
+                EventPayload = new GraphEventPayload
+                {
+                    PayloadA = evt.PayloadA,
+                    PayloadB = evt.PayloadB,
+                    FloatA = evt.FloatA,
+                    FloatB = evt.FloatB,
+                    FloatC = evt.FloatC,
+                    FloatD = evt.FloatD,
+                },
                 TargetPos = IntVector2.Zero,
                 Api = _graphApi,
                 F = _floatRegs,
@@ -355,9 +379,6 @@ namespace Ludots.Core.Presentation.Systems
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
-
-            // Convention: B[0] holds the boolean condition result
-            return _boolRegs[0] != 0;
         }
 
         // ── Command Emission ──
@@ -474,7 +495,7 @@ namespace Ludots.Core.Presentation.Systems
                 ? normalizedParent
                 : ResolveImplicitParent(in evt);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
-                ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
+                ? EvaluateGraphFloat(cmd.ParamGraphProgramId, in evt)
                 : ResolveParamFloatValue(in cmd, in evt);
             emitted.IntValue = ResolveParamIntValue(in cmd, in evt);
             emitted.VectorValue = ResolveParamVectorValue(in cmd, in evt);
@@ -522,7 +543,7 @@ namespace Ludots.Core.Presentation.Systems
                 return NormalizeOptionalEntity(evt.PerformerEntity);
             }
 
-            if (evt.Kind is PresentationEventKind.SelectionMemberAdded or PresentationEventKind.SelectionMemberRemoved &&
+            if (evt.Kind is PresentationEventKind.EntityCollectionMemberAdded or PresentationEventKind.EntityCollectionMemberRemoved &&
                 World.IsAlive(evt.Source) &&
                 World.Has<PresentationOwnerHasPerformerPayload>(evt.Source))
             {
@@ -536,8 +557,8 @@ namespace Ludots.Core.Presentation.Systems
         private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)
         {
             return kind is PresentationEventKind.TagEffectiveChanged
-                or PresentationEventKind.SelectionMemberAdded
-                or PresentationEventKind.SelectionMemberRemoved
+                or PresentationEventKind.EntityCollectionMemberAdded
+                or PresentationEventKind.EntityCollectionMemberRemoved
                 or PresentationEventKind.GlobalDayNight
                 or PresentationEventKind.GlobalRegionChanged
                 or PresentationEventKind.GlobalWeather
@@ -667,7 +688,7 @@ namespace Ludots.Core.Presentation.Systems
         /// <summary>
         /// Execute a Graph program and read F[0] as a float result (for dynamic param values).
         /// </summary>
-        private float EvaluateGraphFloat(int graphProgramId, Entity source, Entity target)
+        private float EvaluateGraphFloat(int graphProgramId, in PresentationEvent evt)
         {
             if (!_programs.TryGetProgram(graphProgramId, out var program))
             {
@@ -679,32 +700,7 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
             }
 
-            Array.Clear(_floatRegs, 0, _floatRegs.Length);
-            Array.Clear(_intRegs, 0, _intRegs.Length);
-            Array.Clear(_boolRegs, 0, _boolRegs.Length);
-            Array.Clear(_entityRegs, 0, _entityRegs.Length);
-
-            _entityRegs[0] = source;
-            _entityRegs[1] = target;
-
-            var targetList = new GraphTargetList(_targets);
-
-            var state = new GraphExecutionState
-            {
-                World = World,
-                Caster = source,
-                ExplicitTarget = target,
-                TargetPos = IntVector2.Zero,
-                Api = _graphApi,
-                F = _floatRegs,
-                I = _intRegs,
-                B = _boolRegs,
-                E = _entityRegs,
-                Targets = _targets,
-                TargetList = targetList,
-            };
-
-            GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+            ExecuteEventGraph(program, in evt);
 
             // Convention: F[0] holds the float result
             return _floatRegs[0];

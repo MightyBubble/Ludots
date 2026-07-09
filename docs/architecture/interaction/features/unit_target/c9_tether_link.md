@@ -13,7 +13,7 @@ InputOrderMapping:
   actionId: "SkillG"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
   argsTemplate: { i0: 8 }  // ability slot
 ```

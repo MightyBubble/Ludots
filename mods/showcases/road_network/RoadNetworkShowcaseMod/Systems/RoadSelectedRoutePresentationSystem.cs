@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 
 namespace RoadNetworkShowcaseMod.Systems
@@ -14,7 +16,6 @@ namespace RoadNetworkShowcaseMod.Systems
     {
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
-        private readonly SelectionRuntime _selection;
         private readonly RoadRoutePreviewSplineBuilder _builder;
         private readonly RoadRouteProfileCatalog _profiles;
         private readonly PresentationWorldFactPublisher _facts;
@@ -22,11 +23,10 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly List<RoadRoutePreviewFactScope> _previousScopes = new();
         private readonly HashSet<RoadRoutePreviewFactScope> _currentScopeSet = new();
 
-        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection, MovePlanStore plans)
+        public RoadSelectedRoutePresentationSystem(World world, Dictionary<string, object> globals, MovePlanStore plans)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
-            _selection = selection ?? throw new ArgumentNullException(nameof(selection));
             _builder = new RoadRoutePreviewSplineBuilder(plans ?? throw new ArgumentNullException(nameof(plans)));
             _profiles = new RoadRouteProfileCatalog(world);
             if (!PresentationWorldFactPublisher.TryCreate(globals, out _facts))
@@ -47,7 +47,7 @@ namespace RoadNetworkShowcaseMod.Systems
         {
             _currentScopes.Clear();
             _currentScopeSet.Clear();
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _globals);
+            Entity[] selected = SnapshotCommandSource();
             int count = selected.Length;
             if (count <= 0)
             {
@@ -121,6 +121,23 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             _facts.PublishWorldSplineEnded(scope.Key, Entity.Null, scope.Scope);
+        }
+
+        private Entity[] SnapshotCommandSource()
+        {
+            return TryResolveLocalCommandSourceOwner(out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(_globals, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                   localObj is Entity local &&
+                   local != Entity.Null &&
+                   _world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
         }
     }
 }

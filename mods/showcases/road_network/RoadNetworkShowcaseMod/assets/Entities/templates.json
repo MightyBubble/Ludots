@@ -4,8 +4,8 @@
     "components": {
       "Name": { "Value": "Blue Column" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "WorldPositionCm": { "Value": { "X": -9000, "Y": 0 } },
@@ -43,8 +43,8 @@
     "components": {
       "Name": { "Value": "Red Column" },
       "Team": { "Id": 2 },
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": {
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
         "IsEnabled": true
       },
       "WorldPositionCm": { "Value": { "X": 9000, "Y": 0 } },

@@ -4,7 +4,8 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -38,7 +39,7 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
     {
         _elapsedSeconds += MathF.Max(0f, dt);
         if (!IsRedAlertMapActive() ||
-            !SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected) ||
+            !TryResolveCommandSourcePrimary(out Entity selected) ||
             !_engine.World.IsAlive(selected) ||
             !TryResolveWorldPosition(selected, out Vector3 center))
         {
@@ -58,6 +59,31 @@ internal sealed class RtsRedAlertSelectionFeedbackPresentationSystem : ISystem<f
             BorderColor = new Vector4(accent.X, accent.Y, accent.Z, 0.78f),
             BorderWidth = 0.055f
         });
+    }
+
+    private bool TryResolveCommandSourcePrimary(out Entity entity)
+    {
+        entity = Entity.Null;
+        return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   _engine.World,
+                   _engine.GlobalContext,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out entity);
+    }
+
+    private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !_engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     public void AfterUpdate(in float dt)

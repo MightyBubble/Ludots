@@ -625,7 +625,12 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         engine.GameSession.Camera.ActivateVirtualCamera(
             cameraConfig.VirtualCameraId,
             blendDurationSeconds: 0f,
-            followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+            followTarget: CameraFollowTargetFactory.Build(
+                engine.World,
+                engine.GlobalContext,
+                definition.FollowTargetKind,
+                Entity.Null,
+                definition.FollowCollectionKey),
             snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
             resetRuntimeState: true);
         engine.GameSession.Camera.ApplyPose(new CameraPoseRequest

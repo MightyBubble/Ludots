@@ -1,0 +1,53 @@
+[
+  {
+    "id": "interaction_arcweaver",
+    "components": {
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Showcase.CommandPanel.Fireball",
+          "Ability.Showcase.CommandPanel.BlinkStep",
+          "Ability.Showcase.CommandPanel.ArcShield",
+          "Ability.Interaction.Arcweaver.NovaPulse",
+          "Ability.Interaction.Arcweaver.ArcDash",
+          "Ability.Interaction.Arcweaver.GuardToggle",
+          "Ability.Interaction.Arcweaver.ActionContext",
+          "Ability.Interaction.Arcweaver.RuneBurst"
+        ]
+      }
+    }
+  },
+  {
+    "id": "interaction_vanguard",
+    "components": {
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Showcase.CommandPanel.Fireball",
+          "Ability.Showcase.CommandPanel.Leap",
+          "Ability.Showcase.CommandPanel.Guard",
+          "Ability.Interaction.Vanguard.Shockwave",
+          "Ability.Interaction.Vanguard.ChargeDash",
+          "Ability.Interaction.Vanguard.IronWall",
+          "Ability.Interaction.Vanguard.ActionContext",
+          "Ability.Interaction.Vanguard.GroundSlam"
+        ]
+      }
+    }
+  },
+  {
+    "id": "interaction_commander",
+    "components": {
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Showcase.CommandPanel.StoneThrow",
+          "Ability.Showcase.CommandPanel.BlinkStep",
+          "Ability.Showcase.CommandPanel.Guard",
+          "Ability.Interaction.Commander.Overclock",
+          "Ability.Interaction.Commander.ThrustJump",
+          "Ability.Interaction.Commander.ShieldNet",
+          "Ability.Interaction.Commander.ActionContext",
+          "Ability.Interaction.Commander.OrbitalStrike"
+        ]
+      }
+    }
+  }
+]

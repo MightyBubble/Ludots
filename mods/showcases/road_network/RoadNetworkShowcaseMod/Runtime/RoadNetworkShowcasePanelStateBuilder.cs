@@ -6,9 +6,10 @@ using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.MovePlanning;
@@ -36,24 +37,24 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         public RoadNetworkShowcasePanelState Build()
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _engine.GlobalContext);
-            int selectedCount = selected.Length;
+            Entity[] commandActors = SnapshotCommandSource();
+            int commandActorCount = commandActors.Length;
             Entity primary = Entity.Null;
-            SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out primary);
+            TryGetCommandSourcePrimary(out primary);
 
-            var actors = new RoadNetworkShowcaseActorPanelState[selectedCount];
-            for (int i = 0; i < selectedCount; i++)
+            var actors = new RoadNetworkShowcaseActorPanelState[commandActorCount];
+            for (int i = 0; i < commandActorCount; i++)
             {
-                actors[i] = BuildActorState(selected[i], selected[i] == primary);
+                actors[i] = BuildActorState(commandActors[i], commandActors[i] == primary);
             }
 
             return new RoadNetworkShowcasePanelState(
                 Title: "Road Network Showcase",
                 Status: _runtime.LastSubmitStatus,
-                Selection: BuildSelectionSummary(selected, primary),
+                CommandSource: BuildCommandSourceSummary(commandActors, primary),
                 Input: BuildInputSummary(),
                 Chunks: $"Chunks {_runtime.LoadedChunkCount} | Nodes {_runtime.LoadedNodeCount}",
-                Hint: "Legend: Query=selection/order, Plan=active order plus nav plan, Pick=selected nav waypoint, Move=intent sink to nav, Check=arrival and timeout state.",
+                Hint: "Legend: Query=command source/order, Plan=active order plus nav plan, Pick=route waypoint, Move=intent sink to nav, Check=arrival and timeout state.",
                 Actors: actors);
         }
 
@@ -81,7 +82,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             string queue = BuildQueueLine(in buffer, hasRoadActiveOrder ? activeOrder : default, hasRoadActiveOrder, roadMoveFollowOrderTypeId);
             string query = $"Query  world={world} planner={planner.Label} execution={execution.Label}";
             string plan = BuildPlanLine(hasRoadActiveOrder, in activeOrder, in orderRuntime, in planRuntime);
-            string select = BuildSelectionLine(actor, hasRoadActiveOrder, in activeOrder, in planRuntime, execution);
+            string pick = BuildRoutePickLine(actor, hasRoadActiveOrder, in activeOrder, in planRuntime, execution);
             string execute = BuildExecutionLine(actor, in intent);
             string check = BuildCheckLine(actor, hasRoadActiveOrder, in activeOrder, in orderRuntime, in planRuntime, execution);
             string path = BuildPathLine(actor, hasRoadActiveOrder, in activeOrder, in planRuntime);
@@ -91,38 +92,70 @@ namespace RoadNetworkShowcaseMod.Runtime
                 Queue: queue,
                 Query: query,
                 Plan: plan,
-                Select: select,
+                Pick: pick,
                 Execute: execute,
                 Check: check,
                 Path: path);
         }
 
-        private string BuildSelectionSummary(Entity[] selected, Entity primary)
+        private string BuildCommandSourceSummary(Entity[] commandActors, Entity primary)
         {
-            int selectedCount = selected.Length;
+            int commandActorCount = commandActors.Length;
             Entity owner = ResolveLocalOwner();
             string ownerName = owner != Entity.Null && _world.IsAlive(owner) ? DescribeActorName(owner) : "<none>";
             string primaryName = primary != Entity.Null && _world.IsAlive(primary) ? DescribeActorName(primary) : "<none>";
-            if (selectedCount <= 0)
+            if (commandActorCount <= 0)
             {
-                return $"Selection 0 | Primary {primaryName} | Owner {ownerName}";
+                return $"Command source 0 | Primary {primaryName} | Owner {ownerName}";
             }
 
             var summary = new StringBuilder();
-            summary.Append("Selection ").Append(selectedCount);
+            summary.Append("Command source ").Append(commandActorCount);
             summary.Append(" | Primary ").Append(primaryName);
-            summary.Append(" | Selected ");
-            for (int i = 0; i < selectedCount; i++)
+            summary.Append(" | Actors ");
+            for (int i = 0; i < commandActorCount; i++)
             {
                 if (i > 0)
                 {
                     summary.Append(", ");
                 }
 
-                summary.Append(DescribeActorName(selected[i]));
+                summary.Append(DescribeActorName(commandActors[i]));
             }
 
             return summary.ToString();
+        }
+
+        private Entity[] SnapshotCommandSource()
+        {
+            return TryResolveLocalCommandSourceOwner(out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
+        }
+
+        private bool TryGetCommandSourcePrimary(out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       _world,
+                       _engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out entity);
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !_world.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private string BuildInputSummary()
@@ -163,7 +196,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             return $"Plan  lifecycle={orderRuntime.LifecycleState} failure={orderRuntime.FailureReason} order={DescribeOrder(in activeOrder, activeOrder.OrderTypeId)} planGen={planRuntime.PlanGeneration} points={planRuntime.PointCount} final={finalGoal}";
         }
 
-        private string BuildSelectionLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in MovePlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
+        private string BuildRoutePickLine(Entity actor, bool hasRoadActiveOrder, in Order activeOrder, in MovePlanRuntime planRuntime, in RoadRouteExecutionProfile execution)
         {
             if (!hasRoadActiveOrder)
             {

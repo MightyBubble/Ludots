@@ -84,14 +84,14 @@ public sealed class MassNavigationConfig
         bool autoSpawnConfiguredScenario = RequireBooleanProperty(scenarioRuntime, "autoSpawnConfiguredScenario");
         RequireProperties(
             scenarioRuntime,
-            "initialSelectionScratchCapacity",
-            "initialSelectedEntityCapacity",
+            "initialCommandActorScratchCapacity",
+            "initialCommandActorSnapshotCapacity",
             "runtimeCapacity");
         RequireProperties(
             RequireProperty(scenarioRuntime, "runtimeCapacity"),
             "navigationGroupCapacity",
             "groupMembershipAgentCapacity",
-            "selectionMemberScratchCapacity",
+            "commandActorScratchCapacity",
             "groupMemberCapacity",
             "orderIngestionTokenCapacity",
             "orderIngestionMemberCapacity",
@@ -145,7 +145,7 @@ public sealed class MassNavigationConfig
         RequireProperties(
             scenario,
             "agentsPerTeam",
-            "initialSelectedTeamId",
+            "initialActiveTeamId",
             "teams");
         if (autoSpawnConfiguredScenario)
         {
@@ -438,20 +438,20 @@ public sealed class MassNavigationConfig
 public sealed class MassNavigationScenarioRuntimeConfig
 {
     public bool AutoSpawnConfiguredScenario { get; set; }
-    public int InitialSelectionScratchCapacity { get; set; }
-    public int InitialSelectedEntityCapacity { get; set; }
+    public int InitialCommandActorScratchCapacity { get; set; }
+    public int InitialCommandActorSnapshotCapacity { get; set; }
     public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
 
     public void Validate()
     {
-        if (InitialSelectionScratchCapacity <= 0)
+        if (InitialCommandActorScratchCapacity <= 0)
         {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialSelectionScratchCapacity must be > 0.");
+            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorScratchCapacity must be > 0.");
         }
 
-        if (InitialSelectedEntityCapacity <= 0)
+        if (InitialCommandActorSnapshotCapacity <= 0)
         {
-            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialSelectedEntityCapacity must be > 0.");
+            throw new InvalidOperationException("MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity must be > 0.");
         }
 
         if (RuntimeCapacity == null)
@@ -467,7 +467,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
 {
     public int NavigationGroupCapacity { get; set; }
     public int GroupMembershipAgentCapacity { get; set; }
-    public int SelectionMemberScratchCapacity { get; set; }
+    public int CommandActorScratchCapacity { get; set; }
     public int GroupMemberCapacity { get; set; }
     public int OrderIngestionTokenCapacity { get; set; }
     public int OrderIngestionMemberCapacity { get; set; }
@@ -483,23 +483,23 @@ public sealed class MassNavigationRuntimeCapacityConfig
 
         RequirePositive(NavigationGroupCapacity, "navigationGroupCapacity");
         RequirePositive(GroupMembershipAgentCapacity, "groupMembershipAgentCapacity");
-        RequirePositive(SelectionMemberScratchCapacity, "selectionMemberScratchCapacity");
+        RequirePositive(CommandActorScratchCapacity, "commandActorScratchCapacity");
         RequirePositive(GroupMemberCapacity, "groupMemberCapacity");
         RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
         RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
 
-        if (SelectionMemberScratchCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        if (CommandActorScratchCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+                "MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
         }
 
-        if (GroupMemberCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        if (GroupMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+                "MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
         }
 
         if (OrderIngestionTokenCapacity < NavigationGroupCapacity)
@@ -508,10 +508,10 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
         }
 
-        if (OrderIngestionMemberCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        if (OrderIngestionMemberCapacity < scenarioRuntime.InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+                "MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity must be >= scenarioRuntime.initialCommandActorSnapshotCapacity.");
         }
     }
 
@@ -529,10 +529,10 @@ public sealed class MassNavigationRuntimeCapacityConfig
                 $"MassNavigation scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
-        if (authoredAgentCount > SelectionMemberScratchCapacity)
+        if (authoredAgentCount > CommandActorScratchCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity {SelectionMemberScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {CommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         if (authoredAgentCount > GroupMemberCapacity)
@@ -1119,7 +1119,7 @@ public sealed class MassNavigationHotZoneConfig
 public sealed class MassNavigationScenarioConfig
 {
     public int AgentsPerTeam { get; set; }
-    public int InitialSelectedTeamId { get; set; }
+    public int InitialActiveTeamId { get; set; }
     public MassNavigationScenarioTeamConfig[] Teams { get; set; } = Array.Empty<MassNavigationScenarioTeamConfig>();
     public MassNavigationScenarioSpawnLayoutConfig SpawnLayout { get; set; } = new();
 
@@ -1160,23 +1160,23 @@ public sealed class MassNavigationScenarioConfig
             }
         }
 
-        if (!seenIds.Contains(InitialSelectedTeamId))
+        if (!seenIds.Contains(InitialActiveTeamId))
         {
             throw new InvalidOperationException(
-                $"MassNavigation config InitialSelectedTeamId {InitialSelectedTeamId} is not present in Scenario.Teams.");
+                $"MassNavigation config InitialActiveTeamId {InitialActiveTeamId} is not present in Scenario.Teams.");
         }
 
         long authoredAgentCount = (long)Teams.Length * AgentsPerTeam;
-        if (authoredAgentCount > scenarioRuntime.InitialSelectionScratchCapacity)
+        if (authoredAgentCount > scenarioRuntime.InitialCommandActorScratchCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialSelectionScratchCapacity {scenarioRuntime.InitialSelectionScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation scenarioRuntime.initialCommandActorScratchCapacity {scenarioRuntime.InitialCommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
-        if (authoredAgentCount > scenarioRuntime.InitialSelectedEntityCapacity)
+        if (authoredAgentCount > scenarioRuntime.InitialCommandActorSnapshotCapacity)
         {
             throw new InvalidOperationException(
-                $"MassNavigation scenarioRuntime.initialSelectedEntityCapacity {scenarioRuntime.InitialSelectedEntityCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+                $"MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity {scenarioRuntime.InitialCommandActorSnapshotCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);

@@ -2,12 +2,13 @@ using System.Text.Json;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Orders;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -86,7 +87,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     {
         string mapId = _engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty;
         string flavor = ResolveFlavor(mapId);
-        Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_engine.World, _engine.GlobalContext);
+        Entity[] selected = SnapshotCommandSource();
         Entity primary = selected.Length > 0 ? selected[0] : Entity.Null;
 
         var entities = BuildEntities(selected);
@@ -437,23 +438,24 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return WebUiCommandResult.Fail("entity_not_found", $"Entity '{key}' is not alive.");
         }
 
-        var selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
+        EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
         Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-        if (selection == null || !_engine.World.IsAlive(owner))
+        if (collections == null || !_engine.World.IsAlive(owner))
         {
-            return WebUiCommandResult.Fail("selection_runtime_missing", "SelectionRuntime or LocalPlayerEntity is missing.");
+            return WebUiCommandResult.Fail("command_source_missing", "EntityCollectionStore or LocalPlayerEntity is missing.");
         }
 
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next))
-        {
-            return WebUiCommandResult.Fail("selection_failed", "SelectionRuntime rejected the replacement selection.");
-        }
-
-        selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            target,
+            "Browser RTS command source",
+            "Selected through the browser data plane.");
+        collections.Replace(owner, descriptor, next, owner);
         return WebUiCommandResult.Ok();
     }
 
@@ -618,23 +620,24 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private bool TrySelectCommandTarget(Entity target)
     {
-        var selection = _engine.GetService(CoreServiceKeys.SelectionRuntime);
+        EntityCollectionStore? collections = _engine.GetService(CoreServiceKeys.EntityCollectionStore);
         Entity owner = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-        if (selection == null || !_engine.World.IsAlive(owner) || !_engine.World.IsAlive(target))
+        if (collections == null || !_engine.World.IsAlive(owner) || !_engine.World.IsAlive(target))
         {
             return false;
         }
 
         Span<Entity> next = stackalloc Entity[1];
         next[0] = target;
-        if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next))
-        {
-            return false;
-        }
-
-        selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-        _engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        var descriptor = EntityCollectionDescriptor.Create(
+            EntityCollectionKeys.CommandSource,
+            EntityCollectionSourceKind.Explicit,
+            EntityCollectionRoleKind.CommandSource,
+            owner,
+            target,
+            "Browser RTS command source",
+            "Selected through the browser data plane.");
+        collections.Replace(owner, descriptor, next, owner);
         return true;
     }
 
@@ -659,9 +662,41 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return target;
         }
 
-        return SelectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected)
-            ? selected
+        return TryGetCommandSourcePrimary(out Entity commandSourcePrimary)
+            ? commandSourcePrimary
             : Entity.Null;
+    }
+
+    private Entity[] SnapshotCommandSource()
+    {
+        return TryResolveLocalCommandSourceOwner(out Entity owner)
+            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+            : Array.Empty<Entity>();
+    }
+
+    private bool TryGetCommandSourcePrimary(out Entity entity)
+    {
+        entity = Entity.Null;
+        return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   _engine.World,
+                   _engine.GlobalContext,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out entity);
+    }
+
+    private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !_engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private bool TryResolveEntityKey(string key, out Entity entity)

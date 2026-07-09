@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "SkillR"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 AbilityExecSpec:
@@ -34,7 +34,7 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | AbilityExecSpec | ✅ 已有 | EffectSignal item |
 | Search preset | ✅ 已有 | 支持超大半径查询 |
 | Phase Graph | ✅ 已有 | QueryRadius + QueryFilter + FanOut |

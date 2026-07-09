@@ -32,10 +32,6 @@ namespace Ludots.Core.Presentation.Events
         // Attribute domain events
         AttributeValueChanged = 40,
 
-        // Selection domain events
-        SelectionMemberAdded = 50,
-        SelectionMemberRemoved = 51,
-
         // Ability aim presentation events
         AbilityAimUpdated = 60,
         AbilityAimEnded = 61,

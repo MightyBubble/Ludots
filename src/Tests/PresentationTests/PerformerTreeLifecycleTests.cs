@@ -3,8 +3,8 @@ using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
@@ -302,18 +302,12 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void SelectionMemberRemoved_DestroysScopedMarker_WithoutDestroyingRoot()
+        public void EntityCollectionMemberRemoved_DestroysScopedMarker_WithoutDestroyingRoot()
         {
             using var fixture = PerformerTreeFixture.Create();
-            var selectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var selection = new SelectionRuntime(
-                fixture.World,
-                new SelectionRuntimeConfig
-                {
-                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
-                },
-                selectionKeys);
-            int livePrimaryKeyId = selectionKeys.GetId(SelectionSetKeys.LivePrimary);
+            var collectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var collections = new EntityCollectionStore(collectionKeys);
+            int commandSourceKeyId = collectionKeys.Register(EntityCollectionKeys.CommandSource);
             const int sourceStableId = 9001;
 
             int markerId = fixture.Definitions.Register("selection_marker", new PerformerDefinition());
@@ -325,8 +319,8 @@ namespace Ludots.Tests.Presentation
                     {
                         Event = new EventFilter
                         {
-                            Kind = PresentationEventKind.SelectionMemberAdded,
-                            KeyId = livePrimaryKeyId,
+                            Kind = PresentationEventKind.EntityCollectionMemberAdded,
+                            KeyId = commandSourceKeyId,
                         },
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
@@ -340,8 +334,8 @@ namespace Ludots.Tests.Presentation
                     {
                         Event = new EventFilter
                         {
-                            Kind = PresentationEventKind.SelectionMemberRemoved,
-                            KeyId = livePrimaryKeyId,
+                            Kind = PresentationEventKind.EntityCollectionMemberRemoved,
+                            KeyId = commandSourceKeyId,
                         },
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
@@ -359,10 +353,10 @@ namespace Ludots.Tests.Presentation
             fixture.Events.Clear();
 
             Entity player = fixture.World.Create();
-            using var selectionEvents = new SelectionPresentationEventSystem(fixture.World, selection, fixture.Events);
-            Assert.That(selection.ReplaceSelection(player, SelectionSetKeys.LivePrimary, new[] { fixture.Owner }), Is.True);
+            using var collectionEvents = new EntityCollectionPresentationEventSystem(fixture.World, collections, fixture.Events);
+            ReplaceCommandSource(collections, player, fixture.Owner);
 
-            selectionEvents.Update(0.016f);
+            collectionEvents.Update(0.016f);
             fixture.TickRuleThenRuntime();
 
             Assert.That(
@@ -379,8 +373,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(fixture.World.IsAlive(rootEntity), Is.True);
 
             fixture.Events.Clear();
-            Assert.That(selection.ClearSelection(player, SelectionSetKeys.LivePrimary), Is.True);
-            selectionEvents.Update(0.016f);
+            Assert.That(collections.Remove(player, EntityCollectionKeys.CommandSource), Is.True);
+            collectionEvents.Update(0.016f);
             fixture.TickRuleThenRuntime();
 
             Assert.That(fixture.World.IsAlive(markerEntity), Is.False);
@@ -396,6 +390,19 @@ namespace Ludots.Tests.Presentation
                 Is.False);
             Assert.That(fixture.Instances.GetActiveByOwnerDefinition(rootId, fixture.Owner).Count, Is.EqualTo(1));
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(1));
+        }
+
+        private static void ReplaceCommandSource(EntityCollectionStore collections, Entity owner, Entity member)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                member,
+                "Command source",
+                "1 entity");
+            collections.Replace(owner, descriptor, new[] { member }, owner);
         }
 
         [Test]

@@ -14,7 +14,7 @@ using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
@@ -30,7 +30,7 @@ namespace NarrativeShowcaseMod.Runtime
     {
         private const int ShowcaseLocalPlayerId = 1;
         private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription().WithAll<Name, PlayerOwner, MapEntity, AbilityStateBuffer>();
-        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<CommandSourceSelectableTag, MapEntity>();
 
         private readonly IModContext _context;
         private readonly NarrativeShowcaseFrontendConfig _frontendConfig;
@@ -81,7 +81,6 @@ namespace NarrativeShowcaseMod.Runtime
                 EnsureViewMode(engine);
                 EnsureShowcaseLocalPlayer(engine, activeMapId);
                 PublishShowcaseKnowledge(engine, activeMapId);
-                EnsureShowcaseSelectionView(engine);
                 EnsureBootstrapped(engine);
                 RebindEntities(engine);
                 RefreshPanel(engine);
@@ -768,7 +767,7 @@ namespace NarrativeShowcaseMod.Runtime
                 ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
             var empty = KnowledgeIdMask256.Empty;
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
-            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref CommandSourceSelectableTag _, ref MapEntity mapEntity) =>
             {
                 if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
                 {
@@ -790,38 +789,6 @@ namespace NarrativeShowcaseMod.Runtime
                         confidencePermille: 1000,
                         revision: 0));
             });
-        }
-
-        private static void EnsureShowcaseSelectionView(GameEngine engine)
-        {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
-            {
-                return;
-            }
-
-            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-        }
-
-        private static bool TryResolveSelectionContext(GameEngine engine, out SelectionRuntime selection, out Entity viewer)
-        {
-            selection = null!;
-            viewer = Entity.Null;
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out object? runtimeObj) ||
-                runtimeObj is not SelectionRuntime runtime)
-            {
-                return false;
-            }
-
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
-                viewerObj is not Entity localViewer ||
-                !engine.World.IsAlive(localViewer))
-            {
-                return false;
-            }
-
-            selection = runtime;
-            viewer = localViewer;
-            return true;
         }
 
         private void ClearFrontend(GameEngine engine)

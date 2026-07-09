@@ -13,7 +13,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS;
 public sealed class SelectionKnowledgeProjectionTests
 {
     [Test]
-    public void Issue197_ClickAndBoxSelectionGateCameraVisibleCandidatesThroughKnowledgeProjection()
+    public void Issue197_ClickAndBoxCommandSourceGateCameraVisibleCandidatesThroughKnowledgeProjection()
     {
         TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
         try
@@ -44,8 +44,7 @@ public sealed class SelectionKnowledgeProjectionTests
             Entity lastKnown = CreateSelectable(world, xCm: 2000, zCm: 1000, teamId: 1);
             Entity disclosedLive = CreateSelectable(world, xCm: 3000, zCm: 1000, teamId: 1);
             Entity directLive = CreateSelectable(world, xCm: 4000, zCm: 1000, teamId: 1);
-            var globals = CreateSelectionGlobals(world, input, local, relationFilter: "Friendly");
-            SelectionRuntime selection = (SelectionRuntime)globals[CoreServiceKeys.SelectionRuntime.Name];
+            var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
             InstallKnowledge(
                 world,
                 globals,
@@ -54,19 +53,20 @@ public sealed class SelectionKnowledgeProjectionTests
                 disclosedLive,
                 directLive,
                 lastKnown);
-            var system = new CurrentSelectionApplySystem(world, globals);
+            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1000f, 1000f));
-            AssertSelection(selection, local);
+            AssertCommandSource(collections, local);
 
             Click(system, globals, input, new Vector2(2000f, 1000f));
-            AssertSelection(selection, local);
+            AssertCommandSource(collections, local);
 
             Click(system, globals, input, new Vector2(3000f, 1000f));
-            AssertSelection(selection, local, disclosedLive);
+            AssertCommandSource(collections, local, disclosedLive);
 
             DragSelect(system, globals, input, new Vector2(500f, 500f), new Vector2(4500f, 1500f));
-            AssertSelectionEquivalent(selection, local, disclosedLive, directLive);
+            AssertCommandSourceEquivalent(collections, local, disclosedLive, directLive);
             Assert.That(unknown, Is.Not.EqualTo(Entity.Null));
         }
         finally
@@ -87,16 +87,16 @@ public sealed class SelectionKnowledgeProjectionTests
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var local = world.Create(new Team { Id = 1 });
             Entity hostile = CreateSelectable(world, xCm: 2000, zCm: 1000, teamId: 2);
-            var globals = CreateSelectionGlobals(world, input, local, relationFilter: "Friendly");
-            SelectionRuntime selection = (SelectionRuntime)globals[CoreServiceKeys.SelectionRuntime.Name];
+            var globals = CreateCommandSourceGlobals(world, input, local, relationFilter: "Friendly");
             var store = new KnowledgeProjectionStore();
             store.Upsert(local, hostile, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
             globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
-            var system = new CurrentSelectionApplySystem(world, globals);
+            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(2000f, 1000f));
 
-            AssertSelection(selection, local);
+            AssertCommandSource(collections, local);
         }
         finally
         {
@@ -119,75 +119,30 @@ public sealed class SelectionKnowledgeProjectionTests
         store.Upsert(viewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
         globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
 
-        Assert.That(SelectionEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.None), Is.True);
-        Assert.That(SelectionEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.LastKnown), Is.False);
-        Assert.That(SelectionEligibility.CanTargetCommand(world, globals, viewer, lastKnown, KnowledgePositionAccess.LastKnown), Is.True);
-        Assert.That(SelectionEligibility.CanTargetCommand(world, globals, viewer, lastKnown, KnowledgePositionAccess.Live), Is.False);
-        Assert.That(SelectionEligibility.CanTargetCommand(world, globals, viewer, live, KnowledgePositionAccess.Live), Is.True);
+        Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.None), Is.True);
+        Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.LastKnown), Is.False);
+        Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, lastKnown, KnowledgePositionAccess.LastKnown), Is.True);
+        Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, lastKnown, KnowledgePositionAccess.Live), Is.False);
+        Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, live, KnowledgePositionAccess.Live), Is.True);
     }
 
     [Test]
-    public void ExplicitSelectionViewer_IsNotOverriddenBySelectionViewDiagnosticsViewer()
+    public void ExplicitCommandSourceViewer_IsNotOverriddenByDiagnosticsViewer()
     {
         using var world = World.Create();
         Entity localViewer = world.Create();
         Entity diagnosticsViewer = world.Create();
-        Entity live = world.Create(new SelectionSelectableTag());
+        Entity live = world.Create(new CommandSourceSelectableTag());
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.LocalPlayerEntity.Name] = localViewer,
-            [CoreServiceKeys.SelectionViewViewerEntity.Name] = diagnosticsViewer,
+            [CoreServiceKeys.LocalPlayerEntity.Name] = diagnosticsViewer,
         };
         var store = new KnowledgeProjectionStore();
         store.Upsert(localViewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, localViewer));
         globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
 
-        Assert.That(SelectionEligibility.CanInspectLive(world, globals, localViewer, live), Is.True);
-    }
-
-    [Test]
-    public void Issue197_GasSelectionResponseFiltersUnknownAndLastKnownCandidatesThroughProjection()
-    {
-        using var world = World.Create();
-        var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-        Entity origin = world.Create(new Team { Id = 1 });
-        Entity unknown = world.Create(WorldPositionCm.FromCm(100, 0), new Team { Id = 2 }, new SelectionSelectableTag());
-        Entity lastKnown = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 }, new SelectionSelectableTag());
-        Entity live = world.Create(WorldPositionCm.FromCm(140, 0), new Team { Id = 2 }, new SelectionSelectableTag());
-        var globals = new Dictionary<string, object>
-        {
-            [CoreServiceKeys.AuthoritativeInput.Name] = input,
-            [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
-            [CoreServiceKeys.SelectionRequestQueue.Name] = new SelectionRequestQueue(),
-            [CoreServiceKeys.SelectionResponseBuffer.Name] = new SelectionResponseBuffer(),
-            [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Select" },
-            [CoreServiceKeys.LocalPlayerEntity.Name] = origin,
-        };
-        var store = new KnowledgeProjectionStore();
-        store.Upsert(origin, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, origin));
-        store.Upsert(origin, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, origin));
-        globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
-        var rules = new SelectionRuleRegistry();
-        rules.Register(77, new SelectionRule
-        {
-            Mode = SelectionRuleMode.Radius,
-            RelationshipFilter = RelationshipFilter.All,
-            RadiusCm = 300,
-            MaxCount = 8,
-        });
-        var system = new GasSelectionResponseSystem(world, globals, new StubSpatialQueryService(unknown, lastKnown, live), rules);
-        var requests = (SelectionRequestQueue)globals[CoreServiceKeys.SelectionRequestQueue.Name];
-        var responses = (SelectionResponseBuffer)globals[CoreServiceKeys.SelectionResponseBuffer.Name];
-        requests.TryEnqueue(new SelectionRequest { RequestId = 42, RequestTagId = 77, Origin = origin });
-
-        SetActionSnapshot(globals, "Select", new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
-        SetAuthoritativeGroundPoint(input, new WorldCmInt2(1, 1));
-        input.Update();
-        system.Update(0f);
-
-        Assert.That(responses.TryConsume(42, out SelectionResponse response), Is.True);
-        Assert.That(response.Count, Is.EqualTo(1));
-        Assert.That(response.GetEntity(0), Is.EqualTo(live));
+        Assert.That(CommandSourceEligibility.CanInspectLive(world, globals, localViewer, live), Is.True);
     }
 
     [Test]
@@ -201,15 +156,15 @@ public sealed class SelectionKnowledgeProjectionTests
         Entity unknown = world.Create(
             new Team { Id = 2 },
             new VisualTransform { Position = new Vector3(5f, 0f, 0f) },
-            new SelectionSelectableTag());
+            new CommandSourceSelectableTag());
         Entity lastKnown = world.Create(
             new Team { Id = 2 },
             new VisualTransform { Position = new Vector3(10f, 0f, 0f) },
-            new SelectionSelectableTag());
+            new CommandSourceSelectableTag());
         Entity live = world.Create(
             new Team { Id = 2 },
             new VisualTransform { Position = new Vector3(15f, 0f, 0f) },
-            new SelectionSelectableTag());
+            new CommandSourceSelectableTag());
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = input,
@@ -230,12 +185,22 @@ public sealed class SelectionKnowledgeProjectionTests
         Assert.That(unknown, Is.Not.EqualTo(Entity.Null));
     }
 
-    private static Dictionary<string, object> CreateSelectionGlobals(
+    private static Dictionary<string, object> CreateCommandSourceGlobals(
         World world,
         PlayerInputHandler input,
         Entity local,
         string relationFilter)
     {
+        var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+        var commandSourceConfig = new CommandSourceAcquisitionConfig
+        {
+            TargetFilter = new CommandSourceTargetFilterConfig { RelationFilter = relationFilter },
+            Acquisition = new CommandSourceAcquisitionCollectionConfig
+            {
+                CollectionKey = EntityCollectionKeys.UiCommandAcquisition,
+                Title = "Command acquisition",
+            },
+        };
         var globals = new Dictionary<string, object>
         {
             [CoreServiceKeys.AuthoritativeInput.Name] = input,
@@ -243,19 +208,10 @@ public sealed class SelectionKnowledgeProjectionTests
             [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
             [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Select" },
+            [CoreServiceKeys.CommandSourceAcquisitionConfig.Name] = commandSourceConfig,
+            [CoreServiceKeys.EntityCollectionStore.Name] = new EntityCollectionStore(collectionKeys),
+            [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
         };
-        var config = new SelectionRuntimeConfig
-        {
-            TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
-            Acquisition = new SelectionAcquisitionConfig { CommitToFormalSelection = true },
-        };
-        var selectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-        var selection = new SelectionRuntime(world, config, selectionKeys);
-        var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-        globals[CoreServiceKeys.SelectionRuntime.Name] = selection;
-        globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = selectionKeys;
-        globals[CoreServiceKeys.EntityCollectionStore.Name] = new EntityCollectionStore(collectionKeys);
-        globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys;
         return globals;
     }
 
@@ -265,7 +221,7 @@ public sealed class SelectionKnowledgeProjectionTests
             WorldPositionCm.FromCm(xCm, zCm),
             new VisualTransform { Position = new Vector3(xCm / 100f, 0f, zCm / 100f) },
             new CullState { IsVisible = true },
-            new SelectionSelectableTag(),
+            new CommandSourceSelectableTag(),
             new Team { Id = teamId });
     }
 
@@ -286,7 +242,8 @@ public sealed class SelectionKnowledgeProjectionTests
             new RelationshipMetricRegistry(),
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer(capacity: 4));
+            new RelationshipChangeBuffer(capacity: 4),
+            new RelationshipReverseIndex(world));
         var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
         relationships.EnsureLink(viewer, ally, intelTypeId);
         collections.Replace(
@@ -341,7 +298,7 @@ public sealed class SelectionKnowledgeProjectionTests
     }
 
     private static void Click(
-        CurrentSelectionApplySystem system,
+        CommandSourceAcquisitionSystem system,
         Dictionary<string, object> globals,
         PlayerInputHandler input,
         Vector2 pointer)
@@ -359,8 +316,23 @@ public sealed class SelectionKnowledgeProjectionTests
         system.Update(0f);
     }
 
+    private static CommandSourceAcquisitionSystem CreateCommandSourceAcquisitionSystem(
+        World world,
+        Dictionary<string, object> globals,
+        Entity owner)
+    {
+        return new CommandSourceAcquisitionSystem(
+            world,
+            globals,
+            (out Entity resolvedOwner) =>
+            {
+                resolvedOwner = owner;
+                return owner != Entity.Null && world.IsAlive(owner);
+            });
+    }
+
     private static void DragSelect(
-        CurrentSelectionApplySystem system,
+        CommandSourceAcquisitionSystem system,
         Dictionary<string, object> globals,
         PlayerInputHandler input,
         Vector2 from,
@@ -411,20 +383,29 @@ public sealed class SelectionKnowledgeProjectionTests
         input.InjectAction(AuthoritativeGroundPointerHelper.ActionId, new Vector3(worldCm.X, 0f, worldCm.Y));
     }
 
-    private static void AssertSelection(SelectionRuntime selection, Entity owner, params Entity[] expected)
+    private static void AssertCommandSource(EntityCollectionStore collections, Entity owner, params Entity[] expected)
     {
-        Assert.That(selection.GetSelectionCount(owner, SelectionSetKeys.LivePrimary), Is.EqualTo(expected.Length));
+        bool hasView = collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view);
+        if (expected.Length == 0)
+        {
+            Assert.That(!hasView || view.Count == 0, Is.True);
+            return;
+        }
+
+        Assert.That(hasView, Is.True);
+        Assert.That(view.Count, Is.EqualTo(expected.Length));
         Entity[] actual = new Entity[expected.Length];
-        int written = selection.CopySelection(owner, SelectionSetKeys.LivePrimary, actual);
+        int written = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, actual);
         Assert.That(written, Is.EqualTo(expected.Length));
         Assert.That(actual, Is.EqualTo(expected));
     }
 
-    private static void AssertSelectionEquivalent(SelectionRuntime selection, Entity owner, params Entity[] expected)
+    private static void AssertCommandSourceEquivalent(EntityCollectionStore collections, Entity owner, params Entity[] expected)
     {
-        int count = selection.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
+        Assert.That(collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view), Is.True);
+        int count = view.Count;
         Entity[] actual = new Entity[count];
-        int written = selection.CopySelection(owner, SelectionSetKeys.LivePrimary, actual);
+        int written = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, actual);
         Assert.That(written, Is.EqualTo(count));
         Assert.That(actual, Is.EquivalentTo(expected));
     }

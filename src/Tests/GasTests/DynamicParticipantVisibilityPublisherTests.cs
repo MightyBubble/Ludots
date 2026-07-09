@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
@@ -8,7 +8,7 @@ using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.ParticipantVisibility;
@@ -40,7 +40,7 @@ namespace Ludots.Tests.GAS
               "CollectionKey": "tests.dynamic.participants",
               "CollectionRole": "Display",
               "Query": {
-                "AllComponents": [ "MapEntity", "PlayerOwner", "SelectionSelectableTag" ],
+                "AllComponents": [ "MapEntity", "PlayerOwner", "CommandSourceSelectableTag" ],
                 "NoneComponents": [ "PlayerIdentity" ]
               },
               "Flags": "RequireSelectable, ExcludePlayerIdentity, RequireMapMatch",
@@ -58,10 +58,10 @@ namespace Ludots.Tests.GAS
                 DynamicParticipantQueryFlags.RequireSelectable |
                 DynamicParticipantQueryFlags.ExcludePlayerIdentity |
                 DynamicParticipantQueryFlags.RequireMapMatch));
-            Assert.That(spec.Query.AllComponents, Is.EqualTo(new[] { "MapEntity", "PlayerOwner", "SelectionSelectableTag" }));
+            Assert.That(spec.Query.AllComponents, Is.EqualTo(new[] { "MapEntity", "PlayerOwner", "CommandSourceSelectableTag" }));
             Assert.That(CoreComponentRegistry.TryGetComponentType("MapEntity", out _), Is.True);
             Assert.That(CoreComponentRegistry.TryGetComponentType("PlayerOwner", out _), Is.True);
-            Assert.That(CoreComponentRegistry.TryGetComponentType("SelectionSelectableTag", out _), Is.True);
+            Assert.That(CoreComponentRegistry.TryGetComponentType("CommandSourceSelectableTag", out _), Is.True);
         }
 
         [Test]
@@ -151,7 +151,7 @@ namespace Ludots.Tests.GAS
                 new MapEntity { MapId = mapId },
                 new PlayerOwner { PlayerId = 1 },
                 new Team { Id = 1 },
-                new SelectionSelectableTag());
+                new CommandSourceSelectableTag());
             var session = new MapSession(mapId, new MapConfig { Id = mapId.Value })
             {
                 PlayerEntityLookup = new PlayerEntityLookup(),
@@ -172,7 +172,7 @@ namespace Ludots.Tests.GAS
                         "1",
                         CollectionKey,
                         DynamicParticipantQueryClause.Create(
-                            new[] { "MapEntity", "PlayerOwner", "SelectionSelectableTag" },
+                            new[] { "MapEntity", "PlayerOwner", "CommandSourceSelectableTag" },
                             new[] { "PlayerIdentity" }),
                         DynamicParticipantQueryFlags.RequireSelectable |
                         DynamicParticipantQueryFlags.ExcludePlayerIdentity |
@@ -270,7 +270,7 @@ namespace Ludots.Tests.GAS
                     new MapEntity { MapId = _mapId },
                     new PlayerOwner { PlayerId = playerId },
                     new Team { Id = teamId },
-                    new SelectionSelectableTag());
+                    new CommandSourceSelectableTag());
             }
 
             public void ApplyMutation(Entity target, StaleMutation mutation)
@@ -290,7 +290,7 @@ namespace Ludots.Tests.GAS
                         World.Set(target, new MapEntity { MapId = new MapId("other-map") });
                         break;
                     case StaleMutation.SelectableState:
-                        World.Add(target, SelectionSelectableState.Disabled);
+                        World.Add(target, CommandSourceSelectableState.Disabled);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(mutation), mutation, null);
@@ -330,7 +330,7 @@ namespace Ludots.Tests.GAS
                     {
                         Component<MapEntity>.ComponentType,
                         Component<PlayerOwner>.ComponentType,
-                        Component<SelectionSelectableTag>.ComponentType
+                        Component<CommandSourceSelectableTag>.ComponentType
                     },
                     new[] { Component<PlayerIdentity>.ComponentType },
                     DynamicParticipantQueryFlags.RequireSelectable |
@@ -347,7 +347,7 @@ namespace Ludots.Tests.GAS
                     {
                         Component<MapEntity>.ComponentType,
                         Component<Team>.ComponentType,
-                        Component<SelectionSelectableTag>.ComponentType
+                        Component<CommandSourceSelectableTag>.ComponentType
                     },
                     new[]
                     {

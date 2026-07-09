@@ -573,7 +573,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 8));
+                new RelationshipChangeBuffer(capacity: 8),
+                new RelationshipReverseIndex(world));
         }
 
         private static ConfigPipeline CreatePipeline(string root)

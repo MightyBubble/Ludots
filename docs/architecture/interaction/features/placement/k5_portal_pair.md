@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Position
+  targetType: Position
   isSkillMapping: true
 ```
 
@@ -23,13 +23,13 @@ InputOrderMapping:
 
 ```
 AbilityExecSpec:
-  Item[0]: SelectionGate → 等待第一个点 (入口)
+  Item[0]: TargetCollectionGate → 等待第一个点 (入口)
     → OrderRequest: Position
   Item[1]: EffectSignal → create_portal_entrance
     → CreateUnit(portal_entrance, position=point_1)
     → WriteBlackboard(portal_entrance_id, entity_id)
 
-  Item[2]: SelectionGate → 等待第二个点 (出口)
+  Item[2]: TargetCollectionGate → 等待第二个点 (出口)
     → OrderRequest: Position
   Item[3]: EffectSignal → create_portal_exit
     → CreateUnit(portal_exit, position=point_2)
@@ -57,7 +57,7 @@ ResponseChainListener:
 
 | 组件 | 状态 |
 |------|------|
-| SelectionGate | ✅ 已有 |
+| TargetCollectionGate | ✅ 已有 |
 | CreateUnit handler | ✅ 已有 |
 | Blackboard write/read | ✅ 已有 |
 | Tag metadata | ⚠️ 需扩展 |

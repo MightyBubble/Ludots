@@ -1,3 +1,5 @@
+> Historical design note. References to SelectionRuntime are pre-retirement context; current architecture
+> uses EntityCollectionStore / `collection.command.source` for command actor sets.
 # 相位系统设计稿
 
 Status: Proposed

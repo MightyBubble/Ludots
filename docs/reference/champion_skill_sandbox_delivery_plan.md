@@ -8,17 +8,17 @@ Status: Delivered
 Deliver a minimal playable champion skill sandbox mod that:
 
 - lets the player select multiple Ezreal, Garen, and Jayce instances
-- shows different command panel content based on selected entity and current form/state
+- shows different command panel content based on the command-source primary and current form/state
 - supports three global cast modes through one shared toolbar
-- uses the existing GAS / selection / command panel / aim presentation pipelines
+- uses the existing GAS / entity collection / command panel / aim presentation pipelines
 - gives every skill a clear visible effect expression through the performer system
-- supports camera reset, free camera, follow selected entity, and weighted selected-group follow
+- supports camera reset, free camera, command-source primary follow, and weighted command-source group follow
 
 ## Confirmed Reuse Baseline
 
 The current implementation must continue to reuse these existing foundations instead of building a parallel stack:
 
-- Selection SSOT: `docs/architecture/entity_selection_architecture.md`
+- Entity collection SSOT: `docs/architecture/entity_collection_query_infrastructure.md`
 - Entity command panel infrastructure: `docs/architecture/entity_command_panel_infrastructure.md`
 - GAS layered execution: `docs/architecture/gas_combat_infrastructure.md`
 - Performer pipeline: `docs/architecture/presentation_performer.md`
@@ -31,7 +31,7 @@ Concrete code entry points already confirmed:
 - Command panel GAS source: `mods/EntityCommandPanelMod/Runtime/GasEntityCommandPanelSource.cs`
 - Ability form slot routing: `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`
 - Ability form config loading: `src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`
-- Selection runtime: `src/Core/Input/Selection/`
+- Entity collection runtime: `src/Core/EntityCollections/` and `src/Core/Input/CommandSources/EntityCollectionContextRuntime.cs`
 - Aim presentation projection: `mods/CoreInputMod/Systems/AbilityAimPresentationProjectionSystem.cs` + `src/Core/Input/Orders/AbilityAimPresentationRuntime.cs`
 - Performer runtime:
   - `src/Core/Presentation/Systems/PerformerRuleSystem.cs`
@@ -52,13 +52,13 @@ Implemented in the sandbox branch:
   - `SmartCastWithIndicator`
   - `PressReleaseAimCast`
 - command panel toolbar mode switching
-- selection marker and hover marker
+- command marker and hover marker
 - camera confine and edge-pan safety for the sandbox tactical camera
 - camera reset button
 - camera toolbar follow modes:
   - free
-  - selected entity
-  - weighted selected group
+  - command-source primary
+  - weighted command-source group
 - projectile skills now use real GAS projectile entities with performer bootstrap
 - sandbox cast / hit / projectile cues now go through performer definitions and `PresentationCommandBuffer`
 - command panel keeps reusing existing ability-slot routing and icon generation
@@ -75,7 +75,7 @@ Recent projectile / presentation slices:
 Recent sandbox interaction / feedback slices:
 
 - `92776b3 feat(champion-sandbox): add movement and hover target marker`
-- `964c11e feat(champion-sandbox): add selection marker and cast feedback`
+- `964c11e feat(champion-sandbox): add command marker and cast feedback`
 - `8a444f7 feat(champion-sandbox): add camera reset and tactical confine`
 
 ## Confirmed Architecture Outcome
@@ -167,7 +167,7 @@ Completed.
 
 Evidence:
 
-- `src/Core/Gameplay/Camera/FollowTargets/SelectedGroupFollowTarget.cs`
+- `src/Core/Gameplay/Camera/FollowTargets/EntityCollectionGroupFollowTarget.cs`
 - `mods/showcases/champion_skill_sandbox/ChampionSkillSandboxMod/Runtime/ChampionSkillCastModeToolbarProvider.cs`
 - `src/Tests/GasTests/Production/ChampionSkillSandboxConfigTests.cs`
 - `src/Tests/ThreeCTests/CameraRuntimeConvergenceTests.cs`
@@ -203,7 +203,7 @@ Required evidence:
 - targeted unit/config tests
 - runnable raylib sandbox launch
 - visual verification of:
-  - selection marker
+  - command marker
   - hover marker
   - cast mode switching
   - projectile spawn/travel/hit visibility
@@ -211,14 +211,14 @@ Required evidence:
 
 ## Acceptance Checklist
 
-- selecting different champion instances changes the command panel immediately
+- changing the command-source primary champion changes the command panel immediately
 - Jayce form switching changes current slots through GAS form routing
 - three cast modes behave differently and can be switched from the toolbar
 - move order remains usable for spacing
 - selection and hover are visually legible
 - projectile skills spawn visible performer-driven missiles
 - every skill has a distinct cast and/or impact effect cue
-- camera can reset, stay confined, and follow current selection or weighted group
+- camera can reset, stay confined, and follow the command-source primary or weighted group
 
 ## Notes
 

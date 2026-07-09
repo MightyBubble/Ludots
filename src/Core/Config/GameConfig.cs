@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using Ludots.Core.Diagnostics;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation;
 
 namespace Ludots.Core.Config
@@ -30,7 +30,7 @@ namespace Ludots.Core.Config
         /// <summary>
         /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
         /// </summary>
-        public int StartupSelectedPlayerId { get; set; }
+        public int StartupLocalPlayerId { get; set; }
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
 
@@ -52,7 +52,7 @@ namespace Ludots.Core.Config
 
         public Physics2DConfig Physics2D { get; set; } = new Physics2DConfig();
 
-        public SelectionRuntimeConfig? Selection { get; set; }
+        public CommandSourceAcquisitionConfig? CommandSource { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 
@@ -82,15 +82,21 @@ namespace Ludots.Core.Config
 
         public string ProviderAssemblyPath { get; set; } = string.Empty;
 
+        public string ProviderHostTypeName { get; set; } = string.Empty;
+
         public string ProviderProjectPath { get; set; } = string.Empty;
 
         public string RuntimeRootPath { get; set; } = string.Empty;
 
         public string CacheRootPath { get; set; } = string.Empty;
+
+        public bool? UseCollectibleLoadContext { get; set; }
+
+        public string[] ProcessSharedAssemblyNamePrefixes { get; set; } = Array.Empty<string>();
     }
 
     /// <summary>
-    /// Game constants that were previously hardcoded in runtime constant classes.
+    /// Game constants loaded from runtime configuration.
     /// Now fully data-driven via game.json merge.
     /// </summary>
     public class GameConstants

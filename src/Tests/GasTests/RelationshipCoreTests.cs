@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -24,7 +25,7 @@ namespace Ludots.Tests.GAS
             var flags = new RelationshipFlagRegistry();
             var bands = new RelationshipBandRegistry();
             var changes = new RelationshipChangeBuffer(capacity: 1);
-            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes);
+            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
 
             int socialBondTypeId = types.Register("SocialBond");
             int hostilityTypeId = types.Register("Hostility");
@@ -176,7 +177,7 @@ namespace Ludots.Tests.GAS
             var flags = new RelationshipFlagRegistry();
             var bands = new RelationshipBandRegistry();
             var changes = new RelationshipChangeBuffer(capacity: 1);
-            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes);
+            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
 
             int socialBondTypeId = types.Register("SocialBond");
             int hostilityTypeId = types.Register("Hostility");
@@ -207,6 +208,62 @@ namespace Ludots.Tests.GAS
             Assert.That(betweenHostilityCount, Is.EqualTo(2));
             Assert.That(buffer[..betweenHostilityCount].ToArray(), Does.Contain(a));
             Assert.That(buffer[..betweenHostilityCount].ToArray(), Does.Contain(b));
+        }
+
+        [Test]
+        public void RelationshipRuntime_TypedEdgeChurnOnExistingPair_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            var types = new RelationshipTypeRegistry();
+            var metrics = new RelationshipMetricRegistry();
+            var flags = new RelationshipFlagRegistry();
+            var bands = new RelationshipBandRegistry();
+            var changes = new RelationshipChangeBuffer(capacity: 4_096);
+            var runtime = new RelationshipRuntime(world, types, metrics, flags, bands, changes, new RelationshipReverseIndex(world));
+
+            int allyTypeId = types.Register("Ally");
+            int controlsTypeId = types.Register("Controls");
+            int grantedFlagId = flags.Register("Granted");
+            Entity source = world.Create();
+            Entity target = world.Create();
+
+            runtime.EnsureLink(source, target, allyTypeId);
+            for (int i = 0; i < 4; i++)
+            {
+                runtime.EnsureLink(source, target, controlsTypeId);
+                runtime.SetFlag(source, target, controlsTypeId, grantedFlagId, enabled: true);
+                runtime.RemoveLink(source, target, controlsTypeId);
+            }
+
+            RelationshipChurnMeasurement measurement = MeasureTypedEdgeChurn(
+                runtime,
+                source,
+                target,
+                controlsTypeId,
+                grantedFlagId,
+                iterations: 1_024);
+            RelationshipChurnMeasurement second = MeasureTypedEdgeChurn(
+                runtime,
+                source,
+                target,
+                controlsTypeId,
+                grantedFlagId,
+                iterations: 1_024);
+            if (second.AllocatedBytes <= measurement.AllocatedBytes)
+            {
+                measurement = second;
+            }
+
+            Console.WriteLine(
+                $"bench.relationship_pair_typed_churn iterations={measurement.Iterations} elapsed_ms={measurement.ElapsedMs:F2} alloc_bytes={measurement.AllocatedBytes}");
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(measurement.AllocatedBytes, Is.EqualTo(0),
+                    "Warmed typed edge churn on an existing pair must stay allocation-free.");
+                Assert.That(runtime.HasLink(source, target, allyTypeId), Is.True, "The stable pair edge must remain while the transient type churns.");
+                Assert.That(runtime.HasLink(source, target, controlsTypeId), Is.False);
+            });
         }
 
         [Test]
@@ -258,6 +315,43 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.Capacity, Is.GreaterThanOrEqualTo(2));
         }
 
+        private static RelationshipChurnMeasurement MeasureTypedEdgeChurn(
+            RelationshipRuntime runtime,
+            Entity source,
+            Entity target,
+            int typeId,
+            int flagId,
+            int iterations)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            long start = Stopwatch.GetTimestamp();
+            for (int i = 0; i < iterations; i++)
+            {
+                runtime.EnsureLink(source, target, typeId);
+                runtime.SetFlag(source, target, typeId, flagId, enabled: true);
+                if (!runtime.HasLink(source, target, typeId) ||
+                    !runtime.HasFlag(source, target, typeId, flagId))
+                {
+                    throw new InvalidOperationException("Measured relationship churn lost the transient typed edge.");
+                }
+
+                runtime.RemoveLink(source, target, typeId);
+            }
+
+            long stop = Stopwatch.GetTimestamp();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            return new RelationshipChurnMeasurement(
+                iterations,
+                Stopwatch.GetElapsedTime(start, stop).TotalMilliseconds,
+                allocated);
+        }
+
+        private readonly record struct RelationshipChurnMeasurement(
+            int Iterations,
+            double ElapsedMs,
+            long AllocatedBytes);
+
         private static RelationshipRuntime CreateRuntime(World world, out RelationshipTypeRegistry types)
         {
             types = new RelationshipTypeRegistry();
@@ -267,7 +361,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer());
+                new RelationshipChangeBuffer(),
+                new RelationshipReverseIndex(world));
         }
 
         private static int EnsureAttribute(string attribute)

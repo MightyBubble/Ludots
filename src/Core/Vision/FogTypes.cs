@@ -233,6 +233,18 @@ namespace Ludots.Core.Vision
             uint exposeLayerMask,
             int altitudeBand = 0,
             byte stealthLevel = 0)
+            : this(entity, position, exposeLayerMask, altitudeBand, stealthLevel, default, cellSizeCm: 0)
+        {
+        }
+
+        public FogOccupant(
+            Entity entity,
+            WorldCmInt2 position,
+            uint exposeLayerMask,
+            int altitudeBand,
+            byte stealthLevel,
+            FogCell cell,
+            int cellSizeCm)
         {
             if (entity == Entity.Null)
             {
@@ -244,6 +256,8 @@ namespace Ludots.Core.Vision
             ExposeLayerMask = exposeLayerMask;
             AltitudeBand = altitudeBand;
             StealthLevel = stealthLevel;
+            Cell = cell;
+            CellSizeCm = cellSizeCm;
         }
 
         public readonly Entity Entity;
@@ -251,6 +265,17 @@ namespace Ludots.Core.Vision
         public readonly uint ExposeLayerMask;
         public readonly int AltitudeBand;
         public readonly byte StealthLevel;
+        public readonly FogCell Cell;
+        public readonly int CellSizeCm;
+
+        public FogCell ResolveCell(int cellSizeCm)
+        {
+            return CellSizeCm == cellSizeCm
+                ? Cell
+                : new FogCell(
+                    MathUtil.FloorDiv(Position.X, cellSizeCm),
+                    MathUtil.FloorDiv(Position.Y, cellSizeCm));
+        }
     }
 
     public readonly struct FogDisclosurePolicy

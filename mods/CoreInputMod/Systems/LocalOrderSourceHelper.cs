@@ -5,15 +5,17 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
@@ -28,6 +30,9 @@ namespace CoreInputMod.Systems
 {
     public sealed class LocalOrderSourceHelper
     {
+        public delegate bool OrderSubmissionFilter(in Order order);
+        public delegate void OrderAcceptedHandler(in Order order);
+
         public const string LastGroundWorldDebugKey = "CoreInputMod.Debug.LastGroundWorldCm";
         public const string LastOrderDebugKey = "CoreInputMod.Debug.LastOrder";
 
@@ -38,10 +43,13 @@ namespace CoreInputMod.Systems
         private readonly IReadOnlyDictionary<string, int> _orderTypeIds;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly CompositeOrderPlanner? _planner;
+        private KnowledgeCommandTargetGate? _commandTargetGate;
 
         public int CastAbilityOrderTypeId { get; }
         public int MoveToOrderTypeId { get; }
         public int StopOrderTypeId { get; }
+        public OrderSubmissionFilter? BeforeOrderSubmit { get; set; }
+        public OrderAcceptedHandler? AfterOrderAccepted { get; set; }
 
         public LocalOrderSourceHelper(World world, Dictionary<string, object> globals, OrderQueue orders)
         {
@@ -129,23 +137,33 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
-            mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
-            mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
-            mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
+            mapping.SetCollectionPrimaryEntityProvider(TryResolveCollectionPrimary);
+            mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
+            RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
+            mapping.SetCommandIntentTargetFactsProvider(TryResolveCommandIntentTargetFacts);
+            RequireConfigureCommandIntentRouting(mapping);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
             mapping.CancelActionId = bindings.CancelActionId;
             mapping.CommandActionId = bindings.CommandActionId;
+            mapping.SetOrderIdentityAssigner((ref Order order) => _orders.EnsureOrderId(ref order));
             mapping.SetOrderSubmitHandler((in Order order) =>
             {
                 _globals[LastOrderDebugKey] = DescribeOrder(in order);
 
-                if (_planner != null && _planner.TrySubmit(in order))
+                if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in order))
                 {
                     return;
                 }
-                _orders.TryEnqueue(order);
+
+                bool accepted = _planner != null
+                    ? _planner.TrySubmit(in order)
+                    : _orders.TryEnqueue(order);
+                if (accepted)
+                {
+                    AfterOrderAccepted?.Invoke(in order);
+                }
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {
@@ -178,6 +196,33 @@ namespace CoreInputMod.Systems
             return mapping;
         }
 
+        private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
+                stackObj is not InteractionContextStack stack ||
+                !_globals.TryGetValue(CoreServiceKeys.ControlSchemeRuntime.Name, out var schemeObj) ||
+                schemeObj is not ControlSchemeRuntime schemes ||
+                !_globals.TryGetValue(CoreServiceKeys.CommandIntentProfileRegistry.Name, out var intentsObj) ||
+                intentsObj is not CommandIntentProfileRegistry intents ||
+                !_globals.TryGetValue(CoreServiceKeys.CastDispatchProfileRegistry.Name, out var dispatchObj) ||
+                dispatchObj is not CastDispatchProfileRegistry dispatch ||
+                !_globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) ||
+                collectionsObj is not EntityCollectionStore collections)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires command intent routing services before input-order mappings install.");
+            }
+
+            mapping.SetCommandIntentRouting(
+                _world,
+                stack,
+                schemes,
+                intents,
+                dispatch,
+                collections,
+                TryGetCommandSourceOwner);
+        }
+
         public bool TryGetLocalPlayerId(out int playerId)
         {
             return _context.TryGetLocalPlayerId(out playerId);
@@ -204,6 +249,104 @@ namespace CoreInputMod.Systems
                 : default;
         }
 
+        private bool TryGetCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            if (_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
+                stackObj is InteractionContextStack stack &&
+                stack.TryPeek(out InteractionContextFrame frame) &&
+                HasEntityValue(frame.ContextEntity))
+            {
+                if (!_world.IsAlive(frame.ContextEntity))
+                {
+                    return false;
+                }
+
+                owner = frame.ContextEntity;
+                return true;
+            }
+
+            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                localObj is Entity local &&
+                local != Entity.Null &&
+                _world.IsAlive(local))
+            {
+                owner = local;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)
+        {
+            if (mapping == null) throw new ArgumentNullException(nameof(mapping));
+
+            facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            if (!TryGetCommandSourceOwner(out Entity owner) ||
+                !PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
+            {
+                return false;
+            }
+
+            PointerActionSnapshot command = pointer.Command;
+            Vector2 screenPoint = ResolveCommandPointer(mapping.Trigger, in command);
+            Entity target = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                _world,
+                _globals,
+                owner,
+                screenPoint,
+                RequireCommandPickRadiusPixels());
+            if (!_world.IsAlive(target))
+            {
+                return false;
+            }
+
+            facts = new CommandIntentTargetFacts(target, HasEntity: true);
+            return true;
+        }
+
+        private float RequireCommandPickRadiusPixels()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out object? configObj) ||
+                configObj is not CommandSourceAcquisitionConfig config)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {CoreServiceKeys.CommandSourceAcquisitionConfig.Name} before command target facts can be resolved.");
+            }
+
+            return config.ClickPickRadiusPixels;
+        }
+
+        private static Vector2 ResolveCommandPointer(InputTriggerType trigger, in PointerActionSnapshot command)
+        {
+            return trigger switch
+            {
+                InputTriggerType.ReleasedThisFrame => command.ResolveReleasePointerOrCurrent(),
+                InputTriggerType.Held => command.ResolveDownPointerOrCurrent(),
+                _ => command.ResolvePressPointerOrCurrent()
+            };
+        }
+
+        private bool TryResolveCollectionPrimary(string collectionKey, out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryGetCommandSourceOwner(out Entity owner) &&
+                   _context.TryGetCollectionPrimary(owner, collectionKey, out entity);
+        }
+
+        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        {
+            entities.Clear();
+            return TryGetCommandSourceOwner(out Entity owner) &&
+                   _context.TryCopyCollectionEntities(owner, collectionKey, entities);
+        }
+
+        private static bool HasEntityValue(Entity entity)
+        {
+            return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
+        }
+
         private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)
         {
             resolver = default!;
@@ -226,7 +369,8 @@ namespace CoreInputMod.Systems
                 eventBus: null,
                 effectRequests: null,
                 _globals);
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;
         }
 
@@ -252,31 +396,53 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            resolver = new AutoTargetResolver(_world, _globals, spatialQueries);
+            resolver = new AutoTargetResolver(_world, spatialQueries, RequireCommandTargetGate().CanTarget);
             return true;
         }
 
         private bool TryResolveHoveredCommandTarget(out Entity entity)
         {
             entity = Entity.Null;
-            if (!_context.TryGetHoveredEntity(out Entity candidate))
+            if (!TryGetCommandSourceOwner(out Entity viewer) ||
+                !_context.TryGetHoveredEntity(viewer, out Entity candidate))
             {
                 return false;
             }
 
-            Entity viewer = _context.TryGetSelectionOwner(out Entity owner) ? owner : Entity.Null;
-            if (!SelectionEligibility.CanTargetCommand(
-                    _world,
-                    _globals,
-                    viewer,
-                    candidate,
-                    KnowledgePositionAccess.Live))
+            if (!RequireCommandTargetGate().CanTarget(viewer, candidate))
             {
                 return false;
             }
 
             entity = candidate;
             return true;
+        }
+
+        private KnowledgeCommandTargetGate RequireCommandTargetGate()
+        {
+            if (_commandTargetGate != null)
+            {
+                return _commandTargetGate;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out var knowledgeResolverObj) ||
+                knowledgeResolverObj is not KnowledgeProjectionResolver knowledgeResolver)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: KnowledgeProjectionResolver is not registered in globals; " +
+                    "command target gating cannot run without it.");
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.Clock.Name, out var clockObj) ||
+                clockObj is not IClock clock)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)}: Clock is not registered in globals; " +
+                    "command target gating cannot run without it.");
+            }
+
+            _commandTargetGate = new KnowledgeCommandTargetGate(_world, knowledgeResolver, clock);
+            return _commandTargetGate;
         }
 
         private static string DescribeOrder(in Order order)
@@ -367,49 +533,21 @@ namespace CoreInputMod.Systems
 
             private static InputOrderMapping CloneMapping(InputOrderMapping mapping)
             {
-                return new InputOrderMapping
-                {
-                    ActionId = mapping.ActionId,
-                    Trigger = mapping.Trigger,
-                    DoubleTapWindowSeconds = mapping.DoubleTapWindowSeconds,
-                    OrderTypeKey = mapping.OrderTypeKey,
-                    ArgsTemplate = new OrderArgsTemplate
-                    {
-                        I0 = mapping.ArgsTemplate.I0,
-                        I1 = mapping.ArgsTemplate.I1,
-                        I2 = mapping.ArgsTemplate.I2,
-                        I3 = mapping.ArgsTemplate.I3,
-                        F0 = mapping.ArgsTemplate.F0,
-                        F1 = mapping.ArgsTemplate.F1,
-                        F2 = mapping.ArgsTemplate.F2,
-                        F3 = mapping.ArgsTemplate.F3,
-                    },
-                    RequireSelection = mapping.RequireSelection,
-                    SelectionSetKey = mapping.SelectionSetKey,
-                    SelectionType = mapping.SelectionType,
-                    ModifierBehavior = mapping.ModifierBehavior,
-                    IsSkillMapping = mapping.IsSkillMapping,
-                    HeldPolicy = mapping.HeldPolicy,
-                    CastModeOverride = mapping.CastModeOverride,
-                    AutoTargetPolicy = mapping.AutoTargetPolicy,
-                    AutoTargetRangeCm = mapping.AutoTargetRangeCm,
-                    CursorTargetPolicy = mapping.CursorTargetPolicy,
-                    CursorTargetRangeCm = mapping.CursorTargetRangeCm
-                };
+                return mapping.Clone();
             }
         }
 
         private sealed class AutoTargetResolver
         {
             private readonly World _world;
-            private readonly Dictionary<string, object> _globals;
             private readonly ISpatialQueryService _spatialQueries;
+            private readonly CommandIntentTargetGate _targetGate;
 
-            public AutoTargetResolver(World world, Dictionary<string, object> globals, ISpatialQueryService spatialQueries)
+            public AutoTargetResolver(World world, ISpatialQueryService spatialQueries, CommandIntentTargetGate targetGate)
             {
                 _world = world;
-                _globals = globals;
                 _spatialQueries = spatialQueries;
+                _targetGate = targetGate ?? throw new ArgumentNullException(nameof(targetGate));
             }
 
             public bool TryResolve(Entity actor, AutoTargetPolicy policy, int rangeCm, out Entity target)
@@ -461,12 +599,7 @@ namespace CoreInputMod.Systems
                     if (!_world.IsAlive(candidate) ||
                         candidate == actor ||
                         !_world.Has<WorldPositionCm>(candidate) ||
-                        !SelectionEligibility.CanTargetCommand(
-                            _world,
-                            _globals,
-                            actor,
-                            candidate,
-                            KnowledgePositionAccess.Live))
+                        !_targetGate(actor, candidate))
                     {
                         continue;
                     }

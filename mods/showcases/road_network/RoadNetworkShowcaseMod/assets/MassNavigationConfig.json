@@ -44,12 +44,12 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": false,
-    "initialSelectionScratchCapacity": 32,
-    "initialSelectedEntityCapacity": 16,
+    "initialCommandActorScratchCapacity": 32,
+    "initialCommandActorSnapshotCapacity": 16,
     "runtimeCapacity": {
       "navigationGroupCapacity": 32,
       "groupMembershipAgentCapacity": 128,
-      "selectionMemberScratchCapacity": 32,
+      "commandActorScratchCapacity": 32,
       "groupMemberCapacity": 32,
       "orderIngestionTokenCapacity": 32,
       "orderIngestionMemberCapacity": 32,

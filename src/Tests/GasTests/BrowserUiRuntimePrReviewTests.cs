@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using Ludots.Launcher.Backend;
 using NUnit.Framework;
 
 namespace GasTests
@@ -179,8 +180,11 @@ namespace GasTests
             Assert.That(loaderSource, Does.Contain("ShadowCopy"));
             Assert.That(loaderSource, Does.Contain("SHA256"));
             Assert.That(loaderSource, Does.Contain("Unload()"));
+            Assert.That(loaderSource, Does.Contain("UseCollectibleLoadContext"));
+            Assert.That(installerSource, Does.Contain("UseCollectibleLoadContext = useCollectibleLoadContext"));
+            Assert.That(installerSource, Does.Not.Contain("CefSharp"));
             Assert.That(loadContextSource, Does.Contain("AssemblyDependencyResolver"));
-            Assert.That(loadContextSource, Does.Contain("isCollectible: true"));
+            Assert.That(loadContextSource, Does.Contain("bool isCollectible = true"));
             Assert.That(loaderSource, Does.Not.Contain("BrowserCefRuntimeMod"));
             Assert.That(loadContextSource, Does.Not.Contain("BrowserCefRuntimeMod"));
             Assert.That(loadContextSource, Does.Not.Contain("ResolvedModLoadPlan"));
@@ -230,17 +234,54 @@ namespace GasTests
         }
 
         [Test]
+        public void BrowserShowcaseGameConfigs_DoNotAdvertiseProviderImplementation()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "mods", "showcases", "browser_react_flow", "BrowserReactFlowShowcaseMod", "Assets", "game.json"),
+                Path.Combine(repoRoot, "mods", "showcases", "browser_rts_production", "BrowserRtsProductionShowcaseMod", "Assets", "game.json"),
+                Path.Combine(repoRoot, "mods", "showcases", "control_plane_projection", "ControlPlaneProjectionShowcaseMod", "assets", "game.json"),
+                Path.Combine(repoRoot, "mods", "showcases", "entity_command_panel", "EntityCommandPanelShowcaseMod", "assets", "game.json")
+            };
+
+            foreach (string file in files)
+            {
+                string source = File.ReadAllText(file);
+                Assert.That(source, Does.Not.Contain("providerAssemblyPath"), file);
+                Assert.That(source, Does.Not.Contain("providerHostTypeName"), file);
+                Assert.That(source, Does.Not.Contain("processSharedAssemblyNamePrefixes"), file);
+                Assert.That(source, Does.Not.Contain("Ludots.UI.Browser.Cef"), file);
+                Assert.That(source, Does.Not.Contain("CefSharp"), file);
+            }
+        }
+
+        [Test]
         public void BrowserShowcaseWebApps_UseLudotsFacadesOnly()
         {
             string repoRoot = FindRepoRoot();
-            string[] files = Directory
-                .EnumerateFiles(Path.Combine(repoRoot, "mods", "showcases", "browser_ui", "BrowserUiShowcaseMod", "Assets", "browser-app"), "*.*", SearchOption.AllDirectories)
-                .Concat(Directory.EnumerateFiles(Path.Combine(repoRoot, "mods", "showcases", "browser_rts_production", "BrowserRtsProductionShowcaseMod", "WebApp", "src"), "*.*", SearchOption.AllDirectories))
-                .Concat(Directory.EnumerateFiles(Path.Combine(repoRoot, "mods", "showcases", "browser_rts_production", "BrowserRtsProductionShowcaseMod", "Assets", "rts-production-app"), "*.*", SearchOption.AllDirectories))
+            string showcasesRoot = Path.Combine(repoRoot, "mods", "showcases");
+            string[] webAppSourceRoots = Directory
+                .EnumerateDirectories(showcasesRoot, "WebApp", SearchOption.AllDirectories)
+                .Select(dir => Path.Combine(dir, "src"))
+                .Where(Directory.Exists)
+                .ToArray();
+            string[] packagedAppRoots = Directory
+                .EnumerateDirectories(showcasesRoot, "*app", SearchOption.AllDirectories)
+                .Where(dir =>
+                    IsPackagedBrowserAppDirectory(dir) &&
+                    !dir.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+            string[] files = webAppSourceRoots
+                .Concat(packagedAppRoots)
+                .SelectMany(root => Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories))
+                .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 .Where(file => file.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
                     file.EndsWith(".jsx", StringComparison.OrdinalIgnoreCase) ||
                     file.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
                 .ToArray();
+
+            Assert.That(files, Is.Not.Empty, "Browser showcase WebApp facade guard did not discover any JS/HTML files.");
 
             foreach (string file in files)
             {
@@ -249,6 +290,20 @@ namespace GasTests
                 Assert.That(source, Does.Not.Contain("cefsharp"), file);
                 Assert.That(source, Does.Not.Contain("window.cefSharp"), file);
             }
+        }
+
+        private static bool IsPackagedBrowserAppDirectory(string directory)
+        {
+            string name = Path.GetFileName(directory);
+            if (!name.EndsWith("-app", StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(name, "browser-app", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string parentName = Path.GetFileName(Path.GetDirectoryName(directory) ?? string.Empty);
+            return string.Equals(parentName, "Assets", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(parentName, "assets", StringComparison.OrdinalIgnoreCase);
         }
 
         [Test]
@@ -276,8 +331,66 @@ namespace GasTests
             Assert.That(provider.GetProperty("projectPath").GetString(), Does.StartWith("src/Libraries/Ludots.UI.Browser.Cef"));
             Assert.That(provider.GetProperty("packageRootPath").GetString(), Is.EqualTo("BrowserRuntime/cef"));
             Assert.That(provider.GetProperty("assemblyPath").GetString(), Is.EqualTo("BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll"));
+            Assert.That(provider.GetProperty("hostTypeName").GetString(), Is.EqualTo("Ludots.UI.Browser.Cef.CefBrowserRuntimeHost"));
+            Assert.That(provider.GetProperty("useCollectibleLoadContext").GetBoolean(), Is.False);
+            Assert.That(provider.GetProperty("processSharedAssemblyNamePrefixes").EnumerateArray().Select(item => item.GetString()).ToArray(),
+                Is.EqualTo(new[] { "CefSharp" }));
             Assert.That(provider.GetProperty("projectPath").GetString(), Does.Not.Contain("mods/"));
             Assert.That(provider.GetProperty("assemblyPath").GetString(), Does.Not.Contain("mods/"));
+        }
+
+        [Test]
+        public void LauncherCefPreset_CompletesHostProviderDescriptorFromRegistry()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"browser-provider-registry-{Guid.NewGuid():N}");
+            string graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            byte[]? originalGraph = File.Exists(graphPath) ? File.ReadAllBytes(graphPath) : null;
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                string preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                string userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                LauncherLaunchPlan plan = launcher.Resolve(
+                    new[] { "preset:browser_react_flow_cef_raylib" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.BrowserRuntime, Is.Not.Null);
+                Assert.That(plan.BrowserRuntime!.Provider, Is.EqualTo("cef"));
+                Assert.That(plan.BrowserRuntime.ProviderAssemblyPath, Does.EndWith("Ludots.UI.Browser.Cef.dll"));
+                Assert.That(Path.IsPathRooted(plan.BrowserRuntime.ProviderAssemblyPath), Is.True);
+                Assert.That(plan.BrowserRuntime.ProviderHostTypeName, Is.EqualTo("Ludots.UI.Browser.Cef.CefBrowserRuntimeHost"));
+                Assert.That(plan.BrowserRuntime.UseCollectibleLoadContext, Is.False);
+                Assert.That(plan.BrowserRuntime.ProcessSharedAssemblyNamePrefixes, Is.EqualTo(new[] { "CefSharp" }));
+            }
+            finally
+            {
+                if (originalGraph == null)
+                {
+                    File.Delete(graphPath);
+                }
+                else
+                {
+                    File.WriteAllBytes(graphPath, originalGraph);
+                }
+
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
         }
 
         private static JsonElement FindPreset(JsonDocument document, string id)

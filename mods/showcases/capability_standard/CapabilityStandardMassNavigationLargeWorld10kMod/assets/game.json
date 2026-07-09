@@ -1,11 +1,11 @@
 {
   "startupMapId": "mass_navigation",
-  "startupSelectedPlayerId": 1,
+  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },

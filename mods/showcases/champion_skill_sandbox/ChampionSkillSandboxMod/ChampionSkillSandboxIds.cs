@@ -37,6 +37,8 @@ namespace ChampionSkillSandboxMod
         public const string ResetCameraRequestKey = "ChampionSkillSandbox.Camera.ResetRequested";
         public const string CameraFollowModeKey = "ChampionSkillSandbox.Camera.FollowMode";
         public const string SelectionViewChoiceKey = "ChampionSkillSandbox.Selection.ViewChoice";
+        public const string ActiveCollectionOwnerKey = "ChampionSkillSandbox.Collection.ActiveOwner";
+        public const string ActiveCollectionKey = "ChampionSkillSandbox.Collection.ActiveKey";
         public const string EzrealAlphaName = "Ezreal Alpha";
         public const string EzrealCooldownName = "Ezreal Cooldown";
         public const string GarenAlphaName = "Garen Alpha";

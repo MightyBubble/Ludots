@@ -55,10 +55,11 @@ namespace Ludots.Core.Vision
                 return;
             }
 
-            AgeVisibleFields();
-            int occupantCount = CopyOccupants();
-            int emitterCount = CopyEmitters();
             ReadOnlySpan<FogLayerId> targetLayers = _layerIds.AsSpan(0, layerCount);
+            int occupantCellSizeCm = ResolveSharedCellSizeCm(targetLayers);
+            AgeVisibleFields();
+            int occupantCount = CopyOccupants(occupantCellSizeCm);
+            int emitterCount = CopyEmitters();
             var rules = FogRulesPolicy.Default;
             var projection = FogProjectionPolicy.Default;
 
@@ -155,7 +156,7 @@ namespace Ludots.Core.Vision
             return count;
         }
 
-        private int CopyOccupants()
+        private int CopyOccupants(int cellSizeCm)
         {
             int count = 0;
             foreach (ref var chunk in World.Query(in OccupantQuery))
@@ -173,16 +174,49 @@ namespace Ludots.Core.Vision
 
                     EnsureOccupantCapacity(count + 1);
                     Entity entity = Unsafe.Add(ref firstEntity, index);
+                    WorldCmInt2 position = positions[index].ToWorldCmInt2();
                     _occupants[count++] = new FogOccupant(
                         entity,
-                        positions[index].ToWorldCmInt2(),
+                        position,
                         occupant.ExposeLayerMask,
                         occupant.AltitudeBand,
-                        occupant.StealthLevel);
+                        occupant.StealthLevel,
+                        ResolvePrecomputedCell(position, cellSizeCm),
+                        cellSizeCm);
                 }
             }
 
             return count;
+        }
+
+        private int ResolveSharedCellSizeCm(ReadOnlySpan<FogLayerId> targetLayers)
+        {
+            int cellSizeCm = 0;
+            for (int i = 0; i < targetLayers.Length; i++)
+            {
+                int current = _layers.Get(targetLayers[i]).CellSizeCm;
+                if (cellSizeCm == 0)
+                {
+                    cellSizeCm = current;
+                    continue;
+                }
+
+                if (cellSizeCm != current)
+                {
+                    return 0;
+                }
+            }
+
+            return cellSizeCm;
+        }
+
+        private static FogCell ResolvePrecomputedCell(WorldCmInt2 position, int cellSizeCm)
+        {
+            return cellSizeCm > 0
+                ? new FogCell(
+                    MathUtil.FloorDiv(position.X, cellSizeCm),
+                    MathUtil.FloorDiv(position.Y, cellSizeCm))
+                : default;
         }
 
         private int ResolveFacingDeg(Entity entity)

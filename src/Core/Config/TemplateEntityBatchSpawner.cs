@@ -11,7 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
@@ -242,7 +242,7 @@ namespace Ludots.Core.Config
                 Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
-                Span<SelectionSelectableState> selectionStates = descriptor.HasSelectionSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
+                Span<CommandSourceSelectableState> commandSourceStates = descriptor.HasCommandSourceSelectableState ? chunk.GetSpan<CommandSourceSelectableState>() : default;
                 Span<Ludots.Core.Gameplay.Components.EntityLayer> entityLayers = descriptor.HasEntityLayer ? chunk.GetSpan<Ludots.Core.Gameplay.Components.EntityLayer>() : default;
                 Span<Team> teams = descriptor.HasTeam ? chunk.GetSpan<Team>() : default;
                 Span<PlayerOwner> playerOwners = descriptor.HasPlayerOwner ? chunk.GetSpan<PlayerOwner>() : default;
@@ -302,9 +302,9 @@ namespace Ludots.Core.Config
                         orderBuffers[componentIndex] = OrderBuffer.CreateEmpty();
                     }
 
-                    if (descriptor.HasSelectionSelectableState)
+                    if (descriptor.HasCommandSourceSelectableState)
                     {
-                        selectionStates[componentIndex] = descriptor.SelectionSelectableState;
+                        commandSourceStates[componentIndex] = descriptor.CommandSourceSelectableState;
                     }
 
                     if (descriptor.HasEntityLayer)
@@ -483,8 +483,8 @@ namespace Ludots.Core.Config
             public readonly TagCountContainer TagCounts;
             public readonly EntityTemplateKeyRef TemplateKey;
             public readonly bool HasOrderBuffer;
-            public readonly bool HasSelectionSelectableState;
-            public readonly SelectionSelectableState SelectionSelectableState;
+            public readonly bool HasCommandSourceSelectableState;
+            public readonly CommandSourceSelectableState CommandSourceSelectableState;
             public readonly bool HasEntityLayer;
             public readonly Ludots.Core.Gameplay.Components.EntityLayer EntityLayer;
             public readonly bool HasTeam;
@@ -512,8 +512,8 @@ namespace Ludots.Core.Config
                 TagCountContainer tagCounts,
                 EntityTemplateKeyRef templateKey,
                 bool hasOrderBuffer,
-                SelectionSelectableState selectionSelectableState,
-                bool hasSelectionSelectableState,
+                CommandSourceSelectableState commandSourceSelectableState,
+                bool hasCommandSourceSelectableState,
                 Ludots.Core.Gameplay.Components.EntityLayer entityLayer,
                 bool hasEntityLayer,
                 Team team,
@@ -540,8 +540,8 @@ namespace Ludots.Core.Config
                 TagCounts = tagCounts;
                 TemplateKey = templateKey;
                 HasOrderBuffer = hasOrderBuffer;
-                SelectionSelectableState = selectionSelectableState;
-                HasSelectionSelectableState = hasSelectionSelectableState;
+                CommandSourceSelectableState = commandSourceSelectableState;
+                HasCommandSourceSelectableState = hasCommandSourceSelectableState;
                 EntityLayer = entityLayer;
                 HasEntityLayer = hasEntityLayer;
                 Team = team;
@@ -649,12 +649,12 @@ namespace Ludots.Core.Config
                 bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
                 bool hasTagCountContainer = template.Components.ContainsKey("TagCountContainer");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
-                bool hasSelectionSelectableState = template.Components.ContainsKey("SelectionSelectableState");
+                bool hasCommandSourceSelectableState = template.Components.ContainsKey("CommandSourceSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
                 bool hasTeam = template.Components.ContainsKey("Team");
                 bool hasPlayerOwner = template.Components.ContainsKey("PlayerOwner");
-                SelectionSelectableState selectionSelectableState = hasSelectionSelectableState
-                    ? ParseSelectionSelectableState(templateId, template.Components["SelectionSelectableState"])
+                CommandSourceSelectableState commandSourceSelectableState = hasCommandSourceSelectableState
+                    ? ParseCommandSourceSelectableState(templateId, template.Components["CommandSourceSelectableState"])
                     : default;
                 Ludots.Core.Gameplay.Components.EntityLayer entityLayer = hasEntityLayer
                     ? ParseEntityLayer(templateId, template.Components["EntityLayer"])
@@ -752,9 +752,9 @@ namespace Ludots.Core.Config
                     signature += Component<OrderBuffer>.Signature;
                 }
 
-                if (hasSelectionSelectableState)
+                if (hasCommandSourceSelectableState)
                 {
-                    signature += Component<SelectionSelectableState>.Signature;
+                    signature += Component<CommandSourceSelectableState>.Signature;
                 }
 
                 if (hasEntityLayer)
@@ -794,8 +794,8 @@ namespace Ludots.Core.Config
                     default,
                     new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
                     hasOrderBuffer,
-                    selectionSelectableState,
-                    hasSelectionSelectableState,
+                    commandSourceSelectableState,
+                    hasCommandSourceSelectableState,
                     entityLayer,
                     hasEntityLayer,
                     team,
@@ -858,7 +858,7 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "SelectionSelectableState", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "CommandSourceSelectableState", StringComparison.Ordinal) ||
                         string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "Team", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
@@ -920,7 +920,7 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
-                       string.Equals(componentName, "SelectionSelectableState", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "CommandSourceSelectableState", StringComparison.Ordinal) ||
                        string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "Team", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
@@ -1007,23 +1007,23 @@ namespace Ludots.Core.Config
                 return new Name { Value = value };
             }
 
-            private static SelectionSelectableState ParseSelectionSelectableState(string templateId, JsonNode node)
+            private static CommandSourceSelectableState ParseCommandSourceSelectableState(string templateId, JsonNode node)
             {
                 if (node is not JsonObject obj)
                 {
-                    throw new InvalidOperationException($"Entity template '{templateId}' SelectionSelectableState requires an object payload.");
+                    throw new InvalidOperationException($"Entity template '{templateId}' CommandSourceSelectableState requires an object payload.");
                 }
 
-                ValidateProperties(obj, $"Entity template '{templateId}' SelectionSelectableState", "IsEnabled");
-                JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", $"Entity template '{templateId}' SelectionSelectableState");
+                ValidateProperties(obj, $"Entity template '{templateId}' CommandSourceSelectableState", "IsEnabled");
+                JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", $"Entity template '{templateId}' CommandSourceSelectableState");
                 byte enabled = isEnabledNode.GetValueKind() switch
                 {
                     JsonValueKind.True => (byte)1,
                     JsonValueKind.False => (byte)0,
-                    _ => throw new InvalidOperationException($"Entity template '{templateId}' SelectionSelectableState.IsEnabled requires a boolean value."),
+                    _ => throw new InvalidOperationException($"Entity template '{templateId}' CommandSourceSelectableState.IsEnabled requires a boolean value."),
                 };
 
-                return new SelectionSelectableState { IsEnabled = enabled };
+                return new CommandSourceSelectableState { IsEnabled = enabled };
             }
 
             private static Ludots.Core.Gameplay.Components.EntityLayer ParseEntityLayer(string templateId, JsonNode node)

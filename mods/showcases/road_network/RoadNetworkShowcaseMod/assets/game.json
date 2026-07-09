@@ -1,13 +1,13 @@
 {
   "startupMapId": "road_network_showcase_chunked",
-  "startupSelectedPlayerId": 1,
+  "startupLocalPlayerId": 1,
   "startupInputContexts": ["Default_Gameplay", "RoadNetwork_Showcase"],
   "constants": {
     "orderTypeIds": {
       "roadMoveFollow": 171
     }
   },
-  "selection": {
+  "commandSource": {
     "clickPickRadiusPixels": 32.0
   }
 }

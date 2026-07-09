@@ -273,7 +273,7 @@ namespace Ludots.Tests.GAS
             var flagRegistry = new RelationshipFlagRegistry();
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
-            var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer);
+            var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
             var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(), relationshipRuntime: relationships);
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];

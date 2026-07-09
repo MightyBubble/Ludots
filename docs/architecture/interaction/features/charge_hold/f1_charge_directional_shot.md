@@ -15,7 +15,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`（Down 边沿触发 .Start）+ `ReleasedThisFrame`（Up 边沿触发 .End）
-- **SelectionType**: `Direction`
+- **TargetType**: `Direction`
 - **InteractionMode**: `SmartCastWithIndicator`
 
 ```json5
@@ -25,7 +25,7 @@
   "actionId": "ability_Q",
   "trigger": "PressedThisFrame",          // Down 边沿生成 .Start order
   "orderTypeKey": "castAbility",
-  "selectionType": "Direction",
+  "targetType": "Direction",
   "isSkillMapping": true,
   "castModeOverride": "SmartCastWithIndicator",
   "heldPolicy": "StartEnd"               // 自动生成 .Start / .End 对

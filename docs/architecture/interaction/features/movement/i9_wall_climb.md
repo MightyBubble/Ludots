@@ -15,12 +15,12 @@ InputOrderMapping:
   actionId: (被动, 无直接映射)
   trigger: 接触墙壁时自动触发
   orderTypeKey: "wallClimb"
-  selectionType: None
+  targetType: None
   isSkillMapping: false
 
 或主动版本:
   trigger: PressedThisFrame (接触墙壁时可用)
-  selectionType: None
+  targetType: None
 ```
 
 ## 实现方案

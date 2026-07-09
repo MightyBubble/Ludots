@@ -16,7 +16,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
             LifecycleOpId.CopyAttributeSlice,
             LifecycleOpId.ClearActiveEffects,
             LifecycleOpId.TransferStableId,
-            LifecycleOpId.RewireSelection,
             LifecycleOpId.ConsumeEntity,
         ];
 
@@ -97,9 +96,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
                     break;
                 case LifecycleOpId.TransferStableId:
                     EntityLifecycleAtomicOps.TransferStableId(world, state.Target, in state.Snapshot);
-                    break;
-                case LifecycleOpId.RewireSelection:
-                    EntityLifecycleAtomicOps.RewireSelection(services, state.Source, state.Target);
                     break;
                 case LifecycleOpId.ConsumeEntity:
                     EntityLifecycleAtomicOps.ConsumeEntity(world, state.Source, "Entity lifecycle ConsumeEntity");

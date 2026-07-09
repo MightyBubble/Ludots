@@ -23,7 +23,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public uint PressurePulseCount { get; set; }
         public uint FormationRevision { get; set; }
         public uint UiBoxRevision { get; set; }
-        public uint FormalSelectionRevision { get; set; }
+        public uint CommandSourceRevision { get; set; }
         public uint FormationResultRevision { get; set; }
         public uint HostileResultRevision { get; set; }
         public bool LastCacheProbeUnchanged { get; set; }
@@ -35,7 +35,7 @@ namespace EntityQueryTacticsShowcaseMod.Runtime
         public Entity ThreatBest { get; set; } = Entity.Null;
         public Entity FormationBest { get; set; } = Entity.Null;
         public int UiBoxCount { get; set; }
-        public int FormalSelectionCount { get; set; }
+        public int CommandSourceCount { get; set; }
         public int SelectedCount { get; set; }
         public int ThreatCount { get; set; }
         public int FormationCount { get; set; }

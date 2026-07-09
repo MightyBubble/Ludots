@@ -98,7 +98,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer());
+                new RelationshipChangeBuffer(),
+                new RelationshipReverseIndex(world));
             var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationshipRuntime);
             var api = new GasGraphRuntimeApi(
                 world,

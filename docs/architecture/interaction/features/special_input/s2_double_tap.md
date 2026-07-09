@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `DoubleTap`（已废弃，需 P2 重新实现）
-- **SelectionType**: 根据技能需求（`None` / `Direction`）
+- **TargetType**: 根据技能需求（`None` / `Direction`）
 - **InteractionMode**: `Explicit`
 
 ```json5
@@ -28,15 +28,15 @@
   "actionId": "sprint",
   "trigger": "DoubleTap",                         // ❌ 已废弃，需 P2 实现
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "doubleTapWindowTicks": 15                      // 双击窗口时间
 }
 ```
 
-**当前状态**：`InputTriggerType.DoubleTap` 已废弃，需要在 `SelectionSystem` 层实现双击检测。
+**当前状态**：`InputTriggerType.DoubleTap` 已废弃，需要在 command-source/input profile 层实现双击检测。
 
-**替代方案（Tag 模拟）**: 首次按键 → AddTag("first_press_{action}", duration=15 ticks)；第二次按键时检查 HasTag("first_press_{action}") → 若有则触发双击技能并移除 Tag。此方案无需修改 SelectionSystem，完全在现有 Tag + RequiredAll 框架内实现。
+**替代方案（Tag 模拟）**: 首次按键 → AddTag("first_press_{action}", duration=15 ticks)；第二次按键时检查 HasTag("first_press_{action}") → 若有则触发双击技能并移除 Tag。此方案无需修改 command-source/input profile 层，完全在现有 Tag + RequiredAll 框架内实现。
 
 ---
 
@@ -80,7 +80,7 @@ Effect 模板示例：
 | 组件 | 路径 | 状态 |
 |------|------|------|
 | InputOrderMapping | `src/Core/Input/Orders/InputOrderMapping.cs` | ✅ 已有 |
-| SelectionSystem | `src/Core/Input/Selection/SelectionSystem.cs` | ❌ P2 — 需新增双击检测逻辑 |
+| CommandSourceAcquisitionSystem | `src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs` | ❌ P2 — 需新增双击检测逻辑 |
 | EffectPhaseExecutor | `src/Core/Gameplay/GAS/Systems/EffectPhaseExecutor.cs` | ✅ 已有 |
 
 ---
@@ -89,11 +89,11 @@ Effect 模板示例：
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| SelectionSystem 双击检测 | P2 | `InputTriggerType.DoubleTap` 已废弃，需在 SelectionSystem 中实现：记录上次按键时间，判断两次按键间隔是否 < doubleTapWindowTicks。 |
+| Command-source 双击检测 | P2 | `InputTriggerType.DoubleTap` 已废弃，需在 command-source/input profile 层实现：记录上次按键时间，判断两次按键间隔是否 < doubleTapWindowTicks。 |
 
 **实现思路**：
 ```csharp
-// src/Core/Input/Selection/SelectionSystem.cs
+// src/Core/Input/CommandSources/CommandSourceAcquisitionSystem.cs
 private Dictionary<string, int> _lastPressedTick = new();
 
 public void Update(int currentTick)

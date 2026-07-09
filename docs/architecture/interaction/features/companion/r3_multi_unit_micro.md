@@ -13,13 +13,13 @@ SC2-style multi-unit micro: box-select a group, then issue the same command to t
 ## Implementation Notes
 
 ```text
-OrderSelectionType.Entities
+OrderTargetType.Entities
   -> selection container resolved from the current viewed selection
   -> order fan-out or shared order planning consumes the container members
 
 InputOrderMapping
   actionId: "MoveOrder"
-  selectionType: Entities
+  targetType: Entities
   interactionMode: Explicit
 ```
 

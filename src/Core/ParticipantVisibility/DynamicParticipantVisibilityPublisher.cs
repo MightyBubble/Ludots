@@ -6,7 +6,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Spatial;
 
@@ -139,7 +139,7 @@ namespace Ludots.Core.ParticipantVisibility
 
             DynamicParticipantQueryFlags flags = binding.Flags;
             if ((flags & DynamicParticipantQueryFlags.RequireSelectable) != 0 &&
-                !SelectionEligibility.IsSelectableNow(_world, candidate))
+                !CommandSourceEligibility.IsSelectableNow(_world, candidate))
             {
                 return false;
             }

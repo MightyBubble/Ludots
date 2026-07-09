@@ -9,9 +9,10 @@ using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -510,7 +511,7 @@ namespace CameraAcceptanceMod.UI
             return state.MapId switch
             {
                 CameraAcceptanceIds.ProjectionMapId => Ui.Text(
-                        $"Left click ground to spawn a random scatter batch. Q/E adjusts the batch by {CameraAcceptanceIds.ProjectionSpawnCountStep}; current batch = {state.ProjectionSpawnCount}.")
+                        $"Use the primary pointer action on ground to spawn a random scatter batch. Q/E adjusts the batch by {CameraAcceptanceIds.ProjectionSpawnCountStep}; current batch = {state.ProjectionSpawnCount}.")
                     .FontSize(12f)
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),
@@ -1259,7 +1260,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
+            if (!TryResolveCommandSourcePrimary(engine, out Entity entity) ||
                 !engine.World.IsAlive(entity) ||
                 !engine.World.Has<Name>(entity))
             {
@@ -1267,6 +1268,18 @@ namespace CameraAcceptanceMod.UI
             }
 
             return engine.World.Get<Name>(entity).Value;
+        }
+
+        private static bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryResolveLocalPlayerEntity(engine, out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out entity);
         }
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)

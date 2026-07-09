@@ -154,6 +154,38 @@
       }
     },
     {
+      "name": "control_plane_projection_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/control_plane_projection/ControlPlaneProjectionShowcaseMod",
+        "projectPath": "ControlPlaneProjectionShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "entity_command_panel_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod",
+        "projectPath": "EntityCommandPanelShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "superweapon_context_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/superweapon_context/SuperweaponContextShowcaseMod",
+        "projectPath": "SuperweaponContextShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "interaction_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/interaction/InteractionShowcaseMod",
+        "projectPath": "InteractionShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_ui_showcase",
       "target": {
         "type": "path",
@@ -218,7 +250,10 @@
       "id": "cef",
       "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
       "packageRootPath": "BrowserRuntime/cef",
-      "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll"
+      "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
+      "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
+      "useCollectibleLoadContext": false,
+      "processSharedAssemblyNamePrefixes": ["CefSharp"]
     }
   ],
   "projectHints": []

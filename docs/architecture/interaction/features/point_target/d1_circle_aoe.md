@@ -13,7 +13,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Position`
+- **TargetType**: `Position`
 - **InteractionMode**: `AimCast`
 
 ```json5
@@ -23,7 +23,7 @@
   "actionId": "ability_D1",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Position",
+  "targetType": "Position",
   "isSkillMapping": true,
   "castModeOverride": null,           // 跟随全局 InteractionMode（默认 AimCast）
   "autoTargetPolicy": null
@@ -134,7 +134,7 @@ Effect 模板示例：
 - **DO**: GroundOverlay Performer 的 `radius` 与 Effect 模板的 `QueryRadiusCm` 保持同源（从同一配置读取），避免视觉与实际范围不一致。
 - **DON'T**: 不在 Graph 内直接操作实体结构（创建/销毁），AoE 只负责查询和分发 Effect。
 - **DON'T**: 不在 `OnApply Main` 中重复计算护甲减伤，减伤逻辑必须在 Listener 中处理，便于全局护甲 Mod 拦截。
-- **DON'T**: 不允许 `selectionType: None` 用于圆形 AoE，必须是 `Position`，否则位置信息无法传入 Graph。
+- **DON'T**: 不允许 `targetType: None` 用于圆形 AoE，必须是 `Position`，否则位置信息无法传入 Graph。
 
 ---
 

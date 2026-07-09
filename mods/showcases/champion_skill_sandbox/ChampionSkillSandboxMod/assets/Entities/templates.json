@@ -8,7 +8,7 @@
                            "Team":  {
                                         "Id":  1
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -77,7 +77,7 @@
                            "Team":  {
                                         "Id":  1
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -146,7 +146,7 @@
                            "Team":  {
                                         "Id":  1
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -218,7 +218,7 @@
                            "Team":  {
                                         "Id":  1
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -272,7 +272,7 @@
                            "Team":  {
                                         "Id":  1
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -327,7 +327,7 @@
                            "Name":  {
                                         "Value":  "Runic Beacon"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -370,7 +370,7 @@
                            "Name":  {
                                         "Value":  "Rune Field"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -413,7 +413,7 @@
                            "Name":  {
                                         "Value":  "Stone Pillar"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -467,7 +467,7 @@
                            "Name":  {
                                         "Value":  "Spell Beacon"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -492,7 +492,7 @@
                            "Name":  {
                                         "Value":  "Gravity Well"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -517,7 +517,7 @@
                            "Name":  {
                                         "Value":  "Barrier Segment"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -557,7 +557,7 @@
                            "Name":  {
                                         "Value":  "Guided Laser"
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "FacingDirection":  {
@@ -594,7 +594,7 @@
                            "Team":  {
                                         "Id":  2
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -628,7 +628,7 @@
                            "Team":  {
                                         "Id":  2
                                     },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -665,7 +665,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  1
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -734,7 +734,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  1
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -803,7 +803,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  1
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -872,7 +872,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  1
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -941,7 +941,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  2
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -1010,7 +1010,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  2
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -1079,7 +1079,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  2
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {
@@ -1148,7 +1148,7 @@
                            "PlayerOwner":  {
                                                "PlayerId":  2
                                            },
-                           "SelectionSelectableTag":  {
+                           "CommandSourceSelectableTag":  {
 
                                                       },
                            "WorldPositionCm":  {

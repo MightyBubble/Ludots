@@ -44,6 +44,10 @@ public sealed class BrowserRuntimeProviderLoadOptions
 
 	public string ProviderId { get; init; } = "browser-runtime-provider";
 
+	public bool UseCollectibleLoadContext { get; init; } = true;
+
+	public IReadOnlyList<string> ProcessSharedAssemblyNamePrefixes { get; init; } = Array.Empty<string>();
+
 	public bool MapRuntimeRootToShadowCopy { get; init; } = true;
 
 	public IReadOnlyCollection<string> DefaultLoadContextAssemblyNamePrefixes { get; init; } = Array.Empty<string>();
@@ -57,6 +61,7 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 	private readonly IDictionary<string, object> _services;
 	private readonly string _providerId;
 	private readonly Action<string>? _log;
+	private readonly bool _usesCollectibleLoadContext;
 
 	private IBrowserRuntime? _runtime;
 	private IBrowserRuntimeHostLifecycle? _providerLifecycle;
@@ -70,6 +75,7 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 		BrowserRuntimeProviderAssemblyLoadContext loadContext,
 		BrowserRuntimeProviderShadowCopy shadowCopy,
 		string providerId,
+		bool usesCollectibleLoadContext,
 		Action<string>? log)
 	{
 		_services = services;
@@ -81,6 +87,7 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 		ShadowCopyDirectory = shadowCopy.ShadowDirectoryPath;
 		LoadContextWeakReference = new WeakReference(loadContext, trackResurrection: false);
 		_providerId = providerId;
+		_usesCollectibleLoadContext = usesCollectibleLoadContext;
 		_log = log;
 	}
 
@@ -106,6 +113,8 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 
 	public bool? LastUnloadCollected { get; private set; }
 
+	public bool UsesCollectibleLoadContext => _usesCollectibleLoadContext;
+
 	public void ShutdownProcessForHostExit()
 	{
 		WeakReference? weakReference = ReleaseProviderReferencesForUnload();
@@ -115,9 +124,18 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 		}
 
 		ForceFullCollection();
-		LastUnloadCollected = !weakReference.IsAlive;
-		WriteLog(
-			$"Browser runtime provider '{_providerId}' collectible ALC collected={LastUnloadCollected.Value}; shadowCopy='{ShadowCopyDirectory}'.");
+		if (_usesCollectibleLoadContext)
+		{
+			LastUnloadCollected = !weakReference.IsAlive;
+			WriteLog(
+				$"Browser runtime provider '{_providerId}' collectible ALC collected={LastUnloadCollected.Value}; shadowCopy='{ShadowCopyDirectory}'.");
+		}
+		else
+		{
+			LastUnloadCollected = null;
+			WriteLog(
+				$"Browser runtime provider '{_providerId}' uses non-collectible provider ALC; shadowCopy='{ShadowCopyDirectory}'.");
+		}
 	}
 
 	private WeakReference? ReleaseProviderReferencesForUnload()
@@ -163,7 +181,10 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 		RemoveServiceIfReferenceEquals(BrowserRuntimeServiceNames.BrowserRuntime, runtime);
 		RemoveServiceIfReferenceEquals(BrowserRuntimeServiceNames.HostLifecycle, this);
 		loadContext?.ReleaseDefaultLoadContextAssemblyResolver();
-		loadContext?.Unload();
+		if (_usesCollectibleLoadContext)
+		{
+			loadContext?.Unload();
+		}
 
 		if (failure != null)
 		{
@@ -225,7 +246,8 @@ public static class BrowserRuntimeProviderLoader
 			shadowCopy.ShadowAssemblyPath,
 			ResolveHostSharedAssemblies(),
 			effectiveRuntimeRootPath,
-			options.DefaultLoadContextAssemblyNamePrefixes);
+			MergeDefaultLoadContextAssemblyNamePrefixes(options),
+			options.UseCollectibleLoadContext);
 
 		try
 		{
@@ -254,6 +276,7 @@ public static class BrowserRuntimeProviderLoader
 				loadContext,
 				shadowCopy,
 				options.ProviderId,
+				options.UseCollectibleLoadContext,
 				options.Log);
 			options.Services[BrowserRuntimeServiceNames.HostLifecycle] = handle;
 			return handle;
@@ -386,8 +409,22 @@ public static class BrowserRuntimeProviderLoader
 
 		RestoreServices(services, serviceSnapshot);
 		CaptureCleanupFailure(ref cleanupFailure, loadContext.ReleaseDefaultLoadContextAssemblyResolver);
-		CaptureCleanupFailure(ref cleanupFailure, loadContext.Unload);
+		if (loadContext.IsCollectible)
+		{
+			CaptureCleanupFailure(ref cleanupFailure, loadContext.Unload);
+		}
 		return cleanupFailure;
+	}
+
+	private static IReadOnlyCollection<string> MergeDefaultLoadContextAssemblyNamePrefixes(
+		BrowserRuntimeProviderLoadOptions options)
+	{
+		return options.DefaultLoadContextAssemblyNamePrefixes
+			.Concat(options.ProcessSharedAssemblyNamePrefixes)
+			.Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+			.Select(prefix => prefix.Trim())
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToArray();
 	}
 
 	private static void CaptureCleanupFailure(ref Exception? cleanupFailure, Action action)
@@ -473,6 +510,12 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			shadowRootPath,
 			SanitizePathSegment(providerId),
 			$"{Path.GetFileNameWithoutExtension(sourceAssemblyPath)}-{fingerprint[..16]}");
+		if (!IsSameOrChildPath(shadowRootPath, shadowDirectoryPath))
+		{
+			throw new InvalidOperationException(
+				$"Browser runtime provider shadow copy path escaped the configured root for provider '{providerId}'.");
+		}
+
 		string shadowAssemblyPath = Path.Combine(shadowDirectoryPath, Path.GetFileName(sourceAssemblyPath));
 
 		EnsureShadowCopy(sourceDirectoryPath, shadowDirectoryPath);
@@ -603,14 +646,19 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			string relativePath = Path.GetRelativePath(sourceDirectoryPath, sourceFile);
 			AppendString(hash, relativePath);
 			AppendString(hash, info.Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
-			AppendString(hash, info.LastWriteTimeUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+			AppendFileContent(hash, sourceFile);
 		}
 	}
 
 	private static void AppendPathAndFile(HashAlgorithm hash, string filePath)
 	{
 		AppendString(hash, Path.GetFileName(filePath));
+		AppendString(hash, new FileInfo(filePath).Length.ToString(System.Globalization.CultureInfo.InvariantCulture));
+		AppendFileContent(hash, filePath);
+	}
 
+	private static void AppendFileContent(HashAlgorithm hash, string filePath)
+	{
 		var buffer = new byte[81920];
 		using var stream = new FileStream(
 			filePath,
@@ -655,7 +703,15 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			builder.Append(invalidChars.Contains(c) ? '_' : c);
 		}
 
-		return builder.ToString();
+		string sanitized = builder.ToString().Trim();
+		if (string.Equals(sanitized, ".", StringComparison.Ordinal) ||
+			string.Equals(sanitized, "..", StringComparison.Ordinal))
+		{
+			throw new InvalidOperationException(
+				$"Browser runtime provider id '{value}' cannot be used as a shadow-copy path segment.");
+		}
+
+		return string.IsNullOrEmpty(sanitized) ? "provider" : sanitized;
 	}
 
 	private static bool IsSameOrChildPath(string parentPath, string candidatePath)

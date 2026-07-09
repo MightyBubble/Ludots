@@ -90,7 +90,7 @@ namespace RoadNetworkShowcaseMod.UI
             return Ui.Card(
                     Ui.Text(state.Title).FontSize(17f).Bold().Color("#F7FAFF"),
                     Ui.Text(state.Status).FontSize(12f).Color("#E7EEF5").WhiteSpace(UiWhiteSpace.Normal),
-                    Ui.Text(state.Selection).FontSize(12f).Color("#8FD0FF").WhiteSpace(UiWhiteSpace.Normal),
+                    Ui.Text(state.CommandSource).FontSize(12f).Color("#8FD0FF").WhiteSpace(UiWhiteSpace.Normal),
                     Ui.Text(state.Input).FontSize(11f).Color("#B8D6EA").WhiteSpace(UiWhiteSpace.PreWrap),
                     Ui.Text(state.Chunks).FontSize(12f).Color("#C2D3E3"),
                     Ui.Row(
@@ -126,7 +126,7 @@ namespace RoadNetworkShowcaseMod.UI
             if (state.Actors.Length == 0)
             {
                 return Ui.Column(
-                    Ui.Text("Viewed selection is empty, so there are no actor debug cards yet. Check the Selection line above first.")
+                    Ui.Text("Command source is empty, so there are no actor debug cards yet. Check the Command source line above first.")
                         .FontSize(11f)
                         .Color("#D8E1EA")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -142,7 +142,7 @@ namespace RoadNetworkShowcaseMod.UI
                         DebugLine(actor.Queue, "#D9E4EE"),
                         DebugLine(actor.Query, "#E7D48D"),
                         DebugLine(actor.Plan, "#F5B4A3"),
-                        DebugLine(actor.Select, "#8FD0FF"),
+                        DebugLine(actor.Pick, "#8FD0FF"),
                         DebugLine(actor.Execute, "#A7F3D0"),
                         DebugLine(actor.Check, "#FBCFE8"),
                         DebugLine(actor.Path, "#CBD5E1", preWrap: true))

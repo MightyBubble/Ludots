@@ -1,9 +1,6 @@
-using Arch.Core;
 using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -15,8 +12,6 @@ namespace Ludots.Core.MassNavigation.Runtime;
 
 public sealed class MassNavigationRuntime
 {
-    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
-
     private MassNavigationConfig? _config;
     private bool _configResolved;
     private bool _systemsInstalled;
@@ -39,7 +34,6 @@ public sealed class MassNavigationRuntime
         EnsureSystemsInstalled(engine, config);
         BindBoardWorld(engine);
         BindMassNavigationLoadedChunks(engine);
-        BindLocalSelectionOwner(engine);
         RequireSimulationRuntime(engine, "activating map focus").SetWorldOperationsReady(true);
         if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
         {
@@ -93,15 +87,10 @@ public sealed class MassNavigationRuntime
         var simulation = new MassNavigationSimulationRuntime(config);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationLocalCommandInputSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationFormationFollowerSystem(engine, simulation),
-            SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-            new MassNavigationOrderIngestionSystem(engine, simulation),
             SystemGroup.PostMovement);
         engine.RegisterSystem(
             new MassNavigationAuthoredAgentBindingSystem(engine, simulation),
@@ -112,6 +101,9 @@ public sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
+        engine.RegisterSystem(
+            new MassNavigationOrderIngestionSystem(engine, simulation),
+            SystemGroup.AbilityActivation);
         engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
             new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
         _systemsInstalled = true;
@@ -258,65 +250,6 @@ public sealed class MassNavigationRuntime
         _activeLoadedChunksOverride = null;
         _savedLoadedChunksValid = false;
         _loadedChunksOverrideActive = false;
-    }
-
-    private static void BindLocalSelectionOwner(GameEngine engine)
-    {
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires SelectionRuntime.");
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
-            localObj is not Entity owner ||
-            !engine.World.IsAlive(owner))
-        {
-            owner = ResolveSingleAuthoredPlayerOwner(engine);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
-        }
-
-        if (!engine.World.Has<PlayerOwner>(owner))
-        {
-            throw new InvalidOperationException("MassNavigation runtime LocalPlayerEntity must author PlayerOwner.");
-        }
-
-        EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
-    }
-
-    private static Entity ResolveSingleAuthoredPlayerOwner(GameEngine engine)
-    {
-        Entity resolved = Entity.Null;
-        int count = 0;
-        engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
-        {
-            resolved = entity;
-            count++;
-        });
-
-        return count switch
-        {
-            1 => resolved,
-            0 => throw new InvalidOperationException("MassNavigation runtime requires the map to author exactly one PlayerOwner local player entity."),
-            _ => throw new InvalidOperationException("MassNavigation runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
-        };
-    }
-
-    private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, Dictionary<string, object> globals)
-    {
-        if (!world.Has<SelectionDragState>(owner))
-        {
-            throw new InvalidOperationException("MassNavigation runtime local player template must author SelectionDragState.");
-        }
-
-        if (!SelectionContextRuntime.TrySetCurrentView(
-                world,
-                globals,
-                selection,
-                owner,
-                SelectionViewKeys.Primary,
-                owner,
-                SelectionSetKeys.LivePrimary,
-                out _))
-        {
-            throw new InvalidOperationException("MassNavigation runtime failed to bind LivePrimary as the primary selection view.");
-        }
     }
 
     private static MassNavigationSimulationRuntime RequireSimulationRuntime(GameEngine engine, string action)

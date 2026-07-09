@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: 根据技能需求（`Entity` / `Position` / `None`）
+- **TargetType**: 根据技能需求（`Entity` / `Position` / `None`）
 - **InteractionMode**: 根据技能需求（`TargetFirst` / `SmartCast`）
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "ability_Q_shift",                  // 独立的 ActionId（在 InputBackend 中配为 Shift+Q）
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true,
   "modifierSubmitBehavior": "Normal",             // 不需要特殊 modifier 行为（组合键已在 InputBackend 处理）
   "autoTargetPolicy": "NearestEnemyInRange",

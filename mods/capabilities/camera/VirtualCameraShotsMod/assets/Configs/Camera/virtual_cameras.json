@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "id": "Camera.Shot.IntroFocus",
     "displayName": "Intro Focus",
@@ -24,7 +24,8 @@
     "pitch": 12,
     "distanceCm": 480,
     "fovYDeg": 58,
-    "followTargetKind": "SelectedEntity",
+    "followTargetKind": "EntityCollectionPrimary",
+    "followCollectionKey": "collection.command.source",
     "defaultBlendDuration": 0.2,
     "blendCurve": "Linear",
     "allowUserInput": false

@@ -1,5 +1,10 @@
 # RFC-0059 Entity-Relation Selection Container SSOT
 
+> Superseded historical RFC. Formal SelectionRuntime/SelectionSet containers have been retired
+> as official selection APIs. Current architecture is EntityCollectionStore with
+> `collection.command.source` as the default command source; do not implement new work from
+> this RFC without checking issue #239 / ADR #244.
+
 Status: Implemented and backwritten to architecture on 2026-03-20  
 Architecture SSOT: `docs/architecture/entity_selection_architecture.md`
 

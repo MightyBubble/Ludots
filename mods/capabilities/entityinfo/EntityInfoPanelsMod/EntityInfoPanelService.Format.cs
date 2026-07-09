@@ -247,7 +247,7 @@ public sealed partial class EntityInfoPanelService
         {
             EntityInfoPanelTargetKind.FixedEntity => "Fixed target unavailable.",
             EntityInfoPanelTargetKind.GlobalEntityKey when !string.IsNullOrWhiteSpace(target.Key) => $"Waiting for `{target.Key}`.",
-            EntityInfoPanelTargetKind.CurrentSelectionView => "Waiting for active selection view.",
+            EntityInfoPanelTargetKind.EntityCollection => $"Waiting for collection `{target.Key}`.",
             _ => "Target unavailable.",
         };
     }

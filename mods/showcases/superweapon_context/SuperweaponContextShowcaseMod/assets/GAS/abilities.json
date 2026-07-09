@@ -1,0 +1,30 @@
+[
+  {
+    "id": "Ability.Showcase.Superweapon.Context",
+    "catalogTags": [
+      "ability.family.superweapon",
+      "ability.catalog.superweapon_context"
+    ],
+    "interactionContextProfile": "ctx.ability.superweapon.confirm_targets",
+    "exec": {
+      "clockId": "Step",
+      "items": [
+        {
+          "kind": "EventGate",
+          "tick": 0,
+          "tag": "Event.Showcase.Superweapon.Confirmed"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "presentation": {
+      "displayName": "Superweapon Context",
+      "iconGlyph": "SW",
+      "accentColor": "#F6D37A",
+      "hintText": "Open targeting, lock the marked units, then confirm the strike."
+    }
+  }
+]

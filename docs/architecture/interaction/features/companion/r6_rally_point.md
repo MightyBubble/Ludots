@@ -12,7 +12,7 @@
 input_order_mappings.json (Command)
   └─ actorOrderRouting
        ├─ match: producer slot 2 + ".Train" → orderTypeKey: setSpawnTarget
-       │    selectionType: HoveredEntityOrPosition
+       │    targetType: HoveredEntityOrPosition
        └─ default candidate → orderTypeKey: moveTo
 
 order_types.json (Mod)

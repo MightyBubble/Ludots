@@ -13,7 +13,7 @@
 ```
 InputOrderMapping:
   actionId: "LoadUnit"
-  selectionType: Entity
+  targetType: Entity
   interactionMode: Explicit
 
 Phase Graph:

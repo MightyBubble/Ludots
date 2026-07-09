@@ -8,6 +8,7 @@
     { "id": "SkillF", "name": "Interaction_SkillF", "type": "Button" },
     { "id": "ActionAttack", "name": "Interaction_ActionAttack", "type": "Button" },
     { "id": "RuneBurst", "name": "Interaction_RuneBurst", "type": "Button" },
+    { "id": "Command", "name": "Interaction_Command", "type": "Button" },
     { "id": "Stop", "name": "Interaction_Stop", "type": "Button" },
     { "id": "QueueModifier", "name": "Interaction_QueueModifier", "type": "Button" },
     { "id": "InteractionModeWoW", "name": "Interaction_Mode_WoW", "type": "Button" },
@@ -45,6 +46,7 @@
             { "path": "<Keyboard>/c" }
           ]
         },
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
         { "actionId": "Stop", "path": "<Keyboard>/s" },
         { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },
         { "actionId": "InteractionModeWoW", "path": "<Keyboard>/f1" },

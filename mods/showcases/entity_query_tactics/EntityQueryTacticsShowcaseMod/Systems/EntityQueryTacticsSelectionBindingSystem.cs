@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
@@ -46,7 +45,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            BindSelectionRuntime(owner);
+            BindCommandSourceOwner(owner);
         }
 
         public void AfterUpdate(in float dt)
@@ -76,30 +75,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             return owner != Entity.Null;
         }
 
-        private void BindSelectionRuntime(Entity owner)
+        private void BindCommandSourceOwner(Entity owner)
         {
-            SelectionRuntime selection = _engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-
             _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
             if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
                 _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
-            }
-
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.FormationPrimary, out _);
-            if (!SelectionContextRuntime.TrySetCurrentView(
-                    _world,
-                    _engine.GlobalContext,
-                    selection,
-                    owner,
-                    SelectionViewKeys.Primary,
-                    owner,
-                    SelectionSetKeys.LivePrimary,
-                    out _))
-            {
-                throw new InvalidOperationException("Entity query tactics showcase failed to bind primary selection view.");
             }
         }
     }

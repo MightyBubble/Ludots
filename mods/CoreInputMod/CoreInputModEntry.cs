@@ -1,6 +1,6 @@
+using CoreInputMod.Triggers;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
-using CoreInputMod.Triggers;
 
 namespace CoreInputMod
 {
@@ -8,7 +8,7 @@ namespace CoreInputMod
     {
         public void OnLoad(IModContext context)
         {
-            context.Log("[CoreInputMod] Loaded — generic input (click-select, GAS selection/input)");
+            context.Log("[CoreInputMod] Loaded - generic command-source and GAS input");
             context.OnEvent(GameEvents.GameStart, new InstallCoreInputOnGameStartTrigger(context).ExecuteAsync);
         }
 

@@ -102,7 +102,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             }
 
             _selectionItems[0] = new NarrativeFrontendSurfaceItem("Drag box", $"{_state.UiBoxCount} preview", string.IsNullOrWhiteSpace(_state.UiBoxNames) ? "empty" : _state.UiBoxNames, AccentHex: "#60A5FA", Active: _state.UiBoxCount > 0);
-            _selectionItems[1] = new NarrativeFrontendSurfaceItem("Committed squad", $"{_state.FormalSelectionCount} units", string.IsNullOrWhiteSpace(_state.SelectedNames) ? "press Enter to commit" : _state.SelectedNames, AccentHex: "#93C5FD", Active: _state.FormalSelectionCount > 0);
+            _selectionItems[1] = new NarrativeFrontendSurfaceItem("Command source", $"{_state.CommandSourceCount} units", string.IsNullOrWhiteSpace(_state.SelectedNames) ? "press Enter to commit" : _state.SelectedNames, AccentHex: "#93C5FD", Active: _state.CommandSourceCount > 0);
             _selectionItems[2] = new NarrativeFrontendSurfaceItem("Friendly query", _state.SelectedCount.ToString(), ReadName(_state.SelectedBest), AccentHex: "#6EE7B7", Active: _state.SelectedCount > 0);
 
             _queryItems[0] = new NarrativeFrontendSurfaceItem("Squad count", _state.SelectedCount.ToString(), BuildSelectedFilterSummary(), AccentHex: "#FDE68A", Active: _state.SelectedCount > 0);
@@ -116,7 +116,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
             _relationItems[3] = new NarrativeFrontendSurfaceItem("Top threat", _state.ThreatMax.ToString(), ReadName(_state.ThreatBest), AccentHex: "#F43F5E", Active: _state.ThreatBest != Entity.Null);
             _relationItems[4] = new NarrativeFrontendSurfaceItem("Pressure path", $"{_state.PressurePulseCount} pulse", $"graph x{_state.GraphExecutionCount} | frame {_state.LastFrameMs:0.0}ms", AccentHex: "#FDBA74", Active: _state.PressurePulseCount > 0);
 
-            _cacheItems[0] = new NarrativeFrontendSurfaceItem("Formation", $"{_state.FormalSelectionCount} -> {_state.FormationCount}", "Routed Scout excluded", AccentHex: "#A78BFA", Active: _state.FormationCount > 0);
+            _cacheItems[0] = new NarrativeFrontendSurfaceItem("Formation", $"{_state.CommandSourceCount} -> {_state.FormationCount}", "Routed Scout excluded", AccentHex: "#A78BFA", Active: _state.FormationCount > 0);
             _cacheItems[1] = new NarrativeFrontendSurfaceItem("Max command", _state.FormationMaxCommandPower.ToString("0"), ReadName(_state.FormationBest), AccentHex: "#C4B5FD");
             _cacheItems[2] = new NarrativeFrontendSurfaceItem("Lowest supply", _state.FormationMinSupply.ToString("0"), "after exclusion", AccentHex: "#DDD6FE");
             _cacheItems[3] = new NarrativeFrontendSurfaceItem("Cache probe", _state.LastCacheProbeUnchanged ? "reused" : "pending", $"input rev {_state.FormationRevision} | graph rev {_state.FormationResultRevision}", AccentHex: _state.LastCacheProbeUnchanged ? "#86EFAC" : "#FDBA74", Active: _state.LastCacheProbeUnchanged);
@@ -204,7 +204,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         {
             return new PresentationSignature(
                 _state.UiBoxRevision,
-                _state.FormalSelectionRevision,
+                _state.CommandSourceRevision,
                 _state.FormationRevision,
                 _state.FormationResultRevision,
                 _state.HostileResultRevision,
@@ -232,7 +232,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         {
             return string.Join("|",
                 signature.UiBoxRevision,
-                signature.FormalSelectionRevision,
+                signature.CommandSourceRevision,
                 signature.FormationRevision,
                 signature.FormationResultRevision,
                 signature.HostileResultRevision,
@@ -384,7 +384,7 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private readonly record struct PresentationSignature(
             uint UiBoxRevision,
-            uint FormalSelectionRevision,
+            uint CommandSourceRevision,
             uint FormationRevision,
             uint FormationResultRevision,
             uint HostileResultRevision,

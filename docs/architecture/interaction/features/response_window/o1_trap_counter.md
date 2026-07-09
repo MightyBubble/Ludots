@@ -15,7 +15,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`（反制技能本身的快捷键）
-- **SelectionType**: `None`（陷阱目标锁定在触发者，不需额外选择）
+- **TargetType**: `None`（陷阱目标锁定在触发者，不需额外选择）
 - **InteractionMode**: `SmartCast`
 
 ```json5
@@ -25,7 +25,7 @@
   "actionId": "ability_trap",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "castModeOverride": null
 }

@@ -5,21 +5,26 @@ namespace Ludots.Core.EntityCollections
 {
     public static class EntityCollectionKeys
     {
-        public const string SelectionLivePrimary = "collection.selection.live.primary";
-        public const string UiSelectionAcquisition = "collection.ui.selection.acquisition";
-        public const string HoveredEntity = "collection.ui.selection.hover";
+        public const string UiCommandAcquisition = "collection.ui.command.acquisition";
+        public const string HoveredEntity = "collection.ui.command.hover";
         public const string AbilityAimHover = "collection.ability.aim.hover";
         public const string AbilityAimAffected = "collection.ability.aim.affected";
         public const string EntityInfoExplicit = "collection.entityinfo.explicit";
         public const string CommandSource = "collection.command.source";
+        public const string UiCastRaw = "collection.ui.cast.raw";
+    }
+
+    public static class EntityViewKeys
+    {
+        public const string ControlPlaneCommand = "view.control_plane.command";
     }
 
     public enum EntityCollectionSourceKind : byte
     {
         Explicit = 0,
         UiAcquisition = 1,
-        SelectionView = 2,
-        SelectionContainer = 3,
+        CollectionView = 2,
+        CollectionSnapshot = 3,
         RelationDerived = 4,
         SpatialQuery = 5,
         GasGraphResult = 6,
@@ -32,7 +37,7 @@ namespace Ludots.Core.EntityCollections
     {
         Display = 0,
         AcquisitionPreview = 1,
-        FormalSelection = 2,
+        CommandPreview = 2,
         CommandSource = 3,
         Debug = 4,
         AimAffected = 5,

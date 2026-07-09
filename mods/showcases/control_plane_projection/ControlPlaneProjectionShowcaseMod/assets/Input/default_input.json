@@ -1,0 +1,15 @@
+{
+  "actions": [
+    { "id": "ControlPlaneProjection.ToggleProxy", "name": "ControlPlaneProjection_ToggleProxy", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "ControlPlaneProjection.Controls",
+      "name": "Control Plane Projection Controls",
+      "priority": 86,
+      "bindings": [
+        { "actionId": "ControlPlaneProjection.ToggleProxy", "path": "<Keyboard>/o" }
+      ]
+    }
+  ]
+}

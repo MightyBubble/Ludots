@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.Loader;
 using Ludots.UI.Browser;
 using NUnit.Framework;
@@ -35,6 +36,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
             Assert.That(handle.SourceAssemblyPath, Is.EqualTo(Path.GetFullPath(sourceAssemblyPath)));
             Assert.That(handle.ShadowAssemblyPath, Is.Not.EqualTo(handle.SourceAssemblyPath));
             Assert.That(handle.ShadowAssemblyPath, Does.StartWith(Path.GetFullPath(shadowRoot)));
+            Assert.That(handle.UsesCollectibleLoadContext, Is.True);
             Assert.That(File.Exists(handle.ShadowAssemblyPath), Is.True);
             Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.InstanceOf<IBrowserRuntime>());
             Assert.That(services["FakeProviderAssemblyLocation"], Is.EqualTo(handle.ShadowAssemblyPath));
@@ -172,6 +174,85 @@ public sealed class BrowserRuntimeProviderLoaderTests
     }
 
     [Test]
+    public void Install_CanUseNonCollectibleProviderAlcForMixedNativeProviders()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+        var logs = new List<string>();
+
+        BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+            new BrowserRuntimeProviderLoadOptions(
+                services,
+                sourceAssemblyPath,
+                typeof(FakeProviderHost).FullName!)
+            {
+                ProviderId = "cef",
+                RuntimeRootPath = sourceRoot,
+                ShadowCopyRootPath = shadowRoot,
+                UseCollectibleLoadContext = false,
+                Log = logs.Add,
+            });
+
+        try
+        {
+            Assert.That(handle.UsesCollectibleLoadContext, Is.False);
+            Assert.That(handle.ShadowAssemblyPath, Is.Not.EqualTo(handle.SourceAssemblyPath));
+            Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.InstanceOf<IBrowserRuntime>());
+        }
+        finally
+        {
+            handle.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+
+        Assert.That(handle.LastUnloadCollected, Is.Null);
+        Assert.That(logs.Any(message => message.Contains("non-collectible provider ALC", StringComparison.Ordinal)), Is.True);
+    }
+
+    [Test]
+    public void Install_CanShareProcessBoundProviderDependenciesWithDefaultAlc()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+            new BrowserRuntimeProviderLoadOptions(
+                services,
+                sourceAssemblyPath,
+                typeof(ProcessSharedDependencyProviderHost).FullName!)
+            {
+                ProviderId = "cef",
+                RuntimeRootPath = sourceRoot,
+                ShadowCopyRootPath = shadowRoot,
+                UseCollectibleLoadContext = false,
+                ProcessSharedAssemblyNamePrefixes = new[] { "Ludots.UI" },
+            });
+
+        try
+        {
+            Assert.That(
+                services["ProcessSharedDependencyLoadContext"],
+                Is.SameAs(AssemblyLoadContext.Default));
+            Assert.That(services["ProcessSharedDependencyLocation"], Is.Not.EqualTo(string.Empty));
+        }
+        finally
+        {
+            handle.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
     public void Install_MissingProviderAssemblyFailsFast()
     {
         string missingAssemblyPath = Path.Combine(CreateTempDirectory(), "Missing.Provider.dll");
@@ -269,7 +350,9 @@ public sealed class BrowserRuntimeProviderLoaderTests
 
         try
         {
+            DateTime fixedTimestamp = new DateTime(2026, 7, 7, 0, 0, 0, DateTimeKind.Utc);
             File.WriteAllText(privateDependencyPath, "version-one");
+            File.SetLastWriteTimeUtc(privateDependencyPath, fixedTimestamp);
             firstHandle = BrowserRuntimeProviderLoader.Install(
                 new BrowserRuntimeProviderLoadOptions(
                     new Dictionary<string, object>(StringComparer.Ordinal),
@@ -286,7 +369,8 @@ public sealed class BrowserRuntimeProviderLoaderTests
             Assert.That(File.ReadAllText(firstShadowDependencyPath), Is.EqualTo("version-one"));
             firstHandle.ShutdownProcessForHostExit();
 
-            File.WriteAllText(privateDependencyPath, "version-two-with-new-length");
+            File.WriteAllText(privateDependencyPath, "version-two");
+            File.SetLastWriteTimeUtc(privateDependencyPath, fixedTimestamp);
             secondHandle = BrowserRuntimeProviderLoader.Install(
                 new BrowserRuntimeProviderLoadOptions(
                     new Dictionary<string, object>(StringComparer.Ordinal),
@@ -302,12 +386,41 @@ public sealed class BrowserRuntimeProviderLoaderTests
                 secondHandle.ShadowCopyDirectory,
                 Path.GetFileName(privateDependencyPath));
             Assert.That(secondHandle.ShadowCopyDirectory, Is.Not.EqualTo(firstHandle.ShadowCopyDirectory));
-            Assert.That(File.ReadAllText(secondShadowDependencyPath), Is.EqualTo("version-two-with-new-length"));
+            Assert.That(File.ReadAllText(secondShadowDependencyPath), Is.EqualTo("version-two"));
         }
         finally
         {
             secondHandle?.ShutdownProcessForHostExit();
             firstHandle?.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
+    public void Install_RejectsProviderIdPathTraversalSegments()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+
+        try
+        {
+            Assert.Throws<InvalidOperationException>(() =>
+                BrowserRuntimeProviderLoader.Install(
+                    new BrowserRuntimeProviderLoadOptions(
+                        new Dictionary<string, object>(StringComparer.Ordinal),
+                        sourceAssemblyPath,
+                        typeof(FakeProviderHost).FullName!)
+                    {
+                        ProviderId = "..",
+                        ShadowCopyRootPath = shadowRoot
+                    }));
+        }
+        finally
+        {
             DeleteDirectoryIfExists(sourceRoot);
             DeleteDirectoryIfExists(shadowRoot);
         }
@@ -377,7 +490,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
         Assert.That(loadContextSource, Does.Contain("AssemblyDependencyResolver"));
         Assert.That(loadContextSource, Does.Contain("defaultLoadContextAssemblyNamePrefixes"));
         Assert.That(loadContextSource, Does.Contain("ResolveDefaultLoadContextAssembly"));
-        Assert.That(loadContextSource, Does.Contain("isCollectible: true"));
+        Assert.That(loadContextSource, Does.Contain("isCollectible"));
         Assert.That(loadContextSource, Does.Not.Contain("CefSharp"));
     }
 
@@ -491,6 +604,30 @@ public sealed class BrowserRuntimeProviderLoaderTests
             services[BrowserRuntimeServiceNames.HostLifecycle] = new FakeHostLifecycle(services);
             services["MismatchedProviderTouchedServices"] = true;
             return returnedRuntime;
+        }
+    }
+
+    public static class ProcessSharedDependencyProviderHost
+    {
+        public static IBrowserRuntime InstallFromAssemblyLocation(
+            IDictionary<string, object> services,
+            string? cacheRootPath = null)
+        {
+            string assemblyLocation = typeof(ProcessSharedDependencyProviderHost).Assembly.Location;
+            string runtimeRootPath = Path.GetDirectoryName(assemblyLocation)
+                ?? throw new DirectoryNotFoundException("Could not resolve fake provider runtime root.");
+            return Install(services, runtimeRootPath, cacheRootPath);
+        }
+
+        public static IBrowserRuntime Install(
+            IDictionary<string, object> services,
+            string runtimeRootPath,
+            string? cacheRootPath = null)
+        {
+            Assembly assembly = Assembly.Load("Ludots.UI");
+            services["ProcessSharedDependencyLoadContext"] = AssemblyLoadContext.GetLoadContext(assembly)!;
+            services["ProcessSharedDependencyLocation"] = assembly.Location;
+            return FakeProviderHost.Install(services, runtimeRootPath, cacheRootPath);
         }
     }
 

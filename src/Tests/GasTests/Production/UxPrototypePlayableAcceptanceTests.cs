@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,7 +16,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
@@ -697,7 +697,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadSelectedEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                    engine.World.TryGet(selected, out Name name)
                 ? name.Value
                 : string.Empty;
@@ -705,7 +705,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadHoveredEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.TryGet(hovered, out Name name)
                 ? name.Value
@@ -714,7 +714,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity[] GetSelectionSnapshot(GameEngine engine)
         {
-            return SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            return Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)

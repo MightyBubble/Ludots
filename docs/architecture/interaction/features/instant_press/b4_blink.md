@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "Flash"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 AbilityExecSpec:
@@ -35,7 +35,7 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | AbilityExecSpec | ✅ 已有 | EffectSignal item |
 | ApplyForce handler | ✅ 已有 | 力/位移处理器 |
 | Phase Graph | ✅ 已有 | Blackboard 读写 |

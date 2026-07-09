@@ -990,27 +990,25 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_UsesSelectionViewerBeforeLocalPlayer()
+        public void WorldHudPerformBehavior_UsesConfiguredViewerForKnowledgeProjection()
         {
             using var world = World.Create();
 
             Entity target = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
-            Entity localPlayer = world.Create();
-            Entity selectionViewer = world.Create();
+            Entity configuredViewer = world.Create();
 
             var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
             var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
             UpsertPerformerKnowledge(
                 projectionStore,
-                selectionViewer,
+                configuredViewer,
                 target,
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live);
             var behavior = new WorldHudPerformBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = selectionViewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = configuredViewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
 
@@ -2754,7 +2752,8 @@ namespace Ludots.Tests.Presentation
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 4));
+                new RelationshipChangeBuffer(capacity: 4),
+                new RelationshipReverseIndex(world));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             int relationshipTypeId = relationshipTypes.Register(relationshipType);

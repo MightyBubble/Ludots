@@ -6,13 +6,14 @@ using Arch.Core;
 using CapabilityStandardMassNavigationLargeWorld10kMod;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.MassNavigation;
@@ -46,8 +47,8 @@ namespace Ludots.Tests.Presentation
         private const float MovementEpsilonCm = 1f;
         private const string MouseLeftButtonPath = "<Mouse>/LeftButton";
         private const string MouseRightButtonPath = "<Mouse>/RightButton";
-        private const string LightSelectionMarkerPerformerId = "mass_navigation_agent_selection_marker_light";
-        private const string HeavySelectionMarkerPerformerId = "mass_navigation_agent_selection_marker_heavy";
+        private const string LightCommandMarkerPerformerId = "mass_navigation_agent_command_marker_light";
+        private const string HeavyCommandMarkerPerformerId = "mass_navigation_agent_command_marker_heavy";
 
         private static readonly string[] ShowcaseMods =
         {
@@ -108,7 +109,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Showcase_SelectionSyncCapacityCoversAuthoredAgentSet()
+        public void Showcase_CommandSourceCapacityCoversAuthoredAgentSet()
         {
             GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
 
@@ -118,9 +119,9 @@ namespace Ludots.Tests.Presentation
             var simulation = RequireService(engine, MassNavigationKeys.SimulationRuntime);
             int expectedAgents = checked(simulation.Config.Scenario.Teams.Length * simulation.Config.Scenario.AgentsPerTeam);
             Assert.That(expectedAgents, Is.EqualTo(ExpectedAgentCount));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialSelectionScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.InitialSelectedEntityCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
-            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.SelectionMemberScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.ScenarioRuntime.InitialCommandActorSnapshotCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
+            Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.CommandActorScratchCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
             Assert.That(simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(expectedAgents));
 
@@ -128,12 +129,11 @@ namespace Ludots.Tests.Presentation
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
 
             Entity[] agents = CollectMassNavigationAgents(engine, expectedAgents);
-            var selection = RequireService(engine, CoreServiceKeys.SelectionRuntime);
             Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
-            Assert.That(selection.ReplaceSelection(localPlayer, SelectionSetKeys.LivePrimary, agents), Is.True);
+            ReplaceCommandSource(engine, localPlayer, agents);
 
-            Assert.DoesNotThrow(() => MassNavigationSelectionSync.SyncIfChanged(engine.World, engine.GlobalContext, selection, simulation));
-            Assert.That(simulation.SelectedCount, Is.EqualTo(expectedAgents));
+            Assert.DoesNotThrow(() => simulation.SetCommandActorSnapshot(agents, simulation.CommandActorSnapshotRevision + 1));
+            Assert.That(simulation.CommandActorCount, Is.EqualTo(expectedAgents));
         }
 
         [Test]
@@ -161,7 +161,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Showcase_MouseBoxSelection_AcquiresVisibleMassNavigationAgents()
+        public void Showcase_MouseBoxAcquisition_AcquiresVisibleMassNavigationAgents()
         {
             GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
 
@@ -177,24 +177,24 @@ namespace Ludots.Tests.Presentation
             AssertLocalScenarioAgentsAreCommandable(engine);
 
             var backend = RequireMutableInputBackend(engine);
-            SelectionDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
-            SelectionDiagnostics before = CaptureSelectionDiagnostics(engine, gesture.Marquee);
+            CommandSourceDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
+            CommandSourceDiagnostics before = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
             Assert.That(before.VisibleSelectable, Is.GreaterThan(0), before.ToString());
             Assert.That(before.ScreenIntersecting, Is.GreaterThan(0), before.ToString());
             Assert.That(before.EligibleIntersecting, Is.GreaterThan(0), before.ToString());
 
-            DriveBoxSelection(engine, hudProjection, backend, gesture);
+            DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
             TickProjectionFrames(engine, hudProjection, 2);
 
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
-            SelectionDiagnostics after = CaptureSelectionDiagnostics(engine, gesture.Marquee);
-            Assert.That(selected.Length, Is.GreaterThan(0), after.ToString());
-            Assert.That(simulation.SelectedCount, Is.GreaterThan(0), after.ToString());
-            Assert.That(CountActiveSelectionMarkers(engine), Is.EqualTo(selected.Length), after.ToString());
+            Entity[] commandActors = SnapshotCommandSource(engine);
+            CommandSourceDiagnostics after = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
+            Assert.That(commandActors.Length, Is.GreaterThan(0), after.ToString());
+            Assert.That(simulation.CommandActorCount, Is.GreaterThan(0), after.ToString());
+            Assert.That(CountActiveCommandMarkers(engine), Is.EqualTo(commandActors.Length), after.ToString());
         }
 
         [Test]
-        public void Showcase_MouseBoxSelection_RightClickIssuesOrdersForCommandableAgents()
+        public void Showcase_MouseBoxAcquisition_RightClickIssuesOrdersForCommandableAgents()
         {
             GC.KeepAlive(typeof(CapabilityStandardMassNavigationLargeWorld10kModEntry).Assembly);
 
@@ -209,33 +209,33 @@ namespace Ludots.Tests.Presentation
             _ = WaitForProductionProjection(engine, hudProjection, simulation, expectedAgents);
 
             var backend = RequireMutableInputBackend(engine);
-            SelectionDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
-            DriveBoxSelection(engine, hudProjection, backend, gesture);
+            CommandSourceDragGesture gesture = ResolveVisibleAgentDragGesture(engine);
+            DriveCommandSourceBoxAcquisition(engine, hudProjection, backend, gesture);
             TickProjectionFrames(engine, hudProjection, 2);
 
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
-            SelectionDiagnostics selectionDiagnostics = CaptureSelectionDiagnostics(engine, gesture.Marquee);
-            Assert.That(selected.Length, Is.GreaterThan(0), selectionDiagnostics.ToString());
-            Assert.That(simulation.SelectedCount, Is.EqualTo(selected.Length), selectionDiagnostics.ToString());
-            AssertSelectedEntitiesAreCommandable(engine, selected);
+            Entity[] commandActors = SnapshotCommandSource(engine);
+            CommandSourceDiagnostics commandSourceDiagnostics = CaptureCommandSourceDiagnostics(engine, gesture.Marquee);
+            Assert.That(commandActors.Length, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
+            Assert.That(simulation.CommandActorCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
+            AssertCommandActorsAreCommandable(engine, commandActors);
 
-            int activeOrdersBefore = CountActiveMoveOrders(engine, selected);
+            int activeOrdersBefore = CountActiveMoveOrders(engine, commandActors);
             int rejectsBefore = simulation.CommandRejectsTotal;
-            Vector2[] positionsBefore = CaptureSelectedWorldPositions(engine, simulation, selected);
-            Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, selected);
+            Vector2[] positionsBefore = CaptureCommandActorWorldPositions(engine, simulation, commandActors);
+            Vector2 commandScreenPoint = ResolveCommandTargetScreenPoint(engine, simulation, commandActors);
 
             DriveRightClickCommandFrame(engine, hudProjection, backend, commandScreenPoint);
 
-            Assert.That(simulation.CommandRejectsTotal, Is.EqualTo(rejectsBefore), selectionDiagnostics.ToString());
-            Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0), selectionDiagnostics.ToString());
-            Assert.That(simulation.LastCommandSelectionCount, Is.EqualTo(selected.Length), selectionDiagnostics.ToString());
-            Assert.That(CountActiveMoveOrders(engine, selected), Is.GreaterThan(activeOrdersBefore), selectionDiagnostics.ToString());
+            Assert.That(simulation.CommandRejectsTotal, Is.EqualTo(rejectsBefore), commandSourceDiagnostics.ToString());
+            Assert.That(simulation.CommandCountFrame, Is.GreaterThan(0), commandSourceDiagnostics.ToString());
+            Assert.That(simulation.LastCommandActorCount, Is.EqualTo(commandActors.Length), commandSourceDiagnostics.ToString());
+            Assert.That(CountActiveMoveOrders(engine, commandActors), Is.GreaterThan(activeOrdersBefore), commandSourceDiagnostics.ToString());
 
             TickProjectionFrames(engine, hudProjection, MovementObservationFrames);
             Assert.That(
-                CountMovedSelectedAgents(engine, simulation, selected, positionsBefore),
+                CountMovedCommandActors(engine, simulation, commandActors, positionsBefore),
                 Is.GreaterThan(0),
-                selectionDiagnostics.ToString());
+                commandSourceDiagnostics.ToString());
 
             backend.SetButton(MouseRightButtonPath, false);
             TickProjectionFrames(engine, hudProjection, 2);
@@ -244,7 +244,7 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.Not.Empty);
-            Assert.That(engine.MergedConfig.StartupSelectedPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();
@@ -253,7 +253,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertStartupParticipantBindings(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupSelectedPlayerId;
+            int playerId = engine.MergedConfig.StartupLocalPlayerId;
             Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.IsAlive(localPlayer), Is.True);
@@ -419,11 +419,11 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private static void DriveBoxSelection(
+        private static void DriveCommandSourceBoxAcquisition(
             GameEngine engine,
             WorldHudToScreenSystem hudProjection,
             MutableInputBackend backend,
-            in SelectionDragGesture gesture)
+            in CommandSourceDragGesture gesture)
         {
             backend.SetMousePosition(gesture.Start);
             backend.SetButton(MouseLeftButtonPath, false);
@@ -459,9 +459,9 @@ namespace Ludots.Tests.Presentation
         private static Vector2 ResolveCommandTargetScreenPoint(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation,
-            ReadOnlySpan<Entity> selected)
+            ReadOnlySpan<Entity> commandActors)
         {
-            Vector2 targetWorldCm = ResolveCommandTargetWorldCm(engine, simulation, selected);
+            Vector2 targetWorldCm = ResolveCommandTargetWorldCm(engine, simulation, commandActors);
             Vector2 candidate = WorldToScreen(engine, targetWorldCm);
             if (AuthoritativeGroundPointerHelper.TryResolveFromScreen(
                     engine.GlobalContext,
@@ -478,9 +478,9 @@ namespace Ludots.Tests.Presentation
         private static Vector2 ResolveCommandTargetWorldCm(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation,
-            ReadOnlySpan<Entity> selected)
+            ReadOnlySpan<Entity> commandActors)
         {
-            Vector2 center = ResolveSelectedCenterWorldCm(engine, simulation, selected);
+            Vector2 center = ResolveCommandActorCenterWorldCm(engine, simulation, commandActors);
             float offsetCm = MathF.Min(simulation.SolverWindowWidthCm, simulation.SolverWindowHeightCm) * CommandTargetOffsetWindowScale;
             ReadOnlySpan<Vector2> directions = stackalloc Vector2[]
             {
@@ -522,16 +522,16 @@ namespace Ludots.Tests.Presentation
             throw new InvalidOperationException("MassNavigation production path test could not find a visible off-center command target.");
         }
 
-        private static Vector2 ResolveSelectedCenterWorldCm(
+        private static Vector2 ResolveCommandActorCenterWorldCm(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation,
-            ReadOnlySpan<Entity> selected)
+            ReadOnlySpan<Entity> commandActors)
         {
             Vector2 sum = Vector2.Zero;
             int count = 0;
-            for (int i = 0; i < selected.Length; i++)
+            for (int i = 0; i < commandActors.Length; i++)
             {
-                if (simulation.TryGetAgentWorldPositionCm(engine.World, selected[i], out Vector2 worldCm))
+                if (simulation.TryGetAgentWorldPositionCm(engine.World, commandActors[i], out Vector2 worldCm))
                 {
                     sum += worldCm;
                     count++;
@@ -540,7 +540,7 @@ namespace Ludots.Tests.Presentation
 
             if (count <= 0)
             {
-                throw new InvalidOperationException("MassNavigation production path test has no selected agent positions.");
+                throw new InvalidOperationException("MassNavigation production path test has no command actor positions.");
             }
 
             return sum / count;
@@ -579,18 +579,18 @@ namespace Ludots.Tests.Presentation
                  minimapRuntime.ContainsRotateToggle(screen));
         }
 
-        private static SelectionDragGesture ResolveVisibleAgentDragGesture(GameEngine engine)
+        private static CommandSourceDragGesture ResolveVisibleAgentDragGesture(GameEngine engine)
         {
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
             var view = RequireService(engine, CoreServiceKeys.ViewController);
-            var selection = RequireService(engine, CoreServiceKeys.SelectionRuntime);
+            var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
             Vector2 resolution = view.Resolution;
-            float padding = selection.Config.ClickPickRadiusPixels + selection.Config.DragThresholdPixels;
+            float padding = commandSourceConfig.ClickPickRadiusPixels + commandSourceConfig.DragThresholdPixels;
             bool hasBounds = false;
             ScreenRect bounds = default;
 
-            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, SelectionSelectableTag>();
-            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref SelectionSelectableTag _) =>
+            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, CommandSourceSelectableTag>();
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref CommandSourceSelectableTag _) =>
             {
                 if (!cull.IsVisible ||
                     !SpatialBoundsUtility.TryProjectScreenBounds(engine.World, entity, projector, out ScreenRect candidate))
@@ -624,36 +624,36 @@ namespace Ludots.Tests.Presentation
                 Clamp(bounds.MaxX + padding, 0f, resolution.X),
                 Clamp(bounds.MaxY + padding, 0f, resolution.Y));
 
-            float minExtent = selection.Config.DragThresholdPixels + padding;
-            if (MathF.Abs(end.X - start.X) <= selection.Config.DragThresholdPixels)
+            float minExtent = commandSourceConfig.DragThresholdPixels + padding;
+            if (MathF.Abs(end.X - start.X) <= commandSourceConfig.DragThresholdPixels)
             {
                 end.X = Clamp(start.X + minExtent, 0f, resolution.X);
             }
 
-            if (MathF.Abs(end.Y - start.Y) <= selection.Config.DragThresholdPixels)
+            if (MathF.Abs(end.Y - start.Y) <= commandSourceConfig.DragThresholdPixels)
             {
                 end.Y = Clamp(start.Y + minExtent, 0f, resolution.Y);
             }
 
-            return new SelectionDragGesture(start, end, ScreenRect.FromPoints(start, end));
+            return new CommandSourceDragGesture(start, end, ScreenRect.FromPoints(start, end));
         }
 
-        private static SelectionDiagnostics CaptureSelectionDiagnostics(GameEngine engine, in ScreenRect marquee)
+        private static CommandSourceDiagnostics CaptureCommandSourceDiagnostics(GameEngine engine, in ScreenRect marquee)
         {
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
-            var selection = RequireService(engine, CoreServiceKeys.SelectionRuntime);
+            var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
             Entity localPlayer = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
                 localObj is Entity local &&
                 engine.World.IsAlive(local)
                     ? local
                     : default;
-            bool hasCurrentView = SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out _);
+            bool hasCurrentView = TryDescribeCommandSourceView(engine, out _);
             bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
             bool localPlayerResolved = localPlayer != default && engine.World.IsAlive(localPlayer);
             Team localTeam = default;
             bool localHasTeam = localPlayerResolved && engine.World.TryGet(localPlayer, out localTeam);
             int localTeamId = localHasTeam ? localTeam.Id : 0;
-            int selectedCount = SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            int selectedCount = SnapshotCommandSource(engine).Length;
             int visibleSelectable = 0;
             int projected = 0;
             int screenIntersecting = 0;
@@ -662,8 +662,8 @@ namespace Ludots.Tests.Presentation
             int liveVisible = 0;
             ScreenRect dragRect = marquee;
 
-            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, SelectionSelectableTag>();
-            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref SelectionSelectableTag _) =>
+            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, CommandSourceSelectableTag>();
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref CommandSourceSelectableTag _) =>
             {
                 if (!cull.IsVisible)
                 {
@@ -698,12 +698,12 @@ namespace Ludots.Tests.Presentation
                 }
 
                 bool canAcquire = localPlayerResolved &&
-                    SelectionEligibility.CanAcquire(
+                    CommandSourceEligibility.CanAcquire(
                         engine.World,
                         engine.GlobalContext,
                         localPlayer,
                         entity,
-                        selection.TargetRelationFilter);
+                        (commandSourceConfig.TargetFilter ?? throw new InvalidOperationException("commandSource.targetFilter is missing.")).ParseRelationFilter());
                 if (canAcquire)
                 {
                     eligible++;
@@ -715,7 +715,7 @@ namespace Ludots.Tests.Presentation
                 }
             });
 
-            return new SelectionDiagnostics(
+            return new CommandSourceDiagnostics(
                 localPlayer,
                 localTeamId,
                 localHasTeam,
@@ -735,15 +735,15 @@ namespace Ludots.Tests.Presentation
             return MathF.Min(MathF.Max(value, min), max);
         }
 
-        private static int CountActiveSelectionMarkers(GameEngine engine)
+        private static int CountActiveCommandMarkers(GameEngine engine)
         {
             var performers = RequireService(engine, CoreServiceKeys.PerformerEntityRuntime);
             var definitions = RequireService(engine, CoreServiceKeys.PerformerDefinitionRegistry);
-            int lightMarkerId = definitions.GetId(LightSelectionMarkerPerformerId);
-            int heavyMarkerId = definitions.GetId(HeavySelectionMarkerPerformerId);
+            int lightMarkerId = definitions.GetId(LightCommandMarkerPerformerId);
+            int heavyMarkerId = definitions.GetId(HeavyCommandMarkerPerformerId);
             if (lightMarkerId <= 0 || heavyMarkerId <= 0)
             {
-                throw new InvalidOperationException("MassNavigation selection marker performer definitions are not registered.");
+                throw new InvalidOperationException("MassNavigation command marker performer definitions are not registered.");
             }
 
             int count = 0;
@@ -760,39 +760,39 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
-        private static Vector2[] CaptureSelectedWorldPositions(
+        private static Vector2[] CaptureCommandActorWorldPositions(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation,
-            ReadOnlySpan<Entity> selected)
+            ReadOnlySpan<Entity> commandActors)
         {
-            var positions = new Vector2[selected.Length];
-            for (int i = 0; i < selected.Length; i++)
+            var positions = new Vector2[commandActors.Length];
+            for (int i = 0; i < commandActors.Length; i++)
             {
-                if (!simulation.TryGetAgentWorldPositionCm(engine.World, selected[i], out positions[i]))
+                if (!simulation.TryGetAgentWorldPositionCm(engine.World, commandActors[i], out positions[i]))
                 {
-                    throw new InvalidOperationException(DescribeEntityCommandState(engine, selected[i]));
+                    throw new InvalidOperationException(DescribeEntityCommandState(engine, commandActors[i]));
                 }
             }
 
             return positions;
         }
 
-        private static int CountMovedSelectedAgents(
+        private static int CountMovedCommandActors(
             GameEngine engine,
             MassNavigationSimulationRuntime simulation,
-            ReadOnlySpan<Entity> selected,
+            ReadOnlySpan<Entity> commandActors,
             ReadOnlySpan<Vector2> positionsBefore)
         {
-            if (positionsBefore.Length != selected.Length)
+            if (positionsBefore.Length != commandActors.Length)
             {
-                throw new InvalidOperationException("MassNavigation movement sample must match selected entity count.");
+                throw new InvalidOperationException("MassNavigation movement sample must match command actor count.");
             }
 
             int moved = 0;
             float epsilonSquared = MovementEpsilonCm * MovementEpsilonCm;
-            for (int i = 0; i < selected.Length; i++)
+            for (int i = 0; i < commandActors.Length; i++)
             {
-                if (simulation.TryGetAgentWorldPositionCm(engine.World, selected[i], out Vector2 current) &&
+                if (simulation.TryGetAgentWorldPositionCm(engine.World, commandActors[i], out Vector2 current) &&
                     Vector2.DistanceSquared(current, positionsBefore[i]) > epsilonSquared)
                 {
                     moved++;
@@ -802,12 +802,12 @@ namespace Ludots.Tests.Presentation
             return moved;
         }
 
-        private static void AssertSelectedEntitiesAreCommandable(GameEngine engine, ReadOnlySpan<Entity> selected)
+        private static void AssertCommandActorsAreCommandable(GameEngine engine, ReadOnlySpan<Entity> commandActors)
         {
-            int playerId = engine.MergedConfig.StartupSelectedPlayerId;
-            for (int i = 0; i < selected.Length; i++)
+            int playerId = engine.MergedConfig.StartupLocalPlayerId;
+            for (int i = 0; i < commandActors.Length; i++)
             {
-                Entity entity = selected[i];
+                Entity entity = commandActors[i];
                 string diagnostics = DescribeEntityCommandState(engine, entity);
                 Assert.That(engine.World.IsAlive(entity), Is.True, diagnostics);
                 Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True, diagnostics);
@@ -817,7 +817,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertLocalScenarioAgentsAreCommandable(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupSelectedPlayerId;
+            int playerId = engine.MergedConfig.StartupLocalPlayerId;
             Entity localPlayer = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
             Assert.That(engine.World.TryGet(localPlayer, out Team localTeam), Is.True, "Startup local player must have a Team.");
 
@@ -855,16 +855,17 @@ namespace Ludots.Tests.Presentation
             string owner = engine.World.TryGet(entity, out PlayerOwner ownerComponent)
                 ? ownerComponent.PlayerId.ToString()
                 : "none";
-            var selection = RequireService(engine, CoreServiceKeys.SelectionRuntime);
-            return $"selectedEntity={entity.Id}, state={alive}, team={team}, playerOwner={owner}, targetRelationFilter={selection.TargetRelationFilter}";
+            var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
+            string relationFilter = commandSourceConfig.TargetFilter?.RelationFilter ?? string.Empty;
+            return $"commandActor={entity.Id}, state={alive}, team={team}, playerOwner={owner}, targetRelationFilter={relationFilter}";
         }
 
-        private static int CountActiveMoveOrders(GameEngine engine, ReadOnlySpan<Entity> selected)
+        private static int CountActiveMoveOrders(GameEngine engine, ReadOnlySpan<Entity> commandActors)
         {
             int count = 0;
-            for (int i = 0; i < selected.Length; i++)
+            for (int i = 0; i < commandActors.Length; i++)
             {
-                Entity entity = selected[i];
+                Entity entity = commandActors[i];
                 if (engine.World.IsAlive(entity) &&
                     engine.World.TryGet(entity, out OrderBuffer orders) &&
                     orders.HasActive)
@@ -874,6 +875,38 @@ namespace Ludots.Tests.Presentation
             }
 
             return count;
+        }
+
+        private static Entity[] SnapshotCommandSource(GameEngine engine)
+        {
+            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            return EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
+        }
+
+        private static bool TryDescribeCommandSourceView(GameEngine engine, out EntityCollectionView view)
+        {
+            view = default;
+            Entity owner = RequireService(engine, CoreServiceKeys.LocalPlayerEntity);
+            if (!engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections))
+            {
+                return false;
+            }
+
+            return EntityCollectionContextRuntime.TryDescribeView(collections, owner, EntityCollectionKeys.CommandSource, out view);
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> members)
+        {
+            EntityCollectionStore collections = RequireService(engine, CoreServiceKeys.EntityCollectionStore);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                members.Length > 0 ? members[0] : Entity.Null,
+                "Command source",
+                $"{members.Length} entity(s)");
+            collections.Replace(owner, descriptor, members, owner);
         }
 
         private static T RequireService<T>(GameEngine engine, ServiceKey<T> key)
@@ -901,8 +934,8 @@ namespace Ludots.Tests.Presentation
         {
             var agents = new Entity[expectedAgents];
             int count = 0;
-            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, SelectionSelectableTag>();
-            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref SelectionSelectableTag _) =>
+            var query = new QueryDescription().WithAll<MassNavigationAgent, VisualTransform, CullState, CommandSourceSelectableTag>();
+            engine.World.Query(in query, (Entity entity, ref MassNavigationAgent _, ref VisualTransform _, ref CullState cull, ref CommandSourceSelectableTag _) =>
             {
                 if (!cull.IsVisible)
                 {
@@ -1080,7 +1113,7 @@ namespace Ludots.Tests.Presentation
             int ScreenHudText,
             string Diagnostics);
 
-        private readonly record struct SelectionDragGesture(Vector2 Start, Vector2 End, ScreenRect Marquee);
+        private readonly record struct CommandSourceDragGesture(Vector2 Start, Vector2 End, ScreenRect Marquee);
 
         private readonly record struct AgentHealthSample(float Current, float Base);
 
@@ -1090,7 +1123,7 @@ namespace Ludots.Tests.Presentation
             long[] BarIdentities,
             long[] TextIdentities);
 
-        private readonly record struct SelectionDiagnostics(
+        private readonly record struct CommandSourceDiagnostics(
             Entity LocalPlayer,
             int LocalTeamId,
             bool LocalHasTeam,
@@ -1102,7 +1135,7 @@ namespace Ludots.Tests.Presentation
             int LiveVisible,
             int Eligible,
             int EligibleIntersecting,
-            int CurrentSelectionCount)
+            int CurrentCommandSourceCount)
         {
             public override string ToString()
             {
@@ -1119,7 +1152,7 @@ namespace Ludots.Tests.Presentation
                     $"liveVisible={LiveVisible}",
                     $"eligible={Eligible}",
                     $"eligibleIntersecting={EligibleIntersecting}",
-                    $"currentSelectionCount={CurrentSelectionCount}");
+                    $"currentCommandSourceCount={CurrentCommandSourceCount}");
             }
         }
 

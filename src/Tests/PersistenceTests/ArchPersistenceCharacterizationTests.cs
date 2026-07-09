@@ -301,19 +301,26 @@ public sealed class ArchPersistenceCharacterizationTests
             metrics,
             flags,
             bands,
-            new RelationshipChangeBuffer());
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(restored));
 
         Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, allianceType), Is.True);
         Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, rivalryType), Is.True);
         Assert.That(restoredRuntime.GetMetric(restoredSource, restoredTarget, allianceType, trustMetric), Is.EqualTo(42));
         Assert.That(restoredRuntime.GetMetric(restoredSource, restoredTarget, rivalryType, trustMetric), Is.EqualTo(-17));
         Assert.That(restoredRuntime.HasFlag(restoredSource, restoredTarget, allianceType, visibleFlag), Is.True);
+        Span<Entity> incoming = stackalloc Entity[4];
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, allianceType, incoming), Is.EqualTo(1));
+        Assert.That(incoming[0], Is.EqualTo(restoredSource));
 
         restoredRuntime.RemoveLink(restoredSource, restoredTarget, allianceType);
         Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget, rivalryType), Is.True);
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, allianceType, incoming), Is.EqualTo(0));
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, rivalryType, incoming), Is.EqualTo(1));
 
         Assert.DoesNotThrow(() => restoredRuntime.RemoveLink(restoredSource, restoredTarget, rivalryType));
         Assert.That(restoredRuntime.HasLink(restoredSource, restoredTarget), Is.False);
+        Assert.That(restoredRuntime.CollectIncoming(restoredTarget, RelationshipTypeRegistry.AnyTypeId, incoming), Is.EqualTo(0));
     }
 
     [Test]
@@ -552,7 +559,14 @@ public sealed class ArchPersistenceCharacterizationTests
         trustMetric = metrics.Register("trust", minValue: -100, maxValue: 100, defaultValue: 0);
         visibleFlag = flags.Register("visible");
 
-        return new RelationshipRuntime(world, types, metrics, flags, bands, changes);
+        return new RelationshipRuntime(
+            world,
+            types,
+            metrics,
+            flags,
+            bands,
+            changes,
+            new RelationshipReverseIndex(world));
     }
 
     private static bool TryFindSingle<T>(World world, out Entity result)

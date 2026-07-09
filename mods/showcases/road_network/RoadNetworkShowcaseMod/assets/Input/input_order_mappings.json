@@ -3,21 +3,23 @@
   "mappings": [
     {
       "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
       "argsTemplate": {},
-      "requireSelection": true,
-      "selectionType": "Position",
+      "requireTarget": true,
+      "targetType": "Position",
       "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier"
     },
     {
       "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "argsTemplate": {},
-      "requireSelection": false,
-      "selectionType": "None",
+      "requireTarget": false,
+      "targetType": "None",
       "isSkillMapping": false,
       "modifierBehavior": "IgnoreModifier"
     }

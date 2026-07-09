@@ -28,7 +28,7 @@ InputOrderMapping:
   actionId: "SkillQ"
   trigger: PressedThisFrame    // Down
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
   heldPolicy: StartEnd         // 启用 Start/End 分离
 
@@ -101,12 +101,12 @@ Up → Order: deactivate_shield
 ```
 L2 (Aim) mapping:
   heldPolicy: StartEnd
-  selectionType: None
+  targetType: None
   orderTypeKey: "aim_mode"
 
 R1/R2 (Fire) mapping:
   trigger: PressedThisFrame
-  selectionType: Direction
+  targetType: Direction
   orderTypeKey: "castAbility"
   // 仅在 HasTag("aiming") 时有效 → precondition 检查
 ```

@@ -4,23 +4,32 @@ namespace Ludots.Core.Gameplay.Relationships
 {
     public struct RelationshipEdgeSet
     {
-        private int[]? _typeIds;
-        private RelationshipEdge[]? _edges;
+        private int _firstTypeId;
+        private RelationshipEdge _firstEdge;
+        private int[]? _extraTypeIds;
+        private RelationshipEdge[]? _extraEdges;
         private int _count;
 
         public int Count => _count;
 
         public bool TryGetAt(int index, out int typeId, out RelationshipEdge edge)
         {
-            if ((uint)index >= (uint)_count || _typeIds == null || _edges == null)
+            if ((uint)index >= (uint)_count)
             {
                 typeId = default;
                 edge = default;
                 return false;
             }
 
-            typeId = _typeIds[index];
-            edge = _edges[index];
+            if (index == 0)
+            {
+                typeId = _firstTypeId;
+                edge = _firstEdge;
+                return true;
+            }
+
+            typeId = _extraTypeIds![index - 1];
+            edge = _extraEdges![index - 1];
             return true;
         }
 
@@ -32,31 +41,42 @@ namespace Ludots.Core.Gameplay.Relationships
         public bool TryGet(int typeId, out RelationshipEdge edge)
         {
             int index = FindIndex(typeId);
-            if (index < 0 || _edges == null)
+            if (index < 0)
             {
                 edge = default;
                 return false;
             }
 
-            edge = _edges[index];
+            edge = index == 0 ? _firstEdge : _extraEdges![index - 1];
             return true;
         }
 
         public RelationshipEdge GetOrAdd(int typeId, RelationshipMetricRegistry metrics, out bool added)
         {
             int index = FindIndex(typeId);
-            if (index >= 0 && _edges != null)
+            if (index >= 0)
             {
                 added = false;
-                return _edges[index];
+                return index == 0 ? _firstEdge : _extraEdges![index - 1];
             }
 
             EnsureCapacity(_count + 1);
             added = true;
-            _typeIds![_count] = typeId;
-            _edges![_count] = RelationshipEdge.CreateDefault(metrics);
+            RelationshipEdge edge = RelationshipEdge.CreateDefault(metrics);
+            if (_count == 0)
+            {
+                _firstTypeId = typeId;
+                _firstEdge = edge;
+            }
+            else
+            {
+                int extraIndex = _count - 1;
+                _extraTypeIds![extraIndex] = typeId;
+                _extraEdges![extraIndex] = edge;
+            }
+
             _count++;
-            return _edges[_count - 1];
+            return edge;
         }
 
         public void Set(int typeId, RelationshipEdge edge)
@@ -65,39 +85,71 @@ namespace Ludots.Core.Gameplay.Relationships
             if (index < 0)
             {
                 EnsureCapacity(_count + 1);
-                _typeIds![_count] = typeId;
-                _edges![_count] = edge;
+                if (_count == 0)
+                {
+                    _firstTypeId = typeId;
+                    _firstEdge = edge;
+                }
+                else
+                {
+                    int extraIndex = _count - 1;
+                    _extraTypeIds![extraIndex] = typeId;
+                    _extraEdges![extraIndex] = edge;
+                }
+
                 _count++;
                 return;
             }
 
-            _edges![index] = edge;
+            if (index == 0)
+            {
+                _firstEdge = edge;
+            }
+            else
+            {
+                _extraEdges![index - 1] = edge;
+            }
         }
 
         public bool Remove(int typeId)
         {
             int index = FindIndex(typeId);
-            if (index < 0 || _typeIds == null || _edges == null)
+            if (index < 0)
             {
                 return false;
             }
 
             int lastIndex = _count - 1;
-            if (index != lastIndex)
+            if (lastIndex == 0)
             {
-                _typeIds[index] = _typeIds[lastIndex];
-                _edges[index] = _edges[lastIndex];
+                _firstTypeId = default;
+                _firstEdge = default;
+                _count = 0;
+                return true;
             }
 
-            _typeIds[lastIndex] = default;
-            _edges[lastIndex] = default;
+            int lastExtraIndex = lastIndex - 1;
+            if (index == 0)
+            {
+                _firstTypeId = _extraTypeIds![lastExtraIndex];
+                _firstEdge = _extraEdges![lastExtraIndex];
+            }
+            else if (index != lastIndex)
+            {
+                int extraIndex = index - 1;
+                _extraTypeIds![extraIndex] = _extraTypeIds![lastExtraIndex];
+                _extraEdges![extraIndex] = _extraEdges![lastExtraIndex];
+            }
+
+            _extraTypeIds![lastExtraIndex] = default;
+            _extraEdges![lastExtraIndex] = default;
             _count--;
             return true;
         }
 
         public int CountMatching(int typeId)
         {
-            if (_typeIds == null || _count == 0)
+            if (_count == 0)
             {
                 return 0;
             }
@@ -112,14 +164,19 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private int FindIndex(int typeId)
         {
-            if (_typeIds == null)
+            if (_count == 0)
             {
                 return -1;
             }
 
-            for (int i = 0; i < _count; i++)
+            if (_firstTypeId == typeId)
             {
-                if (_typeIds[i] == typeId)
+                return 0;
+            }
+
+            for (int i = 1; i < _count; i++)
+            {
+                if (_extraTypeIds![i - 1] == typeId)
                 {
                     return i;
                 }
@@ -130,27 +187,28 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private void EnsureCapacity(int requiredCount)
         {
-            if (requiredCount <= 0)
+            if (requiredCount <= 1)
             {
                 return;
             }
 
-            if (_typeIds == null || _edges == null)
+            int requiredExtraCount = requiredCount - 1;
+            if (_extraTypeIds == null || _extraEdges == null)
             {
-                int length = Math.Max(4, requiredCount);
-                _typeIds = new int[length];
-                _edges = new RelationshipEdge[length];
+                int length = Math.Max(3, requiredExtraCount);
+                _extraTypeIds = new int[length];
+                _extraEdges = new RelationshipEdge[length];
                 return;
             }
 
-            if (_typeIds.Length >= requiredCount)
+            if (_extraTypeIds.Length >= requiredExtraCount)
             {
                 return;
             }
 
-            int newLength = Math.Max(_typeIds.Length * 2, requiredCount);
-            Array.Resize(ref _typeIds, newLength);
-            Array.Resize(ref _edges, newLength);
+            int newLength = Math.Max(_extraTypeIds.Length * 2, requiredExtraCount);
+            Array.Resize(ref _extraTypeIds, newLength);
+            Array.Resize(ref _extraEdges, newLength);
         }
     }
 }

@@ -188,7 +188,7 @@ namespace Ludots.Tests.GAS
             var relationshipFlags = new RelationshipFlagRegistry();
             var relationshipBands = new RelationshipBandRegistry();
             var relationshipChanges = new RelationshipChangeBuffer();
-            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges);
+            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges, new RelationshipReverseIndex(world));
             int memberTypeId = relationshipTypes.Register("TeamMember");
             scopeKeys.RegisterRelationshipOutgoingMembers("team", memberTypeId);
 
@@ -604,7 +604,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementWaitsForSelectionGateTargetContext()
+        public void AbilityExecSystem_ExplicitUseRequirementWaitsForTargetCollectionGateTargetContext()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -629,7 +629,7 @@ namespace Ludots.Tests.GAS
 
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.SelectionGate, tick: 0, tagId: 77);
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
             spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
 
             var definitions = new AbilityDefinitionRegistry();
@@ -640,18 +640,16 @@ namespace Ludots.Tests.GAS
                 UseProgressionRequirementId = reqId
             });
 
-            var selectionRequests = new SelectionRequestQueue();
-            var selectionResponses = new SelectionResponseBuffer();
+            var inputRequests = new InputRequestQueue();
+            var inputResponses = new InputResponseBuffer();
             var effectRequests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(16);
             var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
-                selectionRequests,
-                selectionResponses,
+                inputRequests,
+                inputResponses,
                 effectRequests,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -662,19 +660,20 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
-            Assert.That(selectionRequests.Count, Is.EqualTo(1));
+            Assert.That(inputRequests.Count, Is.EqualTo(1));
             ref var waiting = ref world.Get<AbilityExecInstance>(actor);
             Assert.That(waiting.State, Is.EqualTo(AbilityExecRunState.GateWaiting));
             Assert.That(waiting.PendingProgressionUseRequirement, Is.EqualTo(1));
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.False);
 
-            var response = default(SelectionResponse);
-            response.RequestId = 21;
-            response.ResponseTagId = 77;
-            response.TargetContext = city;
-            response.Count = 1;
-            response.SetEntity(0, target);
-            Assert.That(selectionResponses.TryAdd(response), Is.True);
+            var response = new InputResponse
+            {
+                RequestId = 21,
+                ResponseTagId = 77,
+                Target = target,
+                TargetContext = city,
+            };
+            Assert.That(inputResponses.TryAdd(response), Is.True);
 
             system.Update(0f);
 
@@ -694,7 +693,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementFailsAfterSelectionGateWhenScopeLacksProgression()
+        public void AbilityExecSystem_ExplicitUseRequirementFailsAfterTargetCollectionGateWhenScopeLacksProgression()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -718,7 +717,7 @@ namespace Ludots.Tests.GAS
 
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.SelectionGate, tick: 0, tagId: 78);
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 78);
             spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
 
             var definitions = new AbilityDefinitionRegistry();
@@ -729,18 +728,16 @@ namespace Ludots.Tests.GAS
                 UseProgressionRequirementId = reqId
             });
 
-            var selectionRequests = new SelectionRequestQueue();
-            var selectionResponses = new SelectionResponseBuffer();
+            var inputRequests = new InputRequestQueue();
+            var inputResponses = new InputResponseBuffer();
             var effectRequests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(16);
             var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
-                new InputResponseBuffer(),
-                selectionRequests,
-                selectionResponses,
+                inputRequests,
+                inputResponses,
                 effectRequests,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -751,16 +748,17 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
-            Assert.That(selectionRequests.Count, Is.EqualTo(1));
+            Assert.That(inputRequests.Count, Is.EqualTo(1));
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.False);
 
-            var response = default(SelectionResponse);
-            response.RequestId = 22;
-            response.ResponseTagId = 78;
-            response.TargetContext = cityWithoutTech;
-            response.Count = 1;
-            response.SetEntity(0, target);
-            Assert.That(selectionResponses.TryAdd(response), Is.True);
+            var response = new InputResponse
+            {
+                RequestId = 22,
+                ResponseTagId = 78,
+                Target = target,
+                TargetContext = cityWithoutTech,
+            };
+            Assert.That(inputResponses.TryAdd(response), Is.True);
 
             system.Update(0f);
 
@@ -795,7 +793,7 @@ namespace Ludots.Tests.GAS
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
             spec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
-            spec.SetItem(1, ExecItemKind.SelectionGate, tick: 0, tagId: 79);
+            spec.SetItem(1, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 79);
 
             var definitions = new AbilityDefinitionRegistry();
             definitions.Register(abilityId, new AbilityDefinition
@@ -805,16 +803,14 @@ namespace Ludots.Tests.GAS
                 UseProgressionRequirementId = reqId
             });
 
-            var selectionRequests = new SelectionRequestQueue();
+            var inputRequests = new InputRequestQueue();
             var effectRequests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(16);
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
-                new InputRequestQueue(),
+                inputRequests,
                 new InputResponseBuffer(),
-                selectionRequests,
-                new SelectionResponseBuffer(),
                 effectRequests,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -825,7 +821,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
-            Assert.That(selectionRequests.Count, Is.EqualTo(0));
+            Assert.That(inputRequests.Count, Is.EqualTo(0));
             Assert.That(effectRequests.Count, Is.EqualTo(0));
             Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             Assert.That(ContainsPresentationEvent(presentationEvents, GasPresentationEventKind.CastFailed), Is.True);
@@ -873,8 +869,6 @@ namespace Ludots.Tests.GAS
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                new SelectionRequestQueue(),
-                new SelectionResponseBuffer(),
                 effectRequests,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,

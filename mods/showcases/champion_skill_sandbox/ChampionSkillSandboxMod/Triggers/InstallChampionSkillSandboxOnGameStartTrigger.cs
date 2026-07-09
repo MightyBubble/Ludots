@@ -5,7 +5,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
@@ -62,7 +61,7 @@ namespace ChampionSkillSandboxMod.Triggers
                     new ChampionSkillSandboxLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
                     SystemGroup.InputCollection);
                 engine.RegisterSystem(
-                    new ChampionSkillCommandSnapshotCaptureSystem(engine, _runtime, orders),
+                    new ChampionSkillCommandSnapshotCaptureSystem(engine, _runtime),
                     SystemGroup.InputCollection);
 
                 if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)
@@ -78,9 +77,7 @@ namespace ChampionSkillSandboxMod.Triggers
 
             _toolbarProvider.Bind(engine);
             engine.SetService(CoreServiceKeys.EntityCommandPanelToolbarProvider, _toolbarProvider);
-            engine.InsertSystemBeforeRequired<CurrentSelectionApplySystem>(
-                new ChampionSkillSandboxInputPrepareSystem(engine, _runtime),
-                SystemGroup.InputCollection);
+            engine.RegisterSystem(new ChampionSkillSandboxInputPrepareSystem(engine, _runtime), SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new ChampionSkillSandboxPresentationSystem(engine, _runtime));
 
             _context.Log("[ChampionSkillSandboxMod] Local order source, command panel focus runtime, and cast mode toolbar registered.");

@@ -13,7 +13,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Entity`（需要选中敌方单位）
+- **TargetType**: `Entity`（需要选中敌方单位）
 - **InteractionMode**: `TargetFirst`（悬停目标优先）或 `SmartCast`
 
 ```json5
@@ -23,7 +23,7 @@
   "actionId": "ability_Q",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true,
   "castModeOverride": null,
   "autoTargetPolicy": "NearestEnemyInRange",

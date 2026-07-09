@@ -135,8 +135,7 @@ namespace Ludots.Core.Knowledge
             Entity fallbackViewer,
             out Entity viewer)
         {
-            if (TryResolveViewerFromKey(world, globals, CoreServiceKeys.SelectionViewViewerEntity.Name, out viewer) ||
-                TryResolveViewerFromKey(world, globals, CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
+            if (TryResolveViewerFromKey(world, globals, CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
             {
                 return true;
             }

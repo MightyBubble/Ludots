@@ -5,8 +5,9 @@ using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -661,9 +662,28 @@ internal sealed class UxPrototypeScenarioState
 
     private Entity ResolveSelectedEntity(GameEngine engine)
     {
-        return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity)
+        return TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   engine.World,
+                   engine.GlobalContext,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out Entity entity)
             ? entity
             : Entity.Null;
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private string? ResolveSelectedLabel(GameEngine engine)
@@ -1043,7 +1063,7 @@ internal sealed class UxPrototypeScenarioState
         string type = ResolveSelectedType(selectedLabel);
         return type switch
         {
-            "City" => "City selected. Build radius active. Queue workers or civic actions. Right-click can define rally chains for new units.",
+            "City" => "City selected. Build radius active. Queue workers or civic actions. The command action can define rally chains for new units.",
             "Barracks" => "Barracks selected. Parallel infantry lanes online with rally display.",
             "Stable" => "Stable selected. Cavalry production and route chaining ready.",
             "Workshop" => "Workshop selected. Siege queue active and navmesh-sensitive.",

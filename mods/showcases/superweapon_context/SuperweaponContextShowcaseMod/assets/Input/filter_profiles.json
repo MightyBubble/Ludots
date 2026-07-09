@@ -1,0 +1,20 @@
+{
+  "profiles": [
+    {
+      "id": "filter.superweapon.valid_targets",
+      "associationQuery": {
+        "anchor": "localPlayerRep",
+        "expand": "controls"
+      },
+      "exclude": {
+        "anyTags": [
+          "state.dead",
+          "presentation.hidden"
+        ]
+      },
+      "include": {
+        "anyTags": []
+      }
+    }
+  ]
+}

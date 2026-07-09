@@ -19,8 +19,9 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 		string providerAssemblyPath,
 		IEnumerable<Assembly> sharedAssemblies,
 		string runtimeRootPath,
-		IEnumerable<string>? defaultLoadContextAssemblyNamePrefixes = null)
-		: base(name, isCollectible: true)
+		IEnumerable<string>? defaultLoadContextAssemblyNamePrefixes = null,
+		bool isCollectible = true)
+		: base(name, isCollectible)
 	{
 		if (string.IsNullOrWhiteSpace(providerAssemblyPath))
 		{

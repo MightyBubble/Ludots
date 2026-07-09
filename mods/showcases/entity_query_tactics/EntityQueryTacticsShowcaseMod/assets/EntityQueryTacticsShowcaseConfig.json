@@ -46,7 +46,7 @@
   },
   "collections": {
     "uiBox": "entityquery.collection.ui.box",
-    "formalSelectionMirror": "entityquery.collection.selection.live.primary",
+    "commandSourceMirror": "entityquery.collection.command.source.mirror",
     "formationPrimary": "entityquery.collection.formation.primary",
     "selectedFriendliesResult": "entityquery.collection.graph.selectedFriendlies",
     "hostileThreatResult": "entityquery.collection.graph.hostileThreats",
@@ -94,17 +94,17 @@
   },
   "logs": {
     "systemInstalled": "[EntityQueryTacticsShowcaseMod] production systems registered.",
-    "scenarioReady": "Scenario ready: selection, collection cache, relation metrics, and graph outputs are live.",
-    "selectionCommitted": "UI acquisition committed to formal SelectionRuntime.",
+    "scenarioReady": "Scenario ready: command source, collection cache, relation metrics, and graph outputs are live.",
+    "selectionCommitted": "UI acquisition committed to collection.command.source.",
     "graphsExecuted": "Graph ops executed through shared C# query API.",
-    "formationRotated": "Formation snapshot rotated from formal selection.",
+    "formationRotated": "Formation snapshot rotated from collection.command.source.",
     "pressurePulse": "Threat metric pulse applied through RelationshipRuntime.",
     "cacheProbe": "Retained collection cache probe executed."
   },
   "presentation": {
     "title": "Entity Query Tactics",
-    "controlsLine": "Drag allies | Enter commit formal selection | 1 run graphs | 2 rotate formation | 3 pressure pulse | 4 cache probe",
-    "architectureLine": "SelectionRuntime -> EntityCollectionStore -> GraphReturnWriter -> EntitySetQueryRuntime / RelationshipRuntime"
+    "controlsLine": "Drag allies | Enter commit command source | 1 run graphs | 2 rotate formation | 3 pressure pulse | 4 cache probe",
+    "architectureLine": "EntityCollectionStore(collection.command.source) -> GraphReturnWriter -> EntitySetQueryRuntime / RelationshipRuntime"
   },
   "demoPlayback": {
     "enabled": false,

@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillQ"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 

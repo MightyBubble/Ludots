@@ -18,7 +18,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
@@ -97,7 +97,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate("war3_train");
 
             Assert.That(
-                SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected),
                 Is.True,
                 "Selecting from the RTS toolbar should seed a real primary selection.");
             Assert.That(selected, Is.EqualTo(barracks));
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, MapId, frameTimesMs);
 
             Assert.That(
-                SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected),
                 Is.True,
                 "RTS showcase should auto-select a starter sample so the first-contact UI is coherent.");
             Assert.That(engine.World.Get<Name>(selected).Value, Is.EqualTo("Peasant"));
@@ -260,7 +260,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(world.Get<ChildOf>(peasant).Parent, Is.EqualTo(lumberMill));
             Assert.That(HasEffectiveTag(world, tagOps, peasant, builderAttachedTagId), Is.True);
             Assert.That(HasEffectiveTag(world, tagOps, lumberMill, constructingTagId), Is.True);
-            Assert.That(world.Get<SelectionSelectableState>(peasant).Enabled, Is.False, "Attached builders should be temporarily unselectable.");
+            Assert.That(world.Get<CommandSourceSelectableState>(peasant).Enabled, Is.False, "Attached builders should be temporarily unselectable.");
             Assert.That(ReadAttribute(world, peasant, mineralsAttrId), Is.EqualTo(peasantMineralsBeforeLumberMill - 160f).Within(0.01f));
             Assert.That(ReadAttribute(world, peasant, lumberAttrId), Is.EqualTo(peasantLumberBeforeLumberMill - 60f).Within(0.01f));
             trace.Add(CaptureSnapshot(world, engine, "war3_lumber_mill_started", "Peasant entered build relation and the Lumber Mill site is constructing.", peasant, lumberMill));
@@ -275,7 +275,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 1000,
                 "Lumber Mill construction should complete and detach the peasant.");
             Assert.That(world.Has<ChildOf>(peasant), Is.False, "Peasant should detach after construction completes.");
-            Assert.That(world.Get<SelectionSelectableState>(peasant).Enabled, Is.True, "Peasant should become selectable again after detaching.");
+            Assert.That(world.Get<CommandSourceSelectableState>(peasant).Enabled, Is.True, "Peasant should become selectable again after detaching.");
             trace.Add(CaptureSnapshot(world, engine, "war3_lumber_mill_complete", "Peasant detached after construction completion.", peasant, lumberMill));
             timeline.Add("[T+003] War3 build completion: Lumber Mill clears Constructing, the worker relation is removed, and the peasant regains interaction.");
 
@@ -301,7 +301,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 1000,
                 "Guard Tower construction should complete and release the peasant.");
             Assert.That(world.Has<ChildOf>(peasant), Is.False);
-            Assert.That(world.Get<SelectionSelectableState>(peasant).Enabled, Is.True);
+            Assert.That(world.Get<CommandSourceSelectableState>(peasant).Enabled, Is.True);
             trace.Add(CaptureSnapshot(world, engine, "war3_guard_tower_form_override", "Worker form-set slot override placed and completed a Guard Tower.", peasant, builtGuardTower));
             timeline.Add("[T+004] War3 form-set route: the peasant's R-slot override builds a Guard Tower site without new runtime infrastructure.");
 
@@ -338,7 +338,7 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 12,
                 "Footman should garrison into the Guard Tower and become unselectable.");
             Assert.That(world.Get<ChildOf>(trainedFootman).Parent, Is.EqualTo(guardTower));
-            Assert.That(world.Get<SelectionSelectableState>(trainedFootman).Enabled, Is.False);
+            Assert.That(world.Get<CommandSourceSelectableState>(trainedFootman).Enabled, Is.False);
             CastAbility(engine, guardTower, guardTower, slot: 2);
             TickUntil(
                 engine,
@@ -346,7 +346,7 @@ namespace Ludots.Tests.GAS.Production
                 () => !world.Has<ChildOf>(trainedFootman) && IsSelectable(world, trainedFootman),
                 maxFrames: 24,
                 "Ungarrison should detach the Footman and restore selection.");
-            Assert.That(world.Get<SelectionSelectableState>(trainedFootman).Enabled, Is.True);
+            Assert.That(world.Get<CommandSourceSelectableState>(trainedFootman).Enabled, Is.True);
             trace.Add(CaptureSnapshot(world, engine, "war3_garrison_cycle", "Footman entered and exited the tower via relation-based garrison logic.", trainedFootman, guardTower));
             timeline.Add("[T+006] Shared garrison: Footman enters the tower as ChildOf(Target), becomes unselectable, then exits on UngarrisonAll without custom attach stacks.");
 
@@ -444,14 +444,14 @@ namespace Ludots.Tests.GAS.Production
                 maxFrames: 20,
                 "Warped Zealot should receive its warp-in state and become temporarily unselectable.");
             Assert.That(HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId), Is.True, "Warped Zealot should begin inside the Warping state.");
-            Assert.That(world.Get<SelectionSelectableState>(warpedZealot).Enabled, Is.False, "Warping units should be temporarily unselectable.");
+            Assert.That(world.Get<CommandSourceSelectableState>(warpedZealot).Enabled, Is.False, "Warping units should be temporarily unselectable.");
             TickUntil(
                 engine,
                 frameTimesMs,
                 () => !HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId) && IsSelectable(world, warpedZealot),
                 maxFrames: 600,
                 "Warping state should expire and restore selection.");
-            Assert.That(world.Get<SelectionSelectableState>(warpedZealot).Enabled, Is.True);
+            Assert.That(world.Get<CommandSourceSelectableState>(warpedZealot).Enabled, Is.True);
             trace.Add(CaptureSnapshot(world, engine, "sc2_gateway_tech_and_warp", "Gateway researched Warp Gate and changed its slot 0 output into an instant warp-in.", gateway, trainedZealot, warpedZealot));
             timeline.Add("[T+010] Protoss tech path: Gateway first trains a Zealot, then researches Warp Gate, gains Progression.Rts.WarpGate, and swaps slot 0 into a point-target warp-in.");
 
@@ -480,7 +480,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(world.Get<ChildOf>(drone).Parent, Is.EqualTo(spawningPool));
             Assert.That(HasEffectiveTag(world, tagOps, drone, morphConsumedTagId), Is.True);
             Assert.That(HasEffectiveTag(world, tagOps, spawningPool, constructingTagId), Is.True);
-            Assert.That(world.Get<SelectionSelectableState>(drone).Enabled, Is.False);
+            Assert.That(world.Get<CommandSourceSelectableState>(drone).Enabled, Is.False);
             Assert.That(ReadAttribute(world, drone, mineralsAttrId), Is.EqualTo(droneMineralsBefore - 200f).Within(0.01f));
             TickUntil(engine, frameTimesMs, () => !world.IsAlive(drone), maxFrames: 1400, "Drone should be consumed when the morph completes.");
             Assert.That(HasEffectiveTag(world, tagOps, spawningPool, constructingTagId), Is.False, "Morph host should finish construction before the drone is removed.");
@@ -643,15 +643,15 @@ namespace Ludots.Tests.GAS.Production
         private static bool IsSelectable(World world, Entity entity)
         {
             return world.IsAlive(entity) &&
-                   world.Has<SelectionSelectableState>(entity) &&
-                   world.Get<SelectionSelectableState>(entity).Enabled;
+                   world.Has<CommandSourceSelectableState>(entity) &&
+                   world.Get<CommandSourceSelectableState>(entity).Enabled;
         }
 
         private static bool IsSelectionDisabled(World world, Entity entity)
         {
             return world.IsAlive(entity) &&
-                   world.Has<SelectionSelectableState>(entity) &&
-                   !world.Get<SelectionSelectableState>(entity).Enabled;
+                   world.Has<CommandSourceSelectableState>(entity) &&
+                   !world.Get<CommandSourceSelectableState>(entity).Enabled;
         }
 
         private static float ReadAttribute(World world, Entity entity, int attributeId)
@@ -793,7 +793,7 @@ namespace Ludots.Tests.GAS.Production
                 : "(no-pos)";
             bool hasParent = world.Has<ChildOf>(entity);
             int parentId = hasParent ? world.Get<ChildOf>(entity).Parent.Id : 0;
-            bool selectable = world.Has<SelectionSelectableState>(entity) && world.Get<SelectionSelectableState>(entity).Enabled;
+            bool selectable = world.Has<CommandSourceSelectableState>(entity) && world.Get<CommandSourceSelectableState>(entity).Enabled;
             bool training = HasEffectiveTag(world, tagOps, entity, EnsureTag("Status.Rts.Training"));
             bool constructing = HasEffectiveTag(world, tagOps, entity, EnsureTag("State.Rts.Constructing"));
 
@@ -828,7 +828,7 @@ namespace Ludots.Tests.GAS.Production
                         : null,
                     HasParent = world.Has<ChildOf>(entity),
                     ParentId = world.Has<ChildOf>(entity) ? world.Get<ChildOf>(entity).Parent.Id : 0,
-                    Selectable = world.Has<SelectionSelectableState>(entity) && world.Get<SelectionSelectableState>(entity).Enabled,
+                    Selectable = world.Has<CommandSourceSelectableState>(entity) && world.Get<CommandSourceSelectableState>(entity).Enabled,
                     Attributes = ReadTrackedAttributes(world, entity),
                     Tags = new Dictionary<string, bool>(StringComparer.Ordinal)
                     {
@@ -1132,7 +1132,7 @@ namespace Ludots.Tests.GAS.Production
                 new InputOrderMapping
                 {
                     ActionId = $"PreviewSlot{slotIndex}",
-                    SelectionType = OrderSelectionType.Position,
+                    TargetType = OrderTargetType.Position,
                     ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
                 },
                 new AbilityAimInputState(
@@ -1207,18 +1207,24 @@ namespace Ludots.Tests.GAS.Production
 
         private static void SelectEntity(GameEngine engine, Entity target)
         {
-            var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime service is missing.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Assert.That(engine.World.IsAlive(owner), Is.True, "Local player selection owner should exist on RTS map.");
             Assert.That(engine.World.IsAlive(target), Is.True, "Selection target should exist.");
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: target,
+                title: "RTS strategic command source",
+                summary: "1 actor");
+            collections.Replace(owner, in descriptor, next, owner);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
         }
 
         private static string ReadName(World world, Entity entity)

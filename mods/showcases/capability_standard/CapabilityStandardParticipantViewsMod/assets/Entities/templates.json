@@ -12,7 +12,7 @@
     "id": "capability_standard_participant_views_player",
     "components": {
       "Name": { "Value": "ParticipantViews.Player" },
-      "SelectionDragState": {},
+      "CommandSourceDragState": {},
       "AttributeBuffer": { "base": {} },
       "GameplayTagContainer": {},
       "TagCountContainer": {}

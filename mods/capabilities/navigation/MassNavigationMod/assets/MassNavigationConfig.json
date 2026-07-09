@@ -63,7 +63,7 @@
   "presentation": {
     "requiredMeshAssetIds": [
       "mass_navigation.agent.soldier",
-      "mass_navigation.selection.marker",
+      "mass_navigation.command.marker",
       "mass_navigation.blocker.rock",
       "mass_navigation.hotspot.obelisk"
     ],
@@ -108,7 +108,7 @@
   },
   "scenario": {
     "agentsPerTeam": 2500,
-    "initialSelectedTeamId": 1,
+    "initialActiveTeamId": 1,
     "teams": [
       {
         "id": 1,
@@ -135,13 +135,13 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialSelectionScratchCapacity": 10000,
-    "initialSelectedEntityCapacity": 10000,
+    "initialCommandActorScratchCapacity": 10000,
+    "initialCommandActorSnapshotCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
-      "selectionMemberScratchCapacity": 10000,
       "groupMemberCapacity": 10000,
+      "commandActorScratchCapacity": 10000,
       "orderIngestionTokenCapacity": 256,
       "orderIngestionMemberCapacity": 10000,
       "loadedChunkCapacity": 256,

@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Entity`（但强制 target = self）
+- **TargetType**: `Entity`（但强制 target = self）
 - **InteractionMode**: `TargetFirst` / `SmartCast`
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "heal_spell",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true,
   "castModeOverride": "TargetFirst",
   "autoTargetPolicy": "None",                     // Alt 按下时不自动选目标

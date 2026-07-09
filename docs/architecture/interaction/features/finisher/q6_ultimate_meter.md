@@ -17,7 +17,7 @@ AbilityActivationRequire:
 
 InputOrderMapping:
   actionId: "UltimateAbility"
-  selectionType: None
+  targetType: None
   interactionMode: Explicit
 
 Phase Graph:

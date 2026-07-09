@@ -7,8 +7,8 @@ using EntityInfoPanelsMod.UI;
 using GenreInfoShowcaseMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -466,9 +466,9 @@ namespace GenreInfoShowcaseMod.UI
                 ?? new PresentationTextLocaleSelection(PresentationTextCatalog.Empty);
             string signature = $"{localeSelection.ActiveLocaleId}|{ResolveActiveControlGroup(engine)}|{engine.GetService(EntityInfoPanelServiceKeys.Service)?.UiRevision ?? 0}";
 
-            if (SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
+            if (TryResolveActiveCollection(engine, out _, out _, out EntityCollectionView view))
             {
-                signature = $"{signature}|{descriptor.ViewKey}|{descriptor.Container.SetKey}|{descriptor.Container.MemberCount}|{descriptor.Container.Revision}|{descriptor.Container.Primary.Id}";
+                signature = $"{signature}|{view.Key}|{view.Count}|{view.Revision}|{view.PrimaryEntity.Id}";
             }
 
             return new GenreInfoShowcasePanelState(mapId, signature);
@@ -487,16 +487,13 @@ namespace GenreInfoShowcaseMod.UI
             SelectionGroupSummary group4 = ResolveControlGroupSummary(engine, 4);
 
             if (service != null &&
-                SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity container) &&
-                SelectionContextRuntime.TryGetRuntime(engine.GlobalContext, out SelectionRuntime selection))
+                TryResolveActiveCollection(engine, out EntityCollectionStore collections, out EntityCollectionHandle handle, out EntityCollectionView view))
             {
-                int count = selection.GetSelectionCount(container);
-                Entity primary = SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity resolvedPrimary)
-                    ? resolvedPrimary
-                    : Entity.Null;
+                Entity primary = view.PrimaryEntity;
+                int count = view.Count;
                 for (int index = 0; index < count; index++)
                 {
-                    if (selection.TryGetSelectionAt(container, index, out Entity entity) &&
+                    if (collections.TryGetEntityAt(handle, index, out Entity entity) &&
                         entity != Entity.Null &&
                         engine.World.IsAlive(entity))
                     {
@@ -642,15 +639,14 @@ namespace GenreInfoShowcaseMod.UI
 
         private static SelectionViewMode ResolveSelectionViewMode(GameEngine engine)
         {
-            return SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor) &&
-                   string.Equals(descriptor.ViewKey, SelectionViewKeys.Formation, StringComparison.Ordinal)
+            return string.Equals(ResolveActiveCollectionKey(engine), GenreInfoShowcaseIds.FormationCollectionKey, StringComparison.Ordinal)
                 ? SelectionViewMode.Formation
                 : SelectionViewMode.Live;
         }
 
         private static string ResolveSelectionViewLabel(GameEngine engine, EntityInsightTextResolver textResolver, SelectionViewMode mode)
         {
-            if (!SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
+            if (!TryResolveActiveCollection(engine, out _, out _, out EntityCollectionView view))
             {
                 return mode == SelectionViewMode.Formation
                     ? textResolver.ResolveRequiredTokenKey("genreinfo.view.formation")
@@ -660,7 +656,7 @@ namespace GenreInfoShowcaseMod.UI
             string prefix = mode == SelectionViewMode.Formation
                 ? textResolver.ResolveRequiredTokenKey("genreinfo.view.formation")
                 : textResolver.ResolveRequiredTokenKey("genreinfo.view.live");
-            return $"{prefix} -> {descriptor.Container.SetKey}";
+            return $"{prefix} -> {view.Key}";
         }
 
         private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, int groupIndex)
@@ -668,16 +664,17 @@ namespace GenreInfoShowcaseMod.UI
             if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer) ||
-                engine.GetService(CoreServiceKeys.SelectionRuntime) is not SelectionRuntime selection ||
-                !SelectionControlGroupRuntime.TryDescribeControlGroup(engine.World, selection, viewer, groupIndex, out SelectionContainerDescriptor descriptor))
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !collections.TryGet(viewer, ControlGroupCollectionKey(groupIndex), out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view))
             {
                 return SelectionGroupSummary.Empty;
             }
 
-            string primaryLabel = descriptor.Primary != Entity.Null && engine.World.IsAlive(descriptor.Primary) && engine.World.TryGet(descriptor.Primary, out Name name)
+            string primaryLabel = view.PrimaryEntity != Entity.Null && engine.World.IsAlive(view.PrimaryEntity) && engine.World.TryGet(view.PrimaryEntity, out Name name)
                 ? name.Value
                 : string.Empty;
-            return new SelectionGroupSummary(descriptor.MemberCount, primaryLabel);
+            return new SelectionGroupSummary(view.Count, primaryLabel);
         }
 
         private static int ResolveActiveControlGroup(GameEngine engine)
@@ -687,6 +684,46 @@ namespace GenreInfoShowcaseMod.UI
                 ? groupIndex
                 : 0;
         }
+
+        private static bool TryResolveActiveCollection(
+            GameEngine engine,
+            out EntityCollectionStore collections,
+            out EntityCollectionHandle handle,
+            out EntityCollectionView view)
+        {
+            collections = default!;
+            handle = EntityCollectionHandle.Invalid;
+            view = default;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer) ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store)
+            {
+                return false;
+            }
+
+            string key = ResolveActiveCollectionKey(engine);
+            if (!store.TryGet(viewer, key, out handle) ||
+                !store.TryGetView(handle, out view))
+            {
+                return false;
+            }
+
+            collections = store;
+            return true;
+        }
+
+        private static string ResolveActiveCollectionKey(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.ActiveCollectionKey, out object? keyObj) &&
+                   keyObj is string key &&
+                   !string.IsNullOrWhiteSpace(key)
+                ? key
+                : EntityCollectionKeys.CommandSource;
+        }
+
+        private static string ControlGroupCollectionKey(int groupIndex) =>
+            $"{GenreInfoShowcaseIds.ControlGroupCollectionPrefix}{groupIndex}";
 
         private static string ResolveCategoryLabel(string name)
         {

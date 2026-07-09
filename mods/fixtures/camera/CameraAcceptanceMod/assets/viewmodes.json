@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "Id": "Camera.Acceptance.Mode.Rts",
     "DisplayName": "RTS/MOBA",
@@ -21,7 +21,8 @@
     "Id": "Camera.Acceptance.Mode.FollowClose",
     "DisplayName": "Follow Close",
     "VirtualCameraId": "Camera.Acceptance.Profile.FollowClose",
-    "FollowTargetKind": "SelectedEntity",
+    "FollowTargetKind": "EntityCollectionPrimary",
+    "FollowCollectionKey": "collection.command.source",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeFollowClose"
@@ -30,7 +31,8 @@
     "Id": "Camera.Acceptance.Mode.FollowWide",
     "DisplayName": "Follow Wide",
     "VirtualCameraId": "Camera.Acceptance.Profile.FollowWide",
-    "FollowTargetKind": "SelectedEntity",
+    "FollowTargetKind": "EntityCollectionPrimary",
+    "FollowCollectionKey": "collection.command.source",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
     "SwitchActionId": "CameraAcceptanceModeFollowWide"

@@ -2,7 +2,7 @@
 {
     public sealed class InteractionActionBindings
     {
-        public const string DefaultConfirmActionId = "Select";
+        public const string DefaultConfirmActionId = "CommandSourceAcquire";
         public const string DefaultCancelActionId = "Cancel";
         public const string DefaultCommandActionId = "Command";
         public const string DefaultPointerPositionActionId = "PointerPos";

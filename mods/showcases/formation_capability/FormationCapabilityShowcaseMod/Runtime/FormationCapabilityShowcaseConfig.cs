@@ -15,8 +15,8 @@ internal sealed class FormationCapabilityShowcaseConfig
 {
     public string MapId { get; set; } = string.Empty;
     public FormationCapabilityShowcaseAgentAuthoringConfig FormationAgent { get; set; } = new();
-    public string InitialSelectionFormationId { get; set; } = string.Empty;
-    public int InitialSelectionEntityCapacity { get; set; }
+    public string InitialCommandSourceFormationId { get; set; } = string.Empty;
+    public int InitialCommandSourceEntityCapacity { get; set; }
     public FormationCapabilityShowcaseObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public FormationCapabilityShowcaseFormationConfig[] Formations { get; set; } = Array.Empty<FormationCapabilityShowcaseFormationConfig>();
     public int FormationOutlineOwnerCapacity => Formations.Length;
@@ -56,8 +56,8 @@ internal sealed class FormationCapabilityShowcaseConfig
     {
         RequireProperty(root, "mapId");
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
-        RequireProperty(root, "initialSelectionFormationId");
-        RequireProperty(root, "initialSelectionEntityCapacity");
+        RequireProperty(root, "initialCommandSourceFormationId");
+        RequireProperty(root, "initialCommandSourceEntityCapacity");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
@@ -166,10 +166,10 @@ internal sealed class FormationCapabilityShowcaseConfig
     {
         RequireNonEmpty(MapId, nameof(MapId));
         FormationAgent.Validate(nameof(FormationAgent));
-        RequireNonEmpty(InitialSelectionFormationId, nameof(InitialSelectionFormationId));
-        if (InitialSelectionEntityCapacity <= 0)
+        RequireNonEmpty(InitialCommandSourceFormationId, nameof(InitialCommandSourceFormationId));
+        if (InitialCommandSourceEntityCapacity <= 0)
         {
-            throw new InvalidOperationException("Formation Capability showcase config requires initialSelectionEntityCapacity > 0.");
+            throw new InvalidOperationException("Formation Capability showcase config requires initialCommandSourceEntityCapacity > 0.");
         }
 
         ObstacleOverlay.Validate();
@@ -179,7 +179,7 @@ internal sealed class FormationCapabilityShowcaseConfig
         }
 
         var formationIds = new HashSet<string>(StringComparer.Ordinal);
-        bool foundInitialSelection = false;
+        bool foundInitialCommandSource = false;
         for (int i = 0; i < Formations.Length; i++)
         {
             Formations[i].Validate(i);
@@ -188,13 +188,13 @@ internal sealed class FormationCapabilityShowcaseConfig
                 throw new InvalidOperationException($"Formation Capability showcase config contains duplicate formation id '{Formations[i].Id}'.");
             }
 
-            foundInitialSelection |= string.Equals(Formations[i].Id, InitialSelectionFormationId, StringComparison.Ordinal);
+            foundInitialCommandSource |= string.Equals(Formations[i].Id, InitialCommandSourceFormationId, StringComparison.Ordinal);
         }
 
-        if (!foundInitialSelection)
+        if (!foundInitialCommandSource)
         {
             throw new InvalidOperationException(
-                $"Formation Capability showcase initial selection formation '{InitialSelectionFormationId}' is not configured.");
+                $"Formation Capability showcase initial command-source formation '{InitialCommandSourceFormationId}' is not configured.");
         }
     }
 

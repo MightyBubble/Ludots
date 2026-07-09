@@ -9,12 +9,12 @@
     ]
   },
   {
-    "id": "mass_navigation.selection.marker.raylib",
+    "id": "mass_navigation.command.marker.raylib",
     "assetKind": "Mesh",
-    "assetId": "mass_navigation.selection.marker",
+    "assetId": "mass_navigation.command.marker",
     "backendId": "raylib",
     "sourceUris": [
-      "MassNavigationMod:assets/Models/mass_navigation_selection_marker.obj"
+      "MassNavigationMod:assets/Models/mass_navigation_command_marker.obj"
     ]
   },
   {

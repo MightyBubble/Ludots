@@ -90,11 +90,11 @@ namespace CameraAcceptanceMod
         {
             return mapId switch
             {
-                ProjectionMapId => "Projection and raycast acceptance. Left click empty ground to spawn a random-scatter batch and a transient performer marker.",
+                ProjectionMapId => "Projection and raycast acceptance. Use the primary pointer action on empty ground to spawn a random-scatter batch and a transient performer marker.",
                 HotpathMapId => "Presentation hotpath harness. Drive the local avatar through a 10k+ deterministic crowd while the virtual camera follows, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/terrain/reference guides/primitives/culling load in one reproducible scene.",
                 RtsMapId => "RTS/MOBA shared profile acceptance. Validate the shared follow camera stays bound to the local player while WASD moves the avatar entity.",
                 TpsMapId => "TPS behavior composition. Use WASD to move the local avatar, hold right mouse to aim/look, then use wheel zoom.",
-                BlendMapId => "Blend acceptance. Pick a curve, then left click ground to move the camera there smoothly.",
+                BlendMapId => "Blend acceptance. Pick a curve, then use the primary pointer action on ground to move the camera there smoothly.",
                 FollowMapId => "Follow acceptance. Click an entity to select it; when the target is lost, the camera must stay in place.",
                 StackMapId => "Virtual camera stack acceptance. Base follow camera, reveal shot, nested alert shot, then clear back down.",
                 _ => "Focused camera acceptance slices."
@@ -105,11 +105,11 @@ namespace CameraAcceptanceMod
         {
             return mapId switch
             {
-                ProjectionMapId => "Use the panel to move between scenarios. On this map, press Q/E to decrease/increase the left-click spawn batch by 100 with a floor of 0, then left click empty ground and verify a random-scatter batch appears around the raycast point while the cue marker still appears then expires.",
+                ProjectionMapId => "Use the panel to move between scenarios. On this map, press Q/E to decrease/increase the primary-action spawn batch by 100 with a floor of 0, then use the primary pointer action on empty ground and verify a random-scatter batch appears around the raycast point while the cue marker still appears then expires.",
                 HotpathMapId => "Middle-drag to pan the overview camera. Use WASD to move the local avatar in RTS/TPS modes and watch the virtual camera follow while the panel prints the currently visible entities. Use F6 panel, F7 diagnostics HUD, F8 selection labels, F9 HUD bars, F10 HUD text, F11 terrain, G guides, F12 primitives, and C to isolate culling load.",
                 RtsMapId => "Use WASD to move the local avatar and verify the shared follow camera stays locked to that entity.",
                 TpsMapId => "Use WASD to move the local avatar, hold right mouse and drag to rotate, and use the wheel to zoom. The camera should stay bound to the follow target.",
-                BlendMapId => "Pick Cut / Linear / Smooth in the panel, then left click a ground point to trigger the blend.",
+                BlendMapId => "Pick Cut / Linear / Smooth in the panel, then use the primary pointer action on a ground point to trigger the blend.",
                 FollowMapId => "Click Hero or Captain in world to select, click empty ground to clear selection, move Captain deterministically, and switch Follow Close/Wide to verify no fallback.",
                 StackMapId => "Use panel buttons: Reveal -> Alert -> Clear -> Clear, and verify the stack walks back to the base follow camera.",
                 _ => "Use the panel to switch acceptance scenarios."

@@ -3,9 +3,10 @@ using System.IO;
 using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
@@ -140,7 +141,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_MergesSelectionMovePathPreviewOrderKeys()
+        public void GameEngine_MergesCommandSourceMovePathPreviewOrderKeys()
         {
             string repoRoot = FindRepoRoot();
             using var coreEngine = new GameEngine();
@@ -149,14 +150,15 @@ namespace Ludots.Tests.Architecture
                 Path.Combine(repoRoot, "assets"));
             GameConfig coreConfig = coreEngine.MergedConfig
                 ?? throw new InvalidOperationException("Core engine config was not merged.");
-            SelectionRuntimeConfig coreSelection = coreConfig.Selection
-                ?? throw new InvalidOperationException("Core selection config was not merged.");
+            CommandSourceAcquisitionConfig coreCommandSource = coreConfig.CommandSource
+                ?? throw new InvalidOperationException("Core command-source config was not merged.");
 
             Assert.That(
-                coreSelection.MovePathPreviewOrderTypeKeys,
+                coreCommandSource.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "moveTo" }),
                 "LudotsCoreMod should author the generic move path preview contract.");
             Assert.That(coreConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+            Assert.That(EntityCollectionKeys.CommandSource, Is.EqualTo("collection.command.source"));
 
             using var massNavigationEngine = new GameEngine();
             massNavigationEngine.InitializeWithConfigPipeline(
@@ -170,13 +172,16 @@ namespace Ludots.Tests.Architecture
                 Path.Combine(repoRoot, "assets"));
             GameConfig massNavigationConfig = massNavigationEngine.MergedConfig
                 ?? throw new InvalidOperationException("MassNavigation engine config was not merged.");
-            SelectionRuntimeConfig massNavigationSelection = massNavigationConfig.Selection
-                ?? throw new InvalidOperationException("MassNavigation selection config was not merged.");
+            CommandSourceAcquisitionConfig massNavigationCommandSource = massNavigationConfig.CommandSource
+                ?? throw new InvalidOperationException("MassNavigation command-source config was not merged.");
 
             Assert.That(
-                massNavigationSelection.MovePathPreviewOrderTypeKeys,
+                massNavigationCommandSource.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "massNavigationMove" }),
-                "MassNavigationMod should author only its formal order key for selected move path preview.");
+                "MassNavigationMod should author only its formal order key for command-source move path preview.");
+            EntityCollectionStore collections = massNavigationEngine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+            Assert.That(collections.KeyRegistry.GetId(EntityCollectionKeys.CommandSource), Is.GreaterThan(0));
             Assert.That(massNavigationConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
@@ -219,7 +224,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "attackTarget": {
       "orderTypeId": 102,
@@ -237,7 +243,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Attack.MovePosition",
       "entityBlackboardKey": "Attack.TargetEntity",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "massNavigationMove": {
       "orderTypeId": "massNavigationMove",
@@ -255,7 +262,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
@@ -311,7 +319,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
@@ -358,7 +367,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -392,7 +402,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -426,7 +437,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
@@ -466,7 +478,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": " none ",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -534,7 +547,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "semanticMove": {
       "label": "Semantic Move",
@@ -551,7 +565,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {
@@ -605,7 +620,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "alphaMove": {
       "orderTypeId": "alphaMove",
@@ -623,7 +639,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "omegaMove": {
       "orderTypeId": "omegaMove",
@@ -641,7 +658,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -682,7 +700,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "alphaMove": {
       "orderTypeId": "alphaMove",
@@ -700,7 +719,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     },
     "explicitMove": {
       "orderTypeId": 1,
@@ -718,7 +738,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -748,7 +769,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -782,7 +804,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": 201,
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -818,7 +841,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -863,7 +887,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "Test.Order.CustomInt",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -914,7 +939,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "Test.Order.UnknownInt",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}
@@ -949,7 +975,8 @@ namespace Ludots.Tests.Architecture
       "spatialBlackboardKey": "generic.TargetPosition",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
-      "validationGraph": "none"
+      "validationGraph": "none",
+      "instantComplete": false
     }
   },
   "orderRules": {}

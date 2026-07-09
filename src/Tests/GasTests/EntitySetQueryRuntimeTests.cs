@@ -507,7 +507,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var reasonRegistry = new RelationshipReasonRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
-            var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer);
+            var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
             var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships);
             var templateKeys = new EntityTemplateKeyRegistry();
             var targetDispatchPresets = new TargetDispatchPresetRegistry();

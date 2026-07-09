@@ -39,7 +39,7 @@
   "navigationRuntimeCapacity": {
     "navigationGroupCapacity": 4,
     "groupMembershipAgentCapacity": 4,
-    "selectionMemberScratchCapacity": 4,
+    "commandActorScratchCapacity": 4,
     "groupMemberCapacity": 4,
     "orderIngestionTokenCapacity": 4,
     "orderIngestionMemberCapacity": 4,

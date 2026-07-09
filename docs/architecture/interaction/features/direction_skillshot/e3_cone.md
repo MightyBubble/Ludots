@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillW"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
 ```
 
@@ -47,7 +47,7 @@ AbilityExecSpec:
 |------|------|------|
 | SpatialQuery handler | ✅ 已有 | 已支持 radius |
 | Cone shape (QueryCone op 104) | ✅ 已有 | GraphOps.cs 已支持 QueryCone |
-| Direction input | ✅ 已有 | selectionType: Direction |
+| Direction input | ✅ 已有 | targetType: Direction |
 
 ## 新增需求
 

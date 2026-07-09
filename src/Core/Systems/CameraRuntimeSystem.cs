@@ -91,10 +91,16 @@ namespace Ludots.Core.Systems
             }
 
             var definition = _virtualCameraRegistry.Get(request.Id);
+            var followTargetKind = request.FollowTargetKindOverride ?? definition.FollowTargetKind;
+            string followCollectionKey = string.IsNullOrWhiteSpace(request.FollowCollectionKeyOverride)
+                ? definition.FollowCollectionKey
+                : request.FollowCollectionKeyOverride;
             var followTarget = CameraFollowTargetFactory.Build(
                 _world,
                 _globals,
-                request.FollowTargetKindOverride ?? definition.FollowTargetKind);
+                followTargetKind,
+                request.FollowCollectionOwnerOverride,
+                followCollectionKey);
 
             _cameraManager.ActivateVirtualCamera(
                 request.Id,

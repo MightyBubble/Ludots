@@ -12,7 +12,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame` / `ReleasedThisFrame` / `Held`
-- **SelectionType**: `None` / `Entity` / `Position` / `Direction` / `Vector`
+- **TargetType**: `None` / `Entity` / `Position` / `Direction` / `Vector`
 - **InteractionMode**: `TargetFirst` / `SmartCast` / `AimCast` / `SmartCastWithIndicator`
 
 ```json5
@@ -22,7 +22,7 @@
   "actionId": "ability_Q",                        // 对应 InputAction ID
   "trigger": "PressedThisFrame",                  // InputTriggerType
   "orderTypeKey": "castAbility",                  // 对应 OrderTypeRegistry 中的 key
-  "selectionType": "Entity",                      // OrderSelectionType
+  "targetType": "Entity",                      // OrderTargetType
   "isSkillMapping": true,                         // 受 InteractionMode 影响
   "castModeOverride": null,                       // null = 跟随全局 InteractionMode
   "autoTargetPolicy": "NearestEnemyInRange",      // 可选，SmartCast 无悬停目标时的回退策略
@@ -102,7 +102,7 @@ Effect 模板示例：
 - **DO**: 结构变更（创建实体、挂组件）统一走 `RuntimeEntitySpawnQueue`，不在 Effect Handler 里直接调 `World.Create`。
 - **DO**: 跨层写入统一用 `AttributeSink`（如 float→Fix64 的物理层边界）。
 - **DON'T**: 不允许在 Graph 内做结构变更（只能读写 Blackboard、属性、发布 Effect）。
-- **DON'T**: 不允许 `DoubleTap` InputTriggerType（已废弃，双击属于 SelectionSystem）。
+- **DON'T**: 不允许 `DoubleTap` InputTriggerType（已废弃，双击属于 command-source/input profile 层）。
 - **DON'T**: CC Tag（Status.Stunned 等）不能由 Graph 直接写位，必须通过 `GrantedTags` + Effect 生命周期管理。
 
 ---

@@ -1,3 +1,7 @@
+> Current status: users may see the word "selection" as UI shorthand, but mod config should use
+> EntityCollectionMemberAdded/Removed and `collection.command.source`. Do not author
+> `SelectionMemberAdded`, `selection.live.primary`, `SelectionSetKeys`, or formal SelectionRuntime
+> dependencies for new MassNavigation content.
 # MassNavigation RTS 上手书
 
 这份文档写给第一次接触 Ludots 的 Mod 作者：你想做一个类似《全面战争》的 RTS 战场，玩家选择的是方阵，方阵有血量、能接移动命令；方阵里的士兵也是 MassNavigation agent，但士兵由方阵驱动，不能被玩家单独框选。
@@ -8,7 +12,7 @@
 - Mod 作者：改 JSON 配置和自己的业务 runtime。你配置模板、方阵、士兵、表现、地图、障碍和调参。
 - 引擎开发者：维护 Core、Selection、Order、Performer、MassNavigation 基建。
 
-玩家不需要输入 `selection.live.primary`、`SelectionSetKeys.LivePrimary`、template id、performer id 或 order blackboard key。看到文档让玩家输入这些，就是文档写错了。
+玩家不需要输入 `collection.command.source`、`EntityCollectionKeys.CommandSource`、template id、performer id 或 order blackboard key。看到文档让玩家输入这些，就是文档写错了。
 
 ## 先跑起来
 
@@ -31,7 +35,7 @@ Raylib launch graph 在：
 
 - Shu / Wei 两边方阵在战场上。
 - 只有方阵能被选中。
-- 选中方阵后，脚下有 selection marker，界面有血量表现。
+- 选中方阵后，脚下有 command marker，界面有血量表现。
 - 右键地面后，方阵移动。
 - 士兵跟随所属方阵移动，但不是玩家直接操作对象。
 - 障碍物可见。
@@ -98,7 +102,7 @@ Formation Capability 示例的文件入口：
 
 玩家不理解、也不应该被要求理解：
 
-- runtime selection set
+- runtime command-source collection
 - performer scope
 - core runtime binding group
 - MassNavigationFlow solver index
@@ -118,7 +122,7 @@ Mod 作者描述内容和规则：
 
 Mod 作者不新建这些基础设施：
 
-- selection runtime
+- command-source/entity collection runtime
 - order runtime
 - spawn queue
 - performer runtime
@@ -199,8 +203,8 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `VisualHeightmapSampleState`
 - `FacingDirection`
 - `OrderBuffer`
-- `SelectionSelectableTag`
-- `SelectionSelectableState`
+- `CommandSourceSelectableTag`
+- `CommandSourceSelectableState`
 - `AttributeBuffer`
 - `GameplayTagContainer`
 - `TagCountContainer`
@@ -220,13 +224,13 @@ agent profile 在 `mods/showcases/formation_capability/FormationCapabilityShowca
 - `MassNavigationAgent`
 - `MassNavigationFormationFollower`
 
-这表示士兵也是 core MassNavigation agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `SelectionSelectableTag`，所以玩家不能直接选中或下令。
+这表示士兵也是 core MassNavigation agent，并且可选跟随某个 formation anchor；士兵模板不配 `OrderBuffer` 和 `CommandSourceSelectableTag`，所以玩家不能直接选中或下令。
 
 组件语义要按存在与否理解：
 
 - `MassNavigationAgent`：进入 core MassNavigation runtime。
 - `OrderBuffer`：可接玩家或 AI 订单。
-- `SelectionSelectableTag`：可被选择。
+- `CommandSourceSelectableTag`：可进入 `collection.command.source` 的指挥来源集合。
 - `MassNavigationFormationAnchor`：启用 formation anchor 行为。
 - `MassNavigationFormationFollower`：启用 follower 行为。
 
@@ -240,17 +244,17 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
 
 - `EntitySpawned` 创建方阵或士兵 performer。
 - `EntityDestroyed` 销毁 performer scope。
-- `SelectionMemberAdded` 创建方阵 selection marker。
-- `SelectionMemberRemoved` 销毁方阵 selection marker。
+- `EntityCollectionMemberAdded` 创建方阵 command marker。
+- `EntityCollectionMemberRemoved` 销毁方阵 command marker。
 
 选中 marker 的规则类似：
 
 ```json
 {
-  "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+  "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
   "command": {
     "kind": "CreatePerformer",
-    "definitionId": "formation_capability_showcase_formation_selection_marker",
+    "definitionId": "formation_capability_showcase_formation_command_marker",
     "scopeSource": "SourceStableId"
   }
 }
@@ -264,26 +268,26 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
 
 ```json
 {
-  "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+  "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
   "command": {
     "kind": "DestroyScopedPerformer",
-    "definitionId": "formation_capability_showcase_formation_selection_marker",
+    "definitionId": "formation_capability_showcase_formation_command_marker",
     "scopeSource": "SourceStableId"
   }
 }
 ```
 
-这说明 marker 生命周期属于通用 Selection -> PresentationEvent -> PerformerRule -> PerformerRuntime 链路，不属于 MassNavigation 私有 system。
+这说明 marker 生命周期属于通用 EntityCollectionStore -> PresentationEvent -> PerformerRule -> PerformerRuntime 链路，不属于 MassNavigation 私有 system。
 
-## selection.live.primary 到底是什么
+## collection.command.source 到底是什么
 
 只有一个“玩家当前主选择”概念。
 
 | 视角 | 名字 | 含义 |
 | --- | --- | --- |
 | 玩家 | 没有名字 | 玩家只是框选和取消选中。 |
-| Mod 作者 | `selection.live.primary` | performer 规则里写的事件 key，表示玩家主选择流。 |
-| 引擎开发者 | `SelectionSetKeys.LivePrimary` | 代码里的 canonical key。 |
+| Mod 作者 | `collection.command.source` | performer 规则里写的事件 key，表示玩家主选择流。 |
+| 引擎开发者 | `EntityCollectionKeys.CommandSource` | 代码里的 canonical key。 |
 
 这不是两套选择集，也不是兼容 alias。配置字符串和代码常量必须解析到同一个正式概念。不要再加第二个拼法。
 
@@ -293,7 +297,7 @@ formation 不是必备 feature。不需要 formation 时，不要配置一个“
 
 ```text
 Local input
-  -> SelectionRuntime
+  -> EntityCollectionStore
   -> OrderBuffer(massNavigationMove)
   -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime
@@ -432,8 +436,8 @@ Formation Capability 地图引用：
 ## 不要做
 
 - 不要让玩家输入 runtime key。
-- 不要新建第二套 selection runtime。
-- 不要为 selection marker 写 MassNavigation 私有生命周期 system。
+- 不要新建第二套 command-source/entity collection runtime。
+- 不要为 command marker 写 MassNavigation 私有生命周期 system。
 - 如果士兵需要避障和碰撞，不要把士兵做成非 MassNavigation 对象。
 - 不要把 Formation Capability 方阵业务塞进 MassNavigation core。
 - 不要在 Mod 里新增 MassNavigation runtime 或 post-spawn channel binding。
@@ -455,7 +459,7 @@ Formation Capability 地图引用：
 - 方阵可选中、可下令、有血量。
 - 士兵是 MassNavigation agent，但不能直接选中。
 - 士兵 profile 速度大于方阵 profile 速度。
-- selection marker 的创建和销毁由 performer rule 驱动。
+- command marker 的创建和销毁由 performer rule 驱动。
 - 取消选中或销毁实体后 marker 不残留。
 - 障碍物可见并参与导航。
 - 相机裁剪和驻留都在文件里配置。

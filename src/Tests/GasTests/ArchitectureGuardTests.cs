@@ -494,7 +494,7 @@ namespace GasTests
         }
 
         [Test]
-        public void Epic322_SelectedMovePathOverlayBridge_IsRemoved()
+        public void Epic322_CommandActorMovePathOverlayBridge_IsRemoved()
         {
             var repoRoot = FindRepoRoot();
             string[] directories =
@@ -533,13 +533,13 @@ namespace GasTests
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
                     string.Join("\n", hits));
             }
         }
 
         [Test]
-        public void Epic322_SelectedMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
+        public void Epic322_CommandActorMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
         {
             var repoRoot = FindRepoRoot();
             string file = Path.Combine(
@@ -547,8 +547,8 @@ namespace GasTests
                 "mods",
                 "CoreInputMod",
                 "Systems",
-                "SelectedMovePathPresentationSystem.cs");
-            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 selected move path source {file}");
+                "CommandActorMovePathPresentationSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 command actor move path source {file}");
 
             string[] forbidden =
             {
@@ -567,7 +567,7 @@ namespace GasTests
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -578,7 +578,7 @@ namespace GasTests
             var repoRoot = FindRepoRoot();
             string[] files =
             {
-                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsSelectionFeedbackPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsCommandSourceFeedbackPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),
@@ -625,9 +625,9 @@ namespace GasTests
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionConsumer.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "SelectionEligibility.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "CurrentSelectionApplySystem.cs"),
-                Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "GasSelectionResponseSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceAcquisitionSystem.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "Interaction", "GasInputResponseSystem.cs"),
                 Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap", "MinimapRuntime.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "TabTargetCycleSystem.cs"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "LocalOrderSourceHelper.cs")
@@ -1491,7 +1491,7 @@ namespace GasTests
         public void Issue244_PendingCompositionContracts()
         {
             var repoRoot = FindRepoRoot();
-            string selectionPath = Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "SelectionEligibility.cs");
+            string commandSourceEligibilityPath = Path.Combine(repoRoot, "src", "Core", "Input", "CommandSources", "CommandSourceEligibility.cs");
             string resolverPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs");
             string exchangeModelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
             string exchangeRuntimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
@@ -1500,7 +1500,7 @@ namespace GasTests
             string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
             string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
 
-            string selection = File.ReadAllText(selectionPath);
+            string commandSourceEligibility = File.ReadAllText(commandSourceEligibilityPath);
             string resolver = File.ReadAllText(resolverPath);
             string exchangeModel = File.ReadAllText(exchangeModelPath);
             string exchangeRuntime = File.ReadAllText(exchangeRuntimePath);
@@ -1511,8 +1511,8 @@ namespace GasTests
 
             Assert.Multiple(() =>
             {
-                Assert.That(selection, Does.Contain("KnowledgeProjectionConsumer"));
-                Assert.That(selection, Does.Contain("CanInspectLive"));
+                Assert.That(commandSourceEligibility, Does.Contain("KnowledgeProjectionConsumer"));
+                Assert.That(commandSourceEligibility, Does.Contain("CanInspectLive"));
                 Assert.That(resolver, Does.Contain("ScopeKey"));
                 Assert.That(exchangeRuntime, Does.Contain("RelationshipRuntime"));
                 Assert.That(exchangeRuntime, Does.Contain("ValidateRelationships"));

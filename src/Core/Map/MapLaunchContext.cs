@@ -3,27 +3,27 @@ using System.Collections.Generic;
 namespace Ludots.Core.Map
 {
     /// <summary>
-    /// Runtime launch/session selection carried with map load.
+    /// Runtime launch/session context carried with map load.
     /// Map identity describes world content; launch context describes how that world is entered.
     /// </summary>
     public sealed class MapLaunchContext
     {
-        public int SelectedPlayerId { get; init; }
+        public int LocalPlayerId { get; init; }
         public IReadOnlyDictionary<string, object>? Metadata { get; init; }
 
-        public bool HasSelectedPlayer => SelectedPlayerId > 0;
+        public bool HasLocalPlayer => LocalPlayerId > 0;
 
         public bool IsEmpty =>
-            !HasSelectedPlayer &&
+            !HasLocalPlayer &&
             (Metadata == null || Metadata.Count == 0);
 
         public static MapLaunchContext? Create(
-            int selectedPlayerId = 0,
+            int localPlayerId = 0,
             IReadOnlyDictionary<string, object>? metadata = null)
         {
             var context = new MapLaunchContext
             {
-                SelectedPlayerId = selectedPlayerId,
+                LocalPlayerId = localPlayerId,
                 Metadata = metadata,
             };
             return context.IsEmpty ? null : context;

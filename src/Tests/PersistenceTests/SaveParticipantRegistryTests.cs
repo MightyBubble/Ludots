@@ -352,7 +352,8 @@ public sealed class SaveParticipantRegistryTests
             metrics,
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer());
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(world));
         Entity relationEntity = world.Create(new RelationshipInstanceCm
         {
             Source = source,
@@ -383,7 +384,8 @@ public sealed class SaveParticipantRegistryTests
             new RelationshipMetricRegistry(),
             new RelationshipFlagRegistry(),
             new RelationshipBandRegistry(),
-            new RelationshipChangeBuffer());
+            new RelationshipChangeBuffer(),
+            new RelationshipReverseIndex(world));
         world.Create(new RelationshipInstanceCm
         {
             Source = source,

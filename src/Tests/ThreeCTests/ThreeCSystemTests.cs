@@ -1202,8 +1202,8 @@ namespace Ludots.Tests.ThreeC
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         IsSkillMapping = false,
-                        SelectionType = OrderSelectionType.Position,
-                        RequireSelection = false
+                        TargetType = OrderTargetType.Position,
+                        RequireTarget = false
                     }
                 }
             };

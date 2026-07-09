@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
@@ -234,7 +234,6 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
             };
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
 
@@ -274,7 +273,6 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
             };
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
 
@@ -500,7 +498,7 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
-                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
             };
 
             Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);
@@ -525,7 +523,8 @@ namespace Ludots.Tests.GAS
                 new RelationshipMetricRegistry(),
                 new RelationshipFlagRegistry(),
                 new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer(capacity: 4));
+                new RelationshipChangeBuffer(capacity: 4),
+                new RelationshipReverseIndex(world));
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
             return new TestRuntime(relationshipTypes, relationships, collectionKeys, collections);

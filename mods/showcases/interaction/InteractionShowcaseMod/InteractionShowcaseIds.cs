@@ -45,6 +45,17 @@ namespace InteractionShowcaseMod
         public const string ActiveControlGroupKey = "InteractionShowcase.Selection.ActiveGroup";
         public const string LiveSelectionButtonId = "InteractionShowcase.Selection.Live";
         public const string FormationSelectionButtonId = "InteractionShowcase.Selection.Formation";
+        public const string VisibleUatFrameKey = "InteractionShowcase.VisibleUat.Frame";
+        public const string AutoSchemeTimelineEnvKey = "LUDOTS_INTERACTION_SHOWCASE_AUTO_SCHEME_TIMELINE";
+        public const string AutoBlinkTimelineEnvKey = "LUDOTS_INTERACTION_SHOWCASE_AUTO_BLINK_TIMELINE";
+        public const string BlinkDispatchEvidenceCollectionKey = "collection.ui.interaction.blink.dispatch";
+        public const string BlinkDispatchEvidenceMarkerDefId = "interaction.blink.dispatch_marker";
+        public const string HoverEvidenceMarkerDefId = "interaction.hover.evidence_marker";
+        public const string BlinkDispatchAllTogetherProfileId = "dispatch.all_together";
+        public const string BlinkDispatchOneByOneProfileId = "dispatch.one_by_one";
+        public const string BlinkDispatchNearestTopNProfileId = "dispatch.nearest_top_n";
+        public const float BlinkEvidenceTargetWorldXCm = 2080f;
+        public const float BlinkEvidenceTargetWorldZCm = 1080f;
 
         public static bool IsShowcaseMap(string? mapId)
         {

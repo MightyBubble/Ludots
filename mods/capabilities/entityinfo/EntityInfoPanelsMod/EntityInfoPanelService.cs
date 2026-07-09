@@ -4,7 +4,6 @@ using System.Reflection;
 using Arch.Core;
 using EntityInfoPanelsMod.Insight;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -359,18 +358,6 @@ public sealed partial class EntityInfoPanelService
             index < 0)
         {
             return false;
-        }
-
-        if (_entityCollectionSourceKinds[slot] == EntityCollectionSourceKind.SelectionView)
-        {
-            if (!SelectionContextRuntime.TryGetRuntime(_sampledGlobals, out SelectionRuntime selection))
-            {
-                return false;
-            }
-
-            Entity container = _entityCollectionContainers[slot];
-            return container != Entity.Null &&
-                   selection.TryGetSelectionAt(container, index, out entity);
         }
 
         if (!_sampledGlobals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||

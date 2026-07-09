@@ -59,12 +59,10 @@
       "health": "Health"
     }
   },
-  "selection": {
+  "commandSource": {
     "targetFilter": { "relationFilter": "All" },
     "acquisition": {
-      "collectionKey": "collection.ui.selection.acquisition",
-      "commitToFormalSelection": true,
-      "formalSelectionSetKey": "selection.live.primary",
+      "collectionKey": "collection.ui.command.acquisition",
       "title": "UI acquisition"
     },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]

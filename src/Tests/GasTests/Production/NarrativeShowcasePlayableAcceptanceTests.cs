@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -18,7 +18,7 @@ using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -438,7 +438,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private static int GetSelectionCount(GameEngine engine)
-            => SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length;
+            => Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length;
 
         private static bool UiContains(UIRoot root, string text)
         {
@@ -448,16 +448,30 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) && engine.World.TryGet(selected, out Name name)
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) && engine.World.TryGet(selected, out Name name)
                 ? name.Value
                 : string.Empty;
         }
 
         private static string GetHoveredEntityName(GameEngine engine)
         {
-            return SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) && engine.World.TryGet(hovered, out Name name)
+            return TryGetHoveredEntity(engine, out Entity hovered) && engine.World.TryGet(hovered, out Name name)
                 ? name.Value
                 : string.Empty;
+        }
+
+        private static bool TryGetHoveredEntity(GameEngine engine, out Entity hovered)
+        {
+            hovered = Entity.Null;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+                localObj is not Entity local ||
+                !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            return engine.GetService(CoreServiceKeys.EntityCollectionStore) is { } collections &&
+                   EntityCollectionContextRuntime.TryGetHovered(engine.World, collections, local, out hovered);
         }
 
         private static string BuildSelectionStateDiagnostics(GameEngine engine)
@@ -468,7 +482,7 @@ namespace Ludots.Tests.GAS.Production
                 $"primary={GetSelectedEntityName(engine)}"
             };
 
-            if (SelectionContextRuntime.TryGetCurrentHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (TryGetHoveredEntity(engine, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -485,9 +499,9 @@ namespace Ludots.Tests.GAS.Production
                 engine.World.TryGet(localPlayer, out Name localName))
             {
                 details.Add($"local={localName.Value}");
-                if (engine.World.Has<SelectionDragState>(localPlayer))
+                if (engine.World.Has<CommandSourceDragState>(localPlayer))
                 {
-                    ref var drag = ref engine.World.Get<SelectionDragState>(localPlayer);
+                    ref var drag = ref engine.World.Get<CommandSourceDragState>(localPlayer);
                     details.Add($"dragActive={drag.Active}");
                     details.Add($"dragStart=({drag.StartScreen.X:0.##},{drag.StartScreen.Y:0.##})");
                     details.Add($"dragCurrent=({drag.CurrentScreen.X:0.##},{drag.CurrentScreen.Y:0.##})");
@@ -522,7 +536,7 @@ namespace Ludots.Tests.GAS.Production
 
             if (engine.World.IsAlive(beast))
             {
-                details.Add($"beastSelectable={engine.World.Has<SelectionSelectableTag>(beast)}");
+                details.Add($"beastCommandSourceSelectable={engine.World.Has<CommandSourceSelectableTag>(beast)}");
                 if (engine.World.TryGet(beast, out WorldPositionCm beastPos))
                 {
                     details.Add($"beastPos=({beastPos.Value.X.ToFloat():0.##},{beastPos.Value.Y.ToFloat():0.##})");
@@ -701,7 +715,9 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"mappingAiming={mapping.IsAiming}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
-                    details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"targetType={actionMapping.TargetType}");
+                    details.Add($"actorCollection={actionMapping.ActorCollectionKey}");
+                    details.Add($"targetCollection={actionMapping.TargetCollectionKey}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
                 else
@@ -732,7 +748,7 @@ namespace Ludots.Tests.GAS.Production
 
             Entity entity = FindEntityByName(engine.World, entityName);
             details.Add($"entityAlive={engine.World.IsAlive(entity)}");
-            details.Add($"selectable={engine.World.Has<SelectionSelectableTag>(entity)}");
+            details.Add($"commandSourceSelectable={engine.World.Has<CommandSourceSelectableTag>(entity)}");
 
             if (engine.World.TryGet(entity, out CullState cull))
             {
@@ -926,7 +942,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final quest: `{final.QuestSummary}`");
             sb.AppendLine($"- final variables: `{final.VariableSummary}`");
             sb.AppendLine($"- final dialogue card: `{final.DialogueSummary}`");
-            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `SelectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
+            sb.AppendLine("- reason: the showcase stayed on `ConfigPipeline`, `NarrativeDirector`, `TriggerManager`, `RuntimeEntitySpawnQueue`, `EffectRequestQueue`, `PlayerInputHandler`, `EntityCollectionContextRuntime`, and the shared `NarrativeFrontendMod` scene owner.");
             sb.AppendLine();
             sb.AppendLine("## Summary Stats");
             sb.AppendLine($"- total_actions: `{timeline.Count}`");

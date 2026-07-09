@@ -13,7 +13,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `None`
+- **TargetType**: `None`
 - **InteractionMode**: `SmartCast`（无目标选取，按键即施放）
 
 ```json5
@@ -23,7 +23,7 @@
   "actionId": "ability_Q",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "castModeOverride": null
 }

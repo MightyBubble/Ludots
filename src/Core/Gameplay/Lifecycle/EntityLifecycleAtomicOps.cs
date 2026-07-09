@@ -155,11 +155,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
             }
         }
 
-        public static void RewireSelection(EntityLifecycleRuntimeServices services, Entity source, Entity target)
-        {
-            LifecycleSelectionRewire.ReplaceSource(services.Selection, source, target);
-        }
-
         public static void ConsumeEntity(World world, Entity source, string reason)
         {
             PresentationEntityLifecycle.RequestDestroy(world, source, reason);

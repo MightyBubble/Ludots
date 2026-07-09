@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "SkillFire"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
   heldPolicy: EveryFrame    // 按住期间每帧触发 order
 ```

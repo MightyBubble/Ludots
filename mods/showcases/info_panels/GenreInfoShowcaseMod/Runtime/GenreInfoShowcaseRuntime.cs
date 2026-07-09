@@ -7,9 +7,9 @@ using EntityInfoPanelsMod.Commands;
 using GenreInfoShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -133,72 +133,90 @@ namespace GenreInfoShowcaseMod.Runtime
 
         public bool SaveControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) ||
+                !TryResolveActiveCollection(engine, collections, viewer, out EntityCollectionHandle activeHandle, out EntityCollectionView activeView))
             {
                 return false;
             }
 
-            bool saved = SelectionControlGroupRuntime.TrySaveViewedSelectionToGroup(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                viewer,
-                groupIndex,
-                mirrorToFormation: true);
-            if (saved)
+            var members = new Entity[activeView.Count];
+            int written = collections.CopyEntities(activeHandle, 0, members);
+            if (written != members.Length)
             {
-                engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
+                Array.Resize(ref members, written);
             }
 
-            return saved;
+            ReplaceCollection(
+                collections,
+                viewer,
+                ControlGroupCollectionKey(groupIndex),
+                EntityCollectionRoleKind.Display,
+                members,
+                $"Control group {groupIndex}");
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            return true;
         }
 
         public bool RecallControlGroup(GameEngine engine, int groupIndex)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) ||
+                !collections.TryGet(viewer, ControlGroupCollectionKey(groupIndex), out EntityCollectionHandle groupHandle) ||
+                !collections.TryGetView(groupHandle, out EntityCollectionView groupView))
             {
                 return false;
             }
 
-            bool recalled = SelectionControlGroupRuntime.TryRecallGroupToLive(
-                engine.World,
-                engine.GlobalContext,
-                selection,
-                viewer,
-                groupIndex,
-                mirrorToFormation: true);
-            if (recalled)
+            var members = new Entity[groupView.Count];
+            int written = collections.CopyEntities(groupHandle, 0, members);
+            if (written != members.Length)
             {
-                engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
+                Array.Resize(ref members, written);
             }
 
-            return recalled;
+            ReplaceCommandSource(collections, viewer, members, $"Recall control group {groupIndex}");
+            ReplaceCollection(
+                collections,
+                viewer,
+                GenreInfoShowcaseIds.FormationCollectionKey,
+                EntityCollectionRoleKind.Display,
+                members,
+                "Formation view");
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveControlGroupKey] = groupIndex;
+            return true;
         }
 
         public bool ShowLiveSelection(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out _, out _))
             {
                 return false;
             }
 
-            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
             return true;
         }
 
         public bool ShowFormationSelection(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
             {
                 return false;
             }
 
-            selection.TryGetOrCreateContainer(viewer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation, out _);
-            selection.TryBindView(viewer, SelectionViewKeys.Formation, viewer, SelectionSetKeys.FormationPrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Formation;
+            if (!collections.TryGetView(viewer, GenreInfoShowcaseIds.FormationCollectionKey, out _))
+            {
+                Entity[] members = SnapshotCollection(collections, viewer, EntityCollectionKeys.CommandSource);
+                ReplaceCollection(
+                    collections,
+                    viewer,
+                    GenreInfoShowcaseIds.FormationCollectionKey,
+                    EntityCollectionRoleKind.Display,
+                    members,
+                    "Formation view");
+            }
+
+            engine.GlobalContext[GenreInfoShowcaseIds.ActiveCollectionKey] = GenreInfoShowcaseIds.FormationCollectionKey;
             return true;
         }
 
@@ -319,18 +337,18 @@ namespace GenreInfoShowcaseMod.Runtime
 
         private void SeedSelectionGroups(GameEngine engine)
         {
-            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
             {
                 return;
             }
 
-            SeedGroup(engine.World, selection, viewer, 1, Group1Names);
-            SeedGroup(engine.World, selection, viewer, 2, Group2Names);
-            SeedGroup(engine.World, selection, viewer, 3, Group3Names);
-            SeedGroup(engine.World, selection, viewer, 4, Group4Names);
+            SeedGroup(engine.World, collections, viewer, 1, Group1Names);
+            SeedGroup(engine.World, collections, viewer, 2, Group2Names);
+            SeedGroup(engine.World, collections, viewer, 3, Group3Names);
+            SeedGroup(engine.World, collections, viewer, 4, Group4Names);
         }
 
-        private static void SeedGroup(World world, SelectionRuntime selection, Entity viewer, int groupIndex, IReadOnlyList<string> names)
+        private static void SeedGroup(World world, EntityCollectionStore collections, Entity viewer, int groupIndex, IReadOnlyList<string> names)
         {
             var entities = new Entity[names.Count];
             int written = 0;
@@ -343,7 +361,13 @@ namespace GenreInfoShowcaseMod.Runtime
                 }
             }
 
-            selection.ReplaceSelection(viewer, SelectionSetKeys.ControlGroup(groupIndex), entities.AsSpan(0, written));
+            ReplaceCollection(
+                collections,
+                viewer,
+                ControlGroupCollectionKey(groupIndex),
+                EntityCollectionRoleKind.Display,
+                entities.AsSpan(0, written),
+                $"Control group {groupIndex}");
         }
 
         private static Entity FindNamedEntity(World world, string entityName)
@@ -361,14 +385,14 @@ namespace GenreInfoShowcaseMod.Runtime
             return match;
         }
 
-        private static bool TryResolveSelectionContext(GameEngine engine, out SelectionRuntime selection, out Entity viewer)
+        private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity viewer)
         {
-            selection = engine.GetService(CoreServiceKeys.SelectionRuntime)!;
-            viewer = EnsureSelectionViewer(engine);
-            return selection != null && viewer != Entity.Null && engine.World.IsAlive(viewer);
+            collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
+            viewer = EnsureCollectionViewer(engine);
+            return collections != null && viewer != Entity.Null && engine.World.IsAlive(viewer);
         }
 
-        private static Entity EnsureSelectionViewer(GameEngine engine)
+        private static Entity EnsureCollectionViewer(GameEngine engine)
         {
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) &&
                 viewerObj is Entity localViewer &&
@@ -381,6 +405,87 @@ namespace GenreInfoShowcaseMod.Runtime
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = viewer;
             return viewer;
         }
+
+        private static bool TryResolveActiveCollection(
+            GameEngine engine,
+            EntityCollectionStore collections,
+            Entity viewer,
+            out EntityCollectionHandle handle,
+            out EntityCollectionView view)
+        {
+            handle = EntityCollectionHandle.Invalid;
+            view = default;
+            string key = ResolveActiveCollectionKey(engine);
+            return collections.TryGet(viewer, key, out handle) &&
+                   collections.TryGetView(handle, out view);
+        }
+
+        private static string ResolveActiveCollectionKey(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue(GenreInfoShowcaseIds.ActiveCollectionKey, out object? keyObj) &&
+                   keyObj is string key &&
+                   !string.IsNullOrWhiteSpace(key)
+                ? key
+                : EntityCollectionKeys.CommandSource;
+        }
+
+        private static Entity[] SnapshotCollection(EntityCollectionStore collections, Entity viewer, string key)
+        {
+            if (!collections.TryGet(viewer, key, out EntityCollectionHandle handle) ||
+                !collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return Array.Empty<Entity>();
+            }
+
+            var members = new Entity[view.Count];
+            int written = collections.CopyEntities(handle, 0, members);
+            if (written != members.Length)
+            {
+                Array.Resize(ref members, written);
+            }
+
+            return members;
+        }
+
+        private static void ReplaceCommandSource(
+            EntityCollectionStore collections,
+            Entity viewer,
+            ReadOnlySpan<Entity> members,
+            string summary)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                viewer,
+                members.Length > 0 ? members[0] : Entity.Null,
+                "Command source",
+                summary);
+            collections.Replace(viewer, descriptor, members, viewer);
+        }
+
+        private static void ReplaceCollection(
+            EntityCollectionStore collections,
+            Entity viewer,
+            string key,
+            EntityCollectionRoleKind role,
+            ReadOnlySpan<Entity> members,
+            string title)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                key,
+                EntityCollectionSourceKind.Explicit,
+                role,
+                viewer,
+                members.Length > 0 ? members[0] : Entity.Null,
+                title,
+                $"{members.Length} entity(s)");
+            collections.Replace(viewer, descriptor, members, viewer);
+        }
+
+        private static string ControlGroupCollectionKey(int groupIndex) =>
+            $"{GenreInfoShowcaseIds.ControlGroupCollectionPrefix}{groupIndex}";
 
         private static void EnsureEntityInfoPanels(ScriptContext context, GameEngine engine)
         {
@@ -432,7 +537,9 @@ namespace GenreInfoShowcaseMod.Runtime
 
         private static EntityInfoPanelTarget? TryResolveSelectedTarget(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) ||
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) ||
+                !TryResolveActiveCollection(engine, collections, viewer, out EntityCollectionHandle activeHandle, out _) ||
+                !collections.TryGetEntityAt(activeHandle, 0, out Entity selected) ||
                 selected == Entity.Null ||
                 !engine.World.IsAlive(selected))
             {

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
-using Ludots.Core.Input.Selection;
-using Ludots.Core.Scripting;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.CommandSources;
 
 namespace CameraAcceptanceMod.Runtime
 {
@@ -10,18 +10,26 @@ namespace CameraAcceptanceMod.Runtime
     {
         public static int CopySelectedEntities(World world, Dictionary<string, object> globals, Span<Entity> destination)
         {
-            if (!globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out var runtimeObj) ||
-                runtimeObj is not SelectionRuntime selection)
-            {
-                return 0;
-            }
-
-            return SelectionViewRuntime.CopyViewedSelection(world, globals, selection, destination);
+            return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
+                ? EntityCollectionContextRuntime.Copy(globals, owner, EntityCollectionKeys.CommandSource, destination)
+                : 0;
         }
 
         public static Entity[] SnapshotSelectedEntities(World world, Dictionary<string, object> globals)
         {
-            return SelectionContextRuntime.SnapshotCurrentSelection(world, globals);
+            return TryResolveLocalCommandSourceOwner(world, globals, out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(globals, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
+        }
+
+        private static bool TryResolveLocalCommandSourceOwner(World world, Dictionary<string, object> globals, out Entity owner)
+        {
+            owner = Entity.Null;
+            return globals.TryGetValue(Ludots.Core.Scripting.CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                   localObj is Entity local &&
+                   local != Entity.Null &&
+                   world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
         }
 
         public static string FormatEntityId(Entity entity) => $"#{entity.Id}";

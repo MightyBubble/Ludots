@@ -307,7 +307,6 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.CopyAttributeSlice), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ClearActiveEffects), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.TransferStableId), Is.True);
-            That(registry.IsRegistered(BuiltinHandlerId.RewireSelection), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ConsumeEntity), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);

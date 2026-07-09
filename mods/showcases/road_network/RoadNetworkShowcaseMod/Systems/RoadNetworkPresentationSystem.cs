@@ -4,10 +4,11 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
@@ -259,12 +260,12 @@ namespace RoadNetworkShowcaseMod.Systems
                 for (int i = 0; i < columnChunk.Count; i++)
                 {
                     Entity entity = columnChunk.Entity(i);
-                    bool isSelected = SelectionContextRuntime.ContainsCurrentSelection(_world, _engine.GlobalContext, entity);
+                    bool isCommandSourceActor = ContainsCommandSource(entity);
                     _primitives.TryAdd(new PrimitiveDrawItem
                     {
                         MeshAssetId = _sphereMeshId,
-                        Position = ToMeters(positions[i].Value, yMeters: isSelected ? 0.72f : 0.58f),
-                        Scale = isSelected ? new Vector3(0.82f) : new Vector3(0.62f),
+                        Position = ToMeters(positions[i].Value, yMeters: isCommandSourceActor ? 0.72f : 0.58f),
+                        Scale = isCommandSourceActor ? new Vector3(0.82f) : new Vector3(0.62f),
                         Color = ResolveTeamColor(teams[i].Id),
                         RenderPath = VisualRenderPath.StaticMesh,
                         Mobility = VisualMobility.Movable,
@@ -307,13 +308,13 @@ namespace RoadNetworkShowcaseMod.Systems
 
             string groundDebug = ResolveDebugValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, "<none>");
             string orderDebug = ResolveDebugValue(LocalOrderSourceHelper.LastOrderDebugKey, "<none>");
-            string selectionDebug = DescribeSelectionSummary();
+            string selectionDebug = DescribeCommandSourceSummary();
 
             _overlay.AddRect(12, 12, 980, 170, new Vector4(0.04f, 0.07f, 0.10f, 0.78f), new Vector4(0.35f, 0.51f, 0.60f, 0.92f), stableId: 8000, dirtySerial: 1);
             _overlay.AddText(24, 24, "Road Network Showcase", 22, new Vector4(0.94f, 0.96f, 0.98f, 1f), stableId: 8001, dirtySerial: 1);
             _overlay.AddText(24, 50, $"Blue forts {blueForts} | Red forts {redForts} | Neutral forts {neutralForts}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8002, dirtySerial: blueForts ^ (redForts << 8) ^ (neutralForts << 16));
             _overlay.AddText(24, 72, $"Loaded chunks {_runtime.LoadedChunkCount} | Loaded nodes {_runtime.LoadedNodeCount}", 16, new Vector4(0.78f, 0.84f, 0.90f, 1f), stableId: 8003, dirtySerial: _runtime.LoadedChunkCount ^ (_runtime.LoadedNodeCount << 8));
-            _overlay.AddText(24, 94, "LMB select columns, RMB dispatch along roads, Shift queue, pan camera to stream chunks, Home reset camera.", 15, new Vector4(0.93f, 0.79f, 0.45f, 1f), stableId: 8004, dirtySerial: 1);
+            _overlay.AddText(24, 94, "LMB chooses command columns, RMB dispatches along roads, Shift queues, pan camera to stream chunks, Home resets camera.", 15, new Vector4(0.93f, 0.79f, 0.45f, 1f), stableId: 8004, dirtySerial: 1);
             _overlay.AddText(24, 116, selectionDebug, 13, new Vector4(0.94f, 0.84f, 0.70f, 1f), stableId: 8008, dirtySerial: selectionDebug.GetHashCode(StringComparison.Ordinal));
             _overlay.AddText(24, 138, $"Ground {groundDebug} | Order {orderDebug}", 13, new Vector4(0.68f, 0.83f, 0.96f, 1f), stableId: 8006, dirtySerial: HashCode.Combine(groundDebug.GetHashCode(StringComparison.Ordinal), orderDebug.GetHashCode(StringComparison.Ordinal)));
             string status = _runtime.LastSubmitStatus;
@@ -332,20 +333,20 @@ namespace RoadNetworkShowcaseMod.Systems
             return fallback;
         }
 
-        private string DescribeSelectionSummary()
+        private string DescribeCommandSourceSummary()
         {
-            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(_world, _engine.GlobalContext);
+            Entity[] selected = SnapshotCommandSource();
             if (selected.Length <= 0)
             {
-                return "Selection 0 | Primary <none>";
+                return "Command source 0 | Primary <none>";
             }
 
-            string primary = SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity actor) && _world.IsAlive(actor)
+            string primary = TryGetCommandSourcePrimary(out Entity actor) && _world.IsAlive(actor)
                 ? DescribeActorLabel(actor)
                 : "<none>";
 
             var text = new System.Text.StringBuilder();
-            text.Append("Selection ").Append(selected.Length).Append(" | Primary ").Append(primary).Append(" | ");
+            text.Append("Command source ").Append(selected.Length).Append(" | Primary ").Append(primary).Append(" | ");
             for (int i = 0; i < selected.Length; i++)
             {
                 if (i > 0)
@@ -368,7 +369,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private bool TryResolveObservedActor(out Entity actor)
         {
             actor = default;
-            if (SelectionContextRuntime.TryGetCurrentPrimary(_world, _engine.GlobalContext, out Entity selected) &&
+            if (TryGetCommandSourcePrimary(out Entity selected) &&
                 _world.IsAlive(selected))
             {
                 actor = selected;
@@ -384,6 +385,49 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             return false;
+        }
+
+        private Entity[] SnapshotCommandSource()
+        {
+            return TryResolveLocalCommandSourceOwner(out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
+        }
+
+        private bool TryGetCommandSourcePrimary(out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       _world,
+                       _engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out entity);
+        }
+
+        private bool ContainsCommandSource(Entity entity)
+        {
+            return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+                   EntityCollectionContextRuntime.Contains(
+                       _world,
+                       _engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       entity);
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !_world.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private static string FormatFixVec(in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 value)

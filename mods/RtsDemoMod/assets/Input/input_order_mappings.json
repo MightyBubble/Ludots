@@ -6,8 +6,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 0 },
-      "requireSelection": false,
-      "selectionType": "Position",
+      "requireTarget": false,
+      "targetType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -16,8 +16,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 1 },
-      "requireSelection": false,
-      "selectionType": "Entity",
+      "requireTarget": false,
+      "targetType": "Entity",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -26,8 +26,8 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 2 },
-      "requireSelection": false,
-      "selectionType": "None",
+      "requireTarget": false,
+      "targetType": "None",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
@@ -36,17 +36,18 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 3 },
-      "requireSelection": false,
-      "selectionType": "Position",
+      "requireTarget": false,
+      "targetType": "Position",
       "isSkillMapping": true,
       "modifierBehavior": "QueueOnModifier"
     },
     {
       "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "argsTemplate": {},
-      "requireSelection": true,
-      "selectionType": "Position",
+      "requireTarget": true,
+      "targetType": "Position",
       "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier",
       "actorOrderRouting": {
@@ -54,7 +55,7 @@
           {
             "orderTypeKey": "setSpawnTarget",
             "priority": 10,
-            "selectionType": "HoveredEntityOrPosition",
+            "targetType": "HoveredEntityOrPosition",
             "match": {
               "abilitySlotIndex": 2,
               "abilityIdKeySuffix": ".Train",
@@ -71,11 +72,12 @@
     },
     {
       "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "argsTemplate": {},
-      "requireSelection": false,
-      "selectionType": "None",
+      "requireTarget": false,
+      "targetType": "None",
       "isSkillMapping": false,
       "modifierBehavior": "IgnoreModifier"
     }

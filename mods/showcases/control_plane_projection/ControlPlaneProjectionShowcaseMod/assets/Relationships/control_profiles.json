@@ -1,0 +1,15 @@
+{
+  "profiles": [
+    {
+      "id": "profile.control.ally_offline_proxy",
+      "when": {
+        "all": [
+          { "relationship": "Ally", "between": ["grantee", "grantor"] },
+          { "tag": "participant.offline", "on": "grantor" }
+        ]
+      },
+      "grant": { "edgeType": "Controls", "from": "grantee", "to": "grantor" },
+      "revokeWhen": { "not": { "tag": "participant.offline", "on": "grantor" } }
+    }
+  ]
+}

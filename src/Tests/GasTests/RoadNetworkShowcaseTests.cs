@@ -8,13 +8,14 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
@@ -666,12 +667,15 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.LoadedNodeCount, Is.GreaterThan(0), "Chunk priming should populate the graph store before the player issues the first road move.");
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out object? viewOwnerObj), Is.True);
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewOwnerObj), Is.True);
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out object? viewSetObj), Is.True);
-            Assert.That(viewSetObj, Is.EqualTo(SelectionViewKeys.Primary));
-            var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity primary), Is.True);
+            Assert.That(engine.World.Has<CommandSourceDragState>(owner), Is.True);
+            EntityCollectionStore collections = GetEntityCollectionStore(engine);
+            Assert.That(collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view), Is.True);
+            Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
+            Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.CommandSource));
+            Assert.That(view.PrimaryEntity, Is.EqualTo(owner));
+            Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(owner));
         }
 
@@ -688,17 +692,15 @@ namespace Ludots.Tests.GAS
 
             Entity owner = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
-            Assert.That(engine.GetService(CoreServiceKeys.SelectionRuntime), Is.TypeOf<SelectionRuntime>());
-            var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
 
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, System.Array.Empty<Entity>());
+            ReplaceCommandSource(engine, owner, ReadOnlySpan<Entity>.Empty);
             engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
 
             runtime.UpdateLoadedChunks(engine);
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity repairedPrimary), Is.True);
+            Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity repairedPrimary), Is.True);
             Assert.That(repairedPrimary, Is.EqualTo(owner));
         }
 
@@ -717,23 +719,22 @@ namespace Ludots.Tests.GAS
             Entity selected = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
             Assert.That(selected, Is.Not.EqualTo(Entity.Null));
-            var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
 
             Span<Entity> selectedUnits = stackalloc Entity[1];
             selectedUnits[0] = selected;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
+            ReplaceCommandSource(engine, owner, selectedUnits);
             engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
 
             runtime.UpdateLoadedChunks(engine);
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity preservedPrimary), Is.True);
+            Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity preservedPrimary), Is.True);
             Assert.That(preservedPrimary, Is.EqualTo(selected));
         }
 
         [Test]
-        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsLivePrimarySelectionPrimary()
+        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsCommandSourcePrimary()
         {
             using var engine = CreateRoadShowcaseEngine();
             engine.LoadStartupMap();
@@ -744,17 +745,16 @@ namespace Ludots.Tests.GAS
             runtime.HandleMapFocusedAsync(context).GetAwaiter().GetResult();
 
             Entity owner = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
-            Entity selected = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
+            Entity commandActor = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
-            Assert.That(selected, Is.Not.EqualTo(Entity.Null));
+            Assert.That(commandActor, Is.Not.EqualTo(Entity.Null));
 
-            var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
-            Span<Entity> selectedUnits = stackalloc Entity[1];
-            selectedUnits[0] = selected;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
+            Span<Entity> commandActors = stackalloc Entity[1];
+            commandActors[0] = commandActor;
+            ReplaceCommandSource(engine, owner, commandActors);
 
             RoadNetworkShowcasePanelState panel = runtime.BuildPanelState(engine);
-            Assert.That(panel.Selection, Does.Contain("Blue North Column"));
+            Assert.That(panel.CommandSource, Does.Contain("Blue North Column"));
             Assert.That(panel.Actors.Length, Is.EqualTo(1));
             Assert.That(panel.Actors[0].Header, Does.Contain("Blue North Column"));
             Assert.That(panel.Actors[0].Query, Does.Contain("planner="));
@@ -777,12 +777,11 @@ namespace Ludots.Tests.GAS
             Entity vanguard = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
             Entity north = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
             Entity south = FindEntityByInstanceId(engine, BlueSouthColumnInstanceId);
-            var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
             Span<Entity> selectedUnits = stackalloc Entity[3];
             selectedUnits[0] = vanguard;
             selectedUnits[1] = north;
             selectedUnits[2] = south;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
+            ReplaceCommandSource(engine, owner, selectedUnits);
             Tick(engine, 2);
             Assert.That(GetSelectionCount(engine), Is.EqualTo(3), BuildPlayableMoveDiagnostics(engine, BlueColumnInstanceIds));
 
@@ -1841,8 +1840,8 @@ namespace Ludots.Tests.GAS
             }
             else
             {
-                MapLaunchContext? launchContext = engine.MergedConfig.StartupSelectedPlayerId > 0
-                    ? MapLaunchContext.Create(engine.MergedConfig.StartupSelectedPlayerId)
+                MapLaunchContext? launchContext = engine.MergedConfig.StartupLocalPlayerId > 0
+                    ? MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)
                     : null;
                 engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
             }
@@ -2010,12 +2009,12 @@ namespace Ludots.Tests.GAS
 
         private static int GetSelectionCount(GameEngine engine)
         {
-            return SelectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            return Ludots.Tests.EntityCollectionTestAccess.GetCommandSourceCount(engine);
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary) ||
+            if (!Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity primary) ||
                 !engine.World.TryGet(primary, out Name name))
             {
                 return string.Empty;
@@ -2026,7 +2025,7 @@ namespace Ludots.Tests.GAS
 
         private static bool IsCurrentPrimaryInstance(GameEngine engine, string instanceId)
         {
-            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary))
+            if (!Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity primary))
             {
                 return false;
             }
@@ -2044,6 +2043,35 @@ namespace Ludots.Tests.GAS
             }
 
             return local;
+        }
+
+        private static EntityCollectionStore GetEntityCollectionStore(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore missing.");
+        }
+
+        private static void ReplaceCommandSource(GameEngine engine, Entity owner, ReadOnlySpan<Entity> entities)
+        {
+            EntityCollectionStore collections = GetEntityCollectionStore(engine);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: owner,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Road network command source",
+                summary: "Test-owned command-source collection.");
+            Assert.That(collections.Replace(owner, in descriptor, entities, owner).IsValid, Is.True);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+        }
+
+        private static bool TryGetCommandSourcePrimary(GameEngine engine, Entity owner, out Entity primary)
+        {
+            primary = Entity.Null;
+            EntityCollectionStore collections = GetEntityCollectionStore(engine);
+            return collections.TryGet(owner, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle) &&
+                   collections.TryGetEntityAt(handle, 0, out primary);
         }
 
         private static Vector2 ReadWorldPosition(GameEngine engine, string instanceId)
@@ -2185,9 +2213,9 @@ namespace Ludots.Tests.GAS
             sb.Append(GetSelectedEntityName(engine));
 
             Entity owner = GetLocalPlayer(engine);
-            if (owner != Entity.Null && engine.World.Has<SelectionDragState>(owner))
+            if (owner != Entity.Null && engine.World.Has<CommandSourceDragState>(owner))
             {
-                ref readonly SelectionDragState drag = ref engine.World.Get<SelectionDragState>(owner);
+                ref readonly CommandSourceDragState drag = ref engine.World.Get<CommandSourceDragState>(owner);
                 sb.Append(" dragState=");
                 sb.Append(drag.Active);
                 sb.Append('@');
@@ -2239,7 +2267,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 sb.Append(" selectable=");
-                sb.Append(engine.World.Has<SelectionSelectableTag>(entity));
+                sb.Append(engine.World.Has<CommandSourceSelectableTag>(entity));
             }
 
             return sb.ToString();

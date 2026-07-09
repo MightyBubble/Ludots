@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Relationships;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -9,8 +8,6 @@ namespace Ludots.Core.Gameplay.Relationships
 {
     public sealed class RelationshipRuntime
     {
-        private static readonly QueryDescription RelationshipQuery = new QueryDescription()
-            .WithAll<Relationship<RelationshipEdgeSet>>();
         private static readonly QueryDescription RelationshipEntityQuery = new QueryDescription()
             .WithAll<RelationshipInstanceCm>();
 
@@ -20,6 +17,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipFlagRegistry _flags;
         private readonly RelationshipBandRegistry _bands;
         private readonly RelationshipChangeBuffer _changes;
+        private readonly RelationshipReverseIndex _reverseIndex;
         private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
 
         public RelationshipRuntime(
@@ -28,7 +26,8 @@ namespace Ludots.Core.Gameplay.Relationships
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
             RelationshipBandRegistry bands,
-            RelationshipChangeBuffer changes)
+            RelationshipChangeBuffer changes,
+            RelationshipReverseIndex reverseIndex)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _types = types ?? throw new ArgumentNullException(nameof(types));
@@ -36,10 +35,15 @@ namespace Ludots.Core.Gameplay.Relationships
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
             _bands = bands ?? throw new ArgumentNullException(nameof(bands));
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
+            _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
+            _reverseIndex.RebuildFromWorld();
             RebuildEntityIndexFromWorld();
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
+
+        /// <summary>Reverse adjacency index backing incoming-edge queries.</summary>
+        public RelationshipReverseIndex ReverseIndex => _reverseIndex;
 
         public void RebuildEntityIndexFromWorld()
         {
@@ -141,7 +145,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return false;
             }
@@ -159,7 +163,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateTypeId(typeId);
-            bool hasExisting = source.TryGetRelationship(target, out RelationshipEdgeSet set);
+            bool hasExisting = TryGetEdgeSet(source, target, out RelationshipEdgeSet set);
 
             if (set.HasType(validatedTypeId))
             {
@@ -177,6 +181,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 source.AddRelationship(target, set);
             }
 
+            _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
             MaterializeRelationshipEntity(source, target, validatedTypeId);
         }
 
@@ -187,7 +192,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return;
             }
@@ -203,10 +208,13 @@ namespace Ludots.Core.Gameplay.Relationships
             if (set.Count == 0)
             {
                 source.RemoveRelationship<RelationshipEdgeSet>(target);
-                return;
+            }
+            else
+            {
+                source.SetRelationship(target, set);
             }
 
-            source.SetRelationship(target, set);
+            _reverseIndex.OnLinkRemoved(source, target, validatedTypeId);
         }
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
@@ -389,6 +397,11 @@ namespace Ludots.Core.Gameplay.Relationships
             return CollectIncoming(target, RelationshipTypeRegistry.AnyTypeId, buffer);
         }
 
+        /// <summary>
+        /// Collects live incoming sources straight from the reverse index. No per-source edge re-verification:
+        /// <see cref="EnsureLink"/>/<see cref="RemoveLink"/> are the only edge mutation paths (M9 guardrail)
+        /// and both notify the index, while entity death is covered by the index's lazy IsAlive reclamation.
+        /// </summary>
         public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)
         {
             if (!_world.IsAlive(target) || buffer.Length == 0)
@@ -396,40 +409,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return 0;
             }
 
-            int validatedTypeId = ValidateFilterTypeId(typeId);
-            int count = 0;
-            foreach (ref var chunk in _world.Query(in RelationshipQuery))
-            {
-                ref Entity sourceFirst = ref chunk.Entity(0);
-                Span<Relationship<RelationshipEdgeSet>> relationshipSpans = chunk.GetSpan<Relationship<RelationshipEdgeSet>>();
-                foreach (int index in chunk)
-                {
-                    if (count >= buffer.Length)
-                    {
-                        break;
-                    }
-
-                    Entity source = Unsafe.Add(ref sourceFirst, index);
-                    ref Relationship<RelationshipEdgeSet> relationships = ref relationshipSpans[index];
-                    foreach ((Entity key, RelationshipEdgeSet set) in relationships)
-                    {
-                        if (key != target || !MatchesType(set, validatedTypeId))
-                        {
-                            continue;
-                        }
-
-                        buffer[count++] = source;
-                        break;
-                    }
-                }
-
-                if (count >= buffer.Length)
-                {
-                    break;
-                }
-            }
-
-            return count;
+            return _reverseIndex.CopyIncoming(target, ValidateFilterTypeId(typeId), buffer);
         }
 
         public int CollectMutual(Entity first, Entity second, Span<Entity> buffer)
@@ -505,7 +485,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateTypeId(typeId);
-            if (!source.TryGetRelationship(target, out RelationshipEdgeSet set))
+            if (!TryGetEdgeSet(source, target, out RelationshipEdgeSet set))
             {
                 return false;
             }
@@ -516,6 +496,13 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             return true;
+        }
+
+        private bool TryGetEdgeSet(Entity source, Entity target, out RelationshipEdgeSet set)
+        {
+            set = default;
+            ref Relationship<RelationshipEdgeSet> relationships = ref _world.TryGetRef<Relationship<RelationshipEdgeSet>>(source, out bool exists);
+            return exists && relationships.TryGetValueNoAlloc(target, out set);
         }
 
         private void RemoveMaterializedRelationshipEntity(Entity source, Entity target, int typeId)

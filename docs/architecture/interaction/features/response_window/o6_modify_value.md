@@ -20,7 +20,7 @@
 ## 交互层设计
 
 - **Trigger**: 无（Phase Listener 自动触发）
-- **SelectionType**: `None`
+- **TargetType**: `None`
 - **InteractionMode**: 不适用
 
 ```json5

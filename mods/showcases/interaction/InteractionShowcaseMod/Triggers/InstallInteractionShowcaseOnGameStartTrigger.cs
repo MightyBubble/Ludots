@@ -81,14 +81,14 @@ namespace InteractionShowcaseMod.Triggers
                 SystemGroup.InputCollection);
             engine.RegisterPresentationSystem(new InteractionShowcasePanelPresentationSystem(engine, _runtime));
 
-            WireSelectionFeedback(context, engine);
-            _ctx.Log("[InteractionShowcaseMod] Local order source, stress runtime, and selection feedback registered.");
+            WireCommandSourceAcquisitionFeedback(context, engine);
+            _ctx.Log("[InteractionShowcaseMod] Local order source, stress runtime, and command-source acquisition feedback registered.");
             return Task.CompletedTask;
         }
 
-        private static void WireSelectionFeedback(ScriptContext context, GameEngine engine)
+        private static void WireCommandSourceAcquisitionFeedback(ScriptContext context, GameEngine engine)
         {
-            if (!CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<Action<WorldCmInt2, Entity>> selectionCallbacks))
+            if (!CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out List<Action<WorldCmInt2, Entity>> commandSourceAcquiredCallbacks))
             {
                 return;
             }
@@ -109,7 +109,7 @@ namespace InteractionShowcaseMod.Triggers
                 return;
             }
 
-            selectionCallbacks.Add((_, entity) =>
+            commandSourceAcquiredCallbacks.Add((_, entity) =>
             {
                 commands.TryAdd(new PerformerCommand
                 {

@@ -10,10 +10,6 @@ namespace Ludots.Adapter.Raylib
 {
     internal static class RaylibBrowserRuntimeInstaller
     {
-        private const string CefProviderId = "cef";
-        private const string CefProviderHostTypeName = "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost";
-        private const string CefProviderAssemblyFileName = "Ludots.UI.Browser.Cef.dll";
-
         public static IBrowserRuntime? InstallIfConfigured(GameEngine engine, GameConfig config, string baseDirectory)
         {
             ArgumentNullException.ThrowIfNull(engine);
@@ -30,35 +26,66 @@ namespace Ludots.Adapter.Raylib
                 return null;
             }
 
-            if (!string.Equals(runtimeConfig.Provider, CefProviderId, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(runtimeConfig.Provider))
             {
                 throw new InvalidOperationException(
-                    $"Unsupported browser runtime provider '{runtimeConfig.Provider}'. Raylib host currently supports '{CefProviderId}'.");
+                    "Browser runtime is enabled but browserRuntime.provider is empty.");
             }
 
-            string providerAssemblyPath = ResolveProviderAssemblyPath(baseDirectory, runtimeConfig);
+            string providerAssemblyPath = ResolveProviderAssemblyPath(runtimeConfig);
+            string providerHostTypeName = RequireProviderHostTypeName(runtimeConfig);
             string runtimeRootPath = ResolveRequiredPath(
                 baseDirectory,
                 runtimeConfig.RuntimeRootPath,
-                "browserRuntime.runtimeRootPath is required for CefSharp.");
+                "browserRuntime.runtimeRootPath is required for the configured browser runtime provider.");
             string? cacheRootPath = ResolveOptionalPath(baseDirectory, runtimeConfig.CacheRootPath);
-            return InstallCef(engine.GlobalContext, providerAssemblyPath, runtimeRootPath, cacheRootPath);
+            return InstallProvider(
+                engine.GlobalContext,
+                runtimeConfig.Provider,
+                providerAssemblyPath,
+                providerHostTypeName,
+                runtimeConfig.UseCollectibleLoadContext ?? true,
+                runtimeConfig.ProcessSharedAssemblyNamePrefixes,
+                runtimeRootPath,
+                cacheRootPath);
         }
 
-        private static string ResolveProviderAssemblyPath(string baseDirectory, BrowserRuntimeConfig runtimeConfig)
+        private static string ResolveProviderAssemblyPath(BrowserRuntimeConfig runtimeConfig)
         {
-            string resolvedPath = string.IsNullOrWhiteSpace(runtimeConfig.ProviderAssemblyPath)
-                ? Path.GetFullPath(Path.Combine(baseDirectory, CefProviderAssemblyFileName))
-                : ResolvePath(baseDirectory, runtimeConfig.ProviderAssemblyPath);
+            if (string.IsNullOrWhiteSpace(runtimeConfig.ProviderAssemblyPath))
+            {
+                throw new InvalidOperationException(
+                    "Browser runtime is enabled but browserRuntime.providerAssemblyPath is empty.");
+            }
+
+            string expanded = Environment.ExpandEnvironmentVariables(runtimeConfig.ProviderAssemblyPath);
+            if (!Path.IsPathRooted(expanded))
+            {
+                throw new InvalidOperationException(
+                    "Browser runtime provider assembly path must be a launcher-resolved absolute path.");
+            }
+
+            string resolvedPath = Path.GetFullPath(expanded);
 
             if (!File.Exists(resolvedPath))
             {
                 throw new FileNotFoundException(
-                    $"CEF provider assembly was not found. browserRuntime.providerAssemblyPath must point to '{CefProviderAssemblyFileName}'.",
+                    $"Browser runtime provider assembly was not found for provider '{runtimeConfig.Provider}'.",
                     resolvedPath);
             }
 
             return resolvedPath;
+        }
+
+        private static string RequireProviderHostTypeName(BrowserRuntimeConfig runtimeConfig)
+        {
+            if (string.IsNullOrWhiteSpace(runtimeConfig.ProviderHostTypeName))
+            {
+                throw new InvalidOperationException(
+                    "Browser runtime is enabled but browserRuntime.providerHostTypeName is empty.");
+            }
+
+            return runtimeConfig.ProviderHostTypeName.Trim();
         }
 
         private static string? ResolveOptionalPath(string baseDirectory, string configuredPath)
@@ -89,9 +116,13 @@ namespace Ludots.Adapter.Raylib
                 : Path.GetFullPath(Path.Combine(baseDirectory, expanded));
         }
 
-        private static IBrowserRuntime InstallCef(
+        private static IBrowserRuntime InstallProvider(
             IDictionary<string, object> services,
+            string providerId,
             string providerAssemblyPath,
+            string providerHostTypeName,
+            bool useCollectibleLoadContext,
+            string[] processSharedAssemblyNamePrefixes,
             string? runtimeRootPath,
             string? cacheRootPath)
         {
@@ -99,13 +130,14 @@ namespace Ludots.Adapter.Raylib
                 new BrowserRuntimeProviderLoadOptions(
                     services,
                     providerAssemblyPath,
-                    CefProviderHostTypeName)
+                    providerHostTypeName)
                 {
-                    ProviderId = CefProviderId,
+                    ProviderId = providerId,
+                    UseCollectibleLoadContext = useCollectibleLoadContext,
+                    ProcessSharedAssemblyNamePrefixes = processSharedAssemblyNamePrefixes ?? Array.Empty<string>(),
                     RuntimeRootPath = runtimeRootPath,
                     BrowserCacheRootPath = cacheRootPath,
                     MapRuntimeRootToShadowCopy = false,
-                    DefaultLoadContextAssemblyNamePrefixes = new[] { "CefSharp" },
                     Log = message => Log.Info(in LogChannels.Engine, message)
                 });
             return handle.Runtime;

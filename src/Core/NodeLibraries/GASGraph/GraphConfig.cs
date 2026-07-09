@@ -53,6 +53,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? PayloadPreset { get; set; }
         public string? BuiltinHandler { get; set; }
         public bool Descending { get; set; }
+        /// <summary>Event payload slot index for LoadEventPayloadInt (0..1) / LoadEventPayloadFloat (0..3).</summary>
+        public int Slot { get; set; }
     }
 
     public sealed class GraphOutputConfig

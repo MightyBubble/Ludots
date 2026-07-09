@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -41,15 +41,15 @@ namespace ProgressionScopeShowcaseMod
                 return Task.CompletedTask;
             }
 
-            BindSelection(engine, target);
+            BindCommandSource(engine, target);
             OpenCommandPanel(engine, target);
             return Task.CompletedTask;
         }
 
-        private static void BindSelection(GameEngine engine, Entity target)
+        private static void BindCommandSource(GameEngine engine, Entity target)
         {
-            SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            if (selection == null)
+            EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
+            if (collections == null)
             {
                 return;
             }
@@ -57,10 +57,15 @@ namespace ProgressionScopeShowcaseMod
             Entity owner = ResolveLocalPlayer(engine);
             Span<Entity> selected = stackalloc Entity[1];
             selected[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                owner,
+                target,
+                "Progression scope command source",
+                "Default entity for progression showcase commands.");
+            collections.Replace(owner, descriptor, selected, owner);
         }
 
         private static void OpenCommandPanel(GameEngine engine, Entity target)

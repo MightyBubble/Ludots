@@ -60,7 +60,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 85, "halfSizeZCm": 50 }
     }
@@ -83,7 +83,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 70, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 42, "halfSizeYCm": 75, "halfSizeZCm": 42 }
     }
@@ -105,7 +105,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
     }
@@ -127,7 +127,7 @@
       },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
-      "SelectionSelectableTag": {},
+      "CommandSourceSelectableTag": {},
       "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 90, "localCenterZCm": 0 },
       "SpatialBox3D": { "halfSizeXCm": 58, "halfSizeYCm": 95, "halfSizeZCm": 58 }
     }

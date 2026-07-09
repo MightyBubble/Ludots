@@ -13,11 +13,11 @@ using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
@@ -1674,16 +1674,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static Entity[] ReadLiveSelection(GameEngine engine, Entity owner)
         {
-            SelectionRuntime selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-            int count = selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
-            if (count <= 0)
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
+            if (!collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
                 return Array.Empty<Entity>();
             }
 
-            var members = new Entity[count];
-            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.LivePrimary, members);
+            var members = new Entity[view.Count];
+            int written = collections.CopyEntities(owner, EntityCollectionKeys.CommandSource, members);
             if (written == members.Length)
             {
                 return members;
@@ -1696,12 +1696,17 @@ namespace Ludots.Tests.ThreeC.Acceptance
         private static void SetViewedSelection(GameEngine engine, params Entity[] entities)
         {
             Entity local = GetLocalPlayer(engine);
-            SelectionRuntime selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
-                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
-            selectionRuntime.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities);
-            selectionRuntime.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
-            engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
-            engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource,
+                contextEntity: local,
+                primaryEntity: entities.Length > 0 ? entities[0] : Entity.Null,
+                title: "Camera acceptance command source",
+                summary: "Test-owned command source collection.");
+            collections.Replace(local, in descriptor, entities, local);
         }
 
         private static Vector2 ProjectEntity(GameEngine engine, IScreenProjector projector, Entity entity)

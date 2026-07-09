@@ -124,7 +124,7 @@ energy_resource:
   "trigger": "Held",
   "heldPolicy": "StartEnd",
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "castModeOverride": "SmartCast"
 }

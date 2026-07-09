@@ -1,0 +1,11 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": { "kind": "independent" },
+      "rules": [
+        { "priority": 10, "target": { "hasEntity": false }, "route": { "orderTypeKey": "moveTo" } }
+      ]
+    }
+  ]
+}

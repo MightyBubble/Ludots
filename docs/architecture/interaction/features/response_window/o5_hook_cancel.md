@@ -21,7 +21,7 @@ Hook/取消是一种程序自动取消效果的机制，无需玩家交互。核
 ## 交互层设计
 
 - **Trigger**: 无（Phase Listener 自动触发）
-- **SelectionType**: `None`
+- **TargetType**: `None`
 - **InteractionMode**: 不适用
 
 ```json5

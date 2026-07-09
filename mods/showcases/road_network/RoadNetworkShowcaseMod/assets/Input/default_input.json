@@ -1,6 +1,6 @@
 {
   "actions": [
-    { "id": "Select", "name": "Gameplay_Select", "type": "Button" },
+    { "id": "CommandSourceAcquire", "name": "Gameplay_CommandSourceAcquire", "type": "Button" },
     { "id": "Command", "name": "Gameplay_Command", "type": "Button" },
     { "id": "Stop", "name": "Gameplay_Stop", "type": "Button" },
     { "id": "QueueModifier", "name": "Gameplay_QueueModifier", "type": "Button" },
@@ -12,7 +12,7 @@
       "name": "Road Network Showcase",
       "priority": 50,
       "bindings": [
-        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CommandSourceAcquire", "path": "<Mouse>/LeftButton" },
         { "actionId": "Command", "path": "<Mouse>/RightButton" },
         { "actionId": "Stop", "path": "<Keyboard>/s" },
         { "actionId": "QueueModifier", "path": "<Keyboard>/leftShift" },

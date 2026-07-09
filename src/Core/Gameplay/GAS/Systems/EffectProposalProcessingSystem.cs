@@ -514,6 +514,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             RequestId = windowId,
                             RequestTagId = _inputRequestTagId,
                             Source = _window[0].Source,
+                            Target = _window[0].Target,
                             Context = _window[0].TargetContext,
                             PayloadA = 0,
                             PayloadB = 0

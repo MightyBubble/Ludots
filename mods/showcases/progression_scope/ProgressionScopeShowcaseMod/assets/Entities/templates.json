@@ -48,8 +48,8 @@
     "components": {
       "Name": { "Value": "Chang An Barracks" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 5800, "Y": 6000 } },
       "AttributeBuffer": { "base": { "Health": 1200 } },
       "AbilityStateBuffer": {
@@ -82,8 +82,8 @@
     "components": {
       "Name": { "Value": "Strategist Hero" },
       "Team": { "Id": 1 },
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": { "IsEnabled": true },
       "WorldPositionCm": { "Value": { "X": 6200, "Y": 6500 } },
       "AttributeBuffer": { "base": { "Health": 900 } },
       "GameplayTagContainer": {},

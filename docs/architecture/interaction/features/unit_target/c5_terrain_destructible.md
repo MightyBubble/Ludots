@@ -13,7 +13,7 @@ InputOrderMapping:
   actionId: "SkillD"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
   argsTemplate: { i0: 4 }  // ability slot
 ```
@@ -32,10 +32,10 @@ InputOrderMapping:
 ## 实现方案
 
 ```
-需求: SelectionRule 支持 EntityLayer filter
+需求: TargetFilter 支持 EntityLayer filter
 实现:
   1. 树木/石头等设为特定 EntityLayer (Destructible)
-  2. SelectionRule: filter=Destructible layer
+  2. TargetFilter: filter=Destructible layer
   3. Phase Graph 处理: 对可破坏物施加效果 (HP减为0等)
 ```
 
@@ -49,8 +49,8 @@ InputOrderMapping:
 | InteractionModeType (4种) | ✅ 已有 |
 | QueryFilterLayer Graph op | ✅ 已有 (op 115) |
 | EntityLayer 系统 | ✅ 已有 |
-| SelectionRuleRegistry | ✅ 已有 |
+| FilterProfileRegistry / target filter profiles | ✅ 已有 |
 
 ## 新增需求
 
-无 — 所有依赖组件已实现。可通过 SelectionRule 配置 EntityLayer filter 实现。
+无 — 所有依赖组件已实现。可通过 TargetFilter 配置 EntityLayer filter 实现。

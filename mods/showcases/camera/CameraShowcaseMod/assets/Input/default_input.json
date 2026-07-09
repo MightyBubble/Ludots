@@ -1,6 +1,6 @@
 {
   "actions": [
-    { "id": "CameraModeSelectionFollow", "name": "CameraModeSelectionFollow", "type": "Button" }
+    { "id": "CameraModeCommandSourceFollow", "name": "CameraModeCommandSourceFollow", "type": "Button" }
   ],
   "contexts": [
     {
@@ -8,7 +8,7 @@
       "name": "Camera Showcase Controls",
       "priority": 120,
       "bindings": [
-        { "actionId": "CameraModeSelectionFollow", "path": "<Keyboard>/f4" }
+        { "actionId": "CameraModeCommandSourceFollow", "path": "<Keyboard>/f4" }
       ]
     }
   ]

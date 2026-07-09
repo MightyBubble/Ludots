@@ -56,7 +56,7 @@
 | EC02 | GateDeadline for ResponseChainListener | P1 | 🔴 | O8 | ResponseChain 窗口超时自动 Pass |
 | EC03 | ResponseChain Depth Limit | P2 | 🔴 | O2 | 防止递归 Chain 无限循环（建议 max=10） |
 | EC04 | ResponseChainListener.PauseSimulation | P2 | 🔴 | O4 | 响应链窗口期暂停模拟（暂停选目标） |
-| EC05 | SelectionGate in ResponseChain | P2 | 🔴 | O3, O4 | ResponseChain 内支持 SelectionGate（当前仅 AbilityExec 支持） |
+| EC05 | TargetCollectionGate in ResponseChain | P2 | 🔴 | O3, O4 | ResponseChain 内支持显式目标集合确认（当前仅 AbilityExec 支持） |
 | EC06 | Wildcard Tag Precondition (`tag:*`) | P1 | 🔴 | H3, H6 | 匹配任意后缀的 Tag（`finisher_opportunity:*`） |
 
 ---
@@ -94,9 +94,9 @@
 |---|------|--------|------|------|------|
 | SY10 | CursorDirectionBlackboardWriter | P1 | 🔴 | F1, F3, F5, G11 | 每帧将鼠标/摇杆方向写入施法者 Blackboard（`CursorDirectionRad`） |
 | SY11 | ContextGroup Scoring Mechanism | P1 | 🔴 | S3, G3 | ContextGroup 注册 → Scorer 调用 → 候选排序 → 最高分 Ability 路由 |
-| SY12 | DoubleTap Detection (SelectionSystem) | P2 | 🔴 | S2 | InputTriggerType.DoubleTap 已废弃；需 SelectionSystem 层追踪按压间隔判断 |
+| SY12 | DoubleTap Detection (command-source input) | P2 | 🔴 | S2 | InputTriggerType.DoubleTap 已废弃；需在 command-source/input profile 层追踪按压间隔判断 |
 | SY13 | ModifierBehavior.forceTargetSelf | P2 | 🔴 | S4 | Alt 键状态检测 → Order.Target 强制设为 caster |
-| SY14 | Input Focus / Actor Routing | P2 | 🟡 | K7, R1, R2, R4, R6 | `actorOrderRouting` 已实现本地选中 actor 路由；Camera Focus / 非本地玩家路由仍待补 |
+| SY14 | Input Focus / Actor Routing | P2 | 🟡 | K7, R1, R2, R4, R6 | `actorOrderRouting` 已实现本地命令 actor 路由；Camera Focus / 非本地玩家路由仍待补 |
 | SY15 | Input Profile Remapping | P2 | 🔴 | K7 | 不同实体不同控制映射（投射物操控时） |
 
 ### 3C — 移动 / 物理系统
@@ -149,13 +149,13 @@
 
 ---
 
-## Layer 4 — Input / SelectionRule 配置
+## Layer 4 — Input / Target Filter 配置
 
 | # | 需求 | 优先级 | 状态 | 来源 | 说明 |
 |---|------|--------|------|------|------|
-| IN01 | SelectionRule: DeadFriendly | P1 | 🔴 | C4 | 选取死亡友方单位（复活技能） |
-| IN02 | SelectionRule: OwnedSummon | P2 | 🔴 | C6 | 筛选 `summoned` Tag + owner 匹配的单位 |
-| IN03 | Direction SelectionType | P2 | 🔴 | S3, E8 | OrderSelectionType.Direction 支持方向输入 |
+| IN01 | TargetFilter: DeadFriendly | P1 | 🔴 | C4 | 选取死亡友方单位（复活技能） |
+| IN02 | TargetFilter: OwnedSummon | P2 | 🔴 | C6 | 筛选 `summoned` Tag + owner 匹配的单位 |
+| IN03 | Direction TargetType | P2 | 🔴 | S3, E8 | OrderTargetType.Direction 支持方向输入 |
 | IN04 | Vector Input Mode (two-point drag) | P2 | 🔴 | E8 | 起点+拖拽终点的双点输入 |
 | IN05 | Minimap Click → World Position | P3 | 🔴 | D4, S6 | 小地图点击转世界坐标（Adapter 层） |
 
@@ -203,7 +203,7 @@
 | System — 召唤/放置 | — | 4 | 4 | — | **8** |
 | System — 视野/环境 | — | 2 | 3 | — | **5** |
 | System — 其他 | — | 7 | 3 | — | **10** |
-| Input/SelectionRule | — | 1 | 3 | 1 | **5** |
+| Input/TargetFilter | — | 1 | 3 | 1 | **5** |
 | Projectile Config | — | 4 | 4 | 1 | **9** |
 | VFX/Performer/UI | — | 1 | 3 | — | **4** |
 | **合计** | **1** | **47** | **38** | **5** | **91** |

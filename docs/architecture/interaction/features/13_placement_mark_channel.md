@@ -38,9 +38,9 @@ AbilityExecSpec:
 **K5: 双端传送门**
 ```
 AbilityExecSpec:
-  Item[0]: SelectionGate → 选第一个点 (入口)
+  Item[0]: TargetCollectionGate → 选第一个点 (入口)
   Item[1]: EffectSignal → CreateUnit(portal_entrance, point_1)
-  Item[2]: SelectionGate → 选第二个点 (出口)
+  Item[2]: TargetCollectionGate → 选第二个点 (出口)
   Item[3]: EffectSignal → CreateUnit(portal_exit, point_2)
   Item[4]: 建立 link (Blackboard 或 Tag 关联两个 portal)
 ```
