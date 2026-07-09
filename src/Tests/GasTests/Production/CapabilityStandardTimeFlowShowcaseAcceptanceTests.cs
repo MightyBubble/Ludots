@@ -7,6 +7,7 @@ using CapabilityStandardTimeFlowShowcaseMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Input;
@@ -212,6 +213,154 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
             Assert.That(cast.SystemGuidePauseActive, Is.False);
             Assert.That(cast.HeroSkillCastCount, Is.EqualTo(2));
         });
+    }
+
+    [Test]
+    public void PlayerSkillCast_RunsHeroLocalBurstWhileMassNavPhysicsAreHeldAndSystemPauseStopsHero()
+    {
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+        using var engine = CreateEngine(repoRoot);
+        engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+        CapabilityStandardTimeFlowShowcaseRuntime runtime = RequireRuntime(engine);
+
+        runtime.ReleaseAllPauseTokens();
+        runtime.ReleaseSimulationScaleLayerOne();
+        runtime.ReleaseSimulationScaleLayerTwo();
+        runtime.ReleaseGasScale();
+        runtime.ResetProbes();
+        TickFrames(engine, 10);
+
+        runtime.ShowSkillAimMoment();
+        CapabilityStandardTimeFlowShowcasePanelState aimStart = runtime.CapturePanelState(engine);
+        TickFrames(engine, 12);
+        CapabilityStandardTimeFlowShowcasePanelState aimEnd = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(aimEnd.SkillIndicatorPauseActive, Is.True);
+            Assert.That(aimEnd.SimulationPaused, Is.True);
+            Assert.That(aimEnd.NavPositionXCm, Is.EqualTo(aimStart.NavPositionXCm).Within(0.001f));
+            Assert.That(aimEnd.PhysicsPositionXCm, Is.EqualTo(aimStart.PhysicsPositionXCm).Within(0.001f));
+            Assert.That(aimEnd.GasStep, Is.EqualTo(aimStart.GasStep));
+        });
+
+        runtime.CastHeroSkill();
+        TickFrames(engine, 1);
+        CapabilityStandardTimeFlowShowcasePanelState burstStart = runtime.CapturePanelState(engine);
+        TickFrames(engine, 18);
+        CapabilityStandardTimeFlowShowcasePanelState burstRun = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(burstRun.SimulationPaused, Is.False);
+            Assert.That(burstRun.HeroLocalBurstActive, Is.True);
+            Assert.That(burstRun.HeroLocalBurstTick, Is.GreaterThan(burstStart.HeroLocalBurstTick));
+            Assert.That(burstRun.HeroComboHitCount, Is.GreaterThanOrEqualTo(2));
+            Assert.That(burstRun.NavPositionXCm, Is.EqualTo(burstStart.NavPositionXCm).Within(0.001f));
+            Assert.That(burstRun.NavigationStepCount, Is.EqualTo(burstStart.NavigationStepCount));
+            Assert.That(burstRun.PhysicsPositionXCm, Is.EqualTo(burstStart.PhysicsPositionXCm).Within(0.001f));
+            Assert.That(burstRun.GasStep, Is.GreaterThan(burstStart.GasStep));
+        });
+
+        runtime.OpenSettingsPause();
+        TickFrames(engine, 1);
+        CapabilityStandardTimeFlowShowcasePanelState systemPauseStart = runtime.CapturePanelState(engine);
+        TickFrames(engine, 18);
+        CapabilityStandardTimeFlowShowcasePanelState systemPauseEnd = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(systemPauseEnd.HeroLocalBurstActive, Is.True);
+            Assert.That(systemPauseEnd.HeroLocalBurstPausedBySystem, Is.True);
+            Assert.That(systemPauseEnd.HeroLocalBurstTick, Is.EqualTo(systemPauseStart.HeroLocalBurstTick));
+            Assert.That(systemPauseEnd.HeroComboHitCount, Is.EqualTo(systemPauseStart.HeroComboHitCount));
+            Assert.That(systemPauseEnd.GasStep, Is.EqualTo(systemPauseStart.GasStep));
+            Assert.That(systemPauseEnd.NavPositionXCm, Is.EqualTo(systemPauseStart.NavPositionXCm).Within(0.001f));
+            Assert.That(systemPauseEnd.PhysicsPositionXCm, Is.EqualTo(systemPauseStart.PhysicsPositionXCm).Within(0.001f));
+        });
+
+        runtime.CloseSettingsPause();
+        TickFrames(engine, 18);
+        CapabilityStandardTimeFlowShowcasePanelState resumed = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(resumed.HeroLocalBurstActive, Is.True);
+            Assert.That(resumed.HeroLocalBurstPausedBySystem, Is.False);
+            Assert.That(resumed.HeroLocalBurstTick, Is.GreaterThan(systemPauseEnd.HeroLocalBurstTick));
+            Assert.That(resumed.HeroComboHitCount, Is.GreaterThanOrEqualTo(systemPauseEnd.HeroComboHitCount));
+        });
+    }
+
+    [Test]
+    public void Shortcuts_DriveSkillPauseStackLocalBurstInterfacesAndSpeed()
+    {
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+        var input = new CapabilityStandardShowcaseTestHarness.TestInputBackend();
+        using var engine = CreateEngine(repoRoot, input);
+        engine.LoadEntryMap(engine.MergedConfig.StartupMapId);
+        CapabilityStandardTimeFlowShowcaseRuntime runtime = RequireRuntime(engine);
+        TimeFlowShortcutConfig shortcuts = runtime.ActiveConfig.Shortcuts;
+
+        PressShortcut(engine, input, shortcuts.Skill);
+        CapabilityStandardTimeFlowShowcasePanelState aiming = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(aiming.SkillIndicatorPauseActive, Is.True);
+            Assert.That(aiming.SimulationPaused, Is.True);
+        });
+
+        PressShortcut(engine, input, shortcuts.Guide);
+        CapabilityStandardTimeFlowShowcasePanelState guide = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(guide.SystemGuidePauseActive, Is.True);
+            Assert.That(guide.ActivePauseTokenCount, Is.EqualTo(2));
+        });
+
+        PressShortcut(engine, input, shortcuts.Skill);
+        TickFrames(engine, 8);
+        CapabilityStandardTimeFlowShowcasePanelState burst = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(burst.HeroLocalBurstActive, Is.True);
+            Assert.That(burst.SkillIndicatorPauseActive, Is.False);
+            Assert.That(burst.SystemGuidePauseActive, Is.False);
+            Assert.That(burst.ActivePauseTokenCount, Is.EqualTo(0));
+        });
+
+        PressShortcut(engine, input, shortcuts.Settings);
+        CapabilityStandardTimeFlowShowcasePanelState settings = runtime.CapturePanelState(engine);
+        TickFrames(engine, 8);
+        CapabilityStandardTimeFlowShowcasePanelState heldBySettings = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(heldBySettings.SettingsPauseActive, Is.True);
+            Assert.That(heldBySettings.HeroLocalBurstPausedBySystem, Is.True);
+            Assert.That(heldBySettings.HeroLocalBurstTick, Is.EqualTo(settings.HeroLocalBurstTick));
+        });
+
+        PressShortcut(engine, input, shortcuts.CloseTop);
+        TickFrames(engine, 8);
+        CapabilityStandardTimeFlowShowcasePanelState resumed = runtime.CapturePanelState(engine);
+        Assert.Multiple(() =>
+        {
+            Assert.That(resumed.SettingsPauseActive, Is.False);
+            Assert.That(resumed.HeroLocalBurstPausedBySystem, Is.False);
+            Assert.That(resumed.HeroLocalBurstTick, Is.GreaterThan(heldBySettings.HeroLocalBurstTick));
+        });
+
+        PressShortcut(engine, input, shortcuts.Menu);
+        CapabilityStandardTimeFlowShowcasePanelState menu = runtime.CapturePanelState(engine);
+        Assert.That(menu.MenuPauseActive, Is.True);
+
+        PressShortcut(engine, input, shortcuts.CloseTop);
+        CapabilityStandardTimeFlowShowcasePanelState afterMenu = runtime.CapturePanelState(engine);
+        Assert.That(afterMenu.MenuPauseActive, Is.False);
+
+        PressShortcut(engine, input, shortcuts.FastSpeed);
+        CapabilityStandardTimeFlowShowcasePanelState fast = runtime.CapturePanelState(engine);
+        Assert.That(fast.SimulationScaleLayerOnePermille, Is.EqualTo(2000));
+
+        PressShortcut(engine, input, shortcuts.SlowSpeed);
+        CapabilityStandardTimeFlowShowcasePanelState slow = runtime.CapturePanelState(engine);
+        Assert.That(slow.SimulationScaleLayerOnePermille, Is.EqualTo(500));
     }
 
     [Test]
@@ -526,9 +675,9 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
         });
     }
 
-    private static GameEngine CreateEngine(string repoRoot)
+    private static GameEngine CreateEngine(string repoRoot, IInputBackend? inputBackend = null)
     {
-        GameEngine engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods);
+        GameEngine engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods, inputBackend);
         AcceptanceUiHostInstaller.Install(engine);
         return engine;
     }
@@ -549,6 +698,17 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
     {
         var frameTimes = new List<double>(frames);
         CapabilityStandardShowcaseTestHarness.TickMeasured(engine, frames, frameTimes);
+    }
+
+    private static void PressShortcut(
+        GameEngine engine,
+        CapabilityStandardShowcaseTestHarness.TestInputBackend input,
+        string devicePath)
+    {
+        input.SetButton(devicePath, true);
+        TickFrames(engine, 1);
+        input.SetButton(devicePath, false);
+        TickFrames(engine, 1);
     }
 
     private static void ClickElement(UIRoot root, string elementId)

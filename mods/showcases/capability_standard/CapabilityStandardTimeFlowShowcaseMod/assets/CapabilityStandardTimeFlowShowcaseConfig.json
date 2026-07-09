@@ -136,5 +136,21 @@
     "friction": 0.2,
     "restitution": 0,
     "baseDamping": 1
+  },
+  "skillDemo": {
+    "localBurstDurationSeconds": 2.4,
+    "localHitIntervalSeconds": 0.3,
+    "localHeroOrbitRadiusCm": 120
+  },
+  "shortcuts": {
+    "settings": "<Keyboard>/u",
+    "menu": "<Keyboard>/i",
+    "skill": "<Keyboard>/q",
+    "guide": "<Keyboard>/g",
+    "resetCamera": "<Keyboard>/r",
+    "slowSpeed": "<Keyboard>/j",
+    "normalSpeed": "<Keyboard>/k",
+    "fastSpeed": "<Keyboard>/l",
+    "closeTop": "<Keyboard>/escape"
   }
 }

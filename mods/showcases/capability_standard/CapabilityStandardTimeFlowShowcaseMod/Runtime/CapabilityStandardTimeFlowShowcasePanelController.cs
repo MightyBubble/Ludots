@@ -115,25 +115,39 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
         {
             WorldLabel(
                 "Hero",
-                state.SimulationPaused ? "waiting" : "moving",
+                BuildHeroWorldStatus(state),
                 600f,
                 585f,
                 "#103544",
                 "#51D9F0"),
             WorldLabel(
-                "Target",
-                state.SkillIndicatorPauseActive ? "locked" : "destination",
+                "Enemy",
+                state.HeroLocalBurstActive ? $"hits {state.HeroComboHitCount}" : "target",
                 1045f,
                 430f,
                 "#3A2E14",
                 "#FFD25C"),
             WorldLabel(
-                "Physics",
-                state.SimulationPaused ? "frozen" : "rolling",
+                "MassNav Ally",
+                state.SimulationPaused || state.HeroLocalBurstActive ? "held" : "pathing",
+                705f,
+                440f,
+                "#162D26",
+                "#62D58A"),
+            WorldLabel(
+                "Physics2D Orb",
+                state.SimulationPaused || state.HeroLocalBurstActive ? "held" : "rolling",
                 625f,
                 315f,
                 "#332B16",
-                "#E6C35A")
+                "#E6C35A"),
+            WorldLabel(
+                "GAS Beat",
+                state.GasPaused ? "paused" : $"step {state.GasStep}",
+                900f,
+                260f,
+                "#2A2338",
+                "#B794FF")
         };
 
         if (state.SkillIndicatorPauseActive)
@@ -162,11 +176,13 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
         {
             children.Add(
                 Ui.Panel(
-                        Ui.Text("Time Rift landed")
+                        Ui.Text(state.HeroLocalBurstActive ? "Hero local combo" : "Time Rift landed")
                             .FontSize(18f)
                             .Bold()
                             .Color("#FFE08A"),
-                        Ui.Text($"casts: {state.HeroSkillCastCount}")
+                        Ui.Text(state.HeroLocalBurstActive
+                                ? $"hits: {state.HeroComboHitCount}"
+                                : $"casts: {state.HeroSkillCastCount}")
                             .FontSize(12f)
                             .Color("#FFF1BF"))
                     .Width(230f)
@@ -261,6 +277,15 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
                         Stat("Skill", FormatScale(state.GasEffectiveScalePermille), state.GasPaused),
                         Stat("Stack", $"{state.ActiveTokenCount}", state.ActivePauseTokenCount > 0))
                     .Gap(8f),
+                Ui.Text("Live probes")
+                    .FontSize(10f)
+                    .Bold()
+                    .Color("#8EA0B5"),
+                Ui.Row(
+                        Stat("MassNav", $"{state.NavigationStepCount}", state.SimulationPaused || state.HeroLocalBurstActive),
+                        Stat("Physics", $"{state.PhysicsPositionXCm:0}", state.SimulationPaused || state.HeroLocalBurstActive),
+                        Stat("GAS", $"{state.GasStep}", state.GasPaused))
+                    .Gap(8f),
                 Ui.Text("Pause stack")
                     .FontSize(10f)
                     .Bold()
@@ -315,7 +340,9 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
                             .FontSize(18f)
                             .Bold()
                             .Color("#F4F8FF"),
-                        Ui.Text($"casts {state.HeroSkillCastCount}")
+                        Ui.Text(state.HeroLocalBurstActive
+                                ? $"hits {state.HeroComboHitCount}"
+                                : $"casts {state.HeroSkillCastCount}")
                             .FontSize(11f)
                             .Color("#AAB8C8"))
                     .Width(130f)
@@ -332,7 +359,10 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
                                     .Bold()
                                     .Color("#FFE08A")
                                     .FlexGrow(1f),
-                                Pill(state.SkillIndicatorPauseActive ? "Aiming" : "Ready", state.SkillIndicatorPauseActive ? "#243D54" : "#214635", "#F5FAFF"))
+                                Pill(
+                                    BuildSkillPill(state),
+                                    state.SkillIndicatorPauseActive || state.HeroLocalBurstActive ? "#243D54" : "#214635",
+                                    "#F5FAFF"))
                             .Align(UiAlignItems.Center)
                             .Gap(8f),
                         Ui.Text(BuildSkillLine(state))
@@ -737,6 +767,16 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
 
     private static string BuildSkillLine(CapabilityStandardTimeFlowShowcasePanelState state)
     {
+        if (state.HeroLocalBurstPausedBySystem)
+        {
+            return "A system pause is holding the hero local combo, MassNav, Physics2D, and GAS together.";
+        }
+
+        if (state.HeroLocalBurstActive)
+        {
+            return "The hero local combo is running while the MassNav ally and Physics2D orb stay held.";
+        }
+
         if (state.SystemGuidePauseActive)
         {
             return "A tutorial is stacked above the aim pause. Close it or cast anyway.";
@@ -748,6 +788,36 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
         }
 
         return "Open the indicator, then cast. Settings and menu buttons pause the same world clock.";
+    }
+
+    private static string BuildHeroWorldStatus(CapabilityStandardTimeFlowShowcasePanelState state)
+    {
+        if (state.HeroLocalBurstPausedBySystem)
+        {
+            return "system paused";
+        }
+
+        if (state.HeroLocalBurstActive)
+        {
+            return "local combo";
+        }
+
+        return state.SimulationPaused ? "waiting" : "moving";
+    }
+
+    private static string BuildSkillPill(CapabilityStandardTimeFlowShowcasePanelState state)
+    {
+        if (state.HeroLocalBurstPausedBySystem)
+        {
+            return "Paused";
+        }
+
+        if (state.HeroLocalBurstActive)
+        {
+            return "Combo";
+        }
+
+        return state.SkillIndicatorPauseActive ? "Aiming" : "Ready";
     }
 
     private static string FormatScale(int scalePermille)
@@ -829,6 +899,16 @@ internal sealed class CapabilityStandardTimeFlowShowcasePanelController
                left.GasScaleTokenPermille == right.GasScaleTokenPermille &&
                left.HeroSkillCastCount == right.HeroSkillCastCount &&
                left.HeroSkillCastAgeSteps == right.HeroSkillCastAgeSteps &&
+               left.HeroLocalBurstActive == right.HeroLocalBurstActive &&
+               left.HeroLocalBurstPausedBySystem == right.HeroLocalBurstPausedBySystem &&
+               left.HeroLocalBurstTick == right.HeroLocalBurstTick &&
+               left.HeroComboHitCount == right.HeroComboHitCount &&
+               Math.Abs(left.HeroLocalClockSeconds - right.HeroLocalClockSeconds) < 0.001f &&
+               Math.Abs(left.HeroLocalPositionXCm - right.HeroLocalPositionXCm) < 0.01f &&
+               Math.Abs(left.HeroLocalPositionYCm - right.HeroLocalPositionYCm) < 0.01f &&
+               Math.Abs(left.EnemyPositionXCm - right.EnemyPositionXCm) < 0.01f &&
+               Math.Abs(left.EnemyPositionYCm - right.EnemyPositionYCm) < 0.01f &&
+               left.NavigationStepCount == right.NavigationStepCount &&
                Math.Abs(left.NavPositionXCm - right.NavPositionXCm) < 0.01f &&
                Math.Abs(left.NavPositionYCm - right.NavPositionYCm) < 0.01f &&
                Math.Abs(left.PhysicsPositionXCm - right.PhysicsPositionXCm) < 0.01f &&

@@ -19,6 +19,8 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
     public MassNavigationFlowAvoidanceTuning NavigationAvoidance { get; set; } = new();
     public TimeFlowNavigationSemanticsConfig NavigationSemantics { get; set; } = new();
     public TimeFlowPhysicsProbeConfig PhysicsProbe { get; set; } = new();
+    public TimeFlowSkillDemoConfig SkillDemo { get; set; } = new();
+    public TimeFlowShortcutConfig Shortcuts { get; set; } = new();
 
     public static CapabilityStandardTimeFlowShowcaseConfig Load(JsonObject configObject)
     {
@@ -47,6 +49,8 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
         RequireProperty(root, "navigationAvoidance");
         RequireProperty(root, "navigationSemantics");
         RequireProperty(root, "physicsProbe");
+        RequireProperty(root, "skillDemo");
+        RequireProperty(root, "shortcuts");
     }
 
     private void Validate()
@@ -61,6 +65,8 @@ internal sealed class CapabilityStandardTimeFlowShowcaseConfig
         NavigationAvoidance.Validate();
         NavigationSemantics.Validate();
         PhysicsProbe.Validate();
+        SkillDemo.Validate();
+        Shortcuts.Validate();
     }
 
     private static void ValidateScaleRequests(TimeFlowScaleRequestConfig[] requests, string fieldName)
@@ -210,6 +216,67 @@ internal sealed class TimeFlowPhysicsProbeConfig
         if (Friction < 0f || Restitution < 0f || BaseDamping < 0f)
         {
             throw new InvalidOperationException("TimeFlow showcase physicsProbe material values must be non-negative.");
+        }
+    }
+}
+
+internal sealed class TimeFlowSkillDemoConfig
+{
+    public float LocalBurstDurationSeconds { get; set; }
+    public float LocalHitIntervalSeconds { get; set; }
+    public float LocalHeroOrbitRadiusCm { get; set; }
+
+    public void Validate()
+    {
+        RequirePositive(LocalBurstDurationSeconds, nameof(LocalBurstDurationSeconds));
+        RequirePositive(LocalHitIntervalSeconds, nameof(LocalHitIntervalSeconds));
+        RequirePositive(LocalHeroOrbitRadiusCm, nameof(LocalHeroOrbitRadiusCm));
+        if (LocalHitIntervalSeconds > LocalBurstDurationSeconds)
+        {
+            throw new InvalidOperationException("TimeFlow showcase skillDemo.localHitIntervalSeconds must not exceed localBurstDurationSeconds.");
+        }
+    }
+
+    private static void RequirePositive(float value, string fieldName)
+    {
+        if (!(value > 0f))
+        {
+            throw new InvalidOperationException($"TimeFlow showcase skillDemo.{fieldName} must be > 0.");
+        }
+    }
+}
+
+internal sealed class TimeFlowShortcutConfig
+{
+    public string Settings { get; set; } = string.Empty;
+    public string Menu { get; set; } = string.Empty;
+    public string Skill { get; set; } = string.Empty;
+    public string Guide { get; set; } = string.Empty;
+    public string ResetCamera { get; set; } = string.Empty;
+    public string SlowSpeed { get; set; } = string.Empty;
+    public string NormalSpeed { get; set; } = string.Empty;
+    public string FastSpeed { get; set; } = string.Empty;
+    public string CloseTop { get; set; } = string.Empty;
+
+    public void Validate()
+    {
+        RequireKeyboardPath(Settings, nameof(Settings));
+        RequireKeyboardPath(Menu, nameof(Menu));
+        RequireKeyboardPath(Skill, nameof(Skill));
+        RequireKeyboardPath(Guide, nameof(Guide));
+        RequireKeyboardPath(ResetCamera, nameof(ResetCamera));
+        RequireKeyboardPath(SlowSpeed, nameof(SlowSpeed));
+        RequireKeyboardPath(NormalSpeed, nameof(NormalSpeed));
+        RequireKeyboardPath(FastSpeed, nameof(FastSpeed));
+        RequireKeyboardPath(CloseTop, nameof(CloseTop));
+    }
+
+    private static void RequireKeyboardPath(string value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value) ||
+            !value.StartsWith("<Keyboard>/", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"TimeFlow showcase shortcuts.{fieldName} must be an explicit keyboard path.");
         }
     }
 }

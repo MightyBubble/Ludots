@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -19,7 +20,7 @@ using Ludots.Core.Scripting;
 
 namespace CapabilityStandardTimeFlowShowcaseMod.Runtime;
 
-internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkSceneController
+internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkSceneController, IInputFrameConsumer
 {
     private const string TokenOwner = "CapabilityStandardTimeFlowShowcaseMod";
     private const string SettingsPauseOwner = TokenOwner + ".Settings";
@@ -47,10 +48,33 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     private int _simulationScaleLayerOnePermille;
     private int _simulationScaleLayerTwoPermille;
     private int _gasScalePermille;
+    private bool _shortcutSettingsDown;
+    private bool _shortcutMenuDown;
+    private bool _shortcutSkillDown;
+    private bool _shortcutGuideDown;
+    private bool _shortcutResetCameraDown;
+    private bool _shortcutSlowSpeedDown;
+    private bool _shortcutNormalSpeedDown;
+    private bool _shortcutFastSpeedDown;
+    private bool _shortcutCloseTopDown;
     private string _lastEvent = "TimeFlow showcase ready.";
     private int _navigationStepCount;
     private int _heroSkillCastCount;
     private int _lastHeroSkillCastGasStep = -1;
+    private bool _heroLocalBurstActive;
+    private float _heroLocalClockSeconds;
+    private int _heroLocalBurstTick;
+    private int _heroComboHitCount;
+    private float _heroBurstStartXCm;
+    private float _heroBurstStartYCm;
+    private float _heroLocalPositionXCm;
+    private float _heroLocalPositionYCm;
+    private float _heroBurstEnemyXCm;
+    private float _heroBurstEnemyYCm;
+    private bool _physicsFrozenForHeroBurst;
+    private Fix64Vec2 _heroBurstPhysicsPosition;
+    private Fix64Vec2 _heroBurstPhysicsVelocity;
+    private Fix64 _heroBurstPhysicsAngularVelocity;
 
     public bool IsActive => _activeEngine != null && IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
     public bool SupportsScatterControl => false;
@@ -64,6 +88,11 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     public void SetScatterTargetFromRatio(float ratio) => ThrowScatterUnsupported();
     public void ApplyScatterTarget() => ThrowScatterUnsupported();
     public void ApplyScatterLayout(int total) => ThrowScatterUnsupported();
+
+    public void Consume(GameEngine engine, PlayerInputHandler input, float deltaTime)
+    {
+        HandleShortcuts(engine);
+    }
 
     public CapabilityStandardTimeFlowShowcaseConfig ActiveConfig => _config
         ?? throw new InvalidOperationException("TimeFlow showcase config has not been loaded.");
@@ -118,6 +147,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             ?? throw new InvalidOperationException("TimeFlow showcase requires GasClockStepPolicy.");
         ReadNavigationProbe(out float navX, out float navY);
         ReadPhysicsProbe(engine.World, out float physicsX, out float physicsY, out float physicsVx, out float physicsVy);
+        ResolveHeroLocalPosition(navX, navY, out float heroLocalX, out float heroLocalY);
         int skillCastAgeSteps = _lastHeroSkillCastGasStep < 0
             ? int.MaxValue
             : Math.Max(0, gasClocks.StepNow - _lastHeroSkillCastGasStep);
@@ -146,6 +176,16 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             GasScaleTokenPermille: _gasScalePermille,
             HeroSkillCastCount: _heroSkillCastCount,
             HeroSkillCastAgeSteps: skillCastAgeSteps,
+            HeroLocalBurstActive: _heroLocalBurstActive,
+            HeroLocalBurstPausedBySystem: _heroLocalBurstActive && timeFlow.IsPaused(TimeFlowDomainIds.Simulation),
+            HeroLocalBurstTick: _heroLocalBurstTick,
+            HeroComboHitCount: _heroComboHitCount,
+            HeroLocalClockSeconds: _heroLocalClockSeconds,
+            HeroLocalPositionXCm: heroLocalX,
+            HeroLocalPositionYCm: heroLocalY,
+            EnemyPositionXCm: ActiveConfig.NavigationProbe.TargetXCm,
+            EnemyPositionYCm: ActiveConfig.NavigationProbe.TargetYCm,
+            NavigationStepCount: _navigationStepCount,
             NavPositionXCm: navX,
             NavPositionYCm: navY,
             NavTargetXCm: ActiveConfig.NavigationProbe.TargetXCm,
@@ -162,6 +202,16 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     {
         if (!IsActive)
         {
+            return;
+        }
+
+        if (_heroLocalBurstActive)
+        {
+            if (dt > 0f)
+            {
+                AdvanceHeroLocalBurst(engine, dt);
+            }
+
             return;
         }
 
@@ -183,6 +233,79 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
             hardResolveCandidateThresholdAgents: 2);
         _navigationStepCount++;
         SyncNavigationEntity(engine.World);
+    }
+
+    public void HandleShortcuts(GameEngine engine)
+    {
+        if (!IsActive)
+        {
+            return;
+        }
+
+        if (!engine.TryGetService(CoreServiceKeys.InputBackend, out IInputBackend input))
+        {
+            throw new InvalidOperationException("TimeFlow showcase shortcuts require InputBackend.");
+        }
+
+        TimeFlowShortcutConfig shortcuts = ActiveConfig.Shortcuts;
+        if (ConsumeShortcut(input, shortcuts.CloseTop, ref _shortcutCloseTopDown))
+        {
+            CloseTopmostPlayerLayer();
+        }
+
+        if (ConsumeShortcut(input, shortcuts.Settings, ref _shortcutSettingsDown))
+        {
+            if (_settingsPauseToken.IsValid)
+            {
+                CloseSettingsPause();
+            }
+            else
+            {
+                OpenSettingsPause();
+            }
+        }
+
+        if (ConsumeShortcut(input, shortcuts.Menu, ref _shortcutMenuDown))
+        {
+            if (_menuPauseToken.IsValid)
+            {
+                CloseMenuPause();
+            }
+            else
+            {
+                OpenMenuPause();
+            }
+        }
+
+        if (ConsumeShortcut(input, shortcuts.Skill, ref _shortcutSkillDown))
+        {
+            TriggerSkillShortcut();
+        }
+
+        if (ConsumeShortcut(input, shortcuts.Guide, ref _shortcutGuideDown))
+        {
+            ToggleGuideShortcut();
+        }
+
+        if (ConsumeShortcut(input, shortcuts.ResetCamera, ref _shortcutResetCameraDown))
+        {
+            ResetCamera();
+        }
+
+        if (ConsumeShortcut(input, shortcuts.SlowSpeed, ref _shortcutSlowSpeedDown))
+        {
+            ApplySimulationScaleLayerOne(0);
+        }
+
+        if (ConsumeShortcut(input, shortcuts.NormalSpeed, ref _shortcutNormalSpeedDown))
+        {
+            ApplySimulationScaleLayerOne(1);
+        }
+
+        if (ConsumeShortcut(input, shortcuts.FastSpeed, ref _shortcutFastSpeedDown))
+        {
+            ApplySimulationScaleLayerOne(2);
+        }
     }
 
     public void OpenSettingsPause()
@@ -222,6 +345,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     public void BeginSkillIndicatorPause()
     {
         GameEngine engine = RequireActiveEngine();
+        StopHeroLocalBurst(engine, restorePhysicsVelocity: true);
         AcquirePauseIfMissing(
             engine,
             ref _skillIndicatorPauseToken,
@@ -311,6 +435,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     public void ShowSkillAimMoment()
     {
         GameEngine engine = RequireActiveEngine();
+        StopHeroLocalBurst(engine, restorePhysicsVelocity: true);
         ReleaseTokenIfActive(engine, ref _systemGuidePauseToken, string.Empty);
         ReleaseTokenIfActive(engine, ref _menuPauseToken, string.Empty);
         ReleaseTokenIfActive(engine, ref _settingsPauseToken, string.Empty);
@@ -351,7 +476,8 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         ReleaseTokenIfActive(engine, ref _skillIndicatorPauseToken, string.Empty);
         _heroSkillCastCount++;
         _lastHeroSkillCastGasStep = gasClocks.StepNow;
-        _lastEvent = "Hero cast Time Rift. Aim pause cleared and battle time resumed.";
+        StartHeroLocalBurst(engine);
+        _lastEvent = "Hero cast Time Rift. Aim pause cleared; the hero local clock keeps attacking while the world actors hold.";
     }
 
     public void CancelHeroSkillAim()
@@ -451,12 +577,16 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
     public void ResetProbes()
     {
         GameEngine engine = RequireActiveEngine();
+        StopHeroLocalBurst(engine, restorePhysicsVelocity: false);
         engine.World.Destroy(in _ownedEntityQuery);
         _navigationFlow = null;
         _navigationGroups = null;
         _navigationProbeEntity = Entity.Null;
         _physicsProbeEntity = Entity.Null;
         _navigationStepCount = 0;
+        _heroLocalClockSeconds = 0f;
+        _heroLocalBurstTick = 0;
+        _heroComboHitCount = 0;
         EnsurePhysicsProbe(engine, ActiveConfig);
         EnsureNavigationProbe(engine, ActiveConfig);
         _lastEvent = "Reset nav and Physics2D probes.";
@@ -509,6 +639,233 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         });
         engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
         _lastEvent = "Camera reset to the TimeFlow showcase view.";
+    }
+
+    private void StartHeroLocalBurst(GameEngine engine)
+    {
+        StopHeroLocalBurst(engine, restorePhysicsVelocity: true);
+        ReadNavigationProbe(out _heroBurstStartXCm, out _heroBurstStartYCm);
+        _heroBurstEnemyXCm = ActiveConfig.NavigationProbe.TargetXCm;
+        _heroBurstEnemyYCm = ActiveConfig.NavigationProbe.TargetYCm;
+        _heroLocalPositionXCm = _heroBurstStartXCm;
+        _heroLocalPositionYCm = _heroBurstStartYCm;
+        _heroLocalClockSeconds = 0f;
+        _heroLocalBurstTick = 0;
+        _heroComboHitCount = 0;
+        _heroLocalBurstActive = true;
+        CapturePhysicsProbeForHeroBurst(engine.World);
+    }
+
+    private void AdvanceHeroLocalBurst(GameEngine engine, float dt)
+    {
+        TimeFlowSkillDemoConfig skillDemo = ActiveConfig.SkillDemo;
+        _heroLocalClockSeconds = Math.Min(
+            skillDemo.LocalBurstDurationSeconds,
+            _heroLocalClockSeconds + dt);
+        _heroLocalBurstTick++;
+
+        int maxHits = Math.Max(1, (int)MathF.Ceiling(skillDemo.LocalBurstDurationSeconds / skillDemo.LocalHitIntervalSeconds));
+        int visibleHits = Math.Min(maxHits, 1 + (int)MathF.Floor(_heroLocalClockSeconds / skillDemo.LocalHitIntervalSeconds));
+        _heroComboHitCount = Math.Max(_heroComboHitCount, visibleHits);
+
+        UpdateHeroLocalPosition();
+        ApplyHeroBurstPhysicsFreeze(engine.World);
+
+        if (_heroLocalClockSeconds >= skillDemo.LocalBurstDurationSeconds)
+        {
+            StopHeroLocalBurst(engine, restorePhysicsVelocity: true);
+            _lastEvent = "Hero local burst finished. MassNav and Physics2D probes resumed on the shared clock.";
+        }
+    }
+
+    private void StopHeroLocalBurst(GameEngine engine, bool restorePhysicsVelocity)
+    {
+        if (!_heroLocalBurstActive && !_physicsFrozenForHeroBurst)
+        {
+            return;
+        }
+
+        _heroLocalBurstActive = false;
+        if (restorePhysicsVelocity)
+        {
+            RestorePhysicsProbeAfterHeroBurst(engine.World);
+        }
+        else
+        {
+            _physicsFrozenForHeroBurst = false;
+        }
+    }
+
+    private void CapturePhysicsProbeForHeroBurst(World world)
+    {
+        if (_physicsProbeEntity == Entity.Null || !world.IsAlive(_physicsProbeEntity))
+        {
+            throw new InvalidOperationException("TimeFlow showcase hero burst requires the Physics2D probe entity.");
+        }
+
+        Position2D position = world.Get<Position2D>(_physicsProbeEntity);
+        Velocity2D velocity = world.Get<Velocity2D>(_physicsProbeEntity);
+        _heroBurstPhysicsPosition = position.Value;
+        _heroBurstPhysicsVelocity = velocity.Linear;
+        _heroBurstPhysicsAngularVelocity = velocity.Angular;
+        _physicsFrozenForHeroBurst = true;
+        ApplyHeroBurstPhysicsFreeze(world);
+    }
+
+    private void ApplyHeroBurstPhysicsFreeze(World world)
+    {
+        if (!_physicsFrozenForHeroBurst ||
+            _physicsProbeEntity == Entity.Null ||
+            !world.IsAlive(_physicsProbeEntity))
+        {
+            return;
+        }
+
+        world.Set(_physicsProbeEntity, new Position2D { Value = _heroBurstPhysicsPosition });
+        world.Set(_physicsProbeEntity, new PreviousPosition2D { Value = _heroBurstPhysicsPosition });
+        world.Set(_physicsProbeEntity, new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero });
+        if (world.Has<WorldPositionCm>(_physicsProbeEntity))
+        {
+            world.Set(_physicsProbeEntity, new WorldPositionCm { Value = _heroBurstPhysicsPosition });
+        }
+
+        if (world.Has<PreviousWorldPositionCm>(_physicsProbeEntity))
+        {
+            world.Set(_physicsProbeEntity, new PreviousWorldPositionCm { Value = _heroBurstPhysicsPosition });
+        }
+
+        if (world.Has<VisualTransform>(_physicsProbeEntity))
+        {
+            VisualTransform visual = world.Get<VisualTransform>(_physicsProbeEntity);
+            Vector2 position = _heroBurstPhysicsPosition.ToVector2();
+            visual.Position = new Vector3(position.X * 0.01f, 0f, position.Y * 0.01f);
+            world.Set(_physicsProbeEntity, visual);
+        }
+    }
+
+    private void RestorePhysicsProbeAfterHeroBurst(World world)
+    {
+        if (!_physicsFrozenForHeroBurst)
+        {
+            return;
+        }
+
+        if (_physicsProbeEntity != Entity.Null && world.IsAlive(_physicsProbeEntity))
+        {
+            world.Set(_physicsProbeEntity, new Velocity2D
+            {
+                Linear = _heroBurstPhysicsVelocity,
+                Angular = _heroBurstPhysicsAngularVelocity
+            });
+        }
+
+        _physicsFrozenForHeroBurst = false;
+    }
+
+    private void UpdateHeroLocalPosition()
+    {
+        TimeFlowSkillDemoConfig skillDemo = ActiveConfig.SkillDemo;
+        float progress01 = Math.Clamp(_heroLocalClockSeconds / skillDemo.LocalBurstDurationSeconds, 0f, 1f);
+        if (progress01 < 0.22f)
+        {
+            float leap01 = progress01 / 0.22f;
+            _heroLocalPositionXCm = Lerp(_heroBurstStartXCm, _heroBurstEnemyXCm, leap01);
+            _heroLocalPositionYCm = Lerp(_heroBurstStartYCm, _heroBurstEnemyYCm, leap01);
+            return;
+        }
+
+        float angle = (_heroLocalClockSeconds * 8.5f) + (_heroComboHitCount * 0.9f);
+        _heroLocalPositionXCm = _heroBurstEnemyXCm + (MathF.Cos(angle) * skillDemo.LocalHeroOrbitRadiusCm);
+        _heroLocalPositionYCm = _heroBurstEnemyYCm + (MathF.Sin(angle) * skillDemo.LocalHeroOrbitRadiusCm);
+    }
+
+    private void ResolveHeroLocalPosition(float navX, float navY, out float heroX, out float heroY)
+    {
+        if (_heroLocalBurstActive)
+        {
+            heroX = _heroLocalPositionXCm;
+            heroY = _heroLocalPositionYCm;
+            return;
+        }
+
+        heroX = navX;
+        heroY = navY;
+    }
+
+    private void CloseTopmostPlayerLayer()
+    {
+        if (_systemGuidePauseToken.IsValid)
+        {
+            DismissSystemGuidePause();
+            return;
+        }
+
+        if (_menuPauseToken.IsValid)
+        {
+            CloseMenuPause();
+            return;
+        }
+
+        if (_settingsPauseToken.IsValid)
+        {
+            CloseSettingsPause();
+            return;
+        }
+
+        if (_skillIndicatorPauseToken.IsValid)
+        {
+            CancelHeroSkillAim();
+            return;
+        }
+
+        _lastEvent = "No open player layer to close.";
+    }
+
+    private void TriggerSkillShortcut()
+    {
+        if (_settingsPauseToken.IsValid || _menuPauseToken.IsValid)
+        {
+            _lastEvent = "Close the open interface before casting.";
+            return;
+        }
+
+        if (_skillIndicatorPauseToken.IsValid || _systemGuidePauseToken.IsValid)
+        {
+            CastHeroSkill();
+            return;
+        }
+
+        ShowSkillAimMoment();
+    }
+
+    private void ToggleGuideShortcut()
+    {
+        if (!_skillIndicatorPauseToken.IsValid && !_systemGuidePauseToken.IsValid)
+        {
+            _lastEvent = "Open the skill indicator before showing the system guide.";
+            return;
+        }
+
+        if (_systemGuidePauseToken.IsValid)
+        {
+            DismissSystemGuidePause();
+            return;
+        }
+
+        ShowGuideDuringSkillMoment();
+    }
+
+    private static bool ConsumeShortcut(IInputBackend input, string path, ref bool wasDown)
+    {
+        bool isDown = input.GetButton(path);
+        bool pressed = isDown && !wasDown;
+        wasDown = isDown;
+        return pressed;
+    }
+
+    private static float Lerp(float a, float b, float t)
+    {
+        return a + ((b - a) * Math.Clamp(t, 0f, 1f));
     }
 
     private void AcquirePauseIfMissing(
@@ -766,6 +1123,7 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         ReleaseTokenIfActive(engine, ref _simulationScaleLayerOneToken, ref _simulationScaleLayerOnePermille, string.Empty);
         ReleaseTokenIfActive(engine, ref _simulationScaleLayerTwoToken, ref _simulationScaleLayerTwoPermille, string.Empty);
         ReleaseTokenIfActive(engine, ref _gasScaleToken, ref _gasScalePermille, string.Empty);
+        StopHeroLocalBurst(engine, restorePhysicsVelocity: false);
         engine.World.Destroy(in _ownedEntityQuery);
         _activeEngine = null;
         _navigationProbeEntity = Entity.Null;
@@ -775,6 +1133,9 @@ internal sealed class CapabilityStandardTimeFlowShowcaseRuntime : IBenchmarkScen
         _navigationStepCount = 0;
         _heroSkillCastCount = 0;
         _lastHeroSkillCastGasStep = -1;
+        _heroLocalClockSeconds = 0f;
+        _heroLocalBurstTick = 0;
+        _heroComboHitCount = 0;
     }
 
     private void ReleaseTokenIfActive(GameEngine engine, ref TimeFlowToken token, string action)
