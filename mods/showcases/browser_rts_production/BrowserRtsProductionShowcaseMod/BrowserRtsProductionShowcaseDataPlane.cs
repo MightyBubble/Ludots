@@ -308,6 +308,12 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private BrowserRtsProductionResourceChipView[] BuildResourceChips()
     {
+        // WPK-2 switch point:
+        // Replace flavor-switch resource names + ReadTeamAttributeTotal hand-summing with
+        // WebUiResourceAttributeDescriptor + WebUiResourceAttributeTopicProducer reading
+        // AttributeBuffer / GraphOutputValueStore projections. Do not keep cross-entity
+        // summation in this showcase once the dedicated resource topic is wired via WPK-1 manifest.
+        // See docs/architecture/webui_resource_attribute_panel.md §3.5.
         string flavor = ResolveFlavor(_engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty);
         string[] names = flavor switch
         {
