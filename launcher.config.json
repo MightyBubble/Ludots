@@ -226,6 +226,14 @@
       }
     },
     {
+      "name": "capability_standard_time_flow_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod",
+        "projectPath": "CapabilityStandardTimeFlowShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_transport_network",
       "target": {
         "type": "path",
@@ -241,7 +249,8 @@
     {
       "id": "cef",
       "projectPath": "src/Libraries/Ludots.UI.Browser.Cef/Ludots.UI.Browser.Cef.csproj",
-      "assemblyPath": "src/Libraries/Ludots.UI.Browser.Cef/bin/Release/net8.0-windows/Ludots.UI.Browser.Cef.dll",
+      "packageRootPath": "BrowserRuntime/cef",
+      "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
       "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
       "useCollectibleLoadContext": false,
       "processSharedAssemblyNamePrefixes": ["CefSharp"]

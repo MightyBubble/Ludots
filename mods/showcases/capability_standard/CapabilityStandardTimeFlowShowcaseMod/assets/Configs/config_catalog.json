@@ -1,0 +1,4 @@
+[
+  { "Path": "CapabilityStandardTimeFlowShowcaseConfig.json", "Policy": "Replace" },
+  { "Path": "Physics2D/clock.json", "Policy": "DeepObject" }
+]

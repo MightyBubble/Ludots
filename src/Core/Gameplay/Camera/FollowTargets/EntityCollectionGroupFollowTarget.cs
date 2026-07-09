@@ -29,6 +29,18 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
             return TryGetCollectionCentroid(out positionCm);
         }
 
+        public bool TryGetTransform(out CameraTargetTransformSnapshot transform)
+        {
+            if (TryGetPosition(out Vector2 positionCm))
+            {
+                transform = new CameraTargetTransformSnapshot(positionCm);
+                return true;
+            }
+
+            transform = default;
+            return false;
+        }
+
         private bool TryGetCollectionCentroid(out Vector2 positionCm)
         {
             positionCm = default;

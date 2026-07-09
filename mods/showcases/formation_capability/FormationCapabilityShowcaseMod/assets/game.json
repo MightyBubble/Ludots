@@ -33,6 +33,11 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "runtimeEntityLifecycleQueueCapacity": 131072,
+    "runtimeEntityLifecycleReceiptQueueCapacity": 131072,
+    "globalFieldVisualRecordCapacity": 256,
+    "globalFieldVisualCellCapacity": 262144,
+    "globalFieldVisualDirtyRectCapacity": 4096,
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,

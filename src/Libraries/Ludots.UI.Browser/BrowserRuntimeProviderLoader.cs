@@ -48,6 +48,10 @@ public sealed class BrowserRuntimeProviderLoadOptions
 
 	public IReadOnlyList<string> ProcessSharedAssemblyNamePrefixes { get; init; } = Array.Empty<string>();
 
+	public bool MapRuntimeRootToShadowCopy { get; init; } = true;
+
+	public IReadOnlyCollection<string> DefaultLoadContextAssemblyNamePrefixes { get; init; } = Array.Empty<string>();
+
 	public Action<string>? Log { get; init; }
 }
 
@@ -176,6 +180,7 @@ public sealed class BrowserRuntimeProviderLoadHandle : IBrowserRuntimeHostLifecy
 
 		RemoveServiceIfReferenceEquals(BrowserRuntimeServiceNames.BrowserRuntime, runtime);
 		RemoveServiceIfReferenceEquals(BrowserRuntimeServiceNames.HostLifecycle, this);
+		loadContext?.ReleaseDefaultLoadContextAssemblyResolver();
 		if (_usesCollectibleLoadContext)
 		{
 			loadContext?.Unload();
@@ -232,11 +237,16 @@ public static class BrowserRuntimeProviderLoader
 			options.ProviderAssemblyPath,
 			options.ShadowCopyRootPath,
 			options.ProviderId);
+		string effectiveRuntimeRootPath = shadowCopy.MapRequiredSourcePath(
+			options.RuntimeRootPath,
+			"browserRuntime.runtimeRootPath",
+			options.MapRuntimeRootToShadowCopy);
 		var loadContext = new BrowserRuntimeProviderAssemblyLoadContext(
 			$"Ludots.BrowserRuntimeProvider.{options.ProviderId}.{Path.GetFileNameWithoutExtension(shadowCopy.ShadowAssemblyPath)}",
 			shadowCopy.ShadowAssemblyPath,
 			ResolveHostSharedAssemblies(),
-			options.ProcessSharedAssemblyNamePrefixes,
+			effectiveRuntimeRootPath,
+			MergeDefaultLoadContextAssemblyNamePrefixes(options),
 			options.UseCollectibleLoadContext);
 
 		try
@@ -246,13 +256,8 @@ public static class BrowserRuntimeProviderLoader
 				?? throw new InvalidOperationException(
 					$"Browser runtime provider host type '{options.ProviderHostTypeName}' was not found.");
 
-			string? effectiveRuntimeRootPath = string.IsNullOrWhiteSpace(options.RuntimeRootPath)
-				? null
-				: shadowCopy.MapSourcePath(options.RuntimeRootPath);
-			MethodInfo installMethod = ResolveInstallMethod(providerHostType, effectiveRuntimeRootPath != null);
-			object?[] arguments = effectiveRuntimeRootPath != null
-				? new object?[] { options.Services, effectiveRuntimeRootPath, options.BrowserCacheRootPath }
-				: new object?[] { options.Services, options.BrowserCacheRootPath };
+			MethodInfo installMethod = ResolveInstallMethod(providerHostType);
+			object?[] arguments = { options.Services, effectiveRuntimeRootPath, options.BrowserCacheRootPath };
 
 			object? installed = InvokeInstallMethod(installMethod, arguments);
 			if (installed is not IBrowserRuntime runtime)
@@ -299,12 +304,10 @@ public static class BrowserRuntimeProviderLoader
 		yield return typeof(IBrowserRuntimeHostLifecycle).Assembly;
 	}
 
-	private static MethodInfo ResolveInstallMethod(Type providerHostType, bool hasRuntimeRootPath)
+	private static MethodInfo ResolveInstallMethod(Type providerHostType)
 	{
-		string methodName = hasRuntimeRootPath ? "Install" : "InstallFromAssemblyLocation";
-		Type[] parameterTypes = hasRuntimeRootPath
-			? new[] { typeof(IDictionary<string, object>), typeof(string), typeof(string) }
-			: new[] { typeof(IDictionary<string, object>), typeof(string) };
+		const string methodName = "Install";
+		Type[] parameterTypes = { typeof(IDictionary<string, object>), typeof(string), typeof(string) };
 		return providerHostType.GetMethod(
 			methodName,
 			BindingFlags.Public | BindingFlags.Static,
@@ -405,11 +408,23 @@ public static class BrowserRuntimeProviderLoader
 		});
 
 		RestoreServices(services, serviceSnapshot);
+		CaptureCleanupFailure(ref cleanupFailure, loadContext.ReleaseDefaultLoadContextAssemblyResolver);
 		if (loadContext.IsCollectible)
 		{
 			CaptureCleanupFailure(ref cleanupFailure, loadContext.Unload);
 		}
 		return cleanupFailure;
+	}
+
+	private static IReadOnlyCollection<string> MergeDefaultLoadContextAssemblyNamePrefixes(
+		BrowserRuntimeProviderLoadOptions options)
+	{
+		return options.DefaultLoadContextAssemblyNamePrefixes
+			.Concat(options.ProcessSharedAssemblyNamePrefixes)
+			.Where(prefix => !string.IsNullOrWhiteSpace(prefix))
+			.Select(prefix => prefix.Trim())
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToArray();
 	}
 
 	private static void CaptureCleanupFailure(ref Exception? cleanupFailure, Action action)
@@ -516,12 +531,25 @@ internal sealed class BrowserRuntimeProviderShadowCopy
 			shadowDirectoryPath);
 	}
 
-	public string MapSourcePath(string path)
+	public string MapRequiredSourcePath(string? path, string optionName, bool mapToShadowCopy)
 	{
+		if (string.IsNullOrWhiteSpace(path))
+		{
+			throw new InvalidOperationException(
+				$"{optionName} is required when loading a browser runtime provider. Host bootstrap must pass the provider package root explicitly.");
+		}
+
 		string fullPath = Path.GetFullPath(path);
-		if (!IsSameOrChildPath(SourceDirectoryPath, fullPath))
+		if (!mapToShadowCopy)
 		{
 			return fullPath;
+		}
+
+		if (!IsSameOrChildPath(SourceDirectoryPath, fullPath))
+		{
+			throw new InvalidOperationException(
+				$"{optionName} must be inside the browser runtime provider package. " +
+				$"runtimeRootPath='{fullPath}', providerPackageRoot='{SourceDirectoryPath}'.");
 		}
 
 		string relativePath = Path.GetRelativePath(SourceDirectoryPath, fullPath);

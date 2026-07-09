@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Ludots.Core.Input.Runtime;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -9,20 +8,20 @@ namespace Ludots.Core.Gameplay.Camera
         public PlatformManagedCameraUpdateContext(
             VirtualCameraDefinition definition,
             CameraState state,
-            IInputActionReader input,
+            CameraBehaviorInputState behaviorInput,
             float deltaTimeSeconds,
             bool allowsUserInput)
         {
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             State = state ?? throw new ArgumentNullException(nameof(state));
-            Input = input ?? throw new ArgumentNullException(nameof(input));
+            BehaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
             DeltaTimeSeconds = deltaTimeSeconds;
             AllowsUserInput = allowsUserInput;
         }
 
         public VirtualCameraDefinition Definition { get; }
         public CameraState State { get; }
-        public IInputActionReader Input { get; }
+        public CameraBehaviorInputState BehaviorInput { get; }
         public float DeltaTimeSeconds { get; }
         public bool AllowsUserInput { get; }
     }

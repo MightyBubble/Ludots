@@ -61,6 +61,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
     private bool _scenarioSpawned;
     private bool _obstacleOverlaySpawnsQueued;
     private bool _initialCommandSourceApplied;
+    private Entity _lastCommandSourceOwner = Entity.Null;
+    private uint _lastCommandSourceRevision;
+    private int _lastStructuralRevision = -1;
+    private bool _lastHadCommandActors;
     private int _observedSceneResetCount;
 
     public FormationCapabilityShowcaseConfig ActiveConfig => _config
@@ -206,6 +210,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
         SyncFormationStates(engine, simulation);
         PublishLocalFormationKnowledge(engine);
         TryApplyInitialCommandSource(engine, config);
+        SyncCommandActors(engine, simulation);
     }
 
     private void SpawnScenario(GameEngine engine, FormationCapabilityShowcaseConfig config)
@@ -998,7 +1003,11 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before applying configured initial command source.");
-        Entity owner = ResolveLocalCommandSourceOwner(engine);
+        if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+        {
+            return;
+        }
+
         int formationIndex = ResolveFormationIndex(config.InitialCommandSourceFormationId);
         EnsureInitialCommandSourceScratch(config);
 
@@ -1032,6 +1041,69 @@ internal sealed class FormationCapabilityShowcaseRuntime
         collections.Replace(owner, descriptor, _initialCommandSourceScratch.AsSpan(0, 1), owner);
 
         _initialCommandSourceApplied = true;
+    }
+
+    private void SyncCommandActors(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    {
+        EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+            ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before syncing command actors.");
+        if (!TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+        {
+            ClearCommandActorsIfNeeded(simulation);
+            return;
+        }
+
+        if (!EntityCollectionContextRuntime.TryDescribeView(
+                collections,
+                owner,
+                EntityCollectionKeys.CommandSource,
+                out EntityCollectionView view))
+        {
+            ClearCommandActorsIfNeeded(simulation);
+            _lastCommandSourceOwner = owner;
+            return;
+        }
+
+        bool structuralChanged = _lastStructuralRevision != simulation.StructuralChangeRevision;
+        if (_lastHadCommandActors &&
+            _lastCommandSourceOwner == owner &&
+            _lastCommandSourceRevision == view.Revision &&
+            !structuralChanged)
+        {
+            return;
+        }
+
+        Span<Entity> commandActors = simulation.EnsureCommandActorScratch(view.Count);
+        int written = EntityCollectionContextRuntime.Copy(
+            collections,
+            owner,
+            EntityCollectionKeys.CommandSource,
+            commandActors);
+        if (written != view.Count)
+        {
+            throw new InvalidOperationException(
+                $"Formation Capability showcase expected {view.Count} command actor row(s), copied {written}.");
+        }
+
+        simulation.SetCommandActorSnapshot(commandActors[..written], view.Revision);
+        simulation.ObserveCommandActorSyncTick();
+        _lastCommandSourceOwner = owner;
+        _lastCommandSourceRevision = view.Revision;
+        _lastStructuralRevision = simulation.StructuralChangeRevision;
+        _lastHadCommandActors = true;
+    }
+
+    private void ClearCommandActorsIfNeeded(MassNavigationSimulationRuntime simulation)
+    {
+        if (_lastHadCommandActors || simulation.CommandActorCount > 0)
+        {
+            simulation.ClearCommandActorSnapshot();
+        }
+
+        _lastCommandSourceOwner = Entity.Null;
+        _lastCommandSourceRevision = 0;
+        _lastStructuralRevision = simulation.StructuralChangeRevision;
+        _lastHadCommandActors = false;
     }
 
     private void EnsureInitialCommandSourceScratch(FormationCapabilityShowcaseConfig config)
@@ -1227,20 +1299,54 @@ internal sealed class FormationCapabilityShowcaseRuntime
     {
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("Formation Capability showcase requires EntityCollectionStore before clearing command source.");
-        Entity owner = ResolveLocalCommandSourceOwner(engine);
-        collections.Remove(owner, EntityCollectionKeys.CommandSource);
+        if (TryResolveLocalCommandSourceOwner(engine, out Entity owner))
+        {
+            collections.Remove(owner, EntityCollectionKeys.CommandSource);
+        }
     }
 
     private static Entity ResolveLocalCommandSourceOwner(GameEngine engine)
+    {
+        return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
+            ? owner
+            : throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before mutating command source.");
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localPlayerObj) ||
             localPlayerObj is not Entity local ||
             !engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before mutating command source.");
+            int playerId = ResolveLocalPlayerId(engine);
+            PlayerEntityLookup lookup = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
+                ?? throw new InvalidOperationException("Formation Capability showcase requires PlayerEntityLookup before resolving command source owner.");
+            if (playerId <= 0 ||
+                !lookup.TryGet(playerId, out local) ||
+                local == Entity.Null ||
+                !engine.World.IsAlive(local))
+            {
+                owner = Entity.Null;
+                return false;
+            }
+
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, local);
         }
 
-        return local;
+        owner = local;
+        return true;
+    }
+
+    private static int ResolveLocalPlayerId(GameEngine engine)
+    {
+        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? playerIdObj) &&
+            playerIdObj is int playerId &&
+            playerId > 0)
+        {
+            return playerId;
+        }
+
+        return engine.MergedConfig?.StartupLocalPlayerId ?? 0;
     }
 
     private static int ResolveLocalPlayerOwnerId(GameEngine engine)

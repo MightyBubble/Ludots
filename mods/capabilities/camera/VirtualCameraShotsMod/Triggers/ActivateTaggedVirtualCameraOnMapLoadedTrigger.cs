@@ -40,7 +40,8 @@ namespace VirtualCameraShotsMod.Triggers
             var engine = context.GetEngine();
             if (engine == null)
             {
-                return Task.CompletedTask;
+                throw new InvalidOperationException(
+                    $"Virtual camera shot '{shotId}' was requested by tag but GameEngine is not available.");
             }
 
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest

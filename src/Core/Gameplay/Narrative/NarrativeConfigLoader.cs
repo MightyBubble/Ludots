@@ -25,7 +25,6 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             _registry.Clear();
             LoadVariables(catalog, report);
-            LoadQuests(catalog, report);
             LoadDialogues(catalog, report);
             LoadCinematics(catalog, report);
         }
@@ -37,20 +36,6 @@ namespace Ludots.Core.Gameplay.Narrative
             for (int i = 0; i < merged.Count; i++)
             {
                 var definition = JsonSerializer.Deserialize<NarrativeVariableDefinition>(merged[i].Node.ToJsonString(), _jsonOptions);
-                if (definition != null)
-                {
-                    _registry.Register(definition);
-                }
-            }
-        }
-
-        private void LoadQuests(ConfigCatalog? catalog, ConfigConflictReport? report)
-        {
-            var entry = ConfigPipeline.RequireEntry(catalog, "Narrative/quests.json", ConfigMergePolicy.ArrayById, "id");
-            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            for (int i = 0; i < merged.Count; i++)
-            {
-                var definition = JsonSerializer.Deserialize<NarrativeQuestDefinition>(merged[i].Node.ToJsonString(), _jsonOptions);
                 if (definition != null)
                 {
                     _registry.Register(definition);

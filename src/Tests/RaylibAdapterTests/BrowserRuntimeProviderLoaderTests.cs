@@ -26,6 +26,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                 typeof(FakeProviderHost).FullName!)
             {
                 ProviderId = "fixture",
+                RuntimeRootPath = sourceRoot,
                 ShadowCopyRootPath = shadowRoot,
                 Log = logs.Add
             });
@@ -55,6 +56,88 @@ public sealed class BrowserRuntimeProviderLoaderTests
     }
 
     [Test]
+    public void Install_WithExplicitRuntimeRootMapsProviderPackagePathsIntoShadowCopy()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string sourceRuntimeRoot = Path.Combine(sourceRoot, "cef-runtime-package");
+        string shadowRoot = CreateTempDirectory();
+        string cacheRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        Directory.CreateDirectory(sourceRuntimeRoot);
+        File.WriteAllText(Path.Combine(sourceRuntimeRoot, "runtime.marker"), "provider-owned runtime root");
+
+        BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+            new BrowserRuntimeProviderLoadOptions(
+                services,
+                sourceAssemblyPath,
+                typeof(FakeProviderHost).FullName!)
+            {
+                ProviderId = "fixture",
+                RuntimeRootPath = sourceRuntimeRoot,
+                BrowserCacheRootPath = cacheRoot,
+                ShadowCopyRootPath = shadowRoot
+            });
+
+        try
+        {
+            string expectedRuntimeRoot = Path.GetFullPath(Path.Combine(handle.ShadowCopyDirectory, "cef-runtime-package"));
+            Assert.That(services["FakeProviderRuntimeRootPath"], Is.EqualTo(expectedRuntimeRoot));
+            Assert.That(File.Exists(Path.Combine(expectedRuntimeRoot, "runtime.marker")), Is.True);
+            Assert.That(services["FakeProviderCacheRootPath"], Is.EqualTo(cacheRoot));
+            Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.SameAs(handle.Runtime));
+        }
+        finally
+        {
+            handle.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+            DeleteDirectoryIfExists(cacheRoot);
+        }
+    }
+
+    [Test]
+    public void Install_WithRuntimeRootMappingDisabledPassesOriginalRuntimeRoot()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string externalRuntimeRoot = CreateTempDirectory();
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        BrowserRuntimeProviderLoadHandle handle = BrowserRuntimeProviderLoader.Install(
+            new BrowserRuntimeProviderLoadOptions(
+                services,
+                sourceAssemblyPath,
+                typeof(FakeProviderHost).FullName!)
+            {
+                ProviderId = "fixture",
+                RuntimeRootPath = externalRuntimeRoot,
+                ShadowCopyRootPath = shadowRoot,
+                MapRuntimeRootToShadowCopy = false
+            });
+
+        try
+        {
+            Assert.That(services["FakeProviderRuntimeRootPath"], Is.EqualTo(Path.GetFullPath(externalRuntimeRoot)));
+            Assert.That((string)services["FakeProviderRuntimeRootPath"], Is.Not.EqualTo(handle.ShadowCopyDirectory));
+            Assert.That(services[BrowserRuntimeServiceNames.BrowserRuntime], Is.SameAs(handle.Runtime));
+        }
+        finally
+        {
+            handle.ShutdownProcessForHostExit();
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(externalRuntimeRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
     public void ShutdownProcessForHostExit_DisposesRuntimeRemovesServicesAndLogsAlcCollection()
     {
         string sourceRoot = CopyProviderFixtureDirectory();
@@ -72,6 +155,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                 typeof(FakeProviderHost).FullName!)
             {
                 ProviderId = "fixture",
+                RuntimeRootPath = sourceRoot,
                 ShadowCopyRootPath = shadowRoot,
                 Log = logs.Add
             });
@@ -107,6 +191,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                 typeof(FakeProviderHost).FullName!)
             {
                 ProviderId = "cef",
+                RuntimeRootPath = sourceRoot,
                 ShadowCopyRootPath = shadowRoot,
                 UseCollectibleLoadContext = false,
                 Log = logs.Add,
@@ -146,6 +231,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                 typeof(ProcessSharedDependencyProviderHost).FullName!)
             {
                 ProviderId = "cef",
+                RuntimeRootPath = sourceRoot,
                 ShadowCopyRootPath = shadowRoot,
                 UseCollectibleLoadContext = false,
                 ProcessSharedAssemblyNamePrefixes = new[] { "Ludots.UI" },
@@ -181,6 +267,76 @@ public sealed class BrowserRuntimeProviderLoaderTests
     }
 
     [Test]
+    public void Install_MissingRuntimeRootPathFailsFast()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        try
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                BrowserRuntimeProviderLoader.Install(
+                    new BrowserRuntimeProviderLoadOptions(
+                        services,
+                        sourceAssemblyPath,
+                        typeof(FakeProviderHost).FullName!)
+                    {
+                        ProviderId = "fixture",
+                        ShadowCopyRootPath = shadowRoot
+                    }))!;
+
+            Assert.That(ex.Message, Does.Contain("browserRuntime.runtimeRootPath is required"));
+            Assert.That(services, Is.Empty);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
+    public void Install_RuntimeRootOutsideProviderPackageFailsFast()
+    {
+        string sourceRoot = CopyProviderFixtureDirectory();
+        string sourceAssemblyPath = Path.Combine(
+            sourceRoot,
+            Path.GetFileName(typeof(BrowserRuntimeProviderLoaderTests).Assembly.Location));
+        string externalRuntimeRoot = CreateTempDirectory();
+        string shadowRoot = CreateTempDirectory();
+        var services = new Dictionary<string, object>(StringComparer.Ordinal);
+
+        try
+        {
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                BrowserRuntimeProviderLoader.Install(
+                    new BrowserRuntimeProviderLoadOptions(
+                        services,
+                        sourceAssemblyPath,
+                        typeof(FakeProviderHost).FullName!)
+                    {
+                        ProviderId = "fixture",
+                        RuntimeRootPath = externalRuntimeRoot,
+                        ShadowCopyRootPath = shadowRoot
+                    }))!;
+
+            Assert.That(ex.Message, Does.Contain("must be inside the browser runtime provider package"));
+            Assert.That(ex.Message, Does.Contain(Path.GetFullPath(externalRuntimeRoot)));
+            Assert.That(services, Is.Empty);
+        }
+        finally
+        {
+            DeleteDirectoryIfExists(sourceRoot);
+            DeleteDirectoryIfExists(externalRuntimeRoot);
+            DeleteDirectoryIfExists(shadowRoot);
+        }
+    }
+
+    [Test]
     public void Install_RefreshesShadowCopyWhenProviderPrivateDependencyChanges()
     {
         string sourceRoot = CopyProviderFixtureDirectory();
@@ -204,6 +360,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                     typeof(FakeProviderHost).FullName!)
                 {
                     ProviderId = "fixture",
+                    RuntimeRootPath = sourceRoot,
                     ShadowCopyRootPath = shadowRoot
                 });
             string firstShadowDependencyPath = Path.Combine(
@@ -221,6 +378,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                     typeof(FakeProviderHost).FullName!)
                 {
                     ProviderId = "fixture",
+                    RuntimeRootPath = sourceRoot,
                     ShadowCopyRootPath = shadowRoot
                 });
 
@@ -292,6 +450,7 @@ public sealed class BrowserRuntimeProviderLoaderTests
                         typeof(MismatchedRuntimeProviderHost).FullName!)
                     {
                         ProviderId = "fixture",
+                        RuntimeRootPath = sourceRoot,
                         ShadowCopyRootPath = shadowRoot
                     }));
 
@@ -304,6 +463,53 @@ public sealed class BrowserRuntimeProviderLoaderTests
             DeleteDirectoryIfExists(sourceRoot);
             DeleteDirectoryIfExists(shadowRoot);
         }
+    }
+
+    [Test]
+    public void Loader_UsesCollectibleAlcShadowCopyAndDependencyResolver()
+    {
+        string repoRoot = FindRepoRoot();
+        string loaderSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Libraries",
+            "Ludots.UI.Browser",
+            "BrowserRuntimeProviderLoader.cs"));
+        string loadContextSource = File.ReadAllText(Path.Combine(
+            repoRoot,
+            "src",
+            "Libraries",
+            "Ludots.UI.Browser",
+            "BrowserRuntimeProviderAssemblyLoadContext.cs"));
+
+        Assert.That(loaderSource, Does.Contain("SHA256"));
+        Assert.That(loaderSource, Does.Contain("ShadowCopy"));
+        Assert.That(loaderSource, Does.Contain("MapRuntimeRootToShadowCopy"));
+        Assert.That(loaderSource, Does.Contain("Unload()"));
+        Assert.That(loaderSource, Does.Not.Contain("InstallFromAssemblyLocation"));
+        Assert.That(loadContextSource, Does.Contain("AssemblyDependencyResolver"));
+        Assert.That(loadContextSource, Does.Contain("defaultLoadContextAssemblyNamePrefixes"));
+        Assert.That(loadContextSource, Does.Contain("ResolveDefaultLoadContextAssembly"));
+        Assert.That(loadContextSource, Does.Contain("isCollectible"));
+        Assert.That(loadContextSource, Does.Not.Contain("CefSharp"));
+    }
+
+    private static string FindRepoRoot()
+    {
+        var current = new DirectoryInfo(AppContext.BaseDirectory);
+        while (current != null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "AGENTS.md")) &&
+                Directory.Exists(Path.Combine(current.FullName, "src")) &&
+                Directory.Exists(Path.Combine(current.FullName, "mods")))
+            {
+                return current.FullName;
+            }
+
+            current = current.Parent;
+        }
+
+        throw new DirectoryNotFoundException("Could not locate repository root from test output directory.");
     }
 
     private static string CopyProviderFixtureDirectory()

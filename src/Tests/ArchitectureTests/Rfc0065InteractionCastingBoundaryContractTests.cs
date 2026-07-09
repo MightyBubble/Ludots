@@ -566,15 +566,18 @@ namespace Ludots.Tests.Architecture
             Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
 
             string source = File.ReadAllText(runtimePath);
+            string collectIncomingBody = ExtractMethodBody(
+                source,
+                "public int CollectIncoming(Entity target, int typeId, Span<Entity> buffer)");
             Assert.Multiple(() =>
             {
-                Assert.That(source, Does.Not.Contain("RelationshipQuery"),
+                Assert.That(collectIncomingBody, Does.Not.Contain("RelationshipQuery"),
                     "The removed full-world RelationshipQuery fallback must not return to RelationshipRuntime.");
-                Assert.That(source, Does.Not.Contain("QueryDescription"),
-                    "RelationshipRuntime must not define world queries; incoming edges come from the reverse index.");
-                Assert.That(source, Does.Not.Contain("_world.Query"),
-                    "RelationshipRuntime must not iterate the world to collect incoming edges.");
-                Assert.That(source, Does.Contain("_reverseIndex.CopyIncoming"),
+                Assert.That(collectIncomingBody, Does.Not.Contain("QueryDescription"),
+                    "CollectIncoming must not define world queries; incoming edges come from the reverse index.");
+                Assert.That(collectIncomingBody, Does.Not.Contain("_world.Query"),
+                    "CollectIncoming must not iterate the world to collect incoming edges.");
+                Assert.That(collectIncomingBody, Does.Contain("_reverseIndex.CopyIncoming"),
                     "CollectIncoming must read the reverse adjacency index.");
             });
         }
@@ -819,6 +822,39 @@ namespace Ludots.Tests.Architecture
                     }
                 }
             }
+        }
+
+        private static string ExtractMethodBody(string source, string signature)
+        {
+            int signatureIndex = source.IndexOf(signature, StringComparison.Ordinal);
+            Assert.That(signatureIndex, Is.GreaterThanOrEqualTo(0), $"Could not find method signature '{signature}'.");
+
+            int openBrace = source.IndexOf('{', signatureIndex);
+            Assert.That(openBrace, Is.GreaterThanOrEqualTo(0), $"Could not find method body for '{signature}'.");
+
+            int depth = 0;
+            for (int i = openBrace; i < source.Length; i++)
+            {
+                if (source[i] == '{')
+                {
+                    depth++;
+                    continue;
+                }
+
+                if (source[i] != '}')
+                {
+                    continue;
+                }
+
+                depth--;
+                if (depth == 0)
+                {
+                    return source[openBrace..(i + 1)];
+                }
+            }
+
+            Assert.Fail($"Could not parse method body for '{signature}'.");
+            return string.Empty;
         }
 
         private static string Join(params string[] parts)

@@ -8,9 +8,8 @@ namespace Ludots.Core.Engine
     {
         FixedFrame = 0,
         Step = 1,
-        Turn = 2,
-        PhysicsStep = 3,
-        NavigationStep = 4
+        PhysicsStep = 2,
+        NavigationStep = 3
     }
 
     public interface IClock

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.Narrative
@@ -49,14 +50,6 @@ namespace Ludots.Core.Gameplay.Narrative
         ClearCamera = 10,
     }
 
-    public enum NarrativeQuestState
-    {
-        Inactive = 0,
-        Active = 1,
-        Completed = 2,
-        Failed = 3,
-    }
-
     public sealed class NarrativeVariableDefinition : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
@@ -79,7 +72,7 @@ namespace Ludots.Core.Gameplay.Narrative
         public bool BoolValue { get; set; }
         public string StringValue { get; set; } = string.Empty;
         public string QuestId { get; set; } = string.Empty;
-        public NarrativeQuestState QuestState { get; set; } = NarrativeQuestState.Active;
+        public QuestState QuestState { get; set; } = QuestState.Active;
         public string SignalId { get; set; } = string.Empty;
         public string EntityAlias { get; set; } = string.Empty;
         public string TagId { get; set; } = string.Empty;
@@ -101,31 +94,6 @@ namespace Ludots.Core.Gameplay.Narrative
         public string CinematicId { get; set; } = string.Empty;
         public string SignalId { get; set; } = string.Empty;
         public string CameraId { get; set; } = string.Empty;
-    }
-
-    public sealed class NarrativeQuestStageDefinition
-    {
-        public string Id { get; set; } = string.Empty;
-        public string Title { get; set; } = string.Empty;
-        public string ObjectiveText { get; set; } = string.Empty;
-        public string ObjectiveHint { get; set; } = string.Empty;
-        public string DialogueOnEnterId { get; set; } = string.Empty;
-        public string CinematicOnEnterId { get; set; } = string.Empty;
-        public List<string> RequiredSignals { get; set; } = new();
-        public List<NarrativeConditionDefinition> CompletionConditions { get; set; } = new();
-        public List<NarrativeActionDefinition> OnEnter { get; set; } = new();
-        public List<NarrativeActionDefinition> OnComplete { get; set; } = new();
-    }
-
-    public sealed class NarrativeQuestDefinition : IIdentifiable
-    {
-        public string Id { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string Summary { get; set; } = string.Empty;
-        public List<NarrativeActionDefinition> OnStart { get; set; } = new();
-        public List<NarrativeActionDefinition> OnComplete { get; set; } = new();
-        public List<NarrativeActionDefinition> OnFail { get; set; } = new();
-        public List<NarrativeQuestStageDefinition> Stages { get; set; } = new();
     }
 
     public sealed class NarrativeDialogueChoiceDefinition
@@ -180,7 +148,6 @@ namespace Ludots.Core.Gameplay.Narrative
 
     public sealed class NarrativeDefinitionRegistry
     {
-        private readonly Dictionary<string, NarrativeQuestDefinition> _quests = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, NarrativeDialogueDefinition> _dialogues = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, NarrativeCinematicDefinition> _cinematics = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, NarrativeVariableDefinition> _variables = new(StringComparer.OrdinalIgnoreCase);
@@ -191,14 +158,12 @@ namespace Ludots.Core.Gameplay.Narrative
         }
 
         public StringIntRegistry VariableIds { get; }
-        public IEnumerable<NarrativeQuestDefinition> Quests => _quests.Values;
         public IEnumerable<NarrativeDialogueDefinition> Dialogues => _dialogues.Values;
         public IEnumerable<NarrativeCinematicDefinition> Cinematics => _cinematics.Values;
         public IEnumerable<NarrativeVariableDefinition> Variables => _variables.Values;
 
         public void Clear()
         {
-            _quests.Clear();
             _dialogues.Clear();
             _cinematics.Clear();
             _variables.Clear();
@@ -213,16 +178,6 @@ namespace Ludots.Core.Gameplay.Narrative
 
             VariableIds.Register(definition.Id);
             _variables[definition.Id] = definition;
-        }
-
-        public void Register(NarrativeQuestDefinition definition)
-        {
-            if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
-            {
-                return;
-            }
-
-            _quests[definition.Id] = definition;
         }
 
         public void Register(NarrativeDialogueDefinition definition)
@@ -247,9 +202,6 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public bool TryGetVariable(string id, out NarrativeVariableDefinition definition)
             => _variables.TryGetValue(id, out definition!);
-
-        public bool TryGetQuest(string id, out NarrativeQuestDefinition definition)
-            => _quests.TryGetValue(id, out definition!);
 
         public bool TryGetDialogue(string id, out NarrativeDialogueDefinition definition)
             => _dialogues.TryGetValue(id, out definition!);

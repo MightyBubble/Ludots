@@ -17,6 +17,7 @@
     "panMode": "None",
     "rotateMode": "DragRotate",
     "rotateDegPerPixel": 0.16,
+    "rotateRequiresHold": true,
     "enableZoom": true,
     "zoomCmPerWheel": 600,
     "followMode": "AlwaysFollow",

@@ -327,6 +327,8 @@ public sealed class MassNavigationConfig
             "flowObstacleNeighborRadiusCells",
             "flowObstacleNeighborWeight",
             "flowObstacleAvoidanceWeight",
+            "crowdStampCenterCost",
+            "crowdStampNeighborCost",
             "coincidentPairHashBucketCount",
             "coincidentPairHashPrimeA",
             "coincidentPairHashPrimeB");
@@ -525,6 +527,24 @@ public sealed class MassNavigationRuntimeCapacityConfig
         {
             throw new InvalidOperationException(
                 $"MassNavigation scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > CommandActorScratchCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.commandActorScratchCapacity {CommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > GroupMemberCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.groupMemberCapacity {GroupMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > OrderIngestionMemberCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {OrderIngestionMemberCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         if (teamCount > MetadataTeamCapacity)
@@ -1144,6 +1164,19 @@ public sealed class MassNavigationScenarioConfig
         {
             throw new InvalidOperationException(
                 $"MassNavigation config InitialActiveTeamId {InitialActiveTeamId} is not present in Scenario.Teams.");
+        }
+
+        long authoredAgentCount = (long)Teams.Length * AgentsPerTeam;
+        if (authoredAgentCount > scenarioRuntime.InitialCommandActorScratchCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.initialCommandActorScratchCapacity {scenarioRuntime.InitialCommandActorScratchCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (authoredAgentCount > scenarioRuntime.InitialCommandActorSnapshotCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation scenarioRuntime.initialCommandActorSnapshotCapacity {scenarioRuntime.InitialCommandActorSnapshotCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
         }
 
         scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Tweening;
 
 namespace Ludots.Core.Gameplay.Camera
@@ -27,7 +27,8 @@ namespace Ludots.Core.Gameplay.Camera
         public bool AllowsInput => _resolved != null && _resolved.Definition.AllowUserInput && !IsBlending;
         public string ActiveCameraId => _resolved?.Definition.Id ?? string.Empty;
         public VirtualCameraDefinition? ActiveDefinition => _resolved?.Definition;
-        public Vector2? ActiveFollowTargetPositionCm => _resolved?.ResolvedFollowTargetPositionCm;
+        public Vector2? ActiveFollowTargetPositionCm => _resolved?.ResolvedFollowTargetTransform?.PositionCm;
+        public CameraTargetTransformSnapshot? ActiveFollowTargetTransform => _resolved?.ResolvedFollowTargetTransform;
 
         public bool IsActive(string id)
         {
@@ -132,7 +133,7 @@ namespace Ludots.Core.Gameplay.Camera
         }
 
         public bool TryGetActiveRuntimeTarget(
-            IInputActionReader? input,
+            CameraBehaviorInputState? behaviorInput,
             out VirtualCameraDefinition? definition,
             out Vector2 targetCm)
         {
@@ -144,9 +145,28 @@ namespace Ludots.Core.Gameplay.Camera
                 return false;
             }
 
-            ResolveRuntimeStates(input);
+            ResolveRuntimeStates(behaviorInput);
             definition = _resolved.Definition;
             targetCm = _resolved.RuntimeState.TargetCm;
+            return true;
+        }
+
+        public bool TryGetActiveRuntimeState(
+            CameraBehaviorInputState? behaviorInput,
+            out VirtualCameraDefinition? definition,
+            out CameraStateSnapshot runtimeState)
+        {
+            ResolveActiveCamera();
+            if (_resolved == null)
+            {
+                definition = null;
+                runtimeState = default;
+                return false;
+            }
+
+            ResolveRuntimeStates(behaviorInput);
+            definition = _resolved.Definition;
+            runtimeState = _resolved.RuntimeState;
             return true;
         }
 
@@ -203,16 +223,16 @@ namespace Ludots.Core.Gameplay.Camera
 
             runtime.FollowTarget = followTarget;
             runtime.PendingFollowSnap = snapToFollowTargetWhenAvailable;
-            runtime.ResolvedFollowTargetPositionCm = ResolveFollowTargetPosition(followTarget);
-            if (runtime.ResolvedFollowTargetPositionCm.HasValue && runtime.PendingFollowSnap)
+            runtime.ResolvedFollowTargetTransform = ResolveFollowTargetTransform(followTarget);
+            if (runtime.ResolvedFollowTargetTransform.HasValue && runtime.PendingFollowSnap)
             {
-                runtime.RuntimeState.TargetCm = runtime.ResolvedFollowTargetPositionCm.Value;
+                ApplyFollowTransform(runtime, runtime.ResolvedFollowTargetTransform.Value, forceFacing: true);
                 runtime.PendingFollowSnap = false;
             }
             return true;
         }
 
-        public void ApplyToState(CameraState state, IInputActionReader? input, float dt)
+        public void ApplyToState(CameraState state, CameraBehaviorInputState? behaviorInput, float dt)
         {
             if (state == null)
             {
@@ -225,7 +245,7 @@ namespace Ludots.Core.Gameplay.Camera
                 return;
             }
 
-            ResolveRuntimeStates(input);
+            ResolveRuntimeStates(behaviorInput);
             var desired = _resolved.RuntimeState;
 
             if (IsBlending)
@@ -260,23 +280,23 @@ namespace Ludots.Core.Gameplay.Camera
             return _resolved;
         }
 
-        private void ResolveRuntimeStates(IInputActionReader? input)
+        private void ResolveRuntimeStates(CameraBehaviorInputState? behaviorInput)
         {
             foreach (var pair in _active)
             {
                 var runtime = pair.Value;
-                runtime.ResolvedFollowTargetPositionCm = ResolveFollowTargetPosition(runtime.FollowTarget);
+                runtime.ResolvedFollowTargetTransform = ResolveFollowTargetTransform(runtime.FollowTarget);
 
-                if (runtime.ResolvedFollowTargetPositionCm.HasValue && runtime.PendingFollowSnap)
+                if (runtime.ResolvedFollowTargetTransform.HasValue && runtime.PendingFollowSnap)
                 {
-                    runtime.RuntimeState.TargetCm = runtime.ResolvedFollowTargetPositionCm.Value;
+                    ApplyFollowTransform(runtime, runtime.ResolvedFollowTargetTransform.Value, forceFacing: true);
                     runtime.PendingFollowSnap = false;
                 }
 
-                bool shouldFollow = ShouldFollow(runtime, input);
-                if (shouldFollow && runtime.ResolvedFollowTargetPositionCm.HasValue)
+                bool shouldFollow = ShouldFollow(runtime, behaviorInput);
+                if (shouldFollow && runtime.ResolvedFollowTargetTransform.HasValue)
                 {
-                    runtime.RuntimeState.TargetCm = runtime.ResolvedFollowTargetPositionCm.Value;
+                    ApplyFollowTransform(runtime, runtime.ResolvedFollowTargetTransform.Value, forceFacing: false);
                     runtime.RuntimeState.IsFollowing = true;
                 }
                 else
@@ -286,9 +306,9 @@ namespace Ludots.Core.Gameplay.Camera
             }
         }
 
-        private bool ShouldFollow(RuntimeVirtualCamera runtime, IInputActionReader? input)
+        private bool ShouldFollow(RuntimeVirtualCamera runtime, CameraBehaviorInputState? behaviorInput)
         {
-            if (runtime.ResolvedFollowTargetPositionCm == null)
+            if (runtime.ResolvedFollowTargetTransform == null)
             {
                 return false;
             }
@@ -303,20 +323,46 @@ namespace Ludots.Core.Gameplay.Camera
                 CameraFollowMode.None => false,
                 CameraFollowMode.AlwaysFollow => true,
                 CameraFollowMode.HoldToLock => ReferenceEquals(runtime, _resolved)
-                    && input != null
-                    && input.ReadAction<bool>(runtime.Definition.FollowActionId),
+                    && behaviorInput != null
+                    && behaviorInput.FollowHold,
                 _ => false
             };
         }
 
-        private static Vector2? ResolveFollowTargetPosition(ICameraFollowTarget? followTarget)
+        private static CameraTargetTransformSnapshot? ResolveFollowTargetTransform(ICameraFollowTarget? followTarget)
         {
-            if (followTarget != null && followTarget.TryGetPosition(out var resolved))
+            if (followTarget != null && followTarget.TryGetTransform(out var resolved))
             {
                 return resolved;
             }
 
             return null;
+        }
+
+        private static void ApplyFollowTransform(
+            RuntimeVirtualCamera runtime,
+            in CameraTargetTransformSnapshot transform,
+            bool forceFacing)
+        {
+            runtime.RuntimeState.TargetCm = transform.PositionCm;
+            if (transform.HasHeightCm)
+            {
+                runtime.RuntimeState.TargetHeightCm = transform.HeightCm;
+            }
+
+            if (transform.HasFacingYawRad &&
+                (forceFacing || runtime.Definition.RotateMode == CameraRotateMode.None) &&
+                (runtime.Definition.RigKind == CameraRigKind.FirstPerson ||
+                 runtime.Definition.RigKind == CameraRigKind.ThirdPerson))
+            {
+                runtime.RuntimeState.Yaw = FacingRadToCameraYawDegrees(transform.FacingYawRad);
+            }
+        }
+
+        private static float FacingRadToCameraYawDegrees(float facingRad)
+        {
+            return WorldPlane2D.NormalizeDegreesPositive(
+                WorldPlane2D.RadToDegValue(facingRad - (MathF.PI * 0.5f)));
         }
 
         private void ResolveActiveCamera()
@@ -348,7 +394,7 @@ namespace Ludots.Core.Gameplay.Camera
                 return CameraStateSnapshot.FromState(currentState);
             }
 
-            ResolveRuntimeStates(input: null);
+            ResolveRuntimeStates(behaviorInput: null);
             var desired = _resolved.RuntimeState;
             return IsBlending
                 ? CameraStateSnapshot.Lerp(_blendFrom, desired, _blendProgress.Progress)
@@ -377,7 +423,8 @@ namespace Ludots.Core.Gameplay.Camera
                 CameraBlendCurve.Cut => TweenEasing.Cut,
                 CameraBlendCurve.Linear => TweenEasing.Linear,
                 CameraBlendCurve.SmoothStep => TweenEasing.SmoothStep,
-                _ => TweenEasing.Linear
+                _ => throw new InvalidOperationException(
+                    $"Unsupported virtual camera blend curve '{curve}'.")
             };
         }
 
@@ -393,6 +440,8 @@ namespace Ludots.Core.Gameplay.Camera
                 Pitch = definition.Pitch,
                 DistanceCm = definition.DistanceCm,
                 FovYDeg = definition.FovYDeg,
+                RigPivotOffsetCm = definition.RigPivotOffsetCm,
+                RigCameraOffsetCm = definition.RigCameraOffsetCm,
                 RigKind = definition.RigKind,
                 ZoomLevel = currentState.ZoomLevel,
                 IsFollowing = false
@@ -411,7 +460,7 @@ namespace Ludots.Core.Gameplay.Camera
             public CameraStateSnapshot RuntimeState;
             public int Priority;
             public ICameraFollowTarget? FollowTarget;
-            public Vector2? ResolvedFollowTargetPositionCm;
+            public CameraTargetTransformSnapshot? ResolvedFollowTargetTransform;
             public bool PendingFollowSnap;
             public long ActivationSequence;
         }

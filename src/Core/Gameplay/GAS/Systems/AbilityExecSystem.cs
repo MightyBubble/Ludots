@@ -380,7 +380,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.MultiTargetCount = 0;
                     exec.State = AbilityExecRunState.Running;
                     exec.CurrentTick = 0;
-                    exec.StartAbsoluteTick = _clock.Now(defaultClockId.ToDomainId());
+                    exec.StartAbsoluteTick = ClockNow(defaultClockId, actor);
                     exec.NextItemIndex = 0;
                     exec.GateDeadline = 0;
                     exec.WaitTagId = 0;
@@ -507,7 +507,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 // Tick advancement
                 if (instance.State == AbilityExecRunState.Running)
                 {
-                    int now = _clock.Now(instance.ActiveClockId.ToDomainId());
+                    int now = ClockNow(instance.ActiveClockId, actor);
                     instance.CurrentTick = now - instance.StartAbsoluteTick;
                     AdvanceItems(actor, ref spec, ref callerPool, hasCallerPool, hasOnActivate, ref onActivateEffects, ref instance);
                 }
@@ -936,7 +936,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (durationTicks > 0)
             {
                 ref var timed = ref World.Get<TimedTagBuffer>(actor);
-                int expireAt = _clock.Now(clockId.ToDomainId()) + durationTicks;
+                int expireAt = ClockNow(clockId, actor) + durationTicks;
                 timed.TryAdd(tagId, expireAt, clockId);
             }
         }
@@ -1047,7 +1047,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     int deadlineTicks = spec.GetPayloadA(idx);
                     if (deadlineTicks > 0)
                     {
-                        inst.GateDeadline = _clock.Now(inst.ActiveClockId.ToDomainId()) + deadlineTicks;
+                        inst.GateDeadline = ClockNow(inst.ActiveClockId, actor) + deadlineTicks;
                     }
                     break;
                 }
@@ -1127,7 +1127,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     // Timeout check
                     if (inst.GateDeadline > 0)
                     {
-                        int now = _clock.Now(inst.ActiveClockId.ToDomainId());
+                        int now = ClockNow(inst.ActiveClockId, actor);
                         if (now >= inst.GateDeadline)
                         {
                             inst.GateDeadline = 0;
@@ -1227,7 +1227,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 exec.MultiTargetCount = 0;
                 exec.State = AbilityExecRunState.Running;
                 exec.CurrentTick = 0;
-                exec.StartAbsoluteTick = _clock.Now(toggleSpec.DeactivateExecSpec.ClockId.ToDomainId());
+                exec.StartAbsoluteTick = ClockNow(toggleSpec.DeactivateExecSpec.ClockId, actor);
                 exec.NextItemIndex = 0;
                 exec.GateDeadline = 0;
                 exec.WaitTagId = 0;
@@ -1265,6 +1265,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!World.Has<GameplayTagContainer>(actor)) World.Add(actor, new GameplayTagContainer());
             if (!World.Has<TagCountContainer>(actor)) World.Add(actor, new TagCountContainer());
             if (!World.Has<TimedTagBuffer>(actor)) World.Add(actor, new TimedTagBuffer());
+        }
+
+        private int ClockNow(GasClockId clockId, Entity actor)
+        {
+            return GasClockRuntime.Now(World, _clock, clockId, actor, "Ability execution clock");
         }
 
         private void PublishCastStartedAndCommitted(Entity actor, Entity targetEntity, int slotIndex, int abilityId)

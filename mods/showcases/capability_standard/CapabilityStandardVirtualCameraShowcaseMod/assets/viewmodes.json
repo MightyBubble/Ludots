@@ -1,0 +1,42 @@
+[
+  {
+    "Id": "CapabilityStandard.VirtualCamera.Mode.BehaviorOrbit",
+    "DisplayName": "Capability Behavior Orbit",
+    "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.BehaviorOrbit",
+    "FollowTargetKind": "None",
+    "InputContextId": "CapabilityStandard.VirtualCamera.Controls",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CapabilityStandardVirtualCameraMode"
+  },
+  {
+    "Id": "CapabilityStandard.VirtualCamera.Mode.HeightmapOrbit",
+    "DisplayName": "Capability Terrain Orbit",
+    "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.HeightmapOrbit",
+    "FollowTargetKind": "None",
+    "InputContextId": "CapabilityStandard.VirtualCamera.Controls",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CapabilityStandardVirtualCameraHeightmapMode"
+  },
+  {
+    "Id": "CapabilityStandard.VirtualCamera.Mode.TPS",
+    "DisplayName": "Capability Third Person",
+    "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.TPS",
+    "FollowTargetKind": "LocalPlayer",
+    "InputContextId": "CapabilityStandard.VirtualCamera.AvatarControls",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CapabilityStandardVirtualCameraTpsMode"
+  },
+  {
+    "Id": "CapabilityStandard.VirtualCamera.Mode.FPS",
+    "DisplayName": "Capability First Person",
+    "VirtualCameraId": "CapabilityStandard.VirtualCamera.Profile.FPS",
+    "FollowTargetKind": "LocalPlayer",
+    "InputContextId": "CapabilityStandard.VirtualCamera.AvatarControls",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "CapabilityStandardVirtualCameraFpsMode"
+  }
+]

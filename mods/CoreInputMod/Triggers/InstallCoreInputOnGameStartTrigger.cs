@@ -8,11 +8,11 @@ using Ludots.Core.Engine;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
-using Ludots.Core.Systems;
 
 namespace CoreInputMod.Triggers
 {
@@ -61,7 +61,7 @@ namespace CoreInputMod.Triggers
             {
                 foreach (var cb in commandSourceAcquiredCallbacks) cb(worldCm, entity);
             };
-            engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(commandSourceAcquisition, SystemGroup.InputCollection);
+            engine.InsertSystemBeforeRequired<AxisMoveOrderSystem>(commandSourceAcquisition, SystemGroup.InputCollection);
 
             engine.RegisterSystem(new GasInputResponseSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
             engine.RegisterSystem(new AbilityExecAimSyncSystem(engine.World, new InputInteractionContextAccessor(engine.World, engine.GlobalContext)), SystemGroup.InputCollection);

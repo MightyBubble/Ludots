@@ -34,9 +34,7 @@ namespace CameraAcceptanceMod
                     {
                         consumers.Add(inputOwnership);
                     }
-                    engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(
-                        new CameraAcceptanceLocalAvatarMoveSystem(engine),
-                        SystemGroup.InputCollection);
+                    engine.RegisterSystem(new CameraAcceptanceLocalAvatarMoveSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);

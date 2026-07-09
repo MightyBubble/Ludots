@@ -20,6 +20,8 @@ namespace Ludots.Core.Gameplay.Camera
         public float Pitch { get; set; } = 45f;
         public float DistanceCm { get; set; } = 3000f;
         public float FovYDeg { get; set; } = 60f;
+        public Vector3 RigPivotOffsetCm { get; set; } = Vector3.Zero;
+        public Vector3 RigCameraOffsetCm { get; set; } = Vector3.Zero;
         public float MinDistanceCm { get; set; }
         public float MaxDistanceCm { get; set; }
         public float MinPitchDeg { get; set; }
@@ -34,6 +36,7 @@ namespace Ludots.Core.Gameplay.Camera
         public float ConfinePaddingCm { get; set; }
         public CameraRotateMode RotateMode { get; set; } = CameraRotateMode.Both;
         public float RotateDegPerPixel { get; set; } = 0.28f;
+        public bool RotateRequiresHold { get; set; } = true;
         public float RotateDegPerSecond { get; set; } = 90f;
         public bool EnableZoom { get; set; } = true;
         public float ZoomCmPerWheel { get; set; } = 2000f;

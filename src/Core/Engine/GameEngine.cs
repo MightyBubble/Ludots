@@ -20,6 +20,7 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -33,6 +34,7 @@ using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Physics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -43,6 +45,7 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Events;
@@ -235,7 +238,6 @@ namespace Ludots.Core.Engine
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
         private TimeFlowService _timeFlow;
-        private int _physics2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -564,12 +566,24 @@ namespace Ludots.Core.Engine
             bool reloadNarrative = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            bool reloadQuests = string.IsNullOrWhiteSpace(group)
+                             || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
+                             || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+
+            if (reloadQuests &&
+                GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
+                GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
+            {
+                new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                questRuntime.ResetState();
+            }
+
             if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
             {
                 new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
                 if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
                 {
-                    narrativeDirector.ResetState();
+                    narrativeDirector.ResetNarrativeState();
                 }
             }
 
@@ -718,9 +732,9 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
-            _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
             var componentAuthoringContext = new ComponentAuthoringContext();
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1148,8 +1162,11 @@ namespace Ludots.Core.Engine
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
+            var cameraBehaviorInput = new CameraBehaviorInputState();
+            var cameraImpulseRuntime = new CameraImpulseRuntime();
+            World.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
             var attributeSinks = new AttributeSinkRegistry();
-            GasAttributeSinks.RegisterBuiltins(attributeSinks);
+            GasAttributeSinks.RegisterBuiltins(attributeSinks, cameraBehaviorInput);
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
@@ -1162,10 +1179,13 @@ namespace Ludots.Core.Engine
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
             var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
             var inputConfigRoot = new InputConfigPipelineLoader(ConfigPipeline).Load();
+            var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
+            new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
-            var clockSystem = new GasClockSystem(clock, clockStepPolicy);
+            var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
+            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
@@ -1356,6 +1376,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.InputActionAttributeBindingRegistry, inputActionAttributeBindings);
+            SetService(CoreServiceKeys.CameraBehaviorInputState, cameraBehaviorInput);
             SetService(CoreServiceKeys.GraphEdgeCostOverlay, graphEdgeCostOverlay);
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
@@ -1433,6 +1455,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebugPanelRuntime);
             SetService(CoreServiceKeys.InputFrameConsumers, inputFrameConsumers);
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
+            SetService(CoreServiceKeys.PresentationAudienceRevealHidden, false);
             SetService(CoreServiceKeys.PresentationTimingDiagnostics, presentationTimingDiagnostics);
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
@@ -1451,10 +1474,17 @@ namespace Ludots.Core.Engine
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
+            SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            GameSession.Camera.SetImpulseRuntime(cameraImpulseRuntime);
+            var questDefinitions = new QuestDefinitionRegistry();
+            new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var questRuntime = new QuestRuntimeService(World, questDefinitions);
+            SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
+            SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
@@ -1476,9 +1506,10 @@ namespace Ludots.Core.Engine
             RegisterSystem(
                 new AxisMoveOrderSystem(World, GlobalContext, controlSchemeRuntime, orderQueue),
                 SystemGroup.InputCollection);
+            RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings), SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
-            RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
+            RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
@@ -1608,6 +1639,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
@@ -1707,25 +1739,9 @@ namespace Ludots.Core.Engine
 
             if (GetService(CoreServiceKeys.GasClockStepPolicy) is GasClockStepPolicy gasClockStepPolicy)
             {
-                gasClockStepPolicy.SetScalePermille(_timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Gas));
+                gasClockStepPolicy.SetScalePermille(_timeFlow.GetScalePermilleRelativeToParent(TimeFlowDomainIds.Gas));
             }
 
-            if (GetService(CoreServiceKeys.Physics2DTickPolicy) is Physics2DTickPolicy physics2dTickPolicy)
-            {
-                physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
-            }
-        }
-
-        private static int ScaleRateHz(int baseHz, int scalePermille)
-        {
-            if (baseHz <= 0 || scalePermille <= 0)
-            {
-                return 0;
-            }
-
-            long scaled = (long)baseHz * scalePermille;
-            int targetHz = (int)((scaled + 999) / 1000);
-            return Math.Max(1, targetHz);
         }
 
         private void RegisterPhysics2DSystems(
@@ -3273,9 +3289,9 @@ namespace Ludots.Core.Engine
 
         private void EnsureCameraRuntimeConfigured()
         {
-            var input = GetService(CoreServiceKeys.InputHandler);
+            var behaviorInput = GetService(CoreServiceKeys.CameraBehaviorInputState);
             var viewport = GetService(CoreServiceKeys.ViewController);
-            if (input == null || viewport == null)
+            if (behaviorInput == null || viewport == null)
             {
                 return;
             }
@@ -3283,11 +3299,12 @@ namespace Ludots.Core.Engine
             if (!GameSession.Camera.IsRuntimeConfigured)
             {
                 GameSession.Camera.ConfigureRuntime(
-                    input,
+                    behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
             }
         }
+
     }
 }

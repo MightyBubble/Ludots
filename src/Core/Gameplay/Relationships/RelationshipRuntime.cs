@@ -1,11 +1,16 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Arch.Relationships;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Relationships
 {
     public sealed class RelationshipRuntime
     {
+        private static readonly QueryDescription RelationshipEntityQuery = new QueryDescription()
+            .WithAll<RelationshipInstanceCm>();
+
         private readonly World _world;
         private readonly RelationshipTypeRegistry _types;
         private readonly RelationshipMetricRegistry _metrics;
@@ -13,6 +18,7 @@ namespace Ludots.Core.Gameplay.Relationships
         private readonly RelationshipBandRegistry _bands;
         private readonly RelationshipChangeBuffer _changes;
         private readonly RelationshipReverseIndex _reverseIndex;
+        private readonly Dictionary<RelationshipEntityKey, Entity> _entityIndex = new();
 
         public RelationshipRuntime(
             World world,
@@ -31,12 +37,101 @@ namespace Ludots.Core.Gameplay.Relationships
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
             _reverseIndex = reverseIndex ?? throw new ArgumentNullException(nameof(reverseIndex));
             _reverseIndex.RebuildFromWorld();
+            RebuildEntityIndexFromWorld();
         }
 
         public RelationshipTypeRegistry TypeRegistry => _types;
 
         /// <summary>Reverse adjacency index backing incoming-edge queries.</summary>
         public RelationshipReverseIndex ReverseIndex => _reverseIndex;
+
+        public void RebuildEntityIndexFromWorld()
+        {
+            _entityIndex.Clear();
+            _world.Query(in RelationshipEntityQuery, (Entity entity, ref RelationshipInstanceCm relationship) =>
+            {
+                ValidateMaterializedRelationship(entity, in relationship);
+                RelationshipEntityKey key = new(relationship.Source, relationship.Target, relationship.TypeId);
+                if (_entityIndex.TryGetValue(key, out Entity existing))
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate relationship entity projection for {key.Source.Id}:{key.Source.WorldId}:{key.Source.Version} -> " +
+                        $"{key.Target.Id}:{key.Target.WorldId}:{key.Target.Version} type {key.TypeId}: " +
+                        $"{existing.Id}:{existing.WorldId}:{existing.Version} and {entity.Id}:{entity.WorldId}:{entity.Version}.");
+                }
+
+                _entityIndex[key] = entity;
+            });
+        }
+
+        public bool TryResolveRelationshipEntity(Entity source, Entity target, int typeId, out Entity relationshipEntity)
+        {
+            relationshipEntity = Entity.Null;
+            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            {
+                return false;
+            }
+
+            int validatedTypeId = ValidateTypeId(typeId);
+            RelationshipEntityKey key = new(source, target, validatedTypeId);
+            if (_entityIndex.TryGetValue(key, out Entity indexed) &&
+                _world.IsAlive(indexed) &&
+                _world.Has<RelationshipInstanceCm>(indexed) &&
+                HasLink(source, target, validatedTypeId))
+            {
+                relationshipEntity = indexed;
+                return true;
+            }
+
+            RebuildEntityIndexFromWorld();
+            if (_entityIndex.TryGetValue(key, out indexed) &&
+                _world.IsAlive(indexed) &&
+                _world.Has<RelationshipInstanceCm>(indexed) &&
+                HasLink(source, target, validatedTypeId))
+            {
+                relationshipEntity = indexed;
+                return true;
+            }
+
+            return false;
+        }
+
+        public Entity MaterializeRelationshipEntity(Entity source, Entity target, int typeId)
+        {
+            if (!_world.IsAlive(source) || !_world.IsAlive(target))
+            {
+                throw new InvalidOperationException("RelationshipRuntime requires both source and target entities to be alive.");
+            }
+
+            int validatedTypeId = ValidateTypeId(typeId);
+            if (!HasLink(source, target, validatedTypeId))
+            {
+                throw new InvalidOperationException("RelationshipRuntime cannot materialize a relationship entity without an existing relationship edge.");
+            }
+
+            RelationshipEntityKey key = new(source, target, validatedTypeId);
+            if (_entityIndex.TryGetValue(key, out Entity existing) &&
+                _world.IsAlive(existing) &&
+                _world.Has<RelationshipInstanceCm>(existing))
+            {
+                return existing;
+            }
+
+            Entity relationshipEntity = _world.Create(
+                new RelationshipInstanceCm
+                {
+                    Source = source,
+                    Target = target,
+                    TypeId = validatedTypeId,
+                    Revision = 1
+                },
+                default(AttributeBuffer),
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new ActiveEffectContainer());
+            _entityIndex[key] = relationshipEntity;
+            return relationshipEntity;
+        }
 
         public bool HasLink(Entity source, Entity target)
         {
@@ -72,6 +167,7 @@ namespace Ludots.Core.Gameplay.Relationships
 
             if (set.HasType(validatedTypeId))
             {
+                MaterializeRelationshipEntity(source, target, validatedTypeId);
                 return;
             }
 
@@ -86,6 +182,7 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             _reverseIndex.OnLinkAdded(source, target, validatedTypeId);
+            MaterializeRelationshipEntity(source, target, validatedTypeId);
         }
 
         public void RemoveLink(Entity source, Entity target, int typeId)
@@ -105,6 +202,8 @@ namespace Ludots.Core.Gameplay.Relationships
             {
                 return;
             }
+
+            RemoveMaterializedRelationshipEntity(source, target, validatedTypeId);
 
             if (set.Count == 0)
             {
@@ -150,6 +249,7 @@ namespace Ludots.Core.Gameplay.Relationships
             int validatedTypeId = ValidateTypeId(typeId);
             RelationshipEdgeSet set = source.GetRelationship<RelationshipEdgeSet>(target);
             RelationshipEdge edge = set.GetOrAdd(validatedTypeId, _metrics, out _);
+            Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
             bool resized = edge.EnsureMetricCapacity(_metrics);
             short oldValue = edge.GetMetric(metricId);
             short clamped = ClampToDefinition(metricId, value);
@@ -164,6 +264,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return clamped;
             }
 
+            BumpMaterializedRelationshipRevision(relationshipEntity);
             uint oldFlags = edge.Flags;
             edge.SetMetric(metricId, clamped);
             edge.Flags = ApplyBands(validatedTypeId, metricId, edge.Flags, clamped);
@@ -204,6 +305,7 @@ namespace Ludots.Core.Gameplay.Relationships
             int validatedTypeId = ValidateTypeId(typeId);
             RelationshipEdgeSet set = source.GetRelationship<RelationshipEdgeSet>(target);
             RelationshipEdge edge = set.GetOrAdd(validatedTypeId, _metrics, out _);
+            Entity relationshipEntity = MaterializeRelationshipEntity(source, target, validatedTypeId);
             bool resized = edge.EnsureMetricCapacity(_metrics);
             uint mask = _flags.GetMask(flagId);
             uint oldFlags = edge.Flags;
@@ -219,6 +321,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 return;
             }
 
+            BumpMaterializedRelationshipRevision(relationshipEntity);
             edge.Flags = newFlags;
             edge.Version++;
             set.Set(validatedTypeId, edge);
@@ -402,6 +505,57 @@ namespace Ludots.Core.Gameplay.Relationships
             return exists && relationships.TryGetValueNoAlloc(target, out set);
         }
 
+        private void RemoveMaterializedRelationshipEntity(Entity source, Entity target, int typeId)
+        {
+            RelationshipEntityKey key = new(source, target, typeId);
+            if (!_entityIndex.TryGetValue(key, out Entity entity))
+            {
+                RebuildEntityIndexFromWorld();
+                if (!_entityIndex.TryGetValue(key, out entity))
+                {
+                    return;
+                }
+            }
+
+            _entityIndex.Remove(key);
+            if (_world.IsAlive(entity) && _world.Has<RelationshipInstanceCm>(entity))
+            {
+                _world.Destroy(entity);
+            }
+        }
+
+        private void BumpMaterializedRelationshipRevision(Entity relationshipEntity)
+        {
+            if (!_world.IsAlive(relationshipEntity) || !_world.Has<RelationshipInstanceCm>(relationshipEntity))
+            {
+                return;
+            }
+
+            ref RelationshipInstanceCm relationship = ref _world.Get<RelationshipInstanceCm>(relationshipEntity);
+            relationship.Revision++;
+        }
+
+        private void ValidateMaterializedRelationship(Entity entity, in RelationshipInstanceCm relationship)
+        {
+            if (relationship.TypeId < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Relationship entity {entity.Id}:{entity.WorldId}:{entity.Version} has invalid type id {relationship.TypeId}.");
+            }
+
+            if (!_world.IsAlive(relationship.Source) || !_world.IsAlive(relationship.Target))
+            {
+                throw new InvalidOperationException(
+                    $"Relationship entity {entity.Id}:{entity.WorldId}:{entity.Version} references a missing source or target entity.");
+            }
+
+            if (!HasLink(relationship.Source, relationship.Target, relationship.TypeId))
+            {
+                throw new InvalidOperationException(
+                    $"Relationship entity {entity.Id}:{entity.WorldId}:{entity.Version} has no matching relationship edge for type {relationship.TypeId}.");
+            }
+        }
+
         private int ValidateTypeId(int typeId)
         {
             _types.Get(typeId);
@@ -464,6 +618,37 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             return flags;
+        }
+
+        private readonly struct RelationshipEntityKey : IEquatable<RelationshipEntityKey>
+        {
+            public RelationshipEntityKey(Entity source, Entity target, int typeId)
+            {
+                Source = source;
+                Target = target;
+                TypeId = typeId;
+            }
+
+            public Entity Source { get; }
+            public Entity Target { get; }
+            public int TypeId { get; }
+
+            public bool Equals(RelationshipEntityKey other)
+            {
+                return Source.Equals(other.Source) &&
+                       Target.Equals(other.Target) &&
+                       TypeId == other.TypeId;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is RelationshipEntityKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(Source, Target, TypeId);
+            }
         }
     }
 }

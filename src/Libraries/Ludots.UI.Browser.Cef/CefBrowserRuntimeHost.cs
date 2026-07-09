@@ -1,21 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
 using Ludots.UI.Browser;
 
 namespace Ludots.UI.Browser.Cef;
 
 public static class CefBrowserRuntimeHost
 {
-	public static IBrowserRuntime InstallFromAssemblyLocation(
-		IDictionary<string, object> services,
-		string? cacheRootPath = null)
-	{
-		string runtimeRootPath = ResolveAssemblyDirectory();
-		return Install(services, runtimeRootPath, cacheRootPath);
-	}
-
 	public static IBrowserRuntime Install(
 		IDictionary<string, object> services,
 		string runtimeRootPath,
@@ -45,6 +35,7 @@ public static class CefBrowserRuntimeHost
 			return existingRuntime;
 		}
 
+		CefRuntimeLayoutPreflight.EnsureComplete(runtimeRootPath);
 		var runtime = new CefBrowserRuntime(new CefBrowserRuntimeOptions(runtimeRootPath, cacheRootPath));
 		services[BrowserRuntimeServiceNames.BrowserRuntime] = runtime;
 		EnsureHostLifecycleRegistered(services);
@@ -73,23 +64,5 @@ public static class CefBrowserRuntimeHost
 		{
 			CefProcessRuntime.ShutdownForHostExit();
 		}
-	}
-
-	private static string ResolveAssemblyDirectory()
-	{
-		string assemblyLocation = typeof(CefBrowserRuntimeHost).Assembly.Location;
-		if (string.IsNullOrWhiteSpace(assemblyLocation))
-		{
-			assemblyLocation = Assembly.GetExecutingAssembly().Location;
-		}
-
-		string? directory = Path.GetDirectoryName(assemblyLocation);
-		if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory))
-		{
-			throw new DirectoryNotFoundException(
-				$"CEF runtime root could not be resolved from provider assembly location '{assemblyLocation}'.");
-		}
-
-		return directory;
 	}
 }

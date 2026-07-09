@@ -441,6 +441,58 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesCefBrowserRuntime_FromProviderPackageRoot()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-cef-runtime-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var originalGraph = CaptureFile(graphPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "preset:browser_react_flow_cef_raylib" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                var runtime = plan.BrowserRuntime;
+                string packageRootPath = Path.Combine(repoRoot, "BrowserRuntime", "cef");
+
+                Assert.That(runtime, Is.Not.Null);
+                Assert.That(runtime!.Provider, Is.EqualTo("cef"));
+                Assert.That(runtime.ProviderAssemblyPath, Is.EqualTo(Path.Combine(packageRootPath, "Ludots.UI.Browser.Cef.dll")));
+                Assert.That(runtime.RuntimeRootPath, Is.EqualTo(packageRootPath));
+                Assert.That(runtime.ProviderProjectPath, Is.EqualTo(Path.Combine(
+                    repoRoot,
+                    "src",
+                    "Libraries",
+                    "Ludots.UI.Browser.Cef",
+                    "Ludots.UI.Browser.Cef.csproj")));
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots()
         {
             var repoRoot = FindRepoRoot();
@@ -493,7 +545,14 @@ namespace Ludots.Tests.Architecture
                     LauncherBuildMode.Never).Plan,
                     expectedRootModId: "FormationCapabilityShowcaseMod",
                     expectedStartupMapId: "formation_capability_showcase",
-                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "FormationCapabilityShowcaseMod" });
+                    allowedModIds: new[]
+                    {
+                        "LudotsCoreMod",
+                        "CoreInputMod",
+                        "CameraProfilesMod",
+                        "FormationCapabilityShowcaseMod"
+                    },
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(
@@ -508,7 +567,8 @@ namespace Ludots.Tests.Architecture
                         "CoreInputMod",
                         "ParticipantViewCapabilityMod",
                         "CapabilityStandardParticipantViewsMod"
-                    });
+                    },
+                    requiredModIds: new[] { "LudotsCoreMod", "CoreInputMod", "ParticipantViewCapabilityMod" });
 
                 AssertCapabilityStandardPlan(
                     launcher.Resolve(

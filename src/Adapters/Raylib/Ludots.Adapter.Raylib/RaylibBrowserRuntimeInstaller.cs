@@ -34,7 +34,10 @@ namespace Ludots.Adapter.Raylib
 
             string providerAssemblyPath = ResolveProviderAssemblyPath(runtimeConfig);
             string providerHostTypeName = RequireProviderHostTypeName(runtimeConfig);
-            string? runtimeRootPath = ResolveOptionalPath(baseDirectory, runtimeConfig.RuntimeRootPath);
+            string runtimeRootPath = ResolveRequiredPath(
+                baseDirectory,
+                runtimeConfig.RuntimeRootPath,
+                "browserRuntime.runtimeRootPath is required for the configured browser runtime provider.");
             string? cacheRootPath = ResolveOptionalPath(baseDirectory, runtimeConfig.CacheRootPath);
             return InstallProvider(
                 engine.GlobalContext,
@@ -95,6 +98,16 @@ namespace Ludots.Adapter.Raylib
             return ResolvePath(baseDirectory, configuredPath);
         }
 
+        private static string ResolveRequiredPath(string baseDirectory, string configuredPath, string message)
+        {
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                throw new InvalidOperationException(message);
+            }
+
+            return ResolvePath(baseDirectory, configuredPath);
+        }
+
         private static string ResolvePath(string baseDirectory, string configuredPath)
         {
             string expanded = Environment.ExpandEnvironmentVariables(configuredPath);
@@ -124,6 +137,7 @@ namespace Ludots.Adapter.Raylib
                     ProcessSharedAssemblyNamePrefixes = processSharedAssemblyNamePrefixes ?? Array.Empty<string>(),
                     RuntimeRootPath = runtimeRootPath,
                     BrowserCacheRootPath = cacheRootPath,
+                    MapRuntimeRootToShadowCopy = false,
                     Log = message => Log.Info(in LogChannels.Engine, message)
                 });
             return handle.Runtime;

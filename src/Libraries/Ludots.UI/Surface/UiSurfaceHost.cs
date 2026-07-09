@@ -146,7 +146,7 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 
 			ApplySceneStyleScope(visibleEntries);
 			_scene.Dispatcher.Reset();
-			int nextId = 1;
+			int nextId = _scene.GetNextReactiveNodeIdSeed();
 			UiNode rootNode = BuildHostRoot(visibleEntries).Build(_scene.Dispatcher, ref nextId);
 			UiRetainedPatchStats patchStats = _scene.ApplyReactiveRoot(rootNode);
 			ApplyVirtualWindows(visibleEntries);

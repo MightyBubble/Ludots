@@ -33,9 +33,23 @@ namespace CoreInputMod.ViewMode
 
         public void Register(ViewModeConfig mode)
         {
-            if (string.IsNullOrWhiteSpace(mode.Id) || _modeMap.ContainsKey(mode.Id))
+            ArgumentNullException.ThrowIfNull(mode);
+            if (string.IsNullOrWhiteSpace(mode.Id))
             {
-                return;
+                throw new InvalidOperationException("ViewMode config requires a non-empty Id.");
+            }
+
+            if (_modeMap.ContainsKey(mode.Id))
+            {
+                throw new InvalidOperationException($"ViewMode '{mode.Id}' is registered more than once.");
+            }
+
+            RequireInteractionMode(mode);
+            if (!string.IsNullOrWhiteSpace(mode.FollowTargetKind) &&
+                !Enum.TryParse<CameraFollowTargetKind>(mode.FollowTargetKind, ignoreCase: true, out _))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' declared unsupported FollowTargetKind '{mode.FollowTargetKind}'.");
             }
 
             _modes.Add(mode);
@@ -138,11 +152,16 @@ namespace CoreInputMod.ViewMode
             }
 
             if (!_globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out var registryObj) ||
-                registryObj is not VirtualCameraRegistry registry ||
-                !registry.TryGet(next.VirtualCameraId, out var definition) ||
-                definition == null)
+                registryObj is not VirtualCameraRegistry registry)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared virtual camera '{next.VirtualCameraId}', but VirtualCameraRegistry is not available.");
+            }
+
+            if (!registry.TryGet(next.VirtualCameraId, out var definition) || definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared unknown virtual camera '{next.VirtualCameraId}'.");
             }
 
             if (!Enum.TryParse<CameraFollowTargetKind>(next.FollowTargetKind, ignoreCase: true, out var followTargetKind))
@@ -195,15 +214,29 @@ namespace CoreInputMod.ViewMode
 
         private void ApplyInteractionMode(ViewModeConfig mode)
         {
-            if (!Enum.TryParse<InteractionModeType>(mode.InteractionMode, true, out var interactionMode))
-            {
-                return;
-            }
+            InteractionModeType interactionMode = RequireInteractionMode(mode);
 
             if (_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) && mappingObj is InputOrderMappingSystem mapping)
             {
                 mapping.SetInteractionMode(interactionMode);
             }
+        }
+
+        private static InteractionModeType RequireInteractionMode(ViewModeConfig mode)
+        {
+            if (string.IsNullOrWhiteSpace(mode.InteractionMode))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' must declare InteractionMode explicitly.");
+            }
+
+            if (!Enum.TryParse<InteractionModeType>(mode.InteractionMode, true, out var interactionMode))
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{mode.Id}' declared unsupported InteractionMode '{mode.InteractionMode}'.");
+            }
+
+            return interactionMode;
         }
 
         private void ApplySkillBar(ViewModeConfig mode)

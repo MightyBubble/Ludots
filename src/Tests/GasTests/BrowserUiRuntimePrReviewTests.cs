@@ -329,7 +329,8 @@ namespace GasTests
                 .Single(item => string.Equals(item.GetProperty("id").GetString(), "cef", StringComparison.Ordinal));
 
             Assert.That(provider.GetProperty("projectPath").GetString(), Does.StartWith("src/Libraries/Ludots.UI.Browser.Cef"));
-            Assert.That(provider.GetProperty("assemblyPath").GetString(), Does.StartWith("src/Libraries/Ludots.UI.Browser.Cef"));
+            Assert.That(provider.GetProperty("packageRootPath").GetString(), Is.EqualTo("BrowserRuntime/cef"));
+            Assert.That(provider.GetProperty("assemblyPath").GetString(), Is.EqualTo("BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll"));
             Assert.That(provider.GetProperty("hostTypeName").GetString(), Is.EqualTo("Ludots.UI.Browser.Cef.CefBrowserRuntimeHost"));
             Assert.That(provider.GetProperty("useCollectibleLoadContext").GetBoolean(), Is.False);
             Assert.That(provider.GetProperty("processSharedAssemblyNamePrefixes").EnumerateArray().Select(item => item.GetString()).ToArray(),

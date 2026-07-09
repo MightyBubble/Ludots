@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Ludots.UI;
 using Ludots.UI.Compose;
 using Ludots.UI.Input;
@@ -105,6 +106,63 @@ public sealed class UiSurfaceHostTests
     }
 
     [Test]
+    public void ReactivePage_InsertionsThroughHostScene_KeepNodeIdsUniqueAndDispatchActions()
+    {
+        UIRoot root = CreateRoot(out UiSurfaceHost host);
+        root.Resize(360f, 220f);
+        int insertedClicks = 0;
+        var page = new ReactivePage<bool>(
+            new SkiaTextMeasurer(),
+            new SkiaImageSizeProvider(),
+            false,
+            context =>
+            {
+                UiElementBuilder dynamicChild = context.State
+                    ? Ui.Button("Confirm", _ => insertedClicks++)
+                        .Id("confirm-button")
+                        .Width(120f)
+                        .Height(32f)
+                    : Ui.Text("Waiting")
+                        .Id("waiting-label")
+                        .Width(120f)
+                        .Height(32f);
+
+                return Ui.Column(
+                        Ui.Text("Host").Id("host-title").Width(120f).Height(24f),
+                        Ui.Row(
+                                Ui.Button("Show", _ => context.SetState(current => true))
+                                    .Id("show-button")
+                                    .Width(96f)
+                                    .Height(32f),
+                                Ui.Text(context.State ? "Visible" : "Hidden")
+                                    .Id("status-label")
+                                    .Width(96f)
+                                    .Height(32f))
+                            .Id("action-row")
+                            .Width(240f)
+                            .Height(40f),
+                        dynamicChild,
+                        Ui.Text("Footer").Id("host-footer").Width(120f).Height(24f))
+                    .Id("host-test-root")
+                    .Width(360f)
+                    .Height(220f)
+                    .Gap(4f);
+            });
+
+        UiSurfaceLeaseHandle lease = host.Acquire(new UiSurfaceLeaseRequest("test.reactive-insert"));
+        host.Publish(lease, UiSurfaceContribution.FromReactivePage(page));
+        Click(root, "show-button");
+
+        Assert.That(root.Scene!.FindByElementId("confirm-button"), Is.Not.Null);
+        int[] nodeIds = root.Scene.EnumerateVisualNodes().Select(node => node.Id.Value).ToArray();
+        Assert.That(nodeIds.Distinct().Count(), Is.EqualTo(nodeIds.Length));
+
+        Click(root, "confirm-button");
+
+        Assert.That(insertedClicks, Is.EqualTo(1));
+    }
+
+    [Test]
     public void ReactivePage_VirtualWindow_IsCollectedIntoHostScene()
     {
         UIRoot root = CreateRoot(out UiSurfaceHost host);
@@ -134,6 +192,32 @@ public sealed class UiSurfaceHostTests
 
         Assert.That(root.Scene.TryGetVirtualWindow("test-window", out UiVirtualWindow window), Is.True);
         Assert.That(window.VisibleCount, Is.GreaterThan(0));
+    }
+
+    private static void Click(UIRoot root, string elementId)
+    {
+        root.Scene!.Layout(root.Width, root.Height);
+        UiNode node = root.Scene.FindByElementId(elementId)!;
+        Assert.That(node, Is.Not.Null);
+        float x = node.LayoutRect.X + node.LayoutRect.Width * 0.5f;
+        float y = node.LayoutRect.Y + node.LayoutRect.Height * 0.5f;
+        root.HandleInput(new PointerEvent
+        {
+            PointerId = 0,
+            Action = PointerAction.Down,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+        root.HandleInput(new PointerEvent
+        {
+            PointerId = 0,
+            Action = PointerAction.Up,
+            Button = PointerButton.Left,
+            X = x,
+            Y = y
+        });
+        root.Scene!.Layout(root.Width, root.Height);
     }
 
     private static UIRoot CreateRoot(out UiSurfaceHost host)

@@ -861,6 +861,7 @@ public sealed partial class MassNavigationFlowSolverState
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
+        EnqueueArrivalEvent(index);
         MarkEntityDirty(index);
     }
 
@@ -1503,7 +1504,9 @@ public sealed partial class MassNavigationFlowSolverState
                     continue;
                 }
 
-                float penalty = (ox == 0 && oy == 0) ? 8f : 3f;
+                float penalty = (ox == 0 && oy == 0)
+                    ? Semantics.Solver.CrowdStampCenterCost
+                    : Semantics.Solver.CrowdStampNeighborCost;
                 _cost[idx] += penalty;
             }
         }
@@ -1655,7 +1658,7 @@ public sealed partial class MassNavigationFlowSolverState
                             float ovx = -offsetX;
                             float ovy = -offsetY;
                             float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.EntitySyncVelocityEpsilonSq)
+                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
                             {
                                 float invObstacleDist = FastInvSqrt(obstacleDistSq);
                                 float obstacleDist = obstacleDistSq * invObstacleDist;
@@ -1757,203 +1760,199 @@ public sealed partial class MassNavigationFlowSolverState
             bool hasUnitNavigationTarget = false;
             float activeTargetStopThresholdSq = unitTargetStopThresholdSq;
             float speed = _speedsCmPerSecond[i];
+            float agentDt = clampedDt;
+            bool simulationTimeActive = agentDt > 0f;
 
-            if (_hasUnitTarget[i] != 0)
+            if (simulationTimeActive)
             {
-                hasGoalTarget = true;
-                hasUnitNavigationTarget = true;
-                targetX = _unitTargetsCm[i2];
-                targetY = _unitTargetsCm[i2 + 1];
-                float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
-                activeTargetStopThresholdSq = targetStopThresholdSq;
-                float toTargetX = targetX - px;
-                float toTargetY = targetY - py;
-                float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
-                if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
+                if (_hasUnitTarget[i] != 0)
                 {
-                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
+                    hasGoalTarget = true;
+                    hasUnitNavigationTarget = true;
+                    targetX = _unitTargetsCm[i2];
+                    targetY = _unitTargetsCm[i2 + 1];
+                    float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
+                    activeTargetStopThresholdSq = targetStopThresholdSq;
+                    float toTargetX = targetX - px;
+                    float toTargetY = targetY - py;
+                    float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
+                    if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
                     {
-                        ExitSettledState(i, px, py);
+                        if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
+                        {
+                            ExitSettledState(i, px, py);
+                        }
+                        else
+                        {
+                            suppressTargetMotion = true;
+                        }
                     }
-                    else
-                    {
-                        suppressTargetMotion = true;
-                    }
-                }
 
-                if (!suppressTargetMotion && ArrivalTuning.Enabled)
-                {
-                    if (targetDistSq <= targetStopThresholdSq)
+                    if (!suppressTargetMotion && ArrivalTuning.Enabled)
                     {
-                        EnterSettledState(i, px, py);
-                        suppressTargetMotion = true;
-                    }
-                    else
-                    {
-                        UpdateUnitStuckTimer(i, px, py, clampedDt);
-                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        if (targetDistSq <= targetStopThresholdSq)
                         {
                             EnterSettledState(i, px, py);
                             suppressTargetMotion = true;
                         }
+                        else
+                        {
+                            UpdateUnitStuckTimer(i, px, py, agentDt);
+                            if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                            {
+                                EnterSettledState(i, px, py);
+                                suppressTargetMotion = true;
+                            }
+                        }
+                    }
+                    else if (!suppressTargetMotion)
+                    {
+                        ResetUnitProgressAnchor(i, px, py);
+                    }
+
+                    if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
+                    {
+                        float invDist = FastInvSqrt(targetDistSq);
+                        desiredX = toTargetX * invDist;
+                        desiredY = toTargetY * invDist;
+
+                        int gx = (int)(px / _flowCellSizeCm);
+                        int gy = (int)(py / _flowCellSizeCm);
+                        float avoidX = 0f;
+                        float avoidY = 0f;
+                        for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
+                        {
+                            int ny = gy + oy;
+                            if ((uint)ny >= (uint)_gridHeight)
+                            {
+                                continue;
+                            }
+
+                            int rowOffset = ny * _gridWidth;
+                            for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
+                            {
+                                if (ox == 0 && oy == 0)
+                                {
+                                    continue;
+                                }
+
+                                int nx = gx + ox;
+                                if ((uint)nx >= (uint)_gridWidth)
+                                {
+                                    continue;
+                                }
+
+                                if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                                {
+                                    float obstacleDistanceSq = ox * ox + oy * oy;
+                                    float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
+                                    float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
+                                    avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                    avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                }
+                            }
+                        }
+
+                        desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
+                        desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
+                        float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
+                        if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                        {
+                            float invFlow = FastInvSqrt(flowLengthSq);
+                            desiredX *= invFlow;
+                            desiredY *= invFlow;
+                        }
+                    }
+
+                    float targetDistance = MathF.Sqrt(targetDistSq);
+                    float arriveThreshold = inFormation
+                        ? Semantics.Group.FormationArriveThresholdCm
+                        : Semantics.Group.LooseArriveThresholdCm;
+                    if (targetDistance < arriveThreshold)
+                    {
+                        unitArrivalFactor = targetDistance / arriveThreshold;
+                    }
+                    else if (suppressTargetMotion)
+                    {
+                        unitArrivalFactor = 0f;
                     }
                 }
-                else if (!suppressTargetMotion)
+                else
                 {
-                    ResetUnitProgressAnchor(i, px, py);
-                }
-
-                if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
-                {
-                    float invDist = FastInvSqrt(targetDistSq);
-                    desiredX = toTargetX * invDist;
-                    desiredY = toTargetY * invDist;
-
+                    hasGoalTarget = true;
                     int gx = (int)(px / _flowCellSizeCm);
                     int gy = (int)(py / _flowCellSizeCm);
-                    float avoidX = 0f;
-                    float avoidY = 0f;
-                    for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
+                    float flowX = 0f;
+                    float flowY = 0f;
+                    if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
                     {
-                        int ny = gy + oy;
-                        if ((uint)ny >= (uint)_gridHeight)
+                        int flowOffset = ((gy * _gridWidth) + gx) << 1;
+                        flowX = flowState.Flow[flowOffset];
+                        flowY = flowState.Flow[flowOffset + 1];
+                    }
+
+                    ComputeTeamSlotTarget(i, team, out targetX, out targetY);
+                    float toSlotX = targetX - px;
+                    float toSlotY = targetY - py;
+                    float slotDistSq = toSlotX * toSlotX + toSlotY * toSlotY;
+                    if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
+                    {
+                        if (ShouldRetryTargetAfterPush(i, px, py, slotDistSq, unitTargetStopThresholdSq))
                         {
-                            continue;
+                            ExitSettledState(i, px, py);
                         }
-
-                        int rowOffset = ny * _gridWidth;
-                        for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
+                        else
                         {
-                            if (ox == 0 && oy == 0)
-                            {
-                                continue;
-                            }
-
-                            int nx = gx + ox;
-                            if ((uint)nx >= (uint)_gridWidth)
-                            {
-                                continue;
-                            }
-
-                            if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
-                            {
-                                float obstacleDistanceSq = ox * ox + oy * oy;
-                                float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
-                                float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
-                                avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
-                                avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
-                            }
+                            suppressTargetMotion = true;
                         }
                     }
 
-                    desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
-                    desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
-                    float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                    if (!suppressTargetMotion && ArrivalTuning.Enabled)
                     {
-                        float invFlow = FastInvSqrt(flowLengthSq);
-                        desiredX *= invFlow;
-                        desiredY *= invFlow;
-                    }
-                }
-
-                float targetDistance = MathF.Sqrt(targetDistSq);
-                float arriveThreshold = inFormation
-                    ? Semantics.Group.FormationArriveThresholdCm
-                    : Semantics.Group.LooseArriveThresholdCm;
-                if (targetDistance < arriveThreshold)
-                {
-                    unitArrivalFactor = targetDistance / arriveThreshold;
-                }
-                else if (suppressTargetMotion)
-                {
-                    unitArrivalFactor = 0f;
-                }
-            }
-            else
-            {
-                hasGoalTarget = true;
-                int gx = (int)(px / _flowCellSizeCm);
-                int gy = (int)(py / _flowCellSizeCm);
-                float flowX = 0f;
-                float flowY = 0f;
-                if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
-                {
-                    int flowOffset = ((gy * _gridWidth) + gx) << 1;
-                    flowX = flowState.Flow[flowOffset];
-                    flowY = flowState.Flow[flowOffset + 1];
-                }
-
-                ComputeTeamSlotTarget(i, team, out targetX, out targetY);
-                float toSlotX = targetX - px;
-                float toSlotY = targetY - py;
-                float slotDistSq = toSlotX * toSlotX + toSlotY * toSlotY;
-                if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
-                {
-                    if (ShouldRetryTargetAfterPush(i, px, py, slotDistSq, unitTargetStopThresholdSq))
-                    {
-                        ExitSettledState(i, px, py);
-                    }
-                    else
-                    {
-                        suppressTargetMotion = true;
-                    }
-                }
-
-                if (!suppressTargetMotion && ArrivalTuning.Enabled)
-                {
-                    if (slotDistSq <= unitTargetStopThresholdSq)
-                    {
-                        EnterSettledState(i, px, py);
-                        suppressTargetMotion = true;
-                    }
-                    else
-                    {
-                        UpdateUnitStuckTimer(i, px, py, clampedDt);
-                        if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                        if (slotDistSq <= unitTargetStopThresholdSq)
                         {
                             EnterSettledState(i, px, py);
                             suppressTargetMotion = true;
                         }
+                        else
+                        {
+                            UpdateUnitStuckTimer(i, px, py, agentDt);
+                            if (_unitStuckSeconds[i] >= ArrivalTuning.TimeoutSeconds)
+                            {
+                                EnterSettledState(i, px, py);
+                                suppressTargetMotion = true;
+                            }
+                        }
                     }
-                }
-                else if (!suppressTargetMotion)
-                {
-                    ResetUnitProgressAnchor(i, px, py);
-                }
-
-                if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
-                {
-                    float invSlot = FastInvSqrt(slotDistSq);
-                    float slotDirX = toSlotX * invSlot;
-                    float slotDirY = toSlotY * invSlot;
-                    float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
-                        ? Semantics.Group.NearSlotBlend
-                        : Semantics.Group.FarSlotBlend;
-                    desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
-                    desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
-                    float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                    else if (!suppressTargetMotion)
                     {
-                        float invDesired = FastInvSqrt(desiredLengthSq);
-                        desiredX *= invDesired;
-                        desiredY *= invDesired;
+                        ResetUnitProgressAnchor(i, px, py);
+                    }
+
+                    if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
+                    {
+                        float invSlot = FastInvSqrt(slotDistSq);
+                        float slotDirX = toSlotX * invSlot;
+                        float slotDirY = toSlotY * invSlot;
+                        float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
+                            ? Semantics.Group.NearSlotBlend
+                            : Semantics.Group.FarSlotBlend;
+                        desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
+                        desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
+                        float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
+                        if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
+                        {
+                            float invDesired = FastInvSqrt(desiredLengthSq);
+                            desiredX *= invDesired;
+                            desiredY *= invDesired;
+                        }
+                    }
+                    else if (!suppressTargetMotion)
+                    {
+                        desiredX = flowX;
+                        desiredY = flowY;
                     }
                 }
-                else if (!suppressTargetMotion)
-                {
-                    desiredX = flowX;
-                    desiredY = flowY;
-                }
-            }
-
-            if (suppressTargetMotion)
-            {
-                _velocitiesCm[i2] = 0f;
-                _velocitiesCm[i2 + 1] = 0f;
-                _positionsCm[i2] = px;
-                _positionsCm[i2 + 1] = py;
-                continue;
             }
 
             float directTargetX = hasGoalTarget ? targetX - px : 0f;
@@ -2069,6 +2068,21 @@ public sealed partial class MassNavigationFlowSolverState
                 }
             }
 
+            // Settled agents hold position and velocity to avoid post-arrival jitter, but only
+            // after the scans above have marked hard-resolve candidates: real body overlap must
+            // still be separated by ResolveHardPenetration, which can wake them via the
+            // arrival-recovery push threshold.
+            // TimeFlow pause uses the same hold path after the scans, so navigation cannot move
+            // while simulation time is blocked.
+            if (!simulationTimeActive || suppressTargetMotion)
+            {
+                _velocitiesCm[i2] = 0f;
+                _velocitiesCm[i2 + 1] = 0f;
+                _positionsCm[i2] = px;
+                _positionsCm[i2 + 1] = py;
+                continue;
+            }
+
             float separationScale = (inFormation
                 ? Semantics.Steering.FormationSeparationScale
                 : Semantics.Steering.LooseSeparationScale) * unitArrivalFactor;
@@ -2089,18 +2103,18 @@ public sealed partial class MassNavigationFlowSolverState
                 px,
                 py,
                 speed,
-                clampedDt,
+                agentDt,
                 ref desiredVelocityX,
                 ref desiredVelocityY);
 
-            float mix = MathF.Min(clampedDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
+            float mix = MathF.Min(agentDt * Semantics.Steering.VelocityBlendPerSecond, 1f);
             float velocityX = _readVelocitiesCm[i2] + ((desiredVelocityX - _readVelocitiesCm[i2]) * mix);
             float velocityY = _readVelocitiesCm[i2 + 1] + ((desiredVelocityY - _readVelocitiesCm[i2 + 1]) * mix);
             _velocitiesCm[i2] = velocityX;
             _velocitiesCm[i2 + 1] = velocityY;
 
-            float nextX = px + velocityX * clampedDt;
-            float nextY = py + velocityY * clampedDt;
+            float nextX = px + velocityX * agentDt;
+            float nextY = py + velocityY * agentDt;
             _positionsCm[i2] = nextX;
             _positionsCm[i2 + 1] = nextY;
         }
@@ -2454,6 +2468,7 @@ public sealed partial class MassNavigationFlowSolverState
             if (_unitSettledFlags[i] != 0)
             {
                 settled++;
+                EnqueueArrivalEvent(i);
             }
         }
 

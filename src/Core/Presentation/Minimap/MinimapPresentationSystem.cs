@@ -7,6 +7,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -296,13 +297,19 @@ namespace Ludots.Core.Presentation.Minimap
 
         private static void SuppressCameraZoom(GameEngine engine, PlayerInputHandler input)
         {
-            string? zoomActionId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveDefinition?.ZoomActionId;
-            if (!string.IsNullOrWhiteSpace(zoomActionId))
+            if (engine.GetService(CoreServiceKeys.InputActionAttributeBindingRegistry) is not InputActionAttributeBindingRegistry registry)
             {
-                input.SuppressActionThisFrame(zoomActionId);
+                return;
             }
 
-            input.SuppressActionThisFrame(VirtualCameraDefinition.DefaultZoomActionId);
+            InputActionAttributeBindingEntry[] entries = registry.Entries;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].SuppressOnUiWheelCaptured)
+                {
+                    input.SuppressActionThisFrame(entries[i].ActionId);
+                }
+            }
         }
 
         private bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity commandSourcePrimary)

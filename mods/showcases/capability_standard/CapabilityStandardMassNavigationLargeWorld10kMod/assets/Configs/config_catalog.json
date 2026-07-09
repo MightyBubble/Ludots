@@ -1,1 +1,5 @@
-[]
+[
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Input/command_intent_profiles.json", "Policy": "DeepObject" },
+  { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" }
+]

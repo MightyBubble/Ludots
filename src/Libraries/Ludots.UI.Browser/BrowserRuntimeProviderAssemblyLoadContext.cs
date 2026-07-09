@@ -11,19 +11,25 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 {
 	private readonly AssemblyDependencyResolver _dependencyResolver;
 	private readonly Dictionary<string, Assembly> _sharedAssemblies;
-	private readonly string[] _processSharedAssemblyNamePrefixes;
+	private readonly string _runtimeRootPath;
+	private readonly string[] _defaultLoadContextAssemblyNamePrefixes;
 
 	public BrowserRuntimeProviderAssemblyLoadContext(
 		string name,
 		string providerAssemblyPath,
 		IEnumerable<Assembly> sharedAssemblies,
-		IEnumerable<string>? processSharedAssemblyNamePrefixes = null,
+		string runtimeRootPath,
+		IEnumerable<string>? defaultLoadContextAssemblyNamePrefixes = null,
 		bool isCollectible = true)
 		: base(name, isCollectible)
 	{
 		if (string.IsNullOrWhiteSpace(providerAssemblyPath))
 		{
 			throw new ArgumentException("Provider assembly path is required.", nameof(providerAssemblyPath));
+		}
+		if (string.IsNullOrWhiteSpace(runtimeRootPath))
+		{
+			throw new ArgumentException("Runtime root path is required.", nameof(runtimeRootPath));
 		}
 
 		string fullProviderAssemblyPath = Path.GetFullPath(providerAssemblyPath);
@@ -33,6 +39,7 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 		}
 
 		_dependencyResolver = new AssemblyDependencyResolver(fullProviderAssemblyPath);
+		_runtimeRootPath = Path.GetFullPath(runtimeRootPath);
 		_sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
 		foreach (Assembly assembly in sharedAssemblies)
 		{
@@ -43,11 +50,16 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 			}
 		}
 
-		_processSharedAssemblyNamePrefixes = processSharedAssemblyNamePrefixes?
+		_defaultLoadContextAssemblyNamePrefixes = (defaultLoadContextAssemblyNamePrefixes ?? Array.Empty<string>())
 			.Where(prefix => !string.IsNullOrWhiteSpace(prefix))
 			.Select(prefix => prefix.Trim())
-			.ToArray()
-			?? Array.Empty<string>();
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToArray();
+		if (_defaultLoadContextAssemblyNamePrefixes.Length > 0)
+		{
+			AssemblyLoadContext.Default.Resolving += ResolveDefaultLoadContextAssembly;
+			Unloading += _ => ReleaseDefaultLoadContextAssemblyResolver();
+		}
 	}
 
 	protected override Assembly? Load(AssemblyName assemblyName)
@@ -58,12 +70,12 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 			return sharedAssembly;
 		}
 
-		string? assemblyPath = _dependencyResolver.ResolveAssemblyToPath(assemblyName);
-		if (ShouldShareWithProcess(assemblyName.Name))
+		if (ShouldLoadFromDefaultContext(assemblyName.Name))
 		{
-			return ResolveProcessSharedAssembly(assemblyName, assemblyPath);
+			return LoadDefaultContextAssemblyFromRuntimeRoot(assemblyName);
 		}
 
+		string? assemblyPath = _dependencyResolver.ResolveAssemblyToPath(assemblyName);
 		return string.IsNullOrWhiteSpace(assemblyPath)
 			? null
 			: LoadFromAssemblyPath(assemblyPath);
@@ -77,35 +89,48 @@ internal sealed class BrowserRuntimeProviderAssemblyLoadContext : AssemblyLoadCo
 			: LoadUnmanagedDllFromPath(unmanagedDllPath);
 	}
 
-	private bool ShouldShareWithProcess(string? assemblyName)
+	private bool ShouldLoadFromDefaultContext(string? assemblyName)
 	{
-		if (string.IsNullOrWhiteSpace(assemblyName))
-		{
-			return false;
-		}
-
-		for (int i = 0; i < _processSharedAssemblyNamePrefixes.Length; i++)
-		{
-			if (assemblyName.StartsWith(_processSharedAssemblyNamePrefixes[i], StringComparison.OrdinalIgnoreCase))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return !string.IsNullOrWhiteSpace(assemblyName) &&
+			_defaultLoadContextAssemblyNamePrefixes.Any(prefix =>
+				assemblyName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 	}
 
-	private static Assembly? ResolveProcessSharedAssembly(AssemblyName assemblyName, string? assemblyPath)
+	private Assembly? LoadDefaultContextAssemblyFromRuntimeRoot(AssemblyName assemblyName)
 	{
-		Assembly? loaded = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
+		Assembly? loadedAssembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
 			AssemblyName.ReferenceMatchesDefinition(candidate.GetName(), assemblyName));
-		if (loaded != null)
+		if (loadedAssembly != null)
 		{
-			return loaded;
+			return loadedAssembly;
 		}
 
-		return string.IsNullOrWhiteSpace(assemblyPath)
-			? null
-			: AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath);
+		string? simpleName = assemblyName.Name;
+		if (string.IsNullOrWhiteSpace(simpleName))
+		{
+			return null;
+		}
+
+		string assemblyPath = Path.Combine(_runtimeRootPath, $"{simpleName}.dll");
+		return File.Exists(assemblyPath)
+			? AssemblyLoadContext.Default.LoadFromAssemblyPath(assemblyPath)
+			: null;
+	}
+
+	private Assembly? ResolveDefaultLoadContextAssembly(AssemblyLoadContext context, AssemblyName assemblyName)
+	{
+		return ReferenceEquals(context, AssemblyLoadContext.Default) && ShouldLoadFromDefaultContext(assemblyName.Name)
+			? LoadDefaultContextAssemblyFromRuntimeRoot(assemblyName)
+			: null;
+	}
+
+	public void ReleaseDefaultLoadContextAssemblyResolver()
+	{
+		if (_defaultLoadContextAssemblyNamePrefixes.Length == 0)
+		{
+			return;
+		}
+
+		AssemblyLoadContext.Default.Resolving -= ResolveDefaultLoadContextAssembly;
 	}
 }

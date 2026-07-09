@@ -5,6 +5,15 @@
     "capability_standard_participant_views",
     "capability.participant_view"
   ],
+  "DefaultCamera": {
+    "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "TargetXCm": 250,
+    "TargetYCm": 350,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 12000,
+    "FovYDeg": 55
+  },
   "Metadata": {
     "participantViewKnowledge": {
       "Projections": [],

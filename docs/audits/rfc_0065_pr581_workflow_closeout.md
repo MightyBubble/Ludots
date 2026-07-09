@@ -6,9 +6,9 @@
 > `OrderSelectionReference`, `SelectionRequest`, and `SelectionResponse` are retired; `EntityCollectionStore`
 > / `collection.command.source` is the authoritative model.
 
-Date: 2026-07-09
+Date: 2026-07-10
 
-Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, PR head `2417820e9`, `docs/audits/rfc-0065-implementation-handoff.md`, and `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`.
+Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, current branch head `784fd2fd4` before this merge closeout, local merge head `64c3d51a`, `docs/audits/rfc-0065-implementation-handoff.md`, and `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`.
 
 ## Executive Status
 
@@ -22,6 +22,61 @@ Plain-language boundary: the ground `Command` path now follows the new model. Sk
 | Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable world-space timelines with visible units, rings, and state changes. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
 | Is Selection retired? | Yes for formal Selection APIs and core command authority | Production and test code now use `EntityCollectionStore`, explicit owner/key collection reads, and `CommandSourceAcquisitionSystem`. `EntityCollectionContextRuntime` is intentionally collection-generic and does not hard-code or fall back to command-source. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
 | Is the full RFC-0065 semantic layering solved? | No | `Command` actions use `CommandIntentArbiter` / `CommandIntentProfile` / dispatch / `OrderQueue`. Skill/cast target source fallback is removed and guarded, but skill/cast activation still uses `InteractionModeType`, `_isAiming`, and SmartCast/AimCast branches in `InputOrderMappingSystem`. This is the C2 migration tail, not a completed terminal architecture. |
+
+## 2026-07-10 Mainline Merge Closeout
+
+This pass resolves the local `main` merge in the PR581 clean worktree and rechecks the user-visible and architecture-sensitive slices that were touched by the conflict resolution.
+
+Important boundary decisions:
+
+- MassNavigation core remains an execution domain. It does not read Selection, command-source collections, interaction context, or input mapping services. Formation and 10k MassNavigation showcases sync their own command-source collections into `MassNavigationSimulationRuntime.SetCommandActorSnapshot(...)` at the showcase boundary.
+- ViewMode no longer defaults to SmartCast in code. Each view mode must declare `InteractionMode`; missing or invalid values fail fast instead of silently preserving an old mode.
+- Raylib browser runtime installation no longer hard-codes provider-private `CefSharp` strings; provider shared assembly prefixes come from launcher config.
+- Narrative acceptance diagnostics no longer reference formal Selection drag/state APIs.
+
+Verification:
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~BrowserUiRuntimePrReviewTests|FullyQualifiedName~ViewModeManagerContractTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~InteractionSelectionConvergenceTests|FullyQualifiedName~CommandActorMovePathPresentationSystemTests|FullyQualifiedName~ArchitectureGuardTests|FullyQualifiedName~Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests|FullyQualifiedName~NarrativeShowcasePlayableAcceptanceTests|FullyQualifiedName~RelationshipCoreTests" --logger "trx;LogFileName=pr581-gas-focus2.trx" -v:q -clp:ErrorsOnly
+
+Passed: 122/122
+```
+
+```text
+dotnet test src/Tests/PresentationTests/PresentationTests.csproj --no-restore --filter "FullyQualifiedName~CapabilityStandardMassNavigationLargeWorld10kProductionPathTests|FullyQualifiedName~FormationCapabilityShowcaseContractTests|FullyQualifiedName~MassNavigationFlowSolverStateConfigurationTests|FullyQualifiedName~MassNavigationPerformerContractTests|FullyQualifiedName~PerformerTreeLifecycleTests" --logger "trx;LogFileName=pr581-presentation-focus2.trx" -v:q -clp:ErrorsOnly
+
+Passed: 118/118
+```
+
+```text
+dotnet test src/Tests/RaylibAdapterTests/RaylibAdapterTests.csproj --no-restore --filter "FullyQualifiedName~BrowserRuntimeProviderLoaderTests" -v:q -clp:ErrorsOnly
+
+Passed: 13/13
+```
+
+```text
+dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --no-restore --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests|FullyQualifiedName~LauncherBootstrapContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 29/29
+```
+
+```text
+rg -n -F -e 'SelectionRuntime' -e 'SelectionSetKeys' -e 'SelectionViewKeys' -e 'SelectionContextRuntime' -e 'SelectionViewRuntime' -e 'SelectionControlGroupRuntime' -e 'SelectionRequest' -e 'SelectionResponse' -e 'OrderSelectionReference' -e 'SelectedEntityProvider' -e 'SetSelectedEntityProvider' -e 'CurrentSelection' -e 'SelectionGate' -e 'SelectionBox' src mods assets --glob '!**/bin/**' --glob '!**/obj/**'
+
+No matches.
+```
+
+```text
+rg -n -F -e 'EntityCollectionStore' -e 'EntityCollectionKeys.CommandSource' -e '"collection.command.source"' -e 'EntityCollectionContextRuntime' -e 'InteractionContextStack' -e 'CommandSourceAcquisition' -e 'InputOrderMappingSystem' -e 'MassNavigationLocalCommandInputSystem' src/Core/MassNavigation
+
+No matches.
+```
+
+```text
+git diff --check
+
+Passed.
+```
 
 ## RFC-0065 Semantic Layering Status
 
@@ -649,6 +704,8 @@ Current status: discovery complete; broad migrations intentionally not performed
 | C4 INT-8, M10, DOC-1 | Deferred by design | Tag/stance knowledge-fact projection is new infrastructure; replay acceptance needs a replay harness; gitbook rewrite waits for RFC acceptance. |
 
 Selection double-check result: formal Selection APIs are retired repo-wide in the current closeout pass. Local source audit must stay clean for `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionViewRuntime`, `SelectionControlGroupRuntime`, `SelectionRequest`, `SelectionResponse`, `OrderSelectionReference`, and related formal-service globals. The RFC-0065 ground `Command` route and MassNavigation core boundary remain Selection-free command-authority slices.
+
+2026-07-10 recheck: the formal Selection token scan is still clean. MassNavigation core also has no command-source/input/interaction authority reads; command actor snapshots are fed from showcase/adaptor boundaries.
 
 Workflow C source blockers rechecked on 2026-07-07:
 

@@ -905,9 +905,31 @@ public sealed class LauncherService
             runtime.ProviderProjectPath = ResolveRepoRelativePath(provider.ProjectPath);
         }
 
-        if (!string.IsNullOrWhiteSpace(provider.AssemblyPath))
+        string packageRootPath = ResolveProviderPackageRootPath(provider);
+        string providerAssemblyPath = ResolveProviderAssemblyPath(provider, packageRootPath);
+
+        if (string.IsNullOrWhiteSpace(runtime.ProviderAssemblyPath))
         {
-            runtime.ProviderAssemblyPath = ResolveRepoRelativePath(provider.AssemblyPath);
+            runtime.ProviderAssemblyPath = providerAssemblyPath;
+        }
+        else
+        {
+            EnsureSamePath(
+                ResolveRepoRelativePath(runtime.ProviderAssemblyPath),
+                providerAssemblyPath,
+                "browserRuntime.providerAssemblyPath");
+        }
+
+        if (string.IsNullOrWhiteSpace(runtime.RuntimeRootPath))
+        {
+            runtime.RuntimeRootPath = packageRootPath;
+        }
+        else
+        {
+            EnsureSamePath(
+                ResolveRepoRelativePath(runtime.RuntimeRootPath),
+                packageRootPath,
+                "browserRuntime.runtimeRootPath");
         }
 
         if (!string.IsNullOrWhiteSpace(provider.HostTypeName))
@@ -934,6 +956,46 @@ public sealed class LauncherService
             .ToArray();
 
         return runtime;
+    }
+
+    private string ResolveProviderPackageRootPath(LauncherBrowserRuntimeProvider provider)
+    {
+        if (string.IsNullOrWhiteSpace(provider.PackageRootPath))
+        {
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{provider.Id}' must declare packageRootPath in launcher.config.json.");
+        }
+
+        return ResolveRepoRelativePath(provider.PackageRootPath);
+    }
+
+    private string ResolveProviderAssemblyPath(
+        LauncherBrowserRuntimeProvider provider,
+        string packageRootPath)
+    {
+        if (string.IsNullOrWhiteSpace(provider.AssemblyPath))
+        {
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{provider.Id}' must declare assemblyPath in launcher.config.json.");
+        }
+
+        string providerAssemblyPath = ResolveRepoRelativePath(provider.AssemblyPath);
+        if (!IsSameOrChildPath(packageRootPath, providerAssemblyPath))
+        {
+            throw new InvalidOperationException(
+                $"browserRuntime provider '{provider.Id}' assemblyPath must be inside packageRootPath.");
+        }
+
+        return providerAssemblyPath;
+    }
+
+    private void EnsureSamePath(string configuredPath, string expectedPath, string configKey)
+    {
+        if (!PathsEqual(configuredPath, expectedPath))
+        {
+            throw new InvalidOperationException(
+                $"{configKey} must be derived from the selected browserRuntime provider package root.");
+        }
     }
 
     private static BrowserRuntimeConfig CloneBrowserRuntimeConfig(BrowserRuntimeConfig source)
@@ -1436,9 +1498,21 @@ public sealed class LauncherService
             };
         }
 
+        if (string.IsNullOrWhiteSpace(browserRuntime.RuntimeRootPath))
+        {
+            return new[]
+            {
+                new LauncherBuildResult(
+                    resultId,
+                    false,
+                    1,
+                    "browserRuntime.runtimeRootPath is required for a host-owned browser runtime provider.")
+            };
+        }
+
         if (string.IsNullOrWhiteSpace(browserRuntime.ProviderProjectPath))
         {
-            bool exists = File.Exists(browserRuntime.ProviderAssemblyPath);
+            bool exists = ValidateBrowserRuntimePackage(browserRuntime, out string validationMessage);
             return new[]
             {
                 new LauncherBuildResult(
@@ -1446,14 +1520,14 @@ public sealed class LauncherService
                     exists,
                     exists ? 0 : 1,
                     exists
-                        ? $"Host browser runtime provider assembly already exists: {browserRuntime.ProviderAssemblyPath}"
-                        : $"Host browser runtime provider assembly is missing: {browserRuntime.ProviderAssemblyPath}")
+                        ? $"Host browser runtime provider package already exists: {browserRuntime.RuntimeRootPath}"
+                        : validationMessage)
             };
         }
 
         ct.ThrowIfCancellationRequested();
         if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            File.Exists(browserRuntime.ProviderAssemblyPath))
+            ValidateBrowserRuntimePackage(browserRuntime, out _))
         {
             return new[]
             {
@@ -1467,23 +1541,65 @@ public sealed class LauncherService
 
         string projectDirectory = Path.GetDirectoryName(browserRuntime.ProviderProjectPath) ?? _repoRoot;
         var output = new StringBuilder();
-        var build = await RunDotnetAsync(
-            $"build \"{browserRuntime.ProviderProjectPath}\" -c Release",
+        Directory.CreateDirectory(browserRuntime.RuntimeRootPath);
+        var publish = await RunDotnetAsync(
+            $"publish \"{browserRuntime.ProviderProjectPath}\" -c Release -o \"{browserRuntime.RuntimeRootPath}\" --self-contained false /p:GenerateRuntimeConfigurationFiles=false -nologo -v:m",
             projectDirectory,
             timeoutMs: 300_000);
-        output.AppendLine(build.Output);
-        if (build.ExitCode != 0)
+        output.AppendLine(publish.Output);
+        if (publish.ExitCode != 0)
         {
-            return new[] { new LauncherBuildResult(resultId, false, build.ExitCode, output.ToString()) };
+            return new[] { new LauncherBuildResult(resultId, false, publish.ExitCode, output.ToString()) };
         }
 
-        if (!File.Exists(browserRuntime.ProviderAssemblyPath))
+        if (!ValidateBrowserRuntimePackage(browserRuntime, out string packageValidationMessage))
         {
-            output.AppendLine($"Host browser runtime provider assembly missing after build: {browserRuntime.ProviderAssemblyPath}");
+            output.AppendLine(packageValidationMessage);
             return new[] { new LauncherBuildResult(resultId, false, 1, output.ToString()) };
         }
 
         return new[] { new LauncherBuildResult(resultId, true, 0, output.ToString()) };
+    }
+
+    private static bool ValidateBrowserRuntimePackage(BrowserRuntimeConfig browserRuntime, out string message)
+    {
+        if (!File.Exists(browserRuntime.ProviderAssemblyPath))
+        {
+            message = $"Host browser runtime provider assembly is missing: {browserRuntime.ProviderAssemblyPath}";
+            return false;
+        }
+
+        if (!Directory.Exists(browserRuntime.RuntimeRootPath))
+        {
+            message = $"Host browser runtime package root is missing: {browserRuntime.RuntimeRootPath}";
+            return false;
+        }
+
+        if (string.Equals(browserRuntime.Provider, "cef", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] requiredFiles =
+            {
+                "Ludots.UI.Browser.Cef.deps.json",
+                "CefSharp.Core.Runtime.dll",
+                "libcef.dll",
+                "resources.pak",
+                "icudtl.dat",
+                Path.Combine("locales", "en-US.pak")
+            };
+
+            foreach (string file in requiredFiles)
+            {
+                string path = Path.Combine(browserRuntime.RuntimeRootPath, file);
+                if (!File.Exists(path))
+                {
+                    message = $"CEF browser runtime package is incomplete. Missing: {path}";
+                    return false;
+                }
+            }
+        }
+
+        message = string.Empty;
+        return true;
     }
 
     private async Task<IReadOnlyList<LauncherBuildResult>> BuildPlannedModsAsync(
@@ -2005,6 +2121,16 @@ public sealed class LauncherService
     private static bool PathsEqual(string left, string right)
     {
         return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameOrChildPath(string parentPath, string candidatePath)
+    {
+        string normalizedParent = Path.TrimEndingDirectorySeparator(Path.GetFullPath(parentPath));
+        string normalizedCandidate = Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidatePath));
+        return string.Equals(normalizedParent, normalizedCandidate, StringComparison.OrdinalIgnoreCase) ||
+            normalizedCandidate.StartsWith(
+                normalizedParent + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
     }
 
     private static string CreateStableId(string prefix, string raw)

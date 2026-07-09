@@ -86,6 +86,77 @@ namespace GasTests
         }
 
         [Test]
+        public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods"),
+                Path.Combine(repoRoot, "docs", "architecture"),
+                Path.Combine(repoRoot, "gitbook", "architecture")
+            };
+            string[] forbidden =
+            {
+                "Narrative.Quest",
+                "Narrative.Signal",
+                "NarrativeEventKeys.Quest",
+                "NarrativeEventKeys.Signal",
+                "NarrativeServiceKeys.Quest",
+                "NarrativeServiceKeys.Signal"
+            };
+
+            var hits = new List<string>();
+            foreach (string dir in directories)
+            {
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
+                    .Where(path =>
+                        path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                        path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+                {
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Quest public protocol must use QuestEventKeys / QuestServiceKeys, not Narrative keys:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void CoreInput_ViewModeSwitchSystem_DoesNotRenderPersistentHud()
+        {
+            var repoRoot = FindRepoRoot();
+            string file = Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "ViewModeSwitchSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing {ToRepoRelativePath(repoRoot, file)}");
+
+            string[] forbidden =
+            {
+                "ScreenOverlayBuffer",
+                "RenderModeHud",
+                "ViewMode:"
+            };
+
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "CoreInput view mode switching is gameplay input state. It must not render persistent debug HUD text into the top-left screen overlay:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue200_KnowledgeProjectionConsumers_DoNotTraverseRelationGrantedCollectionsOutsideCoreResolver()
         {
             var repoRoot = FindRepoRoot();

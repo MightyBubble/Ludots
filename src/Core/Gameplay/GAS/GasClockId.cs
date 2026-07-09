@@ -4,6 +4,6 @@ namespace Ludots.Core.Gameplay.GAS
     {
         FixedFrame = 0,
         Step = 1,
-        Turn = 2
+        EntityLocal = 2
     }
 }

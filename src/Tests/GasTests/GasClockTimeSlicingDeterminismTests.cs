@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
                 pacemaker.Update(Time.FixedDeltaTime, sim, timeBudgetMs, maxSlicesPerLogicFrame);
                 while (CountCompletedFixedSteps(fixedTotalStart) == stepsBefore)
                 {
-                    pacemaker.Update(0f, sim, timeBudgetMs, maxSlicesPerLogicFrame);
+                    pacemaker.Update(float.Epsilon, sim, timeBudgetMs, maxSlicesPerLogicFrame);
                 }
             }
 
@@ -203,4 +203,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

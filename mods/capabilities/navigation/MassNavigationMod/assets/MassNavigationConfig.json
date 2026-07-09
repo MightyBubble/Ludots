@@ -135,15 +135,15 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialCommandActorScratchCapacity": 256,
-    "initialCommandActorSnapshotCapacity": 128,
+    "initialCommandActorScratchCapacity": 10000,
+    "initialCommandActorSnapshotCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
-      "commandActorScratchCapacity": 256,
-      "groupMemberCapacity": 256,
+      "groupMemberCapacity": 10000,
+      "commandActorScratchCapacity": 10000,
       "orderIngestionTokenCapacity": 256,
-      "orderIngestionMemberCapacity": 256,
+      "orderIngestionMemberCapacity": 10000,
       "loadedChunkCapacity": 256,
       "metadataTeamCapacity": 4
     }
@@ -313,6 +313,8 @@
       "flowObstacleNeighborRadiusCells": 4,
       "flowObstacleNeighborWeight": 5,
       "flowObstacleAvoidanceWeight": 1.5,
+      "crowdStampCenterCost": 8,
+      "crowdStampNeighborCost": 3,
       "coincidentPairHashBucketCount": 1024,
       "coincidentPairHashPrimeA": 73856093,
       "coincidentPairHashPrimeB": 19349663

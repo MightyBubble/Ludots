@@ -2,14 +2,10 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
     internal sealed class KeyRotateBehavior : ICameraBehavior
     {
-        private readonly string _rotateLeftActionId;
-        private readonly string _rotateRightActionId;
         private readonly float _degPerSecond;
 
-        public KeyRotateBehavior(string rotateLeftActionId, string rotateRightActionId, float degPerSecond)
+        public KeyRotateBehavior(float degPerSecond)
         {
-            _rotateLeftActionId = rotateLeftActionId ?? "RotateLeft";
-            _rotateRightActionId = rotateRightActionId ?? "RotateRight";
             _degPerSecond = degPerSecond;
         }
 
@@ -17,8 +13,8 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         {
             if (dt <= 0f) return;
 
-            bool left = ctx.Input.ReadAction<bool>(_rotateLeftActionId);
-            bool right = ctx.Input.ReadAction<bool>(_rotateRightActionId);
+            bool left = ctx.BehaviorInput.RotateLeft;
+            bool right = ctx.BehaviorInput.RotateRight;
             float dir = (right ? 1f : 0f) - (left ? 1f : 0f);
             if (dir == 0f) return;
 

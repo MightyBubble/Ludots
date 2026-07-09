@@ -177,26 +177,44 @@ namespace Ludots.Core.Gameplay.Camera
                 WorldUnits.CmToM(state.TargetHeightCm),
                 WorldUnits.CmToM(state.TargetCm.Y));
 
+            float yawDeg = state.Yaw + state.ImpulseYawOffsetDeg;
+            float pitchDeg = state.Pitch + state.ImpulsePitchOffsetDeg;
             float distanceM = WorldUnits.CmToM(state.DistanceCm);
             if (cameraDebug is { Enabled: true })
             {
                 distanceM += cameraDebug.PullBackMeters;
             }
 
-            Vector3 offset = WorldPlane2D.VisualCameraTargetToCameraOffset(state.Yaw, state.Pitch, distanceM);
-            Vector3 desiredPos = targetPos + offset;
+            Vector3 targetToCameraOffset = WorldPlane2D.VisualCameraTargetToCameraOffset(yawDeg, pitchDeg, distanceM);
+            Vector3 desiredPos = targetPos + targetToCameraOffset;
+            bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
+            Vector3 basisForward = firstPerson
+                ? WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(yawDeg, pitchDeg)
+                : Vector3.Normalize(targetPos - desiredPos);
+
+            Vector3 pivotOffset = ResolveCameraLocalOffsetMeters(state.RigPivotOffsetCm, basisForward);
+            targetPos += pivotOffset;
+
+            Vector3 socketOffset = ResolveCameraLocalOffsetMeters(state.RigCameraOffsetCm, basisForward);
+            Vector3 impulseOffset = new(
+                WorldUnits.CmToM(state.ImpulsePositionOffsetCm.X),
+                WorldUnits.CmToM(state.ImpulsePositionOffsetCm.Y),
+                WorldUnits.CmToM(state.ImpulsePositionOffsetCm.Z));
+
+            desiredPos = firstPerson
+                ? targetPos + socketOffset + impulseOffset
+                : targetPos + targetToCameraOffset + socketOffset + impulseOffset;
+
             if (cameraDebug is { Enabled: true })
             {
                 desiredPos += cameraDebug.PositionOffsetMeters;
             }
 
-            bool firstPerson = state.RigKind == CameraRigKind.FirstPerson || Vector3.DistanceSquared(targetPos, desiredPos) < 0.000001f;
             Vector3 lookTarget = targetPos;
             Vector3 forward;
             if (firstPerson)
             {
-                desiredPos = targetPos;
-                forward = WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(state.Yaw, state.Pitch);
+                forward = WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(yawDeg, pitchDeg);
                 lookTarget = desiredPos + forward;
             }
             else
@@ -209,6 +227,38 @@ namespace Ludots.Core.Gameplay.Camera
                 up = Vector3.UnitZ;
 
             return new CameraRenderState3D(desiredPos, lookTarget, up, state.FovYDeg);
+        }
+
+        private static Vector3 ResolveCameraLocalOffsetMeters(Vector3 localOffsetCm, Vector3 viewForward)
+        {
+            if (localOffsetCm == Vector3.Zero)
+            {
+                return Vector3.Zero;
+            }
+
+            Vector3 planarForward = new(viewForward.X, 0f, viewForward.Z);
+            if (planarForward.LengthSquared() <= 0.000001f || !float.IsFinite(planarForward.LengthSquared()))
+            {
+                planarForward = Vector3.UnitZ;
+            }
+            else
+            {
+                planarForward = Vector3.Normalize(planarForward);
+            }
+
+            Vector3 right = Vector3.Cross(planarForward, Vector3.UnitY);
+            if (right.LengthSquared() <= 0.000001f || !float.IsFinite(right.LengthSquared()))
+            {
+                right = Vector3.UnitX;
+            }
+            else
+            {
+                right = Vector3.Normalize(right);
+            }
+
+            return (right * WorldUnits.CmToM(localOffsetCm.X)) +
+                   (Vector3.UnitY * WorldUnits.CmToM(localOffsetCm.Y)) +
+                   (planarForward * WorldUnits.CmToM(localOffsetCm.Z));
         }
     }
 }

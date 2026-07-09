@@ -53,6 +53,8 @@ namespace Ludots.Core.Engine.Pacemaker
 
         public void Update(float dt, ISystem<float> simulationGroup)
         {
+            if (dt <= 0f) return;
+
             _accumulator += dt;
             while (_accumulator >= Time.FixedDeltaTime)
             {
@@ -65,6 +67,8 @@ namespace Ludots.Core.Engine.Pacemaker
         public void Update(float dt, ICooperativeSimulation cooperativeSimulation, int timeBudgetMs, int maxSlicesPerLogicFrame)
         {
             if (_budgetFused) return;
+            if (dt <= 0f) return;
+
             _accumulator += dt;
             if (timeBudgetMs <= 0) timeBudgetMs = 1;
             if (maxSlicesPerLogicFrame <= 0) maxSlicesPerLogicFrame = 1;
@@ -142,6 +146,8 @@ namespace Ludots.Core.Engine.Pacemaker
 
         public void Update(float dt, ISystem<float> simulationGroup)
         {
+            if (dt <= 0f) return;
+
             while (_stepsToRun > 0)
             {
                 simulationGroup.Update(Time.FixedDeltaTime);
@@ -153,6 +159,8 @@ namespace Ludots.Core.Engine.Pacemaker
         public void Update(float dt, ICooperativeSimulation cooperativeSimulation, int timeBudgetMs, int maxSlicesPerLogicFrame)
         {
             if (_budgetFused) return;
+            if (dt <= 0f) return;
+
             while (_stepsToRun > 0)
             {
                 int budget = timeBudgetMs <= 0 ? int.MaxValue : timeBudgetMs;

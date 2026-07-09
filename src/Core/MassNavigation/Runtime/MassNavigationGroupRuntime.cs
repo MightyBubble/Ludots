@@ -25,6 +25,13 @@ public sealed class MassNavigationGroupRuntime
     private readonly int _groupMemberCapacity;
 
     public MassNavigationGroupRuntime(
+        MassNavigationGroupSemantics groupSemantics,
+        MassNavigationRuntimeCapacityConfig capacity)
+        : this(new MassNavigationFormationRuntime(groupSemantics), capacity)
+    {
+    }
+
+    public MassNavigationGroupRuntime(
         MassNavigationFormationRuntime formationLayout,
         MassNavigationRuntimeCapacityConfig capacity)
     {

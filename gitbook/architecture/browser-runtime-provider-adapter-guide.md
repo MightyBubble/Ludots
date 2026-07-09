@@ -29,11 +29,14 @@ Adapters do not add a parallel provider registry, a second browser runtime servi
 2. If `enabled=false` and `required=true`, fail fast.
 3. If `enabled=true`, require a known provider id. Today the built-in compatibility provider id is `cef`.
 4. Resolve `providerAssemblyPath` relative to the host base directory when it is not rooted.
-5. Verify the provider assembly exists. Missing provider assemblies fail fast.
-6. Call `BrowserRuntimeProviderLoader.Install(...)` from the host composition root before gameplay/session code consumes browser services.
-7. Keep `Ludots.UI.Browser` contracts in the host ALC. The provider ALC must share those contract assemblies so `handle.Runtime is IBrowserRuntime` is true in the host.
-8. Store the returned `IBrowserRuntime` in the host/global service dictionary through the loader-owned path.
-9. Store or preserve the loader-provided `IBrowserRuntimeHostLifecycle` service for terminal host exit.
+5. Resolve `runtimeRootPath` relative to the host base directory when it is not rooted. For provider-loader installs it is required and must be the provider package root or a child of that package.
+6. Verify the provider assembly exists. Missing provider assemblies fail fast.
+7. Call `BrowserRuntimeProviderLoader.Install(...)` from the host composition root before gameplay/session code consumes browser services.
+8. Keep `Ludots.UI.Browser` contracts in the host ALC. The provider ALC must share those contract assemblies so `handle.Runtime is IBrowserRuntime` is true in the host.
+9. Store the returned `IBrowserRuntime` in the host/global service dictionary through the loader-owned path.
+10. Store or preserve the loader-provided `IBrowserRuntimeHostLifecycle` service for terminal host exit.
+
+The CEF provider preflights its own runtime package before touching CefSharp process state. Missing managed CefSharp assemblies, browser subprocess files, Chromium resource packs, native CEF/D3D/Vulkan libraries, `libcef.dll`, `resources.pak`, `icudtl.dat`, or `locales/en-US.pak` fail with one Ludots error listing every missing path. Hosts should pass `runtimeRootPath` as the provider package root and should not duplicate this provider-private native layout check.
 
 Minimal shape:
 
@@ -108,6 +111,9 @@ Do not:
 Before an adapter change is accepted:
 
 - Missing provider assembly fails fast with no fallback.
+- Missing `runtimeRootPath` fails fast instead of falling back to provider `Assembly.Location`.
+- `runtimeRootPath` outside the provider package fails fast instead of bypassing shadow-copy ownership.
+- Incomplete CEF runtime roots fail before CEF initialization and list every missing required path.
 - The returned runtime is assignable to the host `IBrowserRuntime`.
 - Provider private dependencies resolve from the shadow-copied provider package.
 - Changing a provider-private DLL/native file creates a new shadow-copy cache entry.

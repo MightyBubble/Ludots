@@ -36,9 +36,19 @@ namespace CameraBootstrapMod.Triggers
             }
 
             var engine = context.GetEngine();
-            if (engine == null || !TryResolveBounds(context, out var targetCm, out var distanceCm))
+            string mapId = context.TryGet(CoreServiceKeys.MapId, out var resolvedMapId)
+                ? resolvedMapId.Value
+                : "<unknown>";
+            if (engine == null)
             {
-                return Task.CompletedTask;
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' declared tag '{CenterBoundsTag}', but GameEngine is not available.");
+            }
+
+            if (!TryResolveBounds(context, out var targetCm, out var distanceCm))
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' declared tag '{CenterBoundsTag}', but camera bootstrap bounds could not be resolved.");
             }
 
             engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
@@ -89,8 +99,7 @@ namespace CameraBootstrapMod.Triggers
             distanceCm = 0f;
 
             var world = context.GetWorld();
-            var mapId = context.Get(CoreServiceKeys.MapId);
-            if (world == null || mapId == null)
+            if (world == null || !context.TryGet(CoreServiceKeys.MapId, out var mapId))
             {
                 return false;
             }

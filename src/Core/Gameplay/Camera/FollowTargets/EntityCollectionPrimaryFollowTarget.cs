@@ -40,5 +40,17 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
             positionCm = _world.Get<WorldPositionCm>(entity).Value.ToVector2();
             return true;
         }
+
+        public bool TryGetTransform(out CameraTargetTransformSnapshot transform)
+        {
+            if (TryGetPosition(out Vector2 positionCm))
+            {
+                transform = new CameraTargetTransformSnapshot(positionCm);
+                return true;
+            }
+
+            transform = default;
+            return false;
+        }
     }
 }
