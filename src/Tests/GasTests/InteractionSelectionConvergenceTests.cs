@@ -144,7 +144,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionCommand_FansOutAcrossLivePrimarySelection()
+        public void InputOrderMapping_PositionCommand_FansOutAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -155,6 +155,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         RequireTarget = true,
@@ -176,8 +177,9 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
             {
+                That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
@@ -199,7 +201,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossLivePrimarySelection()
+        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -216,6 +218,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         RequireTarget = true,
@@ -237,8 +240,9 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
             {
+                That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);
@@ -260,7 +264,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_StopCommand_FansOutAcrossLivePrimarySelection()
+        public void InputOrderMapping_StopCommand_FansOutAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -271,6 +275,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Stop",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "stop",
                         RequireTarget = false,
@@ -287,8 +292,9 @@ namespace Ludots.Tests.GAS
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
-            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
             {
+                That(collectionKey, Is.EqualTo("collection.test.actors"));
                 entities.Clear();
                 entities.Add(first);
                 entities.Add(second);

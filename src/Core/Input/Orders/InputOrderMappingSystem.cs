@@ -25,9 +25,9 @@ namespace Ludots.Core.Input.Orders
     public delegate bool ActorProvider(out Entity entity);
 
     /// <summary>
-    /// Delegate for resolving the local command-source collection owner.
+    /// Delegate for resolving the owner of the active actor collection.
     /// </summary>
-    public delegate bool CommandSourceOwnerProvider(out Entity owner);
+    public delegate bool ActiveActorCollectionOwnerProvider(out Entity owner);
 
     /// <summary>
     /// Delegate for resolving command-click target facts frozen for the current input mapping trigger.
@@ -211,7 +211,7 @@ namespace Ludots.Core.Input.Orders
         private CommandIntentProfileRegistry? _commandIntentProfiles;
         private CastDispatchProfileRegistry? _castDispatchProfiles;
         private EntityCollectionStore? _entityCollections;
-        private CommandSourceOwnerProvider? _commandSourceOwnerProvider;
+        private ActiveActorCollectionOwnerProvider? _activeActorCollectionOwnerProvider;
         private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
         
@@ -387,7 +387,7 @@ namespace Ludots.Core.Input.Orders
             CommandIntentProfileRegistry commandIntentProfiles,
             CastDispatchProfileRegistry castDispatchProfiles,
             EntityCollectionStore entityCollections,
-            CommandSourceOwnerProvider? commandSourceOwnerProvider = null)
+            ActiveActorCollectionOwnerProvider? activeActorCollectionOwnerProvider = null)
         {
             _commandIntentWorld = world ?? throw new ArgumentNullException(nameof(world));
             _interactionContextStack = stack ?? throw new ArgumentNullException(nameof(stack));
@@ -395,7 +395,7 @@ namespace Ludots.Core.Input.Orders
             _commandIntentProfiles = commandIntentProfiles ?? throw new ArgumentNullException(nameof(commandIntentProfiles));
             _castDispatchProfiles = castDispatchProfiles ?? throw new ArgumentNullException(nameof(castDispatchProfiles));
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
-            _commandSourceOwnerProvider = commandSourceOwnerProvider;
+            _activeActorCollectionOwnerProvider = activeActorCollectionOwnerProvider;
         }
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
@@ -1426,13 +1426,13 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            Entity commandSourceOwner = ResolveCommandSourceOwner();
-            if (commandSourceOwner == Entity.Null)
+            Entity actorCollectionOwner = ResolveActiveActorCollectionOwner();
+            if (actorCollectionOwner == Entity.Null)
             {
                 return false;
             }
 
-            if (!_entityCollections.TryGet(commandSourceOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
+            if (!_entityCollections.TryGet(actorCollectionOwner, frame.ActiveCollectionKeyId, out EntityCollectionHandle handle))
             {
                 return false;
             }
@@ -1450,7 +1450,7 @@ namespace Ludots.Core.Input.Orders
             _commandIntentProfiles.RouteGroup(
                 commandIntentProfileId,
                 actors,
-                commandSourceOwner,
+                actorCollectionOwner,
                 in targetFacts,
                 routes);
 
@@ -1543,11 +1543,11 @@ namespace Ludots.Core.Input.Orders
             return true;
         }
 
-        private Entity ResolveCommandSourceOwner()
+        private Entity ResolveActiveActorCollectionOwner()
         {
-            if (_commandSourceOwnerProvider != null)
+            if (_activeActorCollectionOwnerProvider != null)
             {
-                if (_commandSourceOwnerProvider(out Entity owner) &&
+                if (_activeActorCollectionOwnerProvider(out Entity owner) &&
                     owner != Entity.Null)
                 {
                     return owner;
@@ -1686,13 +1686,15 @@ namespace Ludots.Core.Input.Orders
             }
 
             if (_collectionPrimaryEntityProvider != null &&
+                !string.IsNullOrWhiteSpace(mapping.ActorCollectionKey) &&
                 _collectionPrimaryEntityProvider(mapping.ActorCollectionKey, out var primary) &&
                 primary != Entity.Null)
             {
                 return primary;
             }
 
-            if (TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch))
+            if (!string.IsNullOrWhiteSpace(mapping.ActorCollectionKey) &&
+                TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch))
             {
                 return _collectionActorsScratch[0];
             }
@@ -1721,7 +1723,9 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            if (!TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch) || _collectionActorsScratch.Count <= 1)
+            if (string.IsNullOrWhiteSpace(mapping.ActorCollectionKey) ||
+                !TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch) ||
+                _collectionActorsScratch.Count <= 1)
             {
                 _orderSubmitHandler!(in order);
                 return;

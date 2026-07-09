@@ -11,6 +11,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 
@@ -44,6 +45,9 @@ namespace CoreInputMod.Triggers
 
             var commandSourceAcquiredCallbacks = new List<Action<WorldCmInt2, Entity>>();
             engine.SetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, commandSourceAcquiredCallbacks);
+            engine.SetService(
+                CoreServiceKeys.MinimapFocusCollectionProvider,
+                (Ludots.Core.Presentation.Minimap.MinimapFocusCollectionProvider)TryResolveMinimapFocusCollection);
 
             _ = engine.GetService(CoreServiceKeys.InteractionActionBindings)
                 ?? throw new InvalidOperationException("InteractionActionBindings must be registered before CoreInputMod installs.");
@@ -101,6 +105,12 @@ namespace CoreInputMod.Triggers
 
             owner = local;
             return true;
+        }
+
+        private static bool TryResolveMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
+        {
+            collectionKey = EntityCollectionKeys.CommandSource;
+            return TryResolveLocalCommandSourceOwner(engine, out owner);
         }
 
         private void RegisterLoadedModViewModes(GameEngine engine)

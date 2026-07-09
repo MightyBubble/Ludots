@@ -461,6 +461,55 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputOrderMapping_DefaultsDoNotInjectCommandSourceCollection()
+        {
+            var mapping = new InputOrderMapping();
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(mapping.ActorCollectionKey, Is.EqualTo(string.Empty));
+                Assert.That(mapping.TargetCollectionKey, Is.EqualTo(string.Empty));
+            });
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_ActorRoutingRequiresExplicitActorCollection()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        ArgsTemplate = new OrderArgsTemplate(),
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "moveTo",
+                                    Match = new ActorOrderRoutingMatch(),
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+
+            Assert.That(ex!.Message, Does.Contain("actorCollectionKey"));
+            Assert.That(ex.Message, Does.Contain("explicitly"));
+        }
+
+        [Test]
         public void DoubleTapTrigger_SubmitsOnlyOnSecondPressWithinWindow()
         {
             var (backend, handler) = BuildHandler();
@@ -665,6 +714,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
@@ -698,8 +748,9 @@ namespace Ludots.Tests.GAS
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(), actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
+                Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(producer);
                 return true;
             });
@@ -739,6 +790,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
@@ -795,8 +847,9 @@ namespace Ludots.Tests.GAS
                 });
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, tagOps, actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
+                Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(producer);
                 list.Add(unitA);
                 list.Add(unitB);
@@ -836,6 +889,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
@@ -868,8 +922,9 @@ namespace Ludots.Tests.GAS
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(), actor, routing.Candidates, out matchedCandidate));
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
+                Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(unitA);
                 list.Add(unitB);
                 return true;
@@ -945,6 +1000,7 @@ namespace Ludots.Tests.GAS
                     new()
                     {
                         ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         ArgsTemplate = new OrderArgsTemplate(),
@@ -965,8 +1021,9 @@ namespace Ludots.Tests.GAS
             system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetCollectionEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((collectionKey, list) =>
             {
+                Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
                 list.Add(unitA);
                 list.Add(unitB);
                 return true;

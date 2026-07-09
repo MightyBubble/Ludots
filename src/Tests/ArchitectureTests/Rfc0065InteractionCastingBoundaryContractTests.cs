@@ -453,6 +453,36 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void MinimapCore_ConsumesNeutralFocusCollectionNotCommandSourceAuthority()
+        {
+            string repoRoot = FindRepoRoot();
+            string minimapRoot = Path.Combine(repoRoot, "src", "Core", "Presentation", "Minimap");
+            Assert.That(Directory.Exists(minimapRoot), Is.True, $"Missing {minimapRoot}");
+
+            string[] forbidden =
+            {
+                "Ludots.Core.Input.CommandSources",
+                "EntityCollectionKeys.CommandSource",
+                "\"collection.command.source\"",
+                "Command" + "Source" + "Owner" + "Provider",
+                "CenterOn" + "CommandSource" + "Primary"
+            };
+
+            var violations = new List<string>();
+            foreach (string file in Directory.EnumerateFiles(minimapRoot, "*.cs", SearchOption.AllDirectories))
+            {
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, violations);
+            }
+
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065: Minimap is presentation infrastructure. It may consume a caller-supplied focus collection, " +
+                "but it must not know whether that collection came from command source, selection, script, or UI:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
         public void InteractionShowcase_SeedsCommandSourceAuthorityDirectly()
         {
             string repoRoot = FindRepoRoot();

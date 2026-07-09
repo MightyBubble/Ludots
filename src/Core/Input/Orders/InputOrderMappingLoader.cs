@@ -155,8 +155,19 @@ namespace Ludots.Core.Input.Orders
                     ValidateActorOrderRouting(mapping.ActorOrderRouting, path);
                 }
 
-                ValidateCollectionKey(mapping.ActorCollectionKey, $"{path}.actorCollectionKey");
-                ValidateCollectionKey(mapping.TargetCollectionKey, $"{path}.targetCollectionKey");
+                ValidateOptionalCollectionKey(mapping.ActorCollectionKey, $"{path}.actorCollectionKey");
+                ValidateOptionalCollectionKey(mapping.TargetCollectionKey, $"{path}.targetCollectionKey");
+                if (RequiresActorCollection(mapping) && string.IsNullOrWhiteSpace(mapping.ActorCollectionKey))
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.actorCollectionKey must be configured explicitly when actor collection fan-out or routing is used.");
+                }
+
+                if (RequiresTargetCollection(mapping) && string.IsNullOrWhiteSpace(mapping.TargetCollectionKey))
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.targetCollectionKey must be configured explicitly when targetType requires collection target data.");
+                }
 
                 if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
                 {
@@ -224,8 +235,13 @@ namespace Ludots.Core.Input.Orders
             ValidateGroupMoveFormation(config.GroupMoveFormation, source);
         }
 
-        private static void ValidateCollectionKey(string key, string path)
+        private static void ValidateOptionalCollectionKey(string key, string path)
         {
+            if (string.IsNullOrEmpty(key))
+            {
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(key))
             {
                 throw new InvalidOperationException($"{path} must be a non-empty string.");
@@ -235,6 +251,21 @@ namespace Ludots.Core.Input.Orders
             {
                 throw new InvalidOperationException($"{path} must not contain leading or trailing whitespace.");
             }
+        }
+
+        private static bool RequiresActorCollection(InputOrderMapping mapping)
+        {
+            return mapping.ActorOrderRouting != null;
+        }
+
+        private static bool RequiresTargetCollection(InputOrderMapping mapping)
+        {
+            return mapping.TargetType == OrderTargetType.Entities ||
+                   (mapping.TargetType == OrderTargetType.Entity &&
+                    !mapping.IsSkillMapping &&
+                    mapping.RequireTarget &&
+                    mapping.AutoTargetPolicy == AutoTargetPolicy.None &&
+                    mapping.CursorTargetPolicy == AutoTargetPolicy.None);
         }
 
         private static void ValidateGroupMoveFormation(GroupMoveFormationSettings settings, string source)

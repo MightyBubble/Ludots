@@ -18,7 +18,7 @@
     { "id": "Minimap.ZoomIn", "name": "Minimap_ZoomIn", "type": "Button" },
     { "id": "Minimap.ZoomOut", "name": "Minimap_ZoomOut", "type": "Button" },
     { "id": "Minimap.Pan", "name": "Minimap_Pan", "type": "Axis2D" },
-    { "id": "Minimap.CenterOnCommandSourcePrimary", "name": "Minimap_CenterOnCommandSourcePrimary", "type": "Button" }
+    { "id": "Minimap.CenterOnFocusPrimary", "name": "Minimap_CenterOnFocusPrimary", "type": "Button" }
   ],
   "contexts": [
     {
@@ -55,7 +55,7 @@
             { "type": "Normalize" }
           ]
         },
-        { "actionId": "Minimap.CenterOnCommandSourcePrimary", "path": "<Keyboard>/home" }
+        { "actionId": "Minimap.CenterOnFocusPrimary", "path": "<Keyboard>/home" }
       ]
     }
   ]

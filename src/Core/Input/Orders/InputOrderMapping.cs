@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
-using Ludots.Core.EntityCollections;
-
 namespace Ludots.Core.Input.Orders
 {
     /// <summary>
@@ -345,14 +343,16 @@ namespace Ludots.Core.Input.Orders
         public bool RequireTarget { get; set; } = false;
 
         /// <summary>
-        /// Named entity collection supplying command actors for this mapping.
+        /// Optional named entity collection supplying actors for this mapping.
+        /// Leave empty when the caller supplies a single actor explicitly.
         /// </summary>
-        public string ActorCollectionKey { get; set; } = EntityCollectionKeys.CommandSource;
+        public string ActorCollectionKey { get; set; } = string.Empty;
 
         /// <summary>
-        /// Named entity collection supplying entity targets for this mapping.
+        /// Optional named entity collection supplying entity targets for this mapping.
+        /// Required when targetType is Entity or Entities and the mapping relies on collection target data.
         /// </summary>
-        public string TargetCollectionKey { get; set; } = EntityCollectionKeys.CommandSource;
+        public string TargetCollectionKey { get; set; } = string.Empty;
         
         /// <summary>
         /// The type of target required.

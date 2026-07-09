@@ -43,6 +43,7 @@
     },
     {
       "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
       "argsTemplate": { "i0": 4 },
@@ -53,6 +54,7 @@
     },
     {
       "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "argsTemplate": {},
@@ -67,4 +69,3 @@
     "persistPath": "user://MobaDemoMod/input_preferences.json"
   }
 }
-

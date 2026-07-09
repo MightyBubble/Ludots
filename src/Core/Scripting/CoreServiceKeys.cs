@@ -310,6 +310,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
         public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");
+        public static readonly ServiceKey<MinimapFocusCollectionProvider> MinimapFocusCollectionProvider = new("MinimapFocusCollectionProvider");
         public static readonly ServiceKey<MinimapMarkerBuffer> MinimapMarkerBuffer = new("MinimapMarkerBuffer");
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
         public static readonly ServiceKey<ChunkDebugPanelRuntime> ChunkDebugPanelRuntime = new("ChunkDebugPanelRuntime");

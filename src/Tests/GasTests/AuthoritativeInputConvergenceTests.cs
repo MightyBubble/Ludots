@@ -442,7 +442,7 @@ namespace Ludots.Tests.GAS
             {
                 Actions = new List<InputActionDef>
                 {
-                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Zoom", Type = InputActionType.Axis1D },
                 },
                 Contexts = new List<InputContextDef>
@@ -453,7 +453,7 @@ namespace Ludots.Tests.GAS
                         Priority = 1,
                         Bindings = new List<InputBindingDef>
                         {
-                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
                             new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
                         }
                     }
@@ -461,9 +461,24 @@ namespace Ludots.Tests.GAS
             };
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
+            var actionBindings = new InputActionAttributeBindingRegistry();
+            actionBindings.Set(new[]
+            {
+                new InputActionAttributeBindingEntry(
+                    "Zoom",
+                    AttributeRegistry.Register(CameraBehaviorAttributes.Zoom),
+                    InputActionAttributeValueKind.Axis1D,
+                    0,
+                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: true,
+                    preserveValueUntilSnapshot: true),
+            });
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = actionBindings,
                 [CoreServiceKeys.UiCaptured.Name] = false,
                 [CoreServiceKeys.UiWheelCaptured.Name] = true,
             };
@@ -474,7 +489,7 @@ namespace Ludots.Tests.GAS
             system.Update(1f / 60f);
 
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f), "UI wheel capture must suppress shared camera zoom.");
-            Assert.That(handler.PressedThisFrame("Select"), Is.True, "UI wheel capture must not block unrelated gameplay input.");
+            Assert.That(handler.PressedThisFrame("Confirm"), Is.True, "UI wheel capture must not block unrelated gameplay input.");
             Assert.That(globals[CoreServiceKeys.UiWheelCaptured.Name], Is.False);
         }
 
@@ -507,7 +522,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void InputRuntimeSystem_GroundPointerOverrideWinsUntilNextFixedSnapshot()
         {
-            var (backend, handler) = BuildSelectionHandler();
+            var (backend, handler) = BuildConfirmCommandHandler();
             var accumulator = new AuthoritativeInputAccumulator();
             var snapshot = new FrozenInputActionReader();
             var groundOverride = new AuthoritativeGroundPointerOverride();
@@ -548,13 +563,13 @@ namespace Ludots.Tests.GAS
         [Test]
         public void InputRuntimeSystem_CapturesPointerButtonPressAndReleaseScreenPositionsWithinOneLogicTick()
         {
-            var (backend, handler) = BuildSelectionHandler();
+            var (backend, handler) = BuildConfirmCommandHandler();
             var pointerButtons = new AuthoritativePointerButtonAccumulator();
             var snapshot = new AuthoritativePointerButtonSnapshot();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
-                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings()
+                [CoreServiceKeys.InteractionActionBindings.Name] = TestInteractionActionBindings()
             };
 
             var system = new InputRuntimeSystem(globals, pointerButtons: pointerButtons);
@@ -573,7 +588,7 @@ namespace Ludots.Tests.GAS
 
             pointerButtons.BuildTickSnapshot(snapshot);
 
-            Assert.That(snapshot.TryGetState("Select", out var state), Is.True);
+            Assert.That(snapshot.TryGetState("Confirm", out var state), Is.True);
             Assert.That(state.PressedThisFrame, Is.True);
             Assert.That(state.ReleasedThisFrame, Is.True);
             Assert.That(state.IsDown, Is.False);
@@ -597,7 +612,7 @@ namespace Ludots.Tests.GAS
             {
                 Actions = new List<InputActionDef>
                 {
-                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Command", Type = InputActionType.Button },
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
@@ -613,7 +628,7 @@ namespace Ludots.Tests.GAS
                         Priority = 1,
                         Bindings = new List<InputBindingDef>
                         {
-                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
                             new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
@@ -640,7 +655,7 @@ namespace Ludots.Tests.GAS
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
+            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
             engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
@@ -661,9 +676,9 @@ namespace Ludots.Tests.GAS
             pointerButtons.BuildTickSnapshot(pointerSnapshot);
 
             Assert.That(minimap.HalfExtentCm, Is.LessThan(beforeHalfExtent));
-            Assert.That(handler.PressedThisFrame("Select"), Is.False, "Minimap click must consume the shared confirm action before authoritative gameplay capture.");
+            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Minimap click must consume the shared confirm action before authoritative gameplay capture.");
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f), "Minimap wheel must suppress the shared camera zoom action for this frame.");
-            Assert.That(pointerSnapshot.TryGetState("Select", out var selectState), Is.True);
+            Assert.That(pointerSnapshot.TryGetState("Confirm", out var selectState), Is.True);
             Assert.That(selectState.PressedThisFrame, Is.False, "Pointer buttons snapshot must not leak minimap clicks into gameplay selection.");
 
             Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
@@ -683,7 +698,7 @@ namespace Ludots.Tests.GAS
             {
                 Actions = new List<InputActionDef>
                 {
-                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Command", Type = InputActionType.Button },
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
@@ -696,7 +711,7 @@ namespace Ludots.Tests.GAS
                         Priority = 1,
                         Bindings = new List<InputBindingDef>
                         {
-                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
                             new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
@@ -721,7 +736,7 @@ namespace Ludots.Tests.GAS
             var rayProvider = new CountingScreenRayProvider();
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
+            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
             engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
@@ -763,7 +778,7 @@ namespace Ludots.Tests.GAS
             {
                 Actions = new List<InputActionDef>
                 {
-                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Command", Type = InputActionType.Button },
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
@@ -779,7 +794,7 @@ namespace Ludots.Tests.GAS
                         Priority = 1,
                         Bindings = new List<InputBindingDef>
                         {
-                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
                             new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
@@ -807,7 +822,7 @@ namespace Ludots.Tests.GAS
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
-            engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
+            engine.SetService(CoreServiceKeys.InteractionActionBindings, TestInteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
             engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
@@ -860,7 +875,7 @@ namespace Ludots.Tests.GAS
             system.Update(1f / 60f);
             Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
             Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
-            Assert.That(handler.IsDown("Select"), Is.False, "Held minimap drag must keep suppressing gameplay select.");
+            Assert.That(handler.IsDown("Confirm"), Is.False, "Held minimap drag must keep suppressing gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
             system.Update(1f / 60f);
@@ -872,7 +887,7 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Mouse>/LeftButton"] = true;
             system.Update(1f / 60f);
             Assert.That(minimap.Preset, Is.EqualTo(MinimapPreset.FollowCamera), "Mode toggle button must switch to follow-camera through the shared pointer confirm input.");
-            Assert.That(handler.PressedThisFrame("Select"), Is.False, "Mode toggle clicks must not leak into gameplay selection.");
+            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Mode toggle clicks must not leak into gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
             system.Update(1f / 60f);
@@ -885,7 +900,7 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Mouse>/LeftButton"] = true;
             system.Update(1f / 60f);
             Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation), "Rotate toggle button must use the shared pointer confirm input.");
-            Assert.That(handler.PressedThisFrame("Select"), Is.False, "Rotate toggle clicks must not leak into gameplay selection.");
+            Assert.That(handler.PressedThisFrame("Confirm"), Is.False, "Rotate toggle clicks must not leak into gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;
             system.Update(1f / 60f);
@@ -946,12 +961,13 @@ namespace Ludots.Tests.GAS
 
         private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
         {
-            return new MinimapInputConsumer(minimap, NoMinimapCommandSourceOwner);
+            return new MinimapInputConsumer(minimap, NoMinimapFocusCollection);
         }
 
-        private static bool NoMinimapCommandSourceOwner(GameEngine engine, out Entity owner)
+        private static bool NoMinimapFocusCollection(GameEngine engine, out Entity owner, out string collectionKey)
         {
             owner = Entity.Null;
+            collectionKey = string.Empty;
             return false;
         }
 
@@ -983,14 +999,25 @@ namespace Ludots.Tests.GAS
             return (backend, handler);
         }
 
-        private static (TestInputBackend backend, PlayerInputHandler handler) BuildSelectionHandler()
+        private static InteractionActionBindings TestInteractionActionBindings()
+        {
+            return new InteractionActionBindings
+            {
+                ConfirmActionId = "Confirm",
+                CommandActionId = "Command",
+                CancelActionId = "Cancel",
+                PointerPositionActionId = "PointerPos",
+            };
+        }
+
+        private static (TestInputBackend backend, PlayerInputHandler handler) BuildConfirmCommandHandler()
         {
             var backend = new TestInputBackend();
             var config = new InputConfigRoot
             {
                 Actions = new List<InputActionDef>
                 {
-                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Command", Type = InputActionType.Button },
                     new() { Id = "Cancel", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Type = InputActionType.Axis2D },
@@ -1003,7 +1030,7 @@ namespace Ludots.Tests.GAS
                         Priority = 1,
                         Bindings = new List<InputBindingDef>
                         {
-                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Confirm", Path = "<Mouse>/LeftButton", Processors = new() },
                             new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
                             new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
                             new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },

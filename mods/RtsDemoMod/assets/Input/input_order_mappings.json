@@ -43,6 +43,7 @@
     },
     {
       "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "argsTemplate": {},
       "requireTarget": true,
@@ -71,6 +72,7 @@
     },
     {
       "actionId": "Stop",
+      "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "argsTemplate": {},

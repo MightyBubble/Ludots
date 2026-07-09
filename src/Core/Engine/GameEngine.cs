@@ -1155,8 +1155,15 @@ namespace Ludots.Core.Engine
             {
                 new MinimapInputConsumer(
                     minimapRuntime,
-                    static (GameEngine engine, out Entity owner) =>
-                        engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner))
+                    static (GameEngine engine, out Entity owner, out string collectionKey) =>
+                    {
+                        owner = Entity.Null;
+                        collectionKey = string.Empty;
+                        return engine.TryGetService(
+                                   CoreServiceKeys.MinimapFocusCollectionProvider,
+                                   out MinimapFocusCollectionProvider provider) &&
+                               provider(engine, out owner, out collectionKey);
+                    })
             };
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
