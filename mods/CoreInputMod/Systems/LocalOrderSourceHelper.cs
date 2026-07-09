@@ -140,7 +140,7 @@ namespace CoreInputMod.Systems
             mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
-            RequireConfigureRfc0065CommandRouting(mapping);
+            RequireConfigureCommandIntentRouting(mapping);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
             mapping.CancelActionId = bindings.CancelActionId;
@@ -194,7 +194,7 @@ namespace CoreInputMod.Systems
             return mapping;
         }
 
-        private void RequireConfigureRfc0065CommandRouting(InputOrderMappingSystem mapping)
+        private void RequireConfigureCommandIntentRouting(InputOrderMappingSystem mapping)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out var stackObj) ||
                 stackObj is not InteractionContextStack stack ||
@@ -208,10 +208,10 @@ namespace CoreInputMod.Systems
                 collectionsObj is not EntityCollectionStore collections)
             {
                 throw new InvalidOperationException(
-                    $"{nameof(LocalOrderSourceHelper)} requires RFC-0065 command routing services before input-order mappings install.");
+                    $"{nameof(LocalOrderSourceHelper)} requires command intent routing services before input-order mappings install.");
             }
 
-            mapping.SetRfc0065CommandRouting(
+            mapping.SetCommandIntentRouting(
                 _world,
                 stack,
                 schemes,

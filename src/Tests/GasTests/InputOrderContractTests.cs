@@ -946,7 +946,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Rfc0065CommandRouting_UnconfiguredCommandActionFailsBeforeCollectionProvider()
+        public void CommandIntentRouting_UnconfiguredCommandActionFailsBeforeCollectionProvider()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -985,14 +985,14 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.Contain("RFC-0065 command routing"));
+            Assert.That(ex.Message, Does.Contain("Command intent routing"));
             Assert.That(collectionProviderCalled, Is.False,
                 "Command actions must fail fast before consulting collection-provider fallback paths.");
             Assert.That(orders, Is.Empty);
         }
 
         [Test]
-        public void Rfc0065CommandRouting_ActiveIntentZeroConsumesCommandWithoutLegacyFallback()
+        public void CommandIntentRouting_ActiveIntentZeroConsumesCommandWithoutLegacyFallback()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -1062,7 +1062,7 @@ namespace Ludots.Tests.GAS
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { actor }, localPlayer);
-            system.SetRfc0065CommandRouting(
+            system.SetCommandIntentRouting(
                 world,
                 stack,
                 schemes,
@@ -1078,11 +1078,11 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             Assert.That(orders, Is.Empty,
-                "A Command action with RFC-0065 routing installed and no active command intent must be consumed, not rerouted through legacy moveTo mapping.");
+                "A Command action with command intent routing installed and no active command intent must be consumed, not rerouted through legacy moveTo mapping.");
         }
 
         [Test]
-        public void Rfc0065CommandRouting_ProgrammaticCommandActivationUsesCommandSource()
+        public void CommandIntentRouting_ProgrammaticCommandActivationUsesCommandSource()
         {
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
@@ -1187,7 +1187,7 @@ namespace Ludots.Tests.GAS
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
-            system.SetRfc0065CommandRouting(
+            system.SetCommandIntentRouting(
                 world,
                 stack,
                 schemes,
@@ -1211,7 +1211,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Rfc0065CommandRouting_DispatchSeesOnlyRoutedActors()
+        public void CommandIntentRouting_DispatchSeesOnlyRoutedActors()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -1321,7 +1321,7 @@ namespace Ludots.Tests.GAS
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
             collections.Replace(localPlayer, in descriptor, new[] { unroutedNearActor, routedFarActor }, localPlayer);
-            system.SetRfc0065CommandRouting(
+            system.SetCommandIntentRouting(
                 world,
                 stack,
                 schemes,

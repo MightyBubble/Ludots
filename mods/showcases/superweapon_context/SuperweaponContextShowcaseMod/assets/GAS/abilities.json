@@ -3,7 +3,7 @@
     "id": "Ability.Showcase.Superweapon.Context",
     "catalogTags": [
       "ability.family.superweapon",
-      "ability.rfc0065.context"
+      "ability.catalog.superweapon_context"
     ],
     "interactionContextProfile": "ctx.ability.superweapon.confirm_targets",
     "exec": {
