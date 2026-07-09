@@ -55,7 +55,8 @@ Cleanup → EventDispatch → ClearPresentationFlags
 - `docs/architecture/gas_layered_architecture.md`
 - `docs/architecture/order_navigation_movement.md`
 - `docs/architecture/item_inventory_equipment_architecture.md`
-- `docs/architecture/narrative_quest_dialogue_cinematic.md`
+- `docs/architecture/quest_core_infra.md`
+- `docs/architecture/narrative_dialogue_cinematic.md`
 - `docs/architecture/narrative_frontend_kit.md`
 - `docs/architecture/time_flow.md`
 - `docs/architecture/ui_runtime_architecture.md`

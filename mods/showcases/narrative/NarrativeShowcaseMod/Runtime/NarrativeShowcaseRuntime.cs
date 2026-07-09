@@ -130,7 +130,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             AppendHistory(_frontendConfig.Templates.QuestStageChanged, new Dictionary<string, string>
             {
-                ["bodyText"] = context.Get(NarrativeServiceKeys.BodyText) ?? string.Empty,
+                ["bodyText"] = context.Get(QuestServiceKeys.ObjectiveText) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -145,7 +145,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             AppendHistory(_frontendConfig.Templates.QuestCompleted, new Dictionary<string, string>
             {
-                ["questId"] = context.Get(NarrativeServiceKeys.QuestId) ?? string.Empty,
+                ["questId"] = context.Get(QuestServiceKeys.QuestId) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -198,14 +198,14 @@ namespace NarrativeShowcaseMod.Runtime
             return Task.CompletedTask;
         }
 
-        public Task HandleNarrativeSignalAsync(ScriptContext context)
+        public Task HandleQuestSignalAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine || !IsShowcaseActive(engine))
             {
                 return Task.CompletedTask;
             }
 
-            string signalId = context.Get(NarrativeServiceKeys.SignalId) ?? string.Empty;
+            string signalId = context.Get(QuestServiceKeys.SignalId) ?? string.Empty;
             AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
             {
                 ["signalId"] = signalId,

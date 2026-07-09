@@ -285,7 +285,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
             var choice = _activeDialogue.CurrentChoices[index];
             ExecuteActions(choice.Actions);
-            FireNarrativeEvent(NarrativeEventKeys.DialogueChoiceCommitted, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.DialogueChoiceCommitted, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.DialogueId, _activeDialogue.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.DialogueNodeId, _activeDialogue.CurrentNode?.Id ?? string.Empty);
@@ -337,14 +337,14 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             if (string.IsNullOrWhiteSpace(signalId))
             {
-                throw new ArgumentException("Narrative signal id is required.", nameof(signalId));
+                throw new ArgumentException("Quest signal id is required.", nameof(signalId));
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.Signal, ctx =>
+            FireTriggerEvent(QuestEventKeys.Signal, ctx =>
             {
-                ctx.Set(NarrativeServiceKeys.SignalId, signalId);
-                ctx.Set(NarrativeServiceKeys.SignalIntValue, intValue);
-                ctx.Set(NarrativeServiceKeys.SignalStringValue, stringValue ?? string.Empty);
+                ctx.Set(QuestServiceKeys.SignalId, signalId);
+                ctx.Set(QuestServiceKeys.SignalIntValue, intValue);
+                ctx.Set(QuestServiceKeys.SignalStringValue, stringValue ?? string.Empty);
             });
 
             _questRuntime.EmitSignal(signalId);
@@ -591,17 +591,29 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             switch (questEvent.Kind)
             {
+                case QuestEventKind.Started:
+                    FireQuestLifecycleEvent(QuestEventKeys.Started, questEvent);
+                    break;
                 case QuestEventKind.StageChanged:
                     HandleQuestStageChanged(questEvent);
                     break;
                 case QuestEventKind.Completed:
-                    FireNarrativeEvent(NarrativeEventKeys.QuestCompleted, ctx =>
-                    {
-                        ctx.Set(NarrativeServiceKeys.QuestId, questEvent.QuestId);
-                        ctx.Set(NarrativeServiceKeys.QuestStageId, questEvent.StageId);
-                    });
+                    FireQuestLifecycleEvent(QuestEventKeys.Completed, questEvent);
+                    break;
+                case QuestEventKind.Failed:
+                    FireQuestLifecycleEvent(QuestEventKeys.Failed, questEvent);
                     break;
             }
+        }
+
+        private void FireQuestLifecycleEvent(EventKey eventKey, QuestEvent questEvent)
+        {
+            FireTriggerEvent(eventKey, ctx =>
+            {
+                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
+                ctx.Set(QuestServiceKeys.StageId, questEvent.StageId);
+                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
+            });
         }
 
         private void HandleQuestStageChanged(QuestEvent questEvent)
@@ -622,11 +634,12 @@ namespace Ludots.Core.Gameplay.Narrative
                 StartDialogue(stage.DialogueOnEnterId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.QuestStageChanged, ctx =>
+            FireTriggerEvent(QuestEventKeys.StageChanged, ctx =>
             {
-                ctx.Set(NarrativeServiceKeys.QuestId, questEvent.QuestId);
-                ctx.Set(NarrativeServiceKeys.QuestStageId, stage.Id);
-                ctx.Set(NarrativeServiceKeys.BodyText, stage.ObjectiveText);
+                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
+                ctx.Set(QuestServiceKeys.StageId, stage.Id);
+                ctx.Set(QuestServiceKeys.ObjectiveText, stage.ObjectiveText);
+                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
             });
         }
 
@@ -654,7 +667,7 @@ namespace Ludots.Core.Gameplay.Narrative
                 ActivateCamera(node.CameraId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.DialogueNodeEntered, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.DialogueNodeEntered, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.DialogueId, _activeDialogue.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.DialogueNodeId, node.Id);
@@ -681,7 +694,7 @@ namespace Ludots.Core.Gameplay.Narrative
                 ActivateCamera(_activeCinematic.CurrentStep.CameraId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.CinematicStepEntered, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.CinematicStepEntered, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.CinematicId, _activeCinematic.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.CinematicStepId, _activeCinematic.CurrentStep.Id);
@@ -704,7 +717,7 @@ namespace Ludots.Core.Gameplay.Narrative
             }
 
             _activeCinematic = null;
-            FireNarrativeEvent(NarrativeEventKeys.CinematicCompleted, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.CinematicCompleted, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.CinematicId, completed.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.CinematicStepId, completed.CurrentStep?.Id ?? string.Empty);
@@ -840,7 +853,7 @@ namespace Ludots.Core.Gameplay.Narrative
             return CompareFloat(attributes.GetCurrent(attributeId), condition.FloatValue, condition.Operator);
         }
 
-        private void FireNarrativeEvent(EventKey eventKey, Action<ScriptContext> enrichContext)
+        private void FireTriggerEvent(EventKey eventKey, Action<ScriptContext> enrichContext)
         {
             var ctx = _engine.CreateContext();
             enrichContext(ctx);
