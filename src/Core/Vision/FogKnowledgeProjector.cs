@@ -42,6 +42,9 @@ namespace Ludots.Core.Vision
             int projected = 0;
             uint layerMask = LayerMaskFromField(field);
             bool trueSightActive = detectionStrength > 0 && policy.TrueSightRevealsConcealment;
+            KnowledgeDisclosureRecord liveRecord = CreateLive(source, in policy, currentTick);
+            KnowledgeDisclosureRecord knownRecord = CreateKnown(source, in policy, currentTick);
+            KnowledgeDisclosureRecord hiddenRecord = CreateHidden(source, currentTick);
 
             for (int i = 0; i < occupants.Length; i++)
             {
@@ -52,31 +55,31 @@ namespace Ludots.Core.Vision
                     continue;
                 }
 
-                FogCell occupantCell = field.WorldToCell(occupant.Position);
+                FogCell occupantCell = occupant.ResolveCell(field.CellSizeCm);
                 CellVisibility visibility = field.GetVisibility(occupantCell);
                 KnowledgeDisclosureRecord record;
                 if (visibility == CellVisibility.Visible && detectionStrength >= occupant.StealthLevel)
                 {
                     if (!_concealment.Allows(viewerCell, occupantCell, trueSightActive, in policy))
                     {
-                        record = CreateHidden(source, currentTick);
+                        record = hiddenRecord;
                     }
                     else
                     {
-                        record = CreateLive(source, in policy, currentTick);
+                        record = liveRecord;
                     }
                 }
                 else if (visibility == CellVisibility.Visible && occupant.StealthLevel > detectionStrength)
                 {
-                    record = CreateHidden(source, currentTick);
+                    record = hiddenRecord;
                 }
                 else if (visibility == CellVisibility.Denied)
                 {
-                    record = CreateHidden(source, currentTick);
+                    record = hiddenRecord;
                 }
                 else if (visibility == CellVisibility.Explored)
                 {
-                    record = CreateKnown(source, in policy, currentTick);
+                    record = knownRecord;
                 }
                 else
                 {
