@@ -16,8 +16,10 @@ namespace Ludots.Core.Input.Systems
     /// source of truth for enablement and parameters is the active control scheme's
     /// <c>axisMove</c> declaration (<see cref="ControlSchemeRuntime.TryGetActiveAxisMove"/>). A
     /// scheme without the declaration means zero work per tick, and a hot switch takes effect on the
-    /// next tick. Movement always goes through the order pipeline; this system never writes
-    /// <see cref="WorldPositionCm"/>.
+    /// next tick. While declared, the system samples the declared Axis2D action from the authoritative
+    /// input snapshot and submits throttled <see cref="OrderQueue"/> move orders targeting
+    /// <c>current position + direction * stepDistanceCm</c>. Movement always goes through the order
+    /// pipeline; this system never writes <see cref="WorldPositionCm"/>.
     /// </summary>
     public sealed class AxisMoveOrderSystem : ISystem<float>
     {
@@ -110,7 +112,7 @@ namespace Ludots.Core.Input.Systems
             };
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
-            order.Args.Spatial.WorldCm = new Vector3(target.X, 0f, target.Y);
+            order.Args.Spatial.WorldCm = new Vector3(target.X, target.Y, 0f);
 
             if (_orderQueue.TryEnqueue(in order))
             {

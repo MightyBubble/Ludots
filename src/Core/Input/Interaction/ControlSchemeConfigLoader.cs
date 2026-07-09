@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, §5.11). Follows the
+    /// Loader for <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11). Follows the
     /// <c>CastCommitProfileConfigLoader</c> mounting pattern: catalog-declared DeepObject merge
     /// through the shared <see cref="ConfigPipeline"/>. Command intent and axis move order type
     /// references resolve at <see cref="ControlSchemeRuntime.Install"/> (fail fast on uninstalled

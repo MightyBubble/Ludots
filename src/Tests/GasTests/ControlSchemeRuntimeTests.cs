@@ -18,10 +18,10 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 INT-5/INT-7 (§5.11, DEC-14/DEC-15): control scheme catalog + hot switch (IMC
-    /// push/pop, allowed set, preference persistence, headless null handler) and the frame command
-    /// intent arbiter's three branches. Scheme/intent/context names are test data, never Core
-    /// concepts.
+    /// RFC-0065 INT-5/INT-7 (Section 5.11, DEC-14/DEC-15): control scheme catalog + hot switch
+    /// (IMC push/pop, allowed set, preference persistence, headless null handler) and the frame
+    /// command intent arbiter's three branches. Scheme/intent/context names are test data, never
+    /// Core concepts.
     /// </summary>
     [TestFixture]
     [NonParallelizable]

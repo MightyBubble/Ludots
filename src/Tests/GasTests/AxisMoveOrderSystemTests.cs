@@ -17,8 +17,8 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// RFC-0065 INT-6 (DEC-15): WASD axis intent to throttled move order kernel, driven by the
-    /// active control scheme's <c>axisMove</c> declaration (single source of truth; no global enable
-    /// switch).
+    /// active control scheme's <c>axisMove</c> declaration. Orders always go through
+    /// <see cref="OrderQueue"/> and never write <see cref="WorldPositionCm"/> directly.
     /// </summary>
     [TestFixture]
     [NonParallelizable]
@@ -112,8 +112,8 @@ namespace Ludots.Tests.GAS
             Assert.That(first.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
             Assert.That(first.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(first.Args.Spatial.WorldCm.X, Is.EqualTo(StartXcm + 240f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(0f).Within(0.01f));
-            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(StartYcm + 320f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Y, Is.EqualTo(StartYcm + 320f).Within(0.01f));
+            Assert.That(first.Args.Spatial.WorldCm.Z, Is.EqualTo(0f).Within(0.01f));
 
             Assert.That(harness.Orders.TryDequeue(out Order second), Is.True);
             Assert.That(second.Args.Spatial.WorldCm, Is.EqualTo(first.Args.Spatial.WorldCm));

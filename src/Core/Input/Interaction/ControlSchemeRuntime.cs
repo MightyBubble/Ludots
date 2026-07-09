@@ -7,7 +7,7 @@ using Ludots.Core.Registry;
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
-    /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, §5.11, DEC-15). Schemes are
+    /// Control scheme catalog and hot-switch runtime (RFC-0065 INT-5, Section 5.11, DEC-15). Schemes are
     /// declared in <c>Input/control_schemes.json</c> and compiled at install time: axis move
     /// <c>orderTypeKey</c> references resolve against <see cref="OrderTypeRegistry"/>, default command
     /// intent ids must be installed <see cref="CommandIntentProfileRegistry"/> profiles and register
@@ -19,7 +19,7 @@ namespace Ludots.Core.Input.Interaction
     /// contexts off the <see cref="PlayerInputHandler"/> and pushes the new ones; non-default frames
     /// on the stack are untouched, and the default frame's intent reference reads the new scheme
     /// immediately through the arbiter. The handler is resolved through a provider per switch and
-    /// may be null (headless engine / handler bound later by the adapter) — in that case only the
+    /// may be null (headless engine / handler bound later by the adapter); in that case only the
     /// intent default and preference bookkeeping happen.
     /// </summary>
     public sealed class ControlSchemeRuntime
@@ -69,8 +69,8 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>
         /// The active scheme's default command intent, in the
         /// <see cref="InteractionContextStack.CommandIntentProfileIdRegistry"/> id space (DEC-14:
-        /// consumed only for the default frame). 0 when no scheme is active — pointer commands then
-        /// do not route (no fallback).
+        /// consumed only for the default frame). 0 when no scheme is active; pointer commands then
+        /// do not route.
         /// </summary>
         public int ActiveDefaultCommandIntentId => _activeDefaultCommandIntentId;
 
@@ -87,7 +87,7 @@ namespace Ludots.Core.Input.Interaction
         /// <summary>
         /// The active scheme's axis move declaration with the order type key pre-resolved at
         /// <see cref="Install"/>. Returns false when no scheme is active or the active scheme
-        /// declares no axis move: the current scheme has no axis movement, not a fallback path.
+        /// declares no axis move: the current scheme has no axis movement.
         /// </summary>
         public bool TryGetActiveAxisMove(out ControlSchemeAxisMoveBinding axisMove)
         {

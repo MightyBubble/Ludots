@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.Input.Interaction
 {
-    /// <summary>Merged root of <c>Input/control_schemes.json</c> (RFC-0065 INT-5, §5.11, DEC-15).</summary>
+    /// <summary>Merged root of <c>Input/control_schemes.json</c> (RFC-0065 INT-5, Section 5.11, DEC-15).</summary>
     public sealed class ControlSchemesConfig
     {
         public List<ControlSchemeDefinition> Schemes { get; set; }

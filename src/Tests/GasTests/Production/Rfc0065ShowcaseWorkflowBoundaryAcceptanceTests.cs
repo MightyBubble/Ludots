@@ -302,7 +302,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
             Assert.That(order.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.Single));
             Assert.That(order.Args.Spatial.WorldCm.X, Is.EqualTo(start.X + binding.StepDistanceCm).Within(0.001f));
-            Assert.That(order.Args.Spatial.WorldCm.Z, Is.EqualTo(start.Y).Within(0.001f));
+            Assert.That(order.Args.Spatial.WorldCm.Y, Is.EqualTo(start.Y).Within(0.001f));
+            Assert.That(order.Args.Spatial.WorldCm.Z, Is.EqualTo(0f).Within(0.001f));
 
             WriteWasdAcceptanceArtifact(
                 artifactDir,
@@ -938,7 +939,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"| step distance cm | {binding.StepDistanceCm.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| order id | {order.OrderId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| start world cm | ({start.X.ToString(CultureInfo.InvariantCulture)}, {start.Y.ToString(CultureInfo.InvariantCulture)}) |");
-            sb.AppendLine($"| target world cm | ({order.Args.Spatial.WorldCm.X.ToString(CultureInfo.InvariantCulture)}, {order.Args.Spatial.WorldCm.Z.ToString(CultureInfo.InvariantCulture)}) |");
+            sb.AppendLine($"| target world cm | ({order.Args.Spatial.WorldCm.X.ToString(CultureInfo.InvariantCulture)}, {order.Args.Spatial.WorldCm.Y.ToString(CultureInfo.InvariantCulture)}) |");
             File.WriteAllText(Path.Combine(artifactDir, "wasd-hot-switch-report.md"), sb.ToString(), Encoding.UTF8);
         }
 
