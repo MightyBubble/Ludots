@@ -1063,7 +1063,7 @@ internal sealed class UxPrototypeScenarioState
         string type = ResolveSelectedType(selectedLabel);
         return type switch
         {
-            "City" => "City selected. Build radius active. Queue workers or civic actions. Right-click can define rally chains for new units.",
+            "City" => "City selected. Build radius active. Queue workers or civic actions. The command action can define rally chains for new units.",
             "Barracks" => "Barracks selected. Parallel infantry lanes online with rally display.",
             "Stable" => "Stable selected. Cavalry production and route chaining ready.",
             "Workshop" => "Workshop selected. Siege queue active and navmesh-sensitive.",

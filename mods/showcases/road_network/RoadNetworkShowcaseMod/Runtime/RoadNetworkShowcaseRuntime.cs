@@ -49,7 +49,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         public NodeGraphBoard? ActiveBoard { get; private set; }
         public RoadNetworkScenarioDefinition? Scenario { get; private set; }
         public bool IsActive => ActiveBoard != null && Scenario != null;
-        public string LastSubmitStatus { get; private set; } = "Road command ready. Right-click near a road or fort.";
+        public string LastSubmitStatus { get; private set; } = "Road command ready. Use the command action near a road or fort.";
         public string? LatestDebugSnapshotPath => _debugLogWriter.SnapshotPath;
 
         public Task HandleMapFocusedAsync(ScriptContext context)
@@ -506,7 +506,7 @@ namespace RoadNetworkShowcaseMod.Runtime
             _activeMapId = null;
             ActiveBoard = null;
             Scenario = null;
-            LastSubmitStatus = "Road command ready. Right-click near a road or fort.";
+            LastSubmitStatus = "Road command ready. Use the command action near a road or fort.";
         }
 
         private bool TryResolvePreset(GameEngine engine, ShowcaseCommandPreset preset, out Entity actor, out Vector3 targetWorldCm, out string status)

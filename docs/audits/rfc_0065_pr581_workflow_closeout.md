@@ -66,6 +66,24 @@ rg -n "SubmitRfc0065Command|SetRfc0065CommandRouting|\bRfc0065Command\b|_rfc0065
 No matches.
 ```
 
+Mouse-button semantic audit on 2026-07-09:
+
+- Gameplay input semantics, CoreInputMod systems, and RFC-0065 visible showcase copy now name actions (`Command`, `Confirm`, `Cancel`, primary pointer action), not physical left/right mouse buttons.
+- Default `<Mouse>/LeftButton` / `<Mouse>/RightButton` entries remain only as binding data in `default_input.json` files; they are remappable input declarations, not gameplay semantics.
+- `RaylibInputPathParser.ParseMouseButton` remains the hardware adapter/parser that turns binding paths into raylib button enums. This is the only production-code hit in the wide scan after excluding tests, third-party libraries, tooling, and hardware adapters.
+
+```text
+rg -n -i "right[- ]?click|left[- ]?click|右键|左键|PointerButton\.Left|PointerButton\.Right|MOUSE_LEFT_BUTTON|MOUSE_RIGHT_BUTTON" src/Core/Input/Orders src/Core/Input/Interaction mods/CoreInputMod/Systems mods/showcases/interaction/InteractionShowcaseMod/UI mods/showcases/road_network/RoadNetworkShowcaseMod/Runtime mods/showcases/road_network/RoadNetworkShowcaseMod/UI --glob "!**/bin/**" --glob "!**/obj/**"
+
+No matches.
+```
+
+```text
+dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --no-restore --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 14/14
+```
+
 ## Final 2026-07-09 Selection-Retirement Pass
 
 This pass closes the remaining formal-selection cleanup for PR581:

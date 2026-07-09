@@ -11,7 +11,7 @@ namespace RoadNetworkShowcaseMod.UI
     {
         public static readonly RoadNetworkShowcasePanelState Empty = new(
             "Road Network Showcase",
-            "Road command ready. Right-click near a road or fort.",
+            "Road command ready. Use the command action near a road or fort.",
             "Command source 0 | Primary <none> | Owner <none>",
             "Input ground=<none>\nInput order=<none>",
             "Chunks 0 | Nodes 0",

@@ -762,7 +762,7 @@ namespace Ludots.Core.Input.Orders
                     return;
                 }
                 
-                // Cancel: right-click or ESC
+                // Cancel through the configured cancel or command action.
                 if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
                 {
                     ExitAimingState();
@@ -774,7 +774,7 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // AimCast: Confirm by left-click
+            // AimCast: confirm through the configured confirm action.
             if (_input.PressedThisFrame(confirmActionId))
             {
                 // Build order using current cursor input.
@@ -786,7 +786,7 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // Cancel: right-click or ESC
+            // Cancel through the configured cancel or command action.
             if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
@@ -831,7 +831,7 @@ namespace Ludots.Core.Input.Orders
         /// </summary>
         private void HandleVectorAimingState(string confirmActionId, string cancelActionId, string commandActionId)
         {
-            // Cancel: right-click or ESC at any phase
+            // Cancel through the configured cancel or command action at any phase.
             if (_input.PressedThisFrame(cancelActionId) || _input.PressedThisFrame(commandActionId))
             {
                 ExitAimingState();
@@ -851,7 +851,7 @@ namespace Ludots.Core.Input.Orders
                         _vectorAimUpdateHandler?.Invoke(_aimingMapping!, cursorPos, cursorPos, VectorAimInputSlot.Origin);
                     }
                     
-                    // Confirm origin with left-click
+                    // Confirm origin through the configured confirm action.
                     if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         _vectorAimOrigin = cursorPos;
@@ -866,7 +866,7 @@ namespace Ludots.Core.Input.Orders
                         _vectorAimUpdateHandler?.Invoke(_aimingMapping!, _vectorAimOrigin, cursorPos, VectorAimInputSlot.Direction);
                     }
                     
-                    // Confirm direction with left-click -> build and submit vector order
+                    // Confirm direction through the configured confirm action, then build and submit vector order.
                     if (_input.PressedThisFrame(confirmActionId) && hasCursor)
                     {
                         if (TryBuildVectorOrder(_aimingMapping!, _vectorAimOrigin, cursorPos, out var order))

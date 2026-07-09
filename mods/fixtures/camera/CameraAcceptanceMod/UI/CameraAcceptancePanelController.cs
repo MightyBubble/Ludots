@@ -511,7 +511,7 @@ namespace CameraAcceptanceMod.UI
             return state.MapId switch
             {
                 CameraAcceptanceIds.ProjectionMapId => Ui.Text(
-                        $"Left click ground to spawn a random scatter batch. Q/E adjusts the batch by {CameraAcceptanceIds.ProjectionSpawnCountStep}; current batch = {state.ProjectionSpawnCount}.")
+                        $"Use the primary pointer action on ground to spawn a random scatter batch. Q/E adjusts the batch by {CameraAcceptanceIds.ProjectionSpawnCountStep}; current batch = {state.ProjectionSpawnCount}.")
                     .FontSize(12f)
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),

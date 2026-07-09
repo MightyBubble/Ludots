@@ -11,7 +11,7 @@ namespace Ludots.Core.Input.Orders
     ///
     /// TargetFirst (WoW): player selects target first, then presses ability key ->order submitted immediately.
     /// SmartCast (LoL): player presses ability key ->order submitted immediately at cursor/hovered entity.
-    /// AimCast (DotA/WC3): player presses ability key ->enters aiming phase ->click to confirm, right-click/ESC to cancel.
+    /// AimCast (DotA/WC3): player presses ability key ->enters aiming phase ->confirm action submits, cancel action exits.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InteractionModeType
@@ -27,7 +27,7 @@ namespace Ludots.Core.Input.Orders
 
         /// <summary>
         /// LoL "Quick Cast with Indicator" style: hold key ->show indicator,
-        /// release key ->cast at cursor position. Right-click/ESC cancels.
+        /// release key ->cast at cursor position. The configured cancel action exits.
         /// </summary>
         SmartCastWithIndicator = 3,
 

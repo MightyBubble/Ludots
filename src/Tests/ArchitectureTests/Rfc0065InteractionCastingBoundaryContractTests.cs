@@ -368,6 +368,58 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void GameplayInputSemantics_DoNotHardCodePhysicalMouseButtons()
+        {
+            string repoRoot = FindRepoRoot();
+            string[] roots =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Input", "Orders"),
+                Path.Combine(repoRoot, "src", "Core", "Input", "Interaction"),
+                Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems"),
+                Path.Combine(repoRoot, "mods", "showcases", "interaction", "InteractionShowcaseMod", "UI"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "Runtime"),
+                Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod", "UI")
+            };
+            var forbidden = new Regex(
+                @"\b(left|right)[ -]?click\b|左键|右键|PointerButton\.(Left|Right)|MOUSE_(LEFT|RIGHT)_BUTTON",
+                RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
+            var violations = new List<string>();
+            int scannedFiles = 0;
+            foreach (string root in roots)
+            {
+                Assert.That(Directory.Exists(root), Is.True, $"Missing gameplay input semantics scan root {root}");
+                foreach (string file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+                {
+                    if (!IsScannedRepoFile(repoRoot, file))
+                    {
+                        continue;
+                    }
+
+                    scannedFiles++;
+                    string[] lines = File.ReadAllLines(file);
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        Match match = forbidden.Match(lines[i]);
+                        if (match.Success)
+                        {
+                            violations.Add($"{ToRepoRelativePath(repoRoot, file)}:{i + 1}: {match.Value}: {lines[i].Trim()}");
+                        }
+                    }
+                }
+            }
+
+            Assert.That(scannedFiles, Is.GreaterThan(0), "Gameplay input semantics mouse-button guard scanned no source files.");
+            Assert.That(
+                violations,
+                Is.Empty,
+                "RFC-0065 input semantics must name configured actions such as Command/Confirm/Cancel, " +
+                "not physical left/right mouse buttons. Physical button paths belong only in input binding data " +
+                "or hardware adapters:\n" +
+                string.Join(Environment.NewLine, violations));
+        }
+
+        [Test]
         public void MassNavigationCore_ConsumesOrdersNotInputOrCommandSourceAuthority()
         {
             string repoRoot = FindRepoRoot();

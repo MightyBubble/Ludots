@@ -113,7 +113,7 @@ namespace InteractionShowcaseMod.UI
                         .FontSize(25f)
                         .Bold()
                         .Color("#F5F7FA"),
-                    Ui.Text("Right-click move, blink routing, and command mode proof")
+                    Ui.Text("Command action move, blink routing, and command mode proof")
                         .FontSize(12f)
                         .Color("#B8C4D4")
                         .WhiteSpace(UiWhiteSpace.Normal),
@@ -677,7 +677,7 @@ namespace InteractionShowcaseMod.UI
             {
                 InteractionShowcaseIds.WowModeId => "Target-first: preselect a unit, then fire abilities without cursor acquisition. This matches MMO command semantics.",
                 InteractionShowcaseIds.LolModeId => "Smart-cast: key press immediately resolves hovered unit or cursor ground point. This matches LoL quick cast.",
-                InteractionShowcaseIds.Sc2ModeId => "Aim-cast: key arms the skill, left click confirms, right click cancels. This matches RTS/MOBA confirm flows.",
+                InteractionShowcaseIds.Sc2ModeId => "Aim-cast: key arms the skill, confirm action submits, cancel action exits. This matches RTS/MOBA confirm flows.",
                 InteractionShowcaseIds.IndicatorModeId => "Indicator-release: hold to preview ring/line/cone overlays, release to fire. This matches quick-cast with indicator.",
                 InteractionShowcaseIds.ActionModeId => "Context-scored: Space picks the best action and target from the current combat state.",
                 _ => "Switch modes to compare the same data-driven ability mappings under different interaction semantics."
@@ -701,7 +701,7 @@ namespace InteractionShowcaseMod.UI
             {
                 InteractionShowcaseIds.Sc2ModeId => "Press W to arm, confirm with LMB/RMB; the aim stays active until confirmed.",
                 InteractionShowcaseIds.ActionModeId => "Press Space; the best available action and target are chosen.",
-                _ => "Right-click ground or press WASD; the active command mode chooses the order.",
+                _ => "Use the command action on ground or press WASD; the active command mode chooses the order.",
             };
         }
 

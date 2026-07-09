@@ -107,7 +107,7 @@ internal sealed class VisualTerrainEditorPanelController
                 .FontSize(22f)
                 .Bold()
                 .Color(PrimaryText),
-            Ui.Text("左键直接在 3D 世界绘制。左上只放地图和视图状态；右下是笔刷；右上是 chunk 小地图。")
+            Ui.Text("使用笔刷动作直接在 3D 世界绘制。左上只放地图和视图状态；右下是笔刷；右上是 chunk 小地图。")
                 .FontSize(12f)
                 .Color(MutedText)
                 .WhiteSpace(UiWhiteSpace.Normal),
