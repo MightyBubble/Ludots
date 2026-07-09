@@ -27,6 +27,7 @@
 - [UI Runtime Architecture](ui_runtime_architecture.md)
 - [Browser UI Runtime](browser_ui_runtime.md)
 - [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
+- [WebUI Panel Kit Manifest (WPK-1)](webui_panel_kit_manifest.md)
 
 ## Target State And Migration
 
