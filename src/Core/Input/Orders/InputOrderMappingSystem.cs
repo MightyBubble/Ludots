@@ -30,6 +30,11 @@ namespace Ludots.Core.Input.Orders
     public delegate bool CommandSourceOwnerProvider(out Entity owner);
 
     /// <summary>
+    /// Delegate for resolving command-click target facts frozen for the current input mapping trigger.
+    /// </summary>
+    public delegate bool CommandIntentTargetFactsProvider(InputOrderMapping mapping, out CommandIntentTargetFacts facts);
+
+    /// <summary>
     /// Delegate for assigning an order id before submission when a dispatch profile requires shared fan-out.
     /// </summary>
     public delegate void OrderIdentityAssigner(ref Order order);
@@ -207,6 +212,7 @@ namespace Ludots.Core.Input.Orders
         private CastDispatchProfileRegistry? _castDispatchProfiles;
         private EntityCollectionStore? _entityCollections;
         private CommandSourceOwnerProvider? _commandSourceOwnerProvider;
+        private CommandIntentTargetFactsProvider? _commandIntentTargetFactsProvider;
         private OrderIdentityAssigner? _orderIdentityAssigner;
         
         // Context
@@ -394,6 +400,9 @@ namespace Ludots.Core.Input.Orders
 
         public void SetOrderIdentityAssigner(OrderIdentityAssigner assigner) =>
             _orderIdentityAssigner = assigner ?? throw new ArgumentNullException(nameof(assigner));
+
+        public void SetCommandIntentTargetFactsProvider(CommandIntentTargetFactsProvider provider) =>
+            _commandIntentTargetFactsProvider = provider ?? throw new ArgumentNullException(nameof(provider));
 
         public void SetInteractionActionBindings(InteractionActionBindings bindings)
         {
@@ -1374,7 +1383,8 @@ namespace Ludots.Core.Input.Orders
                 _controlSchemeRuntime == null ||
                 _commandIntentProfiles == null ||
                 _castDispatchProfiles == null ||
-                _entityCollections == null)
+                _entityCollections == null ||
+                _commandIntentTargetFactsProvider == null)
             {
                 throw new InvalidOperationException(
                     "Command intent routing is partially configured; Command actions must not fall back to legacy input-order mappings.");
@@ -1432,11 +1442,12 @@ namespace Ludots.Core.Input.Orders
 
             Span<Entity> actors = _commandIntentActorsScratch.AsSpan(0, actorCount);
             Span<CommandIntentRoute> routes = _commandIntentRoutesScratch.AsSpan(0, actorCount);
+            CommandIntentTargetFacts targetFacts = ResolveCommandIntentTargetFacts(mapping);
             _commandIntentProfiles.RouteGroup(
                 commandIntentProfileId,
                 actors,
                 commandSourceOwner,
-                new CommandIntentTargetFacts(Entity.Null, HasEntity: false),
+                in targetFacts,
                 routes);
 
             EnsureEntityScratch(ref _commandIntentRoutedActorsScratch, actorCount);
@@ -1547,6 +1558,28 @@ namespace Ludots.Core.Input.Orders
             }
 
             return Entity.Null;
+        }
+
+        private CommandIntentTargetFacts ResolveCommandIntentTargetFacts(InputOrderMapping mapping)
+        {
+            if (_commandIntentTargetFactsProvider == null)
+            {
+                throw new InvalidOperationException(
+                    "Command intent routing requires a command target facts provider.");
+            }
+
+            if (!_commandIntentTargetFactsProvider(mapping, out CommandIntentTargetFacts facts) || !facts.HasEntity)
+            {
+                return new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            }
+
+            if (facts.Target == Entity.Null)
+            {
+                throw new InvalidOperationException(
+                    "Command intent target facts provider returned HasEntity=true with Entity.Null.");
+            }
+
+            return facts;
         }
 
         private bool IsCommandAction(string actionId)

@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -140,6 +141,7 @@ namespace CoreInputMod.Systems
             mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
+            mapping.SetCommandIntentTargetFactsProvider(TryResolveCommandIntentTargetFacts);
             RequireConfigureCommandIntentRouting(mapping);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
@@ -274,6 +276,56 @@ namespace CoreInputMod.Systems
             }
 
             return false;
+        }
+
+        private bool TryResolveCommandIntentTargetFacts(InputOrderMapping mapping, out CommandIntentTargetFacts facts)
+        {
+            if (mapping == null) throw new ArgumentNullException(nameof(mapping));
+
+            facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            if (!TryGetCommandSourceOwner(out Entity owner) ||
+                !PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
+            {
+                return false;
+            }
+
+            PointerActionSnapshot command = pointer.Command;
+            Vector2 screenPoint = ResolveCommandPointer(mapping.Trigger, in command);
+            Entity target = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                _world,
+                _globals,
+                owner,
+                screenPoint,
+                RequireCommandPickRadiusPixels());
+            if (!_world.IsAlive(target))
+            {
+                return false;
+            }
+
+            facts = new CommandIntentTargetFacts(target, HasEntity: true);
+            return true;
+        }
+
+        private float RequireCommandPickRadiusPixels()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out object? configObj) ||
+                configObj is not CommandSourceAcquisitionConfig config)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {CoreServiceKeys.CommandSourceAcquisitionConfig.Name} before command target facts can be resolved.");
+            }
+
+            return config.ClickPickRadiusPixels;
+        }
+
+        private static Vector2 ResolveCommandPointer(InputTriggerType trigger, in PointerActionSnapshot command)
+        {
+            return trigger switch
+            {
+                InputTriggerType.ReleasedThisFrame => command.ResolveReleasePointerOrCurrent(),
+                InputTriggerType.Held => command.ResolveDownPointerOrCurrent(),
+                _ => command.ResolvePressPointerOrCurrent()
+            };
         }
 
         private bool TryResolveCollectionPrimary(string collectionKey, out Entity entity)

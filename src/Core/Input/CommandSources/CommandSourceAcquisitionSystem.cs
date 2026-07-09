@@ -286,48 +286,7 @@ namespace Ludots.Core.Input.CommandSources
 
         private Entity FindNearestEntity(Entity owner, Vector2 pointer, float radiusPixels)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
-            {
-                return default;
-            }
-
-            Entity best = default;
-            ScreenRect bestBounds = default;
-            bool hasBestBounds = false;
-
-            _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref CommandSourceSelectableTag selectable) =>
-            {
-                if (!cull.IsVisible)
-                {
-                    return;
-                }
-
-                if (!CommandSourceEligibility.CanInspectLive(_world, _globals, owner, entity))
-                {
-                    return;
-                }
-
-                if (!SpatialBoundsUtility.PointerHitsEntity(_world, entity, projector, pointer, radiusPixels))
-                {
-                    return;
-                }
-
-                if (!SpatialBoundsUtility.TryProjectScreenBounds(_world, entity, projector, out ScreenRect candidateBounds))
-                {
-                    return;
-                }
-
-                if (!hasBestBounds ||
-                    CompareProjectedBounds(candidateBounds, bestBounds, pointer) < 0 ||
-                    (CompareProjectedBounds(candidateBounds, bestBounds, pointer) == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
-                {
-                    best = entity;
-                    bestBounds = candidateBounds;
-                    hasBestBounds = true;
-                }
-            });
-
-            return best;
+            return CommandSourcePointerHitResolver.FindNearestInspectableEntity(_world, _globals, owner, pointer, radiusPixels);
         }
 
         private Entity ResolveClickAcquisition(Entity owner, Entity hovered)
@@ -460,23 +419,6 @@ namespace Ludots.Core.Input.CommandSources
             }
 
             Array.Resize(ref _commandSourceScratch, nextSize);
-        }
-
-        private static int CompareProjectedBounds(in ScreenRect candidate, in ScreenRect best, Vector2 pointer)
-        {
-            float candidateArea = MathF.Max(0f, candidate.MaxX - candidate.MinX) * MathF.Max(0f, candidate.MaxY - candidate.MinY);
-            float bestArea = MathF.Max(0f, best.MaxX - best.MinX) * MathF.Max(0f, best.MaxY - best.MinY);
-            int areaComparison = candidateArea.CompareTo(bestArea);
-            if (areaComparison != 0)
-            {
-                return areaComparison;
-            }
-
-            Vector2 candidateCenter = new((candidate.MinX + candidate.MaxX) * 0.5f, (candidate.MinY + candidate.MaxY) * 0.5f);
-            Vector2 bestCenter = new((best.MinX + best.MaxX) * 0.5f, (best.MinY + best.MaxY) * 0.5f);
-            float candidateD2 = Vector2.DistanceSquared(candidateCenter, pointer);
-            float bestD2 = Vector2.DistanceSquared(bestCenter, pointer);
-            return candidateD2.CompareTo(bestD2);
         }
 
         private static void SortByEntityId(Span<Entity> entities, int count)

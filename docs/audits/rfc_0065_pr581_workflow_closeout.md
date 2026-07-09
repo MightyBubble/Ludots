@@ -549,7 +549,7 @@ Current status: discovery complete; broad migrations intentionally not performed
 | Item | Status | Reason |
 |---|---|---|
 | C1 CTRL-3 consumer migration and embodied `PlayerOwner`/`Team` deletion | Not safe in PR581 | Actual consumers span GAS targeting, projectile hit checks, queries, AI predicates, input/Selection, presentation, visibility, participant view, MassNavigation, lifecycle, save, and spawn. This must be split into independent breaking PRs, each with post-migration zero-old-component assertions. |
-| C2 input main-chain wiring | Partially wired; terminal migration blocked | The RFC-0065 `Command` ground path now resolves through `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue`, with focused acceptance coverage. The broader skill/cast fan-out path and `InteractionModeType` retirement still depend on PR #535 vs #577 arbitration and must stay as follow-up migration work. |
+| C2 input main-chain wiring | Core command chain wired; terminal migration blocked | The RFC-0065 `Command` path now resolves actors from the active command-source collection and target facts from the frozen command-click pointer: ground clicks route as `HasEntity=false`, entity clicks route as `HasEntity=true` through `CommandIntentProfileRegistry.RouteGroup`, then `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue`. The broader skill/cast fan-out path, `byAbilityTag` route landing into concrete `castAbility` slot args, multi-command-action scheme expansion, and `InteractionModeType` retirement remain follow-up migration work. |
 | C3 presentation/provider follow-ups | Not safe in PR581 | `VisibilityCondition` graph emit still throws on graph visibility and still needs production wiring. SHOW-3 GUI marker/referee/palette UAT is complete and is not a remaining visible-evidence blocker. |
 | C4 INT-8, M10, DOC-1 | Deferred by design | Tag/stance knowledge-fact projection is new infrastructure; replay acceptance needs a replay harness; gitbook rewrite waits for RFC acceptance. |
 
@@ -585,7 +585,7 @@ Completed now:
 - A3 and A4 headless acceptance artifacts regenerated through tests with launcher binding guards.
 - A4 headless acceptance now covers default right-click dispatch, startup CommandSource rows, hover ambiguity, visible-UAT scheme timeline, and `scheme.wasd_move` WASD hot-switch through the production input snapshot/order path; blink/mixed-selection UI timeline screenshots cover all_together, one_by_one, and nearest_top_n.
 - SHOW-3 referee multi-control-domain projection headless evidence completed with standard artifacts; GUI marker/palette recording now shows phase0/phase1/foreign exclusion and revoke shrink.
-- Selection is retired from the RFC-0065 ground `Command` authority path: configured command routing fail-fasts when partially wired, consumes missing active intent without legacy fallback, resolves actors from the active command-source collection, and does not call selected-provider fallbacks.
+- Selection is retired from the RFC-0065 `Command` authority path: configured command routing fail-fasts when partially wired, consumes missing active intent without legacy fallback, resolves actors from the active command-source collection, freezes clicked target facts before command-intent routing, and does not call selected-provider fallbacks.
 - MassNavigation core is decoupled from input arbitration: it consumes explicit `OrderBuffer` move orders, no longer references Selection/CommandSource/InteractionContextStack/`OrderSelectionReference`, and its self-contained move orders encode a null selection reference through the shared `OrderArgs` factory.
 - B1 benchmark hardening completed for the missing repo tests.
 - B2 current-workstation Debug and Release reruns passed 41/41 with all reported benchmark windows at `alloc_bytes=0`; Release is the preferred local evidence set.
@@ -595,4 +595,4 @@ Still open by dependency:
 
 - Full video recordings where required beyond the accepted A1/A2/A3/A4/SHOW-3 timeline PNG evidence.
 - Dedicated isolated B2 perf host rerun, if reviewers require more than the current-workstation Debug/Release evidence above.
-- C1/C2/C3/C4 migrations and RFC/gitbook terminal-state work.
+- C1/C2/C3/C4 migrations and RFC/gitbook terminal-state work, including `byAbilityTag` route landing into concrete `castAbility` slot args and any multi-command-action control-scheme expansion needed by downstream mods.
