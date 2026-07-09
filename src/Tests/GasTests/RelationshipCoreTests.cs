@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
@@ -45,6 +46,125 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.HasLink(source, target, hostilityTypeId), Is.False);
             Assert.That(runtime.HasLink(source, target, socialBondTypeId), Is.True);
             Assert.That(runtime.GetMetric(source, target, socialBondTypeId, loyaltyId), Is.EqualTo(25));
+        }
+
+        [Test]
+        public void RelationshipRuntime_MaterializesIndexedRelationshipEntity()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            int socialBondTypeId = types.Register("Tests.Relationship.SocialBond");
+            Entity source = world.Create();
+            Entity target = world.Create();
+
+            runtime.EnsureLink(source, target, socialBondTypeId);
+
+            Assert.That(runtime.TryResolveRelationshipEntity(source, target, socialBondTypeId, out Entity relationEntity), Is.True);
+            Assert.That(relationEntity, Is.Not.EqualTo(Entity.Null));
+            Assert.That(world.Has<RelationshipInstanceCm>(relationEntity), Is.True);
+            Assert.That(world.Has<AttributeBuffer>(relationEntity), Is.True);
+            Assert.That(world.Has<GameplayTagContainer>(relationEntity), Is.True);
+            Assert.That(world.Has<TagCountContainer>(relationEntity), Is.True);
+            Assert.That(world.Has<ActiveEffectContainer>(relationEntity), Is.True);
+
+            ref readonly RelationshipInstanceCm instance = ref world.Get<RelationshipInstanceCm>(relationEntity);
+            Assert.That(instance.Source, Is.EqualTo(source));
+            Assert.That(instance.Target, Is.EqualTo(target));
+            Assert.That(instance.TypeId, Is.EqualTo(socialBondTypeId));
+            Assert.That(instance.Revision, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void RelationshipEntityAttributesReceiveGasBuffs()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            int socialBondTypeId = types.Register("Tests.Relationship.SocialBondBuff");
+            int pressureId = EnsureAttribute("Tests.Relationship.Pressure");
+            int effectTagId = EnsureTag("Effect.Test.RelationshipPressureBuff");
+            Entity source = world.Create();
+            Entity target = world.Create();
+
+            runtime.EnsureLink(source, target, socialBondTypeId);
+            Assert.That(runtime.TryResolveRelationshipEntity(source, target, socialBondTypeId, out Entity relationEntity), Is.True);
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(relationEntity);
+            attributes.SetBase(pressureId, 1f);
+
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(pressureId, ModifierOp.Add, 2f);
+            templates.Register(2301, new EffectTemplateData
+            {
+                TagId = effectTagId,
+                PresetType = EffectPresetType.Buff,
+                LifetimeKind = EffectLifetimeKind.After,
+                ClockId = GasClockId.Step,
+                DurationTicks = 10,
+                PeriodTicks = 0,
+                Modifiers = modifiers,
+            });
+
+            var requests = new EffectRequestQueue();
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+            var application = new EffectApplicationSystem(world, requests, templates: templates);
+            var aggregator = new AttributeAggregatorSystem(world);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = Entity.Null,
+                Target = relationEntity,
+                TargetContext = Entity.Null,
+                TemplateId = 2301,
+            });
+
+            proposal.Update(0f);
+            application.Update(0f);
+            aggregator.Update(0f);
+
+            Assert.That(world.Get<AttributeBuffer>(relationEntity).GetCurrent(pressureId), Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void RelationshipRuntime_RemoveLinkDestroysMaterializedEntity()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            int socialBondTypeId = types.Register("Tests.Relationship.Remove");
+            Entity source = world.Create();
+            Entity target = world.Create();
+
+            runtime.EnsureLink(source, target, socialBondTypeId);
+            Assert.That(runtime.TryResolveRelationshipEntity(source, target, socialBondTypeId, out Entity relationEntity), Is.True);
+
+            runtime.RemoveLink(source, target, socialBondTypeId);
+
+            Assert.That(runtime.TryResolveRelationshipEntity(source, target, socialBondTypeId, out _), Is.False);
+            Assert.That(world.IsAlive(relationEntity), Is.False);
+        }
+
+        [Test]
+        public void RelationshipRuntime_RebuildIndexFailsFastForDuplicateProjection()
+        {
+            using var world = World.Create();
+            RelationshipRuntime runtime = CreateRuntime(world, out RelationshipTypeRegistry types);
+            int socialBondTypeId = types.Register("Tests.Relationship.DuplicateProjection");
+            Entity source = world.Create();
+            Entity target = world.Create();
+
+            runtime.EnsureLink(source, target, socialBondTypeId);
+            world.Create(new RelationshipInstanceCm
+            {
+                Source = source,
+                Target = target,
+                TypeId = socialBondTypeId,
+            });
+
+            Assert.Throws<InvalidOperationException>(() => runtime.RebuildEntityIndexFromWorld());
         }
 
         [Test]
@@ -136,6 +256,30 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.Count, Is.EqualTo(2));
             Assert.That(buffer.ResizeCount, Is.GreaterThanOrEqualTo(1));
             Assert.That(buffer.Capacity, Is.GreaterThanOrEqualTo(2));
+        }
+
+        private static RelationshipRuntime CreateRuntime(World world, out RelationshipTypeRegistry types)
+        {
+            types = new RelationshipTypeRegistry();
+            return new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer());
+        }
+
+        private static int EnsureAttribute(string attribute)
+        {
+            int id = AttributeRegistry.GetId(attribute);
+            return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(attribute);
+        }
+
+        private static int EnsureTag(string tag)
+        {
+            int id = TagRegistry.GetId(tag);
+            return id != TagRegistry.InvalidId ? id : TagRegistry.Register(tag);
         }
     }
 }

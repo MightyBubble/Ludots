@@ -13,6 +13,8 @@ namespace Ludots.Core.Gameplay.GAS
         public GasStepMode Mode => _mode;
         public int ScalePermille => _scalePermille;
         public int Version => _version;
+        public int LastConsumedSteps { get; private set; }
+        public int LastConsumedManualSteps { get; private set; }
 
         public GasClockStepPolicy(int stepEveryFixedTicks, GasStepMode mode = GasStepMode.Auto)
         {
@@ -58,6 +60,8 @@ namespace Ludots.Core.Gameplay.GAS
 
         public int ConsumeStepsForThisFixedTick()
         {
+            LastConsumedSteps = 0;
+            LastConsumedManualSteps = 0;
             switch (_mode)
             {
                 case GasStepMode.Paused:
@@ -65,13 +69,17 @@ namespace Ludots.Core.Gameplay.GAS
                 case GasStepMode.Manual:
                     if (_pendingManualSteps < 1) return 0;
                     _pendingManualSteps--;
+                    LastConsumedSteps = 1;
+                    LastConsumedManualSteps = 1;
                     return 1;
                 case GasStepMode.Auto:
                     if (_scalePermille <= 0) return 0;
-                    _autoAccumulatorPermille += _scalePermille;
                     int threshold = _stepEveryFixedTicks * 1000;
-                    int steps = _autoAccumulatorPermille / threshold;
-                    _autoAccumulatorPermille -= steps * threshold;
+                    int steps = PermilleStepAccumulator.Consume(
+                        ref _autoAccumulatorPermille,
+                        _scalePermille,
+                        threshold);
+                    LastConsumedSteps = steps;
                     return steps;
                 default:
                     throw new System.ArgumentOutOfRangeException();

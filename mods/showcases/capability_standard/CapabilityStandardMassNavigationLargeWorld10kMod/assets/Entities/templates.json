@@ -1,0 +1,34 @@
+[
+  {
+    "id": "mass_navigation_agent_azure_light",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_azure_heavy",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_crimson_light",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_crimson_heavy",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_amber_light",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_amber_heavy",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_emerald_light",
+    "onSpawnEffect": null
+  },
+  {
+    "id": "mass_navigation_agent_emerald_heavy",
+    "onSpawnEffect": null
+  }
+]

@@ -6,10 +6,16 @@ using CoreInputMod.ViewMode;
 using InteractionShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -22,6 +28,10 @@ namespace NarrativeShowcaseMod.Runtime
 {
     internal sealed class NarrativeShowcaseRuntime
     {
+        private const int ShowcaseLocalPlayerId = 1;
+        private static readonly QueryDescription LocalPlayerCandidateQuery = new QueryDescription().WithAll<Name, PlayerOwner, MapEntity, AbilityStateBuffer>();
+        private static readonly QueryDescription SelectableKnowledgeQuery = new QueryDescription().WithAll<SelectionSelectableTag, MapEntity>();
+
         private readonly IModContext _context;
         private readonly NarrativeShowcaseFrontendConfig _frontendConfig;
         private readonly List<string> _history = new();
@@ -69,6 +79,9 @@ namespace NarrativeShowcaseMod.Runtime
             {
                 ActivateInputContexts(input);
                 EnsureViewMode(engine);
+                EnsureShowcaseLocalPlayer(engine, activeMapId);
+                PublishShowcaseKnowledge(engine, activeMapId);
+                EnsureShowcaseSelectionView(engine);
                 EnsureBootstrapped(engine);
                 RebindEntities(engine);
                 RefreshPanel(engine);
@@ -117,7 +130,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             AppendHistory(_frontendConfig.Templates.QuestStageChanged, new Dictionary<string, string>
             {
-                ["bodyText"] = context.Get(NarrativeServiceKeys.BodyText) ?? string.Empty,
+                ["bodyText"] = context.Get(QuestServiceKeys.ObjectiveText) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -132,7 +145,7 @@ namespace NarrativeShowcaseMod.Runtime
 
             AppendHistory(_frontendConfig.Templates.QuestCompleted, new Dictionary<string, string>
             {
-                ["questId"] = context.Get(NarrativeServiceKeys.QuestId) ?? string.Empty,
+                ["questId"] = context.Get(QuestServiceKeys.QuestId) ?? string.Empty,
             });
             RefreshPanel(engine);
             return Task.CompletedTask;
@@ -185,14 +198,14 @@ namespace NarrativeShowcaseMod.Runtime
             return Task.CompletedTask;
         }
 
-        public Task HandleNarrativeSignalAsync(ScriptContext context)
+        public Task HandleQuestSignalAsync(ScriptContext context)
         {
             if (context.GetEngine() is not GameEngine engine || !IsShowcaseActive(engine))
             {
                 return Task.CompletedTask;
             }
 
-            string signalId = context.Get(NarrativeServiceKeys.SignalId) ?? string.Empty;
+            string signalId = context.Get(QuestServiceKeys.SignalId) ?? string.Empty;
             AppendHistory(_frontendConfig.Templates.Signal, new Dictionary<string, string>
             {
                 ["signalId"] = signalId,
@@ -261,7 +274,11 @@ namespace NarrativeShowcaseMod.Runtime
                 return;
             }
 
-            TryRenameSpawnedBeast(engine);
+            if (TryRenameSpawnedBeast(engine))
+            {
+                PublishShowcaseKnowledge(engine, NarrativeShowcaseIds.MapId);
+            }
+
             BindByName(engine, director, NarrativeShowcaseIds.PlayerAlias, NarrativeShowcaseIds.PlayerName);
             BindByName(engine, director, NarrativeShowcaseIds.ElderAlias, NarrativeShowcaseIds.ElderName);
             BindByName(engine, director, NarrativeShowcaseIds.ShrineAlias, NarrativeShowcaseIds.ShrineName);
@@ -341,11 +358,11 @@ namespace NarrativeShowcaseMod.Runtime
 
         private NarrativeFrontendSurfaceModel BuildObjectiveSurface(NarrativeDirector director)
         {
-            IReadOnlyList<NarrativeQuestView> quests = director.GetQuestViews();
-            NarrativeQuestView? activeQuest = null;
+            IReadOnlyList<QuestView> quests = director.GetQuestViews();
+            QuestView? activeQuest = null;
             for (int i = 0; i < quests.Count; i++)
             {
-                if (quests[i].State == NarrativeQuestState.Active)
+                if (quests[i].State == QuestState.Active)
                 {
                     activeQuest = quests[i];
                     break;
@@ -649,6 +666,164 @@ namespace NarrativeShowcaseMod.Runtime
             }
         }
 
+        private static void EnsureShowcaseLocalPlayer(GameEngine engine, string activeMapId)
+        {
+            if (TryResolveExistingLocalPlayer(engine, activeMapId, out _))
+            {
+                return;
+            }
+
+            Entity firstCandidate = Entity.Null;
+            Entity preferredCandidate = Entity.Null;
+            int firstPlayerId = 0;
+            int preferredPlayerId = 0;
+
+            engine.World.Query(in LocalPlayerCandidateQuery, (Entity entity, ref Name name, ref PlayerOwner owner, ref MapEntity mapEntity, ref AbilityStateBuffer _) =>
+            {
+                if (!IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
+                {
+                    return;
+                }
+
+                if (firstCandidate == Entity.Null)
+                {
+                    firstCandidate = entity;
+                    firstPlayerId = owner.PlayerId;
+                }
+
+                if (string.Equals(name.Value, NarrativeShowcaseIds.PlayerName, StringComparison.OrdinalIgnoreCase))
+                {
+                    preferredCandidate = entity;
+                    preferredPlayerId = owner.PlayerId;
+                }
+            });
+
+            Entity resolved = preferredCandidate != Entity.Null ? preferredCandidate : firstCandidate;
+            int resolvedPlayerId = preferredCandidate != Entity.Null ? preferredPlayerId : firstPlayerId;
+            if (resolved == Entity.Null)
+            {
+                return;
+            }
+
+            PublishShowcaseLocalPlayer(engine, resolved, resolvedPlayerId);
+        }
+
+        private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
+        {
+            localPlayer = Entity.Null;
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
+                !engine.World.IsAlive(existing) ||
+                !engine.World.TryGet(existing, out PlayerOwner owner) ||
+                !engine.World.TryGet(existing, out MapEntity mapEntity) ||
+                !IsLocalPlayerCandidate(activeMapId, in owner, in mapEntity))
+            {
+                return false;
+            }
+
+            localPlayer = existing;
+            PublishShowcaseLocalPlayer(engine, existing, owner.PlayerId);
+            return true;
+        }
+
+        private static void PublishShowcaseLocalPlayer(GameEngine engine, Entity localPlayer, int playerId)
+        {
+            if (playerId <= 0)
+            {
+                return;
+            }
+
+            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
+                lookup == null ||
+                (lookup.TryGet(playerId, out Entity existing) && existing != localPlayer))
+            {
+                lookup = new PlayerEntityLookup();
+                engine.SetService(CoreServiceKeys.PlayerEntityLookup, lookup);
+            }
+
+            if (!lookup.TryGet(playerId, out _))
+            {
+                lookup.Register(playerId, localPlayer);
+            }
+
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+        }
+
+        private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
+        {
+            return owner.PlayerId == ShowcaseLocalPlayerId &&
+                   string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity viewer ||
+                !engine.World.IsAlive(viewer))
+            {
+                return;
+            }
+
+            KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+                ?? throw new InvalidOperationException("KnowledgeProjectionStore missing.");
+            var empty = KnowledgeIdMask256.Empty;
+            int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+            engine.World.Query(in SelectableKnowledgeQuery, (Entity entity, ref SelectionSelectableTag _, ref MapEntity mapEntity) =>
+            {
+                if (!string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                knowledge.Upsert(
+                    viewer,
+                    entity,
+                    new KnowledgeDisclosureRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        empty,
+                        empty,
+                        empty,
+                        viewer,
+                        observedTick,
+                        expiryTick: 0,
+                        confidencePermille: 1000,
+                        revision: 0));
+            });
+        }
+
+        private static void EnsureShowcaseSelectionView(GameEngine engine)
+        {
+            if (!TryResolveSelectionContext(engine, out SelectionRuntime selection, out Entity viewer))
+            {
+                return;
+            }
+
+            selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
+        }
+
+        private static bool TryResolveSelectionContext(GameEngine engine, out SelectionRuntime selection, out Entity viewer)
+        {
+            selection = null!;
+            viewer = Entity.Null;
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out object? runtimeObj) ||
+                runtimeObj is not SelectionRuntime runtime)
+            {
+                return false;
+            }
+
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                viewerObj is not Entity localViewer ||
+                !engine.World.IsAlive(localViewer))
+            {
+                return false;
+            }
+
+            selection = runtime;
+            viewer = localViewer;
+            return true;
+        }
+
         private void ClearFrontend(GameEngine engine)
         {
             if (engine.GetService(NarrativeFrontendServiceKeys.Service) is NarrativeFrontendService frontend)
@@ -665,18 +840,21 @@ namespace NarrativeShowcaseMod.Runtime
             }
         }
 
-        private void TryRenameSpawnedBeast(GameEngine engine)
+        private bool TryRenameSpawnedBeast(GameEngine engine)
         {
             if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.BeastName, out _))
             {
-                return;
+                return false;
             }
 
             if (TryFindEntityByName(engine.World, NarrativeShowcaseIds.SpawnedBeastTemplateName, out Entity entity) && engine.World.TryGet(entity, out Name name))
             {
                 name.Value = NarrativeShowcaseIds.BeastName;
                 engine.World.Set(entity, name);
+                return true;
             }
+
+            return false;
         }
 
         private void ResetHistory()

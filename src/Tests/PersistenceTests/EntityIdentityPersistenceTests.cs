@@ -3,6 +3,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Map;
 using Ludots.Core.Persistence;
 using NUnit.Framework;
@@ -163,6 +164,50 @@ public sealed class EntityIdentityPersistenceTests
         Entity restoredTeam = restored.Get<TeamEntityRef>(restoredOwner).Value;
 
         AssertAliveName(restored, restoredTeam, "team");
+    }
+
+    [Test]
+    public void QuestInstanceScopeHostIsAliveAndReadableAfterRoundTrip()
+    {
+        using World world = World.Create();
+        Entity scopeHost = world.Create(new Name { Value = "quest-scope" });
+        world.Create(new QuestInstanceCm
+        {
+            DefinitionId = 1,
+            State = QuestState.Active,
+            StageIndex = 0,
+            ScopeHost = scopeHost,
+            Revision = 1
+        });
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredQuest = FindSingle<QuestInstanceCm>(restored);
+        Entity restoredScopeHost = restored.Get<QuestInstanceCm>(restoredQuest).ScopeHost;
+
+        Assert.That(restoredScopeHost.WorldId, Is.EqualTo(restored.Id));
+        AssertAliveName(restored, restoredScopeHost, "quest-scope");
+    }
+
+    [Test]
+    public void EntityReferenceAuditFailsFastWhenQuestScopeHostReferencesExcludedEntity()
+    {
+        using World world = World.Create();
+        Entity excludedScopeHost = world.Create(new Name { Value = "excluded-quest-scope" }, new SaveExcludedTag());
+        world.Create(new QuestInstanceCm
+        {
+            DefinitionId = 1,
+            State = QuestState.Active,
+            StageIndex = 0,
+            ScopeHost = excludedScopeHost,
+            Revision = 1
+        });
+
+        var error = Assert.Throws<SaveContextException>(
+            () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+
+        Assert.That(error!.Message, Does.Contain("excluded entity"));
+        Assert.That(error.Message, Does.Contain(nameof(QuestInstanceCm)));
+        Assert.That(error.Message, Does.Contain(nameof(QuestInstanceCm.ScopeHost)));
     }
 
     [Test]

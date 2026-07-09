@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 
@@ -21,11 +22,6 @@ namespace Ludots.Core.Gameplay.Narrative
         public const string Choice2 = "NarrativeChoice2";
         public const string Choice3 = "NarrativeChoice3";
     }
-
-    public sealed record NarrativeQuestSnapshot(
-        string QuestId,
-        NarrativeQuestState State,
-        int StageIndex);
 
     public sealed record NarrativeEntityBindingSnapshot(
         string Alias,
@@ -44,8 +40,6 @@ namespace Ludots.Core.Gameplay.Narrative
 
     public sealed record NarrativeDirectorSnapshot(
         IReadOnlyDictionary<string, NarrativeValue> Variables,
-        IReadOnlyList<NarrativeQuestSnapshot> Quests,
-        IReadOnlyDictionary<string, int> Signals,
         IReadOnlyList<NarrativeEntityBindingSnapshot> Bindings,
         NarrativeDialogueSnapshot ActiveDialogue,
         NarrativeCinematicSnapshot ActiveCinematic);
@@ -54,18 +48,19 @@ namespace Ludots.Core.Gameplay.Narrative
     {
         private readonly GameEngine _engine;
         private readonly NarrativeDefinitionRegistry _definitions;
+        private readonly QuestRuntimeService _questRuntime;
         private readonly NarrativeValueStore _variables;
-        private readonly Dictionary<string, NarrativeQuestRuntime> _quests = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, int> _signals = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, Entity> _bindings = new(StringComparer.OrdinalIgnoreCase);
         private NarrativeDialogueSession _activeDialogue;
         private NarrativeCinematicSession _activeCinematic;
 
-        public NarrativeDirector(GameEngine engine, NarrativeDefinitionRegistry definitions)
+        public NarrativeDirector(GameEngine engine, NarrativeDefinitionRegistry definitions, QuestRuntimeService questRuntime)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _questRuntime = questRuntime ?? throw new ArgumentNullException(nameof(questRuntime));
             _variables = new NarrativeValueStore(definitions);
+            _questRuntime.QuestEventPublished += HandleQuestEventPublished;
         }
 
         public bool HasActiveDialogue => _activeDialogue != null;
@@ -73,9 +68,13 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public void ResetState()
         {
+            ResetNarrativeState();
+            _questRuntime.ResetState();
+        }
+
+        public void ResetNarrativeState()
+        {
             _variables.ResetToDefaults();
-            _quests.Clear();
-            _signals.Clear();
             _bindings.Clear();
             _activeDialogue = null;
             _activeCinematic = null;
@@ -116,61 +115,14 @@ namespace Ludots.Core.Gameplay.Narrative
             };
         }
 
-        public bool TryGetQuestState(string questId, out NarrativeQuestState state, out string stageId)
-        {
-            if (_quests.TryGetValue(questId, out var runtime))
-            {
-                state = runtime.State;
-                stageId = runtime.CurrentStageId;
-                return true;
-            }
+        public bool TryGetQuestState(string questId, out QuestState state, out string stageId)
+            => _questRuntime.TryGetQuestState(questId, out state, out stageId);
 
-            state = NarrativeQuestState.Inactive;
-            stageId = string.Empty;
-            return false;
-        }
-
-        public IReadOnlyList<NarrativeQuestView> GetQuestViews()
-        {
-            var views = new List<NarrativeQuestView>(_quests.Count);
-            foreach (var pair in _quests)
-            {
-                NarrativeQuestRuntime runtime = pair.Value;
-                if (runtime.State == NarrativeQuestState.Inactive)
-                {
-                    continue;
-                }
-
-                NarrativeQuestStageDefinition? stage =
-                    runtime.StageIndex >= 0 && runtime.StageIndex < runtime.Definition.Stages.Count
-                        ? runtime.Definition.Stages[runtime.StageIndex]
-                        : null;
-                views.Add(new NarrativeQuestView(
-                    runtime.Definition.Id,
-                    runtime.Definition.DisplayName,
-                    runtime.Definition.Summary,
-                    runtime.State,
-                    stage?.Id ?? string.Empty,
-                    stage?.Title ?? string.Empty,
-                    stage?.ObjectiveText ?? string.Empty,
-                    stage?.ObjectiveHint ?? string.Empty));
-            }
-
-            return views;
-        }
+        public IReadOnlyList<QuestView> GetQuestViews()
+            => _questRuntime.GetQuestViews();
 
         public NarrativeDirectorSnapshot CaptureSnapshot()
         {
-            var quests = new List<NarrativeQuestSnapshot>(_quests.Count);
-            foreach (var pair in _quests)
-            {
-                NarrativeQuestRuntime runtime = pair.Value;
-                quests.Add(new NarrativeQuestSnapshot(
-                    runtime.Definition.Id,
-                    runtime.State,
-                    runtime.StageIndex));
-            }
-
             var bindings = new List<NarrativeEntityBindingSnapshot>(_bindings.Count);
             foreach (var pair in _bindings)
             {
@@ -198,8 +150,6 @@ namespace Ludots.Core.Gameplay.Narrative
 
             return new NarrativeDirectorSnapshot(
                 _variables.CaptureSnapshot(),
-                quests,
-                new Dictionary<string, int>(_signals, StringComparer.OrdinalIgnoreCase),
                 bindings,
                 dialogue,
                 cinematic);
@@ -210,35 +160,6 @@ namespace Ludots.Core.Gameplay.Narrative
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
 
             _variables.RestoreSnapshot(snapshot.Variables);
-            _quests.Clear();
-            for (int i = 0; i < snapshot.Quests.Count; i++)
-            {
-                NarrativeQuestSnapshot questSnapshot = snapshot.Quests[i];
-                if (!_definitions.TryGetQuest(questSnapshot.QuestId, out NarrativeQuestDefinition definition))
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative quest '{questSnapshot.QuestId}' is not registered.");
-                }
-
-                if (questSnapshot.StageIndex < -1 || questSnapshot.StageIndex >= definition.Stages.Count)
-                {
-                    throw new InvalidOperationException(
-                        $"Narrative quest '{questSnapshot.QuestId}' has invalid stage index {questSnapshot.StageIndex}.");
-                }
-
-                _quests[questSnapshot.QuestId] = new NarrativeQuestRuntime(definition)
-                {
-                    State = questSnapshot.State,
-                    StageIndex = questSnapshot.StageIndex
-                };
-            }
-
-            _signals.Clear();
-            foreach (var pair in snapshot.Signals)
-            {
-                _signals[pair.Key] = pair.Value;
-            }
-
             _bindings.Clear();
             for (int i = 0; i < snapshot.Bindings.Count; i++)
             {
@@ -299,84 +220,39 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public void StartQuest(string questId)
         {
-            if (!_definitions.TryGetQuest(questId, out var definition))
-            {
-                return;
-            }
-
-            if (_quests.TryGetValue(questId, out var existing) && existing.State != NarrativeQuestState.Inactive)
-            {
-                return;
-            }
-
-            var runtime = new NarrativeQuestRuntime(definition);
-            runtime.State = NarrativeQuestState.Active;
-            _quests[questId] = runtime;
-            ExecuteActions(definition.OnStart);
-            EnterQuestStage(runtime, 0);
+            _questRuntime.StartQuest(questId);
         }
 
         public void AdvanceQuestStage(string questId, string targetStageId = "")
         {
-            if (!_quests.TryGetValue(questId, out var runtime) || runtime.State != NarrativeQuestState.Active)
-            {
-                return;
-            }
-
-            if (!string.IsNullOrWhiteSpace(targetStageId))
-            {
-                for (int i = 0; i < runtime.Definition.Stages.Count; i++)
-                {
-                    if (string.Equals(runtime.Definition.Stages[i].Id, targetStageId, StringComparison.OrdinalIgnoreCase))
-                    {
-                        EnterQuestStage(runtime, i);
-                        return;
-                    }
-                }
-            }
-
-            int nextIndex = runtime.StageIndex + 1;
-            if (nextIndex >= runtime.Definition.Stages.Count)
-            {
-                CompleteQuest(questId);
-                return;
-            }
-
-            EnterQuestStage(runtime, nextIndex);
+            _questRuntime.AdvanceQuestStage(questId, targetStageId);
         }
 
         public void CompleteQuest(string questId)
         {
-            if (!_quests.TryGetValue(questId, out var runtime))
-            {
-                return;
-            }
-
-            runtime.State = NarrativeQuestState.Completed;
-            ExecuteActions(runtime.Definition.OnComplete);
-            FireNarrativeEvent(NarrativeEventKeys.QuestCompleted, ctx =>
-            {
-                ctx.Set(NarrativeServiceKeys.QuestId, runtime.Definition.Id);
-                ctx.Set(NarrativeServiceKeys.QuestStageId, runtime.CurrentStageId);
-            });
+            _questRuntime.CompleteQuest(questId);
         }
 
         public void FailQuest(string questId)
         {
-            if (!_quests.TryGetValue(questId, out var runtime))
-            {
-                return;
-            }
-
-            runtime.State = NarrativeQuestState.Failed;
-            ExecuteActions(runtime.Definition.OnFail);
+            _questRuntime.FailQuest(questId);
         }
 
         public void StartDialogue(string dialogueId)
         {
-            if (!_definitions.TryGetDialogue(dialogueId, out var definition) || string.IsNullOrWhiteSpace(definition.StartNodeId))
+            if (string.IsNullOrWhiteSpace(dialogueId))
             {
-                return;
+                throw new ArgumentException("Narrative dialogue id is required.", nameof(dialogueId));
+            }
+
+            if (!_definitions.TryGetDialogue(dialogueId, out var definition))
+            {
+                throw new InvalidOperationException($"Narrative dialogue '{dialogueId}' is not registered.");
+            }
+
+            if (string.IsNullOrWhiteSpace(definition.StartNodeId))
+            {
+                throw new InvalidOperationException($"Narrative dialogue '{dialogueId}' must define a start node.");
             }
 
             _activeDialogue = new NarrativeDialogueSession(definition);
@@ -409,7 +285,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
             var choice = _activeDialogue.CurrentChoices[index];
             ExecuteActions(choice.Actions);
-            FireNarrativeEvent(NarrativeEventKeys.DialogueChoiceCommitted, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.DialogueChoiceCommitted, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.DialogueId, _activeDialogue.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.DialogueNodeId, _activeDialogue.CurrentNode?.Id ?? string.Empty);
@@ -428,9 +304,19 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public void StartCinematic(string cinematicId)
         {
-            if (!_definitions.TryGetCinematic(cinematicId, out var definition) || definition.Steps.Count == 0)
+            if (string.IsNullOrWhiteSpace(cinematicId))
             {
-                return;
+                throw new ArgumentException("Narrative cinematic id is required.", nameof(cinematicId));
+            }
+
+            if (!_definitions.TryGetCinematic(cinematicId, out var definition))
+            {
+                throw new InvalidOperationException($"Narrative cinematic '{cinematicId}' is not registered.");
+            }
+
+            if (definition.Steps.Count == 0)
+            {
+                throw new InvalidOperationException($"Narrative cinematic '{cinematicId}' must define at least one step.");
             }
 
             _activeCinematic = new NarrativeCinematicSession(definition);
@@ -451,20 +337,17 @@ namespace Ludots.Core.Gameplay.Narrative
         {
             if (string.IsNullOrWhiteSpace(signalId))
             {
-                return;
+                throw new ArgumentException("Quest signal id is required.", nameof(signalId));
             }
 
-            _signals.TryGetValue(signalId, out int count);
-            _signals[signalId] = count + 1;
-
-            FireNarrativeEvent(NarrativeEventKeys.Signal, ctx =>
+            FireTriggerEvent(QuestEventKeys.Signal, ctx =>
             {
-                ctx.Set(NarrativeServiceKeys.SignalId, signalId);
-                ctx.Set(NarrativeServiceKeys.SignalIntValue, intValue);
-                ctx.Set(NarrativeServiceKeys.SignalStringValue, stringValue ?? string.Empty);
+                ctx.Set(QuestServiceKeys.SignalId, signalId);
+                ctx.Set(QuestServiceKeys.SignalIntValue, intValue);
+                ctx.Set(QuestServiceKeys.SignalStringValue, stringValue ?? string.Empty);
             });
 
-            EvaluateQuestProgress();
+            _questRuntime.EmitSignal(signalId);
         }
 
         public void Update(float dt)
@@ -477,10 +360,11 @@ namespace Ludots.Core.Gameplay.Narrative
         public string BuildQuestSummary()
         {
             var sb = new StringBuilder();
-            foreach (var pair in _quests)
+            IReadOnlyList<QuestView> quests = _questRuntime.GetQuestViews();
+            for (int i = 0; i < quests.Count; i++)
             {
-                var quest = pair.Value;
-                if (quest.State == NarrativeQuestState.Inactive)
+                QuestView quest = quests[i];
+                if (quest.State == QuestState.Inactive)
                 {
                     continue;
                 }
@@ -490,13 +374,13 @@ namespace Ludots.Core.Gameplay.Narrative
                     sb.Append(" | ");
                 }
 
-                sb.Append(quest.Definition.DisplayName);
+                sb.Append(quest.DisplayName);
                 sb.Append(": ");
                 sb.Append(quest.State);
-                if (!string.IsNullOrWhiteSpace(quest.CurrentStageTitle))
+                if (!string.IsNullOrWhiteSpace(quest.StageTitle))
                 {
                     sb.Append(" - ");
-                    sb.Append(quest.CurrentStageTitle);
+                    sb.Append(quest.StageTitle);
                 }
             }
 
@@ -505,12 +389,13 @@ namespace Ludots.Core.Gameplay.Narrative
 
         public string BuildObjectiveSummary()
         {
-            foreach (var pair in _quests)
+            IReadOnlyList<QuestView> quests = _questRuntime.GetQuestViews();
+            for (int i = 0; i < quests.Count; i++)
             {
-                var quest = pair.Value;
-                if (quest.State == NarrativeQuestState.Active)
+                QuestView quest = quests[i];
+                if (quest.State == QuestState.Active)
                 {
-                    return $"{quest.Definition.DisplayName}: {quest.CurrentObjectiveText}";
+                    return $"{quest.DisplayName}: {quest.ObjectiveText}";
                 }
             }
 
@@ -702,12 +587,42 @@ namespace Ludots.Core.Gameplay.Narrative
             EnterCinematicStep(nextIndex);
         }
 
-        private void EnterQuestStage(NarrativeQuestRuntime runtime, int stageIndex)
+        private void HandleQuestEventPublished(QuestEvent questEvent)
         {
-            runtime.StageIndex = stageIndex;
-            runtime.State = NarrativeQuestState.Active;
-            var stage = runtime.CurrentStage;
-            ExecuteActions(stage.OnEnter);
+            switch (questEvent.Kind)
+            {
+                case QuestEventKind.Started:
+                    FireQuestLifecycleEvent(QuestEventKeys.Started, questEvent);
+                    break;
+                case QuestEventKind.StageChanged:
+                    HandleQuestStageChanged(questEvent);
+                    break;
+                case QuestEventKind.Completed:
+                    FireQuestLifecycleEvent(QuestEventKeys.Completed, questEvent);
+                    break;
+                case QuestEventKind.Failed:
+                    FireQuestLifecycleEvent(QuestEventKeys.Failed, questEvent);
+                    break;
+            }
+        }
+
+        private void FireQuestLifecycleEvent(EventKey eventKey, QuestEvent questEvent)
+        {
+            FireTriggerEvent(eventKey, ctx =>
+            {
+                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
+                ctx.Set(QuestServiceKeys.StageId, questEvent.StageId);
+                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
+            });
+        }
+
+        private void HandleQuestStageChanged(QuestEvent questEvent)
+        {
+            if (!_questRuntime.TryGetStage(questEvent.QuestId, questEvent.StageId, out QuestStageDefinition stage))
+            {
+                throw new InvalidOperationException(
+                    $"Quest event references missing stage '{questEvent.StageId}' on quest '{questEvent.QuestId}'.");
+            }
 
             if (!string.IsNullOrWhiteSpace(stage.CinematicOnEnterId))
             {
@@ -719,52 +634,13 @@ namespace Ludots.Core.Gameplay.Narrative
                 StartDialogue(stage.DialogueOnEnterId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.QuestStageChanged, ctx =>
+            FireTriggerEvent(QuestEventKeys.StageChanged, ctx =>
             {
-                ctx.Set(NarrativeServiceKeys.QuestId, runtime.Definition.Id);
-                ctx.Set(NarrativeServiceKeys.QuestStageId, stage.Id);
-                ctx.Set(NarrativeServiceKeys.BodyText, stage.ObjectiveText);
+                ctx.Set(QuestServiceKeys.QuestId, questEvent.QuestId);
+                ctx.Set(QuestServiceKeys.StageId, stage.Id);
+                ctx.Set(QuestServiceKeys.ObjectiveText, stage.ObjectiveText);
+                ctx.Set(QuestServiceKeys.QuestEntity, questEvent.QuestEntity);
             });
-        }
-
-        private void EvaluateQuestProgress()
-        {
-            foreach (var pair in _quests)
-            {
-                var runtime = pair.Value;
-                if (runtime.State != NarrativeQuestState.Active)
-                {
-                    continue;
-                }
-
-                var stage = runtime.CurrentStage;
-                if (stage.RequiredSignals.Count > 0)
-                {
-                    bool allSignalsSatisfied = true;
-                    for (int i = 0; i < stage.RequiredSignals.Count; i++)
-                    {
-                        if (!_signals.TryGetValue(stage.RequiredSignals[i], out int count) || count <= 0)
-                        {
-                            allSignalsSatisfied = false;
-                            break;
-                        }
-                    }
-
-                    if (!allSignalsSatisfied)
-                    {
-                        continue;
-                    }
-                }
-
-                if (!EvaluateConditions(stage.CompletionConditions))
-                {
-                    continue;
-                }
-
-                ExecuteActions(stage.OnComplete);
-                AdvanceQuestStage(runtime.Definition.Id);
-                return;
-            }
         }
 
         private void EnterDialogueNode(string nodeId)
@@ -777,8 +653,8 @@ namespace Ludots.Core.Gameplay.Narrative
             var node = _activeDialogue.Definition.Nodes.Find(n => string.Equals(n.Id, nodeId, StringComparison.OrdinalIgnoreCase));
             if (node == null)
             {
-                _activeDialogue = null;
-                return;
+                throw new InvalidOperationException(
+                    $"Narrative dialogue '{_activeDialogue.Definition.Id}' references missing node '{nodeId}'.");
             }
 
             _activeDialogue.CurrentNode = node;
@@ -791,7 +667,7 @@ namespace Ludots.Core.Gameplay.Narrative
                 ActivateCamera(node.CameraId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.DialogueNodeEntered, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.DialogueNodeEntered, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.DialogueId, _activeDialogue.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.DialogueNodeId, node.Id);
@@ -818,7 +694,7 @@ namespace Ludots.Core.Gameplay.Narrative
                 ActivateCamera(_activeCinematic.CurrentStep.CameraId);
             }
 
-            FireNarrativeEvent(NarrativeEventKeys.CinematicStepEntered, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.CinematicStepEntered, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.CinematicId, _activeCinematic.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.CinematicStepId, _activeCinematic.CurrentStep.Id);
@@ -841,7 +717,7 @@ namespace Ludots.Core.Gameplay.Narrative
             }
 
             _activeCinematic = null;
-            FireNarrativeEvent(NarrativeEventKeys.CinematicCompleted, ctx =>
+            FireTriggerEvent(NarrativeEventKeys.CinematicCompleted, ctx =>
             {
                 ctx.Set(NarrativeServiceKeys.CinematicId, completed.Definition.Id);
                 ctx.Set(NarrativeServiceKeys.CinematicStepId, completed.CurrentStep?.Id ?? string.Empty);
@@ -927,7 +803,7 @@ namespace Ludots.Core.Gameplay.Narrative
                 case NarrativeConditionKind.QuestState:
                     return TryGetQuestState(condition.QuestId, out var questState, out _) && questState == condition.QuestState;
                 case NarrativeConditionKind.SignalCount:
-                    _signals.TryGetValue(condition.SignalId, out int count);
+                    _questRuntime.Signals.TryGetValue(condition.SignalId, out int count);
                     return CompareInt(count, condition.IntValue, condition.Operator);
                 case NarrativeConditionKind.EntityTag:
                     return EvaluateEntityTag(condition);
@@ -977,7 +853,7 @@ namespace Ludots.Core.Gameplay.Narrative
             return CompareFloat(attributes.GetCurrent(attributeId), condition.FloatValue, condition.Operator);
         }
 
-        private void FireNarrativeEvent(EventKey eventKey, Action<ScriptContext> enrichContext)
+        private void FireTriggerEvent(EventKey eventKey, Action<ScriptContext> enrichContext)
         {
             var ctx = _engine.CreateContext();
             enrichContext(ctx);
@@ -1105,24 +981,6 @@ namespace Ludots.Core.Gameplay.Narrative
             }
 
             return choices;
-        }
-
-        private sealed class NarrativeQuestRuntime
-        {
-            public NarrativeQuestRuntime(NarrativeQuestDefinition definition)
-            {
-                Definition = definition;
-                StageIndex = -1;
-                State = NarrativeQuestState.Inactive;
-            }
-
-            public NarrativeQuestDefinition Definition { get; }
-            public int StageIndex { get; set; }
-            public NarrativeQuestState State { get; set; }
-            public NarrativeQuestStageDefinition CurrentStage => Definition.Stages[Math.Clamp(StageIndex, 0, Definition.Stages.Count - 1)];
-            public string CurrentStageId => StageIndex >= 0 && StageIndex < Definition.Stages.Count ? CurrentStage.Id : string.Empty;
-            public string CurrentStageTitle => StageIndex >= 0 && StageIndex < Definition.Stages.Count ? CurrentStage.Title : string.Empty;
-            public string CurrentObjectiveText => StageIndex >= 0 && StageIndex < Definition.Stages.Count ? CurrentStage.ObjectiveText : string.Empty;
         }
 
         private sealed class NarrativeDialogueSession

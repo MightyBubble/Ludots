@@ -381,12 +381,49 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (CommandTargetsScopedPerformer(ResolveRouteStrategy(in rule.Command)))
                 {
+                    if (ScopedCommandRequiresOwnerDefinitionInstance(rule.OwnerDefinitionId))
+                    {
+                        EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
+                        return;
+                    }
+
                     EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
                     return;
                 }
             }
 
             EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
+        }
+
+        private bool ScopedCommandRequiresOwnerDefinitionInstance(int ownerDefinitionId)
+        {
+            if (_runtime != null &&
+                _runtime.GetActiveByDefinition(ownerDefinitionId).Count != 0)
+            {
+                return true;
+            }
+
+            if (!_definitions.TryGet(ownerDefinitionId, out PerformerDefinition definition))
+            {
+                return false;
+            }
+
+            return DefinitionHasRuntimeInstanceAuthoring(definition);
+        }
+
+        private static bool DefinitionHasRuntimeInstanceAuthoring(PerformerDefinition definition)
+        {
+            return HasAny(definition.Behaviors) ||
+                   HasAny(definition.Children) ||
+                   HasAny(definition.Bindings) ||
+                   HasAny(definition.ParamDefaults) ||
+                   HasAny(definition.InstancedBatches) ||
+                   definition.Surface != null;
+        }
+
+        private static bool HasAny<T>(T[]? items)
+        {
+            return items != null && items.Length != 0;
         }
 
         private void EmitForMatchingInstances(int ownerDefinitionId, in PerformerCommand command, in PresentationEvent evt)

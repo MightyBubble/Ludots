@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -147,6 +148,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
+        public static readonly ServiceKey<QuestDefinitionRegistry> QuestDefinitionRegistry = new("QuestDefinitionRegistry");
+        public static readonly ServiceKey<QuestRuntimeService> QuestRuntimeService = new("QuestRuntimeService");
         public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
         public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
@@ -297,6 +300,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
         public static readonly ServiceKey<ChunkDebugPanelRuntime> ChunkDebugPanelRuntime = new("ChunkDebugPanelRuntime");
         public static readonly ServiceKey<RenderDebugState> RenderDebugState = new("RenderDebugState");
+        public static readonly ServiceKey<bool> PresentationAudienceRevealHidden = new("PresentationAudienceRevealHidden");
         public static readonly ServiceKey<RenderCameraDebugState> RenderCameraDebugState = new("RenderCameraDebugState");
         public static readonly ServiceKey<CameraCullingDebugState> CameraCullingDebugState = new("CameraCullingDebugState");
         public static readonly ServiceKey<PresentationTimingDiagnostics> PresentationTimingDiagnostics = new("PresentationTimingDiagnostics");

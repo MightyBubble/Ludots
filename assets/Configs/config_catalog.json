@@ -68,10 +68,10 @@
 
   { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
 
-  { "Path": "Narrative/variables.json", "Policy": "ArrayById", "IdField": "id", "AllowEmpty": true },
-  { "Path": "Narrative/quests.json", "Policy": "ArrayById", "IdField": "id", "AllowEmpty": true },
-  { "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id", "AllowEmpty": true },
-  { "Path": "Narrative/cinematics.json", "Policy": "ArrayById", "IdField": "id", "AllowEmpty": true },
+  { "Path": "Narrative/variables.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Quests/quests.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/cinematics.json", "Policy": "ArrayById", "IdField": "id" },
 
   { "Path": "EntityInfo/insight_profiles.json", "Policy": "ArrayById", "IdField": "id", "AllowEmpty": true }
 ]

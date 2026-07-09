@@ -1,1 +1,3 @@
-[]
+[
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }
+]

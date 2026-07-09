@@ -1,11 +1,12 @@
-# Narrative Quest / Dialogue / Cinematic 架构
+# Narrative Dialogue / Cinematic Integration
 
-本文定义 Ludots 叙事基建在当前仓库中的正式落点：`Quest + Dialogue + Cinematic + Variables + Conditions + Actions + Callback` 统一建立在现有 `ConfigPipeline`、`Trigger`、`ECS`、`GAS`、`Camera`、`UI` 之上，不额外引入平行运行时。
+本文定义 Ludots 叙事基建在当前仓库中的正式落点：`Dialogue + Cinematic + Variables + Conditions + Actions + Callback` 统一建立在现有 `ConfigPipeline`、`Trigger`、`ECS`、`GAS`、`Camera`、`UI` 之上。Quest 长期进度已经抽到 Core，Narrative 只通过正式 Quest runtime 编排它，不额外引入平行运行时。Quest 本体的 SSOT 位于 [Quest Core Infrastructure](quest_core_infra.md)。
 
 ## 1. 目标与约束
 
 - 一套 runtime 同时覆盖 CRPG 的分支任务/多条件对话/回访结局，以及 JRPG 的线性演出/定点触发/战后回收。
-- 所有叙事状态都收敛到 `NarrativeDirector`，禁止把 quest、dialogue、cinematic 拆成互不感知的多个管理器。
+- Quest 长期状态、signal 计数和 quest entity 收敛到 Core `QuestRuntimeService`；NarrativeDirector 只持有变量、dialogue session、cinematic session 和 entity alias 绑定。
+- 禁止在 showcase、UI 或 trigger handler 里持有第二份 quest/dialogue/cinematic 状态。
 - 内容层只通过配置和正式扩展点表达行为，不在 Mod 里散落硬编码剧情状态机。
 - 与现有基础设施复用优先：
   - 配置加载复用 `src/Core/Config/ConfigPipeline*`
@@ -18,11 +19,9 @@
 
 ### 2.1 配置定义层
 
-定义集中在 `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`：
+Narrative 定义集中在 `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`：
 
 - `NarrativeVariableDefinition`
-- `NarrativeQuestDefinition`
-- `NarrativeQuestStageDefinition`
 - `NarrativeDialogueDefinition`
 - `NarrativeDialogueNodeDefinition`
 - `NarrativeDialogueChoiceDefinition`
@@ -31,24 +30,24 @@
 - `NarrativeConditionDefinition`
 - `NarrativeActionDefinition`
 
-配置加载由 `src/Core/Gameplay/Narrative/NarrativeConfigLoader.cs` 完成，统一从以下目录合并：
+配置加载复用 `ConfigPipeline`，统一从以下目录合并：
 
 - `Narrative/variables.json`
-- `Narrative/quests.json`
 - `Narrative/dialogues.json`
 - `Narrative/cinematics.json`
 
-这意味着 narrative 内容天然支持 Mod 覆盖、扩展和按 `ConfigCatalog` 收敛，不需要新的资源系统。
+Quest 配置目录 `Quests/quests.json` 属于 [Quest Core Infrastructure](quest_core_infra.md)。Narrative 配置可以通过 action 引用 quest id，但不拥有 quest schema。
+
+这意味着 narrative 内容天然支持 Mod 覆盖、扩展和按 `ConfigCatalog` 收敛，不需要新的资源系统，也不复刻 quest 配置加载器。
 
 ### 2.2 运行时层
 
-运行时核心是 `src/Core/Gameplay/Narrative/NarrativeDirector.cs`，职责只有一份：
+Narrative 运行时核心是 `src/Core/Gameplay/Narrative/NarrativeDirector.cs`，职责收敛为：
 
 - 持有叙事变量
-- 持有 quest runtime 状态
+- 委托 Core quest runtime 启动、推进、完成或失败 quest，不保存 quest state
 - 持有当前 dialogue session
 - 持有当前 cinematic session
-- 统计 signals
 - 维护 narrative alias 与 ECS entity 的绑定
 - 执行条件判定与动作派发
 - 对外发出 trigger/event 回调
@@ -59,6 +58,8 @@
 
 - `CoreServiceKeys.NarrativeDefinitions`
 - `CoreServiceKeys.NarrativeDirector`
+
+Quest runtime service 由 Core 单独注册，NarrativeDirector 只依赖它。
 
 并在 `SystemGroup.InputCollection` 中更新，确保叙事输入和交互输入一样走 authoritative fixed-step 路径。
 
@@ -124,13 +125,14 @@
 
 ### 4.1 Quest
 
-Quest 负责长期进度和目标收敛：
+Quest 负责长期进度和目标收敛。它的单一真相是 Core `QuestRuntimeService` 中的 `QuestInstanceCm` entity，而不是 NarrativeDirector 的内部字段：
 
 - stage 切换
 - objective 文案
 - signal 完成条件
 - stage enter / complete 动作
 - 可选地在 stage enter 时启动 dialogue 或 cinematic
+- quest 属性、tag 和 active effects
 
 适合表达：
 
@@ -172,34 +174,29 @@ Cinematic 负责镜头化叙事步进：
 
 ### 4.4 三者的边界
 
-- Quest 负责“长期状态”
+- Quest 负责“长期状态”，并在 Core 中实体化为可被 GAS 命中的 quest entity
 - Dialogue 负责“局部选择”
 - Cinematic 负责“镜头化呈现”
-- Variables / Signals / Actions 是三者共享的公共语言
+- Variables / Actions 是 narrative 的公共语言；Signals 是 Quest runtime 拥有的进度语言，Narrative 只能通过正式 action 发出
 
 这样可以避免：
 
 - quest 内嵌整套对话树
 - cinematic 偷偷推进任务但外部不可见
 - dialogue 自己维护一份并行任务状态
+- NarrativeDirector 和 QuestRuntimeService 同时持有两份 quest state
 
 ## 5. 回调点与扩展缝
 
-`src/Core/Gameplay/Narrative/NarrativeServiceKeys.cs` 定义了正式 narrative 回调事件：
+`src/Core/Gameplay/Narrative/NarrativeServiceKeys.cs` 只定义正式 narrative 回调事件：
 
-- `Narrative.Signal`
-- `Narrative.QuestStageChanged`
-- `Narrative.QuestCompleted`
 - `Narrative.DialogueNodeEntered`
 - `Narrative.DialogueChoiceCommitted`
 - `Narrative.CinematicStepEntered`
 - `Narrative.CinematicCompleted`
 
-这些事件通过 `ScriptContext` 暴露标准参数：
+这些事件通过 `ScriptContext` 暴露 narrative 标准参数：
 
-- `NarrativeServiceKeys.SignalId`
-- `NarrativeServiceKeys.QuestId`
-- `NarrativeServiceKeys.QuestStageId`
 - `NarrativeServiceKeys.DialogueId`
 - `NarrativeServiceKeys.DialogueNodeId`
 - `NarrativeServiceKeys.DialogueChoiceId`
@@ -208,11 +205,24 @@ Cinematic 负责镜头化叙事步进：
 - `NarrativeServiceKeys.SpeakerName`
 - `NarrativeServiceKeys.BodyText`
 
+Quest 进度、signal 和 quest entity 回调属于 `QuestEventKeys` / `QuestServiceKeys`，不挂在 Narrative 名下：
+
+- `Quest.Signal`
+- `Quest.Started`
+- `Quest.StageChanged`
+- `Quest.Completed`
+- `Quest.Failed`
+
 Mod 扩展的推荐方式：
 
-1. 用 `context.OnEvent(NarrativeEventKeys.Xxx, ...)` 接 narrative 生命周期。
-2. 在 handler 内调用正式服务，例如 spawn queue、effect queue、camera、UI、map runtime。
-3. 若缺少公共能力，优先扩充 `ConditionKind` / `ActionKind`，不要在单个 showcase 里私写隐藏协议。
+1. 用 `context.OnEvent(NarrativeEventKeys.Xxx, ...)` 接 dialogue / cinematic 生命周期。
+2. 用 `context.OnEvent(QuestEventKeys.Xxx, ...)` 接 quest 生命周期和 signal。
+3. 在 handler 内调用正式服务，例如 spawn queue、effect queue、camera、UI、map runtime。
+4. 若缺少公共能力，优先扩充 `ConditionKind` / `ActionKind`，不要在单个 showcase 里私写隐藏协议。
+
+### 5.1 Quest 集成口径
+
+Narrative action 可以调用 `StartQuest`、`AdvanceQuestStage`、`EmitSignal`、`CompleteQuest`、`FailQuest`，但这些 action 是 adapter，不是 Quest 的归属证明。Quest 的配置、运行时、事件和上下文 key 均以 [Quest Core Infrastructure](quest_core_infra.md) 为准。
 
 ## 6. 与 ECS / GAS / Trigger / Camera 的连接
 
@@ -343,6 +353,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 
 - 地图：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Maps/narrative_showcase_hub.json`
 - Narrative 配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Narrative/*.json`
+- Quest 配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Quests/quests.json`
 - 相机配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Configs/Camera/virtual_cameras.json`
 - GAS 奖励：`mods/showcases/narrative/NarrativeShowcaseMod/assets/GAS/effects.json`
 - 可玩验收：`src/Tests/GasTests/Production/NarrativeShowcasePlayableAcceptanceTests.cs`
@@ -362,7 +373,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 
 - 新的 condition kind：队伍成员、背包物品、地图标签、章节号
 - 新的 action kind：切 map、投递 UI inbox、派发 performer cue、注册 checkpoint
-- 任务图谱层：在不破坏 director 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
+- 任务图谱层：在不破坏 Core QuestRuntimeService 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
 
 不建议的方向：
 

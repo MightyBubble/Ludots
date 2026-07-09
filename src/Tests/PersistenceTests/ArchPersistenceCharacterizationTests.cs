@@ -32,6 +32,25 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void BinaryWorldRoundTripPreservesEntityLocalClock()
+    {
+        using World world = World.Create();
+        world.Create(new EntityLocalClock { AccumulatorPermille = 500, LocalStep = 12 });
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<EntityLocalClock>(restored);
+        ref readonly EntityLocalClock clock = ref restored.Get<EntityLocalClock>(restoredEntity);
+        int accumulatorPermille = clock.AccumulatorPermille;
+        int localStep = clock.LocalStep;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(accumulatorPermille, Is.EqualTo(500));
+            Assert.That(localStep, Is.EqualTo(12));
+        });
+    }
+
+    [Test]
     public void BinaryWorldRoundTripPreservesEmptyWorldShape()
     {
         using World world = World.Create();
@@ -323,6 +342,30 @@ public sealed class ArchPersistenceCharacterizationTests
         Assert.That(directError.Message, Does.Contain("Relationship<RelationshipEdgeSet>"));
         Assert.That(roundTripError!.Message, Does.Contain("missing entity"));
         Assert.That(roundTripError.Message, Does.Contain("Relationship<RelationshipEdgeSet>"));
+    }
+
+    [Test]
+    public void CoreBinarySerializerRejectsRelationshipProjectionWithoutMatchingEdge()
+    {
+        using World world = World.Create();
+        Entity source = world.Create(new Name { Value = "source" });
+        Entity target = world.Create(new Name { Value = "target" });
+        world.Create(new RelationshipInstanceCm
+        {
+            Source = source,
+            Target = target,
+            TypeId = 1,
+            Revision = 1
+        });
+
+        var directError = Assert.Throws<SaveContextException>(
+            () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+        var roundTripError = Assert.Throws<SaveContextException>(() => CoreRoundTrip(world));
+
+        Assert.That(directError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(directError.Message, Does.Contain("no matching relationship edge"));
+        Assert.That(roundTripError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(roundTripError.Message, Does.Contain("no matching relationship edge"));
     }
 
     [Test]

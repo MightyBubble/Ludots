@@ -23,6 +23,7 @@
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
   - [Input Order Routing 与 Spawn Target 基建](architecture/input-order-and-spawn-target.md)
   - [Entity Lifecycle 原子 Op](architecture/entity-lifecycle-atomic-ops.md)
+  - [时间体系](architecture/time-system.md)
   - [Exchange Operations](architecture/exchange-operations.md)
   - [通用存档系统](architecture/save-system.md)
   - [AI Utility Autocast 契约](architecture/ai-utility-autocast-contract.md)

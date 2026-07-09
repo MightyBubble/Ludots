@@ -177,15 +177,15 @@ Relationship showcase：
 
 ## 6. 回调点
 
-叙事侧正式回调仍来自 narrative events：
+叙事侧正式回调分两类：dialogue / cinematic 来自 narrative events，quest 进度和 signal 来自 quest events。
 
-- `Narrative.Signal`
-- `Narrative.QuestStageChanged`
-- `Narrative.QuestCompleted`
 - `Narrative.DialogueNodeEntered`
 - `Narrative.DialogueChoiceCommitted`
 - `Narrative.CinematicStepEntered`
 - `Narrative.CinematicCompleted`
+- `Quest.Signal`
+- `Quest.StageChanged`
+- `Quest.Completed`
 
 关系侧则复用 relationship runtime + trigger + GAS 回调，把结果投影到 shared kit：
 
