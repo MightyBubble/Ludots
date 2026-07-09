@@ -51,6 +51,31 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		}
 	}
 
+	public bool IsTopicRegistered(string topic)
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			return false;
+		}
+
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			return _topics.ContainsKey(topic.Trim());
+		}
+	}
+
+	public IReadOnlyList<string> GetRegisteredTopics()
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			return _topics.Keys.OrderBy(static topic => topic, StringComparer.Ordinal).ToArray();
+		}
+	}
+
 	public WebUiDataPlaneSession AttachSession(string sessionId, IWebUiDataTransport transport)
 	{
 		ObjectDisposedException.ThrowIf(_disposed, this);
