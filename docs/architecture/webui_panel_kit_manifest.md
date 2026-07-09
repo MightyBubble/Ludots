@@ -63,6 +63,7 @@ Mod JSON manifest
 ## 5. 边界
 
 - 不做 Resource / CommandDeck / Quest 业务逻辑；只做装配合同。
+- Resource / Attribute 展示合同见 [WebUI Resource Attribute Panel (WPK-2)](webui_resource_attribute_panel.md)。
 - 不创建平行 Web host / DataPlane / 本地 UI 真相。
 - 不把 CK3、群星、C&C、AoE、StarCraft 的资源名 / 单位名 / 游戏名写进通用 panel kit。
 - 不恢复 `SelectionRuntime`；玩家文案可说“当前实体”，代码只能是显式 entity / view / command source / control view。

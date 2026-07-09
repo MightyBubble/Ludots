@@ -9,11 +9,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="Samples\sample_panel_kit_manifest.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Samples\sample_resource_attribute_descriptor.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

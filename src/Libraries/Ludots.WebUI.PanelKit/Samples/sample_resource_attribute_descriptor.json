@@ -1,0 +1,32 @@
+{
+  "descriptorId": "panel-kit.sample.resource-attribute",
+  "fields": [
+    {
+      "fieldId": "field.primary",
+      "groupId": "group.stockpile",
+      "displayTokenId": "token.resource.primary",
+      "unitTokenId": "unit.count",
+      "sortOrder": 10,
+      "sourceKind": "singleAttribute",
+      "attributeId": "attr.sample.primary"
+    },
+    {
+      "fieldId": "field.derived",
+      "groupId": "group.stockpile",
+      "displayTokenId": "token.resource.secondary",
+      "unitTokenId": "unit.rate",
+      "sortOrder": 20,
+      "sourceKind": "derivedAttribute",
+      "attributeId": "attr.sample.derived"
+    },
+    {
+      "fieldId": "field.aggregate",
+      "groupId": "group.player",
+      "displayTokenId": "token.resource.capacity",
+      "unitTokenId": "unit.count",
+      "sortOrder": 30,
+      "sourceKind": "aggregateProjection",
+      "graphOutputKey": "graph.output.sample.player.total"
+    }
+  ]
+}
