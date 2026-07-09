@@ -234,7 +234,6 @@ namespace Ludots.Core.Engine
         private Physics2DController _physics2DController;
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
         private TimeFlowService _timeFlow;
-        private int _physics2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -688,9 +687,9 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
-            _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
             var componentAuthoringContext = new ComponentAuthoringContext();
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            int timeScalePermilleAttributeId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
@@ -1117,7 +1116,8 @@ namespace Ludots.Core.Engine
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
-            var clockSystem = new GasClockSystem(clock, clockStepPolicy);
+            var clockSystem = new GasClockSystem(clock, clockStepPolicy, CreateContext, TriggerManager.FireEvent);
+            var entityLocalClockSystem = new EntityLocalClockSystem(World, clockStepPolicy, timeScalePermilleAttributeId);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
@@ -1353,6 +1353,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
+            RegisterSystem(entityLocalClockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
@@ -1579,25 +1580,9 @@ namespace Ludots.Core.Engine
 
             if (GetService(CoreServiceKeys.GasClockStepPolicy) is GasClockStepPolicy gasClockStepPolicy)
             {
-                gasClockStepPolicy.SetScalePermille(_timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Gas));
+                gasClockStepPolicy.SetScalePermille(_timeFlow.GetScalePermilleRelativeToParent(TimeFlowDomainIds.Gas));
             }
 
-            if (GetService(CoreServiceKeys.Physics2DTickPolicy) is Physics2DTickPolicy physics2dTickPolicy)
-            {
-                physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
-            }
-        }
-
-        private static int ScaleRateHz(int baseHz, int scalePermille)
-        {
-            if (baseHz <= 0 || scalePermille <= 0)
-            {
-                return 0;
-            }
-
-            long scaled = (long)baseHz * scalePermille;
-            int targetHz = (int)((scaled + 999) / 1000);
-            return Math.Max(1, targetHz);
         }
 
         private void RegisterPhysics2DSystems(

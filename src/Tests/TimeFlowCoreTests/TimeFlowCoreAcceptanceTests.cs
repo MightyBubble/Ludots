@@ -27,16 +27,16 @@ public sealed class TimeFlowCoreAcceptanceTests
         var clocks = new GasClocks(clock);
         var rows = new List<PhaseRow>();
 
-        RunPhase(rows, service, policy, system, clocks, "baseline", "BaselineRealtime", fixedTicks: 4);
+        RunPhase(rows, service, policy, system, clocks, "baseline", "DefaultScale", fixedTicks: 4);
 
-        TimeFlowToken simulationSlow = service.AcquireScaleToken(TimeFlowDomainIds.Simulation, 500, "acceptance", "half-speed world");
-        TimeFlowToken gasCompensation = service.AcquireScaleToken(TimeFlowDomainIds.Gas, 2000, "acceptance", "keep gas realtime");
-        RunPhase(rows, service, policy, system, clocks, "bullet_time", "WorldHalfSpeedGasRealtime", fixedTicks: 4);
+        TimeFlowToken simulationScale = service.AcquireScaleToken(TimeFlowDomainIds.Simulation, 500, "acceptance", "simulation scale token");
+        TimeFlowToken gasScale = service.AcquireScaleToken(TimeFlowDomainIds.Gas, 2000, "acceptance", "gas scale token");
+        RunPhase(rows, service, policy, system, clocks, "simulation_scaled", "Simulation500Gas1000Effective", fixedTicks: 4);
 
-        service.ReleaseToken(simulationSlow);
-        RunPhase(rows, service, policy, system, clocks, "haste", "GasFastForward", fixedTicks: 3);
+        service.ReleaseToken(simulationScale);
+        RunPhase(rows, service, policy, system, clocks, "gas_scaled", "Simulation1000Gas2000Effective", fixedTicks: 3);
 
-        TimeFlowToken pause = service.AcquirePauseToken(TimeFlowDomainIds.Simulation, "acceptance", "command pause");
+        TimeFlowToken pause = service.AcquirePauseToken(TimeFlowDomainIds.Simulation, "acceptance", "simulation pause token");
         CapturePhase(rows, service, clocks, "pause", "SimulationPaused", fixedTicksApplied: 0, stepDelta: 0);
 
         File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildTraceJsonl(rows));
@@ -55,7 +55,7 @@ public sealed class TimeFlowCoreAcceptanceTests
         });
 
         service.ReleaseToken(pause);
-        service.ReleaseToken(gasCompensation);
+        service.ReleaseToken(gasScale);
     }
 
     private static void RunPhase(
@@ -92,7 +92,6 @@ public sealed class TimeFlowCoreAcceptanceTests
             phaseTitle,
             service.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation),
             service.GetEffectiveScalePermille(TimeFlowDomainIds.Gas),
-            service.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D),
             service.IsPaused(TimeFlowDomainIds.Simulation),
             clocks.FixedFrameNow,
             clocks.StepNow,
@@ -109,7 +108,6 @@ public sealed class TimeFlowCoreAcceptanceTests
             phase_title = row.PhaseTitle,
             simulation_scale_permille = row.SimulationScalePermille,
             gas_scale_permille = row.GasScalePermille,
-            physics_scale_permille = row.PhysicsScalePermille,
             simulation_paused = row.SimulationPaused,
             fixed_ticks_total = row.FixedFrameNow,
             gas_steps_total = row.StepNow,
@@ -124,7 +122,7 @@ public sealed class TimeFlowCoreAcceptanceTests
         sb.AppendLine("# Scenario Card: timeflow-core");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: prove that a shared Core time service can slow, accelerate, and pause simulation domains without inventing a parallel scheduler.");
+        sb.AppendLine("- Goal: prove that a shared Core time service composes scale and pause tokens without inventing a parallel scheduler.");
         sb.AppendLine("- Gameplay domain: Core `TimeFlowService`, domain hierarchy, token composition, and `GasClockStepPolicy` step pacing.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
@@ -134,9 +132,9 @@ public sealed class TimeFlowCoreAcceptanceTests
         sb.AppendLine("- Initial entities: none");
         sb.AppendLine();
         sb.AppendLine("## Action Script");
-        sb.AppendLine("1. Start at baseline realtime.");
-        sb.AppendLine("2. Apply `simulation=500permille` and `gas=2000permille` to keep GAS realtime under world slow motion.");
-        sb.AppendLine("3. Release world slowdown while keeping `gas=2000permille` for fast-forward.");
+        sb.AppendLine("1. Start with default `simulation=1000permille` and `gas=1000permille`.");
+        sb.AppendLine("2. Apply `simulation=500permille` and `gas=2000permille`; composed GAS effective scale remains `1000permille`.");
+        sb.AppendLine("3. Release the simulation scale token while keeping `gas=2000permille`.");
         sb.AppendLine("4. Apply a simulation pause token and confirm all child domains stop.");
         sb.AppendLine();
         sb.AppendLine("## Expected Outcomes");
@@ -167,9 +165,9 @@ public sealed class TimeFlowCoreAcceptanceTests
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
-            "    A[Baseline realtime] --> B[Simulation 0.5x plus Gas 2.0x]",
-            "    B --> C[Release simulation slow token]",
-            "    C --> D[Gas fast-forward at 2.0x]",
+            "    A[simulation 1000, gas 1000] --> B[simulation 500, gas token 2000, gas effective 1000]",
+            "    B --> C[Release simulation scale token]",
+            "    C --> D[simulation 1000, gas effective 2000]",
             "    D --> E[Pause simulation parent domain]",
             "    E --> F[All child domains report paused]"
         }) + Environment.NewLine;
@@ -197,7 +195,6 @@ public sealed class TimeFlowCoreAcceptanceTests
         string PhaseTitle,
         int SimulationScalePermille,
         int GasScalePermille,
-        int PhysicsScalePermille,
         bool SimulationPaused,
         int FixedFrameNow,
         int StepNow,

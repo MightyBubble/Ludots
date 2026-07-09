@@ -32,6 +32,25 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void BinaryWorldRoundTripPreservesEntityLocalClock()
+    {
+        using World world = World.Create();
+        world.Create(new EntityLocalClock { AccumulatorPermille = 500, LocalStep = 12 });
+
+        using World restored = CoreRoundTrip(world);
+        Entity restoredEntity = FindSingle<EntityLocalClock>(restored);
+        ref readonly EntityLocalClock clock = ref restored.Get<EntityLocalClock>(restoredEntity);
+        int accumulatorPermille = clock.AccumulatorPermille;
+        int localStep = clock.LocalStep;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(accumulatorPermille, Is.EqualTo(500));
+            Assert.That(localStep, Is.EqualTo(12));
+        });
+    }
+
+    [Test]
     public void BinaryWorldRoundTripPreservesEmptyWorldShape()
     {
         using World world = World.Create();

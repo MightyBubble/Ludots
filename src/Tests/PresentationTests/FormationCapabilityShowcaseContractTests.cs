@@ -11,7 +11,9 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
@@ -100,6 +102,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("PlayerOwner"), Is.False,
                 "Formation template must not bake scene ownership; FormationCapabilityShowcaseConfig ownerPlayerId is applied by the generic runtime spawn request.");
             Assert.That(components.ContainsKey("AttributeBuffer"), Is.True);
+            Assert.That(components.ContainsKey("EntityLocalClock"), Is.False,
+                "Formation MassNavigation time is controlled by the system simulation clock, not an entity-local GAS clock.");
+            AssertAttributeBufferDoesNotAuthorTimeScale(components["AttributeBuffer"]?.AsObject(), "formation agent");
             Assert.That(components.ContainsKey("SpatialBounds"), Is.False,
                 "Formation footprint is derived from FormationCapabilityShowcaseConfig outline during scenario binding, not authored in the template.");
             Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.False,
@@ -158,7 +163,10 @@ namespace Ludots.Tests.Presentation
                 Assert.That(soldierComponents.ContainsKey("OrderBuffer"), Is.False);
                 Assert.That(soldierComponents.ContainsKey("SelectionSelectableTag"), Is.False);
                 Assert.That(soldierComponents.ContainsKey("SelectionSelectableState"), Is.False);
-                Assert.That(soldierComponents.ContainsKey("AttributeBuffer"), Is.False);
+                Assert.That(soldierComponents.ContainsKey("AttributeBuffer"), Is.False,
+                    "Soldier MassNavigation agents must not author AttributeBuffer just to carry showcase time; showcase time is system-level.");
+                Assert.That(soldierComponents.ContainsKey("EntityLocalClock"), Is.False,
+                    "Soldier MassNavigation time is controlled by the system simulation clock, not an entity-local GAS clock.");
 
                 JsonObject slots = formation["slots"]?.AsObject()
                     ?? throw new InvalidOperationException("Every formation must author slots.");
@@ -2073,6 +2081,70 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void FormationCapabilityPlayable_TimeFlowTokenRequestsDriveSimulationTimeFlow()
+        {
+            using GameEngine engine = CreatePlayableFormationCapabilityEngine();
+            engine.LoadMap("formation_capability_showcase");
+            Tick(engine, FormationCapabilityAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TimeFlowService timeFlow = RequireTimeFlow(engine);
+            TickUntil(
+                engine,
+                () => IsFormationCapabilityScenarioReady(engine, simulation) &&
+                      simulation.SelectedCount == FormationCapabilityAcceptance.ExpectedInitialSelection,
+                maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Formation Capability scenario should be fully spawned and selected before time-control verification.");
+
+            TimeFlowToken pause = timeFlow.AcquirePauseToken(
+                TimeFlowDomainIds.Simulation,
+                "FormationCapabilityShowcase.Tests",
+                "verify system-level pause token");
+            Assert.That(SimulationTimeScaleMatches(engine, 0), Is.True,
+                "A pause token should pause the shared simulation time source.");
+            timeFlow.ReleaseToken(pause);
+
+            TimeFlowToken scale500 = timeFlow.AcquireScaleToken(
+                TimeFlowDomainIds.Simulation,
+                500,
+                "FormationCapabilityShowcase.Tests",
+                "verify system-level scale token");
+            Assert.That(SimulationTimeScaleMatches(engine, 500), Is.True,
+                "A scale token should set the shared simulation time source to 500 permille.");
+            timeFlow.ReleaseToken(scale500);
+
+            Assert.That(SimulationTimeScaleMatches(engine, 1000), Is.True,
+                "Releasing the only active token should restore 1000 permille.");
+
+            TimeFlowToken scale2000 = timeFlow.AcquireScaleToken(
+                TimeFlowDomainIds.Simulation,
+                2000,
+                "FormationCapabilityShowcase.Tests",
+                "verify system-level scale token");
+            Assert.That(SimulationTimeScaleMatches(engine, 2000), Is.True,
+                "A scale token should set the shared simulation time source to 2000 permille.");
+
+            TimeFlowToken externalScale = timeFlow.AcquireScaleToken(
+                TimeFlowDomainIds.Simulation,
+                500,
+                "FormationCapabilityShowcase.Tests",
+                "verify token release preserves other active tokens");
+            try
+            {
+                Assert.That(SimulationTimeScaleMatches(engine, 1000), Is.True,
+                    "Composed 500 and 2000 permille scale tokens should produce 1000 effective permille.");
+
+                timeFlow.ReleaseToken(scale2000);
+                Assert.That(SimulationTimeScaleMatches(engine, 500), Is.True,
+                    "Releasing one scale token must not override other active simulation time tokens.");
+            }
+            finally
+            {
+                timeFlow.ReleaseToken(externalScale);
+            }
+        }
+
+        [Test]
         public void FormationCapabilityPlayable_NonLocalPlayerOwnerFormationSelectionRejectsRightClickMoveOrder()
         {
             using GameEngine engine = CreatePlayableFormationCapabilityEngine();
@@ -2861,6 +2933,12 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationSimulationRuntime is missing.");
         }
 
+        private static TimeFlowService RequireTimeFlow(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.TimeFlow)
+                ?? throw new InvalidOperationException("TimeFlowService is missing.");
+        }
+
         private static void Tick(GameEngine engine, int frames = 1)
         {
             for (int i = 0; i < frames; i++)
@@ -3250,6 +3328,13 @@ namespace Ludots.Tests.Presentation
             }
 
             return agentIndex;
+        }
+
+        private static bool SimulationTimeScaleMatches(GameEngine engine, int expectedScalePermille)
+        {
+            TimeFlowService timeFlow = RequireTimeFlow(engine);
+            return timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) == expectedScalePermille &&
+                   timeFlow.IsPaused(TimeFlowDomainIds.Simulation) == (expectedScalePermille == 0);
         }
 
         private static Entity[] CaptureFormationAgents(GameEngine engine, int expectedCount)
@@ -3964,6 +4049,19 @@ namespace Ludots.Tests.Presentation
                     ?? throw new InvalidOperationException($"{label}[{i}] must be numeric.");
                 Assert.That(channel, Is.InRange(0f, 1f), $"{label}[{i}]");
             }
+        }
+
+        private static void AssertAttributeBufferDoesNotAuthorTimeScale(JsonObject? attributeBuffer, string label)
+        {
+            Assert.That(attributeBuffer, Is.Not.Null, $"{label} must author AttributeBuffer.");
+            JsonObject baseValues = attributeBuffer!["base"]?.AsObject()
+                ?? throw new InvalidOperationException($"{label} AttributeBuffer must author base values.");
+            JsonObject currentValues = attributeBuffer["current"]?.AsObject()
+                ?? throw new InvalidOperationException($"{label} AttributeBuffer must author current values.");
+            Assert.That(baseValues.ContainsKey("time.scale_permille"), Is.False,
+                $"{label} base attributes must not author system-level time.");
+            Assert.That(currentValues.ContainsKey("time.scale_permille"), Is.False,
+                $"{label} current attributes must not author system-level time.");
         }
 
         private static JsonObject FindObjectById(JsonArray array, string id)

@@ -62,6 +62,7 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
+            Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
@@ -960,6 +961,12 @@ namespace Ludots.Core.Config
 
             entity.Add(buffer);
             entity.Add(snapshot);
+        }
+
+        private static void SetEntityLocalClock(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "EntityLocalClock");
+            entity.Add(new EntityLocalClock());
         }
 
         private static unsafe void SetAttributeDerivedGraphBinding(Entity entity, JsonNode data)

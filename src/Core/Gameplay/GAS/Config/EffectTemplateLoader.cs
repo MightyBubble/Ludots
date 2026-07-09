@@ -1477,8 +1477,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             "FixedFrame" => GasClockId.FixedFrame,
             "Step" => GasClockId.Step,
-            "Turn" => GasClockId.Turn,
-            _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
+            "EntityLocal" => GasClockId.EntityLocal,
+            "Turn" => throw new InvalidOperationException("GasClockId 'Turn' has been removed. Use Step for turn durations or EntityLocal for entity-scoped logic time."),
+            _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, EntityLocal."),
         };
 
         private ScopeKey ResolveProgressionScope(string? rawValue, string effectId, string path)

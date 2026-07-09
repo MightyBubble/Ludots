@@ -119,6 +119,11 @@ internal sealed class MassNavigationCadenceScheduler
 
     public int BeginFixedTick(float fixedDt)
     {
+        if (fixedDt <= 0f)
+        {
+            return 0;
+        }
+
         EnsureFixedCadence(fixedDt);
         return _simulation!.NextStepCount();
     }

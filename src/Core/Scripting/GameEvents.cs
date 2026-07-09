@@ -43,6 +43,8 @@ namespace Ludots.Core.Scripting
         public static readonly EventKey GasRunStarted = new EventKey("GasRunStarted");
         public static readonly EventKey GasRunCompleted = new EventKey("GasRunCompleted");
 
+        public static readonly EventKey TurnAdvanced = new EventKey("TurnAdvanced");
+
         /// <summary>
         /// Fired when a map is about to be unloaded.
         /// Triggers' OnMapExit is called during this event.

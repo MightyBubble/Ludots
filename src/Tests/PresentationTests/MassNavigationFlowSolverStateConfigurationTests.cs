@@ -152,6 +152,45 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Step_UsesCallerDeltaTimeAsSingleSimulationClock()
+        {
+            float pausedDistance = StepUnitTargetAndMeasureXDelta(0f);
+            float smallStepDistance = StepUnitTargetAndMeasureXDelta(0.0125f);
+            float mediumStepDistance = StepUnitTargetAndMeasureXDelta(0.025f);
+            float largeStepDistance = StepUnitTargetAndMeasureXDelta(0.05f);
+
+            Assert.That(pausedDistance, Is.EqualTo(0f).Within(0.001f),
+                "A zero simulation dt must stop MassNavigation movement.");
+            Assert.That(smallStepDistance, Is.GreaterThan(pausedDistance),
+                "A positive simulation dt must move MassNavigation agents.");
+            Assert.That(smallStepDistance, Is.LessThan(mediumStepDistance),
+                "MassNavigation must consume the caller-provided simulation dt as its single time source.");
+            Assert.That(largeStepDistance, Is.GreaterThan(mediumStepDistance),
+                "A larger simulation dt within the configured solver cap must move farther.");
+        }
+
+        [Test]
+        public void Step_ZeroDeltaDoesNotAdvanceArrivalTimeout()
+        {
+            using var world = World.Create();
+            var flow = CreateUnitTargetFlow(unitCount: 1);
+            flow.ArrivalTuning.Enabled = true;
+            flow.ArrivalTuning.TimeoutMs = 250;
+            flow.ArrivalTuning.ProgressDistanceCm = 10_000;
+            Assert.That(flow.SetUnitTarget(0, 9_000f, 5_000f, resetRecovery: true), Is.True);
+
+            flow.Step(
+                dt: 0f,
+                world,
+                CreateNavGroupRuntime(agentCapacity: flow.UnitCount),
+                runHardResolve: false,
+                hardResolveCandidateThresholdAgents: flow.UnitCount + 1);
+
+            Assert.That(flow.IsUnitSettled(0), Is.False,
+                "Pause must freeze MassNavigation arrival recovery timers instead of timing out a stopped unit.");
+        }
+
+        [Test]
         public void SimulationRuntime_PropagatesFormationGroupSemanticsToMassNavigationFlow()
         {
             MassNavigationConfig config = MassNavigationConfig.Load(
@@ -216,6 +255,57 @@ namespace Ludots.Tests.Presentation
             flow.AvoidanceTuning.CopyFrom(config.Avoidance);
             flow.Semantics.CopyFrom(config.Semantics);
             return flow;
+        }
+
+        private static float StepUnitTargetAndMeasureXDelta(float dt)
+        {
+            using var world = World.Create();
+            var flow = CreateUnitTargetFlow(unitCount: 1);
+            Assert.That(flow.SetUnitTarget(0, 9_000f, 5_000f, resetRecovery: true), Is.True);
+            float before = flow.GetPositionX(0);
+            flow.Step(
+                dt,
+                world,
+                CreateNavGroupRuntime(agentCapacity: flow.UnitCount),
+                runHardResolve: false,
+                hardResolveCandidateThresholdAgents: flow.UnitCount + 1);
+            return flow.GetPositionX(0) - before;
+        }
+
+        private static MassNavigationFlowSolverState CreateUnitTargetFlow(int unitCount)
+        {
+            var flow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[unitCount];
+            for (int i = 0; i < seeds.Length; i++)
+            {
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 1_000f,
+                    localPositionYCm: 5_000f + (i * 500f),
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            flow.ResetAuthoredAgents(seeds);
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            return flow;
+        }
+
+        private static MassNavigationGroupRuntime CreateNavGroupRuntime(int agentCapacity)
+        {
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            return new MassNavigationGroupRuntime(
+                new MassNavigationFormationRuntime(config.Semantics.Group),
+                CreateRuntimeCapacity(agentCapacity: agentCapacity, groupMemberCapacity: agentCapacity));
         }
 
         private static MassNavigationConfig LoadBaseMassNavigationConfig()

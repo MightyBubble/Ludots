@@ -34,7 +34,10 @@ namespace Ludots.Tests.GAS
             pacemaker.Update(0f, sim, timeBudgetMs: 1, maxSlicesPerLogicFrame: 100);
             That(Time.FixedTotalTime, Is.EqualTo(startFixedTime));
 
-            pacemaker.Update(0f, sim, timeBudgetMs: 1, maxSlicesPerLogicFrame: 100);
+            pacemaker.Update(float.Epsilon, sim, timeBudgetMs: 1, maxSlicesPerLogicFrame: 100);
+            That(Time.FixedTotalTime, Is.EqualTo(startFixedTime));
+
+            pacemaker.Update(float.Epsilon, sim, timeBudgetMs: 1, maxSlicesPerLogicFrame: 100);
             That(Time.FixedTotalTime, Is.EqualTo(startFixedTime + Time.FixedDeltaTime));
         }
 
@@ -117,13 +120,15 @@ namespace Ludots.Tests.GAS
 
         private sealed class YieldingTimeSlicedSystem : ISystem<float>, ITimeSlicedSystem
         {
+            private readonly int _yieldCount;
             private int _remainingYields;
+            private bool _active;
             private readonly List<string>? _order;
             private readonly string _name;
 
             public YieldingTimeSlicedSystem(int yieldCount, List<string>? order = null, string name = "")
             {
-                _remainingYields = yieldCount;
+                _yieldCount = yieldCount;
                 _order = order;
                 _name = name;
             }
@@ -139,6 +144,12 @@ namespace Ludots.Tests.GAS
 
             public bool UpdateSlice(float dt, int timeBudgetMs)
             {
+                if (!_active)
+                {
+                    _active = true;
+                    _remainingYields = _yieldCount;
+                }
+
                 if (_order != null)
                 {
                     _order.Add(_name);
@@ -149,11 +160,15 @@ namespace Ludots.Tests.GAS
                     _remainingYields--;
                     return false;
                 }
+
+                _active = false;
                 return true;
             }
 
             public void ResetSlice()
             {
+                _active = false;
+                _remainingYields = 0;
             }
 
             public void BeforeUpdate(in float dt)

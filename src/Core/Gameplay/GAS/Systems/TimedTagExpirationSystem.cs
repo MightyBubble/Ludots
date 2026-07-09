@@ -29,10 +29,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
-            var withDirty = new WithDirtyJob { Clock = _clock, TagOps = _tagOps };
+            var withDirty = new WithDirtyJob { World = World, Clock = _clock, TagOps = _tagOps };
             World.InlineEntityQuery<WithDirtyJob, GameplayTagContainer, TagCountContainer, TimedTagBuffer, DirtyFlags>(in _withDirtyQuery, ref withDirty);
 
-            var withoutDirty = new WithoutDirtyJob { Clock = _clock, CommandBuffer = _commandBuffer, TagOps = _tagOps };
+            var withoutDirty = new WithoutDirtyJob { World = World, Clock = _clock, CommandBuffer = _commandBuffer, TagOps = _tagOps };
             World.InlineEntityQuery<WithoutDirtyJob, GameplayTagContainer, TagCountContainer, TimedTagBuffer>(in _withoutDirtyQuery, ref withoutDirty);
 
             _commandBuffer.Playback(World, dispose: true);
@@ -40,6 +40,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private struct WithDirtyJob : IForEachWithEntity<GameplayTagContainer, TagCountContainer, TimedTagBuffer, DirtyFlags>
         {
+            public World World;
             public IClock Clock;
             public TagOps TagOps;
 
@@ -63,7 +64,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         fixed (byte* clocks = timed.ClockIds) clockId = (GasClockId)clocks[i];
                     }
 
-                    int now = Clock.Now(clockId.ToDomainId());
+                    int now = GasClockRuntime.Now(World, Clock, clockId, entity, "Timed tag expiration");
                     if (now < expireAt) continue;
 
                     TagOps.RemoveTag(ref tags, ref counts, tagId, ref dirtyFlags);
@@ -74,6 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private struct WithoutDirtyJob : IForEachWithEntity<GameplayTagContainer, TagCountContainer, TimedTagBuffer>
         {
+            public World World;
             public IClock Clock;
             public CommandBuffer CommandBuffer;
             public TagOps TagOps;
@@ -101,7 +103,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         fixed (byte* clocks = timed.ClockIds) clockId = (GasClockId)clocks[i];
                     }
 
-                    int now = Clock.Now(clockId.ToDomainId());
+                    int now = GasClockRuntime.Now(World, Clock, clockId, entity, "Timed tag expiration");
                     if (now < expireAt) continue;
 
                     anyDirty |= TagOps.RemoveTag(ref tags, ref counts, tagId, ref dirtyFlags);

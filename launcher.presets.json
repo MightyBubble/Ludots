@@ -219,6 +219,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_time_flow_showcase_raylib",
+      "name": "Capability Standard TimeFlow Raylib",
+      "selectors": [
+        "$capability_standard_time_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_transport_network_raylib",
       "name": "Capability Standard Transport Network Raylib",
       "selectors": [
