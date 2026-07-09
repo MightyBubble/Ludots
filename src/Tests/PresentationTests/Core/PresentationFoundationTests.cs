@@ -990,25 +990,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_UsesConfiguredViewerForKnowledgeProjection()
+        public void WorldHudPerformBehavior_UsesSelectionViewerBeforeLocalPlayer()
         {
             using var world = World.Create();
 
             Entity target = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
-            Entity configuredViewer = world.Create();
+            Entity localPlayer = world.Create();
+            Entity selectionViewer = world.Create();
 
             var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
             var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
             UpsertPerformerKnowledge(
                 projectionStore,
-                configuredViewer,
+                selectionViewer,
                 target,
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live);
             var behavior = new WorldHudPerformBehavior();
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = configuredViewer,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
+                [CoreServiceKeys.SelectionViewViewerEntity.Name] = selectionViewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
 
