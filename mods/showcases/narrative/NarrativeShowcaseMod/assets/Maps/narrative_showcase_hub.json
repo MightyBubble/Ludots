@@ -1,5 +1,6 @@
 {
   "Id": "narrative_showcase_hub",
+  "VisualHeightmapAsset": "assets/terrain/interaction_showcase_flat.vhtm",
   "Tags": ["narrative.showcase", "quest.dialogue.cinematic"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",

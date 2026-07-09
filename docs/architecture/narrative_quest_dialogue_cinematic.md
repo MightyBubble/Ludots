@@ -1,11 +1,12 @@
 # Narrative Quest / Dialogue / Cinematic 架构
 
-本文定义 Ludots 叙事基建在当前仓库中的正式落点：`Quest + Dialogue + Cinematic + Variables + Conditions + Actions + Callback` 统一建立在现有 `ConfigPipeline`、`Trigger`、`ECS`、`GAS`、`Camera`、`UI` 之上，不额外引入平行运行时。
+本文定义 Ludots 叙事基建在当前仓库中的正式落点：`Quest + Dialogue + Cinematic + Variables + Conditions + Actions + Callback` 统一建立在现有 `ConfigPipeline`、`Trigger`、`ECS`、`GAS`、`Camera`、`UI` 之上。Quest 长期进度已经抽到 Core，Narrative 只通过正式 Quest runtime 编排它，不额外引入平行运行时。
 
 ## 1. 目标与约束
 
 - 一套 runtime 同时覆盖 CRPG 的分支任务/多条件对话/回访结局，以及 JRPG 的线性演出/定点触发/战后回收。
-- 所有叙事状态都收敛到 `NarrativeDirector`，禁止把 quest、dialogue、cinematic 拆成互不感知的多个管理器。
+- Quest 长期状态、signal 计数和 quest entity 收敛到 Core `QuestRuntimeService`；NarrativeDirector 只持有变量、dialogue session、cinematic session 和 entity alias 绑定。
+- 禁止在 showcase、UI 或 trigger handler 里持有第二份 quest/dialogue/cinematic 状态。
 - 内容层只通过配置和正式扩展点表达行为，不在 Mod 里散落硬编码剧情状态机。
 - 与现有基础设施复用优先：
   - 配置加载复用 `src/Core/Config/ConfigPipeline*`
@@ -18,11 +19,16 @@
 
 ### 2.1 配置定义层
 
-定义集中在 `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`：
+Quest 定义集中在 `src/Core/Gameplay/Quests/QuestDefinitions.cs`，运行时实体组件位于 `src/Core/Gameplay/Quests/QuestComponents.cs`：
+
+- `QuestDefinition`
+- `QuestStageDefinition`
+- `QuestAttributeDefinition`
+- `QuestGameplayTagDefinition`
+
+Narrative 定义集中在 `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`：
 
 - `NarrativeVariableDefinition`
-- `NarrativeQuestDefinition`
-- `NarrativeQuestStageDefinition`
 - `NarrativeDialogueDefinition`
 - `NarrativeDialogueNodeDefinition`
 - `NarrativeDialogueChoiceDefinition`
@@ -31,10 +37,10 @@
 - `NarrativeConditionDefinition`
 - `NarrativeActionDefinition`
 
-配置加载由 `src/Core/Gameplay/Narrative/NarrativeConfigLoader.cs` 完成，统一从以下目录合并：
+配置加载复用 `ConfigPipeline`，统一从以下目录合并：
 
+- `Quests/quests.json`
 - `Narrative/variables.json`
-- `Narrative/quests.json`
 - `Narrative/dialogues.json`
 - `Narrative/cinematics.json`
 
@@ -42,13 +48,19 @@
 
 ### 2.2 运行时层
 
-运行时核心是 `src/Core/Gameplay/Narrative/NarrativeDirector.cs`，职责只有一份：
+Quest 运行时核心是 `src/Core/Gameplay/Quests/QuestRuntimeService.cs`，职责收敛为：
+
+- 从 quest 配置创建 `QuestInstanceCm` ECS entity
+- 维护 `questId -> entity` 索引
+- 持有 quest state、stage、signal 计数和 quest lifecycle event
+- 让 quest entity 承载 `AttributeBuffer`、`GameplayTagContainer`、`ActiveEffectContainer`
+
+Narrative 运行时核心是 `src/Core/Gameplay/Narrative/NarrativeDirector.cs`，职责收敛为：
 
 - 持有叙事变量
-- 持有 quest runtime 状态
+- 委托 Core quest runtime 启动、推进、完成或失败 quest
 - 持有当前 dialogue session
 - 持有当前 cinematic session
-- 统计 signals
 - 维护 narrative alias 与 ECS entity 的绑定
 - 执行条件判定与动作派发
 - 对外发出 trigger/event 回调
@@ -59,6 +71,8 @@
 
 - `CoreServiceKeys.NarrativeDefinitions`
 - `CoreServiceKeys.NarrativeDirector`
+- `CoreServiceKeys.QuestDefinitionRegistry`
+- `CoreServiceKeys.QuestRuntimeService`
 
 并在 `SystemGroup.InputCollection` 中更新，确保叙事输入和交互输入一样走 authoritative fixed-step 路径。
 
@@ -124,13 +138,14 @@
 
 ### 4.1 Quest
 
-Quest 负责长期进度和目标收敛：
+Quest 负责长期进度和目标收敛。它的单一真相是 Core `QuestRuntimeService` 中的 `QuestInstanceCm` entity，而不是 NarrativeDirector 的内部字段：
 
 - stage 切换
 - objective 文案
 - signal 完成条件
 - stage enter / complete 动作
 - 可选地在 stage enter 时启动 dialogue 或 cinematic
+- quest 属性、tag 和 active effects
 
 适合表达：
 
@@ -172,7 +187,7 @@ Cinematic 负责镜头化叙事步进：
 
 ### 4.4 三者的边界
 
-- Quest 负责“长期状态”
+- Quest 负责“长期状态”，并在 Core 中实体化为可被 GAS 命中的 quest entity
 - Dialogue 负责“局部选择”
 - Cinematic 负责“镜头化呈现”
 - Variables / Signals / Actions 是三者共享的公共语言
@@ -182,6 +197,7 @@ Cinematic 负责镜头化叙事步进：
 - quest 内嵌整套对话树
 - cinematic 偷偷推进任务但外部不可见
 - dialogue 自己维护一份并行任务状态
+- NarrativeDirector 和 QuestRuntimeService 同时持有两份 quest state
 
 ## 5. 回调点与扩展缝
 
@@ -343,6 +359,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 
 - 地图：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Maps/narrative_showcase_hub.json`
 - Narrative 配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Narrative/*.json`
+- Quest 配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Quests/quests.json`
 - 相机配置：`mods/showcases/narrative/NarrativeShowcaseMod/assets/Configs/Camera/virtual_cameras.json`
 - GAS 奖励：`mods/showcases/narrative/NarrativeShowcaseMod/assets/GAS/effects.json`
 - 可玩验收：`src/Tests/GasTests/Production/NarrativeShowcasePlayableAcceptanceTests.cs`
@@ -362,7 +379,7 @@ UI 面板仅是 narrative 当前状态的只读投影，位于：
 
 - 新的 condition kind：队伍成员、背包物品、地图标签、章节号
 - 新的 action kind：切 map、投递 UI inbox、派发 performer cue、注册 checkpoint
-- 任务图谱层：在不破坏 director 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
+- 任务图谱层：在不破坏 Core QuestRuntimeService 单一真相的前提下，为复杂 CRPG 提供 quest graph authoring
 
 不建议的方向：
 
