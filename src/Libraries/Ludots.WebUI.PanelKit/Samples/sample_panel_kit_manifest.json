@@ -1,0 +1,48 @@
+{
+  "manifestId": "panel-kit.sample.hud",
+  "hostOwnerId": "panel-kit.sample",
+  "panels": [
+    {
+      "panelId": "hud.resource-bar",
+      "panelType": "resource-bar",
+      "surfaceRegionId": "region.top-left",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "top-left",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.resource",
+      "profileId": "profile.resource.generic",
+      "layoutId": "layout.bar.horizontal",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.none"
+    },
+    {
+      "panelId": "hud.command-deck",
+      "panelType": "command-deck",
+      "surfaceRegionId": "region.bottom-center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 20,
+      "anchor": "bottom-center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.command",
+      "profileId": "profile.command.generic",
+      "layoutId": "layout.deck.grid",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activate-slot"
+    },
+    {
+      "panelId": "hud.objective",
+      "panelType": "objective",
+      "surfaceRegionId": "region.top-right",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 15,
+      "anchor": "top-right",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.objective",
+      "profileId": "profile.objective.generic",
+      "layoutId": "layout.list.vertical",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.none"
+    }
+  ]
+}
