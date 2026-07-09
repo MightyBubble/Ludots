@@ -1053,10 +1053,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             // Behavior presets must stay entity-backed so OnApply builtins execute.
             return tpl.PresetType switch
             {
-                EffectPresetType.None => true,
-                EffectPresetType.InstantDamage => true,
-                EffectPresetType.Heal => true,
-                EffectPresetType.ApplyForce2D => true,
+                EffectPresetType.None => tpl.PresetTypeId == (byte)EffectPresetType.None,
+                EffectPresetType.InstantDamage => tpl.PresetTypeId == (byte)EffectPresetType.InstantDamage,
+                EffectPresetType.Heal => tpl.PresetTypeId == (byte)EffectPresetType.Heal,
+                EffectPresetType.ApplyForce2D => tpl.PresetTypeId == (byte)EffectPresetType.ApplyForce2D,
                 _ => false,
             };
         }
@@ -1212,7 +1212,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 EffectPhaseId.OnPropose,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
+                tpl.PresetTypeId,
                 proposal.TagId,
                 proposal.TemplateId,
                 in mergedConfig);
@@ -1247,7 +1247,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 targetPos,
                 EffectPhaseId.OnCalculate,
                 in tpl.PhaseGraphBindings,
-                tpl.PresetType,
+                tpl.PresetTypeId,
                 proposal.TagId,
                 proposal.TemplateId,
                 in mergedConfig);

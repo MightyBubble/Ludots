@@ -263,12 +263,14 @@ namespace Ludots.Tests.GAS
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
             GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
 
             // Warm up
             for (int i = 0; i < 10; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.LoadFromJson(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json, builtinHandlers);
             }
 
             var sw = Stopwatch.StartNew();
@@ -276,7 +278,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < iterations; i++)
             {
                 var reg = new PresetTypeRegistry();
-                PresetTypeLoader.LoadFromJson(reg, json);
+                PresetTypeLoader.LoadFromJson(reg, json, builtinHandlers);
             }
             sw.Stop();
 

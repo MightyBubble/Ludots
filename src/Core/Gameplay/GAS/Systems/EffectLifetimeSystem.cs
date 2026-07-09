@@ -410,7 +410,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     default,
                     phase,
                     in tpl.PhaseGraphBindings,
-                    tpl.PresetType,
+                    tpl.PresetTypeId,
                     tpl.TagId,
                     entry.TemplateId,
                     in mergedConfig,

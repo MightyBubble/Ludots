@@ -9,7 +9,16 @@ namespace Ludots.Core.Config
         public static ConfigCatalog Load(ConfigPipeline pipeline, string relativePath = "config_catalog.json")
         {
             var entry = new ConfigCatalogEntry(relativePath, ConfigMergePolicy.ArrayById, idField: "Path");
-            var merged = pipeline.MergeFromCatalog(in entry);
+            var fragments = pipeline.CollectFragmentsWithSources(in entry);
+            ValidateNoDuplicateCatalogPaths(fragments, relativePath);
+
+            var nodes = new List<JsonNode>(fragments.Count);
+            for (int i = 0; i < fragments.Count; i++)
+            {
+                nodes.Add(fragments[i].Node);
+            }
+
+            var merged = ConfigMerger.MergeMany(nodes, in entry);
 
             var catalog = new ConfigCatalog();
             if (merged is not JsonArray arr)
@@ -28,6 +37,7 @@ namespace Ludots.Core.Config
 
                 ValidateKnownProperties(obj, relativePath, i);
                 string path = ReadRequiredString(obj, "Path", relativePath, i);
+                ValidateRelativeConfigPath(path, relativePath, i, "Path");
                 string pol = ReadRequiredString(obj, "Policy", relativePath, i);
                 ConfigMergePolicy policy = ParsePolicy(pol, path);
 
@@ -67,10 +77,66 @@ namespace Ludots.Core.Config
                     appendFields = tmp.ToArray();
                 }
 
-                catalog.Add(new ConfigCatalogEntry(path, policy, idField, appendFields));
+                string[] shardDirectories = Array.Empty<string>();
+                if (obj.TryGetPropertyValue("ShardDirectories", out var shardNode))
+                {
+                    shardDirectories = ReadStringArray(shardNode, path, "ShardDirectories");
+                    for (int s = 0; s < shardDirectories.Length; s++)
+                    {
+                        ValidateRelativeConfigPath(shardDirectories[s], relativePath, i, $"ShardDirectories[{s}]");
+                    }
+                }
+
+                bool allowEmpty = false;
+                if (obj.TryGetPropertyValue("AllowEmpty", out var allowEmptyNode))
+                {
+                    if (allowEmptyNode == null || allowEmptyNode.GetValueKind() != System.Text.Json.JsonValueKind.True &&
+                        allowEmptyNode.GetValueKind() != System.Text.Json.JsonValueKind.False)
+                    {
+                        throw new InvalidOperationException(
+                            $"Config catalog entry '{path}' AllowEmpty must be a boolean.");
+                    }
+
+                    allowEmpty = allowEmptyNode.GetValue<bool>();
+                }
+
+                catalog.Add(new ConfigCatalogEntry(path, policy, idField, appendFields, shardDirectories, allowEmpty));
             }
 
             return catalog;
+        }
+
+        private static void ValidateNoDuplicateCatalogPaths(List<ConfigFragment> fragments, string relativePath)
+        {
+            var seen = new Dictionary<string, string>(StringComparer.Ordinal);
+            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
+            {
+                if (fragments[fragmentIndex].Node is not JsonArray arr)
+                {
+                    continue;
+                }
+
+                for (int entryIndex = 0; entryIndex < arr.Count; entryIndex++)
+                {
+                    if (arr[entryIndex] is not JsonObject obj)
+                    {
+                        continue;
+                    }
+
+                    if (!TryReadString(obj, "Path", out string path))
+                    {
+                        continue;
+                    }
+
+                    if (seen.TryGetValue(path, out string? firstSource))
+                    {
+                        throw new InvalidOperationException(
+                            $"Config catalog '{relativePath}' declares duplicate Path '{path}' in '{firstSource}' and '{fragments[fragmentIndex].SourceUri}'.");
+                    }
+
+                    seen[path] = fragments[fragmentIndex].SourceUri;
+                }
+            }
         }
 
         private static ConfigMergePolicy ParsePolicy(string policy, string path)
@@ -87,7 +153,7 @@ namespace Ludots.Core.Config
         {
             foreach (var pair in obj)
             {
-                if (pair.Key is "Path" or "Policy" or "IdField" or "ArrayAppendFields")
+                if (pair.Key is "Path" or "Policy" or "IdField" or "ArrayAppendFields" or "ShardDirectories" or "AllowEmpty")
                 {
                     continue;
                 }
@@ -115,6 +181,62 @@ namespace Ludots.Core.Config
 
             return value;
         }
+
+        private static string[] ReadStringArray(JsonNode? node, string path, string propertyName)
+        {
+            if (node is not JsonArray arr)
+            {
+                throw new InvalidOperationException(
+                    $"Config catalog entry '{path}' {propertyName} must be a JSON array.");
+            }
+
+            var values = new List<string>(arr.Count);
+            for (int i = 0; i < arr.Count; i++)
+            {
+                if (arr[i] == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Config catalog entry '{path}' {propertyName}[{i}] must be a non-empty string.");
+                }
+
+                string value = arr[i]!.ToString();
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    throw new InvalidOperationException(
+                        $"Config catalog entry '{path}' {propertyName}[{i}] must be a non-empty string.");
+                }
+
+                values.Add(value);
+            }
+
+            return values.ToArray();
+        }
+
+        private static void ValidateRelativeConfigPath(string path, string catalogPath, int index, string propertyName)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new InvalidOperationException(
+                    $"Config catalog '{catalogPath}' entry at index {index} {propertyName} must be non-empty.");
+            }
+
+            string normalized = path.Replace('\\', '/');
+            if (normalized.StartsWith("/", StringComparison.Ordinal) ||
+                normalized.Contains(":", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Config catalog '{catalogPath}' entry at index {index} {propertyName} must be a relative path.");
+            }
+
+            string[] parts = normalized.Split('/');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i] == "." || parts[i] == "..")
+                {
+                    throw new InvalidOperationException(
+                        $"Config catalog '{catalogPath}' entry at index {index} {propertyName} must not contain traversal segments.");
+                }
+            }
+        }
     }
 }
-

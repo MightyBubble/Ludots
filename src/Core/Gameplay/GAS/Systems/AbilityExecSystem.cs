@@ -37,6 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly GasGraphOpHandlerTable _graphHandlers;
         private readonly TagOps _tagOps;
         private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
@@ -74,6 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectPhaseExecutor phaseExecutor = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
+            GasGraphOpHandlerTable graphHandlers = null,
             TagOps tagOps = null,
             OrderTypeRegistry orderTypeRegistry = null,
             ProgressionRequirementEvaluator progressionRequirements = null)
@@ -93,6 +95,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
             _tagOps = tagOps ?? new TagOps();
             _orderTypeRegistry = orderTypeRegistry;
             _progressionRequirements = progressionRequirements;
@@ -336,7 +339,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 slot.AbilityId,
                                 in activationPrecondition,
                                 _graphPrograms,
-                                _graphApi))
+                                _graphApi,
+                                _graphHandlers))
                         {
                             if (_orderTypeRegistry != null)
                             {

@@ -45,7 +45,7 @@ namespace Ludots.Tests.GAS
                 programs,
                 new PresetTypeRegistry(),
                 new BuiltinHandlerRegistry(),
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 new EffectTemplateRegistry());
             var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: null);
 

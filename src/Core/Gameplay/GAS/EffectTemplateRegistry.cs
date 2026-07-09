@@ -323,6 +323,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public int TagId;
         public EffectPresetType PresetType;
+        public int PresetTypeId;
         public int PresetAttribute0;
         public int PresetAttribute1;
         public EffectLifetimeKind LifetimeKind;

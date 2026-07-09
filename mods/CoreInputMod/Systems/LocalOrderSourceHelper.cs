@@ -17,6 +17,7 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
@@ -214,7 +215,9 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
                 spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) ||
-                coordsObj is not Ludots.Core.Spatial.ISpatialCoordinateConverter spatialCoords)
+                coordsObj is not Ludots.Core.Spatial.ISpatialCoordinateConverter spatialCoords ||
+                !_globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) ||
+                graphHandlersObj is not GasGraphOpHandlerTable graphHandlers)
             {
                 return false;
             }
@@ -226,7 +229,7 @@ namespace CoreInputMod.Systems
                 eventBus: null,
                 effectRequests: null,
                 _globals);
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
+            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, graphHandlers);
             return true;
         }
 

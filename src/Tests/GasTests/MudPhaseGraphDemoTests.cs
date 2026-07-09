@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using Arch.Core;
@@ -53,7 +53,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // ── Register graph programs ──
@@ -233,7 +233,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Preset Main: write BB key=99 = 999 (should NOT run)
@@ -317,7 +317,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templateReg = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templateReg);
 
                 // Shared graph: read config(baseDamage) * config(multiplier), negate, apply to HP

@@ -361,7 +361,9 @@ namespace Ludots.Tests.GAS
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var registry = new PresetTypeRegistry();
-            var loader = new PresetTypeLoader(pipeline, registry);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var loader = new PresetTypeLoader(pipeline, registry, builtinHandlers);
             loader.Load(catalog);
 
             That(registry.IsRegistered(EffectPresetType.InstantDamage), Is.True);

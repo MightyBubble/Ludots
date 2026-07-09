@@ -1427,8 +1427,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private static ConfigCatalogEntry GetEntry(ConfigCatalog catalog, string relativePath, ConfigMergePolicy policy, string idField)
         {
-            if (catalog != null && catalog.TryGet(relativePath, out var e)) return e;
-            return new ConfigCatalogEntry(relativePath, policy, idField);
+            return ConfigPipeline.RequireEntry(catalog, relativePath, policy, idField);
         }
 
         private static (WorldStateBits256 Mask, WorldStateBits256 Values) ReadCondition(JsonObject obj, string propertyName, AtomRegistry atoms, string path)

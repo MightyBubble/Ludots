@@ -20,6 +20,7 @@ namespace Ludots.Core.Modding
         private readonly TriggerManager _triggerManager;
         private readonly SystemFactoryRegistry _systemFactoryRegistry;
         private readonly TriggerDecoratorRegistry _triggerDecoratorRegistry;
+        private readonly ModExtensionHub _extensions;
         private readonly List<IMod> _loadedMods = new List<IMod>();
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
         private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.Ordinal);
@@ -31,17 +32,19 @@ namespace Ludots.Core.Modding
         public List<string> LoadedModIds { get; private set; } = new List<string>();
 
         public ModLoader(IVirtualFileSystem vfs, FunctionRegistry fr, TriggerManager tm,
-            SystemFactoryRegistry sfr = null, TriggerDecoratorRegistry tdr = null)
+            SystemFactoryRegistry sfr = null, TriggerDecoratorRegistry tdr = null, ModExtensionHub extensions = null)
         {
             _vfs = vfs;
             _functionRegistry = fr;
             _triggerManager = tm;
             _systemFactoryRegistry = sfr ?? new SystemFactoryRegistry();
             _triggerDecoratorRegistry = tdr ?? new TriggerDecoratorRegistry();
+            _extensions = extensions ?? new ModExtensionHub();
         }
 
         public SystemFactoryRegistry SystemFactoryRegistry => _systemFactoryRegistry;
         public TriggerDecoratorRegistry TriggerDecoratorRegistry => _triggerDecoratorRegistry;
+        internal ModExtensionHub Extensions => _extensions;
 
         public void LoadMods(string modsRootPath)
         {
@@ -211,52 +214,60 @@ namespace Ludots.Core.Modding
 
         private void ResetLoadedState()
         {
-            for (int i = _loadedMods.Count - 1; i >= 0; i--)
+            try
             {
-                var mod = _loadedMods[i];
-                try
+                for (int i = _loadedMods.Count - 1; i >= 0; i--)
                 {
-                    mod.OnUnload();
+                    var mod = _loadedMods[i];
+                    try
+                    {
+                        mod.OnUnload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
+                        throw;
+                    }
                 }
-                catch (Exception ex)
+                _loadedMods.Clear();
+                UnregisterModComponentAuthoring(LoadedModIds);
+
+                foreach (var ctx in _loadContexts)
                 {
-                    Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
-                    throw;
+                    try
+                    {
+                        ctx.Unload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
+                        throw;
+                    }
+                }
+                _loadContexts.Clear();
+
+                var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.Ordinal);
+                foreach (var id in _modDirectories.Keys)
+                {
+                    staleMounts.Add(id);
+                }
+
+                foreach (var id in staleMounts)
+                {
+                    _vfs.Unmount(id);
                 }
             }
-            _loadedMods.Clear();
-            UnregisterModComponentAuthoring(LoadedModIds);
-
-            foreach (var ctx in _loadContexts)
+            finally
             {
-                try
-                {
-                    ctx.Unload();
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
-                    throw;
-                }
+                _loadedMods.Clear();
+                _loadContexts.Clear();
+                LoadedModIds.Clear();
+                _modDirectories.Clear();
+                _sharedAssemblies.Clear();
+                _processSharedAssemblyNames.Clear();
+                _activePlanLoadContext = null;
+                _extensions.Reset();
             }
-            _loadContexts.Clear();
-
-            var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.Ordinal);
-            foreach (var id in _modDirectories.Keys)
-            {
-                staleMounts.Add(id);
-            }
-
-            foreach (var id in staleMounts)
-            {
-                _vfs.Unmount(id);
-            }
-
-            LoadedModIds.Clear();
-            _modDirectories.Clear();
-            _sharedAssemblies.Clear();
-            _processSharedAssemblyNames.Clear();
-            _activePlanLoadContext = null;
         }
 
         private void ConfigureProcessSharedAssemblies(IEnumerable<ModManifest> manifests)
@@ -410,7 +421,7 @@ namespace Ludots.Core.Modding
                     {
                         var modInstance = (IMod)Activator.CreateInstance(modType);
                         Log.Info(in LogChannels.ModLoader, $"Instantiated entry for {manifest.Name}. Calling OnLoad...");
-                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry);
+                        var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry, _extensions);
                         modInstance.OnLoad(context);
                         Log.Info(in LogChannels.ModLoader, $"{manifest.Name} OnLoad completed.");
                         _loadedMods.Add(modInstance);
@@ -544,46 +555,54 @@ namespace Ludots.Core.Modding
 
         public void UnloadAll()
         {
-            for (int i = _loadedMods.Count - 1; i >= 0; i--)
+            try
             {
-                var mod = _loadedMods[i];
-                try
+                for (int i = _loadedMods.Count - 1; i >= 0; i--)
                 {
-                    mod.OnUnload();
+                    var mod = _loadedMods[i];
+                    try
+                    {
+                        mod.OnUnload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
+                        throw;
+                    }
                 }
-                catch (Exception ex)
+                _loadedMods.Clear();
+                UnregisterModComponentAuthoring(LoadedModIds);
+
+                foreach (var ctx in _loadContexts)
                 {
-                    Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
-                    throw;
+                    try
+                    {
+                        ctx.Unload();
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
+                        throw;
+                    }
+                }
+                _loadContexts.Clear();
+
+                foreach (var id in LoadedModIds)
+                {
+                    _vfs.Unmount(id);
                 }
             }
-            _loadedMods.Clear();
-            UnregisterModComponentAuthoring(LoadedModIds);
-
-            foreach (var ctx in _loadContexts)
+            finally
             {
-                try
-                {
-                    ctx.Unload();
-                }
-                catch (Exception ex)
-                {
-                    Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
-                    throw;
-                }
+                _loadedMods.Clear();
+                _loadContexts.Clear();
+                LoadedModIds.Clear();
+                _modDirectories.Clear();
+                _sharedAssemblies.Clear();
+                _processSharedAssemblyNames.Clear();
+                _activePlanLoadContext = null;
+                _extensions.Reset();
             }
-            _loadContexts.Clear();
-
-            foreach (var id in LoadedModIds)
-            {
-                _vfs.Unmount(id);
-            }
-
-            LoadedModIds.Clear();
-            _modDirectories.Clear();
-            _sharedAssemblies.Clear();
-            _processSharedAssemblyNames.Clear();
-            _activePlanLoadContext = null;
 
             GC.Collect();
             GC.WaitForPendingFinalizers();

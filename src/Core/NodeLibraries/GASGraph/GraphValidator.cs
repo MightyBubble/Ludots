@@ -5,7 +5,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     public static class GraphValidator
     {
-        public static List<GraphDiagnostic> Validate(GraphConfig cfg)
+        public static List<GraphDiagnostic> Validate(GraphConfig cfg, GasGraphOpRegistry? opRegistry = null)
         {
             var diagnostics = new List<GraphDiagnostic>();
 
@@ -44,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.DuplicateNodeId, $"Duplicate node id '{node.Id}'.", graphId, node.Id));
                 }
 
-                if (!GraphNodeOpParser.TryParse(node.Op, out _))
+                if (!GraphNodeOpParser.TryParse(node.Op, out _) &&
+                    (opRegistry == null || !opRegistry.TryGet(node.Op, out _)))
                 {
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.UnknownNodeOp, $"Unknown node op '{node.Op}'.", graphId, node.Id));
                 }
@@ -166,4 +167,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-

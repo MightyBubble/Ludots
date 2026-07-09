@@ -170,6 +170,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ProgressionRequirementEvaluator> ProgressionRequirementEvaluator = new("ProgressionRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
+        public static readonly ServiceKey<GasGraphOpHandlerTable> GasGraphOpHandlerTable = new("GasGraphOpHandlerTable");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");
         public static readonly ServiceKey<StringIntRegistry> GraphOutputValueKeyRegistry = new("GraphOutputValueKeyRegistry");
         public static readonly ServiceKey<GraphOutputValueStore> GraphOutputValueStore = new("GraphOutputValueStore");

@@ -49,6 +49,65 @@ namespace Ludots.Tests.GAS
             That(p.Program.Length, Is.GreaterThan(0));
         }
 
+        [Test]
+        public void Compile_ExtensionOp_UsesRegisteredHandler()
+        {
+            var opRegistry = new GasGraphOpRegistry();
+            int opCode = opRegistry.Register(
+                "ExampleMod.DoubleFloat",
+                GraphValueType.Float,
+                DoubleFloat,
+                GraphValueType.Float);
+
+            var cfg = new GraphConfig
+            {
+                Id = "ExampleMod.Graph.Double",
+                Kind = "Effect",
+                Entry = "value",
+                Nodes = new List<GraphNodeConfig>
+                {
+                    new GraphNodeConfig { Id = "value", Op = "ConstFloat", FloatValue = 3.5f, Next = "double" },
+                    new GraphNodeConfig { Id = "double", Op = "ExampleMod.DoubleFloat", Inputs = new List<string> { "value" } },
+                },
+            };
+
+            var (pkg, diags) = GraphCompiler.Compile(cfg, opRegistry);
+            That(pkg.HasValue, Is.True);
+            for (int i = 0; i < diags.Count; i++)
+            {
+                That(diags[i].Severity, Is.Not.EqualTo(GraphDiagnosticSeverity.Error), diags[i].Message);
+            }
+
+            var handlers = new GasGraphOpHandlerTable(opRegistry);
+            float[] f = new float[GraphVmLimits.MaxFloatRegisters];
+            int[] ints = new int[GraphVmLimits.MaxIntRegisters];
+            byte[] bools = new byte[GraphVmLimits.MaxBoolRegisters];
+            Entity[] entities = new Entity[GraphVmLimits.MaxEntityRegisters];
+            Entity[] targets = new Entity[GraphVmLimits.MaxTargets];
+            using var world = World.Create();
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Api = null!,
+                F = f,
+                I = ints,
+                B = bools,
+                E = entities,
+                Targets = targets,
+                TargetList = new GraphTargetList(targets),
+            };
+
+            That(pkg!.Value.Program[1].Op, Is.EqualTo(opCode));
+            GasGraphOpHandlerTable.Execute(ref state, pkg.Value.Program, handlers);
+
+            That(f[1], Is.EqualTo(7.0f));
+        }
+
+        private static void DoubleFloat(ref GraphExecutionState state, in GraphInstruction ins, ref int pc)
+        {
+            state.F[ins.Dst] = state.F[ins.A] * 2.0f;
+        }
+
     }
 
     [TestFixture]
@@ -120,7 +179,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = 0 }
             };
 
-            GraphExecutor.Execute(world, caster, default, new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster, default, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
 
             ref var a1 = ref world.Get<AttributeBuffer>(e1);
             ref var a2 = ref world.Get<AttributeBuffer>(e2);

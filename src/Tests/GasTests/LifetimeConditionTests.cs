@@ -157,7 +157,7 @@ namespace Ludots.Tests.GAS
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var lifetime = new EffectLifetimeSystem(
                 world,

@@ -140,7 +140,7 @@ namespace Ludots.Tests.GAS
 
                 var target = world.Create(new AttributeBuffer(), new ForceInput2D());
 
-                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
 
                 var chainOrders = new OrderQueue();
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });

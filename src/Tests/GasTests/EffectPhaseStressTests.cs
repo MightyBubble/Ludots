@@ -36,7 +36,7 @@ namespace Ludots.Tests.GAS
                 var presetTypes = new PresetTypeRegistry();
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 var templates = new EffectTemplateRegistry();
-                var handlers = GasGraphOpHandlerTable.Instance;
+                var handlers = new GasGraphOpHandlerTable();
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -193,7 +193,7 @@ namespace Ludots.Tests.GAS
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
                 }
 
                 GC.Collect();
@@ -214,7 +214,7 @@ namespace Ludots.Tests.GAS
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
                     };
-                    GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                    GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
                 }
 
                 sw.Stop();
@@ -290,7 +290,7 @@ namespace Ludots.Tests.GAS
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
                     }
                 }
 
@@ -316,7 +316,7 @@ namespace Ludots.Tests.GAS
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
                         };
-                        GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                        GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
                     }
                 }
 

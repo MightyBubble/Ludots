@@ -24,13 +24,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public sealed class GasGraphOpHandlerTable
     {
-        public static readonly GasGraphOpHandlerTable Instance = new();
+        private readonly GasGraphOpHandler[] _handlers;
 
-        public GasGraphOpHandler[] Handlers { get; }
-
-        private GasGraphOpHandlerTable()
+        public GasGraphOpHandlerTable(GasGraphOpRegistry? extensions = null)
         {
-            Handlers = CreateHandlers();
+            _handlers = CreateHandlers();
+            extensions?.InstallHandlers(_handlers);
         }
 
         /// <summary>
@@ -41,7 +40,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
-            var table = handlers.Handlers;
+            var table = handlers._handlers;
             int pc = 0;
             int steps = 0;
             int maxSteps = GraphVmLimits.MaxInstructionsPerExecution;

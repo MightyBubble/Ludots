@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var state = SetupExecution(world, caster, caster, program);
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             That(state.I[2], Is.EqualTo(10));
             world.Dispose();
         }
@@ -193,7 +193,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var state = SetupExecution(world, caster, caster, program);
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             That(state.B[0], Is.EqualTo(1));
             That(state.B[1], Is.EqualTo(0));
             world.Dispose();
@@ -213,7 +213,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var state = SetupExecution(world, caster, caster, program);
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             That(state.B[0], Is.EqualTo(1));
             That(state.B[1], Is.EqualTo(0));
             world.Dispose();
@@ -236,7 +236,7 @@ namespace Ludots.Tests.GAS
 
             var state = SetupExecution(world, entity, entity, program, api);
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             That(state.B[0], Is.EqualTo(1));
             world.Dispose();
         }
@@ -285,7 +285,7 @@ namespace Ludots.Tests.GAS
             program.Add((ushort)GraphNodeOp.TargetListGet, dst: 3, a: 0, flags: 0); // E[3] = Targets[I[0]], B[0] = valid
 
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
 
             That(state.E[3], Is.EqualTo(e1));
             That(state.B[0], Is.EqualTo(1));
@@ -296,7 +296,7 @@ namespace Ludots.Tests.GAS
             program.Add((ushort)GraphNodeOp.TargetListGet, dst: 4, a: 0, flags: 1);
             instructions = ExtractInstructions(program);
             state.TargetList = targetList; // re-attach (ref struct)
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             That(state.B[1], Is.EqualTo(0));
 
             world.Dispose();
@@ -343,7 +343,7 @@ namespace Ludots.Tests.GAS
             program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 42); // templateId = 42
 
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
 
             // Check all 5 requests were published
             That(requestQueue.Count, Is.EqualTo(5));
@@ -529,7 +529,7 @@ namespace Ludots.Tests.GAS
             var eventBus = new GameplayEventBus();
             var globalReg = new GlobalPhaseListenerRegistry();
 
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates, globalReg, eventBus);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates, globalReg, eventBus);
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
@@ -567,7 +567,7 @@ namespace Ludots.Tests.GAS
                 PhaseListenerActionFlags.PublishEvent, 0, eventTag, 50, ownerEffectId: 1);
             world.Add(caster, listenerBuf);
 
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates, globalReg, eventBus);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates, globalReg, eventBus);
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
@@ -627,7 +627,7 @@ namespace Ludots.Tests.GAS
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var instructions = ExtractInstructions(program);
-            GasGraphOpHandlerTable.Execute(ref state, instructions, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, instructions, new GasGraphOpHandlerTable());
             sw.Stop();
 
             That(requestQueue.Count, Is.EqualTo(1000));
@@ -647,7 +647,7 @@ namespace Ludots.Tests.GAS
             var eventBus = new GameplayEventBus();
             var globalReg = new GlobalPhaseListenerRegistry();
 
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates, globalReg, eventBus);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates, globalReg, eventBus);
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
 
             var caster = world.Create();
@@ -720,7 +720,7 @@ namespace Ludots.Tests.GAS
                 PhaseListenerActionFlags.Both, bonusGraphId, 888, 100, ownerEffectId: 1);
             world.Add(caster, casterBuf);
 
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates, globalReg, eventBus);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates, globalReg, eventBus);
             var api = new GasGraphRuntimeApi(world, null, null, eventBus, requestQueue);
 
             // Simulate: caster's Fireball.Hit applies to victim1, victim2, victim3

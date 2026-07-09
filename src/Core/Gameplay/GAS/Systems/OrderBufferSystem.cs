@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
 
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
@@ -34,7 +35,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            GasGraphOpHandlerTable? graphHandlers = null)
             : base(world)
         {
             _clock = clock;
@@ -50,6 +52,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _graphProgramRegistry = graphProgramRegistry;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
         }
 
         public override void Update(in float dt)
@@ -107,7 +110,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 var config = _orderTypeRegistry.Get(order.OrderTypeId);
                 if (config.ValidationGraphId > 0)
                 {
-                    if (_graphProgramRegistry == null || _graphApi == null)
+                    if (_graphProgramRegistry == null || _graphApi == null || _graphHandlers == null)
                     {
                         throw new InvalidOperationException(
                             $"Order type {order.OrderTypeId} requires validation graph {config.ValidationGraphId}, but graph validation services are not configured.");
@@ -126,7 +129,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         order.Target,
                         targetPos,
                         validationProgram,
-                        _graphApi);
+                        _graphApi,
+                        _graphHandlers);
                     if (!passed) continue;
                 }
 
@@ -216,6 +220,5 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-
 
 

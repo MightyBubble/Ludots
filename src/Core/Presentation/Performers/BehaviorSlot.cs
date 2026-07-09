@@ -8,6 +8,9 @@ namespace Ludots.Core.Presentation.Performers
     {
         public int SlotIndex;
         public BehaviorKind Kind;
+        public int KindId;
+        public PerformerBehaviorExecutionLane ExtensionLane;
+        public int ExtensionTriggerId;
         public bool ActiveByDefault;
         public ConditionRef ActivationCondition;
         public AssetBindingConfig AssetBinding;
@@ -24,6 +27,7 @@ namespace Ludots.Core.Presentation.Performers
 
     public enum BehaviorKind : byte
     {
+        None = 0,
         AssetBinding = 1,
         AttributeBinding = 2,
         TagBinding = 3,
@@ -34,6 +38,7 @@ namespace Ludots.Core.Presentation.Performers
         Spline = 8,
         Grounding = 9,
         MinimapMarker = 10,
+        Extension = 255,
     }
 
     public struct AssetBindingConfig

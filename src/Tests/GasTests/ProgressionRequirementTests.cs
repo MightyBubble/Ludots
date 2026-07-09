@@ -536,7 +536,7 @@ namespace Ludots.Tests.GAS
                 graphPrograms,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var loop = new EffectProcessingLoopSystem(
                 world,

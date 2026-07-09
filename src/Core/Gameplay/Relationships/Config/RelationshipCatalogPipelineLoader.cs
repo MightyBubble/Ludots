@@ -25,12 +25,13 @@ namespace Ludots.Core.Gameplay.Relationships.Config
             ConfigConflictReport? report = null,
             string relativePath = "Relationships/catalog.json")
         {
-            var fragments = _pipeline.CollectFragmentsWithSources(relativePath);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
             if (report != null)
             {
                 for (int i = 0; i < fragments.Count; i++)
                 {
-                    report.RecordFragment(relativePath, fragments[i].SourceUri);
+                    report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
                 }
             }
 

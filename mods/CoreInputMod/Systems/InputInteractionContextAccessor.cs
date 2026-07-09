@@ -12,6 +12,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
@@ -211,6 +212,16 @@ namespace CoreInputMod.Systems
                                                    graphProgramsObj is GraphProgramRegistry resolvedGraphPrograms
                 ? resolvedGraphPrograms
                 : null;
+            GasGraphOpHandlerTable? graphHandlers = _globals.TryGetValue(CoreServiceKeys.GasGraphOpHandlerTable.Name, out var graphHandlersObj) &&
+                                                     graphHandlersObj is GasGraphOpHandlerTable resolvedGraphHandlers
+                ? resolvedGraphHandlers
+                : null;
+            if (graphPrograms != null && graphHandlers == null)
+            {
+                throw new InvalidOperationException(
+                    "Ability aim presentation graph support requires CoreServiceKeys.GasGraphOpHandlerTable.");
+            }
+
             GasGraphRuntimeApi? graphApi = null;
             if (graphPrograms != null &&
                 _globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) &&
@@ -240,7 +251,8 @@ namespace CoreInputMod.Systems
                 events,
                 session,
                 graphPrograms,
-                graphApi);
+                graphApi,
+                graphHandlers);
             return true;
         }
 
@@ -254,7 +266,8 @@ namespace CoreInputMod.Systems
                    _globals.ContainsKey(CoreServiceKeys.RelationshipReasonRegistry.Name) &&
                    _globals.ContainsKey(CoreServiceKeys.TargetDispatchPresetRegistry.Name) &&
                    _globals.ContainsKey(CoreServiceKeys.EntityCollectionStore.Name) &&
-                   _globals.ContainsKey(CoreServiceKeys.EntitySetQueryRuntime.Name);
+                   _globals.ContainsKey(CoreServiceKeys.EntitySetQueryRuntime.Name) &&
+                   _globals.ContainsKey(CoreServiceKeys.GasGraphOpHandlerTable.Name);
         }
     }
 }

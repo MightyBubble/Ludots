@@ -18,14 +18,15 @@ namespace Ludots.Core.Gameplay.GAS
             int abilityId,
             in AbilityActivationPrecondition precondition,
             GraphProgramRegistry graphPrograms,
-            IGraphRuntimeApi graphApi)
+            IGraphRuntimeApi graphApi,
+            GasGraphOpHandlerTable graphHandlers)
         {
             if (precondition.ValidationGraphId <= 0)
             {
                 return true;
             }
 
-            if (graphPrograms == null || graphApi == null)
+            if (graphPrograms == null || graphApi == null || graphHandlers == null)
             {
                 throw new InvalidOperationException(
                     $"Ability {abilityId} requires activation validation graphId={precondition.ValidationGraphId}, but graph validation services are not configured.");
@@ -43,7 +44,8 @@ namespace Ludots.Core.Gameplay.GAS
                 explicitTarget,
                 targetPosCm,
                 validationProgram,
-                graphApi);
+                graphApi,
+                graphHandlers);
         }
     }
 }

@@ -253,7 +253,7 @@ namespace Ludots.Tests.GAS
                 world,
                 graph.Programs,
                 graph.OutputSchemas,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 graph.Collections,
                 graph.OutputValues);
 
@@ -367,7 +367,7 @@ namespace Ludots.Tests.GAS
                 TargetList = targetList,
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             Assert.That(state.TargetList.Count, Is.EqualTo(2));
             Assert.That(targets[0], Is.EqualTo(first));
@@ -385,7 +385,7 @@ namespace Ludots.Tests.GAS
             var outputValues = new GraphOutputValueStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
             programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } });
-            var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
+            var writer = new GraphReturnWriter(world, programs, schemas, new GasGraphOpHandlerTable(), collections, outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
 

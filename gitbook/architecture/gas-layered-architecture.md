@@ -34,7 +34,22 @@ GAS 的宏观分层由 `SystemGroup` 固化，重点 phase 包括：
 - effect phase 不依赖某个 sink 的隐式执行顺序
 - gameplay 逻辑不直接越层写物理、UI 或表现状态
 
-## 5 深度材料
+## 5 Mod-authored preset and graph extension
+
+Mod-authored GAS variants must stay in the existing effect / graph pipeline:
+
+- C# behavior is registered as a phase handler key through `IModContext.Extensions.Gas.RegisterBuiltinHandler`.
+- Graph VM behavior is registered as an op key through `IModContext.Extensions.Gas.RegisterGraphOp`.
+- `preset_types.json` is the authoring IR for preset type composition. A preset type may point a phase at a
+  registered builtin handler key or a compiled graph id.
+- Core enum `EffectPresetType` is only for Core-owned concepts. A user variant should add a preset key,
+  graph wiring, or effect steps, not a new Core enum value.
+
+The runtime compiles graphs with the frozen `GasGraphOpRegistry` and executes them through an explicit
+`GasGraphOpHandlerTable`. There is no static handler singleton and no enum-name fallback for resolving
+mod-authored builtin handlers.
+
+## 6 深度材料
 
 - 仓库深度版：`docs/architecture/gas_layered_architecture.md`
 - Input / spawn target 基建：`gitbook/architecture/input-order-and-spawn-target.md`

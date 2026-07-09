@@ -20,6 +20,7 @@ namespace Ludots.Core.Gameplay.Progression
         private readonly ScopeResolver _scopeResolver;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly IGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
         private readonly TagOps _tagOps;
 
         public ProgressionRequirementEvaluator(
@@ -28,6 +29,7 @@ namespace Ludots.Core.Gameplay.Progression
             ScopeKeyRegistry scopeKeys,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
+            GasGraphOpHandlerTable? graphHandlers = null,
             TagOps? tagOps = null,
             ScopeResolver? scopeResolver = null)
         {
@@ -37,6 +39,7 @@ namespace Ludots.Core.Gameplay.Progression
             _scopeResolver = scopeResolver ?? new ScopeResolver(world, scopeKeys);
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
             _tagOps = tagOps ?? new TagOps();
         }
 
@@ -368,7 +371,7 @@ namespace Ludots.Core.Gameplay.Progression
                 return true;
             }
 
-            if (_graphPrograms == null || _graphApi == null)
+            if (_graphPrograms == null || _graphApi == null || _graphHandlers == null)
             {
                 throw new InvalidOperationException($"Progression requirement graph {node.GraphProgramId} cannot run because graph services are not configured.");
             }
@@ -385,7 +388,8 @@ namespace Ludots.Core.Gameplay.Progression
                 graphTarget,
                 default(IntVector2),
                 program,
-                _graphApi);
+                _graphApi,
+                _graphHandlers);
         }
 
         private int CountMatchingEntities(in ProgressionRequirementNode node, in RoleResolverContext context)

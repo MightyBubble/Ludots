@@ -24,6 +24,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         private readonly AbilityDefinitionRegistry? _abilities;
         private readonly GraphProgramRegistry? _graphs;
         private readonly IGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
         private readonly Entity[] _targets;
 
         public UtilityAiRuntimeEvaluator(
@@ -32,6 +33,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             AbilityDefinitionRegistry? abilities,
             GraphProgramRegistry? graphs,
             IGraphRuntimeApi? graphApi,
+            GasGraphOpHandlerTable? graphHandlers,
             int targetCapacity = 256)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -39,6 +41,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             _abilities = abilities;
             _graphs = graphs;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
         }
 
@@ -717,7 +720,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     abilityId,
                     in ability.ActivationPrecondition,
                     _graphs,
-                    _graphApi))
+                    _graphApi,
+                    _graphHandlers))
             {
                 blockReason = UtilityAiReadinessBlockReason.ActivationPrecondition;
                 return false;
@@ -861,9 +865,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
 
         private float ExecuteScoreGraph(Entity actor, Entity target, int graphId)
         {
-            if (graphId <= 0 || _graphs == null || _graphApi == null)
+            if (graphId <= 0)
             {
                 return 0f;
+            }
+
+            if (_graphs == null || _graphApi == null || _graphHandlers == null)
+            {
+                throw new InvalidOperationException($"AI score graph id {graphId} cannot run because graph services are not configured.");
             }
 
             if (!_graphs.TryGetProgram(graphId, out var program))
@@ -872,7 +881,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, _graphHandlers);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

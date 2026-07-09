@@ -249,6 +249,88 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_ExtensionCommandKind_ParsesRegisteredCommand()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "extension_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Extension" },
+                        "command": {
+                          "kind": "ExampleMod.MarkCommand",
+                          "route": "SingleRuntime",
+                          "scopeTag": "extensionScope"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var commandKinds = new PerformerCommandKindRegistry();
+            int commandKindId = commandKinds.Register(
+                "ExampleMod.MarkCommand",
+                new PerformerCommandExtensionDescriptor(
+                    PerformerCommandRouteStrategy.SingleRuntime,
+                    NoOpExtensionCommand));
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry, commandKinds: commandKinds);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules[0].Command.CommandKind, Is.EqualTo(PerformerCommandKind.Extension));
+            Assert.That(definition.Rules[0].Command.CommandKindId, Is.EqualTo(commandKindId));
+            Assert.That(definition.Rules[0].Command.RouteStrategy, Is.EqualTo(PerformerCommandRouteStrategy.SingleRuntime));
+            Assert.That(definition.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("extensionScope")));
+        }
+
+        [Test]
+        public void Load_ExtensionBehaviorKind_ParsesRegisteredBehavior()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "extension_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "ExampleMod.TickBehavior",
+                        "execution": { "lane": "ContinuousTick" },
+                        "activeByDefault": true
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var behaviorKinds = new PerformerBehaviorKindRegistry();
+            int behaviorKindId = behaviorKinds.Register(
+                "ExampleMod.TickBehavior",
+                new PerformerBehaviorExtensionDescriptor(
+                    PerformerBehaviorExecutionLane.ContinuousTick,
+                    NoOpExtensionBehavior));
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry, behaviorKinds: behaviorKinds);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("extension_actor"), out var definition), Is.True);
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Extension));
+            Assert.That(definition.Behaviors[0].KindId, Is.EqualTo(behaviorKindId));
+            Assert.That(definition.Behaviors[0].ExtensionLane, Is.EqualTo(PerformerBehaviorExecutionLane.ContinuousTick));
+            Assert.That(definition.Behaviors[0].ActiveByDefault, Is.True);
+        }
+
+        [Test]
         public void Load_ResolvesGasSemanticEventKeysIntoPerformerRules()
         {
             WriteCatalog();
@@ -336,12 +418,12 @@ namespace Ludots.Tests.Presentation
             """
             { "event": { "kind": "GameplayEvent", "keyId": "Event.Strict" }, "command": {} }
             """,
-            "rules[0].command.kind requires a non-empty enum string.")]
+            "rules[0].command.kind must be a semantic string.")]
         [TestCase(
             """
             { "event": { "kind": "GameplayEvent", "keyId": "Event.Strict" }, "command": { "kind": "" } }
             """,
-            "rules[0].command.kind requires a non-empty enum string.")]
+            "rules[0].command.kind must be a semantic string.")]
         [TestCase(
             """
             { "event": { "kind": "GameplayEvent", "keyId": "Event.Strict" }, "command": { "kind": "FireAndForget" } }
@@ -1904,9 +1986,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain(expectedMessage));
         }
 
-        [TestCase("\"\"", "non-empty")]
-        [TestCase("\"   \"", "non-empty")]
-        [TestCase("\"AssetBinding \"", "invalid value")]
+        [TestCase("\"\"", "semantic string")]
+        [TestCase("\"   \"", "semantic string")]
+        [TestCase("\"AssetBinding \"", "whitespace")]
         [TestCase("\"assetBinding\"", "invalid value")]
         public void Load_RejectsNonCanonicalBehaviorKind(string kindJson, string expectedMessage)
         {
@@ -2260,6 +2342,14 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("hud.missing.token"));
+        }
+
+        private static void NoOpExtensionCommand(in PerformerCommandExecutionContext context)
+        {
+        }
+
+        private static void NoOpExtensionBehavior(in PerformerBehaviorExecutionContext context)
+        {
         }
 
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()

@@ -26,12 +26,13 @@ namespace Ludots.Core.Input.Config
             ConfigConflictReport report = null,
             string relativePath = "Input/default_input.json")
         {
-            var fragments = _pipeline.CollectFragmentsWithSources(relativePath);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var fragments = _pipeline.CollectFragmentsWithSources(in entry);
 
             if (report != null)
             {
                 for (int i = 0; i < fragments.Count; i++)
-                    report.RecordFragment(relativePath, fragments[i].SourceUri);
+                    report.RecordFragment(entry.RelativePath, fragments[i].SourceUri);
             }
 
             var actions = new Dictionary<string, InputActionDef>(StringComparer.OrdinalIgnoreCase);
@@ -206,4 +207,3 @@ namespace Ludots.Core.Input.Config
         }
     }
 }
-

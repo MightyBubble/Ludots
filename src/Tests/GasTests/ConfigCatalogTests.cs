@@ -127,6 +127,61 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ConfigPipeline_MergeFromCatalog_LoadsShardDirectoriesInStableOrder()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ConfigCatalogTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string core = Path.Combine(root, "Core");
+                string mod = Path.Combine(root, "ModA");
+                Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS", "abilities"));
+                Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "GAS", "abilities"));
+
+                File.WriteAllText(
+                    Path.Combine(core, "Configs", "config_catalog.json"),
+                    """
+                    [
+                      {
+                        "Path": "GAS/abilities.json",
+                        "Policy": "ArrayById",
+                        "IdField": "id",
+                        "ShardDirectories": [ "GAS/abilities" ]
+                      }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(core, "Configs", "GAS", "abilities.json"), "[{ \"id\": \"Core.Main\" }]");
+                File.WriteAllText(Path.Combine(core, "Configs", "GAS", "abilities", "b_second.json"), "[{ \"id\": \"Core.ShardB\" }]");
+                File.WriteAllText(Path.Combine(core, "Configs", "GAS", "abilities", "a_first.json"), "[{ \"id\": \"Core.ShardA\" }]");
+                File.WriteAllText(Path.Combine(mod, "assets", "Configs", "GAS", "abilities", "mod.json"), "[{ \"id\": \"ModA.Shard\" }]");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", core);
+                vfs.Mount("ModA", mod);
+                var modLoader = new ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new Ludots.Core.Scripting.TriggerManager());
+                modLoader.LoadedModIds.Add("ModA");
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
+
+                var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
+
+                Assert.That(merged.Count, Is.EqualTo(4));
+                Assert.That(merged[0].Id, Is.EqualTo("Core.Main"));
+                Assert.That(merged[1].Id, Is.EqualTo("Core.ShardA"));
+                Assert.That(merged[2].Id, Is.EqualTo("Core.ShardB"));
+                Assert.That(merged[3].Id, Is.EqualTo("ModA.Shard"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void ConfigCatalog_PathsAreCaseExact()
         {
             var catalog = new ConfigCatalog();

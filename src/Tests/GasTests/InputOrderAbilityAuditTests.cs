@@ -1028,7 +1028,7 @@ namespace Ludots.Tests.GAS
 
             // Empty program �?B[0] starts at 1 (pass), no instructions change it
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
-            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
+            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!, new GasGraphOpHandlerTable());
             That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
         }
 
@@ -1047,7 +1047,7 @@ namespace Ludots.Tests.GAS
                 Imm = 0   // value = false
             };
             ReadOnlySpan<GraphInstruction> program = new[] { instruction };
-            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
+            bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!, new GasGraphOpHandlerTable());
             That(result, Is.False, "ConstBool B[0]=0 should cause validation to fail");
         }
 

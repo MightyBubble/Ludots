@@ -302,7 +302,7 @@ namespace Ludots.Tests.GAS
                 TargetList = targetList,
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
         }
 
         private static string CreateTempRoot(string prefix)

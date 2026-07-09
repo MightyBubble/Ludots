@@ -16,6 +16,8 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         public PerformerCommandKind CommandKind;
+        public int CommandKindId;
+        public PerformerCommandRouteStrategy RouteStrategy;
         public int PerformerDefinitionId;
         public Entity PerformerEntity;
         public Entity ParentEntity;

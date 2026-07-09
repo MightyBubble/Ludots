@@ -14,6 +14,7 @@ namespace Ludots.Core.Modding
         public FunctionRegistry FunctionRegistry { get; }
         public SystemFactoryRegistry SystemFactoryRegistry { get; }
         public TriggerDecoratorRegistry TriggerDecorators { get; }
+        public IModExtensionRegistration Extensions { get; }
 
         private readonly TriggerManager _triggerManager;
         private readonly LogChannel _logChannel;
@@ -25,7 +26,8 @@ namespace Ludots.Core.Modding
             FunctionRegistry fr,
             TriggerManager tm,
             SystemFactoryRegistry sfr,
-            TriggerDecoratorRegistry tdr)
+            TriggerDecoratorRegistry tdr,
+            ModExtensionHub extensions)
         {
             ModId = modId;
             VFS = vfs;
@@ -33,6 +35,7 @@ namespace Ludots.Core.Modding
             _triggerManager = tm;
             SystemFactoryRegistry = sfr;
             TriggerDecorators = tdr;
+            Extensions = (extensions ?? throw new ArgumentNullException(nameof(extensions))).CreateRegistrationFacade(modId);
             _logChannel = Diagnostics.Log.GetOrCreateModChannel(modId);
         }
 

@@ -34,6 +34,7 @@ namespace Ludots.Core.Input.Orders
         private readonly ContextGroupRegistry _contextGroups;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable _graphHandlers;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly Entity[] _queryBuffer = new Entity[256];
 
@@ -42,13 +43,15 @@ namespace Ludots.Core.Input.Orders
             ContextGroupRegistry contextGroups,
             GraphProgramRegistry graphPrograms,
             ISpatialQueryService spatialQueries,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi)
+            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
+            Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable graphHandlers)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
             _graphPrograms = graphPrograms ?? throw new ArgumentNullException(nameof(graphPrograms));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
+            _graphHandlers = graphHandlers ?? throw new ArgumentNullException(nameof(graphHandlers));
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -237,7 +240,7 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing precondition graph id {candidate.PreconditionGraphId}.");
                 }
 
-                if (!GasGraphExecutor.ExecuteValidation(_world, actor, target, default, preconditionProgram, _graphApi))
+                if (!GasGraphExecutor.ExecuteValidation(_world, actor, target, default, preconditionProgram, _graphApi, _graphHandlers))
                 {
                     return false;
                 }
@@ -250,7 +253,7 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing score graph id {candidate.ScoreGraphId}.");
                 }
 
-                totalScore += GasGraphExecutor.ExecuteScore(_world, actor, target, default, scoreProgram, _graphApi);
+                totalScore += GasGraphExecutor.ExecuteScore(_world, actor, target, default, scoreProgram, _graphApi, _graphHandlers);
             }
 
             return true;

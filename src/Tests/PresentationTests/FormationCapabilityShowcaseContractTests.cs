@@ -4284,12 +4284,76 @@ namespace Ludots.Tests.Presentation
             public FunctionRegistry FunctionRegistry => _functionRegistry;
             public Ludots.Core.Engine.SystemFactoryRegistry SystemFactoryRegistry => _systemFactoryRegistry;
             public TriggerDecoratorRegistry TriggerDecorators => _triggerDecorators;
+            public Ludots.Core.Modding.IModExtensionRegistration Extensions =>
+                RejectingModExtensionRegistration.Instance;
             public Ludots.Core.Diagnostics.LogChannel LogChannel => _logChannel;
 
             public void Log(string message) { }
             public void Log(Ludots.Core.Diagnostics.LogLevel level, string message) { }
             public Stream GetResource(string uri) => VFS.GetStream(uri);
             public void OnEvent(EventKey eventKey, Func<ScriptContext, System.Threading.Tasks.Task> handler) { }
+        }
+
+        private sealed class RejectingModExtensionRegistration : Ludots.Core.Modding.IModExtensionRegistration
+        {
+            public static readonly RejectingModExtensionRegistration Instance = new();
+
+            private RejectingModExtensionRegistration()
+            {
+            }
+
+            public Ludots.Core.Modding.IGasModExtensionRegistration Gas { get; } =
+                new RejectingGasRegistration();
+
+            public Ludots.Core.Modding.IPresentationModExtensionRegistration Presentation { get; } =
+                new RejectingPresentationRegistration();
+
+            private sealed class RejectingGasRegistration : Ludots.Core.Modding.IGasModExtensionRegistration
+            {
+                public int RegisterBuiltinHandler(
+                    string key,
+                    Ludots.Core.Gameplay.GAS.BuiltinHandlerFn handler)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterGraphOp(
+                    string key,
+                    Ludots.Core.NodeLibraries.GASGraph.GraphValueType outputType,
+                    Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandler handler,
+                    params Ludots.Core.NodeLibraries.GASGraph.GraphValueType[] inputTypes)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterGraphOp(
+                    string key,
+                    Ludots.Core.NodeLibraries.GASGraph.GraphValueType outputType,
+                    byte? fixedRegister,
+                    Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandler handler,
+                    params Ludots.Core.NodeLibraries.GASGraph.GraphValueType[] inputTypes)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+            }
+
+            private sealed class RejectingPresentationRegistration :
+                Ludots.Core.Modding.IPresentationModExtensionRegistration
+            {
+                public int RegisterPerformerCommand(
+                    string key,
+                    in PerformerCommandExtensionDescriptor descriptor)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+
+                public int RegisterPerformerBehavior(
+                    string key,
+                    in PerformerBehaviorExtensionDescriptor descriptor)
+                {
+                    throw new NotSupportedException("This test mod context does not support extension registration.");
+                }
+            }
         }
 
         private static class FormationCapabilityAcceptance

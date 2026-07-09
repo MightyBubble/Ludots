@@ -13,7 +13,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             string[] symbols,
             GraphInstruction[] program,
             IGraphSymbolResolver symbolResolver,
-            EntityCollectionStore? entityCollections = null)
+            EntityCollectionStore? entityCollections = null,
+            BuiltinHandlerRegistry? builtinHandlers = null)
         {
             if (symbols == null || symbols.Length == 0) return;
             if (program == null || program.Length == 0) return;
@@ -78,8 +79,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.InvokeBuiltin:
-                        ins.Imm = (int)GasEnumParser.ParseBuiltinHandlerId(ResolveSymbol(symbols, ins.Imm));
+                    {
+                        string handlerKey = ResolveSymbol(symbols, ins.Imm);
+                        if (builtinHandlers == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph InvokeBuiltin symbol '{handlerKey}' requires a builtin handler registry.");
+                        }
+
+                        int handlerId = builtinHandlers.GetId(handlerKey);
+                        if (handlerId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph InvokeBuiltin references unknown builtin handler '{handlerKey}'.");
+                        }
+
+                        ins.Imm = handlerId;
                         break;
+                    }
                     case GraphNodeOp.RelationshipSetMetric:
                     case GraphNodeOp.RelationshipAddMetric:
                     case GraphNodeOp.RelationshipGetMetric:

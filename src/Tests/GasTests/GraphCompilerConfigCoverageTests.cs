@@ -208,7 +208,7 @@ namespace Ludots.Tests.GAS
             int graphId = GraphIdRegistry.GetId(graphName);
             Assert.That(graphId, Is.GreaterThan(0));
             Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-            Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(world, caster, explicitTarget, default, program, api);
+            Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(world, caster, explicitTarget, default, program, api, new Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable());
         }
 
         private const string IntBlackboardConfigGraphJson = """

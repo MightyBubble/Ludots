@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS
             sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 默认通过 (B[0]=1)。");
             bool result1 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                ReadOnlySpan<GraphInstruction>.Empty, null!);
+                ReadOnlySpan<GraphInstruction>.Empty, null!, new GasGraphOpHandlerTable());
             sb.AppendLine($"  Result={result1}");
             That(result1, Is.True);
 
@@ -259,7 +259,7 @@ namespace Ludots.Tests.GAS
             var reject = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 };
             bool result2 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { reject }, null!);
+                new[] { reject }, null!, new GasGraphOpHandlerTable());
             sb.AppendLine($"  Result={result2}");
             That(result2, Is.False);
 
@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS
             var passInstr = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 };
             bool result3 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
-                new[] { passInstr }, null!);
+                new[] { passInstr }, null!, new GasGraphOpHandlerTable());
             sb.AppendLine($"  Result={result3}");
             That(result3, Is.True);
 
@@ -488,7 +488,7 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < iterations; i++)
             {
-                if (GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!))
+                if (GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!, new GasGraphOpHandlerTable()))
                 {
                     passed++;
                 }

@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutApplyEffectDynamic, A = 0, B = 0 },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(requests.Count, Is.EqualTo(3));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -202,7 +202,7 @@ namespace Ludots.Tests.GAS
         }
 
         // ════════════════════════════════════════════════════════════════════
-        //  Combined: LoadConfig → ApplyEffectDynamic
+        //  Combined: LoadConfig �?ApplyEffectDynamic
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipHasFlag, A = 0, B = 1, Dst = 1, Imm = relationshipSetup.TrustedFlagId, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(relationshipSetup.Runtime.GetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId), Is.EqualTo(42));
             That(relationshipSetup.Runtime.HasFlag(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.TrustedFlagId), Is.True);
@@ -326,7 +326,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipAggAverageMetric, A = 0, Dst = 4, Imm = relationshipSetup.LoyaltyMetricId, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0], Is.EqualTo(high));
@@ -358,7 +358,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutApplyEffectDynamic, A = 0 },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -397,7 +397,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -426,7 +426,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipRemoveLink, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(relationshipSetup.Runtime.HasLink(source, target, relationshipSetup.SocialBondTypeId), Is.False);
             That(relationshipSetup.Runtime.HasLink(source, target, relationshipSetup.HostilityTypeId), Is.True);
@@ -449,7 +449,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipAddMetric, A = 0, B = 1, C = 0, Imm = relationshipSetup.LoyaltyMetricId, Dst = byte.MaxValue, Flags = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(relationshipSetup.Runtime.GetMetric(source, target, relationshipSetup.SocialBondTypeId, relationshipSetup.LoyaltyMetricId), Is.EqualTo(17));
         }
@@ -472,7 +472,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryIncoming, A = 0, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0] == sourceA || state.TargetList.Span[1] == sourceA, Is.True);
@@ -501,7 +501,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryMutual, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(state.TargetList.Count, Is.EqualTo(1));
             That(state.TargetList.Span[0], Is.EqualTo(mutual));
@@ -524,7 +524,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RelationshipQueryBetweenPair, A = 0, B = 1, Dst = (byte)relationshipSetup.SocialBondTypeId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(state.TargetList.Count, Is.EqualTo(2));
             That(state.TargetList.Span[0], Is.EqualTo(target));
@@ -563,7 +563,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.FanOutDispatchEffectDynamic, A = 0, Dst = (byte)presetId },
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
 
             That(requests.Count, Is.EqualTo(2));
             That(requests[0].TemplateId, Is.EqualTo(99));
@@ -678,7 +678,7 @@ namespace Ludots.Tests.GAS
                 Targets = targets, TargetList = new GraphTargetList(targets),
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
             return e[entityReg];
         }
 
@@ -702,7 +702,7 @@ namespace Ludots.Tests.GAS
                 TargetContext = targetCtx,
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
             return e[entityReg];
         }
 
@@ -725,7 +725,7 @@ namespace Ludots.Tests.GAS
                 Targets = targets, TargetList = new GraphTargetList(targets),
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
         }
 
         private static GraphExecutionState CreateState(World world, IGraphRuntimeApi api, Entity caster, Entity target)

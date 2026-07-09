@@ -184,7 +184,8 @@ namespace Ludots.Tests.GAS
                 engine.FunctionRegistry,
                 engine.TriggerManager,
                 engine.SystemFactoryRegistry,
-                engine.TriggerDecoratorRegistry);
+                engine.TriggerDecoratorRegistry,
+                new ModExtensionHub());
             new EntityCommandPanelModEntry().OnLoad(context);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));

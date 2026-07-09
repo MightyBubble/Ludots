@@ -41,7 +41,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly byte[] _boolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
         private readonly Entity[] _entityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
-        private readonly GasGraphOpHandlerTable _handlers = GasGraphOpHandlerTable.Instance;
+        private readonly GasGraphOpHandlerTable? _handlers;
 
         // ── Inverted rule index: replaces O(E×D×R) triple loop with O(E × matched) ──
         //
@@ -68,7 +68,8 @@ namespace Ludots.Core.Presentation.Systems
             PerformerEntityRuntime? runtime,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
-            Dictionary<string, object> globals)
+            Dictionary<string, object> globals,
+            GasGraphOpHandlerTable handlers = null)
             : base(world)
         {
             _events = events;
@@ -78,6 +79,7 @@ namespace Ludots.Core.Presentation.Systems
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
+            _handlers = handlers;
             _runtime?.BindDefinitions(_definitions);
         }
 
@@ -280,7 +282,7 @@ namespace Ludots.Core.Presentation.Systems
         private bool TryGetConditionTargetDefinition(in IndexedRule rule, out PerformerDefinition definition)
         {
             definition = null!;
-            int definitionId = rule.Command.CommandKind == PerformerCommandKind.CreatePerformer
+            int definitionId = ResolveRouteStrategy(in rule.Command) == PerformerCommandRouteStrategy.CreatePerformer
                 ? rule.Command.PerformerDefinitionId
                 : rule.OwnerDefinitionId;
             if (definitionId > 0)
@@ -329,6 +331,11 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
             }
 
+            if (_handlers == null)
+            {
+                throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} requires a graph handler table.");
+            }
+
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);
             Array.Clear(_boolRegs, 0, _boolRegs.Length);
@@ -372,7 +379,7 @@ namespace Ludots.Core.Presentation.Systems
                     return;
                 }
 
-                if (CommandTargetsScopedPerformer(rule.Command.CommandKind))
+                if (CommandTargetsScopedPerformer(ResolveRouteStrategy(in rule.Command)))
                 {
                     EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
                     return;
@@ -422,6 +429,7 @@ namespace Ludots.Core.Presentation.Systems
             };
 
             var emitted = cmd;
+            emitted.RouteStrategy = ResolveRouteStrategy(in cmd);
             emitted.ScopeTag = scopeId;
             emitted.ScopeSource = PerformerCommandScopeSource.Fixed;
             emitted.AnchorKind = cmd.UseEventPosition
@@ -509,24 +517,39 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool CommandTargetsExistingPerformerInstances(in PerformerCommand command)
         {
-            if (command.CommandKind == PerformerCommandKind.SetParam &&
-                command.PerformerDefinitionId > 0)
-            {
-                return false;
-            }
-
-            return command.CommandKind is PerformerCommandKind.SetParam
-                or PerformerCommandKind.ActivateBehavior
-                or PerformerCommandKind.DeactivateBehavior
-                or PerformerCommandKind.InitializeTransform
-                or PerformerCommandKind.DestroyPerformer;
+            return ResolveRouteStrategy(in command) == PerformerCommandRouteStrategy.ExistingInstances;
         }
 
-        private static bool CommandTargetsScopedPerformer(PerformerCommandKind kind)
+        private static bool CommandTargetsScopedPerformer(PerformerCommandRouteStrategy route)
         {
-            return kind is PerformerCommandKind.CreatePerformer
-                or PerformerCommandKind.DestroyPerformerScope
-                or PerformerCommandKind.DestroyScopedPerformer;
+            return route is PerformerCommandRouteStrategy.CreatePerformer
+                or PerformerCommandRouteStrategy.DestroyScope
+                or PerformerCommandRouteStrategy.ScopedInstance;
+        }
+
+        private static PerformerCommandRouteStrategy ResolveRouteStrategy(in PerformerCommand command)
+        {
+            if (command.RouteStrategy != PerformerCommandRouteStrategy.None)
+            {
+                return command.RouteStrategy;
+            }
+
+            return command.CommandKind switch
+            {
+                PerformerCommandKind.CreatePerformer => PerformerCommandRouteStrategy.CreatePerformer,
+                PerformerCommandKind.DestroyPerformerScope => PerformerCommandRouteStrategy.DestroyScope,
+                PerformerCommandKind.DestroyScopedPerformer => PerformerCommandRouteStrategy.ScopedInstance,
+                PerformerCommandKind.SetParam when command.PerformerDefinitionId > 0 => PerformerCommandRouteStrategy.ScopedInstance,
+                PerformerCommandKind.SetParam => PerformerCommandRouteStrategy.ExistingInstances,
+                PerformerCommandKind.ActivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PerformerCommandKind.DeactivateBehavior => PerformerCommandRouteStrategy.ExistingInstances,
+                PerformerCommandKind.InitializeTransform => PerformerCommandRouteStrategy.ExistingInstances,
+                PerformerCommandKind.DestroyPerformer => PerformerCommandRouteStrategy.ExistingInstances,
+                PerformerCommandKind.SinkParamToAsset => PerformerCommandRouteStrategy.SingleRuntime,
+                PerformerCommandKind.Extension => throw new InvalidOperationException(
+                    $"Extension performer command id {command.CommandKindId} must declare routeStrategy before rule routing."),
+                _ => throw new InvalidOperationException($"Unsupported performer command kind '{command.CommandKind}'."),
+            };
         }
 
         private int ResolveStableId(Entity source, string scopeSourceName)
@@ -640,6 +663,11 @@ namespace Ludots.Core.Presentation.Systems
             if (program.Length == 0)
             {
                 throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
+            }
+
+            if (_handlers == null)
+            {
+                throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} requires a graph handler table.");
             }
 
             Array.Clear(_floatRegs, 0, _floatRegs.Length);

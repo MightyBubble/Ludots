@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps _tagOps;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly GasGraphOpHandlerTable _graphHandlers;
         private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
         public AbilitySystem(
@@ -26,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
+            GasGraphOpHandlerTable graphHandlers = null,
             ProgressionRequirementEvaluator progressionRequirements = null) : base(world)
         {
             _effectRequests = effectRequests ?? throw new InvalidOperationException(
@@ -34,6 +36,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps ?? new TagOps();
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
             _progressionRequirements = progressionRequirements;
         }
 
@@ -114,7 +117,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             slot.AbilityId,
                             in def.ActivationPrecondition,
                             _graphPrograms,
-                            _graphApi))
+                            _graphApi,
+                            _graphHandlers))
                     {
                         return false;
                     }
@@ -184,7 +188,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         activationId,
                         in activationPreconditionEntity,
                         _graphPrograms,
-                        _graphApi))
+                        _graphApi,
+                        _graphHandlers))
                 {
                     return false;
                 }

@@ -7,15 +7,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 {
     public static class GraphCompiler
     {
-        public static (GraphProgramPackage? Package, List<GraphDiagnostic> Diagnostics) Compile(GraphConfig cfg)
+        public static (GraphProgramPackage? Package, List<GraphDiagnostic> Diagnostics) Compile(
+            GraphConfig cfg,
+            GasGraphOpRegistry? opRegistry = null)
         {
-            var (package, _, diagnostics) = CompileWithOutputs(cfg);
+            var (package, _, diagnostics) = CompileWithOutputs(cfg, opRegistry);
             return (package, diagnostics);
         }
 
-        public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(GraphConfig cfg)
+        public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
+            GraphConfig cfg,
+            GasGraphOpRegistry? opRegistry = null)
         {
-            var diagnostics = GraphValidator.Validate(cfg);
+            var diagnostics = GraphValidator.Validate(cfg, opRegistry);
             if (HasErrors(diagnostics))
             {
                 return (null, GraphOutputSchema.Empty, diagnostics);
@@ -58,13 +62,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             for (int idx = 0; idx < ordered.Count; idx++)
             {
                 var node = ordered[idx];
-                if (!GraphNodeOpParser.TryParse(node.Op, out var op))
+                GasGraphOpDefinition? extensionOp = null;
+                GraphNodeOp op = GraphNodeOp.None;
+                ushort opCode;
+                if (GraphNodeOpParser.TryParse(node.Op, out op))
+                {
+                    opCode = (ushort)op;
+                }
+                else if (opRegistry != null && opRegistry.TryGet(node.Op, out extensionOp))
+                {
+                    opCode = checked((ushort)extensionOp.OpCode);
+                }
+                else
                 {
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.UnknownNodeOp, $"Unknown node op '{node.Op}'.", cfg.Id, node.Id));
                     continue;
                 }
 
-                var (outType, fixedReg) = GetOutputTypeAndFixedReg(op);
+                var (outType, fixedReg) = extensionOp != null
+                    ? (extensionOp.OutputType, extensionOp.FixedRegister)
+                    : GetOutputTypeAndFixedReg(op);
                 byte dstReg = 0;
                 if (outType != GraphValueType.Void)
                 {
@@ -88,7 +105,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 if (HasErrors(diagnostics)) return (null, GraphOutputSchema.Empty, diagnostics);
 
-                var ins = new GraphInstruction { Op = (ushort)op, Dst = dstReg };
+                var ins = new GraphInstruction { Op = opCode, Dst = dstReg };
+
+                if (extensionOp != null)
+                {
+                    CompileExtensionOp(extensionOp, node, ref ins, valueMap, cfg.Id, diagnostics);
+                    instructions.Add(ins);
+                    continue;
+                }
 
                 switch (op)
                 {
@@ -558,6 +582,49 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SnapToNearestGraphEdge => (GraphValueType.Bool, null),
                 _ => (GraphValueType.Void, null)
             };
+        }
+
+        private static void CompileExtensionOp(
+            GasGraphOpDefinition definition,
+            GraphNodeConfig node,
+            ref GraphInstruction ins,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            GraphValueType[] inputs = definition.InputTypes;
+            int configuredInputCount = node.Inputs?.Count ?? 0;
+            if (configuredInputCount != inputs.Length)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' op '{definition.Key}' expects {inputs.Length} inputs but got {configuredInputCount}.",
+                    graphId,
+                    node.Id));
+                return;
+            }
+
+            for (int i = 0; i < inputs.Length; i++)
+            {
+                byte reg = RequireInput(node, i, inputs[i], valueMap, graphId, diagnostics);
+                switch (i)
+                {
+                    case 0:
+                        ins.A = reg;
+                        break;
+                    case 1:
+                        ins.B = reg;
+                        break;
+                    case 2:
+                        ins.C = reg;
+                        break;
+                }
+            }
+
+            ins.Imm = node.IntValue;
+            ins.ImmF = node.FloatValue;
+            ins.Flags = node.BoolValue ? (byte)1 : (byte)0;
         }
 
         private static GraphOutputSchema CompileOutputSchema(

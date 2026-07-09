@@ -171,7 +171,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(
@@ -273,7 +273,7 @@ namespace Ludots.Tests.GasTests
                 programs,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templateRegistry);
             var graphApi = new GasGraphRuntimeApi(world);
             var lifecycleServices = new EntityLifecycleRuntimeServices(

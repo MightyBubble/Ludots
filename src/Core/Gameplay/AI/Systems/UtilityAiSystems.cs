@@ -91,13 +91,14 @@ namespace Ludots.Core.Gameplay.AI.Systems
             Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities,
             Ludots.Core.GraphRuntime.GraphProgramRegistry? graphs,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? graphApi,
+            Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable? graphHandlers,
             OrderQueue orders)
             : base(world)
         {
             _clock = clock;
             _runtime = runtime;
             _orders = orders;
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, abilities, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
+            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, abilities, graphs, graphApi, graphHandlers, ResolveTargetScratchCapacity(in runtime));
         }
 
         public override void Update(in float dt)

@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS
 
             GraphInstruction[] program = { i0, i1, i2 };
 
-            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
 
             That(q.Count, Is.EqualTo(1));
             var req = q[0];

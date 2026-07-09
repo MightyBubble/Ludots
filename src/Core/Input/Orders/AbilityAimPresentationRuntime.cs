@@ -97,6 +97,7 @@ namespace Ludots.Core.Input.Orders
         private readonly GameSession? _session;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly GasGraphRuntimeApi? _graphApi;
+        private readonly GasGraphOpHandlerTable? _graphHandlers;
         private readonly Entity[] _candidateBuffer = new Entity[MaxPreviewTargets];
         private readonly int[] _rowRoleIdBuffer = new int[MaxPreviewTargets];
         private readonly EntityCollectionRowFlags[] _rowFlagBuffer = new EntityCollectionRowFlags[MaxPreviewTargets];
@@ -137,7 +138,8 @@ namespace Ludots.Core.Input.Orders
             PresentationEventStream events,
             GameSession? session = null,
             GraphProgramRegistry? graphPrograms = null,
-            GasGraphRuntimeApi? graphApi = null)
+            GasGraphRuntimeApi? graphApi = null,
+            GasGraphOpHandlerTable? graphHandlers = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
@@ -148,6 +150,7 @@ namespace Ludots.Core.Input.Orders
             _session = session;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _graphHandlers = graphHandlers;
         }
 
         public void UpdateAiming(Entity actor, InputOrderMapping mapping, in AbilityAimInputState input)
@@ -362,10 +365,10 @@ namespace Ludots.Core.Input.Orders
                 throw new InvalidOperationException("Ability aim GraphProgram target query requires a positive graph program id.");
             }
 
-            if (_graphPrograms == null || _graphApi == null)
+            if (_graphPrograms == null || _graphApi == null || _graphHandlers == null)
             {
                 throw new InvalidOperationException(
-                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)} and {nameof(GasGraphRuntimeApi)}.");
+                    $"Ability aim GraphProgram target query '{query.GraphProgramId}' requires {nameof(GraphProgramRegistry)}, {nameof(GasGraphRuntimeApi)}, and {nameof(GasGraphOpHandlerTable)}.");
             }
 
             if (!_graphPrograms.TryGetProgram(query.GraphProgramId, out ReadOnlySpan<GraphInstruction> program))
@@ -406,7 +409,7 @@ namespace Ludots.Core.Input.Orders
             _graphApi.SetConfigContext(in previewParams);
             try
             {
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+                GasGraphOpHandlerTable.Execute(ref state, program, _graphHandlers);
                 return state.TargetList.Count;
             }
             finally

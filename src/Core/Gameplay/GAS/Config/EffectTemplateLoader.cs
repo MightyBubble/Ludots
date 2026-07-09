@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly PresetTypeRegistry? _presetTypes;
         private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
@@ -50,12 +51,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ScopeKeyRegistry? progressionScopeKeys = null,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
             Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? relationshipTypes = null,
-            FogLayerRegistry? fogLayers = null)
+            FogLayerRegistry? fogLayers = null,
+            PresetTypeRegistry? presetTypes = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _presetTypes = presetTypes;
             _exchangeOperations = exchangeOperations;
             _progressionScopeKeys = progressionScopeKeys;
             _entityTemplateKeys = entityTemplateKeys;
@@ -206,7 +209,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 tagId = TagRegistry.Register(cfg.Tags[0]);
             }
 
-            EffectPresetType presetType = ParsePresetType(cfg.PresetType, cfg.Id, relativePath);
+            int presetTypeId = ParsePresetTypeId(cfg.PresetType, cfg.Id, relativePath);
+            ref readonly PresetTypeDefinition presetDefinition = ref _presetTypes!.Get(presetTypeId);
+            if (!presetDefinition.AllowsLifetime(lifetimeKind))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: presetType '{presetDefinition.TypeKey}' does not allow lifetime '{lifetimeKind}'.");
+            }
+
+            EffectPresetType presetType = ResolveBuiltinPresetType(presetTypeId);
             int presetAttr0 = 0;
             int presetAttr1 = 0;
             int reserved = 0;
@@ -507,6 +518,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 TagId = tagId,
                 PresetType = presetType,
+                PresetTypeId = presetTypeId,
                 PresetAttribute0 = presetAttr0,
                 PresetAttribute1 = presetAttr1,
                 LifetimeKind = lifetimeKind,
@@ -1133,9 +1145,32 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new InvalidOperationException(
                 $"Effect template '{ownerId}' in {relativePath}: {fieldPath} uses unsupported entity slot '{slot}'. Supported: None, Source, Target, TargetContext.");
         }
-        private static EffectPresetType ParsePresetType(string? presetType, string ownerId, string relativePath)
+        private int ParsePresetTypeId(string? presetType, string ownerId, string relativePath)
         {
-            return GasEnumParser.ParsePresetTypeStrict(presetType, $"Effect template '{ownerId}' in {relativePath}");
+            string context = $"Effect template '{ownerId}' in {relativePath}";
+            if (string.IsNullOrWhiteSpace(presetType))
+            {
+                throw new InvalidOperationException($"{context}: presetType must be explicitly defined.");
+            }
+
+            if (_presetTypes != null && _presetTypes.TryGetId(presetType, out int typeId) && _presetTypes.IsRegistered(typeId))
+            {
+                return typeId;
+            }
+
+            throw new InvalidOperationException(
+                $"{context}: presetType '{presetType}' is not registered in preset_types.json or a loaded mod extension.");
+        }
+
+        private static EffectPresetType ResolveBuiltinPresetType(int presetTypeId)
+        {
+            if ((uint)presetTypeId <= byte.MaxValue &&
+                Enum.IsDefined(typeof(EffectPresetType), (byte)presetTypeId))
+            {
+                return (EffectPresetType)(byte)presetTypeId;
+            }
+
+            return EffectPresetType.None;
         }
 
         // ── Phase Graph compilation ──

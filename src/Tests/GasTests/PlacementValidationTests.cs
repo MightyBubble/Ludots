@@ -141,7 +141,7 @@ namespace Ludots.Tests.GAS
                 TargetList = new GraphTargetList(targets),
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
             That(state.TargetPos.X, Is.EqualTo(500));
             That(state.B[0], Is.EqualTo(0));
         }
@@ -164,14 +164,16 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 new IntVector2(400, 0),
                 program,
-                api);
+                api,
+                new GasGraphOpHandlerTable());
             bool passedFar = GasGraphExecutor.ExecuteValidation(
                 world,
                 caster,
                 Entity.Null,
                 new IntVector2(1000, 0),
                 program,
-                api);
+                api,
+                new GasGraphOpHandlerTable());
 
             That(passedNear, Is.True);
             That(passedFar, Is.False);
@@ -291,7 +293,7 @@ namespace Ludots.Tests.GAS
                 TargetList = new GraphTargetList(targets),
             };
 
-            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+            GasGraphOpHandlerTable.Execute(ref state, program, new GasGraphOpHandlerTable());
             That(state.B[0], Is.EqualTo(1));
             That(state.TargetPos, Is.EqualTo(new IntVector2(50, 0)));
         }

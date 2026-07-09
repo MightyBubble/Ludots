@@ -49,7 +49,7 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < 1024; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
                     effectRequests.Clear();
                     eventBus.Update();
                 }
@@ -64,7 +64,7 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < iterations; i++)
                 {
-                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                    GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
                     effectRequests.Clear();
                     eventBus.Update();
                 }

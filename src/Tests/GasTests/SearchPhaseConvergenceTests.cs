@@ -30,7 +30,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -101,7 +101,7 @@ namespace Ludots.Tests.GAS
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var templates = new EffectTemplateRegistry();
-            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var source = world.Create(WorldPositionCm.FromCm(0, 0));
@@ -172,7 +172,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var source = world.Create(WorldPositionCm.FromCm(0, 0), new Team { Id = 1 });
@@ -249,7 +249,7 @@ namespace Ludots.Tests.GAS
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 var templates = new EffectTemplateRegistry();
-                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+                var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, new GasGraphOpHandlerTable(), templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 var sourceWithoutTeam = world.Create(WorldPositionCm.FromCm(0, 0));

@@ -13,6 +13,7 @@ namespace Ludots.Core.Presentation.Performers
     public struct PerfHasGrounding {}
     public struct PerfHasOwnerFacingBinding {}
     public struct PerfHasMinimapMarker {}
+    public struct PerfHasExtensionBehavior {}
     public struct PerfTransformSyncTick {}
     public struct PerfOwnerPayloadTransformSync {}
     public struct PerfOwnerPayloadAttachedTransformSync {}

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Registry;
@@ -18,6 +19,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GraphOutputSchemaRegistry? _outputSchemas;
         private readonly StringIntRegistry? _outputValueKeys;
         private readonly EntityCollectionStore? _entityCollections;
+        private readonly GasGraphOpRegistry? _opRegistry;
+        private readonly BuiltinHandlerRegistry? _builtinHandlers;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
 
         public GraphProgramConfigLoader(
@@ -26,7 +29,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             IGraphSymbolResolver symbolResolver,
             GraphOutputSchemaRegistry? outputSchemas = null,
             StringIntRegistry? outputValueKeys = null,
-            EntityCollectionStore? entityCollections = null)
+            EntityCollectionStore? entityCollections = null,
+            GasGraphOpRegistry? opRegistry = null,
+            BuiltinHandlerRegistry? builtinHandlers = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -34,6 +39,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _outputSchemas = outputSchemas;
             _outputValueKeys = outputValueKeys;
             _entityCollections = entityCollections;
+            _opRegistry = opRegistry;
+            _builtinHandlers = builtinHandlers;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -70,7 +77,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         throw new InvalidOperationException($"Graph id mismatch: '{id}' vs '{cfg.Id}'.");
 
                     GraphIdRegistry.Register(id);
-                    var (pkg, outputSchema, diags) = GraphCompiler.CompileWithOutputs(cfg);
+                    var (pkg, outputSchema, diags) = GraphCompiler.CompileWithOutputs(cfg, _opRegistry);
                     for (int d = 0; d < diags.Count; d++)
                     {
                         if (diags[d].Severity == GraphDiagnosticSeverity.Error)
@@ -105,7 +112,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < packages.Count; i++)
             {
                 var (name, symbols, program) = packages[i];
-                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
+                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections, _builtinHandlers);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
                 _registry.Register(id, program);

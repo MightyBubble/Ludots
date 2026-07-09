@@ -95,7 +95,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 graphPrograms,
                 new StubSpatialQueryService(targetNormal, targetDowned),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                new GasGraphOpHandlerTable());
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -187,7 +188,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(target),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -263,7 +265,8 @@ namespace Ludots.Tests.GAS
                 contextGroups,
                 new GraphProgramRegistry(),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
-                new StubGraphApi(world));
+                new StubGraphApi(world),
+                new GasGraphOpHandlerTable());
 
             bool resolved = resolver.TryResolve(
                 actor,

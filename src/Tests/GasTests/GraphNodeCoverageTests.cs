@@ -57,7 +57,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = tplId }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
 
                 eventBus.Update();
 
@@ -102,7 +102,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 7 }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
                 eventBus.Update();
 
                 That(eventBus.Events.Count, Is.EqualTo(0));
@@ -141,7 +141,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 1, Imm = 0 }
                 };
 
-                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster, target, new IntVector2(0, 0), program, api, new GasGraphOpHandlerTable());
 
                 That(world.Get<AttributeBuffer>(target).GetCurrent(0), Is.EqualTo(1f));
             }

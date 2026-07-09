@@ -27,7 +27,8 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(10), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(12), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values, Does.Contain(BehaviorKind.None));
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
             Assert.That(values, Does.Contain(BehaviorKind.TagBinding));
@@ -38,11 +39,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.Spline));
             Assert.That(values, Does.Contain(BehaviorKind.Grounding));
             Assert.That(values, Does.Contain(BehaviorKind.MinimapMarker));
+            Assert.That(values, Does.Contain(BehaviorKind.Extension));
         }
 
         [Test]
         public void BehaviorKindContract_ArchitecturePreservesExplicitEnumValues()
         {
+            Assert.That((byte)BehaviorKind.None, Is.EqualTo(0));
             Assert.That((byte)BehaviorKind.AssetBinding, Is.EqualTo(1));
             Assert.That((byte)BehaviorKind.AttributeBinding, Is.EqualTo(2));
             Assert.That((byte)BehaviorKind.TagBinding, Is.EqualTo(3));
@@ -53,6 +56,145 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.Spline, Is.EqualTo(8));
             Assert.That((byte)BehaviorKind.Grounding, Is.EqualTo(9));
             Assert.That((byte)BehaviorKind.MinimapMarker, Is.EqualTo(10));
+            Assert.That((byte)BehaviorKind.Extension, Is.EqualTo(255));
+        }
+
+        [Test]
+        public void ExtensionCommand_DispatchesRegisteredHandler()
+        {
+            _extensionCommandCalls = 0;
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer(8);
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var markers = new TransientMarkerBuffer();
+            var requests = new PresentationRequestBuffer();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var commandKinds = new PerformerCommandKindRegistry();
+            int commandKindId = commandKinds.Register(
+                "ExampleMod.MarkCommand",
+                new PerformerCommandExtensionDescriptor(
+                    PerformerCommandRouteStrategy.SingleRuntime,
+                    CountExtensionCommand));
+
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.Extension,
+                CommandKindId = commandKindId,
+                RouteStrategy = PerformerCommandRouteStrategy.SingleRuntime,
+            }), Is.True);
+
+            using var system = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                markers,
+                requests,
+                instances,
+                new PresentationStableIdAllocator(),
+                definitions,
+                extensionCommands: commandKinds);
+
+            system.Update(0.016f);
+
+            Assert.That(_extensionCommandCalls, Is.EqualTo(1));
+            Assert.That(commands.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ExtensionBehavior_DispatchesRegisteredHandler()
+        {
+            _extensionBehaviorCalls = 0;
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var behaviorKinds = new PerformerBehaviorKindRegistry();
+            int behaviorKindId = behaviorKinds.Register(
+                "ExampleMod.TickBehavior",
+                new PerformerBehaviorExtensionDescriptor(
+                    PerformerBehaviorExecutionLane.ContinuousTick,
+                    CountExtensionBehavior));
+            int defId = definitions.Register("behavior.extension", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Extension,
+                        KindId = behaviorKindId,
+                        ExtensionLane = PerformerBehaviorExecutionLane.ContinuousTick,
+                        ActiveByDefault = true,
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7008, Entity.Null, definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer(),
+                extensionBehaviors: behaviorKinds);
+
+            system.Update(0.016f);
+
+            Assert.That(_extensionBehaviorCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExtensionCommand_ProgrammaticDefinitionRejectsModIdWithoutExtensionKind()
+        {
+            var definitions = new PerformerDefinitionRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() => definitions.Register(
+                "command.invalid-extension-kind",
+                new PerformerDefinition
+                {
+                    Rules =
+                    [
+                        new PerformerRule
+                        {
+                            Command = new PerformerCommand
+                            {
+                                CommandKind = PerformerCommandKind.SetParam,
+                                CommandKindId = PerformerCommandKindRegistry.FirstModCommandKindId,
+                            },
+                        },
+                    ],
+                }));
+
+            Assert.That(ex!.Message, Does.Contain("does not match builtin command kind"));
+        }
+
+        [Test]
+        public void ExtensionBehavior_ProgrammaticDefinitionRejectsModIdWithoutExtensionKind()
+        {
+            var definitions = new PerformerDefinitionRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() => definitions.Register(
+                "behavior.invalid-extension-kind",
+                new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            KindId = PerformerBehaviorKindRegistry.FirstModBehaviorKindId,
+                        },
+                    ],
+                }));
+
+            Assert.That(ex!.Message, Does.Contain("does not match builtin kind"));
         }
 
         [Test]
@@ -1578,6 +1720,22 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveFloat(performer, 140), Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(transformSource.Value, Is.EqualTo(TransformSource.SplineDriven));
             Assert.That(worldPos.Value.X, Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        private static int _extensionCommandCalls;
+        private static int _extensionBehaviorCalls;
+
+        private static void CountExtensionCommand(in PerformerCommandExecutionContext context)
+        {
+            Assert.That(context.Command.CommandKindId, Is.GreaterThanOrEqualTo(PerformerCommandKindRegistry.FirstModCommandKindId));
+            _extensionCommandCalls++;
+        }
+
+        private static void CountExtensionBehavior(in PerformerBehaviorExecutionContext context)
+        {
+            Assert.That(context.Behavior.KindId, Is.GreaterThanOrEqualTo(PerformerBehaviorKindRegistry.FirstModBehaviorKindId));
+            Assert.That(context.Behavior.Lane, Is.EqualTo(PerformerBehaviorExecutionLane.ContinuousTick));
+            _extensionBehaviorCalls++;
         }
 
         private static bool TryFindVisualProxyRequest(

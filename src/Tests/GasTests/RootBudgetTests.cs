@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
+                new GasGraphOpHandlerTable(),
                 templates);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
             var application = new EffectApplicationSystem(
@@ -414,7 +414,7 @@ namespace Ludots.Tests.GAS
                     new Ludots.Core.GraphRuntime.GraphProgramRegistry(),
                     new PresetTypeRegistry(),
                     new BuiltinHandlerRegistry(),
-                    Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable.Instance,
+                    new Ludots.Core.NodeLibraries.GASGraph.GasGraphOpHandlerTable(),
                     new EffectTemplateRegistry(),
                     globalListeners: globalRegistry,
                     eventBus: eventBus,
