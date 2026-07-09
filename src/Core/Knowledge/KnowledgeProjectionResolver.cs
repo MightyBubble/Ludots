@@ -248,6 +248,37 @@ namespace Ludots.Core.Knowledge
             Span<Entity> relationTargetBuffer,
             out KnowledgeProjection projection)
         {
+            return TryResolveWithRelationGrants(
+                viewer,
+                target,
+                currentTick,
+                in viewerScope,
+                in context,
+                scopeMemberBuffer,
+                relationSourceBuffer,
+                relationTargetBuffer,
+                ReadOnlySpan<int>.Empty,
+                out projection);
+        }
+
+        /// <summary>
+        /// Resolves the current projection and, when requested attributes are missing,
+        /// refreshes relation-granted projection before resolving again.
+        /// A true return means an entity projection was resolved; callers must still
+        /// inspect the returned projection for attribute readability.
+        /// </summary>
+        public bool TryResolveWithRelationGrants(
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            in ScopeKey viewerScope,
+            in RoleResolverContext context,
+            Span<Entity> scopeMemberBuffer,
+            Span<Entity> relationSourceBuffer,
+            Span<Entity> relationTargetBuffer,
+            ReadOnlySpan<int> requiredAttributeIds,
+            out KnowledgeProjection projection)
+        {
             if (TryResolve(
                     viewer,
                     target,
@@ -257,19 +288,34 @@ namespace Ludots.Core.Knowledge
                     scopeMemberBuffer,
                     out projection))
             {
+                if (CanReadAttributes(in projection, requiredAttributeIds))
+                {
+                    return true;
+                }
+
+                KnowledgeProjection initialProjection = projection;
+                if (!ProjectRelationGrants(viewer, currentTick, relationSourceBuffer, relationTargetBuffer))
+                {
+                    return true;
+                }
+
+                if (TryResolve(
+                        viewer,
+                        target,
+                        currentTick,
+                        in viewerScope,
+                        in context,
+                        scopeMemberBuffer,
+                        out projection))
+                {
+                    return true;
+                }
+
+                projection = initialProjection;
                 return true;
             }
 
-            if (_relationProjector != null &&
-                !relationSourceBuffer.IsEmpty &&
-                !relationTargetBuffer.IsEmpty)
-            {
-                _relationProjector.ProjectOutgoing(
-                    viewer,
-                    currentTick,
-                    relationSourceBuffer,
-                    relationTargetBuffer);
-            }
+            ProjectRelationGrants(viewer, currentTick, relationSourceBuffer, relationTargetBuffer);
 
             return TryResolve(
                 viewer,
@@ -279,6 +325,43 @@ namespace Ludots.Core.Knowledge
                 in context,
                 scopeMemberBuffer,
                 out projection);
+        }
+
+        private bool ProjectRelationGrants(
+            Entity viewer,
+            int currentTick,
+            Span<Entity> relationSourceBuffer,
+            Span<Entity> relationTargetBuffer)
+        {
+            if (_relationProjector == null ||
+                relationSourceBuffer.IsEmpty ||
+                relationTargetBuffer.IsEmpty)
+            {
+                return false;
+            }
+
+            _relationProjector.ProjectOutgoing(
+                viewer,
+                currentTick,
+                relationSourceBuffer,
+                relationTargetBuffer);
+            return true;
+        }
+
+        private static bool CanReadAttributes(
+            in KnowledgeProjection projection,
+            ReadOnlySpan<int> requiredAttributeIds)
+        {
+            for (int i = 0; i < requiredAttributeIds.Length; i++)
+            {
+                int attributeId = requiredAttributeIds[i];
+                if ((uint)attributeId >= 256u || !projection.CanReadAttribute(attributeId))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private int ResolveScopeMembers(

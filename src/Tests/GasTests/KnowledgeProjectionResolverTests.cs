@@ -185,6 +185,113 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TryResolveForViewer_RelationGrantCompletesExistingProjectionAttributeMask()
+        {
+            using World world = World.Create();
+            TestRuntime runtime = CreateRuntime(world);
+            int allyTypeId = runtime.RelationshipTypes.Register("Ally");
+            int scoutKeyId = runtime.CollectionKeys.Register("collection.scouts");
+            Entity viewer = world.Create();
+            Entity ally = world.Create();
+            Entity scout = world.Create();
+            runtime.Relationships.EnsureLink(viewer, ally, allyTypeId);
+            runtime.Collections.Replace(
+                ally,
+                EntityCollectionDescriptor.Create("collection.scouts", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
+                new[] { scout });
+            var store = new KnowledgeProjectionStore(initialCapacity: 4);
+            store.Upsert(
+                viewer,
+                scout,
+                CreateRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    attributeMask: KnowledgeIdMask256.Empty,
+                    relationshipMask: KnowledgeIdMask256.Empty,
+                    tagMask: KnowledgeIdMask256.Empty));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Ally",
+                "collection.scouts",
+                CreateRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    ally,
+                    observedTick: 2,
+                    expiryTick: 0,
+                    confidencePermille: 900,
+                    attributeMask: KnowledgeIdMask256.Empty.WithId(2),
+                    relationshipMask: KnowledgeIdMask256.Empty.WithId(allyTypeId),
+                    tagMask: KnowledgeIdMask256.Empty),
+                attributeId: 2,
+                relationshipTypeId: allyTypeId,
+                tagId: -1);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, store);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
+                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+            };
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
+
+            bool resolved = KnowledgeProjectionConsumer.TryResolveForViewer(
+                world,
+                globals,
+                viewer,
+                scout,
+                requiredAttributes,
+                out KnowledgeProjection projection);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(projection.CanReadAttribute(2), Is.True);
+            Assert.That(projection.CanReadPosition(KnowledgePositionAccess.Live), Is.True);
+        }
+
+        [Test]
+        public void TryResolveForViewer_DoesNotGrantMissingAttributeMaskWhenProjectorAbsent()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity scout = world.Create();
+            var store = new KnowledgeProjectionStore(initialCapacity: 4);
+            store.Upsert(
+                viewer,
+                scout,
+                CreateRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    attributeMask: KnowledgeIdMask256.Empty,
+                    relationshipMask: KnowledgeIdMask256.Empty,
+                    tagMask: KnowledgeIdMask256.Empty));
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
+                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+            };
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 2 };
+
+            bool resolved = KnowledgeProjectionConsumer.TryResolveForViewer(
+                world,
+                globals,
+                viewer,
+                scout,
+                requiredAttributes,
+                out KnowledgeProjection projection);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(projection.CanReadPosition(KnowledgePositionAccess.Live), Is.True);
+            Assert.That(projection.CanReadAttribute(2), Is.False);
+        }
+
+        [Test]
         public void TryResolve_NeutralNpcDisclosureAllowsExistenceButDeniesUnmaskedAspects()
         {
             using World world = World.Create();

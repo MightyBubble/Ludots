@@ -21,11 +21,15 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -867,7 +871,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectsOwnerAudienceAndSuppressesHostileAudience()
+        public void WorldHudPerformBehavior_ProjectsKnownAudienceFromKnowledgeNotTeamRelationship()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -912,10 +916,10 @@ namespace Ludots.Tests.Presentation
                 Assert.That(ownerPhase.ShouldPresent, Is.True);
                 Assert.That(ownerPhase.AllowWorldHudProjection, Is.True);
 
-                Assert.That(hostileVisible, Is.False);
+                Assert.That(hostileVisible, Is.True, "Knowledge projection is the HUD readability authority; team hostility is styling-only.");
                 Assert.That(hostilePhase.IsHostile, Is.True);
-                Assert.That(hostilePhase.ShouldPresent, Is.True, "Phase result remains valid for the viewer.");
-                Assert.That(hostilePhase.AllowWorldHudProjection, Is.False, "Projection policy must already be resolved in PerformPhaseResult.");
+                Assert.That(hostilePhase.ShouldPresent, Is.True);
+                Assert.That(hostilePhase.AllowWorldHudProjection, Is.True);
             }
             finally
             {
@@ -983,6 +987,38 @@ namespace Ludots.Tests.Presentation
             {
                 TeamManager.Clear();
             }
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_UsesSelectionViewerBeforeLocalPlayer()
+        {
+            using var world = World.Create();
+
+            Entity target = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity localPlayer = world.Create();
+            Entity selectionViewer = world.Create();
+
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPerformerKnowledge(
+                projectionStore,
+                selectionViewer,
+                target,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live);
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
+                [CoreServiceKeys.SelectionViewViewerEntity.Name] = selectionViewer,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+
+            bool projected = behavior.TryResolveProjection(world, globals, target, LODLevel.High, out PerformPhaseResult phase);
+
+            Assert.That(projected, Is.True);
+            Assert.That(phase.HasKnowledgeProjection, Is.True);
+            Assert.That(phase.ShouldPresent, Is.True);
         }
 
         [Test]
@@ -1099,13 +1135,11 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_DefaultAudienceRequiresOwnerAttributesForAttributeHud()
+        public void WorldHudPerformBehavior_DefaultAudienceSuppressesWorldHudWithoutKnowledgeViewer()
         {
             using var world = World.Create();
 
             const int healthAttributeId = 7;
-            Entity ownerWithoutAttributes = world.Create(
-                new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity ownerWithAttributes = world.Create(
                 new AttributeBuffer(),
                 new CullState { IsVisible = true, LOD = LODLevel.High });
@@ -1119,11 +1153,11 @@ namespace Ludots.Tests.Presentation
             bool projectedWithoutAttributes = behavior.TryResolveProjection(
                 world,
                 globals,
-                ownerWithoutAttributes,
+                ownerWithAttributes,
                 LODLevel.High,
-                WorldHudItemKind.Bar,
-                requiredAttributes,
-                out PerformPhaseResult missingPhase);
+                WorldHudItemKind.Text,
+                ReadOnlySpan<int>.Empty,
+                out PerformPhaseResult noAttributePhase);
             bool projectedWithAttributes = behavior.TryResolveProjection(
                 world,
                 globals,
@@ -1131,18 +1165,17 @@ namespace Ludots.Tests.Presentation
                 LODLevel.High,
                 WorldHudItemKind.Bar,
                 requiredAttributes,
-                out PerformPhaseResult presentPhase);
+                out PerformPhaseResult attributePhase);
 
             Assert.That(projectedWithoutAttributes, Is.False);
-            Assert.That(missingPhase.ShouldPresent, Is.True);
-            Assert.That(missingPhase.RequiresAttributeProjection, Is.True);
-            Assert.That(missingPhase.HasAttributeProjection, Is.False);
-            Assert.That(missingPhase.AllowWorldHudProjection, Is.False);
+            Assert.That(noAttributePhase.ShouldPresent, Is.False);
+            Assert.That(noAttributePhase.HasVision, Is.False);
+            Assert.That(noAttributePhase.AllowWorldHudProjection, Is.False);
 
-            Assert.That(projectedWithAttributes, Is.True);
-            Assert.That(presentPhase.RequiresAttributeProjection, Is.True);
-            Assert.That(presentPhase.HasAttributeProjection, Is.True);
-            Assert.That(presentPhase.AllowWorldHudProjection, Is.True);
+            Assert.That(projectedWithAttributes, Is.False);
+            Assert.That(attributePhase.ShouldPresent, Is.False);
+            Assert.That(attributePhase.HasVision, Is.False);
+            Assert.That(attributePhase.AllowWorldHudProjection, Is.False);
         }
 
         [Test]
@@ -1289,6 +1322,9 @@ namespace Ludots.Tests.Presentation
                 Assert.That(requests.Count, Is.EqualTo(1), "Owner audience should receive projected world HUD output.");
                 requests.Clear();
 
+                // Owner emit clears retained dirty; re-mark so the hostile audience pass re-evaluates projection.
+                instances.MarkTransformDrivenEmitDirty(performer);
+
                 var hostileGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
@@ -1305,7 +1341,271 @@ namespace Ludots.Tests.Presentation
                     hostileSystem.Update(0.016f);
                 }
 
-                Assert.That(requests.Count, Is.EqualTo(0), "Hostile audience should be suppressed by the first world HUD behavior projection slice.");
+                Assert.That(
+                    requests.Count,
+                    Is.EqualTo(1),
+                    "Known hostile audience still receives world HUD when knowledge projection authorizes readability.");
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void PerformerEmitSystem_WorldBar_UsesRelationGrantedAttributeProjection()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                const int durabilityAttributeId = 7;
+                const string publicMapObjectsKey = "collection.public_map_objects";
+                var instances = new PerformerEntityRuntime(world);
+                var definitions = new PerformerDefinitionRegistry();
+                var requests = new PresentationRequestBuffer();
+                var soundRequests = new SoundRequestBuffer();
+
+                int definitionId = definitions.Register(
+                    "performer.entity.relation-granted-worldbar",
+                    new PerformerDefinition
+                    {
+                        Behaviors =
+                        [
+                            new BehaviorSlot
+                            {
+                                SlotIndex = 0,
+                                Kind = BehaviorKind.AttributeBinding,
+                                ActiveByDefault = true,
+                                AttributeBinding = new AttributeBindingConfig
+                                {
+                                    AttributeId = durabilityAttributeId,
+                                    TargetParamKey = WellKnownPerformerParamKeys.BarFillRatio,
+                                    Mode = ValueSourceKind.AttributeRatio,
+                                    Thresholds = Array.Empty<ThresholdMapping>(),
+                                },
+                            },
+                            new BehaviorSlot
+                            {
+                                SlotIndex = 1,
+                                Kind = BehaviorKind.AssetBinding,
+                                ActiveByDefault = true,
+                                AssetBinding = new AssetBindingConfig
+                                {
+                                    AssetKind = AssetKind.WorldHud,
+                                    Mobility = VisualMobility.Movable,
+                                    LocalScale = new Vector3(40f, 6f, 1f),
+                                    MaterialParamKey = -1,
+                                    AssetIdParamKey = -1,
+                                },
+                            },
+                        ],
+                    });
+
+                var ownerAttributes = new AttributeBuffer();
+                ownerAttributes.SetBase(durabilityAttributeId, 100f);
+                ownerAttributes.SetCurrent(durabilityAttributeId, 100f);
+                Entity owner = world.Create(
+                    ownerAttributes,
+                    new PresentationStableId { Value = 701 },
+                    new VisualTransform
+                    {
+                        Position = new Vector3(1f, 2f, 3f),
+                        Rotation = Quaternion.Identity,
+                        Scale = Vector3.One,
+                    },
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+
+                Entity viewer = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+                Entity grantSource = world.Create();
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+                var projectionResolver = CreateRelationGrantedProjectionResolver(
+                    world,
+                    viewer,
+                    grantSource,
+                    owner,
+                    durabilityAttributeId,
+                    "PublicMap",
+                    publicMapObjectsKey,
+                    projectionStore);
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                instances.BindDefinitions(definitions);
+                Entity performer = instances.Create(
+                    definitionId,
+                    owner,
+                    scopeId: 9201,
+                    PresentationAnchorKind.Entity,
+                    Vector3.Zero,
+                    stableId: 8201,
+                    Entity.Null,
+                    default);
+                world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
+
+                using var behaviorSystem = new PerformerBehaviorSystem(
+                    world,
+                    instances,
+                    definitions,
+                    new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                    new PresentationOwnerChangeBuffer(8),
+                    soundRequests);
+                behaviorSystem.Update(0f);
+
+                using var emitSystem = new PerformerEmitSystem(
+                    world,
+                    instances,
+                    definitions,
+                    requests,
+                    globals);
+                emitSystem.Update(0.016f);
+
+                Assert.That(requests.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_ProjectsAttributeHudFromRelationGrantedKnowledge()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                const int durabilityAttributeId = 7;
+                const string publicMapObjectsKey = "collection.public_map_objects";
+
+                Entity viewer = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+                Entity grantSource = world.Create();
+                var mapObjectAttributes = new AttributeBuffer();
+                mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
+                Entity mapObject = world.Create(
+                    mapObjectAttributes,
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+                var projectionResolver = CreateRelationGrantedProjectionResolver(
+                    world,
+                    viewer,
+                    grantSource,
+                    mapObject,
+                    durabilityAttributeId,
+                    "PublicMap",
+                    publicMapObjectsKey,
+                    projectionStore);
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                var behavior = new WorldHudPerformBehavior();
+                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
+
+                bool projected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    mapObject,
+                    LODLevel.High,
+                    WorldHudItemKind.Bar,
+                    requiredAttributes,
+                    out PerformPhaseResult phase);
+
+                Assert.That(projected, Is.True);
+                Assert.That(phase.IsHostile, Is.True, "Team hostility remains a styling fact.");
+                Assert.That(phase.HasKnowledgeProjection, Is.True);
+                Assert.That(phase.RequiresAttributeProjection, Is.True);
+                Assert.That(phase.HasAttributeProjection, Is.True);
+                Assert.That(phase.AllowWorldHudProjection, Is.True);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_RelationGrantCompletesExistingProjectionAttributeMask()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                const int durabilityAttributeId = 7;
+                const string publicMapObjectsKey = "collection.public_map_objects";
+
+                Entity viewer = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+                Entity grantSource = world.Create();
+                var mapObjectAttributes = new AttributeBuffer();
+                mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
+                Entity mapObject = world.Create(
+                    mapObjectAttributes,
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+                UpsertPerformerKnowledge(
+                    projectionStore,
+                    viewer,
+                    mapObject,
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    KnowledgeIdMask256.Empty);
+                var projectionResolver = CreateRelationGrantedProjectionResolver(
+                    world,
+                    viewer,
+                    grantSource,
+                    mapObject,
+                    durabilityAttributeId,
+                    "PublicMap",
+                    publicMapObjectsKey,
+                    projectionStore);
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                var behavior = new WorldHudPerformBehavior();
+                ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
+
+                bool projected = behavior.TryResolveProjection(
+                    world,
+                    globals,
+                    mapObject,
+                    LODLevel.High,
+                    WorldHudItemKind.Bar,
+                    requiredAttributes,
+                    out PerformPhaseResult phase);
+
+                Assert.That(projected, Is.True);
+                Assert.That(phase.HasKnowledgeProjection, Is.True);
+                Assert.That(phase.HasAttributeProjection, Is.True);
+                Assert.That(phase.AllowWorldHudProjection, Is.True);
             }
             finally
             {
@@ -2435,6 +2735,69 @@ namespace Ludots.Tests.Presentation
                     expiryTick: 0,
                     confidencePermille: 1000,
                     revision: 1));
+        }
+
+        private static KnowledgeProjectionResolver CreateRelationGrantedProjectionResolver(
+            World world,
+            Entity viewer,
+            Entity grantSource,
+            Entity target,
+            int attributeId,
+            string relationshipType,
+            string collectionKey,
+            KnowledgeProjectionStore projectionStore)
+        {
+            var relationshipTypes = new RelationshipTypeRegistry();
+            var relationships = new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 4));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+            int relationshipTypeId = relationshipTypes.Register(relationshipType);
+            collectionKeys.Register(collectionKey);
+
+            relationships.EnsureLink(viewer, grantSource, relationshipTypeId);
+            collections.Replace(
+                grantSource,
+                EntityCollectionDescriptor.Create(
+                    collectionKey,
+                    EntityCollectionSourceKind.RelationDerived,
+                    EntityCollectionRoleKind.Display),
+                new[] { target });
+
+            var catalogRuntime = RelationshipCatalogRuntime.Compile(
+                new RelationshipCatalogConfig
+                {
+                    KnowledgeGrants =
+                    {
+                        new RelationshipKnowledgeGrantConfig
+                        {
+                            Id = $"{relationshipType}.{collectionKey}",
+                            TypeId = relationshipType,
+                            CollectionKey = collectionKey,
+                            Presence = KnowledgePresence.LiveVisible,
+                            Position = KnowledgePositionAccess.Live,
+                            AttributeIds = { attributeId },
+                            ObservedTick = 1,
+                            ExpiryTick = 0,
+                            ConfidencePermille = 1000,
+                        },
+                    },
+                },
+                relationshipTypes,
+                new RelationshipMetricRegistry(),
+                collections);
+
+            var projector = new KnowledgeRelationCollectionProjector(
+                relationships,
+                collections,
+                catalogRuntime,
+                projectionStore);
+            return new KnowledgeProjectionResolver(projectionStore, projector);
         }
 
         private static void AssertQuaternionEquivalent(Quaternion actual, Quaternion expected, float epsilon = 0.0001f)
