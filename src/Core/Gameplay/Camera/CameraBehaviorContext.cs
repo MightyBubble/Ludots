@@ -1,17 +1,16 @@
 using System;
-using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
 
 namespace Ludots.Core.Gameplay.Camera
 {
     internal sealed class CameraBehaviorContext
     {
-        public IInputActionReader Input { get; }
+        public CameraBehaviorInputState BehaviorInput { get; }
         public IViewController Viewport { get; }
 
-        public CameraBehaviorContext(IInputActionReader input, IViewController viewport)
+        public CameraBehaviorContext(CameraBehaviorInputState behaviorInput, IViewController viewport)
         {
-            Input = input ?? throw new ArgumentNullException(nameof(input));
+            BehaviorInput = behaviorInput ?? throw new ArgumentNullException(nameof(behaviorInput));
             Viewport = viewport ?? throw new ArgumentNullException(nameof(viewport));
         }
     }

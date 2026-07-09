@@ -4,8 +4,6 @@ namespace Ludots.Core.Gameplay.Camera
 {
     public sealed class VirtualCameraDefinition
     {
-        public const string DefaultZoomActionId = "Zoom";
-
         public string Id { get; set; } = string.Empty;
         public string DisplayName { get; set; } = string.Empty;
         public int Priority { get; set; }
@@ -21,6 +19,8 @@ namespace Ludots.Core.Gameplay.Camera
         public float Pitch { get; set; } = 45f;
         public float DistanceCm { get; set; } = 3000f;
         public float FovYDeg { get; set; } = 60f;
+        public Vector3 RigPivotOffsetCm { get; set; } = Vector3.Zero;
+        public Vector3 RigCameraOffsetCm { get; set; } = Vector3.Zero;
         public float MinDistanceCm { get; set; }
         public float MaxDistanceCm { get; set; }
         public float MinPitchDeg { get; set; }
@@ -40,16 +40,6 @@ namespace Ludots.Core.Gameplay.Camera
         public float ZoomCmPerWheel { get; set; } = 2000f;
         public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
         public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
-        public string FollowActionId { get; set; } = "CameraLock";
-        public string MoveActionId { get; set; } = "Move";
-        public string ZoomActionId { get; set; } = DefaultZoomActionId;
-        public string PointerPosActionId { get; set; } = "PointerPos";
-        public string PointerDeltaActionId { get; set; } = "PointerDelta";
-        public string LookActionId { get; set; } = "Look";
-        public string RotateHoldActionId { get; set; } = "OrbitRotateHold";
-        public string RotateLeftActionId { get; set; } = "RotateLeft";
-        public string RotateRightActionId { get; set; } = "RotateRight";
-        public string GrabDragHoldActionId { get; set; } = "OrbitRotateHold";
         public bool SnapToFollowTargetWhenAvailable { get; set; } = true;
         public float DefaultBlendDuration { get; set; } = 0.25f;
         public CameraBlendCurve BlendCurve { get; set; } = CameraBlendCurve.SmoothStep;

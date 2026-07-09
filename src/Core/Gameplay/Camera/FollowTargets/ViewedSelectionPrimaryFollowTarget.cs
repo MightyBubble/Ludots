@@ -23,9 +23,9 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
                 : null;
         }
 
-        public bool TryGetPosition(out Vector2 positionCm)
+        public bool TryGetTransform(out CameraTargetTransformSnapshot transform)
         {
-            positionCm = default;
+            transform = default;
             if (_selection == null ||
                 !SelectionViewRuntime.TryGetViewedPrimary(_world, _globals, _selection, out Entity entity) ||
                 !_world.IsAlive(entity) ||
@@ -34,7 +34,11 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
                 return false;
             }
 
-            positionCm = _world.Get<WorldPositionCm>(entity).Value.ToVector2();
+            bool hasFacing = _world.TryGet(entity, out FacingDirection facing);
+            transform = new CameraTargetTransformSnapshot(
+                _world.Get<WorldPositionCm>(entity).Value.ToVector2(),
+                hasFacingYawRad: hasFacing,
+                facingYawRad: hasFacing ? facing.AngleRad : 0f);
             return true;
         }
     }

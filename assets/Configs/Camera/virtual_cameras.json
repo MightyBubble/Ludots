@@ -21,7 +21,6 @@
     "zoomCmPerWheel": 500,
     "followMode": "HoldToLock",
     "followTargetKind": "LocalPlayer",
-    "followActionId": "CameraLock",
     "allowUserInput": true
   },
   {

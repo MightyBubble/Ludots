@@ -25,9 +25,16 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
                 : null;
         }
 
-        public bool TryGetPosition(out Vector2 positionCm)
+        public bool TryGetTransform(out CameraTargetTransformSnapshot transform)
         {
-            return TryGetSelectionCentroid(out positionCm);
+            transform = default;
+            if (!TryGetSelectionCentroid(out Vector2 positionCm))
+            {
+                return false;
+            }
+
+            transform = new CameraTargetTransformSnapshot(positionCm);
+            return true;
         }
 
         private bool TryGetSelectionCentroid(out Vector2 positionCm)

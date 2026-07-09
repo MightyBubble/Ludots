@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.Config;
-using Ludots.Core.Input.Runtime;
+using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using NUnit.Framework;
@@ -16,8 +14,7 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_DragRotate_UsesLookActionWithPositiveYUp()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
                 Id = "DragRotate",
                 Priority = 0,
@@ -35,25 +32,18 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             });
 
-            backend.MousePosition = new Vector2(320f, 240f);
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.Buttons["<Mouse>/MiddleButton"] = true;
-            backend.MousePosition = new Vector2(320f, 180f);
-            handler.Update();
+            SetBehaviorInput(input, look: new Vector2(0f, 60f), rotateHold: true);
             manager.Update(0.016f);
 
             Assert.That(manager.State.Pitch, Is.GreaterThan(45f));
         }
 
         [Test]
-        public void VirtualCameraRuntime_DragRotate_PreservesHoldSampleAcrossVisualFramesUntilFixedTick()
+        public void VirtualCameraRuntime_DragRotate_ConsumesCurrentBehaviorStateOnly()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
-                Id = "DragRotateLatchedHold",
+                Id = "DragRotateBehaviorState",
                 Priority = 0,
                 RigKind = CameraRigKind.Orbit,
                 DistanceCm = 1000f,
@@ -69,30 +59,23 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             });
 
-            backend.MousePosition = new Vector2(320f, 240f);
-            handler.Update();
-            manager.CaptureVisualInput();
+            SetBehaviorInput(input, look: new Vector2(40f, 0f), rotateHold: true);
+            manager.Update(0.016f);
+            float yawAfterInput = manager.State.Yaw;
 
-            backend.Buttons["<Mouse>/MiddleButton"] = true;
-            backend.MousePosition = new Vector2(360f, 240f);
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.Buttons["<Mouse>/MiddleButton"] = false;
-            handler.Update();
-            manager.CaptureVisualInput();
-
+            input.Clear();
             manager.Update(0.016f);
 
-            Assert.That(manager.State.Yaw, Is.Not.EqualTo(180f),
-                "Drag hold sampled between fixed ticks must pair with the accumulated look delta on the next logic camera tick.");
+            Assert.That(yawAfterInput, Is.Not.EqualTo(180f),
+                "Camera behavior should read look from the behavior state produced by the attribute sink.");
+            Assert.That(manager.State.Yaw, Is.EqualTo(yawAfterInput).Within(0.001f),
+                "After the behavior state is cleared, camera rotation must not replay old input.");
         }
 
         [Test]
         public void VirtualCameraRuntime_GrabDragPan_DragRight_MovesTargetPositiveX()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
                 Id = "GrabDrag",
                 Priority = 0,
@@ -108,13 +91,7 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             }, new StubViewController(1920f, 1080f));
 
-            backend.MousePosition = new Vector2(400f, 300f);
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.Buttons["<Mouse>/MiddleButton"] = true;
-            backend.MousePosition = new Vector2(440f, 300f);
-            handler.Update();
+            SetBehaviorInput(input, pointerDelta: new Vector2(40f, 0f), grabDragHold: true);
             manager.Update(0.016f);
 
             Assert.That(manager.State.TargetCm.X, Is.GreaterThan(0f));
@@ -124,8 +101,7 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_GrabDragPan_DragUp_MovesTargetNegativeY()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
                 Id = "GrabDrag",
                 Priority = 0,
@@ -141,13 +117,7 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             }, new StubViewController(1920f, 1080f));
 
-            backend.MousePosition = new Vector2(400f, 300f);
-            handler.Update();
-            manager.CaptureVisualInput();
-
-            backend.Buttons["<Mouse>/MiddleButton"] = true;
-            backend.MousePosition = new Vector2(400f, 260f);
-            handler.Update();
+            SetBehaviorInput(input, pointerDelta: new Vector2(0f, -40f), grabDragHold: true);
             manager.Update(0.016f);
 
             Assert.That(manager.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
@@ -155,12 +125,11 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void VirtualCameraRuntime_EdgePan_UserInputSuppressed_DoesNotMoveUntilReleased()
+        public void VirtualCameraRuntime_EdgePan_ZeroBehaviorInput_DoesNotMoveUntilPointerAttributeArrives()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
-                Id = "EdgePanSuppressed",
+                Id = "EdgePanBehaviorInput",
                 Priority = 0,
                 RigKind = CameraRigKind.Orbit,
                 PanMode = CameraPanMode.EdgePan,
@@ -175,18 +144,13 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             }, new StubViewController(1920f, 1080f));
 
-            backend.MousePosition = new Vector2(0f, 0f);
-            handler.Update();
-            manager.SetUserInputSuppressed(true);
-            manager.CaptureVisualInput();
+            input.Clear();
             manager.Update(1f);
 
             Assert.That(manager.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
             Assert.That(manager.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
 
-            handler.Update();
-            manager.SetUserInputSuppressed(false);
-            manager.CaptureVisualInput();
+            SetBehaviorInput(input, pointerPosition: Vector2.Zero);
             manager.Update(1f);
 
             Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f));
@@ -195,8 +159,7 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_EdgePan_PointerOutsideViewport_DoesNotMove_WhenRequireInsideViewportEnabled()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
                 Id = "EdgePanRequiresInsideViewport",
                 Priority = 0,
@@ -214,9 +177,7 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             }, new StubViewController(1920f, 1080f));
 
-            backend.MousePosition = new Vector2(-40f, 100f);
-            handler.Update();
-            manager.CaptureVisualInput();
+            SetBehaviorInput(input, pointerPosition: new Vector2(-40f, 100f));
             manager.Update(1f);
 
             Assert.That(manager.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
@@ -226,8 +187,7 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_EdgePan_PointerOutsideViewport_CanMove_WhenRequireInsideViewportDisabled()
         {
-            var (backend, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
             {
                 Id = "EdgePanAllowsOutsideViewport",
                 Priority = 0,
@@ -245,9 +205,7 @@ namespace Ludots.Tests.ThreeC
                 AllowUserInput = true
             }, new StubViewController(1920f, 1080f));
 
-            backend.MousePosition = new Vector2(-40f, 100f);
-            handler.Update();
-            manager.CaptureVisualInput();
+            SetBehaviorInput(input, pointerPosition: new Vector2(-40f, 100f));
             manager.Update(1f);
 
             Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f));
@@ -256,9 +214,7 @@ namespace Ludots.Tests.ThreeC
         [Test]
         public void VirtualCameraRuntime_TargetConfine_ClampsToWorldBoundsPlusPadding()
         {
-            var (_, handler) = BuildCameraInputHandler();
-            var manager = CreateCameraManager(
-                handler,
+            var (manager, _) = CreateCameraManager(
                 new VirtualCameraDefinition
                 {
                     Id = "WorldConfined",
@@ -290,79 +246,49 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.TargetCm.Y, Is.EqualTo(-750f).Within(0.01f));
         }
 
-        private static (StubInputBackend backend, PlayerInputHandler handler) BuildCameraInputHandler()
-        {
-            var backend = new StubInputBackend();
-            var config = new InputConfigRoot
-            {
-                Actions = new List<InputActionDef>
-                {
-                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
-                    new() { Id = "PointerDelta", Type = InputActionType.Axis2D },
-                    new() { Id = "Look", Type = InputActionType.Axis2D },
-                    new() { Id = "OrbitRotateHold", Type = InputActionType.Button },
-                },
-                Contexts = new List<InputContextDef>
-                {
-                    new()
-                    {
-                        Id = "Camera",
-                        Priority = 10,
-                        Bindings = new List<InputBindingDef>
-                        {
-                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
-                            new() { ActionId = "PointerDelta", Path = "<Mouse>/Delta" },
-                            new()
-                            {
-                                ActionId = "Look",
-                                Path = "<Mouse>/Delta",
-                                Processors = new List<InputModifierDef>
-                                {
-                                    new()
-                                    {
-                                        Type = "Invert",
-                                        Parameters = new List<InputParameterDef> { new() { Name = "Y", Value = 1f } }
-                                    }
-                                }
-                            },
-                            new() { ActionId = "OrbitRotateHold", Path = "<Mouse>/MiddleButton" }
-                        }
-                    }
-                }
-            };
-
-            var handler = new PlayerInputHandler(backend, config);
-            handler.PushContext("Camera");
-            return (backend, handler);
-        }
-
-        private static CameraManager CreateCameraManager(
-            PlayerInputHandler handler,
+        private static (CameraManager Manager, CameraBehaviorInputState Input) CreateCameraManager(
             VirtualCameraDefinition definition,
             IViewController? viewController = null,
             Func<WorldAabbCm>? targetBoundsProvider = null)
         {
+            var behaviorInput = new CameraBehaviorInputState();
             var manager = new CameraManager();
             var registry = new VirtualCameraRegistry();
             registry.Register(definition);
             manager.SetVirtualCameraRegistry(registry);
-            manager.ConfigureRuntime(handler, viewController ?? new StubViewController(), targetBoundsProvider);
+            manager.ConfigureRuntime(behaviorInput, viewController ?? new StubViewController(), targetBoundsProvider);
             manager.ActivateVirtualCamera(definition.Id, blendDurationSeconds: 0f);
-            return manager;
+            return (manager, behaviorInput);
         }
 
-        private sealed class StubInputBackend : IInputBackend
+        private static void SetBehaviorInput(
+            CameraBehaviorInputState input,
+            Vector2? pointerPosition = null,
+            Vector2? pointerDelta = null,
+            Vector2? look = null,
+            bool rotateHold = false,
+            bool grabDragHold = false,
+            float zoom = 0f,
+            bool rotateLeft = false,
+            bool rotateRight = false)
         {
-            public Dictionary<string, bool> Buttons { get; } = new();
-            public Vector2 MousePosition { get; set; }
+            input.Clear();
+            Vector2 pointer = pointerPosition ?? Vector2.Zero;
+            Vector2 delta = pointerDelta ?? Vector2.Zero;
+            Vector2 lookValue = look ?? Vector2.Zero;
 
-            public float GetAxis(string devicePath) => 0f;
-            public bool GetButton(string devicePath) => Buttons.TryGetValue(devicePath, out var down) && down;
-            public Vector2 GetMousePosition() => MousePosition;
-            public float GetMouseWheel() => 0f;
-            public void EnableIME(bool enable) { }
-            public void SetIMECandidatePosition(int x, int y) { }
-            public string GetCharBuffer() => string.Empty;
+            input.Apply(CameraBehaviorInputChannels.PointerX, pointer.X, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.PointerY, pointer.Y, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.PointerActive, pointerPosition.HasValue ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.PointerDeltaX, delta.X, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.PointerDeltaY, delta.Y, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.LookX, lookValue.X, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.LookY, lookValue.Y, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.Zoom, zoom, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateHold, rotateHold ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.GrabDragHold, grabDragHold ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateLeft, rotateLeft ? 1f : 0f, AttributeBindingMode.Override);
+            input.Apply(CameraBehaviorInputChannels.RotateRight, rotateRight ? 1f : 0f, AttributeBindingMode.Override);
         }
 
         private sealed class StubViewController : IViewController

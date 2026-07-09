@@ -5,15 +5,18 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
     internal sealed class EdgePanBehavior : ICameraBehavior
     {
-        private readonly string _pointerPosActionId;
         private readonly float _marginPx;
         private readonly float _speedCmPerSec;
         private readonly bool _requirePointerInsideViewport;
 
-        public EdgePanBehavior(string pointerPosActionId, float marginPx, float speedCmPerSec, bool requirePointerInsideViewport)
+        public EdgePanBehavior(float marginPx, float speedCmPerSec, bool requirePointerInsideViewport)
         {
-            _pointerPosActionId = pointerPosActionId ?? "PointerPos";
-            _marginPx = MathF.Max(1f, marginPx);
+            if (!float.IsFinite(marginPx) || marginPx <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(marginPx), "Edge pan margin must be finite and > 0.");
+            }
+
+            _marginPx = marginPx;
             _speedCmPerSec = speedCmPerSec;
             _requirePointerInsideViewport = requirePointerInsideViewport;
         }
@@ -21,8 +24,9 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
             if (state.IsFollowing || dt <= 0f) return;
+            if (!ctx.BehaviorInput.PointerActive) return;
 
-            Vector2 mousePos = ctx.Input.ReadAction<Vector2>(_pointerPosActionId);
+            Vector2 mousePos = ctx.BehaviorInput.PointerPosition;
             Vector2 res = ctx.Viewport.Resolution;
             if (res.X < 1f || res.Y < 1f) return;
             if (_requirePointerInsideViewport &&

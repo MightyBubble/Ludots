@@ -33,6 +33,7 @@ using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Physics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -41,6 +42,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Presentation;
@@ -1101,8 +1103,11 @@ namespace Ludots.Core.Engine
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
+            var cameraBehaviorInput = new CameraBehaviorInputState();
+            var cameraImpulseRuntime = new CameraImpulseRuntime();
+            World.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
             var attributeSinks = new AttributeSinkRegistry();
-            GasAttributeSinks.RegisterBuiltins(attributeSinks);
+            GasAttributeSinks.RegisterBuiltins(attributeSinks, cameraBehaviorInput);
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
             var attributeBindings = new AttributeBindingRegistry();
             new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
@@ -1114,6 +1119,8 @@ namespace Ludots.Core.Engine
             var authoritativePointerButtons = new AuthoritativePointerButtonSnapshot();
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
             var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
+            var inputActionAttributeBindings = new InputActionAttributeBindingRegistry();
+            new InputActionAttributeBindingLoader(ConfigPipeline, inputActionAttributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
@@ -1240,6 +1247,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChainOrderQueue, chainOrderQueue);
             SetService(CoreServiceKeys.AttributeSinkRegistry, attributeSinks);
             SetService(CoreServiceKeys.AttributeBindingRegistry, attributeBindings);
+            SetService(CoreServiceKeys.InputActionAttributeBindingRegistry, inputActionAttributeBindings);
+            SetService(CoreServiceKeys.CameraBehaviorInputState, cameraBehaviorInput);
             SetService(CoreServiceKeys.GraphEdgeCostOverlay, graphEdgeCostOverlay);
             SetService(CoreServiceKeys.ItemShapeRegistry, itemShapes);
             SetService(CoreServiceKeys.ItemLayoutRegistry, itemLayouts);
@@ -1332,7 +1341,9 @@ namespace Ludots.Core.Engine
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
+            SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            GameSession.Camera.SetImpulseRuntime(cameraImpulseRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions);
@@ -1350,8 +1361,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new InputActionAttributeBindingSystem(World, GlobalContext, inputActionAttributeBindings), SystemGroup.InputCollection);
             RegisterSystem(new NarrativeRuntimeSystem(narrativeDirector), SystemGroup.InputCollection);
-            RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
@@ -1479,6 +1490,7 @@ namespace Ludots.Core.Engine
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
             RegisterSystem(bindingSystem, SystemGroup.AttributeCalculation);
+            RegisterSystem(cameraRuntimeSystem, SystemGroup.AttributeCalculation);
 
             // Phase 5: DeferredTriggerCollection
             SetService(CoreServiceKeys.DeferredTriggerQueue, deferredTriggerQueue);
@@ -3117,9 +3129,9 @@ namespace Ludots.Core.Engine
 
         private void EnsureCameraRuntimeConfigured()
         {
-            var input = GetService(CoreServiceKeys.InputHandler);
+            var behaviorInput = GetService(CoreServiceKeys.CameraBehaviorInputState);
             var viewport = GetService(CoreServiceKeys.ViewController);
-            if (input == null || viewport == null)
+            if (behaviorInput == null || viewport == null)
             {
                 return;
             }
@@ -3127,11 +3139,12 @@ namespace Ludots.Core.Engine
             if (!GameSession.Camera.IsRuntimeConfigured)
             {
                 GameSession.Camera.ConfigureRuntime(
-                    input,
+                    behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
             }
         }
+
     }
 }

@@ -2,9 +2,8 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay;
-using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
  
@@ -56,18 +55,13 @@ namespace Ludots.Core.Input.Systems
             if (_authoritativeInput != null)
             {
                 _authoritativeInput.CaptureVisualFrame(input);
+                PreserveConfiguredActionValues(input);
                 AuthoritativeGroundPointerHelper.Capture(_globals, input, _authoritativeInput);
             }
 
             if (_pointerButtons != null)
             {
                 CapturePointerButtons(input);
-            }
-
-            if (_globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) && sessionObj is GameSession session)
-            {
-                session.Camera.SetUserInputSuppressed(uiCaptured);
-                session.Camera.CaptureVisualInput();
             }
         }
 
@@ -99,6 +93,43 @@ namespace Ludots.Core.Input.Systems
             CapturePointerButton(input, bindings.ConfirmActionId, pointer);
             CapturePointerButton(input, bindings.CommandActionId, pointer);
             CapturePointerButton(input, bindings.CancelActionId, pointer);
+        }
+
+        private void PreserveConfiguredActionValues(PlayerInputHandler input)
+        {
+            if (_authoritativeInput == null ||
+                !_globals.TryGetValue(CoreServiceKeys.InputActionAttributeBindingRegistry.Name, out object? registryObj) ||
+                registryObj is not InputActionAttributeBindingRegistry registry)
+            {
+                return;
+            }
+
+            InputActionAttributeBindingEntry[] entries = registry.Entries;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                InputActionAttributeBindingEntry entry = entries[i];
+                if (!entry.PreserveValueUntilSnapshot)
+                {
+                    continue;
+                }
+
+                Vector3 value = input.ReadAction<Vector3>(entry.ActionId);
+                bool isDown = input.IsDown(entry.ActionId);
+                bool pressed = input.PressedThisFrame(entry.ActionId);
+                bool released = input.ReleasedThisFrame(entry.ActionId);
+                if (!isDown && !pressed && value.LengthSquared() <= 0.000001f)
+                {
+                    continue;
+                }
+
+                _authoritativeInput.CaptureAction(
+                    entry.ActionId,
+                    value,
+                    isDown,
+                    pressed,
+                    released,
+                    preserveValueUntilSnapshot: true);
+            }
         }
 
         private void CapturePointerButton(PlayerInputHandler input, string actionId, Vector2 pointer)
@@ -150,17 +181,27 @@ namespace Ludots.Core.Input.Systems
 
         private void SuppressCameraZoom(PlayerInputHandler input)
         {
-            if (_globals.TryGetValue(CoreServiceKeys.GameSession.Name, out var sessionObj) &&
-                sessionObj is GameSession session)
+            if (!_globals.TryGetValue(CoreServiceKeys.InputActionAttributeBindingRegistry.Name, out object? registryObj) ||
+                registryObj is not InputActionAttributeBindingRegistry registry)
             {
-                string? zoomActionId = session.Camera.VirtualCameraBrain?.ActiveDefinition?.ZoomActionId;
-                if (!string.IsNullOrWhiteSpace(zoomActionId))
+                ClearUiWheelCaptured();
+                return;
+            }
+
+            InputActionAttributeBindingEntry[] entries = registry.Entries;
+            for (int i = 0; i < entries.Length; i++)
+            {
+                if (entries[i].SuppressOnUiWheelCaptured)
                 {
-                    Suppress(input, zoomActionId);
+                    Suppress(input, entries[i].ActionId);
                 }
             }
 
-            Suppress(input, VirtualCameraDefinition.DefaultZoomActionId);
+            ClearUiWheelCaptured();
+        }
+
+        private void ClearUiWheelCaptured()
+        {
             if (_globals is Dictionary<string, object> mutable)
             {
                 mutable[CoreServiceKeys.UiWheelCaptured.Name] = false;

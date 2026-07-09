@@ -42,6 +42,9 @@
     "fovYDeg": 46,
     "defaultBlendDuration": 0.6,
     "blendCurve": "SmoothStep",
-    "allowUserInput": true
+    "panMode": "None",
+    "rotateMode": "None",
+    "enableZoom": false,
+    "allowUserInput": false
   }
 ]
