@@ -196,6 +196,7 @@ Ludots 同屏混排两类 UI，**职责不重叠**：
 
 - 统一 UI Runtime 与三前端写法：`docs/architecture/ui_runtime_architecture.md`
 - WebUI DataPlane 边界：`docs/architecture/webui_dataplane_architecture.md`
+- WebUI Panel Kit Manifest（WPK-1）：`docs/architecture/webui_panel_kit_manifest.md`
 - 浏览器 UI Runtime：`docs/architecture/browser_ui_runtime.md`
 - 适配器模式与平台抽象：`docs/architecture/adapter_pattern.md`
 - 决策记录：`docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md`、`docs/adr/ADR-0003-browser-ui-runtime-contract.md`
