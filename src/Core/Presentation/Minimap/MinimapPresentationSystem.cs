@@ -14,6 +14,7 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Presentation.Minimap
 {
     public delegate bool MinimapFocusCollectionProvider(GameEngine engine, out Entity owner, out string collectionKey);
+    public delegate bool MinimapKnowledgeViewerProvider(GameEngine engine, out Entity viewer);
 
     public sealed class MinimapPresentationSystem : ISystem<float>
     {

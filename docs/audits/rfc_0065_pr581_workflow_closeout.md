@@ -562,6 +562,8 @@ Remaining guard tasks after repo-wide formal Selection retirement:
 
 Small fixes made during this audit:
 
+- `src/Core/Presentation/Minimap/MinimapRuntime.cs` now filters knowledge through an explicit `MinimapKnowledgeViewerProvider`. The default engine provider still resolves the local player through `KnowledgeProjectionConsumer`, while showcase/mod code can publish a different viewer without teaching minimap about Selection or command-source semantics.
+- `mods/showcases/fog_vision_decay/FogVisionDecayShowcaseMod/Runtime/FogVisionDecayRuntime.cs` publishes its scenario viewer as the minimap knowledge viewer and restores the previous provider on unload, so the fog decay UAT proves live/last-known markers from an explicit viewer context instead of relying on an implicit `LocalPlayerEntity` fallback.
 - `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs` no longer uses `EntityCollectionStore.CopyEntities` in the Issue200-guarded input/knowledge consumer path; it reads the active command-source view with `TryGetEntityAt` per row.
 - `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/Runtime/EntityCommandPanelShowcaseRuntime.cs` makes the aggregation toolbar visible after publishing the showcase `collection.command.source`, restoring the SHOW-4 runtime switch acceptance path.
 - `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/DataPlane/EntityCommandPanelShowcaseDataPlane.cs` imports the existing GAS `AbilityIdRegistry` instead of relying on an unresolved name.

@@ -130,6 +130,41 @@ public sealed class MinimapKnowledgeProjectionTests
     }
 
     [Test]
+    public void Issue581_RefreshUsesExplicitMinimapKnowledgeViewerProvider()
+    {
+        using GameEngine engine = CreateEngine();
+        MinimapRuntime runtime = CreateRuntime();
+        var markers = new MinimapMarkerBuffer(4);
+        var screenMarkers = new MinimapScreenMarkerBuffer(4);
+
+        Entity viewer = engine.World.Create();
+        Entity target = engine.World.Create();
+        var store = new KnowledgeProjectionStore(initialCapacity: 4);
+        store.Upsert(viewer, target, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
+        InstallKnowledgeServices(engine, store, null);
+        engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
+        engine.SetService(
+            CoreServiceKeys.MinimapKnowledgeViewerProvider,
+            (MinimapKnowledgeViewerProvider)((GameEngine _, out Entity resolvedViewer) =>
+            {
+                resolvedViewer = viewer;
+                return true;
+            }));
+
+        markers.BeginFrame();
+        var color = new Vector4(0.2f, 0.8f, 1f, 1f);
+        Assert.That(markers.TryAdd(7001, target, 1200f, 0f, in color, 8f), Is.True);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+
+        runtime.Refresh(engine, markers, screenMarkers);
+        MinimapDebugSnapshot snapshot = runtime.CaptureDebugSnapshot();
+
+        Assert.That(snapshot.VisibleMarkerCount, Is.EqualTo(1));
+        Assert.That(snapshot.VisibleMarkers[0].KnowledgeState, Is.EqualTo(MinimapKnowledgeState.LiveVisible));
+    }
+
+    [Test]
     public void Issue198_RefreshKnowledgeFilteringAllocatesZeroAfterWarmup()
     {
         using GameEngine engine = CreateEngine();

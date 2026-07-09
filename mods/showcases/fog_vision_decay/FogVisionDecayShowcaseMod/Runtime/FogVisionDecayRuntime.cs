@@ -28,6 +28,9 @@ public sealed class FogVisionDecayShowcaseRuntime
     private bool[] _seenEver = Array.Empty<bool>();
     private Entity[] _copyTargets = Array.Empty<Entity>();
     private KnowledgeDisclosureRecord[] _copyRecords = Array.Empty<KnowledgeDisclosureRecord>();
+    private MinimapKnowledgeViewerProvider? _previousMinimapKnowledgeViewerProvider;
+    private bool _minimapKnowledgeViewerProviderInstalled;
+    private bool _hasPreviousMinimapKnowledgeViewerProvider;
     private int _tick;
     private int _liveCount;
     private int _knownCount;
@@ -83,6 +86,7 @@ public sealed class FogVisionDecayShowcaseRuntime
         {
             DeactivateInputContext(engine.GetService(CoreServiceKeys.InputHandler));
             ClearPanel(engine);
+            RestoreMinimapKnowledgeViewerProvider(engine);
             ResetScenario();
         }
 
@@ -248,6 +252,11 @@ public sealed class FogVisionDecayShowcaseRuntime
         _resolver = new KnowledgeProjectionResolver(_knowledge);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, _knowledge);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, _resolver);
+        _hasPreviousMinimapKnowledgeViewerProvider = engine.TryGetService(
+            CoreServiceKeys.MinimapKnowledgeViewerProvider,
+            out _previousMinimapKnowledgeViewerProvider);
+        engine.SetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, TryResolveMinimapKnowledgeViewer);
+        _minimapKnowledgeViewerProviderInstalled = true;
         if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime minimap)
         {
             minimap.Visible = true;
@@ -416,6 +425,12 @@ public sealed class FogVisionDecayShowcaseRuntime
         input?.PopContext(FogVisionDecayInputContexts.Showcase);
     }
 
+    private bool TryResolveMinimapKnowledgeViewer(GameEngine engine, out Entity viewer)
+    {
+        viewer = _viewer;
+        return viewer != Entity.Null && engine.World.IsAlive(viewer);
+    }
+
     private void ResetScenario()
     {
         _scenarioReady = false;
@@ -436,6 +451,27 @@ public sealed class FogVisionDecayShowcaseRuntime
         _seenEver = Array.Empty<bool>();
         _copyTargets = Array.Empty<Entity>();
         _copyRecords = Array.Empty<KnowledgeDisclosureRecord>();
+    }
+
+    private void RestoreMinimapKnowledgeViewerProvider(GameEngine engine)
+    {
+        if (!_minimapKnowledgeViewerProviderInstalled)
+        {
+            return;
+        }
+
+        if (_hasPreviousMinimapKnowledgeViewerProvider && _previousMinimapKnowledgeViewerProvider != null)
+        {
+            engine.SetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, _previousMinimapKnowledgeViewerProvider);
+        }
+        else
+        {
+            engine.RemoveService(CoreServiceKeys.MinimapKnowledgeViewerProvider);
+        }
+
+        _minimapKnowledgeViewerProviderInstalled = false;
+        _hasPreviousMinimapKnowledgeViewerProvider = false;
+        _previousMinimapKnowledgeViewerProvider = null;
     }
 
     private FogVisionDecaySnapshot BuildSnapshot()

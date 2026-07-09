@@ -10,6 +10,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Minimap
@@ -719,6 +720,17 @@ namespace Ludots.Core.Presentation.Minimap
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            Entity knowledgeViewer = Entity.Null;
+            if (hasKnowledgeResolver &&
+                (!engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) ||
+                 !knowledgeViewerProvider(engine, out knowledgeViewer) ||
+                 knowledgeViewer == Entity.Null ||
+                 !engine.World.IsAlive(knowledgeViewer)))
+            {
+                screenMarkers.MaterializeStagedBucketKeys();
+                return;
+            }
+
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
@@ -731,10 +743,10 @@ namespace Ludots.Core.Presentation.Minimap
                 {
                     Entity owner = owners[i];
                     if (owner == Entity.Null ||
-                        !KnowledgeProjectionConsumer.TryResolve(
+                        !KnowledgeProjectionConsumer.TryResolveForViewer(
                             engine.World,
                             engine.GlobalContext,
-                            Entity.Null,
+                            knowledgeViewer,
                             owner,
                             out KnowledgeProjection projection) ||
                         !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))

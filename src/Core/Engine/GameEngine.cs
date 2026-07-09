@@ -1165,6 +1165,10 @@ namespace Ludots.Core.Engine
                                provider(engine, out owner, out collectionKey);
                     })
             };
+            SetService(
+                CoreServiceKeys.MinimapKnowledgeViewerProvider,
+                static (GameEngine engine, out Entity viewer) =>
+                    KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
