@@ -59,6 +59,8 @@ The key must start with the loading mod id plus a dot. Other Mods may reference 
 
 Effect preset definitions resolve handler keys through `BuiltinHandlerRegistry`. Graph definitions resolve extension op keys through `GasGraphOpRegistry`. The compiled program then runs against an explicit `GasGraphOpHandlerTable`; there is no static singleton.
 
+Extension graph ops may expose `Void`, `Bool`, `Int`, `Float`, or `Entity` outputs and may consume up to three `Bool`, `Int`, `Float`, or `Entity` inputs. `TargetList` is an implicit VM scratch structure, not a register type for Mod op signatures.
+
 Preset type definitions remain data IR in `GAS/preset_types.json`. A Mod "codes a preset type" by registering the
 C# phase handler or graph op it needs, then declaring a preset key that composes those handlers or graphs. This keeps
 user variants out of Core enum space and keeps effect execution in the existing GAS phase pipeline.

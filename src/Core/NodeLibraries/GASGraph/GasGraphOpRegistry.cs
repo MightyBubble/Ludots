@@ -17,7 +17,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Key = key ?? throw new ArgumentNullException(nameof(key));
             OutputType = outputType;
             Handler = handler ?? throw new ArgumentNullException(nameof(handler));
-            InputTypes = inputTypes ?? Array.Empty<GraphValueType>();
+            InputTypes = inputTypes is { Length: > 0 }
+                ? (GraphValueType[])inputTypes.Clone()
+                : Array.Empty<GraphValueType>();
             FixedRegister = fixedRegister;
         }
 
@@ -69,6 +71,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException(
                     $"Graph op '{key}' declares {inputTypes.Length} inputs, but extension graph ops support at most 3 inputs.");
             }
+
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            ValidateOutputType(key, outputType);
+            ValidateInputTypes(key, inputTypes);
+            ValidateFixedRegister(key, outputType, fixedRegister);
 
             int opCode = _keys.RegisterDynamic(key);
             var definition = new GasGraphOpDefinition(
@@ -141,6 +148,63 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             Array.Clear(_definitions, 0, _definitions.Length);
             _keys.Clear();
+        }
+
+        private static void ValidateOutputType(string key, GraphValueType outputType)
+        {
+            if (outputType is GraphValueType.Void or GraphValueType.Bool or GraphValueType.Int or GraphValueType.Float or GraphValueType.Entity)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Graph op '{key}' declares unsupported output type '{outputType}'. Extension graph ops support Void, Bool, Int, Float, or Entity outputs.");
+        }
+
+        private static void ValidateInputTypes(string key, GraphValueType[]? inputTypes)
+        {
+            if (inputTypes == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < inputTypes.Length; i++)
+            {
+                GraphValueType inputType = inputTypes[i];
+                if (inputType is GraphValueType.Bool or GraphValueType.Int or GraphValueType.Float or GraphValueType.Entity)
+                {
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Graph op '{key}' declares unsupported input type '{inputType}' at index {i}. Extension graph op inputs must be Bool, Int, Float, or Entity.");
+            }
+        }
+
+        private static void ValidateFixedRegister(string key, GraphValueType outputType, byte? fixedRegister)
+        {
+            if (!fixedRegister.HasValue)
+            {
+                return;
+            }
+
+            int limit = outputType switch
+            {
+                GraphValueType.Bool => GraphVmLimits.MaxBoolRegisters,
+                GraphValueType.Int => GraphVmLimits.MaxIntRegisters,
+                GraphValueType.Float => GraphVmLimits.MaxFloatRegisters,
+                GraphValueType.Entity => GraphVmLimits.MaxEntityRegisters,
+                GraphValueType.Void => throw new InvalidOperationException(
+                    $"Graph op '{key}' declares a fixed register for a Void output."),
+                _ => throw new InvalidOperationException(
+                    $"Graph op '{key}' declares unsupported output type '{outputType}'.")
+            };
+
+            if (fixedRegister.Value >= limit)
+            {
+                throw new InvalidOperationException(
+                    $"Graph op '{key}' fixed register {fixedRegister.Value} exceeds {outputType} register limit {limit}.");
+            }
         }
     }
 }

@@ -127,6 +127,55 @@ namespace Ludots.Tests.Presentation
             Assert.That(frozen.Message, Does.Contain("frozen"));
         }
 
+        [Test]
+        public void ModExtensions_RejectInvalidGraphOpShapeAtRegistration()
+        {
+            var hub = new ModExtensionHub();
+            ModContext provider = CreateContext("ProviderMod", hub);
+
+            InvalidOperationException targetListOutput = Assert.Throws<InvalidOperationException>(
+                () => provider.Extensions.Gas.RegisterGraphOp(
+                    "ProviderMod.TargetListOutput",
+                    GraphValueType.TargetList,
+                    NoopGraphOp))!;
+            Assert.That(targetListOutput.Message, Does.Contain("unsupported output type"));
+
+            InvalidOperationException voidInput = Assert.Throws<InvalidOperationException>(
+                () => provider.Extensions.Gas.RegisterGraphOp(
+                    "ProviderMod.VoidInput",
+                    GraphValueType.Void,
+                    NoopGraphOp,
+                    GraphValueType.Void))!;
+            Assert.That(voidInput.Message, Does.Contain("unsupported input type"));
+
+            InvalidOperationException fixedRegister = Assert.Throws<InvalidOperationException>(
+                () => provider.Extensions.Gas.RegisterGraphOp(
+                    "ProviderMod.BadFixedRegister",
+                    GraphValueType.Float,
+                    (byte)GraphVmLimits.MaxFloatRegisters,
+                    NoopGraphOp))!;
+            Assert.That(fixedRegister.Message, Does.Contain("fixed register"));
+        }
+
+        [Test]
+        public void ModExtensions_GraphOpInputTypesAreFrozenByValue()
+        {
+            var hub = new ModExtensionHub();
+            ModContext provider = CreateContext("ProviderMod", hub);
+            var inputTypes = new[] { GraphValueType.Float };
+
+            provider.Extensions.Gas.RegisterGraphOp(
+                "ProviderMod.ImmutableInputs",
+                GraphValueType.Float,
+                NoopGraphOp,
+                inputTypes);
+
+            inputTypes[0] = GraphValueType.Entity;
+
+            Assert.That(hub.Gas.GraphOps.TryGet("ProviderMod.ImmutableInputs", out GasGraphOpDefinition definition), Is.True);
+            Assert.That(definition.InputTypes, Is.EqualTo(new[] { GraphValueType.Float }));
+        }
+
         private static ModContext CreateContext(string modId, ModExtensionHub hub)
         {
             return new ModContext(

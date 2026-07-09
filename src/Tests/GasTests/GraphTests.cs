@@ -108,6 +108,30 @@ namespace Ludots.Tests.GAS
             state.F[ins.Dst] = state.F[ins.A] * 2.0f;
         }
 
+        [Test]
+        public void Execute_NullHandlerTable_ThrowsArgumentNullException()
+        {
+            Throws<System.ArgumentNullException>(ExecuteWithNullHandlerTable);
+        }
+
+        private static void ExecuteWithNullHandlerTable()
+        {
+            using var world = World.Create();
+            Entity[] targets = new Entity[GraphVmLimits.MaxTargets];
+            var state = new GraphExecutionState
+            {
+                World = world,
+                F = new float[GraphVmLimits.MaxFloatRegisters],
+                I = new int[GraphVmLimits.MaxIntRegisters],
+                B = new byte[GraphVmLimits.MaxBoolRegisters],
+                E = new Entity[GraphVmLimits.MaxEntityRegisters],
+                Targets = targets,
+                TargetList = new GraphTargetList(targets),
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, System.ReadOnlySpan<GraphInstruction>.Empty, null!);
+        }
+
     }
 
     [TestFixture]

@@ -40,6 +40,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
+            if (handlers == null) throw new ArgumentNullException(nameof(handlers));
+
             var table = handlers._handlers;
             int pc = 0;
             int steps = 0;
