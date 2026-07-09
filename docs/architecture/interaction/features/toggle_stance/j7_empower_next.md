@@ -27,7 +27,7 @@ Down → AddTag("empowered_next", duration=180 ticks)
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | GameplayTagContainer | ✅ 已有 | empowered_next tag 添加/移除 |
 | AbilityExecCallerParamsPool | ✅ 已有 | 4 slots，支持多版本 CallerParams |
 | Tag duration / expiry | ✅ 已有 | tag 到期自动移除 |

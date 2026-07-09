@@ -553,14 +553,14 @@ namespace Ludots.Tests.Presentation
                 ReadOnlySpan<Entity> actors = Simulation.CommandActors;
                 if (actors.Length <= 0)
                 {
-                    Simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
-                    return MassNavigationMoveCommandResult.EmptySelection;
+                    Simulation.RejectCommandWithoutCommandActors(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.EmptyCommandActors;
                 }
 
                 if (!CanLocalPlayerCommand(World, actors))
                 {
-                    Simulation.RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
-                    return MassNavigationMoveCommandResult.UnauthorizedSelection;
+                    Simulation.RejectCommandUnauthorizedCommandActors(centerCm.X, centerCm.Y);
+                    return MassNavigationMoveCommandResult.UnauthorizedCommandActors;
                 }
 
                 if (!OrderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))

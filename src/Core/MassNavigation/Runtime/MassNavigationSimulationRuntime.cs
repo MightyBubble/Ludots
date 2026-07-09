@@ -88,8 +88,8 @@ public enum MassNavigationMoveCommandResult : byte
 {
     Submitted = 1,
     OutsideWorld = 2,
-    EmptySelection = 3,
-    UnauthorizedSelection = 4,
+    EmptyCommandActors = 3,
+    UnauthorizedCommandActors = 4,
     OrderSubmitRejected = 5,
 }
 
@@ -519,12 +519,12 @@ public sealed class MassNavigationSimulationRuntime
         Telemetry.MarkCommandRejected(worldXCm, worldYCm);
     }
 
-    public void RejectCommandWithoutSelection(float worldXCm, float worldYCm)
+    public void RejectCommandWithoutCommandActors(float worldXCm, float worldYCm)
     {
         Telemetry.MarkCommandRejected(worldXCm, worldYCm);
     }
 
-    public void RejectCommandUnauthorizedSelection(float worldXCm, float worldYCm)
+    public void RejectCommandUnauthorizedCommandActors(float worldXCm, float worldYCm)
     {
         Telemetry.MarkCommandRejected(worldXCm, worldYCm);
     }
@@ -554,7 +554,7 @@ public sealed class MassNavigationSimulationRuntime
     {
         if (Array.IndexOf(_teamIds, teamId) < 0)
         {
-            throw new InvalidOperationException($"MassNavigationSimulationRuntime selected team {teamId} is not configured.");
+            throw new InvalidOperationException($"MassNavigationSimulationRuntime active team {teamId} is not configured.");
         }
 
         ActiveTeamId = teamId;
@@ -577,7 +577,7 @@ public sealed class MassNavigationSimulationRuntime
         {
             if (Array.IndexOf(_teamIds, _initialActiveTeamId) < 0)
             {
-                throw new InvalidOperationException("MassNavigationSimulationRuntime configured teams do not include the initial selected team.");
+                throw new InvalidOperationException("MassNavigationSimulationRuntime configured teams do not include the initial active team.");
             }
 
             ActiveTeamId = _initialActiveTeamId;

@@ -13,14 +13,14 @@ namespace RtsDemoMod.Runtime
     {
         private static readonly ToolbarButtonSpec[] Buttons =
         {
-            new(ToolbarButtonKind.SelectEntity, "war3_build", "W3 Build", "Peasant", "#93C572"),
-            new(ToolbarButtonKind.SelectEntity, "war3_train", "W3 Train", "Barracks", "#D4A15A"),
-            new(ToolbarButtonKind.SelectEntity, "war3_garrison", "W3 Tower", "Footman", "#C8A96B"),
-            new(ToolbarButtonKind.SelectEntity, "cnc_build", "C&C Build", "Construction Yard", "#F18F5A"),
-            new(ToolbarButtonKind.SelectEntity, "cnc_train", "C&C Train", "War Factory", "#B889FF"),
-            new(ToolbarButtonKind.SelectEntity, "cnc_garrison", "C&C Bunker", "Rocket Trooper", "#FF8FA3"),
-            new(ToolbarButtonKind.SelectEntity, "sc2_train", "SC2 Train", "Gateway", "#62C8F3"),
-            new(ToolbarButtonKind.SelectEntity, "zerg_morph", "Zerg Morph", "Drone", "#7ED957"),
+            new(ToolbarButtonKind.SetCommandSource, "war3_build", "W3 Build", "Peasant", "#93C572"),
+            new(ToolbarButtonKind.SetCommandSource, "war3_train", "W3 Train", "Barracks", "#D4A15A"),
+            new(ToolbarButtonKind.SetCommandSource, "war3_garrison", "W3 Tower", "Footman", "#C8A96B"),
+            new(ToolbarButtonKind.SetCommandSource, "cnc_build", "C&C Build", "Construction Yard", "#F18F5A"),
+            new(ToolbarButtonKind.SetCommandSource, "cnc_train", "C&C Train", "War Factory", "#B889FF"),
+            new(ToolbarButtonKind.SetCommandSource, "cnc_garrison", "C&C Bunker", "Rocket Trooper", "#FF8FA3"),
+            new(ToolbarButtonKind.SetCommandSource, "sc2_train", "SC2 Train", "Gateway", "#62C8F3"),
+            new(ToolbarButtonKind.SetCommandSource, "zerg_morph", "Zerg Morph", "Drone", "#7ED957"),
             new(ToolbarButtonKind.ResetCamera, "camera_reset", "Reset Cam", string.Empty, "#F2C36B")
         };
 
@@ -42,10 +42,10 @@ namespace RtsDemoMod.Runtime
                     return 0;
                 }
 
-                string selectedName = ResolveCurrentPrimaryName();
-                return string.IsNullOrWhiteSpace(selectedName)
+                string primaryName = ResolveCurrentPrimaryName();
+                return string.IsNullOrWhiteSpace(primaryName)
                     ? 1u
-                    : unchecked((uint)selectedName.GetHashCode(StringComparison.OrdinalIgnoreCase));
+                    : unchecked((uint)primaryName.GetHashCode(StringComparison.OrdinalIgnoreCase));
             }
         }
 
@@ -60,7 +60,7 @@ namespace RtsDemoMod.Runtime
                 return 0;
             }
 
-            string selectedName = ResolveCurrentPrimaryName();
+            string primaryName = ResolveCurrentPrimaryName();
             ToolbarProfile profile = ResolveToolbarProfile();
             int written = 0;
             for (int i = 0; i < Buttons.Length && written < destination.Length; i++)
@@ -71,13 +71,13 @@ namespace RtsDemoMod.Runtime
                     continue;
                 }
 
-                if (button.Kind == ToolbarButtonKind.SelectEntity && !TryFindEntity(button.EntityName, out _))
+                if (button.Kind == ToolbarButtonKind.SetCommandSource && !TryFindEntity(button.EntityName, out _))
                 {
                     continue;
                 }
 
-                bool active = button.Kind == ToolbarButtonKind.SelectEntity &&
-                              string.Equals(selectedName, button.EntityName, StringComparison.OrdinalIgnoreCase);
+                bool active = button.Kind == ToolbarButtonKind.SetCommandSource &&
+                              string.Equals(primaryName, button.EntityName, StringComparison.OrdinalIgnoreCase);
                 destination[written++] = new EntityCommandPanelToolbarButtonView(
                     button.ButtonId,
                     button.Label,
@@ -111,7 +111,7 @@ namespace RtsDemoMod.Runtime
 
                 if (TryFindEntity(button.EntityName, out Entity target))
                 {
-                    SelectEntity(target);
+                    SetCommandSource(target);
                 }
 
                 return;
@@ -120,7 +120,7 @@ namespace RtsDemoMod.Runtime
 
         private string ResolveCurrentPrimaryName()
         {
-            if (!RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity primary) ||
+            if (!RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity primary) ||
                 !_engine.World.IsAlive(primary) ||
                 !_engine.World.Has<Name>(primary))
             {
@@ -130,9 +130,9 @@ namespace RtsDemoMod.Runtime
             return _engine.World.Get<Name>(primary).Value ?? string.Empty;
         }
 
-        private void SelectEntity(Entity target)
+        private void SetCommandSource(Entity target)
         {
-            RtsShowcaseSelectionHelper.TrySelectAndFocus(_engine, target, snapCamera: true);
+            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, target, snapCamera: true);
         }
 
         private bool TryFindEntity(string entityName, out Entity result)
@@ -297,7 +297,7 @@ namespace RtsDemoMod.Runtime
 
         private enum ToolbarButtonKind : byte
         {
-            SelectEntity,
+            SetCommandSource,
             ResetCamera
         }
 

@@ -2,44 +2,81 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Input.Interaction;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.CommandSources
 {
     public static class EntityCollectionContextRuntime
     {
-        public static bool TryGetCurrentPrimary(World world, Dictionary<string, object> globals, out Entity primary)
+        public static bool TryGetPrimary(
+            World world,
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
+            out Entity primary)
         {
             primary = default;
-            return TryResolveCurrentCollection(world, globals, out EntityCollectionStore collections, out EntityCollectionHandle handle, out _) &&
-                   collections.TryGetEntityAt(handle, 0, out primary);
+            return world != null &&
+                   collections != null &&
+                   world.IsAlive(owner) &&
+                   TryResolveCollection(collections, owner, collectionKey, out EntityCollectionHandle handle, out _) &&
+                   collections.TryGetEntityAt(handle, 0, out primary) &&
+                   primary != Entity.Null &&
+                   world.IsAlive(primary);
         }
 
-        public static int GetCurrentCount(World world, Dictionary<string, object> globals)
+        public static bool TryGetPrimary(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            string collectionKey,
+            out Entity primary)
         {
-            return TryResolveCurrentCollection(world, globals, out EntityCollectionStore collections, out EntityCollectionHandle handle, out _)
-                ? GetCount(collections, handle)
+            primary = default;
+            return TryGetStore(globals, out EntityCollectionStore collections) &&
+                   TryGetPrimary(world, collections, owner, collectionKey, out primary);
+        }
+
+        public static int GetCount(EntityCollectionStore collections, Entity owner, string collectionKey)
+        {
+            return collections != null &&
+                   TryResolveCollection(collections, owner, collectionKey, out _, out EntityCollectionView view)
+                ? view.Count
                 : 0;
         }
 
-        public static int CopyCurrent(World world, Dictionary<string, object> globals, Span<Entity> destination)
+        public static int GetCount(Dictionary<string, object> globals, Entity owner, string collectionKey)
         {
-            return TryResolveCurrentCollection(world, globals, out EntityCollectionStore collections, out EntityCollectionHandle handle, out _)
+            return TryGetStore(globals, out EntityCollectionStore collections)
+                ? GetCount(collections, owner, collectionKey)
+                : 0;
+        }
+
+        public static int Copy(EntityCollectionStore collections, Entity owner, string collectionKey, Span<Entity> destination)
+        {
+            return collections != null &&
+                   TryResolveCollection(collections, owner, collectionKey, out EntityCollectionHandle handle, out _)
                 ? collections.CopyEntities(handle, 0, destination)
                 : 0;
         }
 
-        public static Entity[] SnapshotCurrent(World world, Dictionary<string, object> globals)
+        public static int Copy(Dictionary<string, object> globals, Entity owner, string collectionKey, Span<Entity> destination)
         {
-            int count = GetCurrentCount(world, globals);
+            return TryGetStore(globals, out EntityCollectionStore collections)
+                ? Copy(collections, owner, collectionKey, destination)
+                : 0;
+        }
+
+        public static Entity[] Snapshot(EntityCollectionStore collections, Entity owner, string collectionKey)
+        {
+            int count = GetCount(collections, owner, collectionKey);
             if (count <= 0)
             {
                 return Array.Empty<Entity>();
             }
 
             var entities = new Entity[count];
-            int written = CopyCurrent(world, globals, entities);
+            int written = Copy(collections, owner, collectionKey, entities);
             if (written <= 0)
             {
                 return Array.Empty<Entity>();
@@ -53,19 +90,33 @@ namespace Ludots.Core.Input.CommandSources
             return entities;
         }
 
-        public static bool ContainsCurrent(World world, Dictionary<string, object> globals, Entity entity)
+        public static Entity[] Snapshot(Dictionary<string, object> globals, Entity owner, string collectionKey)
         {
-            if (!world.IsAlive(entity) ||
-                !TryResolveCurrentCollection(world, globals, out EntityCollectionStore collections, out EntityCollectionHandle handle, out EntityCollectionView view))
+            return TryGetStore(globals, out EntityCollectionStore collections)
+                ? Snapshot(collections, owner, collectionKey)
+                : Array.Empty<Entity>();
+        }
+
+        public static bool Contains(
+            World world,
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
+            Entity entity)
+        {
+            if (world == null ||
+                collections == null ||
+                entity == Entity.Null ||
+                !world.IsAlive(entity) ||
+                !TryResolveCollection(collections, owner, collectionKey, out EntityCollectionHandle handle, out EntityCollectionView view))
             {
                 return false;
             }
 
-            Span<Entity> scratch = view.Count <= 128 ? stackalloc Entity[view.Count] : new Entity[view.Count];
-            int written = collections.CopyEntities(handle, 0, scratch);
-            for (int i = 0; i < written; i++)
+            for (int i = 0; i < view.Count; i++)
             {
-                if (scratch[i] == entity)
+                if (collections.TryGetEntityAt(handle, i, out Entity current) &&
+                    current == entity)
                 {
                     return true;
                 }
@@ -74,82 +125,49 @@ namespace Ludots.Core.Input.CommandSources
             return false;
         }
 
-        public static bool TryGetHovered(World world, Dictionary<string, object> globals, out Entity hovered)
-        {
-            hovered = default;
-            return TryGetLocalOwner(world, globals, out Entity owner) &&
-                   TryGetStore(globals, out EntityCollectionStore collections) &&
-                   collections.TryGet(owner, EntityCollectionKeys.HoveredEntity, out EntityCollectionHandle handle) &&
-                   collections.TryGetEntityAt(handle, 0, out hovered);
-        }
-
-        public static bool TryDescribeCurrentView(
+        public static bool Contains(
             World world,
             Dictionary<string, object> globals,
+            Entity owner,
+            string collectionKey,
+            Entity entity)
+        {
+            return TryGetStore(globals, out EntityCollectionStore collections) &&
+                   Contains(world, collections, owner, collectionKey, entity);
+        }
+
+        public static bool TryGetHovered(
+            World world,
+            EntityCollectionStore collections,
+            Entity owner,
+            out Entity hovered)
+        {
+            return TryGetPrimary(world, collections, owner, EntityCollectionKeys.HoveredEntity, out hovered);
+        }
+
+        public static bool TryDescribeView(
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
             out EntityCollectionView view)
         {
-            view = default;
-            return TryResolveCurrentCollection(world, globals, out _, out _, out view);
+            return TryResolveCollection(collections, owner, collectionKey, out _, out view);
         }
 
-        public static bool TryResolveCurrentCollection(
-            World world,
-            Dictionary<string, object> globals,
-            out EntityCollectionStore collections,
+        public static bool TryResolveCollection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
             out EntityCollectionHandle handle,
             out EntityCollectionView view)
         {
-            collections = default!;
             handle = EntityCollectionHandle.Invalid;
             view = default;
-            return TryGetStore(globals, out collections) &&
-                   TryGetCurrentOwnerAndKey(world, globals, out Entity owner, out int keyId) &&
-                   collections.TryGet(owner, keyId, out handle) &&
+            return collections != null &&
+                   owner != Entity.Null &&
+                   !string.IsNullOrWhiteSpace(collectionKey) &&
+                   collections.TryGet(owner, collectionKey, out handle) &&
                    collections.TryGetView(handle, out view);
-        }
-
-        public static bool TryGetCurrentOwnerAndKey(
-            World world,
-            Dictionary<string, object> globals,
-            out Entity owner,
-            out int keyId)
-        {
-            owner = default;
-            keyId = 0;
-            if (!TryGetLocalOwner(world, globals, out owner))
-            {
-                return false;
-            }
-
-            if (TryGetInteractionStack(globals, out InteractionContextStack stack) &&
-                stack.TryPeek(out InteractionContextFrame frame) &&
-                frame.ActiveCollectionKeyId > 0)
-            {
-                keyId = frame.ActiveCollectionKeyId;
-                return true;
-            }
-
-            if (!TryGetStore(globals, out EntityCollectionStore collections))
-            {
-                return false;
-            }
-
-            keyId = collections.KeyRegistry.Register(EntityCollectionKeys.CommandSource);
-            return keyId > 0;
-        }
-
-        private static int GetCount(EntityCollectionStore collections, EntityCollectionHandle handle)
-        {
-            return collections.TryGetView(handle, out EntityCollectionView view) ? view.Count : 0;
-        }
-
-        private static bool TryGetLocalOwner(World world, Dictionary<string, object> globals, out Entity owner)
-        {
-            owner = default;
-            return globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? ownerObj) &&
-                   ownerObj is Entity local &&
-                   world.IsAlive(local) &&
-                   (owner = local) != Entity.Null;
         }
 
         private static bool TryGetStore(Dictionary<string, object> globals, out EntityCollectionStore collections)
@@ -160,12 +178,5 @@ namespace Ludots.Core.Input.CommandSources
                    (collections = store) != null;
         }
 
-        private static bool TryGetInteractionStack(Dictionary<string, object> globals, out InteractionContextStack stack)
-        {
-            stack = default!;
-            return globals.TryGetValue(CoreServiceKeys.InteractionContextStack.Name, out object? stackObj) &&
-                   stackObj is InteractionContextStack resolved &&
-                   (stack = resolved) != null;
-        }
     }
 }

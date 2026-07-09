@@ -1,5 +1,4 @@
 using System.Numerics;
-
 namespace Ludots.Core.Gameplay.Camera
 {
     public sealed class VirtualCameraDefinition
@@ -40,6 +39,7 @@ namespace Ludots.Core.Gameplay.Camera
         public float ZoomCmPerWheel { get; set; } = 2000f;
         public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
         public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
+        public string FollowCollectionKey { get; set; } = string.Empty;
         public string FollowActionId { get; set; } = "CameraLock";
         public string MoveActionId { get; set; } = "Move";
         public string ZoomActionId { get; set; } = DefaultZoomActionId;

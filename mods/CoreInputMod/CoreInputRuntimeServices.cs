@@ -9,11 +9,11 @@ namespace CoreInputMod
 {
     public static class CoreInputRuntimeServices
     {
-        public static bool TryGetEntitySelectionCallbacks(
+        public static bool TryGetCommandSourceAcquiredCallbacks(
             GameEngine engine,
             out List<Action<WorldCmInt2, Entity>> callbacks)
         {
-            return engine.TryGetService(CoreInputServiceKeys.EntitySelectionCallbacks, out callbacks);
+            return engine.TryGetService(CoreInputServiceKeys.CommandSourceAcquiredCallbacks, out callbacks);
         }
 
         public static bool TryGetViewModeManager(GameEngine engine, out ViewModeManager manager)

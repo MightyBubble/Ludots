@@ -20,14 +20,16 @@ using Ludots.Core.Scripting;
 
 namespace CoreInputMod.Systems
 {
-    public sealed class SelectedMovePathPresentationSystem : ISystem<float>
+    public sealed class CommandActorMovePathPresentationSystem : ISystem<float>
     {
-        public const string DebugSummaryKey = "CoreInputMod.SelectedMovePath.DebugSummary";
+        public delegate bool CommandSourceOwnerProvider(out Entity owner);
+
+        public const string DebugSummaryKey = "CoreInputMod.CommandActorMovePath.DebugSummary";
 
         public const string LineEventKey = "core_input.move_path.line";
         public const string WaypointEventKey = "core_input.move_path.waypoint";
 
-        private const int MaxSelectedEntities = 4;
+        private const int MaxCommandActors = 4;
         private const int MaxScopesPerActor = OrderSpatial.MaxPoints + 1;
         private const int LineScopeBase = 52000;
         private const int WaypointScopeBase = 52900;
@@ -38,9 +40,10 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly CommandSourceOwnerProvider _commandSourceOwnerProvider;
         private readonly Dictionary<ActorKey, ActorScopeState> _activeScopesByActor = new();
         private readonly List<ActorKey> _actorRemovalScratch = new(16);
-        private Entity[] _selected = new Entity[16];
+        private Entity[] _commandActors = new Entity[16];
         private int[] _moveOrderTypeIds = Array.Empty<int>();
         private bool _moveOrderTypeIdsResolved;
         private PresentationEventStream? _events;
@@ -86,10 +89,14 @@ namespace CoreInputMod.Systems
             public int TouchedFrame;
         }
 
-        public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals)
+        public CommandActorMovePathPresentationSystem(
+            World world,
+            Dictionary<string, object> globals,
+            CommandSourceOwnerProvider commandSourceOwnerProvider)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
+            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new ArgumentNullException(nameof(commandSourceOwnerProvider));
         }
 
         public void Initialize() { }
@@ -99,11 +106,11 @@ namespace CoreInputMod.Systems
 
         public void Update(in float dt)
         {
-            Entity collectionOwner = Entity.Null;
-            string collectionKey = string.Empty;
+            Entity collectionOwner = ResolveCommandSourceOwner();
+            const string collectionKey = EntityCollectionKeys.CommandSource;
             Entity collectionContext = Entity.Null;
-            Entity primaryViewed = EntityCollectionContextRuntime.TryDescribeCurrentView(_world, _globals, out EntityCollectionView currentView)
-                ? ResolveCurrentViewSummary(in currentView, out collectionOwner, out collectionKey, out collectionContext)
+            Entity primaryViewed = TryResolveCommandSourceView(collectionOwner, out EntityCollectionView commandSourceView)
+                ? ResolveCollectionViewSummary(in commandSourceView, out collectionContext)
                 : Entity.Null;
 
             int emittedLines = 0;
@@ -112,7 +119,7 @@ namespace CoreInputMod.Systems
             if (!TryResolveRuntime())
             {
                 PublishDebugState(
-                    selectionCount: 0,
+                    commandActorCount: 0,
                     emittedLines: 0,
                     emittedWaypoints: 0,
                     collectionOwner,
@@ -123,15 +130,15 @@ namespace CoreInputMod.Systems
             }
 
             int frameId = _session?.CurrentTick ?? Environment.TickCount;
-            int viewedCount = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
-            EnsureSelectedCapacity(viewedCount);
-            int count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, _selected);
+            int viewedCount = GetCommandSourceCount(collectionOwner);
+            EnsureCommandActorCapacity(viewedCount);
+            int count = CopyCommandSourceActors(collectionOwner, _commandActors);
             if (count > 0)
             {
                 int emittedEntities = 0;
-                for (int i = 0; i < count && emittedEntities < MaxSelectedEntities; i++)
+                for (int i = 0; i < count && emittedEntities < MaxCommandActors; i++)
                 {
-                    Entity actor = _selected[i];
+                    Entity actor = _commandActors[i];
                     if (!_world.IsAlive(actor) || !_world.Has<OrderBuffer>(actor))
                     {
                         continue;
@@ -147,7 +154,7 @@ namespace CoreInputMod.Systems
             EndUntouchedScopes(frameId);
             _lastProjectionSummary = $"projection=events line={emittedLines} waypoint={emittedWaypoints}";
             PublishDebugState(
-                selectionCount: count,
+                commandActorCount: count,
                 emittedLines,
                 emittedWaypoints,
                 collectionOwner,
@@ -156,14 +163,50 @@ namespace CoreInputMod.Systems
                 primaryViewed);
         }
 
-        private static Entity ResolveCurrentViewSummary(
+        private Entity ResolveCommandSourceOwner()
+        {
+            return _commandSourceOwnerProvider(out Entity owner) &&
+                   owner != Entity.Null &&
+                   _world.IsAlive(owner)
+                ? owner
+                : Entity.Null;
+        }
+
+        private bool TryResolveCommandSourceView(Entity owner, out EntityCollectionView view)
+        {
+            view = default;
+            return owner != Entity.Null &&
+                   _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                   collectionsObj is EntityCollectionStore collections &&
+                   EntityCollectionContextRuntime.TryDescribeView(
+                       collections,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out view);
+        }
+
+        private int GetCommandSourceCount(Entity owner)
+        {
+            return owner != Entity.Null &&
+                   _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                   collectionsObj is EntityCollectionStore collections
+                ? EntityCollectionContextRuntime.GetCount(collections, owner, EntityCollectionKeys.CommandSource)
+                : 0;
+        }
+
+        private int CopyCommandSourceActors(Entity owner, Span<Entity> destination)
+        {
+            return owner != Entity.Null &&
+                   _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                   collectionsObj is EntityCollectionStore collections
+                ? EntityCollectionContextRuntime.Copy(collections, owner, EntityCollectionKeys.CommandSource, destination)
+                : 0;
+        }
+
+        private static Entity ResolveCollectionViewSummary(
             in EntityCollectionView view,
-            out Entity owner,
-            out string key,
             out Entity contextEntity)
         {
-            owner = view.Owner;
-            key = view.Key;
             contextEntity = view.ContextEntity;
             return view.PrimaryEntity;
         }
@@ -509,12 +552,12 @@ namespace CoreInputMod.Systems
 
             if (!_events!.TryAdd(in evt))
             {
-                throw new InvalidOperationException("PresentationEventStream is full while publishing selected move path event.");
+                throw new InvalidOperationException("PresentationEventStream is full while publishing command actor move path event.");
             }
         }
 
         private void PublishDebugState(
-            int selectionCount,
+            int commandActorCount,
             int emittedLines,
             int emittedWaypoints,
             Entity collectionOwner,
@@ -523,7 +566,7 @@ namespace CoreInputMod.Systems
             Entity primaryViewed)
         {
             string summary = BuildDebugSummary(
-                selectionCount,
+                commandActorCount,
                 emittedLines,
                 emittedWaypoints,
                 collectionOwner,
@@ -534,7 +577,7 @@ namespace CoreInputMod.Systems
         }
 
         private string BuildDebugSummary(
-            int selectionCount,
+            int commandActorCount,
             int emittedLines,
             int emittedWaypoints,
             Entity collectionOwner,
@@ -584,7 +627,7 @@ namespace CoreInputMod.Systems
             return
                 $"{_lastProjectionSummary} " +
                 $"owner={DescribeEntity(collectionOwner)} collection={collectionKey} context={DescribeEntity(collectionContext)} " +
-                $"selCount={selectionCount} primary={DescribeEntity(primaryViewed)} " +
+                $"commandActorCount={commandActorCount} primary={DescribeEntity(primaryViewed)} " +
                 $"inspect={DescribeEntity(inspected)} orderBuf={hasOrderBuffer} activeMove={activeMoveCount} queuedMove={queuedMoveCount} " +
                 $"pos2D={hasPosition2D} {positionSummary} {worldSummary} " +
                 $"events+line={emittedLines} events+waypoint={emittedWaypoints}";
@@ -615,7 +658,7 @@ namespace CoreInputMod.Systems
             if (commandSourceConfig == null)
             {
                 throw new InvalidOperationException(
-                    "game.commandSource must be configured before SelectedMovePathPresentationSystem resolves move path preview order types.");
+                    "game.commandSource must be configured before CommandActorMovePathPresentationSystem resolves move path preview order types.");
             }
 
             moveOrderTypeIds = ResolveMoveOrderTypeIds(commandSourceConfig, orderTypes);
@@ -630,7 +673,7 @@ namespace CoreInputMod.Systems
             if (orderTypeKeys.Length == 0)
             {
                 throw new InvalidOperationException(
-                    "commandSource.movePathPreviewOrderTypeKeys must explicitly list order types that SelectedMovePathPresentationSystem may preview.");
+                    "commandSource.movePathPreviewOrderTypeKeys must explicitly list order types that CommandActorMovePathPresentationSystem may preview.");
             }
 
             int[] ids = new int[orderTypeKeys.Length];
@@ -734,20 +777,20 @@ namespace CoreInputMod.Systems
             }
         }
 
-        private void EnsureSelectedCapacity(int required)
+        private void EnsureCommandActorCapacity(int required)
         {
-            if (required <= _selected.Length)
+            if (required <= _commandActors.Length)
             {
                 return;
             }
 
-            int next = _selected.Length;
+            int next = _commandActors.Length;
             while (next < required)
             {
                 next *= 2;
             }
 
-            Array.Resize(ref _selected, next);
+            Array.Resize(ref _commandActors, next);
         }
     }
 }

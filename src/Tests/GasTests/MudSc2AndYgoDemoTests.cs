@@ -197,7 +197,7 @@ namespace Ludots.Tests.GAS
 
                 var empExec = default(AbilityExecSpec);
                 empExec.ClockId = GasClockId.Step;
-                empExec.SetItem(0, ExecItemKind.SelectionGate, tick: 0);
+                empExec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0);
                 empExec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);
                 empExec.SetItem(2, ExecItemKind.End, tick: 0);
                 var empAbility = world.Create(new AbilityTemplate(), empExec);

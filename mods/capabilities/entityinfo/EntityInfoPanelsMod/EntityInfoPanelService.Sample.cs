@@ -329,31 +329,7 @@ public sealed partial class EntityInfoPanelService
         uint revision = 0;
 
         EntityInfoPanelTarget target = _targets[slot];
-        if (target.Kind == EntityInfoPanelTargetKind.CurrentSelectionView &&
-            EntityCollectionContextRuntime.TryResolveCurrentCollection(
-                world,
-                globals,
-                out _,
-                out collectionHandle,
-                out EntityCollectionView currentView))
-        {
-            container = currentView.ContextEntity;
-            primary = currentView.PrimaryEntity;
-            owner = currentView.Owner;
-            sourceKind = currentView.SourceKind;
-            viewKey = currentView.Key;
-            setKey = currentView.Key;
-            count = currentView.Count;
-            revision = currentView.Revision;
-            sourceTitle = string.IsNullOrWhiteSpace(currentView.Title)
-                ? currentView.Key
-                : currentView.Title;
-            sourceSummary = string.IsNullOrWhiteSpace(currentView.Summary)
-                ? $"{currentView.Key} | {currentView.Count} entities"
-                : currentView.Summary;
-            dirty |= SetString(_subtitles, slot, sourceSummary);
-        }
-        else if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
+        if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
                  TryResolveEntityCollectionSource(world, globals, target, out EntityCollectionView collectionView, out collectionHandle))
         {
             owner = collectionView.Owner;
@@ -367,6 +343,7 @@ public sealed partial class EntityInfoPanelService
             sourceSummary = string.IsNullOrWhiteSpace(collectionView.Summary)
                 ? $"{collectionView.Key} | {collectionView.Count} entities"
                 : collectionView.Summary;
+            viewKey = collectionView.Key;
             setKey = collectionView.Key;
             dirty |= SetString(_subtitles, slot, sourceSummary);
         }
@@ -464,14 +441,14 @@ public sealed partial class EntityInfoPanelService
     {
         return target.Kind == EntityInfoPanelTargetKind.EntityCollection
             ? "Entity collection unavailable"
-            : "Current viewed selection";
+            : "Target collection unavailable";
     }
 
     private static string ResolveMissingCollectionSummary(in EntityInfoPanelTarget target)
     {
         return target.Kind == EntityInfoPanelTargetKind.EntityCollection
             ? $"Missing collection source '{target.Key}'."
-            : "No active selection view.";
+            : "No entity collection target configured.";
     }
 
     private bool RebuildEntityCollectionCategories(int slot, World world, Entity primary, int count)

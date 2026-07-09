@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Vector  // 起点+终点
+  targetType: Vector  // 起点+终点
   isSkillMapping: true
 ```
 
@@ -60,6 +60,6 @@ AbilityExecSpec:
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| Vector input mode | P2 | selectionType: Vector |
+| Vector input mode | P2 | targetType: Vector |
 | Two-point drag UI | P2 | 起点+拖拽终点交互 |
 | Rectangle sweep | P2 | 沿矢量路径的矩形搜索 |

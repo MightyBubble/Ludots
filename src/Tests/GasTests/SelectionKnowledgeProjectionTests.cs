@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -54,7 +54,7 @@ public sealed class SelectionKnowledgeProjectionTests
                 directLive,
                 lastKnown);
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1000f, 1000f));
             AssertCommandSource(collections, local);
@@ -92,7 +92,7 @@ public sealed class SelectionKnowledgeProjectionTests
             store.Upsert(local, hostile, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, local));
             globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(2000f, 1000f));
 
@@ -314,6 +314,21 @@ public sealed class SelectionKnowledgeProjectionTests
         input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
         input.Update();
         system.Update(0f);
+    }
+
+    private static CommandSourceAcquisitionSystem CreateCommandSourceAcquisitionSystem(
+        World world,
+        Dictionary<string, object> globals,
+        Entity owner)
+    {
+        return new CommandSourceAcquisitionSystem(
+            world,
+            globals,
+            (out Entity resolvedOwner) =>
+            {
+                resolvedOwner = owner;
+                return owner != Entity.Null && world.IsAlive(owner);
+            });
     }
 
     private static void DragSelect(

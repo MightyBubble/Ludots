@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillQ"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
   argsTemplate: { i0: 0 }  // ability slot
 ```
@@ -77,7 +77,7 @@ EffectTemplate:
 需求: TargetFilter 需支持 "DeadAlly" 过滤
 实现:
   1. 死亡单位保留 Entity (添加 "dead" tag, 不立即销毁)
-  2. SelectionRule 新增: filter=DeadFriendly
+  2. TargetFilter 新增: filter=DeadFriendly
   3. Ability Phase Graph:
      a. 检查 target HasTag("dead")
      b. RemoveTag("dead"), SetAttribute(health, base_health * 0.5)
@@ -88,10 +88,10 @@ EffectTemplate:
 ### C5: 地形/可破坏物
 
 ```
-需求: SelectionRule 支持 EntityLayer filter
+需求: TargetFilter 支持 EntityLayer filter
 实现:
   1. 树木/石头等设为特定 EntityLayer (Destructible)
-  2. SelectionRule: filter=Destructible layer
+  2. TargetFilter: filter=Destructible layer
   3. Phase Graph 处理: 对可破坏物施加效果 (HP减为0等)
 ```
 
@@ -102,7 +102,7 @@ EffectTemplate:
 ```
 实现:
   1. 召唤物有 "summoned" tag + owner entity ref (Blackboard)
-  2. SelectionRule: filter=OwnedSummon (custom)
+  2. TargetFilter: filter=OwnedSummon (custom)
   3. Phase Graph: 通过 Blackboard 给召唤物写新目标/命令
 ```
 
@@ -160,6 +160,6 @@ AbilityExecSpec:
 
 | 需求 | 优先级 | 清单项 |
 |------|--------|--------|
-| SelectionRule 支持 DeadFriendly filter | P1 | C4 |
+| TargetFilter 支持 DeadFriendly filter | P1 | C4 |
 | LastUsedAbilityId 记录 + 动态 ability slot 写入 | P2 | C7 |
 | Tether 组件 (持续距离监测 + 断裂) | P1 | C9 |

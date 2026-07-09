@@ -6,6 +6,7 @@ namespace CoreInputMod.ViewMode
         public string DisplayName { get; set; } = "";
         public string VirtualCameraId { get; set; } = "Default";
         public string FollowTargetKind { get; set; } = "None";
+        public string FollowCollectionKey { get; set; } = "";
         public string InputContextId { get; set; } = "";
         public string InteractionMode { get; set; } = "SmartCast";
         public string[]? SkillBarKeyLabels { get; set; }

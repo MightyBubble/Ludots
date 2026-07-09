@@ -176,7 +176,7 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void SelectedGroupFollowTarget_UsesViewedSelectionCentroid_AndTracksViewedPrimarySelection()
+        public void EntityCollectionGroupFollowTarget_UsesExplicitCollectionCentroid_AndTracksPrimary()
         {
             using var world = World.Create();
             var globals = new Dictionary<string, object>();
@@ -193,13 +193,14 @@ namespace Ludots.Tests.ThreeC
 
             ReplaceCommandSource(collections, selector, light, heavy);
 
-            var target = new SelectedGroupFollowTarget(world, globals);
+            var target = new EntityCollectionGroupFollowTarget(world, collections, selector, EntityCollectionKeys.CommandSource);
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
             ReplaceCommandSource(collections, selector, light);
-            Assert.That(EntityCollectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
+            Assert.That(collections.TryGet(selector, EntityCollectionKeys.CommandSource, out EntityCollectionHandle handle), Is.True);
+            Assert.That(collections.TryGetEntityAt(handle, 0, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 
             Assert.That(target.TryGetPosition(out var fallback), Is.True);

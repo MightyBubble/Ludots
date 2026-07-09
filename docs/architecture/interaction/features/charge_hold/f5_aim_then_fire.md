@@ -19,7 +19,7 @@ L2 (Aim) mapping:
   actionId: "Aim"
   trigger: PressedThisFrame
   orderTypeKey: "aim_mode"
-  selectionType: None
+  targetType: None
   isSkillMapping: false
   heldPolicy: StartEnd
 
@@ -27,7 +27,7 @@ R1/R2 (Fire) mapping:
   actionId: "Fire"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Direction
+  targetType: Direction
   isSkillMapping: true
   // 仅在 HasTag("aiming") 时有效 → precondition 检查
 ```

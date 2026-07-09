@@ -29,7 +29,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
-    public sealed class SelectedMovePathPresentationSystemTests
+    public sealed class CommandActorMovePathPresentationSystemTests
     {
         private const int MoveToOrderTypeId = 101;
         private const int MassNavigationMoveOrderTypeId = 172;
@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void UpdateViewedSelection_PublishesMovePathEventsForActiveAndQueuedMoveOrders()
         {
-            using var fixture = SelectedMovePathFixture.Create(MoveToOrderKey);
+            using var fixture = CommandActorMovePathFixture.Create(MoveToOrderKey);
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
@@ -48,10 +48,10 @@ namespace Ludots.Tests.GAS
 
             fixture.System.Update(0.016f);
 
-            PresentationEvent[] lineBegun = fixture.EventsOf(PresentationEventKind.MovePathBegun, SelectedMovePathPresentationSystem.LineEventKey);
-            PresentationEvent[] lineUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.LineEventKey);
-            PresentationEvent[] waypointBegun = fixture.EventsOf(PresentationEventKind.MovePathBegun, SelectedMovePathPresentationSystem.WaypointEventKey);
-            PresentationEvent[] waypointUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.WaypointEventKey);
+            PresentationEvent[] lineBegun = fixture.EventsOf(PresentationEventKind.MovePathBegun, CommandActorMovePathPresentationSystem.LineEventKey);
+            PresentationEvent[] lineUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.LineEventKey);
+            PresentationEvent[] waypointBegun = fixture.EventsOf(PresentationEventKind.MovePathBegun, CommandActorMovePathPresentationSystem.WaypointEventKey);
+            PresentationEvent[] waypointUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.WaypointEventKey);
 
             Assert.That(lineBegun.Length, Is.EqualTo(2));
             Assert.That(lineUpdated.Length, Is.EqualTo(2));
@@ -71,7 +71,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void UpdateViewedSelection_UsesConfiguredMoveOrderTypeKeys()
         {
-            using var fixture = SelectedMovePathFixture.Create(MoveToOrderKey, MassNavigationMoveOrderKey);
+            using var fixture = CommandActorMovePathFixture.Create(MoveToOrderKey, MassNavigationMoveOrderKey);
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
@@ -79,8 +79,8 @@ namespace Ludots.Tests.GAS
 
             fixture.System.Update(0.016f);
 
-            PresentationEvent[] lineUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.LineEventKey);
-            PresentationEvent[] waypointUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.WaypointEventKey);
+            PresentationEvent[] lineUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.LineEventKey);
+            PresentationEvent[] waypointUpdated = fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.WaypointEventKey);
             Assert.That(lineUpdated.Length, Is.EqualTo(1));
             Assert.That(waypointUpdated.Length, Is.EqualTo(1));
             Assert.That(lineUpdated[0].FloatA, Is.EqualTo(WorldUnits.CmToM(MathF.Sqrt((450f * 450f) + (250f * 250f)))).Within(0.001f));
@@ -91,7 +91,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void UpdateViewedSelection_AuthoredRoutePastCapacityPublishesCappedEvents()
         {
-            using var fixture = SelectedMovePathFixture.Create(MoveToOrderKey);
+            using var fixture = CommandActorMovePathFixture.Create(MoveToOrderKey);
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
@@ -99,17 +99,17 @@ namespace Ludots.Tests.GAS
 
             Assert.DoesNotThrow(() => fixture.System.Update(0.016f));
             Assert.That(
-                fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.LineEventKey).Length,
+                fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.LineEventKey).Length,
                 Is.EqualTo(OrderSpatial.MaxPoints));
             Assert.That(
-                fixture.EventsOf(PresentationEventKind.MovePathUpdated, SelectedMovePathPresentationSystem.WaypointEventKey).Length,
+                fixture.EventsOf(PresentationEventKind.MovePathUpdated, CommandActorMovePathPresentationSystem.WaypointEventKey).Length,
                 Is.EqualTo(OrderSpatial.MaxPoints));
         }
 
         [Test]
         public void PerformerRules_ConsumeMovePathEvents_AsScopedGroundOverlayPerformers()
         {
-            using var fixture = SelectedMovePathFixture.Create(MoveToOrderKey);
+            using var fixture = CommandActorMovePathFixture.Create(MoveToOrderKey);
             Entity actor = fixture.CreateSelectedActor(WorldPositionCm.FromCm(0, 0));
 
             ref OrderBuffer orders = ref fixture.World.Get<OrderBuffer>(actor);
@@ -131,10 +131,10 @@ namespace Ludots.Tests.GAS
 
             fixture.System.Update(0.016f);
             Assert.That(
-                fixture.EventsOf(PresentationEventKind.MovePathEnded, SelectedMovePathPresentationSystem.LineEventKey).Length,
+                fixture.EventsOf(PresentationEventKind.MovePathEnded, CommandActorMovePathPresentationSystem.LineEventKey).Length,
                 Is.EqualTo(1));
             Assert.That(
-                fixture.EventsOf(PresentationEventKind.MovePathEnded, SelectedMovePathPresentationSystem.WaypointEventKey).Length,
+                fixture.EventsOf(PresentationEventKind.MovePathEnded, CommandActorMovePathPresentationSystem.WaypointEventKey).Length,
                 Is.EqualTo(1));
             fixture.Performers.Tick();
 
@@ -193,17 +193,17 @@ namespace Ludots.Tests.GAS
             return order;
         }
 
-        private sealed class SelectedMovePathFixture : IDisposable
+        private sealed class CommandActorMovePathFixture : IDisposable
         {
             private readonly Entity _viewer;
             private readonly EntityCollectionStore _collections;
 
-            private SelectedMovePathFixture(
+            private CommandActorMovePathFixture(
                 World world,
                 Entity viewer,
                 EntityCollectionStore collections,
                 PresentationEventStream events,
-                SelectedMovePathPresentationSystem system,
+                CommandActorMovePathPresentationSystem system,
                 PerformerMovePathFixture performers)
             {
                 World = world;
@@ -216,10 +216,10 @@ namespace Ludots.Tests.GAS
 
             public World World { get; }
             public PresentationEventStream Events { get; }
-            public SelectedMovePathPresentationSystem System { get; }
+            public CommandActorMovePathPresentationSystem System { get; }
             public PerformerMovePathFixture Performers { get; }
 
-            public static SelectedMovePathFixture Create(params string[] previewOrderTypeKeys)
+            public static CommandActorMovePathFixture Create(params string[] previewOrderTypeKeys)
             {
                 World world = World.Create();
                 var commandSourceConfig = new CommandSourceAcquisitionConfig
@@ -238,12 +238,18 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.GameSession.Name] = new GameSession(),
                     [CoreServiceKeys.GameConfig.Name] = new GameConfig { CommandSource = commandSourceConfig },
                     [CoreServiceKeys.OrderTypeRegistry.Name] = CreateOrderTypeRegistry(),
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                     [CoreServiceKeys.EntityCollectionStore.Name] = collections,
                     [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 };
-                var system = new SelectedMovePathPresentationSystem(world, globals);
-                return new SelectedMovePathFixture(
+                var system = new CommandActorMovePathPresentationSystem(
+                    world,
+                    globals,
+                    (out Entity owner) =>
+                    {
+                        owner = viewer;
+                        return world.IsAlive(viewer);
+                    });
+                return new CommandActorMovePathFixture(
                     world,
                     viewer,
                     collections,
@@ -411,14 +417,14 @@ namespace Ludots.Tests.GAS
                 {
                     Rules =
                     [
-                        CreateRule(SelectedMovePathPresentationSystem.LineEventKey, lineId),
-                        FloatParamRule(SelectedMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayLength, PerformerCommandValueSource.EventFloatA),
-                        FloatParamRule(SelectedMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayWidth, PerformerCommandValueSource.EventFloatB),
-                        FloatParamRule(SelectedMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayRotation, PerformerCommandValueSource.EventFloatC),
-                        EndRule(SelectedMovePathPresentationSystem.LineEventKey, lineId),
-                        CreateRule(SelectedMovePathPresentationSystem.WaypointEventKey, waypointId),
-                        FloatParamRule(SelectedMovePathPresentationSystem.WaypointEventKey, waypointId, WellKnownPerformerParamKeys.OverlayRadius, PerformerCommandValueSource.EventFloatA),
-                        EndRule(SelectedMovePathPresentationSystem.WaypointEventKey, waypointId),
+                        CreateRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayLength, PerformerCommandValueSource.EventFloatA),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayWidth, PerformerCommandValueSource.EventFloatB),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId, WellKnownPerformerParamKeys.OverlayRotation, PerformerCommandValueSource.EventFloatC),
+                        EndRule(CommandActorMovePathPresentationSystem.LineEventKey, lineId),
+                        CreateRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId),
+                        FloatParamRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId, WellKnownPerformerParamKeys.OverlayRadius, PerformerCommandValueSource.EventFloatA),
+                        EndRule(CommandActorMovePathPresentationSystem.WaypointEventKey, waypointId),
                     ]
                 });
             }

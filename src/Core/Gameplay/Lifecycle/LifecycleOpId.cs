@@ -8,7 +8,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
         CopyAttributeSlice = 2,
         ClearActiveEffects = 3,
         TransferStableId = 4,
-        RewireSelection = 5,
         ConsumeEntity = 6,
     }
 }

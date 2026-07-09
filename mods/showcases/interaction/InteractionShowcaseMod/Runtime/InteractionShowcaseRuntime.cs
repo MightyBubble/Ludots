@@ -60,7 +60,7 @@ namespace InteractionShowcaseMod.Runtime
                 SuppressNonEssentialHud(engine);
                 EnsureShowcaseLocalPlayer(engine, activeMapId!);
                 PublishShowcaseKnowledge(engine, activeMapId!);
-                EnsureShowcaseSelectionView(engine);
+                EnsureShowcaseCommandSourceView(engine);
                 CloseEntityInfoPanels(context);
                 RefreshPanel(engine);
             }
@@ -167,7 +167,10 @@ namespace InteractionShowcaseMod.Runtime
                 return false;
             }
 
-            Entity[] current = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] current = EntityCollectionContextRuntime.Snapshot(
+                engine.GlobalContext,
+                viewer,
+                EntityCollectionKeys.CommandSource);
             if (current.Length <= 0)
             {
                 return false;
@@ -202,7 +205,9 @@ namespace InteractionShowcaseMod.Runtime
         public bool ShowLiveSelection(GameEngine engine)
         {
             engine.GlobalContext[InteractionShowcaseIds.ActiveControlGroupKey] = 0;
-            return EntityCollectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out _);
+            return TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer) &&
+                   collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView view) &&
+                   view.Count > 0;
         }
 
         public bool ShowFormationSelection(GameEngine engine)
@@ -304,6 +309,11 @@ namespace InteractionShowcaseMod.Runtime
                 return;
             }
 
+            if (!TryResolveCommandSourceOwner(engine, out Arch.Core.Entity commandSourceOwner))
+            {
+                return;
+            }
+
             OpenOrUpdate(
                 context,
                 handles,
@@ -311,7 +321,7 @@ namespace InteractionShowcaseMod.Runtime
                 new EntityInfoPanelRequest(
                     EntityInfoPanelKind.EntityCollectionInspector,
                     EntityInfoPanelSurface.Ui,
-                    EntityInfoPanelTarget.CurrentSelectionView(),
+                    EntityInfoPanelTarget.EntityCollection(commandSourceOwner, EntityCollectionKeys.CommandSource),
                     new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 632f, 332f),
                     EntityInfoGasDetailFlags.None,
                     true));
@@ -370,14 +380,27 @@ namespace InteractionShowcaseMod.Runtime
 
         private static EntityInfoPanelTarget? TryResolveSelectedTarget(GameEngine engine)
         {
-            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Arch.Core.Entity selected) ||
-                selected == Arch.Core.Entity.Null ||
-                !engine.World.IsAlive(selected))
+            if (!TryResolveCommandSourceOwner(engine, out Arch.Core.Entity commandSourceOwner) ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !EntityCollectionContextRuntime.TryGetPrimary(
+                    engine.World,
+                    collections,
+                    commandSourceOwner,
+                    EntityCollectionKeys.CommandSource,
+                    out Arch.Core.Entity selected))
             {
                 return null;
             }
 
             return EntityInfoPanelTarget.Fixed(selected);
+        }
+
+        private static bool TryResolveCommandSourceOwner(GameEngine engine, out Arch.Core.Entity owner)
+        {
+            owner = Arch.Core.Entity.Null;
+            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner) &&
+                   owner != Arch.Core.Entity.Null &&
+                   engine.World.IsAlive(owner);
         }
 
         private static bool OpenOrUpdate(
@@ -666,30 +689,30 @@ namespace InteractionShowcaseMod.Runtime
                    string.Equals(mapEntity.MapId.Value, activeMapId, StringComparison.OrdinalIgnoreCase);
         }
 
-        private void EnsureShowcaseSelectionView(GameEngine engine)
+        private void EnsureShowcaseCommandSourceView(GameEngine engine)
         {
             if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
             {
                 return;
             }
 
-            Span<Entity> initialSelection = stackalloc Entity[3];
+            Span<Entity> initialCommandActors = stackalloc Entity[3];
             int count = 0;
-            AddInitialSelection(engine, InteractionShowcaseIds.ArcweaverName, initialSelection, ref count);
-            AddInitialSelection(engine, InteractionShowcaseIds.VanguardName, initialSelection, ref count);
-            AddInitialSelection(engine, InteractionShowcaseIds.CommanderName, initialSelection, ref count);
+            AddInitialCommandActor(engine, InteractionShowcaseIds.ArcweaverName, initialCommandActors, ref count);
+            AddInitialCommandActor(engine, InteractionShowcaseIds.VanguardName, initialCommandActors, ref count);
+            AddInitialCommandActor(engine, InteractionShowcaseIds.CommanderName, initialCommandActors, ref count);
             if (count > 0)
             {
                 if (!collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView commandView) ||
                     commandView.Count <= 0)
                 {
-                    PublishShowcaseCommandSource(engine, viewer, initialSelection[..count]);
+                    PublishShowcaseCommandSource(engine, viewer, initialCommandActors[..count]);
                 }
 
                 if (!IsSpecializedInteractionShowcaseActive(engine))
                 {
-                    PublishShowcaseCommandSource(engine, viewer, initialSelection[..count]);
-                    TrySeedHoverTargetForVisibleUat(engine, viewer, initialSelection[..count]);
+                    PublishShowcaseCommandSource(engine, viewer, initialCommandActors[..count]);
+                    TrySeedHoverTargetForVisibleUat(engine, viewer, initialCommandActors[..count]);
                 }
             }
         }
@@ -764,7 +787,7 @@ namespace InteractionShowcaseMod.Runtime
             collections.Replace(viewer, in descriptor, rows, viewer);
         }
 
-        private static void AddInitialSelection(GameEngine engine, string entityName, Span<Entity> destination, ref int count)
+        private static void AddInitialCommandActor(GameEngine engine, string entityName, Span<Entity> destination, ref int count)
         {
             if ((uint)count >= (uint)destination.Length)
             {

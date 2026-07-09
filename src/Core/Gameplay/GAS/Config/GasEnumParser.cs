@@ -194,7 +194,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CopyAttributeSlice", BuiltinHandlerId.CopyAttributeSlice },
             { "ClearActiveEffects", BuiltinHandlerId.ClearActiveEffects },
             { "TransferStableId", BuiltinHandlerId.TransferStableId },
-            { "RewireSelection", BuiltinHandlerId.RewireSelection },
             { "ConsumeEntity", BuiltinHandlerId.ConsumeEntity },
         };
 

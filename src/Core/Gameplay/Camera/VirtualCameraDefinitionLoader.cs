@@ -90,6 +90,7 @@ namespace Ludots.Core.Gameplay.Camera
                         ZoomCmPerWheel = config.ZoomCmPerWheel,
                         FollowMode = config.FollowMode,
                         FollowTargetKind = config.FollowTargetKind,
+                        FollowCollectionKey = config.FollowCollectionKey,
                         FollowActionId = config.FollowActionId,
                         MoveActionId = config.MoveActionId,
                         ZoomActionId = config.ZoomActionId,
@@ -166,6 +167,7 @@ namespace Ludots.Core.Gameplay.Camera
             public float ZoomCmPerWheel { get; set; } = 2000f;
             public CameraFollowMode FollowMode { get; set; } = CameraFollowMode.None;
             public CameraFollowTargetKind FollowTargetKind { get; set; } = CameraFollowTargetKind.None;
+            public string FollowCollectionKey { get; set; } = string.Empty;
             public string FollowActionId { get; set; } = "CameraLock";
             public string MoveActionId { get; set; } = "Move";
             public string ZoomActionId { get; set; } = VirtualCameraDefinition.DefaultZoomActionId;

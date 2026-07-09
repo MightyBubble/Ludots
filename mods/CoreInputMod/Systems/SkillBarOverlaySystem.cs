@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Camera;
@@ -12,6 +13,8 @@ namespace CoreInputMod.Systems
 {
     public sealed class SkillBarOverlaySystem : ISystem<float>
     {
+        public delegate bool CommandSourceOwnerProvider(out Entity owner);
+
         public const string SkillBarKeyLabelsKey = "CoreInputMod.SkillBarKeyLabels";
         public const string SkillBarEnabledKey = "CoreInputMod.SkillBarEnabled";
 
@@ -28,11 +31,16 @@ namespace CoreInputMod.Systems
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly CommandSourceOwnerProvider _commandSourceOwnerProvider;
 
-        public SkillBarOverlaySystem(World world, Dictionary<string, object> globals)
+        public SkillBarOverlaySystem(
+            World world,
+            Dictionary<string, object> globals,
+            CommandSourceOwnerProvider commandSourceOwnerProvider)
         {
             _world = world;
             _globals = globals;
+            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new System.ArgumentNullException(nameof(commandSourceOwnerProvider));
         }
 
         public void Initialize() { }
@@ -97,19 +105,38 @@ namespace CoreInputMod.Systems
 
         private Entity GetControlledEntity()
         {
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out Entity selected) &&
-                _world.IsAlive(selected) &&
-                _world.Has<AbilityStateBuffer>(selected))
+            Entity owner = TryResolveCommandSourceOwner();
+            if (owner != Entity.Null &&
+                TryGetCommandSourcePrimary(owner, out Entity commandSourcePrimary) &&
+                _world.Has<AbilityStateBuffer>(commandSourcePrimary))
             {
-                return selected;
+                return commandSourcePrimary;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) && localObj is Entity local)
-            {
-                return local;
-            }
+            return owner;
+        }
 
-            return default;
+        private Entity TryResolveCommandSourceOwner()
+        {
+            return _commandSourceOwnerProvider(out Entity owner) &&
+                   owner != Entity.Null &&
+                   _world.IsAlive(owner)
+                ? owner
+                : Entity.Null;
+        }
+
+        private bool TryGetCommandSourcePrimary(Entity owner, out Entity entity)
+        {
+            entity = Entity.Null;
+            return owner != Entity.Null &&
+                   _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                   collectionsObj is EntityCollectionStore collections &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       _world,
+                       collections,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out entity);
         }
 
         public void BeforeUpdate(in float dt) { }

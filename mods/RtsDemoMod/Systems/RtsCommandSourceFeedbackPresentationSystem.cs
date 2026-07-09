@@ -15,11 +15,11 @@ using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Systems
 {
-    public sealed class RtsSelectionFeedbackPresentationSystem : ISystem<float>
+    public sealed class RtsCommandSourceFeedbackPresentationSystem : ISystem<float>
     {
-        private const string PrimaryRingKey = "rts.selection.primary_ring";
-        private const string QueueRingKey = "rts.selection.queue_ring";
-        private const string ProgressBarKey = "rts.selection.progress_bar";
+        private const string PrimaryRingKey = "rts.command_source.primary_ring";
+        private const string QueueRingKey = "rts.command_source.queue_ring";
+        private const string ProgressBarKey = "rts.command_source.progress_bar";
 
         private readonly GameEngine _engine;
         private readonly PresentationWorldFactPublisher _facts;
@@ -32,7 +32,7 @@ namespace RtsDemoMod.Systems
         private int _activeProgressScope;
         private float _elapsedSeconds;
 
-        public RtsSelectionFeedbackPresentationSystem(GameEngine engine)
+        public RtsCommandSourceFeedbackPresentationSystem(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
             if (!PresentationWorldFactPublisher.TryCreate(engine.GlobalContext, out _facts))
@@ -55,30 +55,30 @@ namespace RtsDemoMod.Systems
         {
             _elapsedSeconds += MathF.Max(0f, dt);
             if (!IsRtsMapActive() ||
-                !RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity selected) ||
-                !_engine.World.IsAlive(selected) ||
-                !TryResolveWorldPosition(selected, out Vector3 center))
+                !RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity commandSource) ||
+                !_engine.World.IsAlive(commandSource) ||
+                !TryResolveWorldPosition(commandSource, out Vector3 center))
             {
                 EndAllActiveFacts();
                 return;
             }
 
-            bool hasQueue = _engine.World.TryGet(selected, out OrderBuffer orders) &&
+            bool hasQueue = _engine.World.TryGet(commandSource, out OrderBuffer orders) &&
                             (orders.HasActive || orders.QueuedCount > 0 || orders.HasPending);
 
-            EmitSelectionRing(selected, center, PrimaryRingKey, ref _activePrimaryOwner, ref _activePrimaryScope, pulseScale: 1f);
+            EmitCommandSourceRing(commandSource, center, PrimaryRingKey, ref _activePrimaryOwner, ref _activePrimaryScope, pulseScale: 1f);
             if (hasQueue)
             {
-                EmitSelectionRing(selected, center, QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope, pulseScale: 1.18f);
+                EmitCommandSourceRing(commandSource, center, QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope, pulseScale: 1.18f);
             }
             else
             {
                 EndActiveOverlay(QueueRingKey, ref _activeQueueOwner, ref _activeQueueScope);
             }
 
-            if (TryResolveProgress(selected, out float progressRatio))
+            if (TryResolveProgress(commandSource, out float progressRatio))
             {
-                EmitProgressBar(selected, center, progressRatio);
+                EmitProgressBar(commandSource, center, progressRatio);
             }
             else
             {
@@ -94,7 +94,7 @@ namespace RtsDemoMod.Systems
         {
         }
 
-        private void EmitSelectionRing(Entity owner, Vector3 center, string key, ref Entity activeOwner, ref int activeScope, float pulseScale)
+        private void EmitCommandSourceRing(Entity owner, Vector3 center, string key, ref Entity activeOwner, ref int activeScope, float pulseScale)
         {
             EndIfOwnerChanged(key, owner, ref activeOwner, ref activeScope, isHud: false);
             float pulse = 1f + 0.06f * MathF.Sin(_elapsedSeconds * 5.4f);
@@ -123,10 +123,10 @@ namespace RtsDemoMod.Systems
                 Math.Clamp(progressRatio, 0f, 1f));
         }
 
-        private bool TryResolveProgress(Entity selected, out float progressRatio)
+        private bool TryResolveProgress(Entity commandSource, out float progressRatio)
         {
             progressRatio = 0f;
-            if (_engine.World.TryGet(selected, out AbilityExecInstance exec))
+            if (_engine.World.TryGet(commandSource, out AbilityExecInstance exec))
             {
                 int totalTicks = ResolveExecTotalTicks(exec.AbilityId, exec.IsToggleDeactivating);
                 if (totalTicks <= 0)
@@ -138,7 +138,7 @@ namespace RtsDemoMod.Systems
                 return true;
             }
 
-            if (_engine.World.TryGet(selected, out ActiveEffectContainer effects))
+            if (_engine.World.TryGet(commandSource, out ActiveEffectContainer effects))
             {
                 for (int i = 0; i < effects.Count; i++)
                 {
@@ -183,15 +183,15 @@ namespace RtsDemoMod.Systems
             return total;
         }
 
-        private bool TryResolveWorldPosition(Entity selected, out Vector3 center)
+        private bool TryResolveWorldPosition(Entity commandSource, out Vector3 center)
         {
-            if (_engine.World.TryGet(selected, out VisualTransform visual))
+            if (_engine.World.TryGet(commandSource, out VisualTransform visual))
             {
                 center = visual.Position;
                 return true;
             }
 
-            if (_engine.World.TryGet(selected, out WorldPositionCm worldPosition))
+            if (_engine.World.TryGet(commandSource, out WorldPositionCm worldPosition))
             {
                 center = new Vector3(
                     worldPosition.Value.X.ToFloat() * 0.01f,

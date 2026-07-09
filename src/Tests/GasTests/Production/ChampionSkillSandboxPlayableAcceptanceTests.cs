@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1842,7 +1842,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
         {
-            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] selected = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
             return selected.Select(entity => ReadEntityName(engine.World, entity))
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .ToArray();
@@ -1889,7 +1889,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -1985,7 +1985,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string ReadHoveredEntityName(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.TryGet(hovered, out Name name)
                 ? name.Value
@@ -2576,7 +2576,7 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"mappingAiming={mapping.IsAiming}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
-                    details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"TargetType={actionMapping.TargetType}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
             }
@@ -2623,7 +2623,7 @@ namespace Ludots.Tests.GAS.Production
                 $"selected={GetSelectedEntityName(engine)}"
             };
 
-            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -2677,7 +2677,7 @@ namespace Ludots.Tests.GAS.Production
                 $"orderQueue={orderQueue.Count}"
             };
 
-            if (EntityCollectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out EntityCollectionView currentView))
+            if (Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView currentView))
             {
                 details.Add($"currentView owner={DescribeEntity(engine.World, currentView.Owner)} key={currentView.Key} count={currentView.Count} primary={DescribeEntity(engine.World, currentView.PrimaryEntity)}");
             }
@@ -2842,7 +2842,7 @@ namespace Ludots.Tests.GAS.Production
             string actorName,
             int baselineMoveLines)
         {
-            string debugSummary = engine.GlobalContext.TryGetValue(SelectedMovePathPresentationSystem.DebugSummaryKey, out object? summaryObj)
+            string debugSummary = engine.GlobalContext.TryGetValue(CommandActorMovePathPresentationSystem.DebugSummaryKey, out object? summaryObj)
                 ? summaryObj?.ToString() ?? "<null>"
                 : "<missing>";
             string lastGround = engine.GlobalContext.TryGetValue(LocalOrderSourceHelper.LastGroundWorldDebugKey, out object? lastGroundObj)

@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "id": "Camera.Acceptance.Profile.ProjectionFixed",
     "displayName": "Projection Acceptance Fixed",
@@ -96,7 +96,8 @@
     "enableZoom": true,
     "zoomCmPerWheel": 120,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "SelectedEntity",
+    "followTargetKind": "EntityCollectionPrimary",
+    "followCollectionKey": "collection.command.source",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true
@@ -122,7 +123,8 @@
     "enableZoom": true,
     "zoomCmPerWheel": 600,
     "followMode": "AlwaysFollow",
-    "followTargetKind": "SelectedEntity",
+    "followTargetKind": "EntityCollectionPrimary",
+    "followCollectionKey": "collection.command.source",
     "defaultBlendDuration": 0.25,
     "blendCurve": "SmoothStep",
     "allowUserInput": true

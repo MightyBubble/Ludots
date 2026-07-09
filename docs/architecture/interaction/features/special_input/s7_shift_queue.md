@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: 根据技能需求
+- **TargetType**: 根据技能需求
 - **InteractionMode**: 根据技能需求
 - **ModifierSubmitBehavior**: `QueueOnModifier`
 
@@ -29,7 +29,7 @@
   "actionId": "move_to_point",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "move",
-  "selectionType": "Position",
+  "targetType": "Position",
   "isSkillMapping": false,
   "modifierSubmitBehavior": "QueueOnModifier",    // Shift 按住时 = Queued
   "modifierKey": "Shift"                          // 修饰键为 Shift

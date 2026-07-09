@@ -133,7 +133,7 @@ namespace Ludots.Core.Input.Interaction
 
         /// <summary>
         /// Evaluate one dispatch: writes the actors that should submit an order this trigger into
-        /// <paramref name="selected"/> (which must cover every actor) and returns the count;
+        /// <paramref name="dispatchTargets"/> (which must cover every actor) and returns the count;
         /// <paramref name="routing"/> carries the profile's router semantics. Read-only with respect
         /// to cycle state — the cursor moves only via <see cref="NotifyAdvance"/>. Steady-state
         /// allocation free.
@@ -142,18 +142,18 @@ namespace Ludots.Core.Input.Interaction
             int profileId,
             ReadOnlySpan<Entity> actors,
             in CastDispatchContext ctx,
-            Span<Entity> selected,
+            Span<Entity> dispatchTargets,
             out CastDispatchRouting routing)
         {
             CompiledProfile profile = RequireInstalled(profileId);
-            if (selected.Length < actors.Length)
+            if (dispatchTargets.Length < actors.Length)
             {
-                throw new ArgumentException("Selected buffer must cover every actor.", nameof(selected));
+                throw new ArgumentException("Dispatch target buffer must cover every actor.", nameof(dispatchTargets));
             }
 
             routing = profile.Routing;
             var scope = new CastDispatchSelectorScope(this, profileId, profile.SelectorN, profile.Scorer != null);
-            return profile.Selector(in scope, actors, in ctx, selected);
+            return profile.Selector(in scope, actors, in ctx, dispatchTargets);
         }
 
         /// <summary>

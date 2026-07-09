@@ -2,26 +2,23 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Input;
-using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Interaction
 {
     /// <summary>
     /// Generic GAS input-response system.
-    /// Resolves InputRequest to InputResponse using the current interaction bindings
-    /// and the current command-source collection of the active local player.
+    /// Resolves InputRequest to InputResponse using the current interaction bindings.
+    /// Request producers must provide target/context data explicitly.
     /// </summary>
     public sealed class GasInputResponseSystem : ISystem<float>
     {
-        private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private InputRequest _active;
         private bool _hasActive;
 
         public GasInputResponseSystem(World world, Dictionary<string, object> globals)
         {
-            _world = world;
             _globals = globals;
         }
 
@@ -43,18 +40,12 @@ namespace Ludots.Core.Input.Interaction
 
             if (!pointer.Confirm.PressedThisFrame) return;
 
-            Entity target = default;
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out var selected))
-            {
-                target = selected;
-            }
-
             responses.TryAdd(new InputResponse
             {
                 RequestId = _active.RequestId,
                 ResponseTagId = _active.RequestTagId,
                 Source = _active.Source,
-                Target = target,
+                Target = _active.Target,
                 TargetContext = _active.Context,
                 PayloadA = _active.PayloadA,
                 PayloadB = _active.PayloadB,

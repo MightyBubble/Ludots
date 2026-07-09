@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.GAS.Input
         public int RequestId { get; set; }
         public int RequestTagId;
         public Entity Source;
+        public Entity Target;
         public Entity Context;
         public int PayloadA;
         public int PayloadB;

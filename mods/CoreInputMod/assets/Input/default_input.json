@@ -1,6 +1,6 @@
 {
   "actions": [
-    { "id": "Select", "name": "Gameplay_Select", "type": "Button" },
+    { "id": "CommandSourceAcquire", "name": "Gameplay_CommandSourceAcquire", "type": "Button" },
     { "id": "Command", "name": "Gameplay_Command", "type": "Button" },
     { "id": "Cancel", "name": "Gameplay_Cancel", "type": "Button" },
     { "id": "ResponseChainPass", "name": "Gameplay_ResponseChainPass", "type": "Button" },
@@ -18,7 +18,7 @@
     { "id": "Minimap.ZoomIn", "name": "Minimap_ZoomIn", "type": "Button" },
     { "id": "Minimap.ZoomOut", "name": "Minimap_ZoomOut", "type": "Button" },
     { "id": "Minimap.Pan", "name": "Minimap_Pan", "type": "Axis2D" },
-    { "id": "Minimap.CenterOnSelection", "name": "Minimap_CenterOnSelection", "type": "Button" }
+    { "id": "Minimap.CenterOnCommandSourcePrimary", "name": "Minimap_CenterOnCommandSourcePrimary", "type": "Button" }
   ],
   "contexts": [
     {
@@ -26,7 +26,7 @@
       "name": "Default Gameplay",
       "priority": 0,
       "bindings": [
-        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CommandSourceAcquire", "path": "<Mouse>/LeftButton" },
         { "actionId": "Command", "path": "<Mouse>/RightButton" },
         { "actionId": "Cancel", "path": "<Keyboard>/escape" },
         { "actionId": "ResponseChainPass", "path": "<Keyboard>/space" },
@@ -55,7 +55,7 @@
             { "type": "Normalize" }
           ]
         },
-        { "actionId": "Minimap.CenterOnSelection", "path": "<Keyboard>/home" }
+        { "actionId": "Minimap.CenterOnCommandSourcePrimary", "path": "<Keyboard>/home" }
       ]
     }
   ]

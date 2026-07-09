@@ -604,7 +604,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementWaitsForSelectionGateTargetContext()
+        public void AbilityExecSystem_ExplicitUseRequirementWaitsForTargetCollectionGateTargetContext()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -629,7 +629,7 @@ namespace Ludots.Tests.GAS
 
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.SelectionGate, tick: 0, tagId: 77);
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
             spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
 
             var definitions = new AbilityDefinitionRegistry();
@@ -693,7 +693,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityExecSystem_ExplicitUseRequirementFailsAfterSelectionGateWhenScopeLacksProgression()
+        public void AbilityExecSystem_ExplicitUseRequirementFailsAfterTargetCollectionGateWhenScopeLacksProgression()
         {
             using var world = World.Create();
             const int castAbilityOrderTypeId = 100;
@@ -717,7 +717,7 @@ namespace Ludots.Tests.GAS
 
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.SelectionGate, tick: 0, tagId: 78);
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 78);
             spec.SetItem(1, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
 
             var definitions = new AbilityDefinitionRegistry();
@@ -793,7 +793,7 @@ namespace Ludots.Tests.GAS
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
             spec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: effectTemplateId);
-            spec.SetItem(1, ExecItemKind.SelectionGate, tick: 0, tagId: 79);
+            spec.SetItem(1, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 79);
 
             var definitions = new AbilityDefinitionRegistry();
             definitions.Register(abilityId, new AbilityDefinition

@@ -11,18 +11,18 @@ using Ludots.Core.Scripting;
 
 namespace RtsDemoMod.Runtime
 {
-    internal static class RtsShowcaseSelectionHelper
+    internal static class RtsShowcaseCommandSourceHelper
     {
-        public static void EnsureSelectionViewBinding(GameEngine engine)
+        public static void EnsureCommandSourceBinding(GameEngine engine)
         {
-            Entity owner = ResolveSelectionOwner(engine);
+            Entity owner = ResolveCommandSourceOwner(engine);
             if (!engine.World.IsAlive(owner))
             {
                 return;
             }
         }
 
-        public static bool TrySelectAndFocus(GameEngine engine, Entity target, bool snapCamera)
+        public static bool TrySetCommandSourceAndFocus(GameEngine engine, Entity target, bool snapCamera)
         {
             if (!engine.World.IsAlive(target) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
@@ -30,7 +30,7 @@ namespace RtsDemoMod.Runtime
                 return false;
             }
 
-            Entity owner = ResolveSelectionOwner(engine);
+            Entity owner = ResolveCommandSourceOwner(engine);
             if (!engine.World.IsAlive(owner))
             {
                 return false;
@@ -47,24 +47,31 @@ namespace RtsDemoMod.Runtime
                 "RTS command source",
                 "1 actor");
             collections.Replace(owner, descriptor, next, owner);
-            EnsureSelectionViewBinding(engine);
+            EnsureCommandSourceBinding(engine);
             WriteCameraFocusRequests(engine, target, snapCamera);
             return true;
         }
 
-        public static bool TryGetCurrentPrimary(GameEngine engine, out Entity primary)
+        public static bool TryGetCommandSourcePrimary(GameEngine engine, out Entity primary)
         {
-            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetCurrentPrimary(
-                engine.World,
-                engine.GlobalContext,
-                out primary);
+            primary = Entity.Null;
+            return TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+                   Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out primary);
         }
 
-        public static int GetCurrentCount(GameEngine engine)
+        public static int GetCommandSourceCount(GameEngine engine)
         {
-            return Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCurrentCount(
-                engine.World,
-                engine.GlobalContext);
+            return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
+                ? Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCount(
+                    engine.GlobalContext,
+                    owner,
+                    EntityCollectionKeys.CommandSource)
+                : 0;
         }
 
         public static void WriteCameraFocusRequests(GameEngine engine, Entity target, bool snapCamera)
@@ -115,7 +122,20 @@ namespace RtsDemoMod.Runtime
             return MathF.Max(7000f, distanceCm.Value * 0.72f);
         }
 
-        private static Entity ResolveSelectionOwner(GameEngine engine)
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
+        }
+
+        private static Entity ResolveCommandSourceOwner(GameEngine engine)
         {
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (engine.World.IsAlive(owner))

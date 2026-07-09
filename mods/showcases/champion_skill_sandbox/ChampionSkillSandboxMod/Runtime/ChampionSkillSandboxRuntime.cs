@@ -45,7 +45,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private Entity _debugViewer = Entity.Null;
         private string _lastMapId = string.Empty;
         private bool _scenarioTagsApplied;
-        private bool _initialSelectionApplied;
+        private bool _initialCommandSourceApplied;
         private readonly List<Entity> _teamAFormation = new();
         private readonly List<Entity> _teamBFormation = new();
         private readonly List<Entity> _teamBTargets = new();
@@ -147,7 +147,7 @@ namespace ChampionSkillSandboxMod.Runtime
             {
                 _lastMapId = mapId;
                 _scenarioTagsApplied = false;
-                _initialSelectionApplied = false;
+                _initialCommandSourceApplied = false;
             }
 
             EnsureControllableOwnership(engine);
@@ -160,9 +160,9 @@ namespace ChampionSkillSandboxMod.Runtime
                 _scenarioTagsApplied = true;
             }
 
-            if (!_initialSelectionApplied)
+            if (!_initialCommandSourceApplied)
             {
-                _initialSelectionApplied = SeedInitialSelection(engine);
+                _initialCommandSourceApplied = SeedInitialCommandSource(engine);
             }
 
             if (!engine.GlobalContext.ContainsKey(ChampionSkillSandboxIds.CameraFollowModeKey))
@@ -381,11 +381,11 @@ namespace ChampionSkillSandboxMod.Runtime
             });
         }
 
-        private static bool SeedInitialSelection(GameEngine engine)
+        private static bool SeedInitialCommandSource(GameEngine engine)
         {
             EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
-            Entity initialSelection = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
-            Entity owner = ResolveOrAssignLocalPlayer(engine, initialSelection);
+            Entity initialCommandActor = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
+            Entity owner = ResolveOrAssignLocalPlayer(engine, initialCommandActor);
             if (collections == null || owner == Entity.Null || !engine.World.IsAlive(owner))
             {
                 return false;
@@ -400,19 +400,19 @@ namespace ChampionSkillSandboxMod.Runtime
                 return true;
             }
 
-            if (initialSelection == Entity.Null)
+            if (initialCommandActor == Entity.Null)
             {
                 return false;
             }
 
-            Span<Entity> selectionBuffer = stackalloc Entity[1];
-            selectionBuffer[0] = initialSelection;
+            Span<Entity> commandSourceBuffer = stackalloc Entity[1];
+            commandSourceBuffer[0] = initialCommandActor;
             ReplaceCollection(
                 collections,
                 owner,
                 EntityCollectionKeys.CommandSource,
                 EntityCollectionRoleKind.CommandSource,
-                selectionBuffer,
+                commandSourceBuffer,
                 "Initial command source");
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionOwnerKey] = owner;
             engine.GlobalContext[ChampionSkillSandboxIds.ActiveCollectionKey] = EntityCollectionKeys.CommandSource;
@@ -576,12 +576,24 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
+            Entity commandSourceOwner = Entity.Null;
+            if (string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
+                string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal))
+            {
+                commandSourceOwner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+                if (commandSourceOwner == Entity.Null || !engine.World.IsAlive(commandSourceOwner))
+                {
+                    engine.GameSession.Camera.SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
+                    return;
+                }
+            }
+
             ICameraFollowTarget? followTarget = followModeId switch
             {
                 var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedEntity),
+                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionPrimary, commandSourceOwner, EntityCollectionKeys.CommandSource),
                 var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal)
-                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedGroup),
+                    => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.EntityCollectionGroup, commandSourceOwner, EntityCollectionKeys.CommandSource),
                 _ => null
             };
 
@@ -666,12 +678,18 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static Entity ResolvePanelTarget(GameEngine engine)
         {
-            Entity selected = EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity current)
-                ? current
+            Entity commandSourcePrimary = TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    engine.World,
+                    engine.GlobalContext,
+                    owner,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity primary)
+                ? primary
                 : Entity.Null;
-            if (IsCommandPanelTarget(engine, selected))
+            if (IsCommandPanelTarget(engine, commandSourcePrimary))
             {
-                return selected;
+                return commandSourcePrimary;
             }
 
             Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
@@ -681,6 +699,19 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             return Entity.Null;
+        }
+
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private static bool IsCommandPanelTarget(GameEngine engine, Entity entity)
@@ -954,7 +985,7 @@ namespace ChampionSkillSandboxMod.Runtime
             _focusPanelHandle = EntityCommandPanelHandle.Invalid;
             _lastPanelTarget = Entity.Null;
             _scenarioTagsApplied = false;
-            _initialSelectionApplied = false;
+            _initialCommandSourceApplied = false;
             _lastMapId = string.Empty;
             if (engine.World.IsAlive(_teamBViewer))
             {

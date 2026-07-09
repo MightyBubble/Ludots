@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -373,16 +374,34 @@ internal sealed class ParticipantViewPanelController
             ? BuildPlayerSelectionDetail(engine, session, _runtime.SelectedPlayerId)
             : BuildTeamSelectionDetail(engine, session, _runtime.SelectedTeamId);
 
-        int currentMemberCount = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+        int commandSourceMemberCount = TryResolveLocalCommandSourceOwner(engine, out Entity commandSourceOwner)
+            ? EntityCollectionContextRuntime.GetCount(
+                engine.GlobalContext,
+                commandSourceOwner,
+                EntityCollectionKeys.CommandSource)
+            : 0;
         return new ParticipantViewPanelState(
             MapId: session.MapId.Value,
             MapLabel: $"Map: {session.MapId.Value}",
             Summary: "View mode swaps the command source between map-owned player/team representative projections.",
             Mode: _runtime.Mode,
             ParticipantCount: options.Length,
-            CurrentMemberCount: currentMemberCount,
+            CurrentMemberCount: commandSourceMemberCount,
             Participants: options,
             Selection: selection);
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private ParticipantOption[] BuildPlayerOptions(GameEngine engine, MapSession session)

@@ -7,6 +7,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.Physics2D;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -286,16 +287,22 @@ namespace Physics2DPlaygroundMod.Systems
         {
             selected.Clear();
 
-            int count = EntityCollectionContextRuntime.GetCurrentCount(_engine.World, _engine.GlobalContext);
+            if (!TryResolveLocalCommandSourceOwner(out Entity owner))
+            {
+                return 0;
+            }
+
+            int count = EntityCollectionContextRuntime.GetCount(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource);
             if (count <= 0)
             {
                 return 0;
             }
 
             EnsureSelectedScratchCapacity(count);
-            int written = EntityCollectionContextRuntime.CopyCurrent(
-                _engine.World,
+            int written = EntityCollectionContextRuntime.Copy(
                 _engine.GlobalContext,
+                owner,
+                EntityCollectionKeys.CommandSource,
                 _selectedScratch.AsSpan(0, count));
             if (written <= 0)
             {
@@ -312,6 +319,19 @@ namespace Physics2DPlaygroundMod.Systems
             }
 
             return selected.Count;
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !_world.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private void EnsureSelectedScratchCapacity(int required)

@@ -1,8 +1,11 @@
 using System.Numerics;
 using System.Diagnostics;
+using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
@@ -10,6 +13,8 @@ using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Minimap
 {
+    public delegate bool MinimapCommandSourceOwnerProvider(GameEngine engine, out Entity owner);
+
     public sealed class MinimapPresentationSystem : ISystem<float>
     {
         private readonly GameEngine _engine;
@@ -84,8 +89,9 @@ namespace Ludots.Core.Presentation.Minimap
     public sealed class MinimapInputConsumer : IInputFrameConsumer
     {
         private readonly MinimapRuntime _runtime;
+        private readonly MinimapCommandSourceOwnerProvider _commandSourceOwnerProvider;
         private bool _prevToggle;
-        private bool _prevCenterOnSelection;
+        private bool _prevCenterOnCommandSourcePrimary;
         private bool _prevZoomIn;
         private bool _prevZoomOut;
         private bool _prevPresetToggle;
@@ -93,9 +99,12 @@ namespace Ludots.Core.Presentation.Minimap
         private bool _dragging;
         private bool _zoomSliderDragging;
 
-        public MinimapInputConsumer(MinimapRuntime runtime)
+        public MinimapInputConsumer(
+            MinimapRuntime runtime,
+            MinimapCommandSourceOwnerProvider commandSourceOwnerProvider)
         {
             _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
+            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new System.ArgumentNullException(nameof(commandSourceOwnerProvider));
         }
 
         public void Consume(GameEngine engine, PlayerInputHandler input, float deltaTime)
@@ -148,13 +157,15 @@ namespace Ludots.Core.Presentation.Minimap
             _prevZoomIn = zoomIn;
             _prevZoomOut = zoomOut;
 
-            bool centerOnSelection = input.PressedThisFrame(MinimapInputActions.CenterOnSelection);
-            if (centerOnSelection && !_prevCenterOnSelection)
+            bool centerOnCommandSourcePrimary = input.PressedThisFrame(MinimapInputActions.CenterOnCommandSourcePrimary);
+            if (centerOnCommandSourcePrimary &&
+                !_prevCenterOnCommandSourcePrimary &&
+                TryResolveCommandSourcePrimary(engine, out Entity commandSourcePrimary))
             {
-                _runtime.CenterOnSelected(engine);
+                _runtime.CenterOnEntity(engine, commandSourcePrimary);
             }
 
-            _prevCenterOnSelection = centerOnSelection;
+            _prevCenterOnCommandSourcePrimary = centerOnCommandSourcePrimary;
 
             Vector2 pan = input.ReadAction<Vector2>(MinimapInputActions.Pan);
             if (pan.X != 0f || pan.Y != 0f)
@@ -293,6 +304,19 @@ namespace Ludots.Core.Presentation.Minimap
 
             input.SuppressActionThisFrame(VirtualCameraDefinition.DefaultZoomActionId);
         }
+
+        private bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity commandSourcePrimary)
+        {
+            commandSourcePrimary = Entity.Null;
+            return _commandSourceOwnerProvider(engine, out Entity owner) &&
+                   engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out EntityCollectionStore collections) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       collections,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out commandSourcePrimary);
+        }
     }
 
     public static class MinimapInputActions
@@ -304,6 +328,6 @@ namespace Ludots.Core.Presentation.Minimap
         public const string ZoomIn = "Minimap.ZoomIn";
         public const string ZoomOut = "Minimap.ZoomOut";
         public const string Pan = "Minimap.Pan";
-        public const string CenterOnSelection = "Minimap.CenterOnSelection";
+        public const string CenterOnCommandSourcePrimary = "Minimap.CenterOnCommandSourcePrimary";
     }
 }

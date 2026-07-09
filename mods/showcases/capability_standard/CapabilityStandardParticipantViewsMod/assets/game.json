@@ -1,6 +1,6 @@
 {
   "startupMapId": "capability_standard_participant_views",
-  "startupSelectedPlayerId": 1,
+  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Capability Standard Participant Views",
   "targetFps": 0,
   "windowWidth": 1440,

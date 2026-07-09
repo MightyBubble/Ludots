@@ -9,6 +9,7 @@ using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.CommandSources;
@@ -1259,7 +1260,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
+            if (!TryResolveCommandSourcePrimary(engine, out Entity entity) ||
                 !engine.World.IsAlive(entity) ||
                 !engine.World.Has<Name>(entity))
             {
@@ -1267,6 +1268,18 @@ namespace CameraAcceptanceMod.UI
             }
 
             return engine.World.Get<Name>(entity).Value;
+        }
+
+        private static bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryResolveLocalPlayerEntity(engine, out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out entity);
         }
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)

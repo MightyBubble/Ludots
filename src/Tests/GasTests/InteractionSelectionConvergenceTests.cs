@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -38,7 +38,8 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
-            var target = world.Create();
+            var ambientTarget = world.Create();
+            var requestTarget = world.Create();
             var local = world.Create();
             var globals = new Dictionary<string, object>
             {
@@ -51,24 +52,25 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
             CreateCommandSourceRuntime(world, globals);
-            SeedCommandSource(world, globals, local, target);
+            SeedCommandSource(world, globals, local, ambientTarget);
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
             var responses = (InputResponseBuffer)globals[CoreServiceKeys.InputResponseBuffer.Name];
-            requests.TryEnqueue(new InputRequest { RequestId = 9, RequestTagId = 501 });
+            requests.TryEnqueue(new InputRequest { RequestId = 9, RequestTagId = 501, Target = requestTarget });
 
             SetConfirmSnapshot(globals, new Vector2(0f, 0f), pressedThisFrame: true, isDown: true);
             input.Update();
             system.Update(0f);
 
             That(responses.TryConsume(9, out var response), Is.True);
-            That(response.Target, Is.EqualTo(target));
+            That(response.Target, Is.EqualTo(requestTarget));
+            That(response.Target, Is.Not.EqualTo(ambientTarget));
             That(response.ResponseTagId, Is.EqualTo(501));
         }
 
         [Test]
-        public void AbilityExecSystem_SelectionGate_ConsumesInputResponseTargetContext()
+        public void AbilityExecSystem_TargetCollectionGate_ConsumesInputResponseTargetContext()
         {
             using var world = World.Create();
             var actor = world.Create(
@@ -97,7 +99,7 @@ namespace Ludots.Tests.GAS
             var defs = new AbilityDefinitionRegistry();
             var spec = default(AbilityExecSpec);
             spec.ClockId = GasClockId.Step;
-            spec.SetItem(0, ExecItemKind.SelectionGate, tick: 0, tagId: 77);
+            spec.SetItem(0, ExecItemKind.TargetCollectionGate, tick: 0, tagId: 77);
             spec.SetItem(1, ExecItemKind.EventGate, tick: 1, tagId: 999);
             var def = new AbilityDefinition { ExecSpec = spec };
             defs.Register(9001, in def);
@@ -155,8 +157,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     },
                 },
@@ -174,7 +176,7 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
             {
                 entities.Clear();
                 entities.Add(first);
@@ -216,8 +218,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     },
                 },
@@ -235,7 +237,7 @@ namespace Ludots.Tests.GAS
                 worldCm = new Vector3(320f, 0f, 640f);
                 return true;
             });
-            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
             {
                 entities.Clear();
                 entities.Add(first);
@@ -271,8 +273,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Stop",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "stop",
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.None,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
                         IsSkillMapping = false,
                     },
                 },
@@ -285,7 +287,7 @@ namespace Ludots.Tests.GAS
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
-            mapping.SetSelectedEntityListProvider((string _, List<Entity> entities) =>
+            mapping.SetCollectionEntityListProvider((string _, List<Entity> entities) =>
             {
                 entities.Clear();
                 entities.Add(first);
@@ -331,18 +333,18 @@ namespace Ludots.Tests.GAS
             };
             CreateCommandSourceRuntime(world, globals);
 
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
             AssertCommandSource(globals, local, first);
-            That(EntityCollectionContextRuntime.TryGetCurrentPrimary(world, globals, out var currentPrimary), Is.True);
+            That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.CommandSource, out var currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first));
 
             DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
             AssertCommandSource(globals, local, first, second, third);
-            That(EntityCollectionContextRuntime.TryGetCurrentPrimary(world, globals, out currentPrimary), Is.True);
+            That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.CommandSource, out currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
         }
 
@@ -368,7 +370,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
@@ -409,7 +411,7 @@ namespace Ludots.Tests.GAS
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, first);
 
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
             Click(system, globals, input, new Vector2(5200f, 4200f));
 
             AssertCommandSource(globals, local);
@@ -439,7 +441,7 @@ namespace Ludots.Tests.GAS
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, selected);
             var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             DragSelect(system, globals, input, new Vector2(2500f, 1500f), new Vector2(2700f, 1700f));
 
@@ -475,13 +477,13 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
             input.Update();
             system.Update(0f);
 
-            That(EntityCollectionContextRuntime.TryGetHovered(world, globals, out Entity actual), Is.True);
+            That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.HoveredEntity, out Entity actual), Is.True);
             That(actual, Is.EqualTo(hovered));
         }
 
@@ -511,7 +513,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
@@ -547,12 +549,12 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
                 CreateCommandSourceRuntime(world, globals, "Friendly");
-                var system = new CommandSourceAcquisitionSystem(world, globals);
+                var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
                 Click(system, globals, input, new Vector2(1600f, 1200f));
 
                 AssertCommandSource(globals, local);
-                That(EntityCollectionContextRuntime.TryGetHovered(world, globals, out Entity hovered), Is.True);
+                That(EntityCollectionContextRuntime.TryGetPrimary(world, globals, local, EntityCollectionKeys.HoveredEntity, out Entity hovered), Is.True);
                 That(hovered, Is.EqualTo(formation));
 
                 world.Set(formation, new Team { Id = 1 });
@@ -612,7 +614,7 @@ namespace Ludots.Tests.GAS
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
                 CreateCommandSourceRuntime(world, globals, "Friendly");
-                var system = new CommandSourceAcquisitionSystem(world, globals);
+                var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
                 DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
@@ -651,7 +653,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1700f, 1200f));
 
@@ -685,7 +687,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             DragSelect(system, globals, input, new Vector2(2500f, 1300f), new Vector2(2850f, 1700f));
 
@@ -719,7 +721,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1700f, 1200f));
 
@@ -750,7 +752,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: true);
             input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
@@ -792,7 +794,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: false, releasedThisFrame: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2(1700, 1200));
@@ -825,7 +827,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             CreateCommandSourceRuntime(world, globals);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
             input.InjectAction(CommandSourceModifierActionIds.Additive, Vector3.One);
@@ -857,7 +859,7 @@ namespace Ludots.Tests.GAS
             };
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, first, second);
-            var system = new CommandSourceAcquisitionSystem(world, globals);
+            var system = CreateCommandSourceAcquisitionSystem(world, globals, local);
 
             input.InjectAction(CommandSourceModifierActionIds.Toggle, Vector3.One);
             Click(system, globals, input, new Vector2(1600f, 1200f));
@@ -866,7 +868,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CommandSourceAcquisitionSystem_AimConfirmRelease_DoesNotStealSelection()
+        public void CommandSourceAcquisitionSystem_AimConfirmRelease_DoesNotStealCommandSource()
         {
             using var world = World.Create();
 
@@ -890,7 +892,7 @@ namespace Ludots.Tests.GAS
             CreateCommandSourceRuntime(world, globals);
             SeedCommandSource(world, globals, local, actor);
 
-            var selectionSystem = new CommandSourceAcquisitionSystem(world, globals);
+            var selectionSystem = CreateCommandSourceAcquisitionSystem(world, globals, local);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.AimCast,
@@ -902,8 +904,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity,
                         IsSkillMapping = true,
                     },
                 },
@@ -912,7 +914,7 @@ namespace Ludots.Tests.GAS
 
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
-            mapping.SetSelectedEntityProvider((string _, out Entity entity) =>
+            mapping.SetCollectionPrimaryEntityProvider((string _, out Entity entity) =>
             {
                 entity = actor;
                 return true;
@@ -936,7 +938,7 @@ namespace Ludots.Tests.GAS
             SetConfirmSnapshot(globals, new Vector2(2600f, 1600f), pressedThisFrame: true, isDown: true);
             SetAuthoritativeGroundPoint(input, new WorldCmInt2(2600, 1600));
             input.InjectAction("PointerPos", new Vector3(2600f, 1600f, 0f));
-            input.InjectButtonPress("Select");
+            input.InjectButtonPress(InteractionActionBindings.DefaultConfirmActionId);
             input.Update();
             selectionSystem.Update(0f);
             mapping.Update(0f);
@@ -999,7 +1001,7 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                     new() { Id = "Stop", Name = "Stop", Type = InputActionType.Button },
                     new() { Id = "Confirm", Name = "Confirm", Type = InputActionType.Button },
-                    new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
+                    new() { Id = InteractionActionBindings.DefaultConfirmActionId, Name = "Command Source Acquire", Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Additive, Name = CommandSourceModifierActionIds.Additive, Type = InputActionType.Button },
                     new() { Id = CommandSourceModifierActionIds.Toggle, Name = CommandSourceModifierActionIds.Toggle, Type = InputActionType.Button },
                     new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
@@ -1027,6 +1029,21 @@ namespace Ludots.Tests.GAS
             input.InjectAction("PointerPos", new Vector3(pointer.X, pointer.Y, 0f));
             input.Update();
             system.Update(0f);
+        }
+
+        private static CommandSourceAcquisitionSystem CreateCommandSourceAcquisitionSystem(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner)
+        {
+            return new CommandSourceAcquisitionSystem(
+                world,
+                globals,
+                (out Entity resolvedOwner) =>
+                {
+                    resolvedOwner = owner;
+                    return owner != Entity.Null && world.IsAlive(owner);
+                });
         }
 
         private static void DragSelect(CommandSourceAcquisitionSystem system, Dictionary<string, object> globals, PlayerInputHandler input, Vector2 from, Vector2 to)

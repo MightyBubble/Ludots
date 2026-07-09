@@ -1306,15 +1306,25 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 return;
             }
 
-            EnsureActorScratchCapacity(EntityCollectionContextRuntime.GetCurrentCount(_engine.World, _engine.GlobalContext));
-            int actorCount = EntityCollectionContextRuntime.CopyCurrent(
-                _engine.World,
-                _engine.GlobalContext,
-                _actorsScratch);
+            Entity commandSourceOwner = ResolveLocalCommandSourceOwner(_engine);
+            int commandActorCount = commandSourceOwner != Entity.Null
+                ? EntityCollectionContextRuntime.GetCount(
+                    _engine.GlobalContext,
+                    commandSourceOwner,
+                    EntityCollectionKeys.CommandSource)
+                : 0;
+            EnsureActorScratchCapacity(commandActorCount);
+            int actorCount = commandActorCount > 0
+                ? EntityCollectionContextRuntime.Copy(
+                    _engine.GlobalContext,
+                    commandSourceOwner,
+                    EntityCollectionKeys.CommandSource,
+                    _actorsScratch)
+                : 0;
             if (actorCount <= 0 ||
                 !CanLocalPlayerCommand(_engine, _actorsScratch.AsSpan(0, actorCount)))
             {
-                _simulation.RejectCommandUnauthorizedSelection(0f, 0f);
+                _simulation.RejectCommandUnauthorizedCommandActors(0f, 0f);
                 return;
             }
 

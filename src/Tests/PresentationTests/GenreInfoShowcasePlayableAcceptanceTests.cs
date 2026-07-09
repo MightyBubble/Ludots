@@ -275,7 +275,7 @@ public sealed class GenreInfoShowcasePlayableAcceptanceTests
 
     private static string ReadSelectedEntityName(GameEngine engine)
     {
-        return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+        return Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                engine.World.TryGet(selected, out Name name)
             ? name.Value
             : string.Empty;

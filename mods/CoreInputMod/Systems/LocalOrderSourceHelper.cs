@@ -136,8 +136,8 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
-            mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
-            mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
+            mapping.SetCollectionPrimaryEntityProvider(TryResolveCollectionPrimary);
+            mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
             RequireConfigureRfc0065CommandRouting(mapping);
@@ -276,6 +276,20 @@ namespace CoreInputMod.Systems
             return false;
         }
 
+        private bool TryResolveCollectionPrimary(string collectionKey, out Entity entity)
+        {
+            entity = Entity.Null;
+            return TryGetCommandSourceOwner(out Entity owner) &&
+                   _context.TryGetCollectionPrimary(owner, collectionKey, out entity);
+        }
+
+        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        {
+            entities.Clear();
+            return TryGetCommandSourceOwner(out Entity owner) &&
+                   _context.TryCopyCollectionEntities(owner, collectionKey, entities);
+        }
+
         private static bool HasEntityValue(Entity entity)
         {
             return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
@@ -337,12 +351,12 @@ namespace CoreInputMod.Systems
         private bool TryResolveHoveredCommandTarget(out Entity entity)
         {
             entity = Entity.Null;
-            if (!_context.TryGetHoveredEntity(out Entity candidate))
+            if (!TryGetCommandSourceOwner(out Entity viewer) ||
+                !_context.TryGetHoveredEntity(viewer, out Entity candidate))
             {
                 return false;
             }
 
-            Entity viewer = _context.TryGetSelectionOwner(out Entity owner) ? owner : Entity.Null;
             if (!RequireCommandTargetGate().CanTarget(viewer, candidate))
             {
                 return false;

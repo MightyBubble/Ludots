@@ -636,7 +636,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             for (int i = 0; i < spec.ItemCount; i++)
             {
                 ExecItemKind kind = spec.GetKind(i);
-                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.SelectionGate)
+                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.TargetCollectionGate)
                 {
                     return true;
                 }
@@ -728,7 +728,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (inst.PendingProgressionUseRequirement != 0 &&
                     kind != ExecItemKind.InputGate &&
-                    kind != ExecItemKind.SelectionGate)
+                    kind != ExecItemKind.TargetCollectionGate)
                 {
                     FailPendingProgressionUseRequirement(actor, ref inst);
                     return;
@@ -787,7 +787,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     // Gates
                     case ExecItemKind.InputGate:
                     case ExecItemKind.EventGate:
-                    case ExecItemKind.SelectionGate:
+                    case ExecItemKind.TargetCollectionGate:
                         EnterGate(actor, ref spec, idx, ref inst);
                         // Attempt immediate resolution if response already available
                         if (inst.State == AbilityExecRunState.GateWaiting)
@@ -1020,12 +1020,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
                         Source = actor,
+                        Target = inst.Target,
                         Context = inst.TargetContext,
                     });
                     break;
                 }
 
-                case ExecItemKind.SelectionGate:
+                case ExecItemKind.TargetCollectionGate:
                 {
                     int requestId = spec.GetPayloadA(idx) != 0 ? spec.GetPayloadA(idx) : inst.OrderId;
                     inst.WaitRequestId = requestId;
@@ -1034,6 +1035,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         RequestId = requestId,
                         RequestTagId = spec.GetTagId(idx),
                         Source = actor,
+                        Target = inst.Target,
                         Context = inst.TargetContext,
                     });
                     break;
@@ -1082,7 +1084,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     break;
                 }
 
-                case ExecItemKind.SelectionGate:
+                case ExecItemKind.TargetCollectionGate:
                 {
                     if (_inputResponses == null) return;
                     if (_inputResponses.TryConsume(inst.WaitRequestId, out var resp))

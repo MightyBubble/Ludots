@@ -228,7 +228,7 @@ namespace Ludots.Tests.GAS.Production
             AssertEntityHasTag(engine.World, "Garen Courage", "State.Champion.Garen.Courage");
             AssertEntityHasTag(engine.World, "Jayce Hammer", "State.Champion.Jayce.Hammer");
 
-            Entity selected = EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity currentPrimary)
+            Entity selected = Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity currentPrimary)
                 ? currentPrimary
                 : Entity.Null;
             Assert.That(ReadEntityName(engine.World, selected), Is.EqualTo("Ezreal Alpha"), "Sandbox runtime should seed an initial controllable selection.");
@@ -273,7 +273,7 @@ namespace Ludots.Tests.GAS.Production
             var mapping = WaitForActiveInputOrderMapping(engine);
             var ezrealRMapping = mapping.GetMapping("SkillR");
             Assert.That(ezrealRMapping, Is.Not.Null);
-            Assert.That(ezrealRMapping!.SelectionType, Is.EqualTo(OrderSelectionType.Direction));
+            Assert.That(ezrealRMapping!.TargetType, Is.EqualTo(OrderTargetType.Direction));
             Assert.That(ezrealRMapping.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
             Assert.That(ezrealRMapping.CursorTargetRangeCm, Is.EqualTo(320));
 
@@ -385,7 +385,7 @@ namespace Ludots.Tests.GAS.Production
             InputOrderMapping? command = mapping.GetMapping("Command");
             Assert.That(command, Is.Not.Null);
             Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
-            Assert.That(command.SelectionType, Is.EqualTo(OrderSelectionType.Position));
+            Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
 
             Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
@@ -631,7 +631,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate(PlayerSelectionToolbarButtonId);
             Tick(engine, 2);
             Assert.That(ReadViewedSelectionNames(engine), Is.EqualTo(new[] { "StressFireMageA", "StressPriestA", "StressWarriorA" }));
-            Assert.That(ReadEntityName(engine.World, EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
+            Assert.That(ReadEntityName(engine.World, Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity playerPrimary) ? playerPrimary : Entity.Null), Is.EqualTo("StressFireMageA"));
 
             toolbar.Activate(PlayerFormationToolbarButtonId);
             Tick(engine, 2);

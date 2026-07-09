@@ -63,8 +63,8 @@ namespace MobaDemoMod
 
         public sealed class PresentationConfig
         {
-            [JsonPropertyName("selectionIndicatorDefKey")] public string SelectionIndicatorDefKey { get; set; } = "moba_selection_indicator";
-            [JsonPropertyName("selectionScopeId")] public int SelectionScopeId { get; set; } = 99001;
+            [JsonPropertyName("commandSourceIndicatorDefKey")] public string CommandSourceIndicatorDefKey { get; set; } = "moba_command_source_indicator";
+            [JsonPropertyName("commandSourceScopeId")] public int CommandSourceScopeId { get; set; } = 99001;
             [JsonPropertyName("rangeCircleIndicatorDefKey")] public string RangeCircleIndicatorDefKey { get; set; } = "moba_ability_range";
             [JsonPropertyName("circleEnemyMarker")] public CircleEnemyMarkerConfig CircleEnemyMarker { get; set; } = new();
         }

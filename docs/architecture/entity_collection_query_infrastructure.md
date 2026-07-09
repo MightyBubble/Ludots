@@ -77,13 +77,13 @@ This separation is intentional:
 - `collection.command.source` is the gameplay-facing default command set.
 - Display/query collections can be inspected or sampled without mutating command authority.
 
-Missing collection services or missing collection keys must fail explicitly at the consuming boundary. Silent fallback to `SelectionRuntime`, `SelectionSetKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, or old viewed-selection globals is forbidden.
+Missing collection services or missing collection keys must fail explicitly at the consuming boundary. Silent fallback to `SelectionRuntime`, `SelectionSetKeys`, `SelectionContextRuntime`, `SelectionControlGroupRuntime`, or old global selected-entity state is forbidden.
 
 ## EntityInfo Boundary
 
-EntityInfo can target an explicit entity collection through `EntityInfoPanelTargetKind.EntityCollection`.
+EntityInfo targets explicit entity collections through `EntityInfoPanelTargetKind.EntityCollection`.
 
-The panel service resolves the collection from `EntityCollectionStore`, copies a window into its existing sampled panel state, and renders rows through the same insight profile, text catalog, and `UIRoot` path used by entity panels. Inspecting a collection does not mutate viewed selection.
+The panel service resolves the collection from `EntityCollectionStore`, copies a window into its existing sampled panel state, and renders rows through the same insight profile, text catalog, and `UIRoot` path used by entity panels. Inspecting a collection does not mutate the command-source collection.
 
 Reusable EntityInfo templates are presentation descriptors over the same sampling path. A missing template id fails explicitly; templates do not introduce a second profile system or text system.
 
@@ -140,7 +140,6 @@ Primary tests:
 
 Related docs:
 
-- `docs/architecture/entity_selection_architecture.md`
 - `docs/architecture/entity_insight_panel_architecture.md`
 - `docs/architecture/entity_command_panel_infrastructure.md`
 - `docs/architecture/ecs_soa.md`

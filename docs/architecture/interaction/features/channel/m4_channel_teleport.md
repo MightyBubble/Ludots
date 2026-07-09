@@ -15,14 +15,14 @@ InputOrderMapping (回城):
   actionId: "Recall"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 InputOrderMapping (TP到点):
   actionId: "Teleport"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Position
+  targetType: Position
   isSkillMapping: true
 ```
 

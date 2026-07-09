@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(selectedPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -111,7 +111,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(selectedPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void LocalPlayerEntityResolverSystem_SelectedPlayerChangeReplacesExistingLocalPlayerEntity()
+        public void LocalPlayerEntityResolverSystem_LocalPlayerIdChangeReplacesExistingLocalPlayerEntity()
         {
             using var world = World.Create();
             Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 });
@@ -219,7 +219,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(selectedPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -396,13 +396,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextSelectedPlayerId_SelectsLocalPlayer()
+        public void ParticipantBindingResolver_LaunchContextLocalPlayerId_SelectsLocalPlayer()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(selectedPlayerId: 8),
+                LaunchContext = MapLaunchContext.Create(localPlayerId: 8),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -439,13 +439,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ParticipantBindingResolver_LaunchContextUnknownSelectedPlayerId_FailsExplicitly()
+        public void ParticipantBindingResolver_LaunchContextUnknownLocalPlayerId_FailsExplicitly()
         {
             using var world = World.Create();
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(selectedPlayerId: 99),
+                LaunchContext = MapLaunchContext.Create(localPlayerId: 99),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -458,7 +458,7 @@ namespace Ludots.Tests.GAS
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 ParticipantBindingResolver.Resolve(session, world, index, relationships, types, ownership))!;
 
-            Assert.That(ex.Message, Does.Contain("SelectedPlayerId 99"));
+            Assert.That(ex.Message, Does.Contain("LocalPlayerId 99"));
         }
 
         private static MapConfig CreateMap()

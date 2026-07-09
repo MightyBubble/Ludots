@@ -8,14 +8,14 @@
 
 玩家按下技能键（PressedThisFrame），系统取光标下或预选的敌方单位作为目标，立即发出 CastAbility 订单。订单验证通过后，GAS 在当前 Tick 生成 Effect，OnCalculate 阶段将施法者的 BaseDamage 属性乘以配置系数写入 Blackboard（DamageAmount），OnApply Listener 读取 Armor 做减伤计算并写入 FinalDamage，OnApply Main 将 FinalDamage 以负数 delta 应用到目标的 Health 属性。
 
-与 AoE 伤害的区别：目标是单一 Entity（由 InputOrderMapping.selectionType=Entity 保证），不涉及范围查询。
+与 AoE 伤害的区别：目标是单一 Entity（由 InputOrderMapping.targetType=Entity 保证），不涉及范围查询。
 
 ---
 
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Entity`
+- **TargetType**: `Entity`
 - **InteractionMode**: `SmartCast`（推荐）/ `TargetFirst`
 
 ```json5
@@ -25,7 +25,7 @@
   "actionId": "ability_Q",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true,
   "castModeOverride": null,              // null = 跟随全局 InteractionMode
   "autoTargetPolicy": "NearestEnemyInRange",

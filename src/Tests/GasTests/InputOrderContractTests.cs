@@ -21,6 +21,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using MobaDemoMod.Systems;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -44,8 +45,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.Held,
                         HeldPolicy = HeldPolicy.StartEnd,
                         OrderTypeKey = "beam",
-                        SelectionType = OrderSelectionType.None,
-                        RequireSelection = false,
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
                         IsSkillMapping = false,
                     }
                 }
@@ -89,8 +90,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Attack",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "typoOrder",
-                        SelectionType = OrderSelectionType.None,
-                        RequireSelection = false,
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
                         IsSkillMapping = false
                     }
                 }
@@ -233,6 +234,147 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void MobaLocalOrderSource_ResolvesCallerSuppliedTargetCollectionKey()
+        {
+            const string customCollectionKey = "collection.test.explicit.targets";
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_MobaCollectionKeyTests", Guid.NewGuid().ToString("N"));
+            string inputDir = Path.Combine(root, "assets", "Input");
+            Directory.CreateDirectory(inputDir);
+            File.WriteAllText(
+                Path.Combine(inputDir, "input_order_mappings.json"),
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": true,
+                      "targetCollectionKey": "collection.test.explicit.targets",
+                      "targetType": "Entity",
+                      "isSkillMapping": false
+                    }
+                  ]
+                }
+                """);
+
+            try
+            {
+                using var world = World.Create();
+                Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+                Entity commandSourceTarget = world.Create(new PlayerOwner { PlayerId = 1 });
+                Entity explicitTarget = world.Create(new PlayerOwner { PlayerId = 1 });
+                var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 8);
+                collections.Replace(
+                    localPlayer,
+                    EntityCollectionDescriptor.Create(
+                        EntityCollectionKeys.CommandSource,
+                        EntityCollectionSourceKind.UiAcquisition,
+                        EntityCollectionRoleKind.CommandSource,
+                        localPlayer,
+                        commandSourceTarget,
+                        "Command source",
+                        "Should not be used by this mapping"),
+                    new[] { commandSourceTarget },
+                    localPlayer);
+                collections.Replace(
+                    localPlayer,
+                    EntityCollectionDescriptor.Create(
+                        customCollectionKey,
+                        EntityCollectionSourceKind.Explicit,
+                        EntityCollectionRoleKind.CommandSource,
+                        localPlayer,
+                        explicitTarget,
+                        "Explicit target",
+                        "Mapping-requested collection"),
+                    new[] { explicitTarget },
+                    localPlayer);
+
+                var input = new FrozenInputActionReader();
+                input.SetActionState("SkillQ", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
+                    [CoreServiceKeys.LocalPlayerId.Name] = 1,
+                    [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+                    [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
+                    [CoreServiceKeys.GameConfig.Name] = new GameConfig
+                    {
+                        Constants = new GameConstants
+                        {
+                            OrderTypeIds = new Dictionary<string, int>
+                            {
+                                ["castAbility"] = 101,
+                                ["stop"] = 1003,
+                            },
+                        },
+                    },
+                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                };
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("TestMobaMappingMod", root);
+                var ctx = new ModContext(
+                    "TestMobaMappingMod",
+                    vfs,
+                    new FunctionRegistry(),
+                    new TriggerManager(),
+                    new Ludots.Core.Engine.SystemFactoryRegistry(),
+                    new TriggerDecoratorRegistry());
+                var orders = new OrderQueue();
+                var system = new MobaLocalOrderSourceSystem(world, globals, orders, ctx);
+
+                system.Update(0f);
+
+                Assert.That(orders.TryDequeue(out Order order), Is.True);
+                Assert.That(order.Target, Is.EqualTo(explicitTarget),
+                    "MobaLocalOrderSourceSystem must resolve the entity collection named by the mapping, not the active command-source collection.");
+                Assert.That(order.Target, Is.Not.EqualTo(commandSourceTarget));
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(root)) Directory.Delete(root, recursive: true);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsPascalCaseAndRetiredCollectionField()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "RequireTarget": true,
+                      "EntityCollectionKey": "collection.test.explicit.targets",
+                      "TargetType": "Entity",
+                      "isSkillMapping": false
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<JsonException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("RequireTarget"));
+        }
+
+        [Test]
         public void DoubleTapTrigger_SubmitsOnlyOnSecondPressWithinWindow()
         {
             var (backend, handler) = BuildHandler();
@@ -246,8 +388,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.DoubleTap,
                         DoubleTapWindowSeconds = 0.25f,
                         OrderTypeKey = "dash",
-                        SelectionType = OrderSelectionType.None,
-                        RequireSelection = false,
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
                         IsSkillMapping = false
                     }
                 }
@@ -294,8 +436,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 3 },
-                        SelectionType = OrderSelectionType.Direction,
-                        RequireSelection = false,
+                        TargetType = OrderTargetType.Direction,
+                        RequireTarget = false,
                         IsSkillMapping = true,
                         CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
                         CursorTargetRangeCm = 320
@@ -355,8 +497,8 @@ namespace Ludots.Tests.GAS
                     {
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -366,7 +508,7 @@ namespace Ludots.Tests.GAS
                                 {
                                     OrderTypeKey = "setSpawnTarget",
                                     Priority = 10,
-                                    SelectionType = OrderSelectionType.HoveredEntityOrPosition,
+                                    TargetType = OrderTargetType.HoveredEntityOrPosition,
                                     Match = new ActorOrderRoutingMatch(),
                                 },
                             },
@@ -387,7 +529,7 @@ namespace Ludots.Tests.GAS
             system.SetOrderTypeKeyResolver(key => key == "setSpawnTarget" ? 106 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(), actor, routing.Candidates, out matchedCandidate));
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
                 list.Add(producer);
                 return true;
@@ -415,7 +557,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ActorOrderRouting_MixedSelection_ProducerGetsSpawnTargetAndUnitsGetMoveTo()
+        public void ActorOrderRouting_MixedCollection_ProducerGetsSpawnTargetAndUnitsGetMoveTo()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -429,8 +571,8 @@ namespace Ludots.Tests.GAS
                     {
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -440,7 +582,7 @@ namespace Ludots.Tests.GAS
                                 {
                                     OrderTypeKey = "setSpawnTarget",
                                     Priority = 10,
-                                    SelectionType = OrderSelectionType.HoveredEntityOrPosition,
+                                    TargetType = OrderTargetType.HoveredEntityOrPosition,
                                     Match = new ActorOrderRoutingMatch
                                     {
                                         AbilitySlotIndex = 2,
@@ -484,7 +626,7 @@ namespace Ludots.Tests.GAS
                 });
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, tagOps, actor, routing.Candidates, out matchedCandidate));
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
                 list.Add(producer);
                 list.Add(unitA);
@@ -526,8 +668,8 @@ namespace Ludots.Tests.GAS
                     {
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -557,7 +699,7 @@ namespace Ludots.Tests.GAS
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
             system.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
                 ActorOrderRoutingMatcher.TryResolveCandidate(world, new TagOps(), actor, routing.Candidates, out matchedCandidate));
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
                 list.Add(unitA);
                 list.Add(unitB);
@@ -591,8 +733,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = true,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -637,8 +779,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         ArgsTemplate = new OrderArgsTemplate(),
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     },
                 },
@@ -654,7 +796,7 @@ namespace Ludots.Tests.GAS
             system.CommandActionId = "PointerCommand";
             system.SetLocalPlayer(unitA, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
                 list.Add(unitA);
                 list.Add(unitB);
@@ -691,8 +833,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
                         ArgsTemplate = new OrderArgsTemplate(),
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                     },
                 },
             };
@@ -717,9 +859,10 @@ namespace Ludots.Tests.GAS
                         DoubleTapWindowSeconds = 0.17f,
                         OrderTypeKey = "moveTo",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 3, F1 = 2.5f },
-                        RequireSelection = true,
-                        SelectionSetKey = "selection.command",
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        ActorCollectionKey = "collection.test.actors",
+                        TargetCollectionKey = "collection.test.targets",
+                        TargetType = OrderTargetType.Position,
                         ModifierBehavior = ModifierSubmitBehavior.AlwaysQueued,
                         IsSkillMapping = false,
                         HeldPolicy = HeldPolicy.EveryFrame,
@@ -736,7 +879,7 @@ namespace Ludots.Tests.GAS
                                 {
                                     OrderTypeKey = "setSpawnTarget",
                                     Priority = 20,
-                                    SelectionType = OrderSelectionType.HoveredEntityOrPosition,
+                                    TargetType = OrderTargetType.HoveredEntityOrPosition,
                                     Match = new ActorOrderRoutingMatch
                                     {
                                         RequiredAllTags = new List<string> { "producer" },
@@ -774,9 +917,10 @@ namespace Ludots.Tests.GAS
                 Assert.That(remapped.ArgsTemplate.I1, Is.EqualTo(9));
                 Assert.That(remapped.ArgsTemplate.F2, Is.EqualTo(4.5f));
                 Assert.That(remapped.ArgsTemplate.I0, Is.Null);
-                Assert.That(remapped.RequireSelection, Is.True);
-                Assert.That(remapped.SelectionSetKey, Is.EqualTo("selection.command"));
-                Assert.That(remapped.SelectionType, Is.EqualTo(OrderSelectionType.Position));
+                Assert.That(remapped.RequireTarget, Is.True);
+                Assert.That(remapped.ActorCollectionKey, Is.EqualTo("collection.test.actors"));
+                Assert.That(remapped.TargetCollectionKey, Is.EqualTo("collection.test.targets"));
+                Assert.That(remapped.TargetType, Is.EqualTo(OrderTargetType.Position));
                 Assert.That(remapped.ModifierBehavior, Is.EqualTo(ModifierSubmitBehavior.AlwaysQueued));
                 Assert.That(remapped.HeldPolicy, Is.EqualTo(HeldPolicy.EveryFrame));
                 Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
@@ -787,7 +931,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
                 Assert.That(remapped.ActorOrderRouting!.Candidates.Count, Is.EqualTo(1));
                 Assert.That(remapped.ActorOrderRouting.Candidates[0].OrderTypeKey, Is.EqualTo("setSpawnTarget"));
-                Assert.That(remapped.ActorOrderRouting.Candidates[0].SelectionType, Is.EqualTo(OrderSelectionType.HoveredEntityOrPosition));
+                Assert.That(remapped.ActorOrderRouting.Candidates[0].TargetType, Is.EqualTo(OrderTargetType.HoveredEntityOrPosition));
                 Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.RequiredAllTags, Is.EquivalentTo(new[] { "producer" }));
                 Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.BlockedAnyTags, Is.EquivalentTo(new[] { "stunned" }));
                 Assert.That(remapped.ActorOrderRouting.Candidates[0].Match.AbilitySlotIndex, Is.EqualTo(2));
@@ -802,7 +946,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Rfc0065CommandRouting_UnconfiguredCommandActionFailsBeforeSelectedProvider()
+        public void Rfc0065CommandRouting_UnconfiguredCommandActionFailsBeforeCollectionProvider()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -815,8 +959,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     }
                 }
@@ -824,17 +968,17 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             Entity localPlayer = world.Create();
-            Entity selectedActor = world.Create();
+            Entity collectionActor = world.Create();
             var orders = new List<Order>();
-            bool selectedProviderCalled = false;
+            bool collectionProviderCalled = false;
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
             system.SetLocalPlayer(localPlayer, 1);
             system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
-                selectedProviderCalled = true;
-                list.Add(selectedActor);
+                collectionProviderCalled = true;
+                list.Add(collectionActor);
                 return true;
             });
             system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
@@ -842,8 +986,8 @@ namespace Ludots.Tests.GAS
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
             Assert.That(ex.Message, Does.Contain("RFC-0065 command routing"));
-            Assert.That(selectedProviderCalled, Is.False,
-                "Command actions must fail fast before consulting selected-provider fallback paths.");
+            Assert.That(collectionProviderCalled, Is.False,
+                "Command actions must fail fast before consulting collection-provider fallback paths.");
             Assert.That(orders, Is.Empty);
         }
 
@@ -861,8 +1005,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     }
                 }
@@ -881,7 +1025,7 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
                 list.Add(actor);
                 return true;
@@ -950,8 +1094,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     }
                 }
@@ -961,7 +1105,7 @@ namespace Ludots.Tests.GAS
             Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity commandActor = world.Create();
             var orders = new List<Order>();
-            bool selectedProviderCalled = false;
+            bool collectionProviderCalled = false;
             var system = new InputOrderMappingSystem(input, config);
             system.CommandActionId = "Command";
             system.SetLocalPlayer(localPlayer, 1);
@@ -971,15 +1115,15 @@ namespace Ludots.Tests.GAS
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
-            system.SetSelectedEntityProvider((string _, out Entity selected) =>
+            system.SetCollectionPrimaryEntityProvider((string _, out Entity primary) =>
             {
-                selectedProviderCalled = true;
-                selected = commandActor;
+                collectionProviderCalled = true;
+                primary = commandActor;
                 return true;
             });
-            system.SetSelectedEntityListProvider((_, list) =>
+            system.SetCollectionEntityListProvider((_, list) =>
             {
-                selectedProviderCalled = true;
+                collectionProviderCalled = true;
                 list.Add(commandActor);
                 return true;
             });
@@ -1059,8 +1203,8 @@ namespace Ludots.Tests.GAS
             bool activated = system.TryActivateMappedAction("Command");
 
             Assert.That(activated, Is.True);
-            Assert.That(selectedProviderCalled, Is.False,
-                "Programmatic Command activation must use the command-source collection, not selected-provider fallback.");
+            Assert.That(collectionProviderCalled, Is.False,
+                "Programmatic Command activation must use the command-source collection, not collection-provider fallback.");
             Assert.That(orders, Has.Count.EqualTo(1));
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(2));
@@ -1080,8 +1224,8 @@ namespace Ludots.Tests.GAS
                         ActionId = "Command",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "moveTo",
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Position,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
                         IsSkillMapping = false,
                     }
                 }

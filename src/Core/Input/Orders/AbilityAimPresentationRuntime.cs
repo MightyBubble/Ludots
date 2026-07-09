@@ -179,7 +179,7 @@ namespace Ludots.Core.Input.Orders
                 actor,
                 viewer,
                 input.HoveredEntity,
-                mapping.SelectionType,
+                mapping.TargetType,
                 abilityId,
                 actionKeyId,
                 primaryEventKeyId,
@@ -203,7 +203,7 @@ namespace Ludots.Core.Input.Orders
                 valid);
             PublishAimHoverCollection(actor, input.HoveredEntity);
             PublishAffectedCollection(actor, previewTarget, in impact, in previewParams, aimWorldCm);
-            PublishAimEvents(actor, viewer, input.HoveredEntity, mapping.SelectionType, definition, in impact, originWorldCm, aimWorldCm, valid);
+            PublishAimEvents(actor, viewer, input.HoveredEntity, mapping.TargetType, definition, in impact, originWorldCm, aimWorldCm, valid);
         }
 
         public void Clear(Entity actor)
@@ -429,7 +429,7 @@ namespace Ludots.Core.Input.Orders
             Entity actor,
             Entity viewer,
             Entity hoveredEntity,
-            OrderSelectionType selectionType,
+            OrderTargetType TargetType,
             in AbilityDefinition ability,
             in AimImpactDescriptor impact,
             Vector3 originWorldCm,
@@ -457,7 +457,7 @@ namespace Ludots.Core.Input.Orders
 
             if (impact.Query.Kind == TargetResolverKind.BuiltinSpatial)
             {
-                PublishAreaUpdated(actor, viewer, hoveredEntity, selectionType, impact.Query, originWorldCm, aimWorldCm, valid);
+                PublishAreaUpdated(actor, viewer, hoveredEntity, TargetType, impact.Query, originWorldCm, aimWorldCm, valid);
             }
             else
             {
@@ -663,7 +663,7 @@ namespace Ludots.Core.Input.Orders
             Entity actor,
             Entity viewer,
             Entity hoveredEntity,
-            OrderSelectionType selectionType,
+            OrderTargetType TargetType,
             int abilityId,
             int actionKeyId,
             int previewKeyId,
@@ -687,7 +687,7 @@ namespace Ludots.Core.Input.Orders
                     abilityId,
                     actionKeyId,
                     previewKeyId,
-                    selectionType,
+                    TargetType,
                     in query,
                     hasRange,
                     originWorldCm,
@@ -709,7 +709,7 @@ namespace Ludots.Core.Input.Orders
                     abilityId,
                     actionKeyId,
                     previewKeyId,
-                    selectionType,
+                    TargetType,
                     in query,
                     hasRange,
                     originWorldCm,
@@ -727,7 +727,7 @@ namespace Ludots.Core.Input.Orders
             int abilityId,
             int actionKeyId,
             int previewKeyId,
-            OrderSelectionType selectionType,
+            OrderTargetType TargetType,
             in TargetQueryDescriptor query,
             bool hasRange,
             Vector3 originWorldCm,
@@ -761,7 +761,7 @@ namespace Ludots.Core.Input.Orders
                     hoveredEntity,
                     ResolveEventKeyId(activeAreaEventKey),
                     AreaScopeOffset,
-                    ResolveAreaCenter(selectionType, in query, originWorldCm, aimWorldCm),
+                    ResolveAreaCenter(TargetType, in query, originWorldCm, aimWorldCm),
                     abilityId,
                     actionKeyId,
                     inputSlot,
@@ -920,14 +920,14 @@ namespace Ludots.Core.Input.Orders
             Entity actor,
             Entity viewer,
             Entity hoveredEntity,
-            OrderSelectionType selectionType,
+            OrderTargetType TargetType,
             in TargetQueryDescriptor query,
             Vector3 originWorldCm,
             Vector3 aimWorldCm,
             bool valid)
         {
             ref readonly BuiltinSpatialDescriptor spatial = ref query.Spatial;
-            Vector3 centerWorldCm = ResolveAreaCenter(selectionType, query, originWorldCm, aimWorldCm);
+            Vector3 centerWorldCm = ResolveAreaCenter(TargetType, query, originWorldCm, aimWorldCm);
             string activeKey = spatial.Shape switch
             {
                 SpatialShape.Circle => AbilityAimPresentationEventKeys.AreaCircle,
@@ -1269,7 +1269,7 @@ namespace Ludots.Core.Input.Orders
             return inRange;
         }
 
-        private static Vector3 ResolveAreaCenter(OrderSelectionType selectionType, in TargetQueryDescriptor query, Vector3 originWorldCm, Vector3 aimWorldCm)
+        private static Vector3 ResolveAreaCenter(OrderTargetType TargetType, in TargetQueryDescriptor query, Vector3 originWorldCm, Vector3 aimWorldCm)
         {
             if (query.Kind == TargetResolverKind.BuiltinSpatial &&
                 (query.Spatial.Shape == SpatialShape.Cone ||
@@ -1279,7 +1279,7 @@ namespace Ludots.Core.Input.Orders
                 return originWorldCm;
             }
 
-            return selectionType == OrderSelectionType.None ? originWorldCm : aimWorldCm;
+            return TargetType == OrderTargetType.None ? originWorldCm : aimWorldCm;
         }
 
         private static float ResolveRotationDeg(Vector3 fromWorldCm, Vector3 toWorldCm)

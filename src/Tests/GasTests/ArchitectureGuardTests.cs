@@ -364,7 +364,7 @@ namespace GasTests
         }
 
         [Test]
-        public void Epic322_SelectedMovePathOverlayBridge_IsRemoved()
+        public void Epic322_CommandActorMovePathOverlayBridge_IsRemoved()
         {
             var repoRoot = FindRepoRoot();
             string[] directories =
@@ -403,13 +403,13 @@ namespace GasTests
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; the old direct overlay bridge must not return:\n" +
                     string.Join("\n", hits));
             }
         }
 
         [Test]
-        public void Epic322_SelectedMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
+        public void Epic322_CommandActorMovePathPresentationSystem_PublishesEventsWithoutRenderBuffers()
         {
             var repoRoot = FindRepoRoot();
             string file = Path.Combine(
@@ -417,8 +417,8 @@ namespace GasTests
                 "mods",
                 "CoreInputMod",
                 "Systems",
-                "SelectedMovePathPresentationSystem.cs");
-            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 selected move path source {file}");
+                "CommandActorMovePathPresentationSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing epic #322 command actor move path source {file}");
 
             string[] forbidden =
             {
@@ -437,7 +437,7 @@ namespace GasTests
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 selected move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
+                    "Epic #322 command actor move path presentation must publish MovePath events consumed by performer rules; it must not read or write render buffers directly:\n" +
                     string.Join("\n", hits));
             }
         }
@@ -448,7 +448,7 @@ namespace GasTests
             var repoRoot = FindRepoRoot();
             string[] files =
             {
-                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsSelectionFeedbackPresentationSystem.cs"),
+                Path.Combine(repoRoot, "mods", "RtsDemoMod", "Systems", "RtsCommandSourceFeedbackPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "entity_query_tactics", "EntityQueryTacticsShowcaseMod", "Systems", "EntityQueryTacticsPresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "relationship", "RelationshipShowcaseMod", "Systems", "RelationshipShowcasePresentationSystem.cs"),
                 Path.Combine(repoRoot, "mods", "showcases", "visual_terrain_editor", "VisualTerrainEditorMod", "Runtime", "VisualTerrainEditorRuntime.cs"),

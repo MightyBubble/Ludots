@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EmptySelection_ZeroGroups_AndMembersWithoutSlotsAreSkipped()
+        public void EmptyCollection_ZeroGroups_AndMembersWithoutSlotsAreSkipped()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);

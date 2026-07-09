@@ -21,10 +21,10 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>Built-in router kinds (RFC-0065 §5.8, DEC-11). Registry keys, not a closed enum.</summary>
     public static class CastDispatchRouterKinds
     {
-        /// <summary>Selected actors submit together; <c>sharedOrderId</c> declares shared fan-out.</summary>
+        /// <summary>Resolved dispatch actors submit together; <c>sharedOrderId</c> declares shared fan-out.</summary>
         public const string Parallel = "parallel";
 
-        /// <summary>Selected actors submit one after another; incompatible with <c>sharedOrderId</c>.</summary>
+        /// <summary>Resolved dispatch actors submit one after another; incompatible with <c>sharedOrderId</c>.</summary>
         public const string Sequential = "sequential";
     }
 

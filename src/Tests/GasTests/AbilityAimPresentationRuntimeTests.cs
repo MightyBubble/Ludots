@@ -86,7 +86,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Position),
+                CreateMapping(OrderTargetType.Position),
                 CreateInput(new Vector3(300f, 0f, 400f), hoveredEntity: target, viewerEntity: viewer));
 
             Assert.That(_spatialQueries.LastRadiusCenter, Is.EqualTo(new WorldCmInt2(300, 400)));
@@ -167,7 +167,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Position),
+                CreateMapping(OrderTargetType.Position),
                 CreateInput(new Vector3(100f, 0f, 200f)));
 
             PresentationEvent area = SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.AreaRing);
@@ -192,7 +192,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Direction),
+                CreateMapping(OrderTargetType.Direction),
                 CreateInput(new Vector3(800f, 0f, 0f), AbilityAimInputSlot.VectorDirection));
 
             PresentationEvent area = SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.AreaLine);
@@ -223,7 +223,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Direction),
+                CreateMapping(OrderTargetType.Direction),
                 new AbilityAimInputState(
                     slot: AbilityAimInputSlot.VectorOrigin,
                     hasCursorWorldCm: true,
@@ -233,7 +233,7 @@ namespace Ludots.Tests.GAS
                     hoveredEntity: Entity.Null));
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Direction),
+                CreateMapping(OrderTargetType.Direction),
                 new AbilityAimInputState(
                     slot: AbilityAimInputSlot.VectorDirection,
                     hasCursorWorldCm: true,
@@ -277,7 +277,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Position),
+                CreateMapping(OrderTargetType.Position),
                 CreateInput(new Vector3(500f, 0f, 0f)));
 
             PresentationEvent genericPreview = SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.Preview);
@@ -303,7 +303,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Position),
+                CreateMapping(OrderTargetType.Position),
                 CreateInput(new Vector3(300f, 0f, 0f)));
 
             Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out var view), Is.True);
@@ -368,7 +368,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Entity),
+                CreateMapping(OrderTargetType.Entity),
                 CreateInput(new Vector3(250f, 0f, 0f)));
 
             Assert.That(_collections.TryGetView(actor, EntityCollectionKeys.AbilityAimAffected, out EntityCollectionView view), Is.True);
@@ -414,7 +414,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Direction),
+                CreateMapping(OrderTargetType.Direction),
                 CreateInput(new Vector3(800f, 0f, 0f), AbilityAimInputSlot.VectorDirection));
             fixture.Tick();
 
@@ -428,7 +428,7 @@ namespace Ludots.Tests.GAS
 
             _runtime.UpdateAiming(
                 actor,
-                CreateMapping(OrderSelectionType.Direction),
+                CreateMapping(OrderTargetType.Direction),
                 CreateInput(new Vector3(300f, 0f, 0f), AbilityAimInputSlot.VectorDirection));
             fixture.Tick();
 
@@ -683,12 +683,12 @@ namespace Ludots.Tests.GAS
                 abilities);
         }
 
-        private static InputOrderMapping CreateMapping(OrderSelectionType selectionType)
+        private static InputOrderMapping CreateMapping(OrderTargetType TargetType)
         {
             return new InputOrderMapping
             {
                 ActionId = "Skill",
-                SelectionType = selectionType,
+                TargetType = TargetType,
                 ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
             };
         }

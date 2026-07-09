@@ -1,6 +1,6 @@
 {
   "startupMapId": "formation_capability_showcase",
-  "startupSelectedPlayerId": 1,
+  "startupLocalPlayerId": 1,
   "windowTitle": "Ludots Engine - Formation Capability Showcase Movement",
   "targetFps": 0,
   "windowWidth": 1600,

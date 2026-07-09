@@ -6,7 +6,7 @@
 > `OrderSelectionReference`, `SelectionRequest`, and `SelectionResponse` are retired; `EntityCollectionStore`
 > / `collection.command.source` is the authoritative model.
 
-Date: 2026-07-07
+Date: 2026-07-09
 
 Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, PR head `2417820e9`, `docs/audits/rfc-0065-implementation-handoff.md`, and `docs/rfcs/RFC-0065-unified-interaction-collection-casting-architecture.md`.
 
@@ -18,7 +18,55 @@ PR581 has reached the current RFC-0065 closeout target for formal Selection reti
 |---|---|---|
 | Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 timeline, A4 command-source/scheme, A4 blink/mixed-selection UI timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
 | Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable timelines. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
-| Is Selection retired? | Yes for formal Selection APIs repo-wide | Production and test code now use `EntityCollectionStore`, `EntityCollectionKeys.CommandSource`, `EntityCollectionContextRuntime`, and `CommandSourceAcquisitionSystem`. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
+| Is Selection retired? | Yes for formal Selection APIs and core command authority | Production and test code now use `EntityCollectionStore`, explicit owner/key collection reads, and `CommandSourceAcquisitionSystem`. `EntityCollectionContextRuntime` is intentionally collection-generic and does not hard-code or fall back to command-source. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
+
+## Final 2026-07-09 Selection-Retirement Pass
+
+This pass closes the remaining formal-selection cleanup for PR581:
+
+- Core helpers that need a focused set of entities now accept an explicit `owner + collectionKey` or explicit actor span. They do not ask whether that set came from "selection", command-source acquisition, a showcase seed, or another business workflow.
+- `EntityCollectionContextRuntime` remains a neutral collection reader. It resolves only the caller-provided collection key and does not register or imply a `collection.command.source` fallback.
+- `MassNavigation` remains an execution domain. It consumes explicit move orders and does not read Selection, command-source, or interaction-context authority APIs.
+- Current interaction architecture docs were migrated from old selection-oriented target-field, gate, and filter wording to `targetType` / `TargetCollectionGate` / `TargetFilter`, so new examples no longer teach the retired input model.
+- `AbilityExecLoader` was tightened to fail fast for malformed ability config instead of silently skipping invalid effect ids, tags, timeline ticks, gate payloads, graph ids, caller params, toggle effects, or presentation mode overrides.
+
+Latest validation from this pass:
+
+```text
+dotnet test src\Tests\GasTests\GasTests.csproj --no-build --filter "FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~ParticipantBindingContractTests|FullyQualifiedName~LifecycleArchitectureTests|FullyQualifiedName~TagEffectArchitectureTests|FullyQualifiedName~InteractionSelectionConvergenceTests|FullyQualifiedName~ProgressionRequirementTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~MudSc2AndYgoDemoTests|FullyQualifiedName~ArchitectureGuardTests"
+
+Passed: 227/227
+```
+
+```text
+dotnet test src\Tests\ThreeCTests\ThreeCTests.csproj --filter "FullyQualifiedName~Camera"
+
+Passed: 77/77
+```
+
+```text
+dotnet test src\Tests\PresentationTests\PresentationTests.csproj --filter "FullyQualifiedName~MassNavigation|FullyQualifiedName~FormationCapabilityShowcaseContractTests|FullyQualifiedName~EntityInfoPanelServiceTests"
+
+Passed: 144/144
+```
+
+```text
+dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests"
+
+Passed: 13/13
+```
+
+```text
+rg -n "SelectionRuntime|SelectionContextRuntime|SelectionControlGroupRuntime|OrderSelectionReference|SelectedEntityProvider|SetSelectedEntityProvider|SelectionRequest|SelectionResponse|SelectionViewRuntime|SelectionViewKeys|CurrentSelection|ViewedSelectionPrimary|SelectedGroupFollowTarget|CameraFollowTargetKind\.Selected|CenterOnSelected|RejectCommandWithoutSelection|EmptySelection|SelectionGate|RewireSelection|SelectionBox|startupSelectedPlayerId|StartupSelectedPlayerId|HasSelectedPlayer|TryGetLocalOwner\(" src mods assets -g "*.cs" -g "*.json" --glob "!**/bin/**" --glob "!**/obj/**"
+
+No matches.
+```
+
+```text
+rg -n "SelectionGate|OrderSelectionType|selectionType|selectionGate|SelectionRule" docs\architecture\interaction docs\architecture\entity_collection_query_infrastructure.md
+
+No matches.
+```
 
 Latest PR review checked on 2026-07-06:
 
@@ -317,7 +365,7 @@ rg -n "Selected|Selection|SelectionContextRuntime|SelectionViewRuntime|LivePrima
 
 | Audit question | Finding | Evidence |
 |---|---|---|
-| Does the RFC-0065 ground `Command` command-source path depend on Selection? | No for the routed `Command` slice when RFC-0065 services are installed. It reads the active interaction frame, `ControlSchemeRuntime`, command intent profiles, dispatch profiles, and `EntityCollectionStore`; it copies actors from the active collection and never calls the selected-provider path. | `src/Core/Input/Orders/InputOrderMappingSystem.cs` routes command actions to `SubmitRfc0065Command`; that method resolves `frame.ActiveCollectionKeyId`, copies actors from `EntityCollectionStore`, routes through `CommandIntentProfileRegistry.RouteGroup`, dispatches through `CastDispatchProfileRegistry.SelectDispatchTargets`, then submits orders. `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs` fail-fast configures these services instead of silently falling back. |
+| Does the RFC-0065 ground `Command` command-source path depend on Selection? | No for the routed `Command` slice when RFC-0065 services are installed. It reads the active interaction frame, `ControlSchemeRuntime`, command intent profiles, dispatch profiles, and `EntityCollectionStore`; it copies actors from the active collection and never calls an implicit selected-provider path. | `src/Core/Input/Orders/InputOrderMappingSystem.cs` routes command actions to `SubmitRfc0065Command`; that method resolves `frame.ActiveCollectionKeyId`, copies actors from `EntityCollectionStore`, routes through `CommandIntentProfileRegistry.RouteGroup`, dispatches through `CastDispatchProfileRegistry.SelectDispatchTargets`, then submits orders. `mods/CoreInputMod/Systems/LocalOrderSourceHelper.cs` fail-fast configures these services instead of silently falling back. |
 | Is repo-wide Selection retired? | Yes in the current closeout pass. | The old `src/Core/Input/Selection/*` infrastructure is deleted; `GameEngine` no longer registers formal Selection services; command authority uses `EntityCollectionStore` and explicit command-source collections. |
 | Is the EntityCommandPanel command-source path selection-free? | The aggregation source is command-source based. | `mods/EntityCommandPanelMod/Runtime/CollectionGasEntityCommandPanelSource.cs` resolves `context.TargetEntity + config.CollectionKey` through `EntityCollectionStore`; no `SelectionRuntime` read is present in that source. The showcase host still has to publish `collection.command.source`, but the panel source itself does not use Selection as its command source. |
 | Which old Selection consumers were migrated? | Acquisition/view/control-group, presentation readers, camera/minimap readers, participant-view/showcase projections, and legacy skill/cast tests now resolve through explicit entity collections or command-source helpers. | Current production and test scans ban `SelectionRuntime`, `SelectionSetKeys`, `SelectionViewKeys`, `SelectionContextRuntime`, `SelectionViewRuntime`, `SelectionControlGroupRuntime`, `OrderSelectionReference`, and request/response queues. |
@@ -325,14 +373,23 @@ rg -n "Selected|Selection|SelectionContextRuntime|SelectionViewRuntime|LivePrima
 Superseded fallback / dual-truth findings:
 
 - `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs` was tightened to command-source collection helpers and no longer bridges formal Selection services.
-- `src/Core/Input/Orders/InputOrderMappingSystem.cs` must not rebuild selected-provider fallback semantics; command actions route through explicit command-source collections.
+- `src/Core/Input/Orders/InputOrderMappingSystem.cs` must not rebuild selected-provider fallback semantics; command actions route through explicit command-source collections, and legacy skill/cast paths now expose neutral `CollectionPrimaryEntityProvider` / `CollectionEntityListProvider` contracts.
 - `mods/showcases/interaction/InteractionShowcaseMod/Runtime/InteractionShowcaseRuntime.cs` seeds command-source rows directly for the RFC-0065 command path.
-- `src/Core/MassNavigation/**` no longer references Selection/CommandSource/InteractionContextStack authority APIs. It consumes explicit `OrderBuffer` move orders; remaining MassNavigation follow-up work is the separate `PlayerOwner`/`Team` domain migration.
-- `mods/capabilities/participant_view/**`, minimap, camera, and UI readers are collection readers; they must not depend on formal Selection APIs.
+- `src/Core/MassNavigation/**` no longer references Selection/CommandSource/InteractionContextStack authority APIs. It consumes explicit `OrderBuffer` move orders and command actor spans; remaining MassNavigation follow-up work is the separate `PlayerOwner`/`Team` domain migration.
+- `mods/capabilities/participant_view/**`, minimap, camera, entity-info, and UI readers are collection readers; they must not depend on formal Selection APIs.
+
+Follow-up selection-boundary tightening completed after this audit:
+
+- `InputOrderMappingSystem` no longer exposes `SelectedEntityProvider` / `SetSelectedEntityProvider` or selected actor scratch names; callers inject `CollectionPrimaryEntityProvider` and `CollectionEntityListProvider`.
+- `CommandSourceAcquisitionSystem` publishes `OnEntityAcquired`; CoreInputMod exposes `CommandSourceAcquiredCallbacks` instead of `EntitySelectionCallbacks`.
+- Camera follow targets use `EntityCollectionPrimary` / `EntityCollectionGroup` and `EntityCollection*FollowTarget` classes. Config assets were migrated to those names without keeping old enum aliases.
+- Minimap runtime centers on the command-source primary through explicit entity collections; MassNavigation result/method names use `CommandActors`.
+- EntityInfo uses explicit `EntityCollection` panel targets, and the generic move-path projection is `CommandActorMovePathPresentationSystem`.
+- `CommandSourceDragOverlaySystem` handles the UI drag rectangle using explicit command-source acquisition config; it is not an authority API and does not provide command-source membership by itself.
 
 Remaining guard tasks after repo-wide formal Selection retirement:
 
-- Keep command-source-only provider names explicit and forbid selected-provider fallbacks in `Command` actions.
+- Keep command-source-only provider names explicit and forbid implicit selected-provider fallbacks in `Command` actions.
 - Keep a focused guard that a `Command` action with missing active command-source collection / missing active intent fails instead of routing through any retired formal Selection name.
 - Keep the interaction showcase command-source direct-seeding path guarded; do not introduce any `LivePrimary -> collection.command.source` bridge.
 - Keep MassNavigation on explicit OrderQueue ingestion; do not migrate it to CommandSource or InteractionContext reads.
@@ -344,7 +401,7 @@ Small fixes made during this audit:
 - `mods/CoreInputMod/Systems/InputInteractionContextAccessor.cs` no longer uses `EntityCollectionStore.CopyEntities` in the Issue200-guarded input/knowledge consumer path; it reads the active command-source view with `TryGetEntityAt` per row.
 - `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/Runtime/EntityCommandPanelShowcaseRuntime.cs` makes the aggregation toolbar visible after publishing the showcase `collection.command.source`, restoring the SHOW-4 runtime switch acceptance path.
 - `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/DataPlane/EntityCommandPanelShowcaseDataPlane.cs` imports the existing GAS `AbilityIdRegistry` instead of relying on an unresolved name.
-- `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs` now fails fast when `exec` is missing, rejects non-object `exec.items[]`, and rejects more than `AbilityExecSpec.MAX_ITEMS` instead of truncating.
+- `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs` now fails fast when `exec.clockId`, required timeline fields, gate payloads, graph ids, effect ids, tag strings, caller param entries, toggle effects, or presentation mode overrides are malformed; non-object `exec.items[]` and more than `AbilityExecSpec.MAX_ITEMS` are rejected instead of skipped or truncated.
 - `mods/showcases/superweapon_context/SuperweaponContextShowcaseMod/Runtime/SuperweaponContextShowcaseRuntime.cs` now starts the showcase ability through `OrderQueue.TryEnqueue` with `OrderArgs.I0` instead of hardcoding an order id and calling `OrderBuffer.SetActiveDirect`; cleanup goes through `OrderSubmitter.CancelAll`.
 - `src/Libraries/Arch.Extended/Arch.Relationships/Relationship.cs` no longer compiles reflection accessors over `SortedList` private `values` / `version` fields. It keeps the public `SortedList` backing store required by persistence and uses public APIs after the local binary key lookup.
 
@@ -420,6 +477,49 @@ DOTNET_ROLL_FORWARD=Major dotnet test src/Libraries/Arch.Extended/Arch.Relations
 Passed: 5/5
 Note: roll-forward is needed on this workstation because .NET 7 runtime is not installed.
 ```
+
+Final 2026-07-08 validation after external-entity / collection-provider selection-boundary tightening:
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --filter "FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CommandActorMovePathPresentationSystemTests|FullyQualifiedName~ArchitectureGuardTests|FullyQualifiedName~InteractionSelectionConvergenceTests|FullyQualifiedName~EffectPresetInteractionModeTests|FullyQualifiedName~Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests"
+
+Passed: 86/86
+```
+
+```text
+dotnet test src/Tests/PresentationTests/PresentationTests.csproj --no-build --filter "FullyQualifiedName~EntityInfoPanelServiceTests|FullyQualifiedName~MassNavigationLocalCommandInputSystemTests|FullyQualifiedName~MassNavigationAuthoredAgentBindingIncrementalTests"
+
+Passed: 33/33
+```
+
+```text
+dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj --no-build --filter "FullyQualifiedName~CameraRuntimeConvergenceTests"
+
+Passed: 14/14
+```
+
+```text
+dotnet test src/Tests/ThreeCTests/ThreeCTests.csproj --no-build --filter "FullyQualifiedName~SharedThreeCProfilesModTests"
+
+Passed: 1/1
+```
+
+```text
+dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests"
+
+Passed: 13/13
+```
+
+```text
+rg -n -e "SelectedEntityProvider" -e "SetSelectedEntityProvider" -e "SetSelectedEntityListProvider" -e "OnEntitySelected" -e "EntitySelectionCallbacks" -e "CurrentSelectionView" -e "ViewedSelectionPrimary" -e "SelectedGroupFollowTarget" -e "CameraFollowTargetKind\.Selected" -e "CenterOnSelected" -e "EmptySelection" -e "RejectCommandWithoutSelection" src/Core mods/CoreInputMod mods/MobaDemoMod mods/EntityCommandPanelMod mods/capabilities mods/showcases/interaction
+
+No matches.
+```
+
+Known non-regression noise during broad local validation:
+
+- `dotnet test src/Tests/PresentationTests/PresentationTests.csproj --filter "...|FullyQualifiedName~Minimap"` also selected `PerformerDynamicWorkerBenchmarkTests` minimap large-world benchmarks; those failed with 30k screen marker count `0`, outside this selection-boundary patch.
+- Broad `CameraAcceptanceModTests` / `CameraShowcaseModTests` include existing fixture failures around missing `LocalPlayerEntity`, unmounted UI panel, and inactive camera follow state. The core `CameraRuntimeConvergenceTests` and config parse test above pass after the follow-target enum rename.
 
 ```text
 git diff --check

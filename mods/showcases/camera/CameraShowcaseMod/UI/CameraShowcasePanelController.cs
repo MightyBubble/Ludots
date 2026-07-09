@@ -45,7 +45,7 @@ namespace CameraShowcaseMod.UI
                 Ui.Row(
                     BuildMapButton("Hub", mapId == CameraShowcaseIds.HubMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.HubMapId)),
                     BuildMapButton("Stack", mapId == CameraShowcaseIds.StackMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.StackMapId)),
-                    BuildMapButton("Selection", mapId == CameraShowcaseIds.SelectionMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.SelectionMapId)),
+                    BuildMapButton("Command", mapId == CameraShowcaseIds.CommandSourceFollowMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.CommandSourceFollowMapId)),
                     BuildMapButton("Bootstrap", mapId == CameraShowcaseIds.BootstrapMapId, ctx => LoadShowcaseMap(engine, CameraShowcaseIds.BootstrapMapId))
                 ).Wrap().Gap(8f),
                 Ui.Text("View Modes").FontSize(12f).Bold().Color("#F4C77D"),
@@ -53,7 +53,7 @@ namespace CameraShowcaseMod.UI
                     BuildActionButton("Tactical", activeMode == CameraShowcaseIds.TacticalModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.TacticalModeId)),
                     BuildActionButton("Follow", activeMode == CameraShowcaseIds.FollowModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.FollowModeId)),
                     BuildActionButton("Inspect", activeMode == CameraShowcaseIds.InspectModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.InspectModeId)),
-                    BuildActionButton("Selection", activeMode == CameraShowcaseIds.SelectionModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.SelectionModeId))
+                    BuildActionButton("Command", activeMode == CameraShowcaseIds.CommandSourceFollowModeId, ctx => viewModeManager?.SwitchTo(CameraShowcaseIds.CommandSourceFollowModeId))
                 ).Wrap().Gap(8f),
                 Ui.Text("Runtime").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
@@ -62,7 +62,7 @@ namespace CameraShowcaseMod.UI
                     BuildActionButton("Tighten", false, ctx => TightenActiveCameraPose(engine)),
                     BuildActionButton("Reset", false, ctx => ResetActiveCameraPose(engine))
                 ).Wrap().Gap(8f),
-                Ui.Text("Keyboard: F1/F2/F3 shared modes, F4 selection mode, Tab cycles selection target.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
+                Ui.Text("Keyboard: F1/F2/F3 shared modes, F4 command-source follow, Tab cycles command actor.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal)
             ).Width(440f)
              .Padding(16f)
              .Gap(10f)

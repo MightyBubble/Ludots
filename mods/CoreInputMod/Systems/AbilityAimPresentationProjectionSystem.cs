@@ -67,7 +67,15 @@ namespace CoreInputMod.Systems
             }
 
             bool hasCursor = _context.TryGetGroundWorldCm(out var groundCm);
-            _context.TryGetHoveredEntity(out Entity hovered);
+            Entity viewer = _context.TryGetCommandSourceOwner(out Entity owner)
+                ? owner
+                : _context.GetLocalPlayerEntityOrNull();
+            Entity hovered = Entity.Null;
+            if (viewer != Entity.Null)
+            {
+                _context.TryGetHoveredEntity(viewer, out hovered);
+            }
+
             var input = new AbilityAimInputState(
                 AbilityAimInputSlot.Target,
                 hasCursor,
@@ -75,7 +83,7 @@ namespace CoreInputMod.Systems
                 hasOriginWorldCm: false,
                 originWorldCm: default,
                 hovered,
-                _context.GetLocalPlayerEntityOrNull());
+                viewer);
             _runtime!.UpdateAiming(actor, aimingMapping, in input);
         }
 
@@ -129,7 +137,7 @@ namespace CoreInputMod.Systems
                 hasOriginWorldCm: mappingSystem.VectorAimSlot != VectorAimInputSlot.Origin,
                 origin,
                 Entity.Null,
-                _context.GetLocalPlayerEntityOrNull());
+                _context.TryGetCommandSourceOwner(out Entity viewer) ? viewer : _context.GetLocalPlayerEntityOrNull());
             _runtime!.UpdateAiming(actor, aimingMapping, in input);
         }
 

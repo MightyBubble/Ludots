@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
@@ -90,8 +90,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.Held,
                         HeldPolicy = HeldPolicy.StartEnd,
                         OrderTypeKey = "beam",
-                        SelectionType = OrderSelectionType.None,
-                        RequireSelection = false,
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
                         IsSkillMapping = false,
                     }
                 }
@@ -136,12 +136,13 @@ namespace Ludots.Tests.GAS
             var authoritativeInput = new FrozenInputActionReader();
             authoritativeInput.SetActionState("Confirm", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
-            var target = world.Create();
+            var ambientTarget = world.Create();
+            var requestTarget = world.Create();
             var local = world.Create();
             var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var collections = new EntityCollectionStore(collectionKeys);
             Span<Entity> commandSource = stackalloc Entity[1];
-            commandSource[0] = target;
+            commandSource[0] = ambientTarget;
             collections.Replace(
                 local,
                 EntityCollectionDescriptor.Create(
@@ -149,7 +150,7 @@ namespace Ludots.Tests.GAS
                     EntityCollectionSourceKind.UiAcquisition,
                     EntityCollectionRoleKind.CommandSource,
                     local,
-                    target,
+                    ambientTarget,
                     "Command source",
                     "Seed | 1 actor(s)"),
                 commandSource,
@@ -183,12 +184,13 @@ namespace Ludots.Tests.GAS
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
             var responses = (InputResponseBuffer)globals[CoreServiceKeys.InputResponseBuffer.Name];
-            requests.TryEnqueue(new InputRequest { RequestId = 7, RequestTagId = 700 });
+            requests.TryEnqueue(new InputRequest { RequestId = 7, RequestTagId = 700, Target = requestTarget });
 
             system.Update(0f);
 
             Assert.That(responses.TryConsume(7, out var response), Is.True);
-            Assert.That(response.Target, Is.EqualTo(target));
+            Assert.That(response.Target, Is.EqualTo(requestTarget));
+            Assert.That(response.Target, Is.Not.EqualTo(ambientTarget));
             Assert.That(response.ResponseTagId, Is.EqualTo(700));
         }
 
@@ -450,7 +452,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { new MinimapInputConsumer(minimap) });
+            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
 
             var input = new AuthoritativeInputAccumulator();
             var pointerButtons = new AuthoritativePointerButtonAccumulator();
@@ -531,7 +533,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { new MinimapInputConsumer(minimap) });
+            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
             engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
             engine.SetService(CoreServiceKeys.VisualHeightmap, CreateFlatHeightmap());
             engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
@@ -617,7 +619,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
             engine.SetService(CoreServiceKeys.UiCaptured, false);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
-            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { new MinimapInputConsumer(minimap) });
+            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { CreateMinimapInputConsumer(minimap) });
 
             var input = new AuthoritativeInputAccumulator();
             var pointerButtons = new AuthoritativePointerButtonAccumulator();
@@ -749,6 +751,17 @@ namespace Ludots.Tests.GAS
                 MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
                 MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
             });
+        }
+
+        private static MinimapInputConsumer CreateMinimapInputConsumer(MinimapRuntime minimap)
+        {
+            return new MinimapInputConsumer(minimap, NoMinimapCommandSourceOwner);
+        }
+
+        private static bool NoMinimapCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            return false;
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildCameraHandler()

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Ludots.Core.EntityCollections;
@@ -9,25 +9,25 @@ namespace Ludots.Core.Input.Orders
     /// Interaction mode determines HOW InputActions become Orders.
     /// This is a game-level / player-preference setting, NOT per-ability.
     ///
-    /// TargetFirst (WoW): player selects target first, then presses ability key 鈫?order submitted immediately.
-    /// SmartCast (LoL): player presses ability key 鈫?order submitted immediately at cursor/hovered entity.
-    /// AimCast (DotA/WC3): player presses ability key 鈫?enters aiming phase 鈫?click to confirm, right-click/ESC to cancel.
+    /// TargetFirst (WoW): player selects target first, then presses ability key ->order submitted immediately.
+    /// SmartCast (LoL): player presses ability key ->order submitted immediately at cursor/hovered entity.
+    /// AimCast (DotA/WC3): player presses ability key ->enters aiming phase ->click to confirm, right-click/ESC to cancel.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InteractionModeType
     {
-        /// <summary>WoW style: select target, press key 鈫?instant cast.</summary>
+        /// <summary>WoW style: select target, press key ->instant cast.</summary>
         TargetFirst = 0,
 
-        /// <summary>LoL style: press key 鈫?cast at cursor / hovered entity.</summary>
+        /// <summary>LoL style: press key ->cast at cursor / hovered entity.</summary>
         SmartCast = 1,
 
-        /// <summary>DotA/WC3 style: press key 鈫?aiming 鈫?click confirm.</summary>
+        /// <summary>DotA/WC3 style: press key ->aiming ->click confirm.</summary>
         AimCast = 2,
 
         /// <summary>
-        /// LoL "Quick Cast with Indicator" style: hold key 鈫?show indicator,
-        /// release key 鈫?cast at cursor position. Right-click/ESC cancels.
+        /// LoL "Quick Cast with Indicator" style: hold key ->show indicator,
+        /// release key ->cast at cursor position. Right-click/ESC cancels.
         /// </summary>
         SmartCastWithIndicator = 3,
 
@@ -69,12 +69,12 @@ namespace Ludots.Core.Input.Orders
     }
     
     /// <summary>
-    /// Selection type required for the order.
+    /// Target data required for the order.
     /// </summary>
-    public enum OrderSelectionType
+    public enum OrderTargetType
     {
         /// <summary>
-        /// No selection required.
+        /// No target data required.
         /// </summary>
         None = 0,
         
@@ -174,7 +174,7 @@ namespace Ludots.Core.Input.Orders
     public enum AutoTargetPolicy
     {
         /// <summary>
-        /// No auto-targeting. If no hovered entity, fall back to selected entity or fail.
+        /// No automatic target resolution. Entity targets must come from hover or explicit target input.
         /// </summary>
         None = 0,
         
@@ -267,10 +267,10 @@ namespace Ludots.Core.Input.Orders
         public ActorOrderRoutingMatch Match { get; set; } = new();
 
         /// <summary>
-        /// Optional per-candidate selection resolution. When null, inherits mapping.SelectionType.
+        /// Optional per-candidate target resolution. When null, inherits mapping.TargetType.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public OrderSelectionType? SelectionType { get; set; }
+        public OrderTargetType? TargetType { get; set; }
 
         public ActorOrderRoutingCandidate Clone()
         {
@@ -279,7 +279,7 @@ namespace Ludots.Core.Input.Orders
                 OrderTypeKey = OrderTypeKey,
                 Priority = Priority,
                 Match = Match?.Clone() ?? new ActorOrderRoutingMatch(),
-                SelectionType = SelectionType
+                TargetType = TargetType
             };
         }
     }
@@ -339,20 +339,25 @@ namespace Ludots.Core.Input.Orders
         public OrderArgsTemplate ArgsTemplate { get; set; } = new();
         
         /// <summary>
-        /// Whether selection data is required.
+        /// Whether target data is required.
         /// </summary>
-        public bool RequireSelection { get; set; } = false;
+        public bool RequireTarget { get; set; } = false;
 
         /// <summary>
-        /// Named selection set supplying entity targets for this mapping.
+        /// Named entity collection supplying command actors for this mapping.
         /// </summary>
-        public string SelectionSetKey { get; set; } = EntityCollectionKeys.CommandSource;
+        public string ActorCollectionKey { get; set; } = EntityCollectionKeys.CommandSource;
+
+        /// <summary>
+        /// Named entity collection supplying entity targets for this mapping.
+        /// </summary>
+        public string TargetCollectionKey { get; set; } = EntityCollectionKeys.CommandSource;
         
         /// <summary>
-        /// The type of selection required.
+        /// The type of target required.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public OrderSelectionType SelectionType { get; set; } = OrderSelectionType.None;
+        public OrderTargetType TargetType { get; set; } = OrderTargetType.None;
         
         /// <summary>
         /// How modifier keys affect the order submit mode.
@@ -388,8 +393,8 @@ namespace Ludots.Core.Input.Orders
         
         /// <summary>
         /// Automatic target acquisition policy for SmartCast when no entity is hovered.
-        /// When set, the system uses a spatial query to find a fallback target.
-        /// Only meaningful for <see cref="OrderSelectionType.Entity"/> selections.
+        /// When set, the system uses a spatial query to find an explicit target.
+        /// Only meaningful for <see cref="OrderTargetType.Entity"/> targets.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public AutoTargetPolicy AutoTargetPolicy { get; set; } = AutoTargetPolicy.None;
@@ -424,9 +429,10 @@ namespace Ludots.Core.Input.Orders
                 OrderTypeKey = OrderTypeKey,
                 ActorOrderRouting = ActorOrderRouting?.Clone(),
                 ArgsTemplate = ArgsTemplate?.Clone() ?? new OrderArgsTemplate(),
-                RequireSelection = RequireSelection,
-                SelectionSetKey = SelectionSetKey,
-                SelectionType = SelectionType,
+                RequireTarget = RequireTarget,
+                ActorCollectionKey = ActorCollectionKey,
+                TargetCollectionKey = TargetCollectionKey,
+                TargetType = TargetType,
                 ModifierBehavior = ModifierBehavior,
                 IsSkillMapping = IsSkillMapping,
                 HeldPolicy = HeldPolicy,
@@ -463,7 +469,7 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Global interaction mode for this configuration.
         /// Determines how skill-type InputActions transition to Orders:
-        ///   TargetFirst = instant submit using selected entity
+        ///   TargetFirst = instant submit using configured target data
         ///   SmartCast   = instant submit using cursor/hovered entity
         ///   AimCast     = enter aiming phase, submit on confirm click
         ///
@@ -478,7 +484,7 @@ namespace Ludots.Core.Input.Orders
         public List<InputOrderMapping> Mappings { get; set; } = new();
 
         /// <summary>
-        /// Global move formation behavior for multi-selected moveTo position commands.
+        /// Global move formation behavior for multi-actor moveTo position commands.
         /// </summary>
         public GroupMoveFormationSettings GroupMoveFormation { get; set; } = new();
         

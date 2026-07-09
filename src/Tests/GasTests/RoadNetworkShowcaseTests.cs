@@ -734,7 +734,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsLivePrimarySelectionPrimary()
+        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsCommandSourcePrimary()
         {
             using var engine = CreateRoadShowcaseEngine();
             engine.LoadStartupMap();
@@ -745,16 +745,16 @@ namespace Ludots.Tests.GAS
             runtime.HandleMapFocusedAsync(context).GetAwaiter().GetResult();
 
             Entity owner = FindEntityByInstanceId(engine, BlueVanguardInstanceId);
-            Entity selected = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
+            Entity commandActor = FindEntityByInstanceId(engine, BlueNorthColumnInstanceId);
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
-            Assert.That(selected, Is.Not.EqualTo(Entity.Null));
+            Assert.That(commandActor, Is.Not.EqualTo(Entity.Null));
 
-            Span<Entity> selectedUnits = stackalloc Entity[1];
-            selectedUnits[0] = selected;
-            ReplaceCommandSource(engine, owner, selectedUnits);
+            Span<Entity> commandActors = stackalloc Entity[1];
+            commandActors[0] = commandActor;
+            ReplaceCommandSource(engine, owner, commandActors);
 
             RoadNetworkShowcasePanelState panel = runtime.BuildPanelState(engine);
-            Assert.That(panel.Selection, Does.Contain("Blue North Column"));
+            Assert.That(panel.CommandSource, Does.Contain("Blue North Column"));
             Assert.That(panel.Actors.Length, Is.EqualTo(1));
             Assert.That(panel.Actors[0].Header, Does.Contain("Blue North Column"));
             Assert.That(panel.Actors[0].Query, Does.Contain("planner="));
@@ -1840,8 +1840,8 @@ namespace Ludots.Tests.GAS
             }
             else
             {
-                MapLaunchContext? launchContext = engine.MergedConfig.StartupSelectedPlayerId > 0
-                    ? MapLaunchContext.Create(engine.MergedConfig.StartupSelectedPlayerId)
+                MapLaunchContext? launchContext = engine.MergedConfig.StartupLocalPlayerId > 0
+                    ? MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)
                     : null;
                 engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
             }
@@ -2009,12 +2009,12 @@ namespace Ludots.Tests.GAS
 
         private static int GetSelectionCount(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            return Ludots.Tests.EntityCollectionTestAccess.GetCommandSourceCount(engine);
         }
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary) ||
+            if (!Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity primary) ||
                 !engine.World.TryGet(primary, out Name name))
             {
                 return string.Empty;
@@ -2025,7 +2025,7 @@ namespace Ludots.Tests.GAS
 
         private static bool IsCurrentPrimaryInstance(GameEngine engine, string instanceId)
         {
-            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary))
+            if (!Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity primary))
             {
                 return false;
             }

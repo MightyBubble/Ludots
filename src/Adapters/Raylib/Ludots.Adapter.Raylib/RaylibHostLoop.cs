@@ -7,6 +7,7 @@ using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
@@ -1590,17 +1591,24 @@ namespace Ludots.Adapter.Raylib
             }
 
             string hoveredSummary = "hovered=(none)";
-            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (TryGetLocalEntityCollectionStore(engine, out Entity debugOwner, out EntityCollectionStore debugCollections) &&
+                EntityCollectionContextRuntime.TryGetHovered(engine.World, debugCollections, debugOwner, out Entity hovered) &&
                 hovered != Entity.Null)
             {
                 hoveredSummary = $"hovered={DescribeEntity(engine, hovered)}";
             }
 
-            string selectedSummary = "selected=(none)";
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
-                selected != Entity.Null)
+            string selectedSummary = "commandSource=(none)";
+            if (TryGetLocalEntityCollectionStore(engine, out debugOwner, out debugCollections) &&
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    engine.World,
+                    debugCollections,
+                    debugOwner,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity commandSource) &&
+                commandSource != Entity.Null)
             {
-                selectedSummary = $"selected={DescribeEntity(engine, selected)}";
+                selectedSummary = $"commandSource={DescribeEntity(engine, commandSource)}";
             }
 
             bool uiCaptured = engine.TryGetService(CoreServiceKeys.UiCaptured, out bool captured) &&
@@ -1619,6 +1627,18 @@ namespace Ludots.Adapter.Raylib
 
             string targetSummary = BuildSelectionTargetSummary(engine);
             return $"windowFocused={Rl.IsWindowFocused()} {pointerSummary} {authPointerSummary} {liveSelectSummary} {authSelectSummary} {liveCommandSummary} {authCommandSummary} {hoveredSummary} {selectedSummary} uiCaptured={uiCaptured} {dragSummary} {targetSummary}";
+        }
+
+        private static bool TryGetLocalEntityCollectionStore(
+            GameEngine engine,
+            out Entity owner,
+            out EntityCollectionStore collections)
+        {
+            collections = default!;
+            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner) &&
+                   engine.World.IsAlive(owner) &&
+                   engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out collections) &&
+                   collections != null;
         }
 
         private static string BuildActionStateSummary(IInputActionReader input, string actionId, string label)

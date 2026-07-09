@@ -13,7 +13,7 @@
 ```
 InputOrderMapping:
   actionId: "CompanionAttack"
-  selectionType: Entity
+  targetType: Entity
   interactionMode: Explicit
 
 OrderSubmitter:

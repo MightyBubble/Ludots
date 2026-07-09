@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.MovePlanning;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 
 namespace RoadNetworkShowcaseMod.Systems
@@ -45,7 +47,7 @@ namespace RoadNetworkShowcaseMod.Systems
         {
             _currentScopes.Clear();
             _currentScopeSet.Clear();
-            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(_world, _globals);
+            Entity[] selected = SnapshotCommandSource();
             int count = selected.Length;
             if (count <= 0)
             {
@@ -119,6 +121,23 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             _facts.PublishWorldSplineEnded(scope.Key, Entity.Null, scope.Scope);
+        }
+
+        private Entity[] SnapshotCommandSource()
+        {
+            return TryResolveLocalCommandSourceOwner(out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(_globals, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
+        }
+
+        private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+        {
+            owner = Entity.Null;
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                   localObj is Entity local &&
+                   local != Entity.Null &&
+                   _world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
         }
     }
 }

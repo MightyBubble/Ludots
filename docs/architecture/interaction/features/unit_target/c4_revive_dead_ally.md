@@ -13,7 +13,7 @@ InputOrderMapping:
   actionId: "SkillR"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
   argsTemplate: { i0: 3 }  // ability slot
 ```
@@ -35,7 +35,7 @@ InputOrderMapping:
 需求: TargetFilter 需支持 "DeadAlly" 过滤
 实现:
   1. 死亡单位保留 Entity (添加 "dead" tag, 不立即销毁)
-  2. SelectionRule 新增: filter=DeadFriendly
+  2. TargetFilter 新增: filter=DeadFriendly
   3. Ability Phase Graph:
      a. 检查 target HasTag("dead")
      b. RemoveTag("dead"), SetAttribute(health, base_health * 0.5)

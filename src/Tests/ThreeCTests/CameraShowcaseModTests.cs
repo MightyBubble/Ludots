@@ -38,14 +38,14 @@ namespace Ludots.Tests.ThreeC.Acceptance
         };
 
         [Test]
-        public void CoreInputMod_DefaultGameplay_ProvidesGenericSelectionAndViewModeActions()
+        public void CoreInputMod_DefaultGameplay_ProvidesGenericCommandSourceAndViewModeActions()
         {
             using var engine = CreateEngine(CoreInputMods);
 
             var input = engine.GetService(CoreServiceKeys.InputHandler);
             Assert.That(input, Is.Not.Null);
             Assert.That(input!.HasContext("Default_Gameplay"), Is.True);
-            Assert.That(input.HasAction("Select"), Is.True);
+            Assert.That(input.HasAction("CommandSourceAcquire"), Is.True);
             Assert.That(input.HasAction("Command"), Is.True);
             Assert.That(input.HasAction("Cancel"), Is.True);
             Assert.That(input.HasAction("ViewModeNext"), Is.True);
@@ -54,27 +54,27 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraShowcaseMod_SelectionMode_TracksSelectedEntityWithoutFallback()
+        public void CameraShowcaseMod_CommandSourceFollowMode_TracksCommandSourcePrimaryWithoutFallback()
         {
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.HubMapId);
 
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             Assert.That(registry, Is.Not.Null);
-            Assert.That(registry!.TryGet(CameraShowcaseIds.SelectionProfileId, out var selectionProfile), Is.True);
+            Assert.That(registry!.TryGet(CameraShowcaseIds.CommandSourceFollowProfileId, out var commandSourceProfile), Is.True);
             Assert.That(registry.TryGet(CameraShowcaseIds.RevealShotId, out var revealShot), Is.True);
-            Assert.That(selectionProfile.Id, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(commandSourceProfile.Id, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(revealShot.Id, Is.EqualTo(CameraShowcaseIds.RevealShotId));
 
             Assert.That(engine.GlobalContext.TryGetValue("CoreInputMod.ViewModeManager", out var managerObj), Is.True);
             Assert.That(managerObj, Is.Not.Null);
 
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.SelectionModeId), Is.True);
+            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
             var brain = engine.GameSession.Camera.VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
-            Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(brain!.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
@@ -82,12 +82,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            SetLivePrimarySelection(engine, captain);
+            SetCommandSource(engine, captain);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
-            ClearLivePrimarySelection(engine);
+            ClearCommandSource(engine);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -95,7 +95,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraShowcaseMod_SelectionModeHotkey_IsOnlyActiveOnShowcaseMaps()
+        public void CameraShowcaseMod_CommandSourceFollowHotkey_IsOnlyActiveOnShowcaseMaps()
         {
             using var engine = CreateEngine(ShowcaseMods);
             var input = engine.GetService(CoreServiceKeys.InputHandler);
@@ -104,28 +104,28 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
             LoadMap(engine, "entry");
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             LoadMap(engine, CameraShowcaseIds.HubMapId);
             PressButton(engine, backend, "<Keyboard>/f4");
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
         }
 
         [Test]
-        public void CameraShowcaseMod_LeavingShowcaseMap_ClearsSelectionModeOwnership()
+        public void CameraShowcaseMod_LeavingShowcaseMap_ClearsCommandSourceFollowModeOwnership()
         {
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, CameraShowcaseIds.HubMapId);
 
             Assert.That(engine.GlobalContext.TryGetValue(ViewModeManager.GlobalKey, out var managerObj), Is.True);
-            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.SelectionModeId), Is.True);
+            Assert.That(SwitchViewMode(managerObj!, CameraShowcaseIds.CommandSourceFollowModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             LoadMap(engine, "entry");
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.Not.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(engine.GlobalContext.ContainsKey(ViewModeManager.ActiveModeIdKey), Is.False);
         }
 
@@ -158,12 +158,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
-        public void CameraShowcaseMod_SelectionMap_DefaultProfile_FollowsSelectionWithoutFallback()
+        public void CameraShowcaseMod_CommandSourceFollowMap_DefaultProfile_FollowsCommandSourceWithoutFallback()
         {
             using var engine = CreateEngine(ShowcaseMods);
-            LoadMap(engine, CameraShowcaseIds.SelectionMapId);
+            LoadMap(engine, CameraShowcaseIds.CommandSourceFollowMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(1200f, 800f)));
@@ -171,12 +171,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            SetLivePrimarySelection(engine, captain);
+            SetCommandSource(engine, captain);
             TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
-            ClearLivePrimarySelection(engine);
+            ClearCommandSource(engine);
             TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -199,13 +199,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
         public void CameraShowcaseMod_PoseRequest_TargetsActiveVirtualCamera()
         {
             using var engine = CreateEngine(ShowcaseMods);
-            LoadMap(engine, CameraShowcaseIds.SelectionMapId);
+            LoadMap(engine, CameraShowcaseIds.CommandSourceFollowMapId);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.SelectionProfileId));
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraShowcaseIds.CommandSourceFollowProfileId));
 
             engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
             {
-                VirtualCameraId = CameraShowcaseIds.SelectionProfileId,
+                VirtualCameraId = CameraShowcaseIds.CommandSourceFollowProfileId,
                 Pitch = 55f,
                 DistanceCm = 3600f,
                 FovYDeg = 48f
@@ -305,7 +305,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");
         }
 
-        private static void SetLivePrimarySelection(GameEngine engine, params Entity[] entities)
+        private static void SetCommandSource(GameEngine engine, params Entity[] entities)
         {
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore is missing.");
@@ -321,9 +321,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             collections.Replace(local, in descriptor, entities, local);
         }
 
-        private static void ClearLivePrimarySelection(GameEngine engine)
+        private static void ClearCommandSource(GameEngine engine)
         {
-            SetLivePrimarySelection(engine);
+            SetCommandSource(engine);
         }
 
         private static string FindRepoRoot()

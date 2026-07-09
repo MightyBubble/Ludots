@@ -135,7 +135,7 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
             return;
         }
 
-        simulation.RejectCommandUnauthorizedSelection(
+        simulation.RejectCommandUnauthorizedCommandActors(
             order.Args.Spatial.WorldCm.X,
             order.Args.Spatial.WorldCm.Z);
     }

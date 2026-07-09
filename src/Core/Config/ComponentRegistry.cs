@@ -543,7 +543,7 @@ namespace Ludots.Core.Config
 
             ValidateProperties(obj, "CommandSourceSelectableState", "IsEnabled");
             JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", "CommandSourceSelectableState");
-            byte enabled = ParseSelectionEnabled(isEnabledNode, "CommandSourceSelectableState.IsEnabled");
+            byte enabled = ParseSelectableStateEnabled(isEnabledNode, "CommandSourceSelectableState.IsEnabled");
             entity.Add(new CommandSourceSelectableState { IsEnabled = enabled });
         }
 
@@ -788,7 +788,7 @@ namespace Ludots.Core.Config
             }
         }
 
-        private static byte ParseSelectionEnabled(JsonNode node, string context)
+        private static byte ParseSelectableStateEnabled(JsonNode node, string context)
         {
             return node.GetValueKind() switch
             {

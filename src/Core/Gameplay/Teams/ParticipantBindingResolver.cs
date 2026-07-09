@@ -142,17 +142,17 @@ namespace Ludots.Core.Gameplay.Teams
             }
 
             MapLaunchContext? launchContext = session.LaunchContext;
-            if (launchContext?.HasSelectedPlayer == true)
+            if (launchContext?.HasLocalPlayer == true)
             {
-                int selectedPlayerId = launchContext.SelectedPlayerId;
-                if (!playerLookup.TryGet(selectedPlayerId, out Entity selectedEntity))
+                int localLaunchPlayerId = launchContext.LocalPlayerId;
+                if (!playerLookup.TryGet(localLaunchPlayerId, out Entity localLaunchPlayerEntity))
                 {
                     throw new InvalidOperationException(
-                        $"Map '{mapId}' launch context SelectedPlayerId {selectedPlayerId} references an unbound player.");
+                        $"Map '{mapId}' launch context LocalPlayerId {localLaunchPlayerId} references an unbound player.");
                 }
 
-                localPlayerId = selectedPlayerId;
-                localPlayerEntity = selectedEntity;
+                localPlayerId = localLaunchPlayerId;
+                localPlayerEntity = localLaunchPlayerEntity;
             }
 
             ResolveRelationships(mapId, mapConfig, teamLookup, playerLookup, relationships, relationshipTypes, stanceCatalog);

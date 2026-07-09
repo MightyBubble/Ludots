@@ -1,32 +1,70 @@
-{
-  "Id": "camera_acceptance_tps",
-  "Tags": ["camera.acceptance", "camera.acceptance.behaviors", "camera.acceptance.behaviors.tps"],
-  "Boards": [
-    {
-      "Name": "default",
-      "SpatialType": "Grid",
-      "WidthInMacroTiles": 1,
-      "HeightInMacroTiles": 1,
-      "GridCellSizeCm": 100
-    }
-  ],
-  "DefaultCamera": {
-    "VirtualCameraId": "Camera.Acceptance.Profile.TpsAim"
-  },
-  "Entities": [
-    {
-      "Template": "moba_hero",
-      "Overrides": {
-        "Name": { "Value": "CameraAcceptanceHero" },
-        "WorldPositionCm": { "Value": { "X": 1200, "Y": 800 } }
-      }
-    },
-    {
-      "Template": "moba_dummy",
-      "Overrides": {
-        "Name": { "Value": "CameraAcceptanceScout" },
-        "WorldPositionCm": { "Value": { "X": 2400, "Y": 1200 } }
-      }
-    }
-  ]
+﻿{
+    "Id":  "camera_acceptance_tps",
+    "Tags":  [
+                 "camera.acceptance",
+                 "camera.acceptance.behaviors",
+                 "camera.acceptance.behaviors.tps"
+             ],
+    "Boards":  [
+                   {
+                       "Name":  "default",
+                       "SpatialType":  "Grid",
+                       "WidthInMacroTiles":  1,
+                       "HeightInMacroTiles":  1,
+                       "GridCellSizeCm":  100
+                   }
+               ],
+    "DefaultCamera":  {
+                          "VirtualCameraId":  "Camera.Acceptance.Profile.TpsAim"
+                      },
+    "Entities":  [
+                     {
+                         "Template":  "moba_hero",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraAcceptanceHero"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  1200,
+                                                                                 "Y":  800
+                                                                             }
+                                                               }
+                                       },
+                         "InstanceId":  "camera-acceptance-local-player"
+                     },
+                     {
+                         "Template":  "moba_dummy",
+                         "Overrides":  {
+                                           "Name":  {
+                                                        "Value":  "CameraAcceptanceScout"
+                                                    },
+                                           "WorldPositionCm":  {
+                                                                   "Value":  {
+                                                                                 "X":  2400,
+                                                                                 "Y":  1200
+                                                                             }
+                                                               },
+                                           "PlayerOwner":  {
+                                                               "PlayerId":  1
+                                                           },
+                                           "Team":  {
+                                                        "Id":  1
+                                                    }
+                                       }
+                     }
+                 ],
+    "Teams":  [
+                  {
+                      "TeamId":  1,
+                      "RepresentativeInstanceId":  "camera-acceptance-local-player"
+                  }
+              ],
+    "Players":  [
+                    {
+                        "PlayerId":  1,
+                        "TeamId":  1,
+                        "RepresentativeInstanceId":  "camera-acceptance-local-player"
+                    }
+                ]
 }

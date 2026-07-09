@@ -72,31 +72,31 @@ namespace MobaDemoMod.Triggers
                 engine.RegisterSystem(new Ludots.Core.Gameplay.GAS.Systems.AbilityMoveWorldCmSystem(engine.World, engine.EventBus, mobaConfig.Movement.SpeedCmPerSec, mobaConfig.Movement.StopRadiusCm), SystemGroup.AbilityActivation);
             }
 
-            // Selection feedback hooks are provided by CoreInputMod; MOBA injects only the visual callbacks here.
+            // Command-source acquisition feedback hooks are provided by CoreInputMod; MOBA injects only visual callbacks here.
             PerformerCommandBuffer cmdBuffer = null;
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
                 cmdBuffer = pcb;
 
-            if (CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> selectionCallbacks))
+            if (CoreInputRuntimeServices.TryGetCommandSourceAcquiredCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> commandSourceAcquiredCallbacks))
             {
                 var capturedCmdBuffer = cmdBuffer;
                 var perfReg = context.Get(CoreServiceKeys.PerformerDefinitionRegistry) as PerformerDefinitionRegistry;
-                int selectionIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.SelectionIndicatorDefKey) ?? 0;
-                selectionCallbacks.Add((worldCm, entity) =>
+                int commandSourceIndicatorDefId = perfReg?.GetId(mobaConfig.Presentation.CommandSourceIndicatorDefKey) ?? 0;
+                commandSourceAcquiredCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
                     capturedCmdBuffer.TryAdd(new PerformerCommand
                     {
                         CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                        ScopeTag = mobaConfig.Presentation.SelectionScopeId
+                        ScopeTag = mobaConfig.Presentation.CommandSourceScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
                         capturedCmdBuffer.TryAdd(new PerformerCommand
                         {
                             CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = selectionIndicatorDefId,
-                            ScopeTag = mobaConfig.Presentation.SelectionScopeId,
+                            PerformerDefinitionId = commandSourceIndicatorDefId,
+                            ScopeTag = mobaConfig.Presentation.CommandSourceScopeId,
                             Source = entity
                         });
                     }

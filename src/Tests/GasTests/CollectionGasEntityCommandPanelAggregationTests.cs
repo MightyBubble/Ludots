@@ -22,7 +22,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 PNL-4 — <c>CollectionGasEntityCommandPanelSource</c> consumes the
+    /// RFC-0065 PNL-4 �?<c>CollectionGasEntityCommandPanelSource</c> consumes the
     /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the §6.1 M6 catalog cases
     /// (mixed marine/tank selection grouped by cast family, FormSet override recompute) and P3
     /// (runtime profile switch regroups without re-selection), plus activation routing to the
@@ -356,8 +356,8 @@ namespace Ludots.Tests.GAS
                 Trigger = InputTriggerType.PressedThisFrame,
                 OrderTypeKey = "castAbility",
                 ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
-                RequireSelection = false,
-                SelectionType = OrderSelectionType.None,
+                RequireTarget = false,
+                TargetType = OrderTargetType.None,
                 IsSkillMapping = true
             };
         }

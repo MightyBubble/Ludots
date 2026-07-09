@@ -15,7 +15,7 @@ InputOrderMapping:
   actionId: "SkillE"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: UnitTarget  // 或 Direction
+  targetType: UnitTarget  // 或 Direction
   isSkillMapping: true
 ```
 

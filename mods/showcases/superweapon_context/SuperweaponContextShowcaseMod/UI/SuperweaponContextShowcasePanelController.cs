@@ -2,6 +2,8 @@ using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
+using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -230,15 +232,31 @@ namespace SuperweaponContextShowcaseMod.UI
 
         private static string ResolveActiveGroupSummary(GameEngine engine)
         {
-            int count = Ludots.Core.Input.CommandSources.EntityCollectionContextRuntime.GetCurrentCount(
-                engine.World,
-                engine.GlobalContext);
+            int count = TryResolveLocalCommandSourceOwner(engine, out Entity owner)
+                ? EntityCollectionContextRuntime.GetCount(
+                    engine.GlobalContext,
+                    owner,
+                    EntityCollectionKeys.CommandSource)
+                : 0;
             if (count <= 0)
             {
                 return "no active heroes";
             }
 
             return $"{count} active hero(es)";
+        }
+
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private sealed record PanelState(

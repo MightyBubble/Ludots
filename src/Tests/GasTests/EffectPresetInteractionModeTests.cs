@@ -69,8 +69,8 @@ namespace Ludots.Tests.GAS
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
                         IsSkillMapping = true,
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity
                     }
                 }
             };
@@ -83,7 +83,7 @@ namespace Ludots.Tests.GAS
             var target = world.Create();
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
-            mapping.SetSelectedEntityProvider((string _, out Entity e) => { e = target; return true; });
+            mapping.SetCollectionPrimaryEntityProvider((string _, out Entity e) => { e = target; return true; });
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();

@@ -1320,7 +1320,12 @@ public static class LauncherEvidenceRecorder
         });
 
         var commandActorNames = new List<string>();
-        Entity[] commandActors = EntityCollectionContextRuntime.SnapshotCurrent(runtime.Engine.World, runtime.Engine.GlobalContext);
+        Entity[] commandActors = TryResolveLocalCommandSourceOwner(runtime.Engine, out Entity commandSourceOwner)
+            ? EntityCollectionContextRuntime.Snapshot(
+                runtime.Engine.GlobalContext,
+                commandSourceOwner,
+                EntityCollectionKeys.CommandSource)
+            : Array.Empty<Entity>();
         for (int i = 0; i < commandActors.Length; i++)
         {
             Entity commandActor = commandActors[i];
@@ -1784,6 +1789,19 @@ public static class LauncherEvidenceRecorder
         }
 
         return false;
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private static bool IsAcceptedRoadStatus(string statusLine)

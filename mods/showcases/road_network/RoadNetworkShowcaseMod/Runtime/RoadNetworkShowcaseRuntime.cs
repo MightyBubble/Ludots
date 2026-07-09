@@ -270,8 +270,8 @@ namespace RoadNetworkShowcaseMod.Runtime
                 EnsureCommandSourceComponents(engine.World, owner);
                 if (ShouldSeedCommandSource(engine.World, collections, owner))
                 {
-                    Span<Entity> initialSelection = stackalloc Entity[1];
-                    initialSelection[0] = owner;
+                    Span<Entity> initialCommandSource = stackalloc Entity[1];
+                    initialCommandSource[0] = owner;
                     var descriptor = EntityCollectionDescriptor.Create(
                         EntityCollectionKeys.CommandSource,
                         EntityCollectionSourceKind.Explicit,
@@ -280,7 +280,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                         owner,
                         "Road network command source",
                         "Primary road-network actor.");
-                    collections.Replace(owner, descriptor, initialSelection, owner);
+                    collections.Replace(owner, descriptor, initialCommandSource, owner);
                 }
             }
         }
@@ -553,7 +553,13 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+                EntityCollectionContextRuntime.TryGetPrimary(
+                    engine.World,
+                    engine.GlobalContext,
+                    owner,
+                    EntityCollectionKeys.CommandSource,
+                    out Entity selected) &&
                 engine.World.IsAlive(selected))
             {
                 return selected;
@@ -567,6 +573,19 @@ namespace RoadNetworkShowcaseMod.Runtime
             }
 
             return ResolveNamedEntity(engine, PrimaryPlayerColumnName);
+        }
+
+        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
         }
 
         private static string DescribeActor(GameEngine engine, Entity actor)

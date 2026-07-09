@@ -59,7 +59,6 @@ namespace Ludots.Core.Gameplay.GAS
         CopyAttributeSlice = 65,
         ClearActiveEffects = 66,
         TransferStableId = 67,
-        RewireSelection = 68,
         ConsumeEntity = 69,
     }
 }

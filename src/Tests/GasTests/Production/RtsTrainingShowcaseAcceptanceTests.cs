@@ -109,7 +109,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => EntityCollectionContextRuntime.TryGetCurrentPrimary(world, engine.GlobalContext, out Entity selected) &&
+                () => Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                       ReadName(world, selected) == scenario.ProducerName,
                 12,
                 $"{scenario.ProducerName} should be auto-selected.");

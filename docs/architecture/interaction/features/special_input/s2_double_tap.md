@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `DoubleTap`（已废弃，需 P2 重新实现）
-- **SelectionType**: 根据技能需求（`None` / `Direction`）
+- **TargetType**: 根据技能需求（`None` / `Direction`）
 - **InteractionMode**: `Explicit`
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "sprint",
   "trigger": "DoubleTap",                         // ❌ 已废弃，需 P2 实现
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "doubleTapWindowTicks": 15                      // 双击窗口时间
 }

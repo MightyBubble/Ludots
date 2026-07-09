@@ -74,7 +74,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.ContainsKey("selection"), Is.False,
                 "FormationCapability config must not invent a private selection scope block; command-source acquire uses game.json commandSource.targetFilter.");
             JsonObject gameConfig = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
-            Assert.That(gameConfig["startupSelectedPlayerId"]?.GetValue<int>(), Is.EqualTo(1),
+            Assert.That(gameConfig["startupLocalPlayerId"]?.GetValue<int>(), Is.EqualTo(1),
                 "FormationCapability must publish LocalPlayerEntity through the formal startup player + map participant binding path before command-source mutation.");
             JsonObject commandSource = gameConfig["commandSource"]?.AsObject()
                 ?? throw new InvalidOperationException("FormationCapability game.json must author commandSource.");
@@ -1040,9 +1040,8 @@ namespace Ludots.Tests.Presentation
                 simulation.Config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 1;
                 RegisterMoveOrderType(engine);
 
-                Entity selectionContainer = engine.World.Create();
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0, selectionContainer);
-                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1, selectionContainer);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 101, agentIndex: 0);
+                CreateActiveMassNavigationMoveOrderEntity(engine, token: 202, agentIndex: 1);
 
                 var system = new MassNavigationOrderIngestionSystem(engine, simulation);
                 InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => UpdateSystem(system))!;
@@ -1949,14 +1948,14 @@ namespace Ludots.Tests.Presentation
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
                       CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Formation Capability scenario should spawn MassNavigation-authored formation and soldier agents, bind showcase-authored sidecars, and seed the authored formation selection.");
+                failureMessage: "Formation Capability scenario should spawn MassNavigation-authored formation and soldier agents, bind showcase-authored sidecars, and seed the authored command source.");
 
             Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalAgents));
             Assert.That(simulation.AgentState.ControllableAgentCount, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalFormations));
             Assert.That(simulation.AgentState.ControllableAgentSlotCount, Is.EqualTo(FormationCapabilityAcceptance.ExpectedTotalFormations));
             AssertConfiguredObstaclesAreEcsBlockers(engine, simulation);
             AssertFormationAgentsDoNotOverlap(engine, simulation);
-            Assert.That(EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext).Length,
+            Assert.That(Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length,
                 Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialCommandSource));
             AssertInitialCommandSourceTargetsFormationAgents(engine);
             Assert.That(CountCommandMarkerPerformers(engine), Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialCommandSource),
@@ -1966,31 +1965,31 @@ namespace Ludots.Tests.Presentation
             AssertObstacleOverlays(engine, simulation);
             AssertMassNavigationDoesNotOwnCullingProbe(engine);
 
-            Entity[] initialSelection = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
-            DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
+            Entity[] initialCommandSource = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
+            DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialCommandSource));
             TickUntil(
                 engine,
                 () => CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource &&
                       CountCommandMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: BuildSelectionDiagnostics(engine));
+                failureMessage: BuildCommandSourceDiagnostics(engine));
 
             LeftClick(engine, GetInputBackend(engine), WorldToScreen(engine, FormationCapabilityAcceptance.EmptyGroundWorldCm));
             TickUntil(
                 engine,
                 () => CommandSourceCount(engine) == 0 &&
-                      EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext).Length == 0 &&
+                      Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length == 0 &&
                       CountCommandMarkerPerformers(engine) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Empty ground click should clear LivePrimary selection and destroy scoped marker performers.");
+                failureMessage: "Empty ground click should clear the command source and destroy scoped marker performers.");
 
-            DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
+            DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialCommandSource));
             TickUntil(
                 engine,
                 () => CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource &&
                       CountCommandMarkerPerformers(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: BuildSelectionDiagnostics(engine));
+                failureMessage: BuildCommandSourceDiagnostics(engine));
 
             int rejectsBeforeMove = simulation.CommandRejectsTotal;
             Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MoveTargetWorldCm);
@@ -2025,7 +2024,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be fully spawned and selected before movement/facing verification.");
 
-            Entity formation = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext)[0];
+            Entity formation = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
             float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
@@ -2119,7 +2118,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => CommandSourceCount(engine) == 1,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Test-authored selection should contain the non-local formation agent.");
+                failureMessage: "Test-authored command source should contain the non-local formation agent.");
 
             int rejectsBeforeMove = simulation.CommandRejectsTotal;
             Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MoveTargetWorldCm);
@@ -2168,7 +2167,7 @@ namespace Ludots.Tests.Presentation
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
                       CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Formation Capability scenario should be fully spawned before box selection ownership verification.");
+                failureMessage: "Formation Capability scenario should be fully spawned before box acquisition ownership verification.");
 
             AssertFormationCommandSourceCandidateFacts(engine);
             Entity[] formations = CaptureFormationAgents(engine, FormationCapabilityAcceptance.ExpectedTotalFormations);
@@ -2178,9 +2177,9 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => CommandSourceCount(engine) == CountFriendlyTeamFormations(engine, selectorTeamId),
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Player box selection should include only formations accepted by the configured Friendly relationship filter.");
+                failureMessage: "Player box acquisition should include only formations accepted by the configured Friendly relationship filter.");
 
-            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] selected = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
             Assert.That(selected.Length, Is.EqualTo(CountFriendlyTeamFormations(engine, selectorTeamId)));
             for (int i = 0; i < selected.Length; i++)
             {
@@ -2204,7 +2203,7 @@ namespace Ludots.Tests.Presentation
                 () => IsFormationCapabilityScenarioReady(engine, simulation) &&
                       CommandSourceCount(engine) == FormationCapabilityAcceptance.ExpectedInitialCommandSource,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Formation Capability scenario should be fully spawned before mixed selection rotate verification.");
+                failureMessage: "Formation Capability scenario should be fully spawned before mixed command-source rotate verification.");
 
             int localPlayerId = ResolveLocalPlayerOwnerId(engine);
             Entity localFormation = FindLocalPlayerOwnerFormation(engine, localPlayerId);
@@ -2216,7 +2215,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => CommandSourceCount(engine) == 2,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Test-authored mixed selection should enter MassNavigation's selected snapshot.");
+                failureMessage: "Test-authored mixed command source should enter MassNavigation's command snapshot.");
 
             int rejectsBeforeRotate = simulation.CommandRejectsTotal;
             var input = engine.GetService(CoreServiceKeys.InputHandler)
@@ -2252,7 +2251,7 @@ namespace Ludots.Tests.Presentation
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Formation Capability scenario should be ready before solver-window rebase verification.");
 
-            Entity formation = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext)[0];
+            Entity formation = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine)[0];
             Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out FormationCapabilityShowcaseFormationAgent formationAgent), Is.True);
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
@@ -2293,7 +2292,7 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => CommandSourceCount(engine) == formations.Length,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Test-authored selection should contain the chosen formation agents.");
+                failureMessage: "Test-authored command source should contain the chosen formation agents.");
 
             Vector2 moveTargetScreen = WorldToScreen(engine, FormationCapabilityAcceptance.MultiFormationMoveTargetWorldCm);
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
@@ -2334,11 +2333,11 @@ namespace Ludots.Tests.Presentation
                 engine,
                 () => simulation.SceneResetCount > 0 &&
                       CommandSourceCount(engine) == 0 &&
-                      EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext).Length == 0 &&
+                      Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length == 0 &&
                       CountCommandMarkerPerformers(engine) == 0 &&
                       CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
                 maxFrames: FormationCapabilityAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Scene reset should clear selection, remove scoped marker performers, and strip runtime tags from agents tracked before reset.");
+                failureMessage: "Scene reset should clear the command source, remove scoped marker performers, and strip runtime tags from agents tracked before reset.");
 
             TickUntil(
                 engine,
@@ -2854,12 +2853,12 @@ namespace Ludots.Tests.Presentation
 
         private static void LoadFormationCapabilityMap(GameEngine engine)
         {
-            int selectedPlayerId = engine.MergedConfig.StartupSelectedPlayerId;
-            Assert.That(selectedPlayerId, Is.EqualTo(1),
+            int localPlayerId = engine.MergedConfig.StartupLocalPlayerId;
+            Assert.That(localPlayerId, Is.EqualTo(1),
                 "FormationCapability tests must exercise the same startup player binding path as the playable showcase.");
             engine.LoadMap(MapLoadRequest.FromMapId(
                 "formation_capability_showcase",
-                MapLaunchContext.Create(selectedPlayerId)));
+                MapLaunchContext.Create(localPlayerId)));
         }
 
         private static void EnsureFormationCapabilityEntryAssemblyPreloaded()
@@ -3071,8 +3070,7 @@ namespace Ludots.Tests.Presentation
         private static Entity CreateActiveMassNavigationMoveOrderEntity(
             GameEngine engine,
             int token,
-            int agentIndex,
-            Entity selectionContainer)
+            int agentIndex)
         {
             var order = new Order
             {
@@ -3136,13 +3134,6 @@ namespace Ludots.Tests.Presentation
                 minimap.ContainsInteractiveRegion(screenPosition),
                 Is.False,
                 "This acceptance path verifies a normal ground right-click; the screen point must not be consumed by minimap command input.");
-        }
-
-        private static ScreenRect ProjectCurrentSelectionDragRect(GameEngine engine)
-        {
-            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
-            Assert.That(selected.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialCommandSource));
-            return ProjectEntitiesDragRect(engine, selected);
         }
 
         private static ScreenRect ProjectEntitiesDragRect(GameEngine engine, ReadOnlySpan<Entity> entities)
@@ -3603,7 +3594,7 @@ namespace Ludots.Tests.Presentation
         {
             int count = 0;
             int moveOrderTypeId = ResolveMassNavigationMoveOrderTypeId(engine);
-            Entity[] actors = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] actors = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
             for (int i = 0; i < actors.Length; i++)
             {
                 Entity entity = actors[i];
@@ -3642,7 +3633,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertInitialCommandSourceTargetsFormationAgents(GameEngine engine)
         {
-            Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] selected = Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
             Assert.That(selected.Length, Is.EqualTo(FormationCapabilityAcceptance.ExpectedInitialCommandSource));
             for (int i = 0; i < selected.Length; i++)
             {
@@ -3765,7 +3756,7 @@ namespace Ludots.Tests.Presentation
             engine.World.Query(in formationCapabilityAnchorQuery, (ref MassNavigationFormationAnchor _, ref FormationCapabilityShowcaseFormationAgent _) => formationCapabilityAnchor++);
             var followerQuery = new QueryDescription().WithAll<MassNavigationFormationFollower>();
             engine.World.Query(in followerQuery, (ref MassNavigationFormationFollower _) => followerOnly++);
-            return $"formationOnly={formationOnly} anchor={anchorOnly} indexedAnchor={indexedAnchor} destroyPendingAnchor={destroyPendingAnchor} formationCapabilityAnchor={formationCapabilityAnchor} follower={followerOnly} indexed={indexOnly} orderable={orderable} {BuildSelectionDiagnostics(engine)} {BuildSelectionCandidateDiagnostics(engine)}";
+            return $"formationOnly={formationOnly} anchor={anchorOnly} indexedAnchor={indexedAnchor} destroyPendingAnchor={destroyPendingAnchor} formationCapabilityAnchor={formationCapabilityAnchor} follower={followerOnly} indexed={indexOnly} orderable={orderable} {BuildCommandSourceDiagnostics(engine)} {BuildSelectionCandidateDiagnostics(engine)}";
         }
 
         private static string BuildSelectionCandidateDiagnostics(GameEngine engine)
@@ -3973,17 +3964,17 @@ namespace Ludots.Tests.Presentation
             Assert.That(focus.SourceId, Is.EqualTo(string.Empty));
         }
 
-        private static string BuildSelectionDiagnostics(GameEngine engine)
+        private static string BuildCommandSourceDiagnostics(GameEngine engine)
         {
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            string view = EntityCollectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out EntityCollectionView descriptor)
+            string view = Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView descriptor)
                 ? $"viewCount={descriptor.Count} viewRev={descriptor.Revision} viewOwner={descriptor.Owner.Id} viewContainer={descriptor.ContextEntity.Id}"
                 : "view=<none>";
             return $"commandSource={CommandSourceCount(engine)} massNavCommandActors={simulation.CommandActorCount} simRev={simulation.CommandActorSnapshotRevision} {view} markers={CountCommandMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
         }
 
         private static int CommandSourceCount(GameEngine engine)
-            => EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            => Ludots.Tests.EntityCollectionTestAccess.GetCommandSourceCount(engine);
 
         private static void AssertPositive(JsonObject obj, string propertyName, bool allowZero = false)
         {

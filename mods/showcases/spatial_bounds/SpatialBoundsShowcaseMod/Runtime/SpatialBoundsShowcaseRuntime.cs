@@ -163,12 +163,12 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
             Entity hovered = ResolveHoveredEntity(engine);
             Entity primary = ResolvePrimary(engine);
-            int selectedCount = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            int selectedCount = GetCommandSourceCount(engine);
             Span<Entity> selected = selectedCount <= 16
                 ? stackalloc Entity[Math.Max(selectedCount, 1)]
                 : new Entity[selectedCount];
             int written = selectedCount > 0
-                ? EntityCollectionContextRuntime.CopyCurrent(engine.World, engine.GlobalContext, selected)
+                ? CopyCommandSource(engine, selected)
                 : 0;
 
             for (int i = 0; i < written; i++)
@@ -318,7 +318,12 @@ namespace SpatialBoundsShowcaseMod.Runtime
             engine.GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+                followTarget: CameraFollowTargetFactory.Build(
+                    engine.World,
+                    engine.GlobalContext,
+                    definition.FollowTargetKind,
+                    _selectionOwner,
+                    definition.FollowCollectionKey),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
             engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
@@ -358,7 +363,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private string BuildSelectionPreview(GameEngine engine)
         {
-            int count = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            int count = GetCommandSourceCount(engine);
             if (count <= 0)
             {
                 return "(empty)";
@@ -367,7 +372,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
             Span<Entity> selected = count <= 16
                 ? stackalloc Entity[count]
                 : new Entity[count];
-            int written = EntityCollectionContextRuntime.CopyCurrent(engine.World, engine.GlobalContext, selected);
+            int written = CopyCommandSource(engine, selected);
             if (written <= 0)
             {
                 return "(empty)";
@@ -399,14 +404,44 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static Entity ResolvePrimary(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity primary)
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out Entity primary)
                 ? primary
                 : Entity.Null;
         }
 
+        private static int GetCommandSourceCount(GameEngine engine)
+        {
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : 0;
+        }
+
+        private static int CopyCommandSource(GameEngine engine, Span<Entity> destination)
+        {
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null
+                ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource, destination)
+                : 0;
+        }
+
         private static Entity ResolveHoveredEntity(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            Entity owner = ResolveExistingLocalPlayer(engine);
+            return owner != Entity.Null &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.HoveredEntity,
+                       out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
                 ? hovered

@@ -271,8 +271,8 @@ namespace Ludots.Tests.GAS
                 Trigger = InputTriggerType.PressedThisFrame,
                 OrderTypeKey = "castAbility",
                 ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
-                RequireSelection = false,
-                SelectionType = OrderSelectionType.None,
+                RequireTarget = false,
+                TargetType = OrderTargetType.None,
                 IsSkillMapping = true
             };
         }

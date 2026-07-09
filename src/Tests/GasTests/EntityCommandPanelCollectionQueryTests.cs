@@ -266,8 +266,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.None,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
                         IsSkillMapping = true
                     },
                     new()
@@ -276,8 +276,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.None,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
                         IsSkillMapping = true
                     },
                     new()
@@ -286,8 +286,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 2 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.None,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.None,
                         IsSkillMapping = true
                     },
                 }

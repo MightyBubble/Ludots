@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Direction`（方向输入）
+- **TargetType**: `Direction`（方向输入）
 - **InteractionMode**: `ContextScored`（根据方向 dot 评分）
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "attack_directional",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Direction",                   // 方向作为选择输入
+  "targetType": "Direction",                   // 方向作为选择输入
   "isSkillMapping": true,
   "contextGroupId": "DirectionalAttackGroup"      // 使用 ContextGroup 评分
 }
@@ -118,7 +118,7 @@ Effect 模板示例：
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
 | ContextGroup 评分机制 | P1 | 需实现 ContextGroup 注册、评分器调用、候选项排序。参考 N 系列 context_scored 需求。 |
-| Direction selectionType | P2 | `OrderSelectionType.Direction` 需支持方向输入（摇杆/WASD）作为选择参数，传递到 Order.Args.Direction。 |
+| Direction targetType | P2 | `OrderTargetType.Direction` 需支持方向输入（摇杆/WASD）作为选择参数，传递到 Order.Args.Direction。 |
 
 **实现思路**：
 ```csharp

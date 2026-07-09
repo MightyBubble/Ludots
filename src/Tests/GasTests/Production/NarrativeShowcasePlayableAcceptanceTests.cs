@@ -348,7 +348,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         private static int GetSelectionCount(GameEngine engine)
-            => EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext).Length;
+            => Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine).Length;
 
         private static bool UiContains(UIRoot root, string text)
         {
@@ -358,7 +358,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) && engine.World.TryGet(selected, out Name name)
+            return Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) && engine.World.TryGet(selected, out Name name)
                 ? name.Value
                 : string.Empty;
         }
@@ -606,5 +606,4 @@ namespace Ludots.Tests.GAS.Production
         }
     }
 }
-
 

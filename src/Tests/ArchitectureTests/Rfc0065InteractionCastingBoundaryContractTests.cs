@@ -154,7 +154,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void CommandSourceAuthority_IsEntityCollectionBackedByDefault()
+        public void CommandSourceAuthority_UsesExplicitEntityCollectionKey()
         {
             string repoRoot = FindRepoRoot();
             string entityCollectionTypesPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "EntityCollectionTypes.cs");
@@ -181,8 +181,14 @@ namespace Ludots.Tests.Architecture
                     "The default interaction context must use EntityCollectionKeys.CommandSource.");
                 Assert.That(gameEngine, Does.Contain("EntityViewKeys.ControlPlaneCommand"),
                     "The default interaction context must bind command-source authority to the control-plane command view.");
-                Assert.That(contextRuntime, Does.Contain("collections.KeyRegistry.Register(EntityCollectionKeys.CommandSource)"),
-                    "EntityCollectionContextRuntime must fall back to collection.command.source when no explicit interaction frame is active.");
+                Assert.That(contextRuntime, Does.Contain("TryResolveCollection(collections, owner, collectionKey"),
+                    "EntityCollectionContextRuntime must resolve the caller-provided collection key, not hard-code command-source authority.");
+                Assert.That(contextRuntime, Does.Contain("collections.TryGet(owner, collectionKey"),
+                    "EntityCollectionContextRuntime must read the explicit owner/key pair from EntityCollectionStore.");
+                Assert.That(contextRuntime, Does.Not.Contain("EntityCollectionKeys.CommandSource"),
+                    "EntityCollectionContextRuntime must stay collection-generic; command-source is a caller-provided key, not a built-in fallback.");
+                Assert.That(contextRuntime, Does.Not.Contain("Register(EntityCollectionKeys.CommandSource)"),
+                    "EntityCollectionContextRuntime must not register or imply a default command-source fallback.");
             });
         }
 

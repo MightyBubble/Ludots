@@ -10,19 +10,19 @@ using RtsDemoMod.Runtime;
 
 namespace RtsDemoMod.Systems
 {
-    public sealed class RtsSelectionCommandPanelSystem : ISystem<float>
+    public sealed class RtsCommandSourceCommandPanelSystem : ISystem<float>
     {
         private const string GasSourceId = "gas.ability-slots";
-        private const string CommandDeckInstanceKey = "rts.selection.command";
-        private const string OrderMonitorInstanceKey = "rts.selection.orders";
+        private const string CommandDeckInstanceKey = "rts.command_source.command";
+        private const string OrderMonitorInstanceKey = "rts.command_source.orders";
 
         private readonly GameEngine _engine;
         private EntityCommandPanelHandle _commandDeckHandle = EntityCommandPanelHandle.Invalid;
         private EntityCommandPanelHandle _orderMonitorHandle = EntityCommandPanelHandle.Invalid;
         private Entity _lastTarget = Entity.Null;
-        private bool _seededDefaultSelection;
+        private bool _seededDefaultCommandSource;
 
-        public RtsSelectionCommandPanelSystem(GameEngine engine)
+        public RtsCommandSourceCommandPanelSystem(GameEngine engine)
         {
             _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         }
@@ -46,26 +46,26 @@ namespace RtsDemoMod.Systems
             if (!IsRtsMapActive())
             {
                 ClosePanel(service);
-                _seededDefaultSelection = false;
+                _seededDefaultCommandSource = false;
                 return;
             }
 
-            RtsShowcaseSelectionHelper.EnsureSelectionViewBinding(_engine);
+            RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(_engine);
 
-            Entity selected = RtsShowcaseSelectionHelper.TryGetCurrentPrimary(_engine, out Entity current)
+            Entity commandSource = RtsShowcaseCommandSourceHelper.TryGetCommandSourcePrimary(_engine, out Entity current)
                 ? current
                 : Entity.Null;
-            if (!IsPanelTarget(selected) && !_seededDefaultSelection)
+            if (!IsPanelTarget(commandSource) && !_seededDefaultCommandSource)
             {
                 Entity fallback = FindFallbackTarget();
-                if (IsPanelTarget(fallback) && RtsShowcaseSelectionHelper.TrySelectAndFocus(_engine, fallback, snapCamera: true))
+                if (IsPanelTarget(fallback) && RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(_engine, fallback, snapCamera: true))
                 {
-                    _seededDefaultSelection = true;
-                    selected = fallback;
+                    _seededDefaultCommandSource = true;
+                    commandSource = fallback;
                 }
             }
 
-            if (!IsPanelTarget(selected))
+            if (!IsPanelTarget(commandSource))
             {
                 SetVisible(service, _commandDeckHandle, visible: false);
                 SetVisible(service, _orderMonitorHandle, visible: false);
@@ -81,7 +81,7 @@ namespace RtsDemoMod.Systems
             EnsurePanel(
                 service,
                 ref _commandDeckHandle,
-                selected,
+                commandSource,
                 CommandDeckInstanceKey,
                 commandAnchor,
                 commandSize,
@@ -89,19 +89,19 @@ namespace RtsDemoMod.Systems
             EnsurePanel(
                 service,
                 ref _orderMonitorHandle,
-                selected,
+                commandSource,
                 OrderMonitorInstanceKey,
                 monitorAnchor,
                 monitorSize,
                 EntityCommandPanelLayoutPreset.OrderMonitor);
 
-            if (_lastTarget != selected)
+            if (_lastTarget != commandSource)
             {
-                service.RebindTarget(_commandDeckHandle, selected);
-                service.RebindTarget(_orderMonitorHandle, selected);
+                service.RebindTarget(_commandDeckHandle, commandSource);
+                service.RebindTarget(_orderMonitorHandle, commandSource);
                 service.SetGroupIndex(_commandDeckHandle, 0);
                 service.SetGroupIndex(_orderMonitorHandle, 0);
-                _lastTarget = selected;
+                _lastTarget = commandSource;
             }
 
             SetVisible(service, _commandDeckHandle, visible: true);
@@ -235,7 +235,7 @@ namespace RtsDemoMod.Systems
         private static void EnsurePanel(
             IEntityCommandPanelService service,
             ref EntityCommandPanelHandle handle,
-            Entity selected,
+            Entity commandSource,
             string instanceKey,
             in EntityCommandPanelAnchor anchor,
             in EntityCommandPanelSize size,
@@ -245,7 +245,7 @@ namespace RtsDemoMod.Systems
             {
                 handle = service.Open(new EntityCommandPanelOpenRequest
                 {
-                    TargetEntity = selected,
+                    TargetEntity = commandSource,
                     SourceId = GasSourceId,
                     InstanceKey = instanceKey,
                     Anchor = anchor,

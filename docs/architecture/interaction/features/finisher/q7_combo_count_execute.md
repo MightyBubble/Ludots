@@ -17,7 +17,7 @@ AbilityActivationRequire:
 
 InputOrderMapping:
   actionId: "ComboFinisher"
-  selectionType: None
+  targetType: None
   interactionMode: Explicit
 
 Phase Graph:

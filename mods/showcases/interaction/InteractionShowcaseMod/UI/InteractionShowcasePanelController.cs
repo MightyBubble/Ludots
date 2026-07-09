@@ -541,7 +541,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectedLabel(GameEngine engine)
         {
-            if (!EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected))
+            if (!TryResolveCommandSourcePrimary(engine, out Entity selected))
             {
                 return "(none)";
             }
@@ -553,7 +553,7 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolveSelectionSummary(GameEngine engine, string selectedLabel)
         {
-            Entity[] selection = EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            Entity[] selection = SnapshotCommandSource(engine);
             if (selection.Length <= 0)
             {
                 return "Roster is empty. Drag a box around heroes to test RTS-style multi-cast fan-out.";
@@ -596,7 +596,41 @@ namespace InteractionShowcaseMod.UI
             group3 = SelectionGroupSummary.Empty;
             group4 = SelectionGroupSummary.Empty;
 
-            liveCount = EntityCollectionContextRuntime.GetCurrentCount(engine.World, engine.GlobalContext);
+            liveCount = TryResolveCommandSourceOwner(engine, out Entity owner)
+                ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : 0;
+        }
+
+        private static bool TryResolveCommandSourceOwner(GameEngine engine, out Entity owner)
+        {
+            owner = Entity.Null;
+            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            if (local == Entity.Null || !engine.World.IsAlive(local))
+            {
+                return false;
+            }
+
+            owner = local;
+            return true;
+        }
+
+        private static bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity primary)
+        {
+            primary = Entity.Null;
+            return TryResolveCommandSourceOwner(engine, out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.CommandSource,
+                       out primary);
+        }
+
+        private static Entity[] SnapshotCommandSource(GameEngine engine)
+        {
+            return TryResolveCommandSourceOwner(engine, out Entity owner)
+                ? EntityCollectionContextRuntime.Snapshot(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+                : Array.Empty<Entity>();
         }
 
         private static SelectionViewMode ResolveSelectionViewMode(GameEngine engine)
@@ -720,7 +754,13 @@ namespace InteractionShowcaseMod.UI
 
         private static string ResolvePointerTargetFactsLabel(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            return TryResolveCommandSourceOwner(engine, out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetPrimary(
+                       engine.World,
+                       engine.GlobalContext,
+                       owner,
+                       EntityCollectionKeys.HoveredEntity,
+                       out Entity hovered) &&
                    hovered != Entity.Null &&
                    engine.World.IsAlive(hovered)
                 ? "ground; hover ignored"

@@ -87,7 +87,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     {
         string mapId = _engine.CurrentMapSession?.MapConfig?.Id ?? string.Empty;
         string flavor = ResolveFlavor(mapId);
-        Entity[] selected = EntityCollectionContextRuntime.SnapshotCurrent(_engine.World, _engine.GlobalContext);
+        Entity[] selected = SnapshotCommandSource();
         Entity primary = selected.Length > 0 ? selected[0] : Entity.Null;
 
         var entities = BuildEntities(selected);
@@ -662,9 +662,41 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return target;
         }
 
-        return EntityCollectionContextRuntime.TryGetCurrentPrimary(_engine.World, _engine.GlobalContext, out Entity selected)
-            ? selected
+        return TryGetCommandSourcePrimary(out Entity commandSourcePrimary)
+            ? commandSourcePrimary
             : Entity.Null;
+    }
+
+    private Entity[] SnapshotCommandSource()
+    {
+        return TryResolveLocalCommandSourceOwner(out Entity owner)
+            ? EntityCollectionContextRuntime.Snapshot(_engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
+            : Array.Empty<Entity>();
+    }
+
+    private bool TryGetCommandSourcePrimary(out Entity entity)
+    {
+        entity = Entity.Null;
+        return TryResolveLocalCommandSourceOwner(out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   _engine.World,
+                   _engine.GlobalContext,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out entity);
+    }
+
+    private bool TryResolveLocalCommandSourceOwner(out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !_engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private bool TryResolveEntityKey(string key, out Entity entity)

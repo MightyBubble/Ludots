@@ -110,8 +110,8 @@ namespace Ludots.Tests.GAS
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
                         ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity,
                         IsSkillMapping = true,
                     }
                 }

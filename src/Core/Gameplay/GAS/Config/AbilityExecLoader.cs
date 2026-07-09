@@ -115,13 +115,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["onActivateEffects"] is JsonArray effectArr)
             {
                 var onActivate = default(AbilityOnActivateEffects);
-                foreach (var item in effectArr)
+                for (int i = 0; i < effectArr.Count; i++)
                 {
-                    string effectName = item?.GetValue<string>();
-                    if (string.IsNullOrWhiteSpace(effectName)) continue;
+                    string effectName = RequireNonEmptyString(effectArr[i], $"onActivateEffects[{i}]", id, path);
                     int tid = EffectTemplateIdRegistry.GetId(effectName);
-                    if (tid > 0) onActivate.Add(tid);
+                    if (tid <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Ability '{id}' in '{path}' field 'onActivateEffects[{i}]' references unknown effect template '{effectName}'.");
+                    }
+
+                    onActivate.Add(tid);
                 }
+
                 def.HasOnActivateEffects = onActivate.Count > 0;
                 def.OnActivateEffects = onActivate;
             }
@@ -138,18 +144,18 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var blockTags = default(AbilityActivationBlockTags);
                 if (blockObj["requiredAll"] is JsonArray reqArr)
                 {
-                    foreach (var t in reqArr)
+                    for (int i = 0; i < reqArr.Count; i++)
                     {
-                        string tag = t?.GetValue<string>();
-                        if (!string.IsNullOrWhiteSpace(tag)) blockTags.RequiredAll.AddTag(TagRegistry.Register(tag));
+                        string tag = RequireNonEmptyString(reqArr[i], $"blockTags.requiredAll[{i}]", id, path);
+                        blockTags.RequiredAll.AddTag(TagRegistry.Register(tag));
                     }
                 }
                 if (blockObj["blockedAny"] is JsonArray blkArr)
                 {
-                    foreach (var t in blkArr)
+                    for (int i = 0; i < blkArr.Count; i++)
                     {
-                        string tag = t?.GetValue<string>();
-                        if (!string.IsNullOrWhiteSpace(tag)) blockTags.BlockedAny.AddTag(TagRegistry.Register(tag));
+                        string tag = RequireNonEmptyString(blkArr[i], $"blockTags.blockedAny[{i}]", id, path);
+                        blockTags.BlockedAny.AddTag(TagRegistry.Register(tag));
                     }
                 }
                 def.HasActivationBlockTags = true;
@@ -222,7 +228,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (obj["presentation"] is JsonObject presentationObj)
             {
-                def.Presentation = CompilePresentation(presentationObj);
+                def.Presentation = CompilePresentation(presentationObj, id, path);
                 def.HasPresentation = def.Presentation != null;
             }
 
@@ -265,16 +271,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var spec = default(AbilityExecSpec);
 
             // clockId
-            string clockStr = execObj["clockId"]?.GetValue<string>() ?? "Step";
+            string clockStr = RequireNonEmptyString(execObj["clockId"], "exec.clockId", id, path);
             spec.ClockId = ParseClockId(clockStr);
 
             // interruptAny
             if (execObj["interruptAny"] is JsonArray intArr)
             {
-                foreach (var t in intArr)
+                for (int i = 0; i < intArr.Count; i++)
                 {
-                    string tag = t?.GetValue<string>();
-                    if (!string.IsNullOrWhiteSpace(tag)) spec.InterruptAny.AddTag(TagRegistry.Register(tag));
+                    string tag = RequireNonEmptyString(intArr[i], $"exec.interruptAny[{i}]", id, path);
+                    spec.InterruptAny.AddTag(TagRegistry.Register(tag));
                 }
             }
 
@@ -366,7 +372,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             string kindStr = itemObj["kind"]?.GetValue<string>() ?? "None";
             var kind = ParseItemKind(kindStr);
-            int tick = itemObj["tick"]?.GetValue<int>() ?? 0;
+            if (itemObj["tick"] is not JsonNode tickNode)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'exec.items[{idx}].tick' is required.");
+            }
+
+            int tick = tickNode.GetValue<int>();
             int durationTicks = itemObj["duration"]?.GetValue<int>() ?? 0;
 
             GasClockId clockId = default;
@@ -397,6 +409,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             int payloadA = itemObj["payloadA"]?.GetValue<int>() ?? 0;
 
+            if (kind == ExecItemKind.InputGate && itemObj["payloadA"] is null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'exec.items[{idx}].payloadA' is required for InputGate.");
+            }
+
             if ((kind == ExecItemKind.EffectClip || kind == ExecItemKind.EffectSignal) &&
                 itemObj["dispatchTarget"] is JsonValue dispatchTargetNode)
             {
@@ -407,10 +425,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // For GraphSignal, "graph" field maps to payloadA via GraphIdRegistry
             if (kind == ExecItemKind.GraphSignal)
             {
-                string graphName = itemObj["graph"]?.GetValue<string>();
-                if (!string.IsNullOrWhiteSpace(graphName))
+                string graphName = RequireNonEmptyString(itemObj["graph"], $"exec.items[{idx}].graph", id, path);
+                payloadA = GraphIdRegistry.GetId(graphName);
+                if (payloadA <= 0)
                 {
-                    payloadA = Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.Register(graphName);
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].graph' references unknown graph '{graphName}'.");
                 }
             }
 
@@ -439,18 +459,27 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (execObj["callerParams"] is not JsonArray paramsArr) return;
 
-            foreach (var setNode in paramsArr)
+            for (int setIndex = 0; setIndex < paramsArr.Count; setIndex++)
             {
-                if (setNode is not JsonObject setObj) continue;
+                if (paramsArr[setIndex] is not JsonObject setObj)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}]' must be an object.");
+                }
+
                 var cp = default(EffectConfigParams);
 
                 if (setObj["entries"] is JsonArray entriesArr)
                 {
-                    foreach (var entryNode in entriesArr)
+                    for (int entryIndex = 0; entryIndex < entriesArr.Count; entryIndex++)
                     {
-                        if (entryNode is not JsonObject entryObj) continue;
-                        string key = entryObj["key"]?.GetValue<string>();
-                        if (string.IsNullOrWhiteSpace(key)) continue;
+                        if (entriesArr[entryIndex] is not JsonObject entryObj)
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries[{entryIndex}]' must be an object.");
+                        }
+
+                        string key = RequireNonEmptyString(entryObj["key"], $"exec.callerParams[{setIndex}].entries[{entryIndex}].key", id, path);
                         int keyId = ConfigKeyRegistry.Register(key);
 
                         if (entryObj["value"] is JsonNode valNode)
@@ -498,13 +527,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
 
                 int activeCount = 0;
-                foreach (var effectNode in activeEffects)
+                for (int i = 0; i < activeEffects.Count; i++)
                 {
-                    string effectId = effectNode?.GetValue<string>() ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(effectId))
-                    {
-                        continue;
-                    }
+                    string effectId = RequireNonEmptyString(activeEffects[i], $"toggleSpec.activeEffects[{i}]", id, path);
 
                     int templateId = EffectTemplateIdRegistry.GetId(effectId);
                     if (templateId <= 0)
@@ -614,7 +639,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        private static AbilityPresentationConfig? CompilePresentation(JsonObject presentationObj)
+        private static AbilityPresentationConfig? CompilePresentation(JsonObject presentationObj, string id, string path)
         {
             var displayName = presentationObj["displayName"]?.GetValue<string>() ?? string.Empty;
             var iconGlyph = presentationObj["iconGlyph"]?.GetValue<string>() ?? string.Empty;
@@ -643,16 +668,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeIconGlyphs)
                 {
-                    if (string.IsNullOrWhiteSpace(modeKey) || valueNode == null)
-                    {
-                        continue;
-                    }
-
-                    string glyph = valueNode.GetValue<string>();
-                    if (!string.IsNullOrWhiteSpace(glyph))
-                    {
-                        config.ModeIconGlyphOverrides[modeKey] = glyph;
-                    }
+                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeIconGlyphs.{modeKey}", id, path);
+                    string glyph = RequireNonEmptyString(valueNode, $"presentation.modeIconGlyphs.{modeKey}", id, path);
+                    config.ModeIconGlyphOverrides[modeName] = glyph;
                 }
             }
 
@@ -660,20 +678,48 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 foreach ((string? modeKey, JsonNode? valueNode) in modeHints)
                 {
-                    if (string.IsNullOrWhiteSpace(modeKey) || valueNode == null)
-                    {
-                        continue;
-                    }
-
-                    string hint = valueNode.GetValue<string>();
-                    if (!string.IsNullOrWhiteSpace(hint))
-                    {
-                        config.ModeHintOverrides[modeKey] = hint;
-                    }
+                    string modeName = RequireKnownInteractionMode(modeKey, $"presentation.modeHints.{modeKey}", id, path);
+                    string hint = RequireNonEmptyString(valueNode, $"presentation.modeHints.{modeKey}", id, path);
+                    config.ModeHintOverrides[modeName] = hint;
                 }
             }
 
             return config;
+        }
+
+        private static string RequireNonEmptyString(JsonNode? node, string fieldPath, string id, string path)
+        {
+            if (node is null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' is required and must be a non-empty string.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must be a non-empty string.");
+            }
+
+            return value.Trim();
+        }
+
+        private static string RequireKnownInteractionMode(string? modeKey, string fieldPath, string id, string path)
+        {
+            if (string.IsNullOrWhiteSpace(modeKey))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must use a non-empty interaction mode key.");
+            }
+
+            if (!Enum.TryParse(modeKey, ignoreCase: true, out InteractionModeType parsed))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' uses unknown interaction mode '{modeKey}'.");
+            }
+
+            return parsed.ToString();
         }
 
         private static AbilityInputBindingOverride CompileInputBindingOverride(JsonObject inputObj, string id, string path)
@@ -779,9 +825,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "TagSignalTarget" => ExecItemKind.TagSignalTarget,
                 "InputGate" => ExecItemKind.InputGate,
                 "EventGate" => ExecItemKind.EventGate,
-                "SelectionGate" => ExecItemKind.SelectionGate,
+                "TargetCollectionGate" => ExecItemKind.TargetCollectionGate,
                 "End" => ExecItemKind.End,
-                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, SelectionGate, End."),
+                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
             };
         }
     }

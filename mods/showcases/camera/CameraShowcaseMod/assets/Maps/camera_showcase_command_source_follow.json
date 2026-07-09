@@ -1,8 +1,8 @@
 ﻿{
-    "Id":  "camera_showcase_hub",
+    "Id":  "camera_showcase_command_source_follow",
     "Tags":  [
                  "camera.showcase",
-                 "camera.showcase.hub"
+                 "camera.showcase.selection"
              ],
     "DefaultCamera":  {
                           "VirtualCameraId":  "Camera.Profile.Tactical"
@@ -16,8 +16,8 @@
                                                     },
                                            "WorldPositionCm":  {
                                                                    "Value":  {
-                                                                                 "X":  1200,
-                                                                                 "Y":  800
+                                                                                 "X":  1600,
+                                                                                 "Y":  1200
                                                                              }
                                                                }
                                        },
@@ -31,8 +31,8 @@
                                                     },
                                            "WorldPositionCm":  {
                                                                    "Value":  {
-                                                                                 "X":  2200,
-                                                                                 "Y":  1200
+                                                                                 "X":  2600,
+                                                                                 "Y":  1600
                                                                              }
                                                                },
                                            "PlayerOwner":  {
@@ -51,8 +51,8 @@
                                                     },
                                            "WorldPositionCm":  {
                                                                    "Value":  {
-                                                                                 "X":  3200,
-                                                                                 "Y":  2000
+                                                                                 "X":  3400,
+                                                                                 "Y":  2200
                                                                              }
                                                                },
                                            "PlayerOwner":  {

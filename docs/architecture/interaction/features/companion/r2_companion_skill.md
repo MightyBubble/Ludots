@@ -13,7 +13,7 @@
 ```
 InputOrderMapping:
   actionId: "CompanionSkill"
-  selectionType: None
+  targetType: None
   interactionMode: Explicit
 
 OrderSubmitter:

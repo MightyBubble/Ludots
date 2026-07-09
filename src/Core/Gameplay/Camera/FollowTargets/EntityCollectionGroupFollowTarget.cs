@@ -1,48 +1,54 @@
-using System;
-using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Input.CommandSources;
+using Ludots.Core.EntityCollections;
 
 namespace Ludots.Core.Gameplay.Camera.FollowTargets
 {
-    public sealed class SelectedGroupFollowTarget : ICameraFollowTarget
+    public sealed class EntityCollectionGroupFollowTarget : ICameraFollowTarget
     {
         private readonly World _world;
-        private readonly Dictionary<string, object> _globals;
-        private Entity[] _scratch = new Entity[16];
+        private readonly EntityCollectionStore _collections;
+        private readonly Entity _owner;
+        private readonly string _collectionKey;
 
-        public SelectedGroupFollowTarget(World world, Dictionary<string, object> globals)
+        public EntityCollectionGroupFollowTarget(
+            World world,
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey)
         {
             _world = world;
-            _globals = globals;
+            _collections = collections;
+            _owner = owner;
+            _collectionKey = collectionKey;
         }
 
         public bool TryGetPosition(out Vector2 positionCm)
         {
-            return TryGetSelectionCentroid(out positionCm);
+            return TryGetCollectionCentroid(out positionCm);
         }
 
-        private bool TryGetSelectionCentroid(out Vector2 positionCm)
+        private bool TryGetCollectionCentroid(out Vector2 positionCm)
         {
             positionCm = default;
-            int count = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
-            if (count <= 0)
+            if (_owner == Entity.Null ||
+                string.IsNullOrWhiteSpace(_collectionKey) ||
+                !_collections.TryGet(_owner, _collectionKey, out EntityCollectionHandle handle) ||
+                !_collections.TryGetView(handle, out EntityCollectionView view) ||
+                view.Count <= 0)
             {
                 return false;
             }
 
-            EnsureScratchCapacity(count);
-            count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, _scratch);
-
             Vector2 weightedSum = Vector2.Zero;
             float totalWeight = 0f;
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < view.Count; i++)
             {
-                Entity entity = _scratch[i];
-                if (!_world.IsAlive(entity) || !_world.Has<WorldPositionCm>(entity))
+                if (!_collections.TryGetEntityAt(handle, i, out Entity entity) ||
+                    !_world.IsAlive(entity) ||
+                    !_world.Has<WorldPositionCm>(entity))
                 {
                     continue;
                 }
@@ -74,22 +80,6 @@ namespace Ludots.Core.Gameplay.Camera.FollowTargets
             }
 
             return 1f;
-        }
-
-        private void EnsureScratchCapacity(int required)
-        {
-            if (required <= _scratch.Length)
-            {
-                return;
-            }
-
-            int next = _scratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _scratch, next);
         }
     }
 }

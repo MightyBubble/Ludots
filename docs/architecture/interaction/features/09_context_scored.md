@@ -160,7 +160,7 @@ input mapping 仍然只声明 root cast：
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
   "argsTemplate": { "i0": 0 },
-  "selectionType": "Entity",
+  "targetType": "Entity",
   "isSkillMapping": true
 }
 ```

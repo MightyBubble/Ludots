@@ -110,23 +110,23 @@ enum Acquisition
 | `SmartCastWithIndicator` | `Explicit` | 按住显示指示器，松开确认 |
 | `ContextScored` | `ContextScored` | 已落地，见 `src/Core/Input/Orders/InputOrderMappingSystem.cs` |
 
-### OrderSelectionType → TargetMode
+### OrderTargetType → TargetMode
 
-| Ludots OrderSelectionType | TargetMode |
+| Ludots OrderTargetType | TargetMode |
 |--------------------------|-----------|
 | `None` | `None` |
 | `Entity` | `Unit` |
 | `Position` | `Point` |
 | `Direction` | `Direction` |
 | `Vector` | `Vector` |
-| `Entities` | `Unit` multi-select（经 `SelectionGate`） |
+| `Entities` | `Unit` multi-entity collection（经 `TargetCollectionGate`） |
 
 ### AbilityExecSpec Gates → 响应窗口 / 插入上下文
 
 | Gate | 用途 |
 |------|------|
 | `InputGate` | P5 确认窗口，P2 效果变体选择 |
-| `SelectionGate` | P1 额外目标选择，P6 多目标选取 |
+| `TargetCollectionGate` | P1 额外目标集合确认，P6 多目标选取 |
 | `EventGate` | O1-O8 响应窗口（等待事件） |
 
 ### Response Chain → 响应窗口

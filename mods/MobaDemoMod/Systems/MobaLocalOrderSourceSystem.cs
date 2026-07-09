@@ -32,12 +32,16 @@ namespace MobaDemoMod.Systems
     /// </summary>
     public sealed class MobaLocalOrderSourceSystem : ISystem<float>
     {
+        private const int InitialCollectionScratchCapacity = 16;
+
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
         private readonly int _castAbilityOrderTypeId;
         private readonly int _stopOrderTypeId;
+        private readonly EntityCollectionStore _entityCollections;
+        private Entity[] _collectionScratch = new Entity[InitialCollectionScratchCapacity];
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
@@ -62,11 +66,11 @@ namespace MobaDemoMod.Systems
                     "Ensure game.json constants.orderTypeIds is properly configured.");
             }
 
-            _ = _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
-                collectionsObj is EntityCollectionStore
-                ? true
-                : throw new InvalidOperationException(
-                    $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
+            _entityCollections = _globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
+                collectionsObj is EntityCollectionStore collections
+                    ? collections
+                    : throw new InvalidOperationException(
+                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered.");
         }
 
         public void Initialize() { }
@@ -110,7 +114,7 @@ namespace MobaDemoMod.Systems
                 return false;
             });
             
-            // Selected entity provider
+            // Entity collection providers
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
                 entity = TryGetLocalPlayerId(out int playerId)
@@ -118,13 +122,13 @@ namespace MobaDemoMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
-            _inputOrderMapping.SetSelectedEntityProvider((string setKey, out Entity entity) =>
+            _inputOrderMapping.SetCollectionPrimaryEntityProvider((string collectionKey, out Entity entity) =>
             {
-                return TryGetSelected(setKey, out entity);
+                return TryGetCollectionPrimary(collectionKey, out entity);
             });
-            _inputOrderMapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) =>
+            _inputOrderMapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities) =>
             {
-                return TryGetSelectedEntities(setKey, entities);
+                return TryCopyCollectionEntities(collectionKey, entities);
             });
 
             _inputOrderMapping.SetHoveredEntityProvider((out Entity entity) =>
@@ -236,34 +240,50 @@ namespace MobaDemoMod.Systems
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
-            if (TryGetSelected(EntityCollectionKeys.CommandSource, out var selected))
+            if (TryGetCollectionPrimary(EntityCollectionKeys.CommandSource, out var commandSourcePrimary))
             {
-                if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
-                    return selected;
+                if (_world.TryGet(commandSourcePrimary, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
+                    return commandSourcePrimary;
             }
             return localPlayer;
         }
 
-        private bool TryGetSelected(string setKey, out Entity target)
+        private bool TryGetCollectionPrimary(string collectionKey, out Entity target)
         {
             target = default;
-            return EntityCollectionContextRuntime.TryGetCurrentPrimary(_world, _globals, out target);
-        }
-
-        private bool TryGetSelectedEntities(string setKey, List<Entity> entities)
-        {
-            entities.Clear();
-            int selectionCount = EntityCollectionContextRuntime.GetCurrentCount(_world, _globals);
-            if (selectionCount <= 0)
+            if (!TryResolveLocalCollection(collectionKey, out EntityCollectionHandle handle, out EntityCollectionView view))
             {
                 return false;
             }
 
-            Entity[] selected = new Entity[selectionCount];
-            int count = EntityCollectionContextRuntime.CopyCurrent(_world, _globals, selected);
+            Entity primary = view.PrimaryEntity != Entity.Null
+                ? view.PrimaryEntity
+                : _entityCollections.TryGetEntityAt(handle, 0, out Entity first)
+                    ? first
+                    : Entity.Null;
+            if (primary == Entity.Null || !_world.IsAlive(primary))
+            {
+                return false;
+            }
+
+            target = primary;
+            return true;
+        }
+
+        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        {
+            entities.Clear();
+            if (!TryResolveLocalCollection(collectionKey, out EntityCollectionHandle handle, out EntityCollectionView view) ||
+                view.Count <= 0)
+            {
+                return false;
+            }
+
+            EnsureCollectionScratch(view.Count);
+            int count = _entityCollections.CopyEntities(handle, 0, _collectionScratch);
             for (int i = 0; i < count; i++)
             {
-                Entity entity = selected[i];
+                Entity entity = _collectionScratch[i];
                 if (_world.IsAlive(entity))
                 {
                     entities.Add(entity);
@@ -273,10 +293,49 @@ namespace MobaDemoMod.Systems
             return entities.Count > 0;
         }
 
+        private bool TryResolveLocalCollection(
+            string collectionKey,
+            out EntityCollectionHandle handle,
+            out EntityCollectionView view)
+        {
+            handle = EntityCollectionHandle.Invalid;
+            view = default;
+            return !string.IsNullOrWhiteSpace(collectionKey) &&
+                   TryGetLocalCollectionOwner(out Entity owner) &&
+                   _entityCollections.TryGet(owner, collectionKey, out handle) &&
+                   _entityCollections.TryGetView(handle, out view);
+        }
+
+        private bool TryGetLocalCollectionOwner(out Entity owner)
+        {
+            owner = default;
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
+                   localObj is Entity local &&
+                   _world.IsAlive(local) &&
+                   (owner = local) != Entity.Null;
+        }
+
+        private void EnsureCollectionScratch(int required)
+        {
+            if (_collectionScratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = _collectionScratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref _collectionScratch, next);
+        }
+
         private bool TryGetHovered(out Entity target)
         {
             target = default;
-            return EntityCollectionContextRuntime.TryGetHovered(_world, _globals, out target);
+            return TryGetLocalCollectionOwner(out Entity owner) &&
+                   EntityCollectionContextRuntime.TryGetHovered(_world, _entityCollections, owner, out target);
         }
 
         private bool TryGetCommandWorldPoint(out WorldCmInt2 worldCm)

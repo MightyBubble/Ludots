@@ -5,7 +5,6 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
@@ -517,16 +516,15 @@ namespace Ludots.Core.Presentation.Minimap
             _viewportInitialized = true;
         }
 
-        public void CenterOnSelected(GameEngine engine)
+        public void CenterOnEntity(GameEngine engine, Entity entity)
         {
             ArgumentNullException.ThrowIfNull(engine);
-            Entity selected = ResolveSelectedEntity(engine);
-            if (selected == Entity.Null)
+            if (entity == Entity.Null)
             {
                 return;
             }
 
-            if (TryResolveFollowPosition(engine, selected, out float worldXcm, out float worldYcm))
+            if (TryResolveFollowPosition(engine, entity, out float worldXcm, out float worldYcm))
             {
                 _centerXcm = worldXcm;
                 _centerYcm = worldYcm;
@@ -1000,13 +998,6 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             return false;
-        }
-
-        private static Entity ResolveSelectedEntity(GameEngine engine)
-        {
-            return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected)
-                ? selected
-                : Entity.Null;
         }
 
         private static WorldAabbCm ResolveRequiredWorldBounds(GameEngine engine)

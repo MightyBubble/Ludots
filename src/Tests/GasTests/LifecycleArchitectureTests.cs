@@ -41,17 +41,16 @@ namespace Ludots.Tests.GasTests
         }
 
         [Test]
-        public void LifecycleTransactionPrograms_DeployConsumeSource_HasSevenAtomicOps()
+        public void LifecycleTransactionPrograms_DeployConsumeSource_HasSixAtomicOps()
         {
             var ops = LifecycleTransactionPrograms.DeployConsumeSource;
-            That(ops.Length, Is.EqualTo(7));
+            That(ops.Length, Is.EqualTo(6));
             That(ops[0], Is.EqualTo(LifecycleOpId.MaterializeTemplate));
             That(ops[1], Is.EqualTo(LifecycleOpId.CopyIdentityComponents));
             That(ops[2], Is.EqualTo(LifecycleOpId.CopyAttributeSlice));
             That(ops[3], Is.EqualTo(LifecycleOpId.ClearActiveEffects));
             That(ops[4], Is.EqualTo(LifecycleOpId.TransferStableId));
-            That(ops[5], Is.EqualTo(LifecycleOpId.RewireSelection));
-            That(ops[6], Is.EqualTo(LifecycleOpId.ConsumeEntity));
+            That(ops[5], Is.EqualTo(LifecycleOpId.ConsumeEntity));
         }
 
         [Test]
@@ -621,8 +620,7 @@ namespace Ludots.Tests.GasTests
                     new GraphNodeConfig { Id = "copyIdentity", Op = "InvokeBuiltin", BuiltinHandler = "CopyIdentityComponents", Next = "copyAttrs" },
                     new GraphNodeConfig { Id = "copyAttrs", Op = "InvokeBuiltin", BuiltinHandler = "CopyAttributeSlice", Next = "clearFx" },
                     new GraphNodeConfig { Id = "clearFx", Op = "InvokeBuiltin", BuiltinHandler = "ClearActiveEffects", Next = "transferId" },
-                    new GraphNodeConfig { Id = "transferId", Op = "InvokeBuiltin", BuiltinHandler = "TransferStableId", Next = "rewire" },
-                    new GraphNodeConfig { Id = "rewire", Op = "InvokeBuiltin", BuiltinHandler = "RewireSelection", Next = "consume" },
+                    new GraphNodeConfig { Id = "transferId", Op = "InvokeBuiltin", BuiltinHandler = "TransferStableId", Next = "consume" },
                     new GraphNodeConfig { Id = "consume", Op = "InvokeBuiltin", BuiltinHandler = "ConsumeEntity" },
                 ],
             };

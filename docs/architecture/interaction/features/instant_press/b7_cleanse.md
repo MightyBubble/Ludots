@@ -17,7 +17,7 @@ InputOrderMapping:
   actionId: "Cleanse"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: None
+  targetType: None
   isSkillMapping: true
 
 AbilityExecSpec:
@@ -34,7 +34,7 @@ AbilityExecSpec:
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | AbilityExecSpec | ✅ 已有 | EffectSignal item |
 | GameplayTagContainer | ✅ 已有 | 标签管理 |
 | Phase Graph | ✅ 已有 | 效果处理流程 |

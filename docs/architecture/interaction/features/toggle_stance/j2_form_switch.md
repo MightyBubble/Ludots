@@ -34,7 +34,7 @@ Form tag 的存在决定当前激活的技能组。每个 ability slot 在执行
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| InputOrderMapping (None) | ✅ 已有 | selectionType: None |
+| InputOrderMapping (None) | ✅ 已有 | targetType: None |
 | GameplayTagContainer | ✅ 已有 | form tag 切换 |
 | AbilityStateBuffer | ⚠️ 需要扩展 | 支持 form-based ability mapping (slot + tag → actual ability) |
 

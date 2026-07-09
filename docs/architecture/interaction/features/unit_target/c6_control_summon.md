@@ -13,7 +13,7 @@ InputOrderMapping:
   actionId: "SkillF"
   trigger: PressedThisFrame
   orderTypeKey: "castAbility"
-  selectionType: Entity
+  targetType: Entity
   isSkillMapping: true
   argsTemplate: { i0: 5 }  // ability slot
 ```
@@ -34,7 +34,7 @@ InputOrderMapping:
 ```
 实现:
   1. 召唤物有 "summoned" tag + owner entity ref (Blackboard)
-  2. SelectionRule: filter=OwnedSummon (custom)
+  2. TargetFilter: filter=OwnedSummon (custom)
   3. Phase Graph: 通过 Blackboard 给召唤物写新目标/命令
 ```
 
@@ -52,5 +52,5 @@ InputOrderMapping:
 
 | 需求 | 优先级 | 说明 |
 |------|--------|------|
-| SelectionRule OwnedSummon filter | P2 | 需要自定义 filter 检查 "summoned" tag + owner ref |
+| TargetFilter OwnedSummon filter | P2 | 需要自定义 filter 检查 "summoned" tag + owner ref |
 | 召唤物 owner 记录机制 | P2 | 在召唤时写入 Blackboard owner entity ref |

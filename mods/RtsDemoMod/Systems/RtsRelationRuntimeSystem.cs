@@ -60,7 +60,7 @@ namespace RtsDemoMod.Systems
             ProcessUngarrisonCommands();
             ProcessCompletedConstructionHosts();
             SyncAttachedChildrenToParents();
-            SyncSelectionAvailability();
+            SyncCommandSourceAvailability();
         }
 
         public void AfterUpdate(in float dt)
@@ -245,7 +245,7 @@ namespace RtsDemoMod.Systems
             });
         }
 
-        private void SyncSelectionAvailability()
+        private void SyncCommandSourceAvailability()
         {
             var selectableQuery = new QueryDescription().WithAll<CommandSourceSelectableTag>();
             _world.Query(in selectableQuery, (Entity entity, ref CommandSourceSelectableTag _) =>

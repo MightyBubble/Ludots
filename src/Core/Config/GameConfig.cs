@@ -30,7 +30,7 @@ namespace Ludots.Core.Config
         /// <summary>
         /// Initial local player for startup map load. Provided by CoreMod via game.json merge.
         /// </summary>
-        public int StartupSelectedPlayerId { get; set; }
+        public int StartupLocalPlayerId { get; set; }
 
         public List<string> StartupInputContexts { get; set; } = new List<string>();
 

@@ -19,42 +19,55 @@ namespace Ludots.Core.Input.CommandSources
     /// </summary>
     public sealed class CommandSourceAcquisitionSystem : ISystem<float>
     {
+        public delegate bool CommandSourceOwnerProvider(out Entity owner);
+
         private static readonly QueryDescription SelectableQuery = new QueryDescription().WithAll<VisualTransform, CullState, CommandSourceSelectableTag>();
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly CommandSourceOwnerProvider _commandSourceOwnerProvider;
         private readonly CommandSourceAcquisitionConfig _config;
         private readonly Ludots.Core.Gameplay.Teams.RelationshipFilter _targetRelationFilter;
         private readonly EntityCollectionStore _entityCollections;
-        private Entity[] _boxSelectionScratch = new Entity[16];
+        private Entity[] _boxAcquisitionScratch = new Entity[16];
         private Entity[] _commandSourceScratch = new Entity[16];
         private bool _suppressConfirmRelease;
 
-        public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
+        public Action<WorldCmInt2, Entity>? OnEntityAcquired { get; set; }
 
         public CommandSourceAcquisitionSystem(
             World world,
             Dictionary<string, object> globals,
+            CommandSourceOwnerProvider commandSourceOwnerProvider,
             CommandSourceAcquisitionConfig config,
             EntityCollectionStore entityCollections)
         {
             _world = world;
             _globals = globals;
+            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new ArgumentNullException(nameof(commandSourceOwnerProvider));
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
                 "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
         }
 
-        public CommandSourceAcquisitionSystem(World world, Dictionary<string, object> globals, CommandSourceAcquisitionConfig config)
-            : this(world, globals, config, ResolveEntityCollectionStore(globals))
+        public CommandSourceAcquisitionSystem(
+            World world,
+            Dictionary<string, object> globals,
+            CommandSourceOwnerProvider commandSourceOwnerProvider,
+            CommandSourceAcquisitionConfig config)
+            : this(world, globals, commandSourceOwnerProvider, config, ResolveEntityCollectionStore(globals))
         {
         }
 
-        public CommandSourceAcquisitionSystem(World world, Dictionary<string, object> globals)
+        public CommandSourceAcquisitionSystem(
+            World world,
+            Dictionary<string, object> globals,
+            CommandSourceOwnerProvider commandSourceOwnerProvider)
         {
             _world = world;
             _globals = globals;
+            _commandSourceOwnerProvider = commandSourceOwnerProvider ?? throw new ArgumentNullException(nameof(commandSourceOwnerProvider));
             _config = ResolveCommandSourceAcquisitionConfig(globals);
             _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
                 "commandSource.targetFilter must be explicitly configured.")).ParseRelationFilter();
@@ -81,7 +94,10 @@ namespace Ludots.Core.Input.CommandSources
             Entity hovered = hasOwner
                 ? FindNearestEntity(owner, pointer.Pointer, _config.ClickPickRadiusPixels)
                 : Entity.Null;
-            UpdateHoveredEntity(hovered);
+            if (hasOwner)
+            {
+                UpdateHoveredEntity(owner, hovered);
+            }
 
             if (!hasOwner)
             {
@@ -115,7 +131,7 @@ namespace Ludots.Core.Input.CommandSources
             {
                 drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
                 drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
-                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
+                ApplyCompletedAcquisitionGesture(owner, in drag, hovered, pointer);
                 drag.Clear();
             }
             else if (pointer.Confirm.PressedThisFrame)
@@ -130,7 +146,7 @@ namespace Ludots.Core.Input.CommandSources
             if (pointer.Confirm.ReleasedThisFrame && drag.Active)
             {
                 drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
-                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
+                ApplyCompletedAcquisitionGesture(owner, in drag, hovered, pointer);
                 drag.Clear();
             }
             else if (!pointer.Confirm.IsDown && drag.Active)
@@ -142,27 +158,27 @@ namespace Ludots.Core.Input.CommandSources
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
-                   _world.IsAlive(local) &&
-                   (owner = local) != Entity.Null;
+            return _commandSourceOwnerProvider(out Entity candidate) &&
+                   candidate != Entity.Null &&
+                   _world.IsAlive(candidate) &&
+                   (owner = candidate) != Entity.Null;
         }
 
-        private void ApplyCompletedSelectionGesture(Entity owner, in CommandSourceDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
+        private void ApplyCompletedAcquisitionGesture(Entity owner, in CommandSourceDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
         {
             CommandSourceAcquisitionMode acquisitionMode = drag.AcquisitionMode;
 
             if (drag.ExceedsThreshold(_config.DragThresholdPixels))
             {
-                ApplyBoxSelection(owner, in drag, acquisitionMode);
+                ApplyBoxAcquisition(owner, in drag, acquisitionMode);
                 return;
             }
 
             Entity acquired = ResolveClickAcquisition(owner, hovered);
-            ApplyClickSelection(owner, acquired, acquisitionMode);
+            ApplyClickAcquisition(owner, acquired, acquisitionMode);
             if (pointer.HasGroundPoint)
             {
-                OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
+                OnEntityAcquired?.Invoke(pointer.GroundWorldCm, acquired);
             }
         }
 
@@ -181,17 +197,10 @@ namespace Ludots.Core.Input.CommandSources
             }
         }
 
-        private void UpdateHoveredEntity(Entity hovered)
+        private void UpdateHoveredEntity(Entity owner, Entity hovered)
         {
             CommandSourceAcquisitionCollectionConfig acquisition = _config.Acquisition
                 ?? throw new InvalidOperationException("commandSource.acquisition must be explicitly configured.");
-            Entity owner = _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var ownerObj) && ownerObj is Entity local && _world.IsAlive(local)
-                ? local
-                : Entity.Null;
-            if (owner == Entity.Null)
-            {
-                return;
-            }
 
             var descriptor = EntityCollectionDescriptor.Create(
                 EntityCollectionKeys.HoveredEntity,
@@ -213,7 +222,7 @@ namespace Ludots.Core.Input.CommandSources
             _entityCollections.Replace(owner, descriptor, ReadOnlySpan<Entity>.Empty);
         }
 
-        private void ApplyClickSelection(Entity owner, Entity clicked, CommandSourceAcquisitionMode acquisitionMode)
+        private void ApplyClickAcquisition(Entity owner, Entity clicked, CommandSourceAcquisitionMode acquisitionMode)
         {
             if (_world.IsAlive(clicked))
             {
@@ -229,7 +238,7 @@ namespace Ludots.Core.Input.CommandSources
             }
         }
 
-        private void ApplyBoxSelection(Entity owner, in CommandSourceDragState drag, CommandSourceAcquisitionMode acquisitionMode)
+        private void ApplyBoxAcquisition(Entity owner, in CommandSourceDragState drag, CommandSourceAcquisitionMode acquisitionMode)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
@@ -252,27 +261,27 @@ namespace Ludots.Core.Input.CommandSources
                 }
 
                 EnsureScratchCapacity(nextCount + 1);
-                _boxSelectionScratch[nextCount++] = entity;
+                _boxAcquisitionScratch[nextCount++] = entity;
             });
 
-            SortByEntityId(_boxSelectionScratch, nextCount);
-            ApplyAcquisition(owner, _boxSelectionScratch.AsSpan(0, nextCount), acquisitionMode);
+            SortByEntityId(_boxAcquisitionScratch, nextCount);
+            ApplyAcquisition(owner, _boxAcquisitionScratch.AsSpan(0, nextCount), acquisitionMode);
         }
 
         private void EnsureScratchCapacity(int required)
         {
-            if (required <= _boxSelectionScratch.Length)
+            if (required <= _boxAcquisitionScratch.Length)
             {
                 return;
             }
 
-            int nextSize = _boxSelectionScratch.Length;
+            int nextSize = _boxAcquisitionScratch.Length;
             while (nextSize < required)
             {
                 nextSize *= 2;
             }
 
-            Array.Resize(ref _boxSelectionScratch, nextSize);
+            Array.Resize(ref _boxAcquisitionScratch, nextSize);
         }
 
         private Entity FindNearestEntity(Entity owner, Vector2 pointer, float radiusPixels)
@@ -358,7 +367,7 @@ namespace Ludots.Core.Input.CommandSources
                     return;
 
                 default:
-                    throw new InvalidOperationException($"Unsupported selection acquisition mode '{mode}'.");
+                    throw new InvalidOperationException($"Unsupported command-source acquisition mode '{mode}'.");
             }
         }
 

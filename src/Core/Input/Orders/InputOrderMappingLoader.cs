@@ -13,12 +13,7 @@ namespace Ludots.Core.Input.Orders
     {
         private readonly ConfigPipeline _pipeline;
 
-        private static readonly JsonSerializerOptions JsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
-        };
+        private static readonly JsonSerializerOptions JsonOptions = StrictJsonOptions.CreateCamelCase();
 
         public InputOrderMappingLoader(ConfigPipeline pipeline)
         {
@@ -152,13 +147,16 @@ namespace Ludots.Core.Input.Orders
                         throw new InvalidOperationException($"{path}.actorOrderRouting is only valid when isSkillMapping is false.");
                     }
 
-                    if (mapping.SelectionType == OrderSelectionType.Entities)
+                    if (mapping.TargetType == OrderTargetType.Entities)
                     {
-                        throw new InvalidOperationException($"{path}.actorOrderRouting does not support selectionType=Entities.");
+                        throw new InvalidOperationException($"{path}.actorOrderRouting does not support TargetType=Entities.");
                     }
 
                     ValidateActorOrderRouting(mapping.ActorOrderRouting, path);
                 }
+
+                ValidateCollectionKey(mapping.ActorCollectionKey, $"{path}.actorCollectionKey");
+                ValidateCollectionKey(mapping.TargetCollectionKey, $"{path}.targetCollectionKey");
 
                 if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
                 {
@@ -201,6 +199,19 @@ namespace Ludots.Core.Input.Orders
             }
 
             ValidateGroupMoveFormation(config.GroupMoveFormation, source);
+        }
+
+        private static void ValidateCollectionKey(string key, string path)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                throw new InvalidOperationException($"{path} must be a non-empty string.");
+            }
+
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{path} must not contain leading or trailing whitespace.");
+            }
         }
 
         private static void ValidateGroupMoveFormation(GroupMoveFormationSettings settings, string source)

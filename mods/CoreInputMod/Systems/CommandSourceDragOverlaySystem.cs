@@ -9,20 +9,28 @@ using Ludots.Core.Scripting;
 namespace CoreInputMod.Systems
 {
     /// <summary>
-    /// Shared presentation for screen-space selection drag rectangles.
+    /// Shared presentation for screen-space command-source acquisition drag rectangles.
     /// </summary>
-    public sealed class SelectionBoxOverlaySystem : ISystem<float>
+    public sealed class CommandSourceDragOverlaySystem : ISystem<float>
     {
         private static readonly Vector4 FillColor = new(0.18f, 0.55f, 0.95f, 0.12f);
         private static readonly Vector4 BorderColor = new(0.38f, 0.78f, 1f, 0.92f);
 
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
+        private readonly CommandSourceAcquisitionSystem.CommandSourceOwnerProvider _commandSourceOwnerProvider;
+        private readonly CommandSourceAcquisitionConfig _config;
 
-        public SelectionBoxOverlaySystem(World world, Dictionary<string, object> globals)
+        public CommandSourceDragOverlaySystem(
+            World world,
+            Dictionary<string, object> globals,
+            CommandSourceAcquisitionSystem.CommandSourceOwnerProvider commandSourceOwnerProvider,
+            CommandSourceAcquisitionConfig config)
         {
             _world = world;
             _globals = globals;
+            _commandSourceOwnerProvider = commandSourceOwnerProvider;
+            _config = config;
         }
 
         public void Initialize() { }
@@ -34,19 +42,18 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) || localObj is not Entity local || !_world.IsAlive(local))
+            if (!_commandSourceOwnerProvider(out Entity owner) || owner == Entity.Null || !_world.IsAlive(owner))
             {
                 return;
             }
 
-            if (!_world.Has<CommandSourceDragState>(local))
+            if (!_world.Has<CommandSourceDragState>(owner))
             {
                 return;
             }
 
-            ref var drag = ref _world.Get<CommandSourceDragState>(local);
-            float threshold = ResolveDragThreshold();
-            if (!drag.Active || !drag.ExceedsThreshold(threshold))
+            ref var drag = ref _world.Get<CommandSourceDragState>(owner);
+            if (!drag.Active || !drag.ExceedsThreshold(_config.DragThresholdPixels))
             {
                 return;
             }
@@ -69,13 +76,5 @@ namespace CoreInputMod.Systems
         public void BeforeUpdate(in float dt) { }
         public void AfterUpdate(in float dt) { }
         public void Dispose() { }
-
-        private float ResolveDragThreshold()
-        {
-            return _globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionConfig.Name, out var configObj) &&
-                   configObj is CommandSourceAcquisitionConfig config
-                ? config.DragThresholdPixels
-                : 8f;
-        }
     }
 }

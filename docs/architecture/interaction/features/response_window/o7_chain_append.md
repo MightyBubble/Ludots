@@ -20,7 +20,7 @@ Chain/追加效果允许 Phase Listener 在效果结算的 OnApply 阶段调用 
 ## 交互层设计
 
 - **Trigger**: 无（Phase Listener 自动触发）
-- **SelectionType**: `None`
+- **TargetType**: `None`
 - **InteractionMode**: 不适用
 
 ```json5

@@ -12,7 +12,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame` / `ReleasedThisFrame` / `Held`
-- **SelectionType**: `None` / `Entity` / `Position` / `Direction` / `Vector`
+- **TargetType**: `None` / `Entity` / `Position` / `Direction` / `Vector`
 - **InteractionMode**: `TargetFirst` / `SmartCast` / `AimCast` / `SmartCastWithIndicator`
 
 ```json5
@@ -22,7 +22,7 @@
   "actionId": "ability_Q",                        // 对应 InputAction ID
   "trigger": "PressedThisFrame",                  // InputTriggerType
   "orderTypeKey": "castAbility",                  // 对应 OrderTypeRegistry 中的 key
-  "selectionType": "Entity",                      // OrderSelectionType
+  "targetType": "Entity",                      // OrderTargetType
   "isSkillMapping": true,                         // 受 InteractionMode 影响
   "castModeOverride": null,                       // null = 跟随全局 InteractionMode
   "autoTargetPolicy": "NearestEnemyInRange",      // 可选，SmartCast 无悬停目标时的回退策略

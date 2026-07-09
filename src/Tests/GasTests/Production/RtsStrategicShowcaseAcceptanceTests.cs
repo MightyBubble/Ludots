@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -97,7 +97,7 @@ namespace Ludots.Tests.GAS.Production
             toolbar.Activate("war3_train");
 
             Assert.That(
-                EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected),
                 Is.True,
                 "Selecting from the RTS toolbar should seed a real primary selection.");
             Assert.That(selected, Is.EqualTo(barracks));
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, MapId, frameTimesMs);
 
             Assert.That(
-                EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected),
+                Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected),
                 Is.True,
                 "RTS showcase should auto-select a starter sample so the first-contact UI is coherent.");
             Assert.That(engine.World.Get<Name>(selected).Value, Is.EqualTo("Peasant"));
@@ -1132,7 +1132,7 @@ namespace Ludots.Tests.GAS.Production
                 new InputOrderMapping
                 {
                     ActionId = $"PreviewSlot{slotIndex}",
-                    SelectionType = OrderSelectionType.Position,
+                    TargetType = OrderTargetType.Position,
                     ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
                 },
                 new AbilityAimInputState(

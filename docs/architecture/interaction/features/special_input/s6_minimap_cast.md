@@ -18,7 +18,7 @@
 ## 交互层设计
 
 - **Trigger**: `PressedThisFrame`
-- **SelectionType**: `Position`（小地图坐标→世界坐标）
+- **TargetType**: `Position`（小地图坐标→世界坐标）
 - **InteractionMode**: `Explicit`
 
 ```json5
@@ -28,7 +28,7 @@
   "actionId": "teleport",
   "trigger": "PressedThisFrame",
   "orderTypeKey": "castAbility",
-  "selectionType": "Position",
+  "targetType": "Position",
   "isSkillMapping": true,
   "inputSource": "Minimap"                        // ❌ P3 — 需新增 Minimap 输入源
 }

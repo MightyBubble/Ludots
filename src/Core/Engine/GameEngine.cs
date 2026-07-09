@@ -1139,7 +1139,10 @@ namespace Ludots.Core.Engine
             var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
             var inputFrameConsumers = new List<IInputFrameConsumer>
             {
-                new MinimapInputConsumer(minimapRuntime)
+                new MinimapInputConsumer(
+                    minimapRuntime,
+                    static (GameEngine engine, out Entity owner) =>
+                        engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner))
             };
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
@@ -2198,7 +2201,12 @@ namespace Ludots.Core.Engine
             GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(World, GlobalContext, definition.FollowTargetKind),
+                followTarget: CameraFollowTargetFactory.Build(
+                    World,
+                    GlobalContext,
+                    definition.FollowTargetKind,
+                    ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
+                    definition.FollowCollectionKey),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
             if (cam != null)
@@ -2221,6 +2229,25 @@ namespace Ludots.Core.Engine
 
             var state = GameSession.Camera.State;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+        }
+
+        private Entity ResolveDefaultCameraFollowCollectionOwner(CameraFollowTargetKind followTargetKind)
+        {
+            if (!CameraFollowTargetFactory.RequiresEntityCollection(followTargetKind))
+            {
+                return Entity.Null;
+            }
+
+            Entity sessionLocal = CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
+            if (sessionLocal != Entity.Null && World.IsAlive(sessionLocal))
+            {
+                return sessionLocal;
+            }
+
+            Entity serviceLocal = GetService(CoreServiceKeys.LocalPlayerEntity);
+            return serviceLocal != Entity.Null && World.IsAlive(serviceLocal)
+                ? serviceLocal
+                : Entity.Null;
         }
 
         private static bool ShouldSkipDefaultCameraOnLoad(MapConfig mapConfig)
@@ -2991,8 +3018,8 @@ namespace Ludots.Core.Engine
                 throw new InvalidOperationException("StartupMapId is required.");
             }
 
-            MapLaunchContext? launchContext = MergedConfig!.StartupSelectedPlayerId > 0
-                ? MapLaunchContext.Create(MergedConfig.StartupSelectedPlayerId)
+            MapLaunchContext? launchContext = MergedConfig!.StartupLocalPlayerId > 0
+                ? MapLaunchContext.Create(MergedConfig.StartupLocalPlayerId)
                 : null;
             LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
         }

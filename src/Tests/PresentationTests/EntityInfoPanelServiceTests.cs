@@ -246,7 +246,7 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_SelectionViewInspector_UsesViewedSelectionDescriptor_AndFormatsEntityRows()
+    public void Refresh_EntityCollectionInspector_UsesExplicitCollectionDescriptor_AndFormatsEntityRows()
     {
         using var world = World.Create();
         int healthId = AttributeRegistry.Register("Tests.EntityInfo.Selection.Health");
@@ -276,7 +276,7 @@ public sealed class EntityInfoPanelServiceTests
         EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
             EntityInfoPanelKind.EntityCollectionInspector,
             EntityInfoPanelSurface.Ui,
-            EntityInfoPanelTarget.CurrentSelectionView(),
+            EntityInfoPanelTarget.EntityCollection(viewer, EntityCollectionKeys.CommandSource),
             new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 480f, 280f),
             EntityInfoGasDetailFlags.None,
             true));
@@ -308,7 +308,7 @@ public sealed class EntityInfoPanelServiceTests
     }
 
     [Test]
-    public void Refresh_ExplicitEntityCollectionInspector_RendersWithoutMutatingViewedSelection()
+    public void Refresh_ExplicitEntityCollectionInspector_RendersWithoutReadingCommandSource()
     {
         using var world = World.Create();
         Entity viewer = world.Create();

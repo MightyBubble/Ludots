@@ -5,6 +5,7 @@ using Arch.Core;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Map;
@@ -661,9 +662,28 @@ internal sealed class UxPrototypeScenarioState
 
     private Entity ResolveSelectedEntity(GameEngine engine)
     {
-        return EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity)
+        return TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
+               EntityCollectionContextRuntime.TryGetPrimary(
+                   engine.World,
+                   engine.GlobalContext,
+                   owner,
+                   EntityCollectionKeys.CommandSource,
+                   out Entity entity)
             ? entity
             : Entity.Null;
+    }
+
+    private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
+    {
+        owner = Entity.Null;
+        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        if (local == Entity.Null || !engine.World.IsAlive(local))
+        {
+            return false;
+        }
+
+        owner = local;
+        return true;
     }
 
     private string? ResolveSelectedLabel(GameEngine engine)

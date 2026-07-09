@@ -13,7 +13,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
             registry.Register(BuiltinHandlerId.CopyAttributeSlice, HandleCopyAttributeSlice);
             registry.Register(BuiltinHandlerId.ClearActiveEffects, HandleClearActiveEffects);
             registry.Register(BuiltinHandlerId.TransferStableId, HandleTransferStableId);
-            registry.Register(BuiltinHandlerId.RewireSelection, HandleRewireSelection);
             registry.Register(BuiltinHandlerId.ConsumeEntity, HandleConsumeEntity);
         }
 
@@ -80,17 +79,6 @@ namespace Ludots.Core.Gameplay.Lifecycle
         {
             var state = RequireTransactionState();
             EntityLifecycleAtomicOps.TransferStableId(world, state.Target, in state.Snapshot);
-        }
-
-        public static void HandleRewireSelection(
-            World world,
-            Entity effectEntity,
-            ref EffectContext context,
-            in EffectConfigParams mergedParams,
-            in EffectTemplateData templateData)
-        {
-            var state = RequireTransactionState();
-            EntityLifecycleAtomicOps.RewireSelection(RequireServices(), state.Source, state.Target);
         }
 
         public static void HandleConsumeEntity(

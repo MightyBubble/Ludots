@@ -13,7 +13,7 @@
 ## 交互层设计
 
 - **Trigger**: `Held`，配合 `HeldPolicy = StartEnd`（Down 触发 block.Start，Up 触发 block.End）
-- **SelectionType**: `None`
+- **TargetType**: `None`
 - **InteractionMode**: `SmartCast`
 
 ```json5
@@ -24,7 +24,7 @@
   "trigger": "Held",
   "heldPolicy": "StartEnd",          // Down→block.Start；Up→block.End
   "orderTypeKey": "castAbility",
-  "selectionType": "None",
+  "targetType": "None",
   "isSkillMapping": true,
   "castModeOverride": "SmartCast"
 }

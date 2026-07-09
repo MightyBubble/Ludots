@@ -1,11 +1,12 @@
-[
+﻿[
   {
-    "Id": "Camera.Mode.SelectionFollow",
-    "DisplayName": "Selected Follow",
-    "VirtualCameraId": "Camera.Showcase.Profile.SelectionFollow",
-    "FollowTargetKind": "SelectedEntity",
+    "Id": "Camera.Mode.CommandSourceFollow",
+    "DisplayName": "Command Source Follow",
+    "VirtualCameraId": "Camera.Showcase.Profile.CommandSourceFollow",
+    "FollowTargetKind": "EntityCollectionPrimary",
+    "FollowCollectionKey": "collection.command.source",
     "InteractionMode": "SmartCast",
     "SkillBarEnabled": false,
-    "SwitchActionId": "CameraModeSelectionFollow"
+    "SwitchActionId": "CameraModeCommandSourceFollow"
   }
 ]

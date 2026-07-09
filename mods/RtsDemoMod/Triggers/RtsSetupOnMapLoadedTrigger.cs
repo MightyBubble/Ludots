@@ -53,10 +53,10 @@ namespace RtsDemoMod.Triggers
             });
 
             RtsPresentationBootstrapper.EnsureReadableActors(engine, world);
-            EnsureLocalSelectionOwner(engine, world);
+            EnsureLocalCommandSourceOwner(engine, world);
             EnsurePlayerOwnership(world);
-            RtsShowcaseSelectionHelper.EnsureSelectionViewBinding(engine);
-            EnsureDefaultSelection(engine, world);
+            RtsShowcaseCommandSourceHelper.EnsureCommandSourceBinding(engine);
+            EnsureDefaultCommandSource(engine, world);
             return Task.CompletedTask;
         }
 
@@ -74,7 +74,7 @@ namespace RtsDemoMod.Triggers
             });
         }
 
-        private static void EnsureLocalSelectionOwner(GameEngine engine, World world)
+        private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (world.IsAlive(owner))
@@ -87,10 +87,10 @@ namespace RtsDemoMod.Triggers
             engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
         }
 
-        private static void EnsureDefaultSelection(GameEngine engine, World world)
+        private static void EnsureDefaultCommandSource(GameEngine engine, World world)
         {
             Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (!world.IsAlive(owner) || RtsShowcaseSelectionHelper.GetCurrentCount(engine) > 0)
+            if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
             {
                 return;
             }
@@ -101,7 +101,7 @@ namespace RtsDemoMod.Triggers
                 return;
             }
 
-            RtsShowcaseSelectionHelper.TrySelectAndFocus(engine, target, snapCamera: false);
+            RtsShowcaseCommandSourceHelper.TrySetCommandSourceAndFocus(engine, target, snapCamera: false);
         }
 
         private static bool HasTag(List<string> tags, string t)

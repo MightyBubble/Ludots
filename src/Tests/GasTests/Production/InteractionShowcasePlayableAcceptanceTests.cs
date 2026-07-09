@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1373,7 +1373,7 @@ namespace Ludots.Tests.GAS.Production
                 details.Add($"mappingAiming={mapping.IsAiming}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
-                    details.Add($"selectionType={actionMapping.SelectionType}");
+                    details.Add($"TargetType={actionMapping.TargetType}");
                     details.Add($"orderTypeKey={actionMapping.OrderTypeKey}");
                 }
                 else
@@ -1416,7 +1416,7 @@ namespace Ludots.Tests.GAS.Production
             details.Add($"selected={string.Join(",", GetSelectedNames(engine))}");
             details.Add($"primary={GetSelectedEntityName(engine)}");
 
-            if (EntityCollectionContextRuntime.TryGetHovered(engine.World, engine.GlobalContext, out Entity hovered) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetHoveredEntity(engine, out Entity hovered) &&
                 engine.World.IsAlive(hovered) &&
                 engine.World.TryGet(hovered, out Name hoveredName))
             {
@@ -1528,10 +1528,7 @@ namespace Ludots.Tests.GAS.Production
                     : $"{names[i]} screen=({screen.X:0.##},{screen.Y:0.##}) visible={visible} intersects={intersects} bounds=<none>");
             }
 
-            if (EntityCollectionContextRuntime.TryDescribeCurrentView(
-                    engine.World,
-                    engine.GlobalContext,
-                    out EntityCollectionView view))
+            if (Ludots.Tests.EntityCollectionTestAccess.TryDescribeCommandSourceView(engine, out EntityCollectionView view))
             {
                 details.Add(
                     $"commandSource owner={view.Owner.Id} key={view.Key} source={view.SourceKind} role={view.Role} primary={view.PrimaryEntity.Id} members={view.Count}");
@@ -2004,7 +2001,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static string GetSelectedEntityName(GameEngine engine)
         {
-            if (EntityCollectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity selected) &&
+            if (Ludots.Tests.EntityCollectionTestAccess.TryGetCommandSourcePrimary(engine, out Entity selected) &&
                 engine.World.TryGet(selected, out Name name))
             {
                 return name.Value;
@@ -2015,7 +2012,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity[] GetSelectionSnapshot(GameEngine engine)
         {
-            return EntityCollectionContextRuntime.SnapshotCurrent(engine.World, engine.GlobalContext);
+            return Ludots.Tests.EntityCollectionTestAccess.SnapshotCommandSource(engine);
         }
 
         private static Entity GetLocalPlayer(GameEngine engine)

@@ -167,3 +167,60 @@ N/A - no new atomic op.
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: existing ability catalog tags or existing aggregation profile entries, not Core enum.
+
+---
+
+## GAS Composition Gate - Self Review
+
+- **Task / Issue**: PR #581 RFC-0065 selection-retirement closeout: AbilityExecLoader fail-fast tightening.
+- **Date**: 2026-07-09
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本次只收紧既有 ability config loader 的校验边界，拒绝坏配置静默通过；没有新增 handler、effect preset、graph op、profile enum、JSON schema 或平行加载管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Ability exec config validation | N/A - existing config boundary | `AbilityExecLoader` |
+| GraphSignal id resolution | N/A - existing registry lookup | `GraphIdRegistry.GetId` |
+| Presentation mode override validation | N/A - existing enum contract | `InteractionModeType` |
+| Regression coverage | N/A - tests | `AbilityExecLoaderFailFastTests` |
+
+### 3. Reuse list
+
+- Handlers: N/A, no GAS handler changes.
+- Queues / Systems: existing AbilityExec runtime only; no new runtime queue.
+- Resolvers / Registries: `EffectTemplateIdRegistry`, `GraphIdRegistry`, `TagRegistry`, `ConfigKeyRegistry`.
+- Existing presets / graphs: Existing graph ids must already be registered; loader no longer registers unknown graph names from ability items.
+
+### 4. New Layer 0 ops (if any)
+
+N/A - no new atomic op.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A. This is config compilation fail-fast behavior, not a gameplay lifecycle transaction.
+
+### 6. Config SSOT
+
+行为配置落在: existing `GAS/abilities.json` schema and existing registries.
+
+是否新增 JSON schema: NO - existing fields are validated more strictly.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: ability JSON entries / graph assets / effect templates, not Core enum.
