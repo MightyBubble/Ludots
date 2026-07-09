@@ -2,100 +2,80 @@
 
 ## 概述
 
-这个案例展示用户如何直接编码一个 effect preset type 需要的 C# 行为, 再用配置把它变成可复用效果类型。玩家视角是: 火法技能命中后目标获得 `Heat Mark`, 后续燃烧、爆裂或 UI 提示都从这个效果类型出发。
+这个 showcase 展示作者如何直接编码一个 effect preset type 背后的 C# handler，再用数据把它变成可复用的效果类型。玩家进入地图后能看到 `Effect Preset Type Code` 面板；点击 `Apply Heat Mark` 后，面板显示 Heat Mark 已被正式执行，并且调用次数增加。
 
-这里的关键点是: `preset_types.json` 仍然是数据真相, C# 只注册 phase handler。作者不是给 Core 加一个新 `EffectPresetType` 枚举值。
+关键点是：作者不新增 `EffectPresetType` Core enum。preset type 仍然是数据，C# 只注册 phase handler。
 
 ## 结构
 
 ```text
-ArcMageMod/
-  ArcMageModEntry.cs
+CapabilityStandardEffectPresetTypeCodeShowcaseMod/
+  CapabilityStandardEffectPresetTypeCodeShowcaseModEntry.cs
   assets/
+    game.json
+    Maps/
+      capability_standard_effect_preset_type_code_showcase.json
     Configs/
       GAS/
         preset_types/
-          arc_mage.heat_mark.json
+          capability_standard.effect_preset_type_code.heat_mark.json
         effects/
-          arc_mage.heat_mark.json
+          capability_standard.effect_preset_type_code.heat_mark.json
 ```
 
 ## 详情
 
-Mod 启动时注册自己拥有的 handler key:
+Root mod 在 `IMod.OnLoad` 注册 handler：
 
 ```csharp
-public void OnLoad(IModContext context)
-{
-    context.Extensions.Gas.RegisterBuiltinHandler(
-        "ArcMageMod.ApplyHeatMark",
-        ApplyHeatMark);
-}
+context.Extensions.Gas.RegisterBuiltinHandler(
+    "CapabilityStandardEffectPresetTypeCodeShowcaseMod.ApplyHeatMark",
+    ApplyHeatMark);
 ```
 
-handler 使用现有 GAS phase handler 签名:
-
-```csharp
-private static void ApplyHeatMark(
-    World world,
-    Entity effectEntity,
-    ref EffectContext context,
-    in EffectConfigParams mergedParams,
-    in EffectTemplateData templateData)
-{
-    // 读取 mergedParams, 修改目标实体的正式属性或 tag。
-}
-```
-
-然后用 `GAS/preset_types` shard 声明 preset type:
+preset type shard 声明这个 handler 参与 `OnApply`：
 
 ```json
-[
-  {
-    "id": "ArcMage.HeatMark",
-    "components": [ "ModifierParams", "DurationParams" ],
-    "activePhases": [ "OnApply", "OnPeriod" ],
-    "allowedLifetimes": [ "After" ],
-    "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ArcMageMod.ApplyHeatMark" },
-      "OnPeriod": { "type": "builtin", "id": "ArcMageMod.ApplyHeatMark" }
+{
+  "id": "CapabilityStandard.EffectPresetTypeCode.HeatMark",
+  "defaultPhaseHandlers": {
+    "OnApply": {
+      "type": "builtin",
+      "id": "CapabilityStandardEffectPresetTypeCodeShowcaseMod.ApplyHeatMark"
     }
   }
-]
+}
 ```
 
-`type: "builtin"` 表示走 C# handler registry。另一个合法选择是 `type: "graph"`, 适合完全能用 GAS graph 表达的组合逻辑。选择标准很简单: 需要新代码访问正式运行时服务时用 C# handler; 只是串联已有 op 时用 graph。
+`type: "builtin"` 使用 C# handler registry。`type: "graph"` 也是合法选择，适合完全能用 GAS graph 表达的组合逻辑。需要访问正式运行时服务或执行小段专用代码时用 builtin；只是串联现有 op 时用 graph。
 
 ## 场景
 
-1. 玩家释放 `Ember Bolt`。
-2. 效果模板引用 `presetType: "ArcMage.HeatMark"`。
-3. `OnApply` 让目标获得热量标记。
-4. `OnPeriod` 按时间继续推进燃烧反馈。
-5. 其他 Mod 可以引用 `ArcMage.HeatMark`, 但不能注册 `ArcMageMod.*` handler。
+玩家点击按钮后，showcase 发布一个 `EffectRequest`。正式 GAS effect pipeline 处理请求，effect phase executor 调用 Mod 注册的 `ApplyHeatMark`。面板上的 `calls` 增加，表示效果不是 UI 假装触发，而是经过了 GAS phase。
 
 ## 边界
 
-- 用户变体不进 Core enum。
-- handler key 必须以当前加载 Mod id 加点号开头。
-- `preset_types.json` 必须通过 catalog 和 shard 进入管线。
-- 引用不存在的 handler 必须启动失败。
-- 不用 legacy enum parser 去猜用户 handler。
+- 用户玩法变体不进入 Core enum。
+- handler key 必须属于当前加载的 Mod 命名空间。
+- `preset_types.json` 和 `effects.json` 必须通过 catalog shard 进入 `ConfigPipeline`。
+- 引用不存在的 handler 必须在加载或编译期失败。
+- showcase 不直接修改目标属性来假装 GAS 生效。
 
 ## UAT
 
 ```gherkin
-Feature: Mod 作者用 C# handler 定义新的 effect preset type
+Feature: 玩家触发 Heat Mark 并看到执行反馈
 
-  Scenario: 火法 Mod 注册热量标记效果
-    Given `ArcMageMod` 在启动时注册 `ArcMageMod.ApplyHeatMark`
-    And `ArcMageMod` 的 preset type shard 声明 `ArcMage.HeatMark`
-    When 玩家释放会施加 `ArcMage.HeatMark` 的技能
-    Then 目标获得热量标记
-    And 后续周期效果继续通过同一个 preset type 执行
+  Scenario: Heat Mark 点击后显示已执行
+    Given 我启动 `capability_standard_effect_preset_type_code_showcase_raylib`
+    And 地图显示 `Effect Preset Type Code` 面板
+    When 我点击 `Apply Heat Mark`
+    Then 面板显示 Heat Mark 已执行
+    And 面板的 Calls 数量大于 0
 
-  Scenario: preset type 引用了不存在的 handler
-    Given `GAS/preset_types/arc_mage.heat_mark.json` 引用 `ArcMageMod.MissingHandler`
-    When 游戏加载 preset type
-    Then 启动失败并指出 handler 未注册
+  Scenario: 玩家连续触发 Heat Mark 时看到调用次数继续增长
+    Given 我已经点击过一次 `Apply Heat Mark`
+    When 我再次点击 `Apply Heat Mark`
+    Then 面板的 Actions 计数增加
+    And 面板的 Calls 数量继续增长
 ```

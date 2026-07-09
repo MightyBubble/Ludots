@@ -1,0 +1,14 @@
+[
+  {
+    "id": "Effect.CapabilityStandard.EffectPresetTypeCode.HeatMark",
+    "tags": ["Effect.CapabilityStandard.EffectPresetTypeCode"],
+    "presetType": "CapabilityStandard.EffectPresetTypeCode.HeatMark",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 15,
+      "clockId": "FixedFrame"
+    }
+  }
+]

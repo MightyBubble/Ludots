@@ -2,96 +2,80 @@
 
 ## 概述
 
-这个案例展示用户如何扩展 performer behavior。玩家视角是: 地图上的云旗、火焰标记或能量护盾会持续变化, 这些表现不是 Core 内置行为, 而是 Mod 自己注册的 behavior。
+这个 showcase 展示作者如何扩展 performer behavior。玩家进入地图后会看到 `Performer Behavior Extension` 面板；CloudDrift performer 被创建后持续 tick，面板上的 tick 数会增长。点击 `Focus Cloud Drift` 时，面板继续显示行为仍在正式 Performer behavior 系统里运行。
+
+它证明表现行为可以由 Mod 注册并被 performer 数据复用，而不是新增 Core behavior enum。
 
 ## 结构
 
 ```text
-WeatherMod/
-  WeatherModEntry.cs
+CapabilityStandardPerformerBehaviorExtensionShowcaseMod/
+  CapabilityStandardPerformerBehaviorExtensionShowcaseModEntry.cs
   assets/
+    game.json
+    Maps/
+      capability_standard_performer_behavior_extension_showcase.json
     Configs/
       Presentation/
         performers/
-          weather.cloud_banner.json
+          capability_standard.performer_behavior_extension.cloud_banner.json
 ```
 
 ## 详情
 
-Mod 启动时注册 behavior kind:
+Mod 启动时注册 behavior key，并声明执行 lane：
 
 ```csharp
-public void OnLoad(IModContext context)
-{
-    context.Extensions.Presentation.RegisterPerformerBehavior(
-        "WeatherMod.CloudDrift",
-        new PerformerBehaviorExtensionDescriptor(
-            PerformerBehaviorExecutionLane.ContinuousTick,
-            TickCloudDrift));
-}
+context.Extensions.Presentation.RegisterPerformerBehavior(
+    "CapabilityStandardPerformerBehaviorExtensionShowcaseMod.CloudDrift",
+    new PerformerBehaviorExtensionDescriptor(
+        PerformerBehaviorExecutionLane.ContinuousTick,
+        RunCloudDrift));
 ```
 
-handler 进入现有 Performer behavior 系统:
+performer shard 通过 key 引用 behavior。loader 会把它编译为 `BehaviorKind.Extension` 和动态 `KindId`，并校验配置 lane 与注册 descriptor 一致。
 
-```csharp
-private static void TickCloudDrift(in PerformerBehaviorExecutionContext context)
-{
-    // 只更新该 behavior 负责的表现状态。
-}
-```
+运行时流程：
 
-performer 定义通过 shard 引用注册 key:
-
-```json
-[
-  {
-    "id": "Weather.CloudBanner",
-    "behaviors": [
-      {
-        "slot": "body",
-        "kind": "WeatherMod.CloudDrift",
-        "activeByDefault": true,
-        "execution": { "lane": "ContinuousTick" }
-      }
-    ]
-  }
-]
-```
-
-`kind` 不是 `BehaviorKind.Extension` 字符串, 而是 Mod 注册的 key。loader 会把它解析成 `BehaviorKind.Extension`, 写入 resolved `KindId`, 并校验 `execution.lane` 与注册 descriptor 一致。
+1. 地图加载后 root mod 创建 owner entity。
+2. root mod 通过 `PerformerCommandBuffer` 发出 `CreatePerformer`。
+3. `PerformerRuntimeSystem` 创建 performer 实例。
+4. `PerformerBehaviorSystem` 在 ContinuousTick lane 调用 CloudDrift handler。
+5. handler 写入 performer param，UI 面板显示 tick 数。
 
 ## 场景
 
-1. 玩家进入天气 showcase 地图。
-2. 地图生成 `Weather.CloudBanner` performer。
-3. `body` behavior slot 每帧执行 `WeatherMod.CloudDrift`。
-4. 云旗随风漂移, 但它仍然走 Performer behavior 系统。
-5. 其他 Mod 可以复用 `WeatherMod.CloudDrift` 制作自己的云旗 performer。
+玩家看到的是一块会持续变化的展示目标。作者看到的是 behavior slot 如何从 JSON 进入正式 performer 定义，再通过 Performer behavior 系统执行。
 
 ## 边界
 
-- 扩展 behavior 必须声明执行 lane。
-- dirty lane 必须声明触发源, 例如属性变化或 tag 变化。
-- behavior 不能绕过 performer runtime 自己开并行表现管线。
-- builtin behavior 不能携带 extension lane 或 extension trigger。
-- 未注册 key 必须在 performer 定义加载时失败。
+- extension behavior 必须注册 execution lane。
+- performer 定义必须引用已注册的 Mod key。
+- behavior 不能绕过 performer runtime 自己开平行表现管线。
+- builtin behavior 不能携带 extension lane 或 extension kind id。
+- 未注册 key 或 lane 不匹配必须在加载期失败。
 
 ## UAT
 
 ```gherkin
-Feature: Mod 作者添加可复用 performer behavior
+Feature: 玩家看到 CloudDrift 持续运行
 
-  Scenario: 云旗 performer 使用 Mod behavior 持续漂移
-    Given `WeatherMod` 注册 `WeatherMod.CloudDrift`
-    And `Weather.CloudBanner` 的 behavior 使用 `WeatherMod.CloudDrift`
-    When 玩家进入天气 showcase 地图
-    Then 云旗 performer 出现在场景中
-    And 云旗持续漂移
-    And 该更新由 Performer behavior 系统执行
+  Scenario: CloudDrift 在地图加载后自动运行
+    Given 我启动 `capability_standard_performer_behavior_extension_showcase_raylib`
+    When 地图加载完成
+    Then 我能看到 Performer Behavior Extension 面板
+    And 面板的 Ticks 数量大于 0
+    And 面板事件说明 CloudDrift 正在运行
 
-  Scenario: performer definition 漏写 execution lane
-    Given `Weather.CloudBanner` 使用 `WeatherMod.CloudDrift`
-    But behavior 没有写 `execution.lane`
-    When 游戏加载 performer 定义
-    Then 启动失败并提示 extension performer behavior 需要 execution
+  Scenario: 点击聚焦按钮后行为仍继续运行
+    Given CloudDrift 已经开始运行
+    When 我点击 `Focus Cloud Drift`
+    Then 面板显示 CloudDrift 事件
+    And 面板的 Actions 计数变为 1
+
+  Scenario: 玩家停留在地图上时行为持续增长
+    Given 我正在观看 Performer Behavior Extension 面板
+    When 我等待几帧
+    Then 面板的 Ticks 数量继续增长
+    And CloudDrift 仍显示为正在运行
 ```

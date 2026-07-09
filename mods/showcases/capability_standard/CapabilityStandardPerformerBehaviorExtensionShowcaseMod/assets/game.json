@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_performer_behavior_extension_showcase",
+  "windowTitle": "Ludots Engine - Capability Standard Performer Behavior Extension",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

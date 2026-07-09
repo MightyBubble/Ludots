@@ -2,106 +2,95 @@
 
 ## 概述
 
-这个案例展示一个 Mod 如何提供 GAS graph op, 另一个 Mod 如何复用它。玩家视角是: 威胁系统 Mod 装上后, 火法的自动施法会优先打高威胁目标, 但火法 Mod 不需要复制威胁计算代码。
+这个 showcase 展示一个 Mod 如何提供 GAS graph op，另一个 Mod 如何复用它。玩家进入地图后看到左右两个目标评分；点击 `Re-score Threat` 后，分数由 provider mod 的 op 重新计算。
+
+它证明 provider 和 consumer 的职责可以拆开：provider 拥有 `CapabilityStandardGraphOpProviderMod.QueryThreat`，consumer 只在 graph 配置里引用这个 key，并把威胁分数放在目标实体的数据上。
 
 ## 结构
 
 ```text
-ThreatProviderMod/
-  ThreatProviderModEntry.cs
+CapabilityStandardGraphOpProviderMod/
+  CapabilityStandardGraphOpProviderModEntry.cs
+  Runtime/
+    CapabilityStandardGraphOpThreatScore.cs
 
-ArcMageMod/
+CapabilityStandardGraphOpExtensionShowcaseMod/
   assets/
+    game.json
+    Maps/
+      capability_standard_graph_op_extension_showcase.json
     Configs/
       GAS/
         graphs/
-          arc_mage.score_threat.json
+          capability_standard.graph_op_extension.score_threat.json
 ```
+
+`CapabilityStandardGraphOpProviderMod` 没有 Raylib preset。玩家启动的是 consumer root mod，launcher 会同时加载 provider。
 
 ## 详情
 
-提供方在 `OnLoad` 注册 graph op:
+provider 在 `IMod.OnLoad` 注册 graph op：
 
 ```csharp
-public void OnLoad(IModContext context)
-{
-    context.Extensions.Gas.RegisterGraphOp(
-        "ThreatProviderMod.QueryThreat",
-        GraphValueType.Float,
-        QueryThreat,
-        GraphValueType.Entity);
-}
+context.Extensions.Gas.RegisterGraphOp(
+    "CapabilityStandardGraphOpProviderMod.QueryThreat",
+    GraphValueType.Float,
+    QueryThreat,
+    GraphValueType.Entity);
 ```
 
-handler 使用 VM op 签名:
-
-```csharp
-private static void QueryThreat(
-    ref GraphExecutionState state,
-    in GraphInstruction instruction,
-    ref int pc)
-{
-    Entity target = state.E[instruction.A];
-    state.F[instruction.Dst] = ReadThreatScore(target);
-}
-```
-
-消费方只在 graph 配置里引用 provider key:
+consumer 的 graph shard 引用 provider key：
 
 ```json
-[
-  {
-    "id": "ArcMage.ScoreThreat",
-    "kind": "Score",
-    "entry": "target",
-    "nodes": [
-      { "id": "target", "op": "LoadExplicitTarget", "next": "threat" },
-      { "id": "threat", "op": "ThreatProviderMod.QueryThreat", "inputs": [ "target" ] }
-    ],
-    "outputs": [
-      {
-        "id": "score",
-        "destination": "Summary",
-        "type": "Float",
-        "source": "threat",
-        "key": "threat"
-      }
-    ]
-  }
-]
+{
+  "id": "Graph.CapabilityStandard.GraphOpExtension.ScoreThreat",
+  "nodes": [
+    {
+      "id": "target",
+      "op": "LoadExplicitTarget",
+      "next": "threat"
+    },
+    {
+      "id": "threat",
+      "op": "CapabilityStandardGraphOpProviderMod.QueryThreat",
+      "inputs": ["target"]
+    }
+  ]
+}
 ```
 
-扩展 op 的输出只能是 `Void`, `Bool`, `Int`, `Float`, `Entity`; 输入最多 3 个, 类型只能是 `Bool`, `Int`, `Float`, `Entity`。`TargetList` 是 VM 内部 scratch 结构, 不能作为 Mod op 的注册签名。
+编译期通过 `GasGraphOpRegistry` 解析 op；执行期通过显式 `GasGraphOpHandlerTable` 调用 handler。provider handler 从目标实体读取 `CapabilityStandardGraphOpThreatScore`。这里没有静态 singleton，也不让 consumer 重新注册 provider 命名空间。
 
 ## 场景
 
-1. 玩家安装 `ThreatProviderMod` 和 `ArcMageMod`。
-2. `ThreatProviderMod` 注册 `ThreatProviderMod.QueryThreat`。
-3. `ArcMageMod` 的 graph shard 引用这个 op。
-4. 自动施法评分时, 火法图能拿到威胁分。
-5. 如果只安装 `ArcMageMod` 而缺 provider, graph 编译失败。
+玩家点击重算按钮时，consumer root mod 给左右两个目标写入各自的威胁分数，再对两个目标分别运行 graph。面板显示 `Left` 和 `Right` 分数，并记录事件来自 provider op。测试还会确认 graph program 已进入 `GraphProgramRegistry`。
 
 ## 边界
 
-- consumer Mod 可以引用 provider key, 不能注册 provider 命名空间。
-- graph op 注册发生在配置编译前, 运行中不能补注册。
-- handler table 必须显式传入 graph 执行, 不使用静态 singleton。
-- op 签名在注册时校验, 不把错误推迟到第一场战斗。
+- consumer 可以引用 provider key，但不能注册 `CapabilityStandardGraphOpProviderMod.*`。
+- graph op 注册必须发生在 graph 编译前。
+- handler table 必须显式传入 graph 执行。
+- provider op 需要 live target entity，且目标必须带 `CapabilityStandardGraphOpThreatScore`；缺失时必须失败。
+- extension op 的输入最多三个，类型只允许 `Bool`、`Int`、`Float`、`Entity`。
+- `TargetList` 是 VM 内部 scratch，不作为 Mod op 签名类型。
 
 ## UAT
 
 ```gherkin
-Feature: 一个 Mod 提供 graph op, 另一个 Mod 复用它
+Feature: 玩家看到左右目标重新评分
 
-  Scenario: 火法 Mod 复用威胁评分 op
-    Given `ThreatProviderMod` 注册 `ThreatProviderMod.QueryThreat`
-    And `ArcMageMod` 的 graph 节点引用 `ThreatProviderMod.QueryThreat`
-    When 游戏编译 GAS graph
-    Then `ArcMage.ScoreThreat` 编译成功
-    And 玩家释放自动施法时高威胁目标获得更高评分
+  Scenario: 点击后左右目标出现新评分
+    Given 我启动 `capability_standard_graph_op_extension_showcase_raylib`
+    And 地图显示左右两个目标
+    When 我点击 `Re-score Threat`
+    Then 面板显示评分已重新计算
+    And 左右目标都显示新的评分
+    And 高分目标被高亮
 
-  Scenario: 消费方抢注提供方命名空间
-    Given 当前正在加载 `ArcMageMod`
-    When 它尝试注册 `ThreatProviderMod.OtherOp`
-    Then 启动失败并提示只能注册 `ArcMageMod.` 命名空间下的 key
+  Scenario: 玩家再次重算时看到评分变化
+    Given 我已经点击过一次 `Re-score Threat`
+    When 我再次点击 `Re-score Threat`
+    Then 面板的 Actions 计数增加
+    And 左右目标的分数发生变化
+    And 高亮目标跟随更高分数切换
 ```

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "Graph.CapabilityStandard.GraphOpExtension.ScoreThreat",
+    "kind": "Score",
+    "entry": "target",
+    "nodes": [
+      {
+        "id": "target",
+        "op": "LoadExplicitTarget",
+        "next": "threat"
+      },
+      {
+        "id": "threat",
+        "op": "CapabilityStandardGraphOpProviderMod.QueryThreat",
+        "inputs": ["target"]
+      }
+    ]
+  }
+]

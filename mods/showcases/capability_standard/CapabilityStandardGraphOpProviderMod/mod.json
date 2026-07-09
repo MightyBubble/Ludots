@@ -1,0 +1,12 @@
+{
+  "name": "CapabilityStandardGraphOpProviderMod",
+  "version": "1.0.0",
+  "description": "Provider support mod for the capability-standard graph op extension showcase.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpProviderMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "graph-op-provider", "gas"]
+}

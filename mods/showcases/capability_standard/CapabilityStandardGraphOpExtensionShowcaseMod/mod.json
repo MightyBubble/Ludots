@@ -1,0 +1,15 @@
+{
+  "name": "CapabilityStandardGraphOpExtensionShowcaseMod",
+  "version": "1.0.0",
+  "description": "Capability-standard showcase proving a consumer Mod can reuse a provider Mod GAS graph op.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpExtensionShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "CapabilityStandardGraphOpProviderMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "capability-standard", "graph-op", "gas"]
+}

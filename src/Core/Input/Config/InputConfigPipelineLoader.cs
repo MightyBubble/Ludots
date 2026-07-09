@@ -26,6 +26,7 @@ namespace Ludots.Core.Input.Config
             ConfigConflictReport report = null,
             string relativePath = "Input/default_input.json")
         {
+            catalog ??= ConfigCatalogLoader.Load(_pipeline);
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var fragments = _pipeline.CollectFragmentsWithSources(in entry);
 
