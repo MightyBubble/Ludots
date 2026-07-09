@@ -53,7 +53,7 @@ namespace Ludots.Tests.GAS.Production
         };
 
         [Test]
-        public void Show5Show6Workflow_RightClickCommandRoutesThroughIntentDispatchAndOrderBuffer()
+        public void Show5Show6Workflow_PointerCommandRoutesThroughIntentDispatchAndOrderBuffer()
         {
             string repoRoot = FindRepoRoot();
             AssertLauncherBinding(repoRoot);
@@ -117,7 +117,7 @@ namespace Ludots.Tests.GAS.Production
 
             Vector2 targetWorldCm = new(2080f, 1080f);
             DispatchVariantEvidence[] dispatchVariants = AssertDispatchVariants(dispatch, actors, engine.World, targetWorldCm);
-            RightClickCommandWorld(engine, backend, targetWorldCm);
+            SubmitPointerCommandWorld(engine, backend, targetWorldCm);
             TickUntil(
                 engine,
                 () => TryReadSharedMoveOrders(engine, actors, out _),
@@ -353,7 +353,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.UiCaptured, false);
         }
 
-        private static void RightClickCommandWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm)
+        private static void SubmitPointerCommandWorld(GameEngine engine, TestInputBackend backend, Vector2 worldCm)
         {
             AuthoritativeGroundPointerOverride groundOverride = engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)
                 ?? throw new InvalidOperationException("AuthoritativeGroundPointerOverride service is missing.");
@@ -959,13 +959,13 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("# Scenario: rfc0065-showcase-workflow");
             sb.AppendLine();
             sb.AppendLine("## Header");
-            sb.AppendLine("- build: GasTests / Show5Show6Workflow_RightClickCommandRoutesThroughIntentDispatchAndOrderBuffer");
+            sb.AppendLine("- build: GasTests / Show5Show6Workflow_PointerCommandRoutesThroughIntentDispatchAndOrderBuffer");
             sb.AppendLine("- seed: interaction_showcase_hub deterministic headless run");
             sb.AppendLine("- clock: engine fixed step sampled through 1/60s test ticks");
             sb.AppendLine($"- execution timestamp UTC: {DateTimeOffset.UtcNow:O}");
             sb.AppendLine();
             sb.AppendLine("## Scenario Card");
-            sb.AppendLine("- Player goal: right-click the ground with three command-source actors selected.");
+            sb.AppendLine("- Player goal: issue a ground pointer command with three command-source actors active.");
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
             sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `InteractionShowcaseLocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
@@ -976,12 +976,12 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with CoreInputMod and InteractionShowcaseMod.");
             sb.AppendLine($"- T+004: production startup has active `{DefaultSchemeId}` and resolves `{DefaultIntentId}`.");
             sb.AppendLine("- T+008: publish local `(owner, collection.command.source)` with Arcweaver, Vanguard, and Commander.");
-            sb.AppendLine($"- T+012: right-click ground target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");
+            sb.AppendLine($"- T+012: submit ground pointer command target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");
             sb.AppendLine($"- T+016: `dispatch.all_together` fans out {orders.Length.ToString(CultureInfo.InvariantCulture)} moveTo orders with shared order id {orders[0].OrderId.ToString(CultureInfo.InvariantCulture)}.");
             sb.AppendLine();
             sb.AppendLine("## Outcome");
             sb.AppendLine("- result: success");
-            sb.AppendLine("- headless evidence: production right-click command intake used scheme default intent, command-source collection, cast dispatch fan-out, shared order id assignment, and OrderBuffer promotion.");
+            sb.AppendLine("- headless evidence: production pointer command intake used scheme default intent, command-source collection, cast dispatch fan-out, shared order id assignment, and OrderBuffer promotion.");
             sb.AppendLine("- visible evidence boundary: this run is headless GasTests evidence; it does not claim a captured raylib/CEF video.");
             sb.AppendLine();
             sb.AppendLine("## Runtime Values");
