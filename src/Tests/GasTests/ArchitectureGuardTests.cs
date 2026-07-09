@@ -174,7 +174,9 @@ namespace GasTests
                 "KnowledgeRelationCollectionProjector",
                 ".ProjectOutgoing(",
                 ".CopyEntities(",
-                "CopyEntities("
+                "CopyEntities(",
+                "AttributeBuffer",
+                ".HasAttribute("
             };
 
             List<string> hits = FindForbiddenSourceTokens(repoRoot, directories, forbidden);
@@ -252,6 +254,63 @@ namespace GasTests
                 "Issue #200 expects Core Knowledge Projection to land on entity projections instead of player/team visibility shortcuts:\n" +
                     string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void Issue610_WorldHudProjectionConsumesKnowledgeThroughSingleEntryPoint()
+        {
+            var repoRoot = FindRepoRoot();
+            string hudPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Performers",
+                "WorldHudPerformBehavior.cs");
+            string phaseResolverPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Core",
+                "Presentation",
+                "Performers",
+                "PerformPhaseResolver.cs");
+
+            string hudSource = File.ReadAllText(hudPath);
+            string phaseResolverSource = File.ReadAllText(phaseResolverPath);
+            string normalizedPhaseResolver = Regex.Replace(phaseResolverSource, "\\s+", string.Empty);
+            string[] forbiddenHudTokens =
+            {
+                "CoreServiceKeys.KnowledgeProjectionResolver",
+                "KnowledgeProjectionResolver resolver",
+                "KnowledgeProjectionResolver? resolver",
+                "new KnowledgeProjectionResolver",
+                ".TryResolve(",
+                "KnowledgeRelationCollectionGrantStore",
+                "KnowledgeRelationCollectionProjector",
+                ".ProjectOutgoing(",
+                ".CopyEntities(",
+                "CopyEntities("
+            };
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(
+                    hudSource,
+                    Does.Contain("KnowledgeProjectionConsumer.TryResolveForViewer"),
+                    "World HUD should consume knowledge projection through the shared consumer, including relation-granted projection.");
+                for (int i = 0; i < forbiddenHudTokens.Length; i++)
+                {
+                    Assert.That(
+                        hudSource,
+                        Does.Not.Contain(forbiddenHudTokens[i]),
+                        $"World HUD should not bypass KnowledgeProjectionConsumer with {forbiddenHudTokens[i]}.");
+                }
+
+                Assert.That(
+                    normalizedPhaseResolver,
+                    Does.Contain("boolallowWorldHudProjection=shouldPresent&&input.HasAttributeProjection;"),
+                    "World HUD projection allow must be gated by visibility and knowledge-authorized attributes only.");
+            });
         }
 
         [Test]

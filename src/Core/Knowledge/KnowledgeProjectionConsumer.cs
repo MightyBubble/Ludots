@@ -71,6 +71,23 @@ namespace Ludots.Core.Knowledge
             Entity target,
             out KnowledgeProjection projection)
         {
+            return TryResolveForViewer(
+                world,
+                globals,
+                viewer,
+                target,
+                ReadOnlySpan<int>.Empty,
+                out projection);
+        }
+
+        public static bool TryResolveForViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity target,
+            ReadOnlySpan<int> requiredAttributeIds,
+            out KnowledgeProjection projection)
+        {
             projection = default;
             if (viewer == Entity.Null ||
                 !world.IsAlive(viewer) ||
@@ -96,6 +113,7 @@ namespace Ludots.Core.Knowledge
                 scopeMembers,
                 relationSources,
                 relationTargets,
+                requiredAttributeIds,
                 out projection);
         }
 

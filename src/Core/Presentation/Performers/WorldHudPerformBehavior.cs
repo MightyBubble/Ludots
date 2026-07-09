@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using Arch.Core;
-using Ludots.Core.Engine;
 using Ludots.Core.Knowledge;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
@@ -10,8 +8,9 @@ using Ludots.Core.Scripting;
 namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
-    /// First extracted behavior helper for world HUD projection.
-    /// It consumes the minimal phase contract and keeps viewer-policy truth upstream.
+    /// World HUD projection consumer.
+    /// Knowledge readability is resolved upstream via <see cref="KnowledgeProjectionConsumer"/>;
+    /// this helper only translates presentation/cull facts into the perform phase contract.
     /// </summary>
     public sealed class WorldHudPerformBehavior
     {
@@ -29,23 +28,15 @@ namespace Ludots.Core.Presentation.Performers
             PerformAudienceContext audience = ResolveAudienceContext(world, globals);
             if (!audience.HasViewer)
             {
-                bool requiresAttributeProjection = !requiredAttributeIds.IsEmpty;
-                bool hasAttributeProjection = OwnerSatisfiesRequiredAttributes(world, owner, requiredAttributeIds);
                 phaseResult = new PerformPhaseResult
                 {
-                    ShouldPresent = true,
-                    AllowWorldHudProjection = hasAttributeProjection,
-                    IsVisible = true,
-                    HasVision = true,
-                    RequiresAttributeProjection = requiresAttributeProjection,
-                    HasAttributeProjection = hasAttributeProjection,
                     LOD = defaultLod,
                 };
 
-                return phaseResult.AllowWorldHudProjection;
+                return false;
             }
 
-            PerformProjectionFacts projection = ResolveProjectionFacts(globals, audience.Viewer, owner);
+            PerformProjectionFacts projection = ResolveProjectionFacts(world, globals, audience.Viewer, owner, requiredAttributeIds);
             PerformPhaseInput input = _phaseResolver.CreateInput(
                 world,
                 owner,
@@ -96,9 +87,7 @@ namespace Ludots.Core.Presentation.Performers
         private PerformAudienceContext ResolveAudienceContext(World world, Dictionary<string, object> globals)
         {
             if (globals != null &&
-                globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object viewerObj) &&
-                viewerObj is Entity viewer &&
-                world.IsAlive(viewer))
+                KnowledgeProjectionConsumer.TryResolveViewer(world, globals, Entity.Null, out Entity viewer))
             {
                 return _phaseResolver.CreateAudienceContext(world, viewer, ResolveRevealHidden(globals));
             }
@@ -115,58 +104,25 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         private static PerformProjectionFacts ResolveProjectionFacts(
+            World world,
             Dictionary<string, object> globals,
             Entity viewer,
-            Entity owner)
+            Entity owner,
+            ReadOnlySpan<int> requiredAttributeIds)
         {
             if (globals != null &&
-                globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out object resolverObj) &&
-                resolverObj is KnowledgeProjectionResolver resolver &&
-                resolver.TryResolve(viewer, owner, ResolveCurrentTick(globals), out KnowledgeProjection projection))
+                KnowledgeProjectionConsumer.TryResolveForViewer(
+                    world,
+                    globals,
+                    viewer,
+                    owner,
+                    requiredAttributeIds,
+                    out KnowledgeProjection projection))
             {
                 return new PerformProjectionFacts(in projection);
             }
 
             return default;
-        }
-
-        private static int ResolveCurrentTick(Dictionary<string, object> globals)
-        {
-            if (globals != null &&
-                globals.TryGetValue(CoreServiceKeys.Clock.Name, out object clockObj) &&
-                clockObj is IClock clock)
-            {
-                return clock.Now(ClockDomainId.Step);
-            }
-
-            return 0;
-        }
-
-        private static bool OwnerSatisfiesRequiredAttributes(
-            World world,
-            Entity owner,
-            ReadOnlySpan<int> requiredAttributeIds)
-        {
-            if (requiredAttributeIds.IsEmpty)
-            {
-                return true;
-            }
-
-            if (!world.IsAlive(owner) || !world.Has<AttributeBuffer>(owner))
-            {
-                return false;
-            }
-
-            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
-            for (int i = 0; i < requiredAttributeIds.Length; i++)
-            {
-                if (!attributes.HasAttribute(requiredAttributeIds[i]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
     }
 }
