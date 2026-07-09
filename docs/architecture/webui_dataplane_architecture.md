@@ -38,6 +38,7 @@ The DataPlane must reuse existing infrastructure before adding new stores:
 Missing services or unknown topic/query ids must fail explicitly at the consuming boundary. Silent fallback to selection, current panel state, adapter-local cache, or browser-side state is forbidden.
 Browser adapters must not become selection truth; user-facing selection remains a derived label for explicit `EntityCollectionStore` topics such as `collection.command.source`.
 Panel Kit manifests validate topic existence through `WebUiDataPlaneRuntime.IsTopicRegistered` at load time; unknown topic ids fail with the concrete id in the exception message.
+Resource attribute panels (WPK-2) publish `owner` / `descriptor` / `revision` / `values` snapshots via `WebUiResourceAttributeTopicProducer`; see [WebUI Resource Attribute Panel](webui_resource_attribute_panel.md).
 
 ## 3 Entity Collection Topics
 
