@@ -7,7 +7,7 @@ public sealed class MassNavigationTelemetry
 {
     private const float TimingWeight = 0.18f;
 
-    private long _commandSourceSyncTick;
+    private long _commandActorSyncTick;
     private long _controlTick;
     private long _commandTick;
     private long _simTick;
@@ -23,7 +23,7 @@ public sealed class MassNavigationTelemetry
     public int SolverWindowMovesFrame { get; private set; }
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
-    public float CommandSourceSyncMs { get; private set; }
+    public float CommandActorSyncMs { get; private set; }
     public float FormationTargetMs { get; private set; }
     public float FlowFieldRebuildMs { get; private set; }
     public float StepPrepMs { get; private set; }
@@ -32,7 +32,7 @@ public sealed class MassNavigationTelemetry
     public float HardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
     public float PerformerCommandMs { get; private set; }
-    public float CommandSourceSyncHzObserved { get; private set; }
+    public float CommandActorSyncHzObserved { get; private set; }
     public float ControlHzObserved { get; private set; }
     public float CommandHzObserved { get; private set; }
     public float SimHzObserved { get; private set; }
@@ -67,7 +67,7 @@ public sealed class MassNavigationTelemetry
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
     }
 
-    public void ObserveCommandSourceSync(double sampleMs) => CommandSourceSyncMs = Smooth(CommandSourceSyncMs, (float)sampleMs);
+    public void ObserveCommandActorSync(double sampleMs) => CommandActorSyncMs = Smooth(CommandActorSyncMs, (float)sampleMs);
     public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
     public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
@@ -89,7 +89,7 @@ public sealed class MassNavigationTelemetry
         PerformerDroppedCount = Math.Max(0, performerDroppedCount);
     }
 
-    public void ObserveCommandSourceSyncTick() => CommandSourceSyncHzObserved = ObserveHz(ref _commandSourceSyncTick, CommandSourceSyncHzObserved);
+    public void ObserveCommandActorSyncTick() => CommandActorSyncHzObserved = ObserveHz(ref _commandActorSyncTick, CommandActorSyncHzObserved);
     public void ObserveControlTick() => ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
     public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
     public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);

@@ -145,7 +145,7 @@ public sealed class MassNavigationSimulationRuntime
     public int SolverWindowMovesFrame => Telemetry.SolverWindowMovesFrame;
     public float FrameMs => Telemetry.FrameMs;
     public float Fps => Telemetry.Fps;
-    public float CommandSourceSyncMs => Telemetry.CommandSourceSyncMs;
+    public float CommandActorSyncMs => Telemetry.CommandActorSyncMs;
     public float FormationTargetMs => Telemetry.FormationTargetMs;
     public float FlowFieldRebuildMs => Telemetry.FlowFieldRebuildMs;
     public float StepPrepMs => Telemetry.StepPrepMs;
@@ -154,7 +154,7 @@ public sealed class MassNavigationSimulationRuntime
     public float HardResolveMs => Telemetry.HardResolveMs;
     public float EntitySyncMs => Telemetry.EntitySyncMs;
     public float PerformerCommandMs => Telemetry.PerformerCommandMs;
-    public float CommandSourceSyncHzObserved => Telemetry.CommandSourceSyncHzObserved;
+    public float CommandActorSyncHzObserved => Telemetry.CommandActorSyncHzObserved;
     public float ControlHzObserved => Telemetry.ControlHzObserved;
     public float CommandHzObserved => Telemetry.CommandHzObserved;
     public float SimHzObserved => Telemetry.SimHzObserved;
@@ -317,7 +317,7 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
-    public void ObserveCommandSourceSync(double sampleMs) => Telemetry.ObserveCommandSourceSync(sampleMs);
+    public void ObserveCommandActorSync(double sampleMs) => Telemetry.ObserveCommandActorSync(sampleMs);
     public void ObserveFormationTargets(double sampleMs) => Telemetry.ObserveFormationTargets(sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => Telemetry.ObserveFlowFieldRebuild(sampleMs);
     public void ObserveStepPrep(double sampleMs) => Telemetry.ObserveStepPrep(sampleMs);
@@ -442,7 +442,7 @@ public sealed class MassNavigationSimulationRuntime
             performerDroppedCount);
     }
 
-    public void ObserveCommandSourceSyncTick() => Telemetry.ObserveCommandSourceSyncTick();
+    public void ObserveCommandActorSyncTick() => Telemetry.ObserveCommandActorSyncTick();
     public void ObserveControlTick() => Telemetry.ObserveControlTick();
     public void ObserveCommandTick() => Telemetry.ObserveCommandTick();
     public void ObserveSimTick() => Telemetry.ObserveSimTick();
