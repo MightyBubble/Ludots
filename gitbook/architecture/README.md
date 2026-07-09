@@ -8,6 +8,7 @@
 - [UI 渲染控制与 Surface 所有权](ui-rendering-and-surface-ownership.md)
 - [Mod 架构](mod-architecture.md)
 - [Mod Extensible Runtime](mod-extensible-runtime.md)
+- [Mod Extensible Runtime Showcases](mod-extensible-runtime-showcases/README.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
 - [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**

@@ -26,6 +26,16 @@ The runtime has three hard rules:
 Mods receive only `IModExtensionRegistration`. The mutable `ModExtensionHub` stays internal to the engine startup path.
 After the hub freezes, every Mod-facing registration method rejects new keys. Re-registering the same Mod key is also an error; Mods must treat semantic keys as single-owner declarations, not as idempotent runtime writes.
 
+## Standard Showcases
+
+Each feature has a player-facing authoring showcase. Use these pages when onboarding a new Mod author or when reviewing whether an extension proposal follows the official runtime path:
+
+- [Config Shards](mod-extensible-runtime-showcases/config-shards.md)
+- [Effect Preset Type Code](mod-extensible-runtime-showcases/effect-preset-type-code.md)
+- [Graph Op Extension](mod-extensible-runtime-showcases/graph-op-extension.md)
+- [Performer Behavior Extension](mod-extensible-runtime-showcases/performer-behavior-extension.md)
+- [Performer Command Extension](mod-extensible-runtime-showcases/performer-command-extension.md)
+
 ## Details
 
 ### Config shards
