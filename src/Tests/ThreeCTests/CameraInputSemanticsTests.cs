@@ -39,6 +39,61 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void VirtualCameraRuntime_DragRotate_DefaultRequiresRotateHold()
+        {
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
+            {
+                Id = "DragRotateRequiresHold",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 0.28f,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 85f,
+                EnableZoom = false,
+                AllowUserInput = true
+            });
+
+            SetBehaviorInput(input, look: new Vector2(40f, 0f), rotateHold: false);
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.Yaw, Is.EqualTo(180f).Within(0.001f));
+        }
+
+        [Test]
+        public void VirtualCameraRuntime_DragRotate_CanRotateWithoutHold_WhenConfigured()
+        {
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
+            {
+                Id = "DragRotateFreeLook",
+                Priority = 0,
+                RigKind = CameraRigKind.ThirdPerson,
+                DistanceCm = 1000f,
+                Pitch = 18f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 0.28f,
+                RotateRequiresHold = false,
+                MinPitchDeg = -20f,
+                MaxPitchDeg = 45f,
+                EnableZoom = false,
+                AllowUserInput = true
+            });
+
+            SetBehaviorInput(input, look: new Vector2(40f, 0f), rotateHold: false);
+            manager.Update(0.016f);
+
+            Assert.That(MathF.Abs(manager.State.Yaw - 180f), Is.GreaterThan(0.001f));
+        }
+
+        [Test]
         public void VirtualCameraRuntime_DragRotate_ConsumesCurrentBehaviorStateOnly()
         {
             var (manager, input) = CreateCameraManager(new VirtualCameraDefinition

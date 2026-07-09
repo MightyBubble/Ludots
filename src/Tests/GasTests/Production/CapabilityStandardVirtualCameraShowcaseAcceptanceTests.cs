@@ -73,20 +73,25 @@ namespace Ludots.Tests.GAS.Production
             var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry);
             Assert.That(registry, Is.Not.Null);
             Assert.That(registry!.TryGet(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId, out var tactical), Is.True);
+            Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitCameraId, out var behaviorOrbit), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId, out var heightmapOrbit), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId, out var tps), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId, out var fps), Is.True);
             Assert.That(registry.TryGet(CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId, out var shot), Is.True);
             Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.Not.Null);
             Assert.That(tactical.AllowUserInput, Is.True);
+            Assert.That(behaviorOrbit!.RotateRequiresHold, Is.True);
             Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(heightmapOrbit.RotateRequiresHold, Is.True);
             Assert.That(tps!.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
             Assert.That(tps.RigPivotOffsetCm, Is.EqualTo(new Vector3(65f, 35f, 90f)));
             Assert.That(tps.RigCameraOffsetCm, Is.EqualTo(new Vector3(70f, 10f, -20f)));
+            Assert.That(tps.RotateRequiresHold, Is.False);
             Assert.That(fps!.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
             Assert.That(fps.DistanceCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(fps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(fps.RotateRequiresHold, Is.False);
             Assert.That(engine.GetService(CoreServiceKeys.CameraImpulseRuntime), Is.Not.Null);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.MoveActionId, CameraBehaviorAttributes.MoveX);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.MoveActionId, CameraBehaviorAttributes.MoveY);
@@ -205,6 +210,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(input.HasAction(CapabilityStandardVirtualCameraShowcaseIds.TpsModeActionId), Is.True);
             Assert.That(input.HasAction(CapabilityStandardVirtualCameraShowcaseIds.FpsModeActionId), Is.True);
             Assert.That(input.HasAction(CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveActionId), Is.True);
+            var backend = (TestInputBackend)engine.GlobalContext[TestInputBackendKey];
 
             Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId), Is.True);
             Tick(engine, BlendSettleFrames);
@@ -226,8 +232,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(localPlayerPositionCm));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(localPlayerPositionCm));
+            float tpsYawBeforeLook = engine.GameSession.Camera.State.Yaw;
+            int tickBeforeTpsLook = engine.GameSession.CurrentTick;
+            backend.SetMousePosition(new Vector2(20f, 0f));
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeTpsLook, maxFrames: 8);
+            Assert.That(MathF.Abs(engine.GameSession.Camera.State.Yaw - tpsYawBeforeLook), Is.GreaterThan(0.001f));
 
-            var backend = (TestInputBackend)engine.GlobalContext[TestInputBackendKey];
             int tickBeforeMove = engine.GameSession.CurrentTick;
             backend.SetButton("<Keyboard>/w", true);
             TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeMove, maxFrames: 8);
@@ -271,6 +281,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(
                 engine.GameSession.Camera.State.TargetHeightCm,
                 Is.EqualTo(localTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
+            float fpsYawBeforeLook = engine.GameSession.Camera.State.Yaw;
+            int tickBeforeFpsLook = engine.GameSession.CurrentTick;
+            backend.SetMousePosition(new Vector2(40f, 0f));
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeFpsLook, maxFrames: 8);
+            Assert.That(MathF.Abs(engine.GameSession.Camera.State.Yaw - fpsYawBeforeLook), Is.GreaterThan(0.001f));
 
             int tickBeforeFpsMove = engine.GameSession.CurrentTick;
             backend.SetButton("<Keyboard>/w", true);
@@ -366,6 +381,33 @@ namespace Ludots.Tests.GAS.Production
 
             var ex = Assert.Throws<InvalidOperationException>(() => LoadVirtualCameraDefinitionsFromTempRoot());
             Assert.That(ex!.ToString(), Does.Contain("enableZoom"));
+        }
+
+        [Test]
+        public void Loader_RequiresExplicitRotateHoldSwitchForDragRotateCameras()
+        {
+            WriteConfig("Core", "config_catalog.json",
+                """[{ "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }]""");
+            WriteConfig("Core", "Camera/virtual_cameras.json",
+                """
+                [
+                  {
+                    "id": "Bad.DragRotate.Camera",
+                    "distanceCm": 3000,
+                    "fovYDeg": 60,
+                    "minPitchDeg": -20,
+                    "maxPitchDeg": 60,
+                    "panMode": "None",
+                    "rotateMode": "DragRotate",
+                    "rotateDegPerPixel": 0.2,
+                    "enableZoom": false,
+                    "allowUserInput": true
+                  }
+                ]
+                """);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => LoadVirtualCameraDefinitionsFromTempRoot());
+            Assert.That(ex!.ToString(), Does.Contain("rotateRequiresHold"));
         }
 
         private static GameEngine CreateEngine(params string[] modIds)
@@ -553,7 +595,10 @@ namespace Ludots.Tests.GAS.Production
         private sealed class TestInputBackend : IInputBackend
         {
             public float GetAxis(string devicePath) => 0f;
-            public Vector2 GetMousePosition() => Vector2.Zero;
+            private Vector2 _mousePosition;
+
+            public void SetMousePosition(Vector2 position) => _mousePosition = position;
+            public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }

@@ -51,14 +51,20 @@ namespace Ludots.Core.Gameplay.Camera
             {
                 case CameraRotateMode.DragRotate:
                     behaviors.Add(new DragRotateBehavior(
-                        definition.RotateDegPerPixel, definition.MinPitchDeg, definition.MaxPitchDeg));
+                        definition.RotateDegPerPixel,
+                        definition.MinPitchDeg,
+                        definition.MaxPitchDeg,
+                        definition.RotateRequiresHold));
                     break;
                 case CameraRotateMode.KeyRotate:
                     behaviors.Add(new KeyRotateBehavior(definition.RotateDegPerSecond));
                     break;
                 case CameraRotateMode.Both:
                     behaviors.Add(new DragRotateBehavior(
-                        definition.RotateDegPerPixel, definition.MinPitchDeg, definition.MaxPitchDeg));
+                        definition.RotateDegPerPixel,
+                        definition.MinPitchDeg,
+                        definition.MaxPitchDeg,
+                        definition.RotateRequiresHold));
                     behaviors.Add(new KeyRotateBehavior(definition.RotateDegPerSecond));
                     break;
                 case CameraRotateMode.None:

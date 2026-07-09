@@ -91,6 +91,7 @@ namespace Ludots.Core.Gameplay.Camera
                         ConfinePaddingCm = config.ConfinePaddingCm,
                         RotateMode = rotateMode,
                         RotateDegPerPixel = config.RotateDegPerPixel,
+                        RotateRequiresHold = config.RotateRequiresHold ?? true,
                         RotateDegPerSecond = config.RotateDegPerSecond,
                         EnableZoom = enableZoom,
                         ZoomCmPerWheel = config.ZoomCmPerWheel,
@@ -323,8 +324,19 @@ namespace Ludots.Core.Gameplay.Camera
         {
             if (rotateMode is CameraRotateMode.DragRotate or CameraRotateMode.Both)
             {
+                if (!config.RotateRequiresHold.HasValue)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Virtual camera '{config.Id}' enables drag rotate and must declare rotateRequiresHold.");
+                }
+
                 ValidateFinitePositive(config.Id, nameof(config.RotateDegPerPixel), config.RotateDegPerPixel);
                 ValidatePitchBounds(config);
+            }
+            else if (config.RotateRequiresHold.HasValue)
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' declares rotateRequiresHold without drag rotate.");
             }
 
             if (rotateMode is CameraRotateMode.KeyRotate or CameraRotateMode.Both)
@@ -448,6 +460,7 @@ namespace Ludots.Core.Gameplay.Camera
             public float ConfinePaddingCm { get; set; }
             public CameraRotateMode? RotateMode { get; set; }
             public float RotateDegPerPixel { get; set; } = 0.28f;
+            public bool? RotateRequiresHold { get; set; }
             public float RotateDegPerSecond { get; set; } = 90f;
             public bool? EnableZoom { get; set; }
             public float ZoomCmPerWheel { get; set; } = 2000f;

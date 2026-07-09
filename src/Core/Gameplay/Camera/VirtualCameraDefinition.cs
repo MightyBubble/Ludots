@@ -35,6 +35,7 @@ namespace Ludots.Core.Gameplay.Camera
         public float ConfinePaddingCm { get; set; }
         public CameraRotateMode RotateMode { get; set; } = CameraRotateMode.Both;
         public float RotateDegPerPixel { get; set; } = 0.28f;
+        public bool RotateRequiresHold { get; set; } = true;
         public float RotateDegPerSecond { get; set; } = 90f;
         public bool EnableZoom { get; set; } = true;
         public float ZoomCmPerWheel { get; set; } = 2000f;

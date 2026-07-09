@@ -9,18 +9,20 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         private readonly float _degPerPixel;
         private readonly float _minPitchDeg;
         private readonly float _maxPitchDeg;
+        private readonly bool _requiresHold;
 
         public DragRotateBehavior(
-            float degPerPixel, float minPitchDeg, float maxPitchDeg)
+            float degPerPixel, float minPitchDeg, float maxPitchDeg, bool requiresHold)
         {
             _degPerPixel = degPerPixel;
             _minPitchDeg = minPitchDeg;
             _maxPitchDeg = maxPitchDeg;
+            _requiresHold = requiresHold;
         }
 
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
-            if (!ctx.BehaviorInput.RotateHold)
+            if (_requiresHold && !ctx.BehaviorInput.RotateHold)
             {
                 return;
             }
