@@ -29,6 +29,28 @@ public readonly struct MassNavigationObstacleSnapshot
     public float RadiusCm { get; }
 }
 
+public readonly record struct MassNavigationAvoidanceAgentSnapshot(
+    int AgentIndex,
+    float LocalXCm,
+    float LocalYCm,
+    float WorldXCm,
+    float WorldYCm,
+    int TeamId,
+    float BodyRadiusCm,
+    bool Selected,
+    bool HeavyProfile,
+    bool Settled,
+    bool InsidePlayArea);
+
+public readonly record struct MassNavigationAvoidanceSnapshot(
+    int UnitCount,
+    int ObstacleCount,
+    int SettledUnitCount,
+    float PlayAreaMinXCm,
+    float PlayAreaMaxXCm,
+    float PlayAreaMinYCm,
+    float PlayAreaMaxYCm);
+
 public readonly record struct MassNavigationArrivalEvent(
     int AgentIndex,
     Entity Agent,
@@ -192,6 +214,7 @@ public sealed class MassNavigationSimulationRuntime
 
     public int NavigationAgentCount => MassNavigationFlow.UnitCount;
     public int NavigationObstacleCount => MassNavigationFlow.ObstacleCount;
+    public int NavigationSettledAgentCount => MassNavigationFlow.SettledUnitCount;
     public int SelectedCount => _selectedCount;
     public uint SelectionRevision => _selectionRevision;
     public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities.AsSpan(0, _selectedCount);
@@ -434,6 +457,63 @@ public sealed class MassNavigationSimulationRuntime
             HardResolveHashCellSizeCm: MassNavigationFlow.HardResolveHashCellSizeCm,
             PlayAreaMinXCm: MassNavigationFlow.PlayAreaMinXCm,
             PlayAreaMaxXCm: MassNavigationFlow.PlayAreaMaxXCm);
+    }
+
+    public MassNavigationAvoidanceSnapshot CaptureAvoidanceSnapshot(
+        Span<MassNavigationAvoidanceAgentSnapshot> agents,
+        Span<MassNavigationObstacleSnapshot> obstacles)
+    {
+        int unitCount = MassNavigationFlow.UnitCount;
+        if (agents.Length < unitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation avoidance snapshot requires {unitCount} agent slots, received {agents.Length}.");
+        }
+
+        for (int i = 0; i < unitCount; i++)
+        {
+            float localX = MassNavigationFlow.GetPositionX(i);
+            float localY = MassNavigationFlow.GetPositionY(i);
+            agents[i] = new MassNavigationAvoidanceAgentSnapshot(
+                AgentIndex: i,
+                LocalXCm: localX,
+                LocalYCm: localY,
+                WorldXCm: ToWorldXCm(localX),
+                WorldYCm: ToWorldYCm(localY),
+                TeamId: MassNavigationFlow.GetTeam(i),
+                BodyRadiusCm: MassNavigationFlow.GetBodyRadiusCm(i),
+                Selected: MassNavigationFlow.IsSelected(i),
+                HeavyProfile: MassNavigationFlow.IsHeavyProfile(i),
+                Settled: MassNavigationFlow.IsUnitSettled(i),
+                InsidePlayArea: localX >= MassNavigationFlow.PlayAreaMinXCm &&
+                    localX <= MassNavigationFlow.PlayAreaMaxXCm &&
+                    localY >= MassNavigationFlow.PlayAreaMinYCm &&
+                    localY <= MassNavigationFlow.PlayAreaMaxYCm);
+        }
+
+        int obstacleCount = MassNavigationFlow.ObstacleCount;
+        if (obstacles.Length < obstacleCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation avoidance snapshot requires {obstacleCount} obstacle slots, received {obstacles.Length}.");
+        }
+
+        for (int i = 0; i < obstacleCount; i++)
+        {
+            obstacles[i] = new MassNavigationObstacleSnapshot(
+                MassNavigationFlow.GetObstacleWorldX(i),
+                MassNavigationFlow.GetObstacleWorldY(i),
+                MassNavigationFlow.GetObstacleRadius(i));
+        }
+
+        return new MassNavigationAvoidanceSnapshot(
+            UnitCount: unitCount,
+            ObstacleCount: obstacleCount,
+            SettledUnitCount: MassNavigationFlow.SettledUnitCount,
+            PlayAreaMinXCm: MassNavigationFlow.PlayAreaMinXCm,
+            PlayAreaMaxXCm: MassNavigationFlow.PlayAreaMaxXCm,
+            PlayAreaMinYCm: MassNavigationFlow.PlayAreaMinYCm,
+            PlayAreaMaxYCm: MassNavigationFlow.PlayAreaMaxYCm);
     }
 
     public void ObservePerformerCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int performerDroppedCount)

@@ -13,6 +13,17 @@ var setup = gameHost.Setup;
 
 var cts = new CancellationTokenSource();
 var gameLoopTask = Task.Run(() => gameHost.Run(cts.Token));
+_ = gameLoopTask.ContinueWith(
+    t =>
+    {
+        Exception? taskFault = t.Exception?.GetBaseException() ?? t.Exception;
+        Exception fault = taskFault ?? new InvalidOperationException("Web game loop faulted without exception details.");
+        setup.LoopStatus.MarkFaulted(fault);
+        Console.Error.WriteLine($"[GameLoop FAULTED] {t.Exception}");
+    },
+    CancellationToken.None,
+    TaskContinuationOptions.OnlyOnFaulted,
+    TaskScheduler.Default);
 
 app.UseWebSockets();
 
@@ -26,13 +37,26 @@ if (Directory.Exists(clientPath))
 app.MapGet("/health", () =>
 {
     var sessions = setup.Transport.GetSessionInfo();
-    return Results.Json(new
+    WebHostLoopHealthSnapshot loop = setup.LoopStatus.CaptureHealthSnapshot();
+    var payload = new
     {
-        status = "ok",
+        status = loop.Status,
+        loop = new
+        {
+            loop.Healthy,
+            loop.Running,
+            loop.Faulted,
+            loop.FaultType,
+            loop.FaultMessage,
+        },
         clients = sessions.Count,
         tick = setup.Engine.GameSession?.CurrentTick ?? 0,
         sessions = sessions.Select(s => new { s.Id, s.FramesSent, s.BytesSent, s.FramesDropped }),
-    });
+    };
+
+    return Results.Json(
+        payload,
+        statusCode: loop.Healthy ? StatusCodes.Status200OK : StatusCodes.Status503ServiceUnavailable);
 });
 
 app.Map("/ws", async (HttpContext context) =>

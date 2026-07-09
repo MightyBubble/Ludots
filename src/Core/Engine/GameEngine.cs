@@ -1314,6 +1314,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebugPanelRuntime);
             SetService(CoreServiceKeys.InputFrameConsumers, inputFrameConsumers);
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
+            SetService(CoreServiceKeys.PresentationAudienceRevealHidden, false);
             SetService(CoreServiceKeys.PresentationTimingDiagnostics, presentationTimingDiagnostics);
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);

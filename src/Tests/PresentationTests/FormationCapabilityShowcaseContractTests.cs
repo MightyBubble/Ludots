@@ -107,7 +107,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("MassNavigationFormationAnchor"), Is.False,
                 "Formation identity is per spawned formation and must be applied by runtime component patch, not an empty template placeholder.");
             Assert.That(components.ContainsKey("MassNavigationFollowerLocomotion"), Is.True,
-                "Follower sync tuning belongs to component authoring, not a showcase-only runtime config block.");
+                "Follower sync tuning belongs to component authoring, not a runtime config block.");
 
             JsonArray formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("FormationCapability config must author formations.");
@@ -2615,18 +2615,22 @@ namespace Ludots.Tests.Presentation
                 "capability_standard",
                 "CapabilityStandardMassNavigationLargeWorld10kMod");
             string entrySource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kModEntry.cs"));
+            string mapFocusSource = File.ReadAllText(Path.Combine(modRoot, "CapabilityStandardMassNavigationLargeWorld10kMapFocus.cs"));
+            string runtimeSource = entrySource + mapFocusSource;
 
-            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldUatAsync);"));
-            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldUatAsync);"));
-            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldUatAsync);"));
-            Assert.That(entrySource, Does.Contain("engine.MergedConfig?.StartupMapId"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.GameStart, ConfigureLargeWorldShowcaseAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapLoaded, ConfigureLargeWorldShowcaseAsync);"));
+            Assert.That(entrySource, Does.Contain("context.OnEvent(GameEvents.MapResumed, ConfigureLargeWorldShowcaseAsync);"));
+            Assert.That(entrySource, Does.Contain("MassNavigationObserverVisibilityBindingSystem"));
+            Assert.That(entrySource, Does.Contain("SystemGroup.RuntimeEntityBinding"));
+            Assert.That(runtimeSource, Does.Contain("engine.MergedConfig?.StartupMapId"));
             Assert.That(entrySource, Does.Contain("CoreServiceKeys.MinimapRuntime"));
             Assert.That(entrySource, Does.Contain("runtime.Visible = true;"));
             Assert.That(entrySource, Does.Contain("runtime.SetRotateWithCamera(false);"));
             Assert.That(entrySource, Does.Contain("runtime.UseRtsFullMapPreset();"));
-            Assert.That(entrySource, Does.Not.Contain("\"mass_navigation\""),
-                "The capability entry must use authored startupMapId instead of a code-level map-id duplicate.");
-            Assert.That(entrySource, Does.Not.Contain("Environment.GetEnvironmentVariable"),
+            Assert.That(runtimeSource, Does.Not.Contain("\"mass_navigation\""),
+                "The capability runtime must use authored startupMapId instead of a code-level map-id duplicate.");
+            Assert.That(runtimeSource, Does.Not.Contain("Environment.GetEnvironmentVariable"),
                 "Capability-standard MassNavigation acceptance must not depend on env fallback toggles.");
         }
 
