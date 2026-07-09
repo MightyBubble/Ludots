@@ -10,7 +10,8 @@ namespace Ludots.Core.Input.Orders
     /// This is a game-level / player-preference setting, NOT per-ability.
     ///
     /// TargetFirst (WoW): player selects target first, then presses ability key ->order submitted immediately.
-    /// SmartCast (LoL): player presses ability key ->order submitted immediately at cursor/hovered entity.
+    /// SmartCast (LoL): player presses ability key -> order submitted immediately using the
+    /// mapping's explicit target source.
     /// AimCast (DotA/WC3): player presses ability key ->enters aiming phase ->confirm action submits, cancel action exits.
     /// </summary>
     [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -107,7 +108,7 @@ namespace Ludots.Core.Input.Orders
         Vector = 5,
 
         /// <summary>
-        /// Prefer hovered command target entity; fall back to ground position when none.
+        /// Use hovered command target entity when present; otherwise use the resolved ground position.
         /// </summary>
         HoveredEntityOrPosition = 6,
         
@@ -169,7 +170,7 @@ namespace Ludots.Core.Input.Orders
     }
     
     /// <summary>
-    /// Policy for automatic target acquisition when SmartCast has no hovered entity.
+    /// Policy for explicit automatic target acquisition.
     /// </summary>
     public enum AutoTargetPolicy
     {
@@ -392,9 +393,9 @@ namespace Ludots.Core.Input.Orders
         public InteractionModeType? CastModeOverride { get; set; }
         
         /// <summary>
-        /// Automatic target acquisition policy for SmartCast when no entity is hovered.
-        /// When set, the system uses a spatial query to find an explicit target.
-        /// Only meaningful for <see cref="OrderTargetType.Entity"/> targets.
+        /// Automatic target acquisition policy for SmartCast.
+        /// When set, the system uses actor-centered spatial query as the explicit entity target source.
+        /// Only meaningful for <see cref="OrderTargetType.Entity"/> and <see cref="OrderTargetType.Position"/> targets.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public AutoTargetPolicy AutoTargetPolicy { get; set; } = AutoTargetPolicy.None;
@@ -406,8 +407,7 @@ namespace Ludots.Core.Input.Orders
         public int AutoTargetRangeCm { get; set; } = 0;
 
         /// <summary>
-        /// Cursor-centric entity resolution policy for position / direction casts when
-        /// screen-space hover is missing or unstable.
+        /// Cursor-centric entity resolution policy for position / direction casts.
         /// The spatial query is centered on the resolved cursor ground point, not on the actor.
         /// </summary>
         [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -470,7 +470,7 @@ namespace Ludots.Core.Input.Orders
         /// Global interaction mode for this configuration.
         /// Determines how skill-type InputActions transition to Orders:
         ///   TargetFirst = instant submit using configured target data
-        ///   SmartCast   = instant submit using cursor/hovered entity
+        ///   SmartCast   = instant submit using the mapping's explicit target source
         ///   AimCast     = enter aiming phase, submit on confirm click
         ///
         /// Non-skill mappings (e.g. moveTo, stop) are unaffected by this setting.

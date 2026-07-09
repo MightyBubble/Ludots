@@ -196,6 +196,29 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException(
                         $"{path}.cursorTargetRangeCm must be positive when cursorTargetPolicy is {mapping.CursorTargetPolicy}.");
                 }
+
+                if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                    mapping.CursorTargetPolicy != AutoTargetPolicy.None)
+                {
+                    throw new InvalidOperationException(
+                        $"{path} must not declare both autoTargetPolicy and cursorTargetPolicy; configured target source must be explicit.");
+                }
+
+                if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                    mapping.TargetType != OrderTargetType.Entity &&
+                    mapping.TargetType != OrderTargetType.Position)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.autoTargetPolicy requires targetType Entity or Position.");
+                }
+
+                if (mapping.CursorTargetPolicy != AutoTargetPolicy.None &&
+                    mapping.TargetType != OrderTargetType.Position &&
+                    mapping.TargetType != OrderTargetType.Direction)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.cursorTargetPolicy requires targetType Position or Direction.");
+                }
             }
 
             ValidateGroupMoveFormation(config.GroupMoveFormation, source);

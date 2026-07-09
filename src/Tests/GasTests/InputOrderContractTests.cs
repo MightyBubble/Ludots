@@ -375,6 +375,92 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputOrderMappingLoader_RejectsAmbiguousSmartCastTargetSources()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": false,
+                      "targetType": "Position",
+                      "isSkillMapping": true,
+                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetRangeCm": 600,
+                      "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRangeCm": 320
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("configured target source must be explicit"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsCursorTargetPolicyWithoutCursorWorldPoint()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": true,
+                      "targetType": "Entity",
+                      "isSkillMapping": true,
+                      "cursorTargetPolicy": "NearestInRange",
+                      "cursorTargetRangeCm": 320
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("cursorTargetPolicy requires targetType Position or Direction"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAutoTargetPolicyForDirectionTarget()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillR",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 3 },
+                      "requireTarget": false,
+                      "targetType": "Direction",
+                      "isSkillMapping": true,
+                      "autoTargetPolicy": "NearestEnemyInRange",
+                      "autoTargetRangeCm": 760
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("autoTargetPolicy requires targetType Entity or Position"));
+        }
+
+        [Test]
         public void DoubleTapTrigger_SubmitsOnlyOnSecondPressWithinWindow()
         {
             var (backend, handler) = BuildHandler();
@@ -420,7 +506,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void DirectionSelection_UsesCursorTargetFallback_WhenHoverIsMissing()
+        public void DirectionTargeting_UsesConfiguredCursorTarget_NotImplicitHover()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("SkillR", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -448,6 +534,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             Entity actor = world.Create();
             Entity enemy = world.Create();
+            Entity hovered = world.Create();
             var system = new InputOrderMappingSystem(input, config);
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
 
@@ -460,8 +547,8 @@ namespace Ludots.Tests.GAS
             });
             system.SetHoveredEntityProvider((out Entity entity) =>
             {
-                entity = default;
-                return false;
+                entity = hovered;
+                return true;
             });
             system.SetCursorTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, Vector3 cursorWorldCm, out Entity target) =>
             {
@@ -479,8 +566,90 @@ namespace Ludots.Tests.GAS
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(203));
             Assert.That(orders[0].Actor, Is.EqualTo(actor));
             Assert.That(orders[0].Target, Is.EqualTo(enemy));
+            Assert.That(orders[0].Target, Is.Not.EqualTo(hovered));
             Assert.That(orders[0].Args.Spatial.Mode, Is.EqualTo(Ludots.Core.Gameplay.GAS.Orders.OrderCollectionMode.Single));
             Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1960f, 0f, 413f)));
+        }
+
+        [Test]
+        public void SmartCastEntity_WithAutoTargetPolicy_FailsClosedWhenAutoTargetMisses()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        AutoTargetRangeCm = 500
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            Entity hovered = world.Create();
+            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
+            system.SetHoveredEntityProvider((out Entity entity) =>
+            {
+                entity = hovered;
+                return true;
+            });
+            system.SetAutoTargetProvider((Entity resolvedActor, AutoTargetPolicy policy, int rangeCm, out Entity target) =>
+            {
+                target = default;
+                return false;
+            });
+            system.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+
+            system.Update(0f);
+
+            Assert.That(orders, Is.Empty,
+                "A declared auto-target source must fail closed when it misses; SmartCast must not switch to hover.");
+        }
+
+        [Test]
+        public void InputOrderMappingSystem_RejectsEntityCursorTargetPolicyInsteadOfIgnoringIt()
+        {
+            var input = new FrozenInputActionReader();
+
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        TargetType = OrderTargetType.Entity,
+                        RequireTarget = true,
+                        IsSkillMapping = true,
+                        CursorTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
+                        CursorTargetRangeCm = 320
+                    }
+                }
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() => new InputOrderMappingSystem(input, config));
+
+            Assert.That(ex!.Message, Does.Contain("cursorTargetPolicy requires targetType Position or Direction"));
         }
 
         [Test]
@@ -869,8 +1038,6 @@ namespace Ludots.Tests.GAS
                         CastModeOverride = InteractionModeType.AimCast,
                         AutoTargetPolicy = AutoTargetPolicy.NearestEnemyInRange,
                         AutoTargetRangeCm = 640,
-                        CursorTargetPolicy = AutoTargetPolicy.NearestInRange,
-                        CursorTargetRangeCm = 320,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
                             Candidates = new List<ActorOrderRoutingCandidate>
@@ -926,8 +1093,6 @@ namespace Ludots.Tests.GAS
                 Assert.That(remapped.CastModeOverride, Is.EqualTo(InteractionModeType.AimCast));
                 Assert.That(remapped.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
                 Assert.That(remapped.AutoTargetRangeCm, Is.EqualTo(640));
-                Assert.That(remapped.CursorTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestInRange));
-                Assert.That(remapped.CursorTargetRangeCm, Is.EqualTo(320));
                 Assert.That(remapped.ActorOrderRouting, Is.Not.Null);
                 Assert.That(remapped.ActorOrderRouting!.Candidates.Count, Is.EqualTo(1));
                 Assert.That(remapped.ActorOrderRouting.Candidates[0].OrderTypeKey, Is.EqualTo("setSpawnTarget"));

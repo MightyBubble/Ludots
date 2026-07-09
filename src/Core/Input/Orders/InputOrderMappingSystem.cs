@@ -916,6 +916,7 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = RequireOrderTypeId(mapping, orderTypeSuffix);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
 
             // Fill target data same as TryBuildOrder.
             if (mapping.TargetType == OrderTargetType.Position || mapping.TargetType == OrderTargetType.Direction)
@@ -926,28 +927,23 @@ namespace Ludots.Core.Input.Orders
                     args.Spatial.Mode = OrderCollectionMode.Single;
                     args.Spatial.WorldCm = pos;
 
-                    if (mapping.TargetType == OrderTargetType.Position &&
-                        mapping.AutoTargetPolicy != AutoTargetPolicy.None)
+                    if (mapping.TargetType == OrderTargetType.Position)
                     {
-                        if (TryResolveHoveredEntity(out var hovered))
-                        {
-                            order.Target = hovered;
-                        }
-                        else if (TryResolveCursorTarget(actor, mapping, pos, out var cursorTarget))
+                        if (TryResolveCursorTarget(actor, mapping, pos, out var cursorTarget))
                         {
                             order.Target = cursorTarget;
                         }
-                        else if (mapping.AutoTargetRangeCm > 0 &&
-                                 _autoTargetProvider != null &&
-                                 _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out var autoTarget))
+                        else if (TryResolveAutoTarget(actor, mapping, out var positionAutoTarget))
                         {
-                            order.Target = autoTarget;
+                            order.Target = positionAutoTarget;
                         }
                     }
-                    else if (mapping.TargetType == OrderTargetType.Direction &&
-                             TryResolveDirectionalTarget(actor, mapping, pos, out var directionTarget))
+                    else if (mapping.TargetType == OrderTargetType.Direction)
                     {
-                        order.Target = directionTarget;
+                        if (TryResolveCursorTarget(actor, mapping, pos, out var directionTarget))
+                        {
+                            order.Target = directionTarget;
+                        }
                     }
                 }
             }
@@ -1062,8 +1058,9 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Build order for skill/cast SmartCast paths: prefer hovered entity, then data-driven
-        /// auto-target providers. Command intent actions bypass this method.
+        /// Build order for skill/cast SmartCast paths. Target sources are explicit: entity casts
+        /// use either an auto-target policy or the hover collection; position/direction casts use
+        /// cursor/auto-target policies only when configured. Command intent actions bypass this method.
         /// </summary>
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, out Order order)
         {
@@ -1075,23 +1072,25 @@ namespace Ludots.Core.Input.Orders
             Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
 
-            // SmartCast targeting priority:
-            //   1. Hovered entity (entity under cursor)
-            //   2. Auto-target (nearest in range, if configured)
             switch (mapping.TargetType)
             {
                 case OrderTargetType.Entity:
-                    if (TryResolveHoveredEntity(out var hovered))
+                    if (mapping.AutoTargetPolicy != AutoTargetPolicy.None)
+                    {
+                        if (TryResolveAutoTarget(actor, mapping, out var autoTarget))
+                        {
+                            order.Target = autoTarget;
+                        }
+                        else if (mapping.RequireTarget)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (TryResolveHoveredEntity(out var hovered))
                     {
                         order.Target = hovered;
-                    }
-                    else if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
-                             mapping.AutoTargetRangeCm > 0 &&
-                             _autoTargetProvider != null &&
-                             _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out var autoTarget))
-                    {
-                        order.Target = autoTarget;
                     }
                     else if (mapping.RequireTarget)
                     {
@@ -1106,22 +1105,13 @@ namespace Ludots.Core.Input.Orders
                         args.Spatial.Mode = OrderCollectionMode.Single;
                         args.Spatial.WorldCm = groundPos;
 
-                        if (mapping.AutoTargetPolicy != AutoTargetPolicy.None)
+                        if (TryResolveCursorTarget(actor, mapping, groundPos, out var cursorTarget))
                         {
-                            if (TryResolveHoveredEntity(out var hoveredTarget))
-                            {
-                                order.Target = hoveredTarget;
-                            }
-                            else if (TryResolveCursorTarget(actor, mapping, groundPos, out var cursorTarget))
-                            {
-                                order.Target = cursorTarget;
-                            }
-                            else if (mapping.AutoTargetRangeCm > 0 &&
-                                     _autoTargetProvider != null &&
-                                     _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out var autoTarget))
-                            {
-                                order.Target = autoTarget;
-                            }
+                            order.Target = cursorTarget;
+                        }
+                        else if (TryResolveAutoTarget(actor, mapping, out var positionAutoTarget))
+                        {
+                            order.Target = positionAutoTarget;
                         }
                     }
                     else if (mapping.RequireTarget)
@@ -1138,7 +1128,7 @@ namespace Ludots.Core.Input.Orders
                         args.Spatial.Mode = OrderCollectionMode.Single;
                         args.Spatial.WorldCm = dirPos;
 
-                        if (TryResolveDirectionalTarget(actor, mapping, dirPos, out var directionTarget))
+                        if (TryResolveCursorTarget(actor, mapping, dirPos, out var directionTarget))
                         {
                             order.Target = directionTarget;
                         }
@@ -1184,6 +1174,7 @@ namespace Ludots.Core.Input.Orders
             Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
+            RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
             
             // Store both points in List mode: point[0] = origin, point[1] = endpoint
             args.Spatial.Kind = OrderSpatialKind.WorldCm;
@@ -1201,7 +1192,7 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// Original order building logic (TargetFirst / non-skill mappings).
+        /// Build immediate TargetFirst and non-skill orders.
         /// </summary>
         private bool TryBuildOrder(InputOrderMapping mapping, out Order order)
         {
@@ -1227,6 +1218,7 @@ namespace Ludots.Core.Input.Orders
             var args = new OrderArgs();
             ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             OrderTargetType TargetType = TargetTypeOverride ?? mapping.TargetType;
+            RequireValidConfiguredTargetResolver(mapping, TargetType);
             
             if (mapping.RequireTarget)
             {
@@ -1258,10 +1250,12 @@ namespace Ludots.Core.Input.Orders
                         args.Spatial.Kind = OrderSpatialKind.WorldCm;
                         args.Spatial.Mode = OrderCollectionMode.Single;
                         args.Spatial.WorldCm = groundPos;
-                        if (TargetType == OrderTargetType.Direction &&
-                            TryResolveDirectionalTarget(actor, mapping, groundPos, out var directionTarget))
+                        if (TargetType == OrderTargetType.Direction)
                         {
-                            order.Target = directionTarget;
+                            if (TryResolveCursorTarget(actor, mapping, groundPos, out var directionTarget))
+                            {
+                                order.Target = directionTarget;
+                            }
                         }
                         break;
                         
@@ -1808,14 +1802,40 @@ namespace Ludots.Core.Input.Orders
                    target != Entity.Null;
         }
 
-        private bool TryResolveDirectionalTarget(Entity actor, InputOrderMapping mapping, Vector3 cursorWorldCm, out Entity target)
+        private bool TryResolveAutoTarget(Entity actor, InputOrderMapping mapping, out Entity target)
         {
-            if (TryResolveHoveredEntity(out target))
+            target = default;
+            return mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                   mapping.AutoTargetRangeCm > 0 &&
+                   _autoTargetProvider != null &&
+                   _autoTargetProvider(actor, mapping.AutoTargetPolicy, mapping.AutoTargetRangeCm, out target) &&
+                   target != Entity.Null;
+        }
+
+        private static void RequireValidConfiguredTargetResolver(InputOrderMapping mapping, OrderTargetType targetType)
+        {
+            if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                mapping.CursorTargetPolicy != AutoTargetPolicy.None)
             {
-                return true;
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' declares both autoTargetPolicy and cursorTargetPolicy; configured target source must be explicit.");
             }
 
-            return TryResolveCursorTarget(actor, mapping, cursorWorldCm, out target);
+            if (mapping.AutoTargetPolicy != AutoTargetPolicy.None &&
+                targetType != OrderTargetType.Entity &&
+                targetType != OrderTargetType.Position)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' autoTargetPolicy requires targetType Entity or Position.");
+            }
+
+            if (mapping.CursorTargetPolicy != AutoTargetPolicy.None &&
+                targetType != OrderTargetType.Position &&
+                targetType != OrderTargetType.Direction)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' cursorTargetPolicy requires targetType Position or Direction.");
+            }
         }
         
         private OrderSubmitMode DetermineSubmitMode(ModifierSubmitBehavior behavior)

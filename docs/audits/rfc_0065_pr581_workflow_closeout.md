@@ -14,14 +14,14 @@ Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, PR hea
 
 PR581 has reached the current RFC-0065 closeout target for formal Selection retirement and visible showcase evidence. It has **not** reached the full RFC-0065 terminal interaction architecture. Remaining RFC follow-ups are explicitly scoped below and are not fallback permission.
 
-Plain-language boundary: the ground `Command` path now follows the new model, but the broader skill/cast path still carries the old interaction-mode state machine. Do not describe this PR as "the complex semantic layering is fully solved" until skill/cast activation is driven by `CastCommitProfile`, `ClientCastPreference`, `InteractionContextStack.frameActions`, and dispatch routing end to end.
+Plain-language boundary: the ground `Command` path now follows the new model. Skill/cast activation still carries the old interaction-mode state machine, but SmartCast target acquisition no longer has an implicit hover/cursor/auto-target fallback chain: each mapping must declare exactly the target source it wants, and invalid combinations fail fast. Do not describe this PR as "the complex semantic layering is fully solved" until skill/cast activation is driven by `CastCommitProfile`, `ClientCastPreference`, `InteractionContextStack.frameActions`, and dispatch routing end to end.
 
 | Question | Status | Evidence |
 |---|---|---|
 | Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 world-space superweapon timeline, A4 command-source/scheme, A4 world-space blink/mixed-dispatch timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
 | Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable world-space timelines with visible units, rings, and state changes. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
 | Is Selection retired? | Yes for formal Selection APIs and core command authority | Production and test code now use `EntityCollectionStore`, explicit owner/key collection reads, and `CommandSourceAcquisitionSystem`. `EntityCollectionContextRuntime` is intentionally collection-generic and does not hard-code or fall back to command-source. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
-| Is the full RFC-0065 semantic layering solved? | No | `Command` actions use `CommandIntentArbiter` / `CommandIntentProfile` / dispatch / `OrderQueue`. Skill/cast activation still uses `InteractionModeType`, `_isAiming`, and SmartCast/AimCast branches in `InputOrderMappingSystem`. This is the C2 migration tail, not a completed terminal architecture. |
+| Is the full RFC-0065 semantic layering solved? | No | `Command` actions use `CommandIntentArbiter` / `CommandIntentProfile` / dispatch / `OrderQueue`. Skill/cast target source fallback is removed and guarded, but skill/cast activation still uses `InteractionModeType`, `_isAiming`, and SmartCast/AimCast branches in `InputOrderMappingSystem`. This is the C2 migration tail, not a completed terminal architecture. |
 
 ## RFC-0065 Semantic Layering Status
 
@@ -30,7 +30,7 @@ The current branch must be read as a completed command-authority slice plus a vi
 | User question | Current truthful answer | Code signal |
 |---|---|---|
 | "Right-click / pointer command should be device-independent and data-routed; is that solved?" | Yes for the ground `Command` path. The clicked target facts are frozen before routing, command actors come from an explicit entity collection, and route selection goes through `CommandIntentProfile`. | `InputOrderMappingSystem.SubmitCommandIntentOrder` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue`. |
-| "Hover vs click command vs SmartCast: are they separated?" | Partially. `Command` click target facts bypass the SmartCast hover path; skill SmartCast still reads hover/cursor/auto-target directly. | `SubmitCommandIntentOrder` uses `CommandIntentTargetFacts`; `TryBuildOrderSmartCast` remains the skill/cast target builder. |
+| "Hover vs click command vs SmartCast: are they separated?" | Yes for command authority and for hidden SmartCast target fallback. `Command` click target facts bypass SmartCast. SmartCast entity casts either use declared auto-target or the hover collection; position/direction casts use declared cursor/auto target sources only. Invalid mixed sources fail fast. | `SubmitCommandIntentOrder` uses `CommandIntentTargetFacts`; `TryBuildOrderSmartCast` calls explicit target-source guards before resolving target data. |
 | "User preference vs per-ability preference: are they separated?" | Kernel pieces exist, but the main skill/cast chain is not fully migrated. Per-ability `CastModeOverride` is honored in the legacy mapper, including when switching skills while aiming; terminal `ClientCastPreference` activation is still follow-up. | `ClientCastPreferenceStore` exists; `InputOrderMappingSystem` still branches on `InteractionModeType` / `CastModeOverride`. |
 | "Can we say Selection retirement solved all semantic layering?" | No. Formal Selection APIs are retired, but Selection retirement and cast semantic layering are different problems. | Selection scans are clean; `InteractionModeType` scans are still live by design until C2. |
 
@@ -39,20 +39,54 @@ Latest semantic-layering verification on 2026-07-09:
 ```text
 dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~EffectPresetInteractionModeTests|FullyQualifiedName~InputOrderContractTests" -v:q -clp:ErrorsOnly
 
-Passed: 26/26
+Passed: 31/31
 ```
 
 ```text
 dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~CommandIntentProfileTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests|FullyQualifiedName~EffectPresetInteractionModeTests" -v:q -clp:ErrorsOnly
 
-Passed: 46/46
+Passed: 51/51
 ```
 
 ```text
 dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --no-restore --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests" -v:q -clp:ErrorsOnly
 
-Passed: 13/13
+Passed: 14/14
 ```
+
+Latest explicit-target-source verification on 2026-07-09:
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~InputOrderContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 27/27
+```
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~CommandIntentProfileTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests|FullyQualifiedName~EffectPresetInteractionModeTests" -v:q -clp:ErrorsOnly
+
+Passed: 51/51
+```
+
+```text
+dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --no-restore --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 14/14
+```
+
+```text
+rg -n -i "SmartCast.*fallback|fallback.*SmartCast|hover.*fallback|fallback.*hover|when no hovered|no hovered|TryResolveDirectionalTarget|SmartCast targeting priority|hovered entity, then" src/Core/Input mods/CoreInputMod mods/EntityCommandPanelMod mods/showcases/interaction src/Tests/GasTests/InputOrderContractTests.cs src/Tests/ArchitectureTests --glob "!**/bin/**" --glob "!**/obj/**"
+
+No matches.
+```
+
+Target-source contract:
+
+- A mapping must not declare both `autoTargetPolicy` and `cursorTargetPolicy`.
+- `autoTargetPolicy` is valid only for `Entity` and `Position` targets.
+- `cursorTargetPolicy` is valid only for `Position` and `Direction` targets.
+- `Entity` SmartCast with declared auto-target fails closed when auto-target misses; it does not switch to hover.
+- `Direction` SmartCast with declared cursor target ignores hover and uses the cursor-centered target resolver.
 
 ```text
 rg -n "SelectionRuntime|SelectionSetKeys|SelectionViewKeys|SelectionContextRuntime|SelectionViewRuntime|SelectionControlGroupRuntime|SelectionRequest|SelectionResponse|OrderSelectionReference|SelectedEntityProvider|SetSelectedEntityProvider|CurrentSelection|ViewedSelectionPrimary|SelectedGroupFollowTarget|CameraFollowTargetKind\.Selected|CenterOnSelected|RejectCommandWithoutSelection|EmptySelection|SelectionGate|RewireSelection|SelectionBox|startupSelectedPlayerId|StartupSelectedPlayerId|HasSelectedPlayer|TryGetLocalOwner\(" src mods assets --glob "!**/bin/**" --glob "!**/obj/**"
