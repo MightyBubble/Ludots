@@ -1,4 +1,5 @@
 using System;
+using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
 using CoreInputMod.Systems;
@@ -32,6 +33,8 @@ namespace InteractionShowcaseMod.Runtime
         private bool _inputContextActive;
         private bool _showcaseHudSuppressed;
         private int _visibleUatFrame;
+        private Entity[] _blinkActorsScratch = new Entity[8];
+        private Entity[] _blinkSelectedScratch = new Entity[8];
 
         internal const string SavedCollectionKey = "showcase.interaction.command.saved";
 
@@ -139,6 +142,11 @@ namespace InteractionShowcaseMod.Runtime
             _visibleUatFrame++;
             engine.GlobalContext[InteractionShowcaseIds.VisibleUatFrameKey] = _visibleUatFrame;
 
+            if (blinkTimelineEnabled)
+            {
+                PublishBlinkDispatchEvidence(engine);
+            }
+
             if (!schemeTimelineEnabled ||
                 engine.GetService(CoreServiceKeys.ControlSchemeRuntime) is not ControlSchemeRuntime schemes)
             {
@@ -153,6 +161,112 @@ namespace InteractionShowcaseMod.Runtime
             {
                 schemes.TrySwitch(schemeId);
             }
+        }
+
+        private void PublishBlinkDispatchEvidence(GameEngine engine)
+        {
+            if (!TryResolveCollectionContext(engine, out EntityCollectionStore collections, out Entity viewer))
+            {
+                throw new InvalidOperationException("Interaction blink evidence requires EntityCollectionStore and a live local player entity.");
+            }
+
+            int actorCount = CopyCommandSourceActors(collections, viewer);
+            if (actorCount <= 0)
+            {
+                throw new InvalidOperationException("Interaction blink evidence requires a non-empty command-source collection.");
+            }
+
+            CastDispatchProfileRegistry dispatch = engine.GetService(CoreServiceKeys.CastDispatchProfileRegistry)
+                ?? throw new InvalidOperationException("Interaction blink evidence requires CastDispatchProfileRegistry.");
+            string profileId = ResolveBlinkDispatchProfileId(_visibleUatFrame);
+            if (!dispatch.ProfileIdRegistry.TryGetId(profileId, out int profileRegistryId) ||
+                !dispatch.IsInstalled(profileRegistryId))
+            {
+                throw new InvalidOperationException($"Interaction blink evidence requires installed dispatch profile '{profileId}'.");
+            }
+
+            EnsureScratchCapacity(ref _blinkSelectedScratch, actorCount);
+            var context = new CastDispatchContext(
+                engine.World,
+                new Vector3(
+                    InteractionShowcaseIds.BlinkEvidenceTargetWorldXCm,
+                    0f,
+                    InteractionShowcaseIds.BlinkEvidenceTargetWorldZCm),
+                groupKey: 581_650L);
+            int selectedCount = dispatch.SelectDispatchTargets(
+                profileRegistryId,
+                _blinkActorsScratch.AsSpan(0, actorCount),
+                in context,
+                _blinkSelectedScratch.AsSpan(0, actorCount),
+                out CastDispatchRouting routing);
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
+                EntityCollectionSourceKind.CollectionSnapshot,
+                EntityCollectionRoleKind.Display,
+                contextEntity: viewer,
+                primaryEntity: selectedCount > 0 ? _blinkSelectedScratch[0] : Entity.Null,
+                title: "Blink dispatch evidence",
+                summary: BuildBlinkEvidenceSummary(profileId, selectedCount, actorCount, in routing));
+            collections.Replace(
+                viewer,
+                in descriptor,
+                _blinkSelectedScratch.AsSpan(0, selectedCount),
+                viewer);
+        }
+
+        private int CopyCommandSourceActors(EntityCollectionStore collections, Entity viewer)
+        {
+            if (!collections.TryGetView(viewer, EntityCollectionKeys.CommandSource, out EntityCollectionView view))
+            {
+                return 0;
+            }
+
+            EnsureScratchCapacity(ref _blinkActorsScratch, view.Count);
+            int copied = collections.CopyEntities(viewer, EntityCollectionKeys.CommandSource, _blinkActorsScratch.AsSpan(0, view.Count));
+            if (copied != view.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Interaction blink evidence copied {copied} command-source row(s), expected {view.Count}.");
+            }
+
+            return copied;
+        }
+
+        private static void EnsureScratchCapacity(ref Entity[] scratch, int required)
+        {
+            if (scratch.Length >= required)
+            {
+                return;
+            }
+
+            int next = scratch.Length;
+            while (next < required)
+            {
+                next *= 2;
+            }
+
+            Array.Resize(ref scratch, next);
+        }
+
+        private static string ResolveBlinkDispatchProfileId(int frame)
+        {
+            return frame < 90
+                ? InteractionShowcaseIds.BlinkDispatchAllTogetherProfileId
+                : frame < 180
+                    ? InteractionShowcaseIds.BlinkDispatchOneByOneProfileId
+                    : InteractionShowcaseIds.BlinkDispatchNearestTopNProfileId;
+        }
+
+        private static string BuildBlinkEvidenceSummary(
+            string profileId,
+            int selectedCount,
+            int actorCount,
+            in CastDispatchRouting routing)
+        {
+            string routingLabel = routing.Sequential ? "sequential" : "parallel";
+            string orderLabel = routing.SharedOrderId ? "shared order" : "per-actor order";
+            return $"{profileId}: {selectedCount}/{actorCount} hero(es), {routingLabel}, {orderLabel}.";
         }
 
         private static bool IsEnabled(string key)

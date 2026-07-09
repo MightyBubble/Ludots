@@ -28,6 +28,11 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         private const string FocusAlias = "showcase.focus";
         private const string AutoProfileTimelineEnvKey = "LUDOTS_ENTITY_COMMAND_PANEL_AUTO_PROFILE_TIMELINE";
         private const int AutoProfileSegmentFrames = 90;
+        private const string ProjectionTitle = "A2 Aggregation Profile Projection";
+        private const string TemplateProjectionSummary = "Template profile projects the same command owners as separate unit-template lanes.";
+        private const string FamilyProjectionSummary = "Family profile projects the command owners contributing to command-family groups.";
+        private const string AbilityProjectionSummary = "Ability profile projects the command owners contributing to distinct ability buttons.";
+        private const string InactiveProjectionSummary = "Inactive aggregation profile projection.";
 
         private readonly AggregationProfileToolbarProvider _aggregationToolbar = new();
         private IEntityCommandPanelToolbarProvider? _previousToolbarProvider;
@@ -73,8 +78,11 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             }
 
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
-            TryPublishAggregationCommandCollection(engine, out _);
             UpdateAutoProfileTimeline();
+            if (TryPublishAggregationCommandCollection(engine, out Entity aggregationOwner))
+            {
+                PublishActiveProfileProjection(engine, aggregationOwner);
+            }
         }
 
         private void EnableShowcase(ScriptContext context, GameEngine engine)
@@ -90,7 +98,11 @@ namespace EntityCommandPanelShowcaseMod.Runtime
                 _aggregationToolbar.ActivateByIndex(0);
             }
 
-            TryPublishAggregationCommandCollection(engine, out _);
+            if (TryPublishAggregationCommandCollection(engine, out Entity aggregationOwner))
+            {
+                PublishActiveProfileProjection(engine, aggregationOwner);
+            }
+
             _aggregationToolbar.SetVisible(false);
         }
 
@@ -98,6 +110,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
         {
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
             RestoreSuppressedHud(engine);
+            ClearProfileProjectionCollections(engine);
             UninstallAggregationProfileToolbar(engine);
             ClosePinnedPanels(context);
             _autoProfileTimelineFrame = 0;
@@ -239,11 +252,8 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
                 ?? throw new InvalidOperationException("EntityCollectionStore must be registered before the showcase publishes aggregation collections.");
 
-            Span<Entity> members = stackalloc Entity[3];
-            int count = 0;
-            AddIfResolved(engine, InteractionShowcaseIds.ArcweaverName, members, ref count);
-            AddIfResolved(engine, InteractionShowcaseIds.VanguardName, members, ref count);
-            AddIfResolved(engine, InteractionShowcaseIds.CommanderName, members, ref count);
+            Span<Entity> members = stackalloc Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+            int count = ResolveShowcaseCommandOwners(engine, members);
             if (count == 0)
             {
                 return false;
@@ -260,6 +270,117 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             collections.Replace(localPlayer, descriptor, members[..count]);
             aggregationOwner = localPlayer;
             return true;
+        }
+
+        private void PublishActiveProfileProjection(GameEngine engine, Entity owner)
+        {
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore must be registered before the showcase publishes profile projections.");
+
+            Span<Entity> members = stackalloc Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+            int count = ResolveShowcaseCommandOwners(engine, members);
+            if (count == 0)
+            {
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    TemplateProjectionSummary);
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    FamilyProjectionSummary);
+                ReplaceProfileProjection(
+                    collections,
+                    owner,
+                    EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                    ReadOnlySpan<Entity>.Empty,
+                    AbilityProjectionSummary);
+                return;
+            }
+
+            ReadOnlySpan<Entity> activeMembers = members[..count];
+            bool templateActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByTemplateProfileId, StringComparison.Ordinal);
+            bool familyActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByFamilyProfileId, StringComparison.Ordinal);
+            bool abilityActive = string.Equals(_aggregationToolbar.ActiveProfileId, ByAbilityIdProfileId, StringComparison.Ordinal);
+
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                templateActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                templateActive ? TemplateProjectionSummary : InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                familyActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                familyActive ? FamilyProjectionSummary : InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                owner,
+                EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                abilityActive ? activeMembers : ReadOnlySpan<Entity>.Empty,
+                abilityActive ? AbilityProjectionSummary : InactiveProjectionSummary);
+        }
+
+        private static void ClearProfileProjectionCollections(GameEngine engine)
+        {
+            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) ||
+                localPlayer == Entity.Null ||
+                engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections)
+            {
+                return;
+            }
+
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+            ReplaceProfileProjection(
+                collections,
+                localPlayer,
+                EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey,
+                ReadOnlySpan<Entity>.Empty,
+                InactiveProjectionSummary);
+        }
+
+        private static void ReplaceProfileProjection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
+            ReadOnlySpan<Entity> members,
+            string summary)
+        {
+            var descriptor = EntityCollectionDescriptor.Create(
+                collectionKey,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.Display,
+                owner,
+                members.Length == 0 ? Entity.Null : members[0],
+                ProjectionTitle,
+                summary);
+            collections.Replace(owner, descriptor, members);
+        }
+
+        private static int ResolveShowcaseCommandOwners(GameEngine engine, Span<Entity> destination)
+        {
+            int count = 0;
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.ArcweaverName, destination, ref count);
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.VanguardName, destination, ref count);
+            AddIfResolved(engine, EntityCommandPanelShowcaseIds.CommanderName, destination, ref count);
+            return count;
         }
 
         private static void AddIfResolved(GameEngine engine, string entityName, Span<Entity> destination, ref int count)
@@ -346,6 +467,7 @@ namespace EntityCommandPanelShowcaseMod.Runtime
             public string Title => "Aggregation Profile";
             public string Subtitle => $"M6/P3 grouping: {Profiles[_activeIndex].Label}";
             public string ActiveProfileLabel => Profiles[_activeIndex].Label;
+            public string ActiveProfileId => Profiles[_activeIndex].ProfileId;
 
             public void Bind(CollectionGasEntityCommandPanelSource source)
             {

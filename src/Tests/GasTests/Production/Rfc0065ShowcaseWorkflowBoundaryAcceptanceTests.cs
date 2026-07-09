@@ -11,6 +11,7 @@ using InteractionShowcaseMod;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
@@ -36,9 +37,9 @@ namespace Ludots.Tests.GAS.Production
         private const string DefaultSchemeId = "scheme.default";
         private const string WasdSchemeId = "scheme.wasd_move";
         private const string DefaultIntentId = "intent.command.default";
-        private const string AllTogetherDispatchId = "dispatch.all_together";
-        private const string OneByOneDispatchId = "dispatch.one_by_one";
-        private const string NearestTopNDispatchId = "dispatch.nearest_top_n";
+        private const string AllTogetherDispatchId = InteractionShowcaseIds.BlinkDispatchAllTogetherProfileId;
+        private const string OneByOneDispatchId = InteractionShowcaseIds.BlinkDispatchOneByOneProfileId;
+        private const string NearestTopNDispatchId = InteractionShowcaseIds.BlinkDispatchNearestTopNProfileId;
 
         private static readonly JsonSerializerOptions TraceJsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -61,6 +62,7 @@ namespace Ludots.Tests.GAS.Production
 
             var backend = new TestInputBackend();
             using var engine = CreateEngine(repoRoot, backend);
+            AssertStaticInteractionShowcaseCamera(engine);
             engine.LoadMap(InteractionShowcaseIds.HubMapId);
             Tick(engine, 8);
 
@@ -192,6 +194,67 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
+        public void Show6VisibleUatBlinkTimeline_PublishesDispatchEvidenceCollectionForWorldMarkers()
+        {
+            string? previous = Environment.GetEnvironmentVariable(InteractionShowcaseIds.AutoBlinkTimelineEnvKey);
+            Environment.SetEnvironmentVariable(InteractionShowcaseIds.AutoBlinkTimelineEnvKey, "1");
+            try
+            {
+                string repoRoot = FindRepoRoot();
+                AssertLauncherBinding(repoRoot);
+
+                var backend = new TestInputBackend();
+                using var engine = CreateEngine(repoRoot, backend);
+                engine.LoadMap(InteractionShowcaseIds.HubMapId);
+                Tick(engine, 8);
+
+                Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                Entity arcweaver = FindEntityByName(engine.World, InteractionShowcaseIds.ArcweaverName);
+                Entity vanguard = FindEntityByName(engine.World, InteractionShowcaseIds.VanguardName);
+                Entity commander = FindEntityByName(engine.World, InteractionShowcaseIds.CommanderName);
+                Entity[] actors = { arcweaver, vanguard, commander };
+                Assert.That(actors.All(static actor => actor != Entity.Null), Is.True);
+
+                Entity[] allTogetherRows = AssertBlinkEvidenceCollection(
+                    engine,
+                    localPlayer,
+                    expectedCount: actors.Length,
+                    expectedProfileId: AllTogetherDispatchId);
+                Assert.That(allTogetherRows, Is.EquivalentTo(actors));
+
+                TickUntil(
+                    engine,
+                    () => TryGetBlinkEvidenceCount(engine, localPlayer, out int count) && count == 1,
+                    maxFrames: 96,
+                    describeFailure: () => BuildBlinkEvidenceDiagnostics(engine, localPlayer));
+                Entity[] oneByOneRows = AssertBlinkEvidenceCollection(
+                    engine,
+                    localPlayer,
+                    expectedCount: 1,
+                    expectedProfileId: OneByOneDispatchId);
+                Assert.That(oneByOneRows[0], Is.EqualTo(arcweaver));
+
+                TickUntil(
+                    engine,
+                    () => TryGetBlinkEvidenceCount(engine, localPlayer, out int count) && count == Math.Min(3, actors.Length),
+                    maxFrames: 120,
+                    describeFailure: () => BuildBlinkEvidenceDiagnostics(engine, localPlayer));
+                Entity[] nearestRows = AssertBlinkEvidenceCollection(
+                    engine,
+                    localPlayer,
+                    expectedCount: Math.Min(3, actors.Length),
+                    expectedProfileId: NearestTopNDispatchId);
+                Assert.That(nearestRows.All(row => actors.Contains(row)), Is.True);
+
+                AssertInteractionBlinkPerformerRules(repoRoot);
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(InteractionShowcaseIds.AutoBlinkTimelineEnvKey, previous);
+            }
+        }
+
+        [Test]
         public void Show6Workflow_ControlSchemeHotSwitchEnablesWasdAxisMoveThroughOrderBuffer()
         {
             string repoRoot = FindRepoRoot();
@@ -261,6 +324,18 @@ namespace Ludots.Tests.GAS.Production
             AcceptanceUiHostInstaller.Install(engine);
             engine.Start();
             return engine;
+        }
+
+        private static void AssertStaticInteractionShowcaseCamera(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+                ?? throw new InvalidOperationException("VirtualCameraRegistry service is missing.");
+            VirtualCameraDefinition tactical = registry.Get("Camera.Profile.Tactical");
+            Assert.That(tactical.DisplayName, Is.EqualTo("Interaction Showcase Static Camera"));
+            Assert.That(tactical.PanMode, Is.EqualTo(CameraPanMode.None));
+            Assert.That(tactical.EnableGrabDrag, Is.False);
+            Assert.That(tactical.EnableZoom, Is.False);
+            Assert.That(tactical.AllowUserInput, Is.False);
         }
 
         private static void InstallInput(GameEngine engine, TestInputBackend backend)
@@ -379,6 +454,60 @@ namespace Ludots.Tests.GAS.Production
             return members;
         }
 
+        private static Entity[] AssertBlinkEvidenceCollection(
+            GameEngine engine,
+            Entity owner,
+            int expectedCount,
+            string expectedProfileId)
+        {
+            Assert.That(owner, Is.Not.EqualTo(Entity.Null), "blink evidence collection requires the local player owner.");
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+
+            Assert.That(
+                collections.TryGetView(owner, InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey, out EntityCollectionView view),
+                Is.True,
+                $"visible blink UAT must publish '{InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey}'.");
+            Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.CollectionSnapshot));
+            Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.Display));
+            Assert.That(view.Count, Is.EqualTo(expectedCount), view.Summary);
+            Assert.That(view.Summary, Does.Contain(expectedProfileId));
+
+            var members = new Entity[view.Count];
+            int copied = collections.CopyEntities(owner, InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey, members);
+            Assert.That(copied, Is.EqualTo(view.Count));
+            return members;
+        }
+
+        private static bool TryGetBlinkEvidenceCount(GameEngine engine, Entity owner, out int count)
+        {
+            count = 0;
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !collections.TryGetView(owner, InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey, out EntityCollectionView view))
+            {
+                return false;
+            }
+
+            count = view.Count;
+            return true;
+        }
+
+        private static string BuildBlinkEvidenceDiagnostics(GameEngine engine, Entity owner)
+        {
+            int frame = engine.GlobalContext.TryGetValue(InteractionShowcaseIds.VisibleUatFrameKey, out object? frameObj) &&
+                        frameObj is int visibleFrame
+                ? visibleFrame
+                : 0;
+
+            if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
+                !collections.TryGetView(owner, InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey, out EntityCollectionView view))
+            {
+                return $"frame={frame}; blink evidence collection missing.";
+            }
+
+            return $"frame={frame}; count={view.Count}; summary={view.Summary}";
+        }
+
         private static DispatchVariantEvidence[] AssertDispatchVariants(
             CastDispatchProfileRegistry dispatch,
             Entity[] actors,
@@ -440,6 +569,100 @@ namespace Ludots.Tests.GAS.Production
                 "hover entity must not become the ground command target.");
             ReadOnlySpan<Entity> rows = stackalloc Entity[] { hovered };
             collections.Replace(owner, descriptor, rows);
+        }
+
+        private static void AssertInteractionBlinkPerformerRules(string repoRoot)
+        {
+            string performerPath = Path.Combine(repoRoot, LauncherTargetPath, "assets", "Presentation", "performers.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerPath, Encoding.UTF8));
+            JsonElement root = document.RootElement;
+
+            AssertGroundOverlayRingDefinition(root, InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
+            AssertPerformerCollectionRule(
+                root,
+                "EntityCollectionMemberAdded",
+                InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
+                "CreatePerformer",
+                InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
+            AssertPerformerCollectionRule(
+                root,
+                "EntityCollectionMemberRemoved",
+                InteractionShowcaseIds.BlinkDispatchEvidenceCollectionKey,
+                "DestroyScopedPerformer",
+                InteractionShowcaseIds.BlinkDispatchEvidenceMarkerDefId);
+        }
+
+        private static void AssertGroundOverlayRingDefinition(JsonElement root, string definitionId)
+        {
+            foreach (JsonElement entry in root.EnumerateArray())
+            {
+                if (!entry.TryGetProperty("id", out JsonElement id) ||
+                    !string.Equals(id.GetString(), definitionId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Assert.That(entry.TryGetProperty("behaviors", out JsonElement behaviors), Is.True);
+                foreach (JsonElement behavior in behaviors.EnumerateArray())
+                {
+                    if (!behavior.TryGetProperty("assetBinding", out JsonElement binding))
+                    {
+                        continue;
+                    }
+
+                    if (binding.TryGetProperty("assetKind", out JsonElement assetKind) &&
+                        binding.TryGetProperty("assetId", out JsonElement assetId) &&
+                        string.Equals(assetKind.GetString(), "GroundOverlay", StringComparison.Ordinal) &&
+                        string.Equals(assetId.GetString(), "Ring", StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+                }
+
+                Assert.Fail($"Performer '{definitionId}' must bind a GroundOverlay Ring.");
+            }
+
+            Assert.Fail($"Performer '{definitionId}' is missing.");
+        }
+
+        private static void AssertPerformerCollectionRule(
+            JsonElement root,
+            string eventKind,
+            string collectionKey,
+            string commandKind,
+            string definitionId)
+        {
+            foreach (JsonElement entry in root.EnumerateArray())
+            {
+                if (!entry.TryGetProperty("rules", out JsonElement rules))
+                {
+                    continue;
+                }
+
+                foreach (JsonElement rule in rules.EnumerateArray())
+                {
+                    if (!rule.TryGetProperty("event", out JsonElement evt) ||
+                        !rule.TryGetProperty("command", out JsonElement command) ||
+                        !evt.TryGetProperty("kind", out JsonElement kind) ||
+                        !evt.TryGetProperty("key", out JsonElement key) ||
+                        !command.TryGetProperty("kind", out JsonElement actualCommandKind) ||
+                        !command.TryGetProperty("definitionId", out JsonElement actualDefinitionId))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(kind.GetString(), eventKind, StringComparison.Ordinal) &&
+                        string.Equals(key.GetString(), collectionKey, StringComparison.Ordinal) &&
+                        string.Equals(actualCommandKind.GetString(), commandKind, StringComparison.Ordinal) &&
+                        string.Equals(actualDefinitionId.GetString(), definitionId, StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+                }
+            }
+
+            Assert.Fail(
+                $"Performer rule missing: {eventKind} {collectionKey} -> {commandKind} {definitionId}.");
         }
 
         private static Entity FindEntityByName(World world, string name)

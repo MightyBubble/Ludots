@@ -10,6 +10,7 @@ using EntityCommandPanelShowcaseMod.DataPlane;
 using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Scripting;
@@ -42,14 +43,21 @@ namespace Ludots.Tests.GAS.Production
 
         private static readonly string[] ExpectedFamilyLabels =
         {
-            "DuelBolt",
-            "BlinkStep",
-            "FireLance",
-            "NovaPulse",
-            "ArcDash",
-            "GuardToggle",
-            "ActionContext",
-            "RuneBurst"
+            "Projectile",
+            "Mobility",
+            "Defense",
+            "Area",
+            "Dash",
+            "Toggle",
+            "Context",
+            "Advanced"
+        };
+
+        private static readonly string[] ProfileProjectionCollectionKeys =
+        {
+            EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey,
+            EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey,
+            EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey
         };
 
         private static readonly string[] AcceptanceMods =
@@ -84,6 +92,8 @@ namespace Ludots.Tests.GAS.Production
             AssertToolbarButtons(initialButtons, "Family");
             AssertWebUiRuntimeDeclared(engine);
             AssertPackagedWebApp(repoRoot);
+            AssertShowcaseCameraLocked(engine);
+            AssertProfileProjectionPerformerConfig(repoRoot);
             AssertOldComposePanelClosed(engine);
 
             var aggregationProfiles = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
@@ -112,25 +122,35 @@ namespace Ludots.Tests.GAS.Production
             var slots = new EntityCommandPanelSlotView[32];
 
             ProfileSnapshot family = CaptureProfile(toolbar, source, in context, slots, "Family", ByFamilyProfileId);
+            Tick(engine, 1);
+            AssertActiveProfileProjection(engine, owner, EntityCommandPanelShowcaseIds.FamilyProjectionCollectionKey);
+
             ProfileSnapshot template = CaptureProfile(toolbar, source, in context, slots, "Template", ByTemplateProfileId);
+            Tick(engine, 1);
+            AssertActiveProfileProjection(engine, owner, EntityCommandPanelShowcaseIds.TemplateProjectionCollectionKey);
+
             ProfileSnapshot ability = CaptureProfile(toolbar, source, in context, slots, "Ability", ByAbilityIdProfileId);
+            Tick(engine, 1);
+            AssertActiveProfileProjection(engine, owner, EntityCommandPanelShowcaseIds.AbilityProjectionCollectionKey);
 
             Assert.That(family.SlotCount, Is.EqualTo(8),
                 "by_family should group the three showcase heroes into the eight M6 command families.");
             Assert.That(template.SlotCount, Is.EqualTo(24),
-                "by_template is the repository identity selector and should split all three 8-slot heroes.");
-            Assert.That(ability.SlotCount, Is.EqualTo(template.SlotCount),
-                "by_ability_id is the repository-equivalent identity selector and stays switchable as its own profile.");
+                "by_template should preserve each unit template command sheet: 3 heroes x 8 slots.");
+            Assert.That(ability.SlotCount, Is.EqualTo(21),
+                "by_ability_id should merge shared ability definitions while keeping distinct ability definitions separate.");
             Assert.That(template.Revision, Is.Not.EqualTo(family.Revision));
             Assert.That(ability.Revision, Is.Not.EqualTo(template.Revision));
-            Assert.That(family.Labels, Does.Contain("DuelBolt"));
-            Assert.That(template.Labels.Count(label => label.Contains("DuelBolt", StringComparison.Ordinal)), Is.EqualTo(1));
+            Assert.That(family.Labels, Does.Contain("Projectile"));
             Assert.That(family.Labels, Is.EquivalentTo(ExpectedFamilyLabels));
-            Assert.That(template.Labels.Count(label => string.Equals(label, "ActionContext", StringComparison.Ordinal)), Is.EqualTo(3),
-                "by_template should preserve same-label commands from all three showcase heroes instead of collapsing by display label.");
-            Assert.That(ability.Slots.Select(slot => slot.AbilityId).Distinct().Count(), Is.EqualTo(24),
-                "by_ability_id should split all commands by ability identity even when display labels repeat.");
-            Assert.That(ability.Labels.Count(label => label.Contains("DuelBolt", StringComparison.Ordinal)), Is.EqualTo(1));
+            Assert.That(template.Labels.Count(label => string.Equals(label, "Fireball", StringComparison.Ordinal)), Is.EqualTo(2),
+                "by_template should show the shared Fireball in each owning unit template row.");
+            Assert.That(template.Labels.Count(label => string.Equals(label, "Stone Throw", StringComparison.Ordinal)), Is.EqualTo(1));
+            Assert.That(ability.Slots.Select(slot => slot.AbilityId).Distinct().Count(), Is.EqualTo(21),
+                "by_ability_id should expose one cell per distinct ability definition.");
+            Assert.That(ability.Labels.Count(label => string.Equals(label, "Fireball", StringComparison.Ordinal)), Is.EqualTo(1),
+                "Ability view should collapse Arcweaver and Vanguard's shared Fireball into one cell.");
+            Assert.That(ability.Labels.Count(label => string.Equals(label, "Stone Throw", StringComparison.Ordinal)), Is.EqualTo(1));
             AssertWebUiDataPlaneSnapshot(engine, ability);
 
             WriteAcceptanceArtifacts(
@@ -332,12 +352,58 @@ namespace Ludots.Tests.GAS.Production
                 owner.Version);
         }
 
+        private static void AssertActiveProfileProjection(GameEngine engine, Entity owner, string activeCollectionKey)
+        {
+            var collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+
+            for (int i = 0; i < ProfileProjectionCollectionKeys.Length; i++)
+            {
+                string key = ProfileProjectionCollectionKeys[i];
+                int expectedCount = string.Equals(key, activeCollectionKey, StringComparison.Ordinal)
+                    ? EntityCommandPanelShowcaseIds.ExpectedSourceActorCount
+                    : 0;
+                AssertProjectionCollection(collections, owner, key, expectedCount);
+            }
+        }
+
+        private static void AssertProjectionCollection(
+            EntityCollectionStore collections,
+            Entity owner,
+            string collectionKey,
+            int expectedCount)
+        {
+            Assert.That(collections.TryGetView(owner, collectionKey, out EntityCollectionView view), Is.True,
+                $"A2 should publish the world-space projection collection '{collectionKey}'.");
+            Assert.That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.Explicit));
+            Assert.That(view.Role, Is.EqualTo(EntityCollectionRoleKind.Display));
+            Assert.That(view.Count, Is.EqualTo(expectedCount),
+                $"A2 projection collection '{collectionKey}' should contain only the active profile's command owners.");
+            Assert.That(view.Title, Is.EqualTo("A2 Aggregation Profile Projection"));
+
+            var members = new Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+            int copied = collections.CopyEntities(owner, collectionKey, members);
+            Assert.That(copied, Is.EqualTo(expectedCount));
+        }
+
         private static void AssertWebUiRuntimeDeclared(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.BrowserRuntime.Enabled, Is.True,
                 "EntityCommandPanelShowcaseMod game.json should require the host BrowserRuntime path.");
             Assert.That(engine.MergedConfig.BrowserRuntime.Required, Is.True);
             Assert.That(engine.MergedConfig.BrowserRuntime.Provider, Is.EqualTo("cef"));
+        }
+
+        private static void AssertShowcaseCameraLocked(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+                ?? throw new InvalidOperationException("VirtualCameraRegistry service is missing.");
+            VirtualCameraDefinition tactical = registry.Get("Camera.Profile.Tactical");
+            Assert.That(tactical.DisplayName, Is.EqualTo("Entity Command Panel Showcase"));
+            Assert.That(tactical.PanMode, Is.EqualTo(CameraPanMode.None));
+            Assert.That(tactical.EnableGrabDrag, Is.False);
+            Assert.That(tactical.EnableZoom, Is.False);
+            Assert.That(tactical.AllowUserInput, Is.False);
         }
 
         private static void AssertPackagedWebApp(string repoRoot)
@@ -354,6 +420,52 @@ namespace Ludots.Tests.GAS.Production
                 "WebApp build output must be packaged into mod assets.");
             Assert.That(Directory.GetFiles(Path.Combine(appRoot, "assets"), "*.js").Length, Is.GreaterThan(0));
             Assert.That(Directory.GetFiles(Path.Combine(appRoot, "assets"), "*.css").Length, Is.GreaterThan(0));
+        }
+
+        private static void AssertProfileProjectionPerformerConfig(string repoRoot)
+        {
+            string performerPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "entity_command_panel",
+                "EntityCommandPanelShowcaseMod",
+                "assets",
+                "Presentation",
+                "performers.json");
+            Assert.That(File.Exists(performerPath), Is.True,
+                "A2 visible UAT should package performer rules for world-space profile projection markers.");
+
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerPath, Encoding.UTF8));
+            string[] markerIds =
+            {
+                EntityCommandPanelShowcaseIds.TemplateProjectionMarkerDefId,
+                EntityCommandPanelShowcaseIds.FamilyProjectionMarkerDefId,
+                EntityCommandPanelShowcaseIds.AbilityProjectionMarkerDefId
+            };
+
+            foreach (string markerId in markerIds)
+            {
+                Assert.That(
+                    document.RootElement.EnumerateArray().Any(entry =>
+                        entry.TryGetProperty("id", out JsonElement id) &&
+                        string.Equals(id.GetString(), markerId, StringComparison.Ordinal)),
+                    Is.True,
+                    $"performers.json should declare marker '{markerId}'.");
+            }
+
+            foreach (string collectionKey in ProfileProjectionCollectionKeys)
+            {
+                Assert.That(
+                    document.RootElement.EnumerateArray().Any(entry =>
+                        entry.TryGetProperty("rules", out JsonElement rules) &&
+                        rules.EnumerateArray().Any(rule =>
+                            rule.TryGetProperty("event", out JsonElement evt) &&
+                            evt.TryGetProperty("key", out JsonElement key) &&
+                            string.Equals(key.GetString(), collectionKey, StringComparison.Ordinal))),
+                    Is.True,
+                    $"performers.json should bind world markers to collection '{collectionKey}'.");
+            }
         }
 
         private static void AssertOldComposePanelClosed(GameEngine engine)
@@ -397,15 +509,17 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(snapshot.SourceActorCount, Is.EqualTo(3));
             Assert.That(snapshot.TileCount, Is.EqualTo(activeProfile.SlotCount));
             Assert.That(snapshot.Tiles.Length, Is.EqualTo(activeProfile.SlotCount));
-            Assert.That(snapshot.ExpectedTileCount, Is.EqualTo(24));
+            Assert.That(snapshot.ExpectedTileCount, Is.EqualTo(activeProfile.SlotCount));
             Assert.That(snapshot.Profiles.Select(profile => profile.Label), Is.EquivalentTo(new[] { "Template", "Family", "Ability" }));
-            Assert.That(snapshot.Tiles.Count(tile => string.Equals(tile.Label, "ActionContext", StringComparison.Ordinal)), Is.EqualTo(3),
-                "Ability WebUI snapshot must keep same-name ActionContext skills split by owner.");
-            Assert.That(
-                snapshot.Tiles.Where(tile => string.Equals(tile.Label, "ActionContext", StringComparison.Ordinal)).Select(tile => tile.Owner),
-                Is.EquivalentTo(new[] { "Arcweaver", "Vanguard", "Commander" }));
-            Assert.That(snapshot.Then, Does.Contain("ActionContext stays split"));
-            Assert.That(snapshot.VisibleResult, Does.Contain("split by hero"));
+            EntityCommandPanelShowcaseCommandTileView fireball =
+                snapshot.Tiles.Single(tile => string.Equals(tile.Label, "Fireball", StringComparison.Ordinal));
+            Assert.That(fireball.ContributorNames, Is.EquivalentTo(new[] { "Arcweaver", "Vanguard" }));
+            Assert.That(fireball.OwnerCount, Is.EqualTo(2));
+            EntityCommandPanelShowcaseCommandTileView stoneThrow =
+                snapshot.Tiles.Single(tile => string.Equals(tile.Label, "Stone Throw", StringComparison.Ordinal));
+            Assert.That(stoneThrow.ContributorNames, Is.EquivalentTo(new[] { "Commander" }));
+            Assert.That(snapshot.Then, Does.Contain("Fireball appears once"));
+            Assert.That(snapshot.VisibleResult, Does.Contain("shared abilities show contributor labels"));
         }
 
         private static GameEngine CreateEngine(string repoRoot)
@@ -625,7 +739,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-4 / P3 runtime aggregation preference over the M6 command-source collection.");
             sb.AppendLine("- Initial entities: local player command owner plus Arcweaver, Vanguard, and Commander showcase command providers.");
             sb.AppendLine("- Action script: load `interaction_showcase_hub`, verify toolbar/source registries, activate Family, Template, and Ability buttons, then copy slots from the registered collection source.");
-            sb.AppendLine("- Primary success condition: by-family collapses the three heroes into eight command families while template and ability identity profiles expose twenty-four distinct commands.");
+            sb.AppendLine("- Primary success condition: by-family collapses the three heroes into eight command families, by-template shows 24 unit-template slots, and by-ability shows 21 distinct ability definitions.");
             sb.AppendLine("- Failure branch condition: missing source registry entry, missing by-family profile fragment, toolbar not bound to source, stale revision, or copied slots bypassing aggregation.");
             sb.AppendLine();
             sb.AppendLine("## Runtime Evidence");
@@ -685,7 +799,7 @@ namespace Ludots.Tests.GAS.Production
                 "    H --> K[\"EntityCommandPanelSourceDispatch.CopySlots\"]",
                 "    I --> K",
                 "    J --> K",
-                "    K --> L[\"Assert 8 family slots or 24 identity slots\"]",
+                "    K --> L[\"Assert 8 family slots, 24 template slots, or 21 ability slots\"]",
                 "    L --> M[\"Write battle-report, trace.jsonl, path.mmd\"]"
             });
         }

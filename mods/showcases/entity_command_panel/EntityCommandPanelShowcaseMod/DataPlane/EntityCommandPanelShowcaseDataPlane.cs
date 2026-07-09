@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Json;
 using System.Threading;
@@ -11,6 +12,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.WebUI.DataPlane;
@@ -22,8 +24,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
         private readonly GameEngine _engine;
         private readonly Entity[] _ownerScratch = new Entity[EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
-        private readonly EntityCommandPanelSlotView[] _slotScratch =
-            new EntityCommandPanelSlotView[AbilityStateBuffer.CAPACITY * EntityCommandPanelShowcaseIds.ExpectedSourceActorCount];
+        private AbilityAggregationResult _aggregationResult = new();
         private string _lastCommand = "snapshot";
 
         public EntityCommandPanelShowcaseDataPlane(GameEngine engine)
@@ -118,34 +119,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             }
 
             int sourceActorCount = CopyOwners(owner, out EntityCommandPanelShowcaseOwnerView[] owners);
-            int slotCount = groupCount <= 0
-                ? 0
-                : EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, _slotScratch);
-
-            var tiles = new EntityCommandPanelShowcaseCommandTileView[slotCount];
-            for (int i = 0; i < slotCount; i++)
-            {
-                EntityCommandPanelSlotView slot = _slotScratch[i];
-                string abilityKey = slot.AbilityId > 0 ? AbilityIdRegistry.GetName(slot.AbilityId) : string.Empty;
-                string tileOwner = ResolveOwnerName(slot.AbilityId, sourceActorCount);
-                int ownerCount = string.Equals(activeLabel, EntityCommandPanelShowcaseIds.FamilyLabel, StringComparison.Ordinal)
-                    ? Math.Max(ParseOwnerCount(slot.DetailLabel), sourceActorCount)
-                    : 1;
-                tiles[i] = new EntityCommandPanelShowcaseCommandTileView(
-                    slot.SlotIndex,
-                    slot.AbilityId,
-                    slot.TemplateEntityId,
-                    abilityKey,
-                    string.IsNullOrWhiteSpace(slot.DisplayLabel) ? $"Command {slot.SlotIndex + 1}" : slot.DisplayLabel,
-                    slot.DetailLabel,
-                    slot.ActionId,
-                    ResolveHotkey(slot.SlotIndex),
-                    tileOwner,
-                    ownerCount,
-                    ResolveFamilyLabel(slot.DisplayLabel, abilityKey),
-                    ResolveAccent(tileOwner, activeLabel, slot.SlotIndex),
-                    slot.StateFlags.ToString());
-            }
+            EntityCommandPanelShowcaseCommandTileView[] tiles = BuildKernelTiles(activeLabel, profileId, sourceActorCount);
 
             int expectedTiles = ExpectedTileCount(activeLabel);
             uint revision = sourceRevision == 0 ? toolbarRevision : sourceRevision;
@@ -160,7 +134,7 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
                 expectedTiles,
                 CreateProfileViews(profiles, activeLabel, profileId),
                 owners,
-                groupCount,
+                tiles.Length > 0 ? 1 : groupCount,
                 group.GroupLabel,
                 tiles,
                 "Given Arcweaver, Vanguard, and Commander are active.",
@@ -169,6 +143,225 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
                 VisibleResult(activeLabel, tiles.Length, expectedTiles, sourceActorCount),
                 _lastCommand,
                 string.Empty);
+        }
+
+        private EntityCommandPanelShowcaseCommandTileView[] BuildKernelTiles(
+            string activeLabel,
+            string profileId,
+            int sourceActorCount)
+        {
+            if (sourceActorCount <= 0)
+            {
+                return Array.Empty<EntityCommandPanelShowcaseCommandTileView>();
+            }
+
+            var aggregationProfiles = _engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
+                ?? throw new InvalidOperationException("AbilityAggregationProfileRegistry is missing.");
+            if (!aggregationProfiles.ProfileIdRegistry.TryGetId(profileId, out int profileRegistryId) ||
+                !aggregationProfiles.IsInstalled(profileRegistryId))
+            {
+                throw new InvalidOperationException($"Aggregation profile '{profileId}' is not installed.");
+            }
+
+            var abilities = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
+                ?? throw new InvalidOperationException("AbilityDefinitionRegistry is missing.");
+
+            int groupCount = aggregationProfiles.BuildGroups(
+                profileRegistryId,
+                _ownerScratch.AsSpan(0, sourceActorCount),
+                _engine.World,
+                abilities,
+                ref _aggregationResult);
+            var tiles = new EntityCommandPanelShowcaseCommandTileView[groupCount];
+            for (int groupIndex = 0; groupIndex < groupCount; groupIndex++)
+            {
+                long groupKey = _aggregationResult.GetGroupKey(groupIndex);
+                ReadOnlySpan<Entity> members = _aggregationResult.GroupEntities(groupIndex);
+                ReadOnlySpan<int> slots = _aggregationResult.GroupSlotIndices(groupIndex);
+                var contributorNames = new List<string>(members.Length);
+                var abilityLabels = new List<string>(members.Length);
+                int representativeAbilityId = 0;
+                int representativeTemplateEntityId = 0;
+                string representativeAbilityKey = string.Empty;
+
+                for (int memberIndex = 0; memberIndex < members.Length; memberIndex++)
+                {
+                    Entity member = members[memberIndex];
+                    AddDistinct(contributorNames, ResolveEntityName(member));
+                    AbilitySlotState slot = ResolveAbilitySlot(member, slots[memberIndex]);
+                    if (representativeAbilityId == 0)
+                    {
+                        representativeAbilityId = slot.AbilityId;
+                        representativeTemplateEntityId = slot.TemplateEntityId;
+                        representativeAbilityKey = slot.AbilityId > 0 ? AbilityIdRegistry.GetName(slot.AbilityId) : string.Empty;
+                    }
+
+                    AddDistinct(abilityLabels, ResolveAbilityLabel(slot));
+                }
+
+                string[] contributors = contributorNames.ToArray();
+                string owner = contributors.Length == 1 ? contributors[0] : string.Empty;
+                string label = ResolveGroupLabel(groupKey, representativeAbilityId, abilityLabels);
+                string family = ResolveGroupFamily(groupKey, representativeAbilityId);
+                string detail = ResolveGroupDetail(activeLabel, abilityLabels, contributorNames);
+                tiles[groupIndex] = new EntityCommandPanelShowcaseCommandTileView(
+                    groupIndex,
+                    representativeAbilityId,
+                    representativeTemplateEntityId,
+                    representativeAbilityKey,
+                    label,
+                    detail,
+                    string.Empty,
+                    ResolveHotkey(groupIndex),
+                    owner,
+                    contributors.Length,
+                    family,
+                    ResolveAccent(contributors.Length > 0 ? contributors[0] : string.Empty, activeLabel, groupIndex),
+                    nameof(EntityCommandSlotStateFlags.Base),
+                    contributors);
+            }
+
+            return tiles;
+        }
+
+        private AbilitySlotState ResolveAbilitySlot(Entity owner, int slotIndex)
+        {
+            if (!_engine.World.IsAlive(owner) || !_engine.World.TryGet(owner, out AbilityStateBuffer abilities))
+            {
+                return default;
+            }
+
+            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(owner);
+            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(owner) : default;
+            bool hasItemGranted = _engine.World.Has<ItemGrantedSlotBuffer>(owner);
+            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _engine.World.Get<ItemGrantedSlotBuffer>(owner) : default;
+            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(owner);
+            GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(owner) : default;
+            return AbilitySlotResolver.Resolve(
+                in abilities,
+                in formSlots,
+                hasForm,
+                in itemGrantedSlots,
+                hasItemGranted,
+                in grantedSlots,
+                hasGranted,
+                slotIndex);
+        }
+
+        private string ResolveAbilityLabel(AbilitySlotState slot)
+        {
+            if (slot.AbilityId <= 0)
+            {
+                return slot.TemplateEntityId > 0 ? $"Template {slot.TemplateEntityId}" : "Command";
+            }
+
+            string fallback = ResolveLeafName(AbilityIdRegistry.GetName(slot.AbilityId));
+            var definitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
+            return definitions != null &&
+                   definitions.TryGet(slot.AbilityId, out AbilityDefinition definition) &&
+                   definition.HasPresentation &&
+                   definition.Presentation != null
+                ? definition.Presentation.ResolveDisplayName(fallback)
+                : fallback;
+        }
+
+        private static string ResolveGroupLabel(long groupKey, int representativeAbilityId, List<string> abilityLabels)
+        {
+            int kind = (int)(groupKey >> 32);
+            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            {
+                return FormatTagLeaf(TagRegistry.GetName((int)(uint)groupKey));
+            }
+
+            return abilityLabels.Count > 0
+                ? abilityLabels[0]
+                : representativeAbilityId > 0
+                    ? ResolveLeafName(AbilityIdRegistry.GetName(representativeAbilityId))
+                    : "Command";
+        }
+
+        private string ResolveGroupFamily(long groupKey, int representativeAbilityId)
+        {
+            int kind = (int)(groupKey >> 32);
+            if (kind == AbilityAggregationKeyKinds.CatalogTag)
+            {
+                return FormatTagLeaf(TagRegistry.GetName((int)(uint)groupKey));
+            }
+
+            if (representativeAbilityId <= 0)
+            {
+                return string.Empty;
+            }
+
+            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            {
+                string tag = TagRegistry.GetName(tagId);
+                if (tag.StartsWith("castFamily.", StringComparison.Ordinal) &&
+                    _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)?.HasCatalogTag(representativeAbilityId, tagId) == true)
+                {
+                    return FormatTagLeaf(tag);
+                }
+            }
+
+            return string.Empty;
+        }
+
+        private static string ResolveGroupDetail(string activeLabel, List<string> abilityLabels, List<string> contributorNames)
+        {
+            string contributors = string.Join(", ", contributorNames);
+            if (string.Equals(activeLabel, EntityCommandPanelShowcaseIds.FamilyLabel, StringComparison.Ordinal))
+            {
+                return string.Concat(string.Join(", ", abilityLabels), " | ", contributors);
+            }
+
+            return contributors;
+        }
+
+        private string ResolveEntityName(Entity entity)
+        {
+            return _engine.World.IsAlive(entity) && _engine.World.TryGet(entity, out Name name)
+                ? name.Value
+                : $"Entity {entity.Id}";
+        }
+
+        private static void AddDistinct(List<string> values, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return;
+            }
+
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (string.Equals(values[i], value, StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+
+            values.Add(value);
+        }
+
+        private static string ResolveLeafName(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return string.Empty;
+            }
+
+            int dot = id.LastIndexOf('.');
+            return dot >= 0 && dot + 1 < id.Length ? id[(dot + 1)..] : id;
+        }
+
+        private static string FormatTagLeaf(string tag)
+        {
+            string leaf = ResolveLeafName(tag).Replace('_', ' ');
+            if (leaf.Length == 0)
+            {
+                return string.Empty;
+            }
+
+            return string.Concat(char.ToUpperInvariant(leaf[0]), leaf.Length == 1 ? string.Empty : leaf[1..]);
         }
 
         private bool TryResolveCommandSource(
@@ -352,9 +545,14 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
 
         private static int ExpectedTileCount(string activeLabel)
         {
-            return string.Equals(activeLabel, EntityCommandPanelShowcaseIds.FamilyLabel, StringComparison.Ordinal)
-                ? EntityCommandPanelShowcaseIds.ExpectedFamilyTileCount
-                : EntityCommandPanelShowcaseIds.ExpectedIdentityTileCount;
+            if (string.Equals(activeLabel, EntityCommandPanelShowcaseIds.TemplateLabel, StringComparison.Ordinal))
+            {
+                return EntityCommandPanelShowcaseIds.ExpectedTemplateTileCount;
+            }
+
+            return string.Equals(activeLabel, EntityCommandPanelShowcaseIds.AbilityLabel, StringComparison.Ordinal)
+                ? EntityCommandPanelShowcaseIds.ExpectedAbilityTileCount
+                : EntityCommandPanelShowcaseIds.ExpectedFamilyTileCount;
         }
 
         private static string ThenTextForProfile(string activeLabel)
@@ -366,10 +564,10 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
 
             if (string.Equals(activeLabel, EntityCommandPanelShowcaseIds.AbilityLabel, StringComparison.Ordinal))
             {
-                return "Then ActionContext stays split across Arcweaver, Vanguard, and Commander.";
+                return "Then Fireball appears once for Arcweaver and Vanguard, while Stone Throw appears once for Commander.";
             }
 
-            return "Then 24 commands collapse into 8 shared family tiles, each marked x3 heroes.";
+            return "Then Fireball and Stone Throw collapse into one Projectile family tile marked by all three heroes.";
         }
 
         private static string VisibleResult(string activeLabel, int actualTiles, int expectedTiles, int sourceActorCount)
@@ -381,51 +579,10 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
 
             if (string.Equals(activeLabel, EntityCommandPanelShowcaseIds.AbilityLabel, StringComparison.Ordinal))
             {
-                return $"Ability view = {actualTiles}/{expectedTiles}; repeated names stay split by hero";
+                return $"Ability view = {actualTiles}/{expectedTiles}; shared abilities show contributor labels";
             }
 
-            return $"Family view = {actualTiles}/{expectedTiles}; each shared tile shows x{sourceActorCount} heroes";
-        }
-
-        private string ResolveOwnerName(int abilityId, int sourceActorCount)
-        {
-            if (abilityId <= 0 || sourceActorCount <= 0)
-            {
-                return string.Empty;
-            }
-
-            for (int ownerIndex = 0; ownerIndex < sourceActorCount; ownerIndex++)
-            {
-                Entity owner = _ownerScratch[ownerIndex];
-                if (!_engine.World.IsAlive(owner) ||
-                    !_engine.World.TryGet(owner, out AbilityStateBuffer abilities))
-                {
-                    continue;
-                }
-
-                bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(owner);
-                AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(owner) : default;
-                bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(owner);
-                GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(owner) : default;
-                for (int slotIndex = 0; slotIndex < abilities.Count; slotIndex++)
-                {
-                    AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                        in abilities,
-                        in formSlots,
-                        hasForm,
-                        in grantedSlots,
-                        hasGranted,
-                        slotIndex);
-                    if (slot.AbilityId != abilityId)
-                    {
-                        continue;
-                    }
-
-                    return _engine.World.TryGet(owner, out Name name) ? name.Value : $"Entity {owner.Id}";
-                }
-            }
-
-            return string.Empty;
+            return $"Family view = {actualTiles}/{expectedTiles}; Projectile shows x{sourceActorCount} heroes";
         }
 
         private static string ResolveOwnerRole(string name)
@@ -446,36 +603,6 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
             }
 
             return "source";
-        }
-
-        private static string ResolveFamilyLabel(string displayLabel, string abilityKey)
-        {
-            if (!string.IsNullOrWhiteSpace(displayLabel))
-            {
-                return displayLabel;
-            }
-
-            int lastDot = abilityKey.LastIndexOf('.');
-            return lastDot >= 0 && lastDot + 1 < abilityKey.Length ? abilityKey[(lastDot + 1)..] : abilityKey;
-        }
-
-        private static int ParseOwnerCount(string detail)
-        {
-            if (string.IsNullOrWhiteSpace(detail))
-            {
-                return 1;
-            }
-
-            int marker = detail.IndexOf(" owners", StringComparison.OrdinalIgnoreCase);
-            if (marker <= 0)
-            {
-                return 1;
-            }
-
-            string prefix = detail[..marker].Trim();
-            return int.TryParse(prefix, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed)
-                ? Math.Max(1, parsed)
-                : 1;
         }
 
         private static string ResolveHotkey(int slotIndex)
@@ -606,9 +733,11 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
                 0,
                 0,
                 0,
-                activeLabel == EntityCommandPanelShowcaseIds.FamilyLabel
-                    ? EntityCommandPanelShowcaseIds.ExpectedFamilyTileCount
-                    : EntityCommandPanelShowcaseIds.ExpectedIdentityTileCount,
+                activeLabel == EntityCommandPanelShowcaseIds.TemplateLabel
+                    ? EntityCommandPanelShowcaseIds.ExpectedTemplateTileCount
+                    : activeLabel == EntityCommandPanelShowcaseIds.AbilityLabel
+                        ? EntityCommandPanelShowcaseIds.ExpectedAbilityTileCount
+                        : EntityCommandPanelShowcaseIds.ExpectedFamilyTileCount,
                 EntityCommandPanelShowcaseDataPlane.CreateProfileViews(profiles, activeLabel, activeProfileId),
                 Array.Empty<EntityCommandPanelShowcaseOwnerView>(),
                 0,
@@ -650,7 +779,8 @@ namespace EntityCommandPanelShowcaseMod.DataPlane
         int OwnerCount,
         string Family,
         string AccentColorHex,
-        string StateFlags);
+        string StateFlags,
+        string[] ContributorNames);
 
     public sealed class EntityCommandPanelShowcaseCommandHandler : IWebUiCommandHandler
     {

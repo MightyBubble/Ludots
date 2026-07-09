@@ -28,7 +28,7 @@ const EMPTY_SNAPSHOT = {
   tiles: [],
   given: 'Given Arcweaver, Vanguard, and Commander are active.',
   when: 'When the Family command view is active.',
-  then: 'Then 24 commands collapse into 8 shared family tiles, each marked x3 heroes.',
+  then: 'Then shared command families collapse into one visible button with contributor labels.',
   visibleResult: 'Waiting for the live hero command roster.',
   lastCommand: 'snapshot',
   error: ''
@@ -46,7 +46,7 @@ const INITIAL_CONNECTION = {
 function App() {
   const { snapshot, connection, setProfile } = useEntityCommandPanelDataPlane();
   const profileClass = snapshot.activeProfile.toLowerCase();
-  const groupedTiles = useMemo(() => groupTiles(snapshot), [snapshot]);
+  const templateGroups = useMemo(() => groupTemplateTiles(snapshot), [snapshot]);
 
   return (
     <main className={`war3-command-panel ${profileClass}`} data-ready={snapshot.ready ? 'true' : 'false'}>
@@ -109,17 +109,17 @@ function App() {
             <strong>Command panel waiting</strong>
             <span>{formatPanelError(connection.error || snapshot.error)}</span>
           </div>
-        ) : snapshot.activeProfile === 'Family' ? (
-          <FamilyGrid tiles={snapshot.tiles} owners={snapshot.owners} />
+        ) : snapshot.activeProfile === 'Template' ? (
+          <TemplateGrid groups={templateGroups} />
         ) : (
-          <IdentityGrid groups={groupedTiles} activeProfile={snapshot.activeProfile} />
+          <AggregateGrid tiles={snapshot.tiles} mode={snapshot.activeProfile.toLowerCase()} />
         )}
       </section>
 
       <section className="audit-zone" aria-label="profile evidence">
         <EvidenceMeter label="Template" value="3x8" active={snapshot.activeProfile === 'Template'} />
-        <EvidenceMeter label="Family" value="8 x3" active={snapshot.activeProfile === 'Family'} />
-        <EvidenceMeter label="Ability" value="3 split" active={snapshot.activeProfile === 'Ability'} />
+        <EvidenceMeter label="Family" value="catalog" active={snapshot.activeProfile === 'Family'} />
+        <EvidenceMeter label="Ability" value="shared" active={snapshot.activeProfile === 'Ability'} />
         <div className="transport-readout">
           <span>{snapshot.ready ? 'Live roster' : 'Roster pending'}</span>
           <strong>{formatPanelCommand(snapshot.lastCommand || connection.lastPacket)}</strong>
@@ -270,28 +270,29 @@ function ScenarioLine({ label, text }) {
   );
 }
 
-function FamilyGrid({ tiles, owners }) {
+function AggregateGrid({ tiles, mode }) {
+  const visibleTiles = sortAggregateTiles(tiles, mode);
   return (
-    <div className="family-grid">
-      {tiles.map((tile) => (
-        <CommandTile key={`${tile.slotIndex}:${tile.abilityId}`} tile={tile} owners={owners} mode="family" />
+    <div className={`${mode}-grid aggregate-grid`}>
+      {visibleTiles.map((tile) => (
+        <CommandTile key={`${tile.slotIndex}:${tile.abilityId}:${tile.label}`} tile={tile} mode={mode} />
       ))}
     </div>
   );
 }
 
-function IdentityGrid({ groups, activeProfile }) {
+function TemplateGrid({ groups }) {
   return (
-    <div className="identity-grid">
+    <div className="template-grid">
       {groups.map((group) => (
         <div className="owner-lane" key={group.owner}>
           <header style={{ '--accent': group.accent }}>
             <strong>{group.owner}</strong>
-            <span>{activeProfile === 'Template' ? '8 commands' : 'split by hero'}</span>
+            <span>{group.tiles.length} commands</span>
           </header>
           <div>
             {group.tiles.map((tile) => (
-              <CommandTile key={`${tile.slotIndex}:${tile.abilityId}`} tile={tile} mode="identity" />
+              <CommandTile key={`${tile.slotIndex}:${tile.abilityId}:${tile.label}`} tile={tile} mode="template" />
             ))}
           </div>
         </div>
@@ -300,20 +301,21 @@ function IdentityGrid({ groups, activeProfile }) {
   );
 }
 
-function CommandTile({ tile, owners = [], mode }) {
-  const isRepeatedAbility = tile.label === 'ActionContext' && mode === 'identity';
+function CommandTile({ tile, mode }) {
+  const contributors = contributorNames(tile);
+  const isAggregate = mode === 'ability' || mode === 'family';
   return (
     <article
-      className={isRepeatedAbility ? 'command-tile repeated' : 'command-tile'}
+      className={isAggregate && contributors.length > 1 ? 'command-tile repeated' : 'command-tile'}
       style={{ '--accent': tile.accentColorHex }}
     >
       <span className="hotkey">{tile.hotkey || tile.slotIndex + 1}</span>
       <strong>{tile.label}</strong>
-      <small>{mode === 'family' ? `${tile.ownerCount} heroes` : tile.owner || 'hero'}</small>
-      {mode === 'family' ? (
-        <div className="mini-owners">
-          {owners.map((owner) => (
-            <i key={owner.entityKey || owner.name} style={{ '--accent': owner.accentColorHex }} title={owner.name} />
+      <small>{tileSubtitle(tile, mode, contributors)}</small>
+      {isAggregate ? (
+        <div className="contributor-labels">
+          {contributors.map((name) => (
+            <span key={name}>{shortName(name)}</span>
           ))}
         </div>
       ) : (
@@ -325,14 +327,14 @@ function CommandTile({ tile, owners = [], mode }) {
 
 function profileDescription(label) {
   if (label === 'Template') {
-    return 'one row per hero';
+    return 'unit template layout';
   }
 
   if (label === 'Ability') {
-    return 'split repeated names';
+    return 'shared ability once';
   }
 
-  return 'shared commands';
+  return 'catalog family';
 }
 
 function formatPanelError(message) {
@@ -387,11 +389,12 @@ function normalizeSnapshot(previous, payload) {
   };
 }
 
-function groupTiles(snapshot) {
+function groupTemplateTiles(snapshot) {
   const ownerOrder = ownersForDisplay(snapshot).map((owner) => owner.name);
   const groups = new Map(ownerOrder.map((owner) => [owner, []]));
   for (const tile of snapshot.tiles) {
-    const owner = tile.owner || inferOwner(tile.abilityKey) || 'Unassigned';
+    const contributors = contributorNames(tile);
+    const owner = tile.owner || contributors[0] || 'Unassigned';
     if (!groups.has(owner)) {
       groups.set(owner, []);
     }
@@ -407,26 +410,57 @@ function groupTiles(snapshot) {
     }));
 }
 
+function sortAggregateTiles(tiles, mode) {
+  const sorted = Array.isArray(tiles) ? [...tiles] : [];
+  if (mode === 'ability') {
+    sorted.sort((left, right) => {
+      const leftContributorCount = contributorNames(left).length || left.ownerCount || 0;
+      const rightContributorCount = contributorNames(right).length || right.ownerCount || 0;
+      return rightContributorCount - leftContributorCount ||
+        String(left.label).localeCompare(String(right.label)) ||
+        left.slotIndex - right.slotIndex ||
+        left.abilityId - right.abilityId;
+    });
+    return sorted;
+  }
+
+  sorted.sort((left, right) =>
+    left.slotIndex - right.slotIndex ||
+    left.abilityId - right.abilityId ||
+    String(left.label).localeCompare(String(right.label)));
+  return sorted;
+}
+
 function ownersForDisplay(snapshot) {
   if (Array.isArray(snapshot.owners) && snapshot.owners.length > 0) {
     return [...snapshot.owners].sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
   }
 
-  return [
-    { name: 'Arcweaver', accentColorHex: '#6EC6FF' },
-    { name: 'Vanguard', accentColorHex: '#F6D37A' },
-    { name: 'Commander', accentColorHex: '#9EE493' }
-  ];
+  return [];
 }
 
-function inferOwner(abilityKey = '') {
-  for (const owner of ['Arcweaver', 'Vanguard', 'Commander']) {
-    if (abilityKey.includes(`.${owner}.`)) {
-      return owner;
-    }
+function contributorNames(tile) {
+  if (Array.isArray(tile.contributorNames) && tile.contributorNames.length > 0) {
+    return tile.contributorNames.filter((name) => typeof name === 'string' && name.trim().length > 0);
   }
 
-  return '';
+  return tile.owner ? [tile.owner] : [];
+}
+
+function tileSubtitle(tile, mode, contributors) {
+  if (mode === 'family') {
+    return tile.detail || `${contributors.length || tile.ownerCount || 0} contributors`;
+  }
+
+  if (mode === 'ability') {
+    return contributors.join(', ') || tile.detail || 'Ready';
+  }
+
+  return tile.owner || contributors[0] || 'Ready';
+}
+
+function shortName(name) {
+  return String(name).replace(/^Showcase\s+/i, '').trim();
 }
 
 function tileStatus(tile) {

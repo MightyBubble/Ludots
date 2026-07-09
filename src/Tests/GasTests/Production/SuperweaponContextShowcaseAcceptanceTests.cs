@@ -8,6 +8,7 @@ using Arch.Core;
 using InteractionShowcaseMod;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -51,7 +52,15 @@ namespace Ludots.Tests.GAS.Production
 
             var backend = new TestInputBackend();
             using var engine = CreateEngine(repoRoot, backend);
+            AssertStaticInteractionShowcaseCamera(engine);
             engine.LoadMap(InteractionShowcaseIds.HubMapId);
+            var preTickStore = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore service is missing.");
+            SuperweaponContextShowcaseState preTickState = GetState(engine);
+            Entity[] commandSourceBeforeTargets = CopyCollectionOrEmpty(
+                preTickStore,
+                preTickState.Commander,
+                EntityCollectionKeys.CommandSource);
             Tick(engine, 6);
 
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
@@ -92,15 +101,25 @@ namespace Ludots.Tests.GAS.Production
             int abilityTargetsKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetsCollectionKey);
             int commandSourceKey = stack.CollectionKeyRegistry.GetId(EntityCollectionKeys.CommandSource);
             int rawKey = stack.CollectionKeyRegistry.GetId(EntityCollectionKeys.UiCastRaw);
+            int casterMarkerKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey);
+            int targetMarkerKey = stack.CollectionKeyRegistry.GetId(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey);
 
             Entity[] abilityTargets = CopyCollection(store, state.Commander, abilityTargetsKey);
             Entity[] rawTargets = CopyCollection(store, state.LocalPlayer, rawKey);
+            Entity[] casterMarkers = CopyCollection(store, state.Commander, casterMarkerKey);
+            Entity[] targetMarkers = CopyCollection(store, state.Commander, targetMarkerKey);
             Assert.That(abilityTargets, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
             Assert.That(rawTargets, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
+            Assert.That(stack.CollectionKeyRegistry.GetName(casterMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.CasterMarkerCollectionKey));
+            Assert.That(stack.CollectionKeyRegistry.GetName(targetMarkerKey), Is.EqualTo(SuperweaponContextShowcaseIds.TargetMarkerCollectionKey));
+            Assert.That(casterMarkers, Is.EqualTo(new[] { state.Commander }));
+            Assert.That(targetMarkers, Is.EqualTo(new[] { state.Arcweaver, state.Vanguard }));
+            Entity[] commandSourceDuringAbility = CopyCollectionOrEmpty(store, state.Commander, commandSourceKey);
             Assert.That(
-                store.TryGet(state.Commander, commandSourceKey, out _),
-                Is.False,
-                "ability-frame target acquisition must not mutate collection.command.source.");
+                commandSourceDuringAbility,
+                Is.EqualTo(commandSourceBeforeTargets),
+                "ability-frame target acquisition must not rewrite collection.command.source.");
+            AssertPerformerRules(repoRoot);
 
             Assert.That(state.ConfirmInputObserved, Is.False);
             PressAndRelease(engine, backend, "<Keyboard>/enter");
@@ -183,9 +202,99 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(source, Does.Not.Contain("World.Remove<AbilityExecInstance>"));
         }
 
+        private static void AssertPerformerRules(string repoRoot)
+        {
+            string performerConfigPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "superweapon_context",
+                "SuperweaponContextShowcaseMod",
+                "assets",
+                "Presentation",
+                "performers.json");
+            using JsonDocument document = JsonDocument.Parse(File.ReadAllText(performerConfigPath, Encoding.UTF8));
+            Assert.That(HasCollectionRule(
+                document,
+                "EntityCollectionMemberAdded",
+                SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
+                "CreatePerformer",
+                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+            Assert.That(HasCollectionRule(
+                document,
+                "EntityCollectionMemberRemoved",
+                SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
+                "DestroyScopedPerformer",
+                SuperweaponContextShowcaseIds.CasterMarkerPerformerId), Is.True);
+            Assert.That(HasCollectionRule(
+                document,
+                "EntityCollectionMemberAdded",
+                SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
+                "CreatePerformer",
+                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+            Assert.That(HasCollectionRule(
+                document,
+                "EntityCollectionMemberRemoved",
+                SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
+                "DestroyScopedPerformer",
+                SuperweaponContextShowcaseIds.TargetMarkerPerformerId), Is.True);
+        }
+
+        private static bool HasCollectionRule(
+            JsonDocument document,
+            string eventKind,
+            string collectionKey,
+            string commandKind,
+            string performerDefinitionId)
+        {
+            foreach (JsonElement definition in document.RootElement.EnumerateArray())
+            {
+                if (!definition.TryGetProperty("rules", out JsonElement rules))
+                {
+                    continue;
+                }
+
+                foreach (JsonElement rule in rules.EnumerateArray())
+                {
+                    JsonElement evt = rule.GetProperty("event");
+                    JsonElement command = rule.GetProperty("command");
+                    if (string.Equals(evt.GetProperty("kind").GetString(), eventKind, StringComparison.Ordinal) &&
+                        string.Equals(evt.GetProperty("key").GetString(), collectionKey, StringComparison.Ordinal) &&
+                        string.Equals(command.GetProperty("kind").GetString(), commandKind, StringComparison.Ordinal) &&
+                        string.Equals(command.GetProperty("definitionId").GetString(), performerDefinitionId, StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private static Entity[] CopyCollection(EntityCollectionStore store, Entity owner, int keyId)
         {
             Assert.That(store.TryGet(owner, keyId, out EntityCollectionHandle handle), Is.True);
+            Span<Entity> rows = stackalloc Entity[8];
+            int count = store.CopyEntities(handle, 0, rows);
+            return rows[..count].ToArray();
+        }
+
+        private static Entity[] CopyCollectionOrEmpty(EntityCollectionStore store, Entity owner, string key)
+        {
+            return store.TryGet(owner, key, out EntityCollectionHandle handle)
+                ? CopyCollection(store, handle)
+                : Array.Empty<Entity>();
+        }
+
+        private static Entity[] CopyCollectionOrEmpty(EntityCollectionStore store, Entity owner, int keyId)
+        {
+            return store.TryGet(owner, keyId, out EntityCollectionHandle handle)
+                ? CopyCollection(store, handle)
+                : Array.Empty<Entity>();
+        }
+
+        private static Entity[] CopyCollection(EntityCollectionStore store, EntityCollectionHandle handle)
+        {
             Span<Entity> rows = stackalloc Entity[8];
             int count = store.CopyEntities(handle, 0, rows);
             return rows[..count].ToArray();
@@ -212,6 +321,18 @@ namespace Ludots.Tests.GAS.Production
             AcceptanceUiHostInstaller.Install(engine);
             engine.Start();
             return engine;
+        }
+
+        private static void AssertStaticInteractionShowcaseCamera(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+                ?? throw new InvalidOperationException("VirtualCameraRegistry service is missing.");
+            VirtualCameraDefinition tactical = registry.Get("Camera.Profile.Tactical");
+            Assert.That(tactical.DisplayName, Is.EqualTo("Interaction Showcase Static Camera"));
+            Assert.That(tactical.PanMode, Is.EqualTo(CameraPanMode.None));
+            Assert.That(tactical.EnableGrabDrag, Is.False);
+            Assert.That(tactical.EnableZoom, Is.False);
+            Assert.That(tactical.AllowUserInput, Is.False);
         }
 
         private static void InstallInput(GameEngine engine, TestInputBackend backend)

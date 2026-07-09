@@ -309,7 +309,7 @@ p {
   line-height: 1.2;
 }
 
-.family-grid {
+.aggregate-grid {
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -317,7 +317,12 @@ p {
   gap: 8px;
 }
 
-.identity-grid {
+.ability-grid {
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.template-grid {
   min-height: 0;
   display: grid;
   grid-template-rows: repeat(3, 1fr);
@@ -384,8 +389,8 @@ p {
     inset 0 -10px 18px rgba(0, 0, 0, 0.28);
 }
 
-.family-grid .command-tile {
-  grid-template-rows: 20px minmax(0, 1fr) 17px 14px;
+.aggregate-grid .command-tile {
+  grid-template-rows: 20px minmax(0, 1fr) auto 18px;
   padding: 8px;
 }
 
@@ -421,7 +426,7 @@ p {
   line-height: 1.1;
 }
 
-.family-grid .command-tile strong {
+.aggregate-grid .command-tile strong {
   font-size: 14px;
 }
 
@@ -437,23 +442,33 @@ p {
   font-style: normal;
 }
 
-.family-grid .command-tile small {
+.aggregate-grid .command-tile small {
   color: #f6d37a;
   font-weight: 760;
 }
 
-.mini-owners {
+.contributor-labels {
+  min-width: 0;
   display: flex;
+  align-items: center;
   gap: 4px;
+  overflow: hidden;
 }
 
-.mini-owners i {
-  width: 13px;
-  height: 13px;
-  display: block;
+.contributor-labels span {
+  min-width: 0;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 2px 5px;
   border: 1px solid rgba(255, 245, 210, 0.42);
-  border-radius: 50%;
-  background: var(--accent);
+  border-radius: 3px;
+  color: #12110e;
+  background: color-mix(in srgb, var(--accent) 82%, #f7ead2);
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
 }
 
 .audit-zone {

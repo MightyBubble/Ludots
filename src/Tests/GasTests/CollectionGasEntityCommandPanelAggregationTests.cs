@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
@@ -22,8 +23,8 @@ using NUnit.Framework;
 namespace Ludots.Tests.GAS
 {
     /// <summary>
-    /// RFC-0065 PNL-4 �?<c>CollectionGasEntityCommandPanelSource</c> consumes the
-    /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the §6.1 M6 catalog cases
+    /// RFC-0065 PNL-4 - <c>CollectionGasEntityCommandPanelSource</c> consumes the
+    /// <see cref="AbilityAggregationProfileRegistry"/> kernel. Covers the M6 catalog cases
     /// (mixed marine/tank selection grouped by cast family, FormSet override recompute) and P3
     /// (runtime profile switch regroups without re-selection), plus activation routing to the
     /// group's first member. All family/ability names are test data, never Core concepts.
@@ -43,6 +44,9 @@ namespace Ludots.Tests.GAS
         private const int EliteChargeAbilityId = 202;
         private const int FormVariantAbilityId = 203;
         private const int StrikeAbilityId = 301;
+        private const int MarineTemplateKeyId = 11;
+        private const int EliteTemplateKeyId = 12;
+        private const int TankTemplateKeyId = 21;
 
         private const string ByTemplateProfileId = "aggregation.by_template";
         private const string ByFamilyProfileId = "aggregation.by_family";
@@ -83,7 +87,8 @@ namespace Ludots.Tests.GAS
 
             Assert.That(slots[1].AbilityId, Is.EqualTo(EliteChargeAbilityId),
                 "charge family cell represents its first member (elite marine, lowest entity id).");
-            Assert.That(slots[1].DisplayLabel, Is.EqualTo("Elite Charge"));
+            Assert.That(slots[1].DisplayLabel, Is.EqualTo("Charge shot"),
+                "family profile display names come from the configured catalog tag, not from a representative ability.");
             Assert.That(slots[1].DetailLabel, Does.StartWith("3 owners | "), "elite + both tanks in one family cell.");
 
             Assert.That(slots[2].AbilityId, Is.EqualTo(StrikeAbilityId), "untagged ability falls back to its own group.");
@@ -114,15 +119,14 @@ namespace Ludots.Tests.GAS
                 "P3: profile switch bumps the revision so open panels re-pull without re-selection.");
 
             int copied = EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots);
-            Assert.That(copied, Is.EqualTo(4), "by_template splits the two charge-cannon templates.");
-            Assert.That(slots[0].AbilityId, Is.EqualTo(StimAbilityId));
-            Assert.That(slots[0].DetailLabel, Does.StartWith("3 owners | "));
-            Assert.That(slots[1].AbilityId, Is.EqualTo(TankChargeAbilityId));
-            Assert.That(slots[1].DetailLabel, Does.StartWith("2 owners | "));
-            Assert.That(slots[2].AbilityId, Is.EqualTo(EliteChargeAbilityId));
-            Assert.That(slots[2].DetailLabel, Does.Not.Contain("owners |"), "single-member cell keeps the plain detail.");
-            Assert.That(slots[3].AbilityId, Is.EqualTo(StrikeAbilityId));
-            Assert.That(slots[3].DetailLabel, Does.StartWith("5 owners | "));
+            Assert.That(copied, Is.EqualTo(7), "by_template preserves unit-template command rows and slot positions.");
+            Assert.That(CountAbility(slots, copied, StrikeAbilityId), Is.EqualTo(3));
+            Assert.That(CountAbility(slots, copied, StimAbilityId), Is.EqualTo(2));
+            Assert.That(CountAbility(slots, copied, TankChargeAbilityId), Is.EqualTo(1));
+            Assert.That(CountAbility(slots, copied, EliteChargeAbilityId), Is.EqualTo(1));
+            Assert.That(FirstDetail(slots, copied, StrikeAbilityId), Does.StartWith("2 owners | "));
+            Assert.That(FirstDetail(slots, copied, EliteChargeAbilityId), Does.Not.Contain("owners |"),
+                "single-member unit-template cell keeps the plain detail.");
 
             collectionSource.SetAggregationProfile(ByFamilyProfileId);
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3),
@@ -217,13 +221,13 @@ namespace Ludots.Tests.GAS
                 RegisterAbility(engine, EliteChargeAbilityId, "Elite Charge", "Elite charge detail", ChargeFamilyTag);
                 RegisterAbility(engine, FormVariantAbilityId, "Form Variant", "Form variant detail", catalogTag: null);
 
-                Entity marine1 = CreateActor(engine.World, "Marine 1", StrikeAbilityId, StimAbilityId);
-                Entity marine2 = CreateActor(engine.World, "Marine 2", StrikeAbilityId, StimAbilityId);
+                Entity marine1 = CreateActor(engine.World, "Marine 1", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
+                Entity marine2 = CreateActor(engine.World, "Marine 2", MarineTemplateKeyId, StrikeAbilityId, StimAbilityId);
                 // Elite marine slot layout = [0: strike, 1: stim, 2: charge cannon] (slots are panel-agnostic).
-                Entity elite = CreateActor(engine.World, "Elite Marine", StrikeAbilityId, StimAbilityId, EliteChargeAbilityId);
+                Entity elite = CreateActor(engine.World, "Elite Marine", EliteTemplateKeyId, StrikeAbilityId, StimAbilityId, EliteChargeAbilityId);
                 engine.World.Add(elite, new AbilityFormSlotBuffer());
-                Entity tank1 = CreateActor(engine.World, "Tank 1", StrikeAbilityId, TankChargeAbilityId);
-                Entity tank2 = CreateActor(engine.World, "Tank 2", StrikeAbilityId, TankChargeAbilityId);
+                Entity tank1 = CreateActor(engine.World, "Tank 1", TankTemplateKeyId, StrikeAbilityId, TankChargeAbilityId);
+                Entity tank2 = CreateActor(engine.World, "Tank 2", TankTemplateKeyId, StrikeAbilityId, TankChargeAbilityId);
 
                 Entity collectionOwner = engine.World.Create(new Name { Value = "Aggregation Collection Owner" });
                 ReplaceCommandCollection(engine, collectionOwner, new[] { marine1, marine2, elite, tank1, tank2 });
@@ -238,6 +242,34 @@ namespace Ludots.Tests.GAS
 
                 return new SelectionFixture(collectionOwner, elite);
             }
+        }
+
+        private static int CountAbility(EntityCommandPanelSlotView[] slots, int count, int abilityId)
+        {
+            int result = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (slots[i].AbilityId == abilityId)
+                {
+                    result++;
+                }
+            }
+
+            return result;
+        }
+
+        private static string FirstDetail(EntityCommandPanelSlotView[] slots, int count, int abilityId)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (slots[i].AbilityId == abilityId)
+                {
+                    return slots[i].DetailLabel;
+                }
+            }
+
+            Assert.Fail($"Ability {abilityId} was not copied.");
+            return string.Empty;
         }
 
         private static GameEngine CreateEngineWithCommandPanelMod()
@@ -287,9 +319,12 @@ namespace Ludots.Tests.GAS
             registry.Register(abilityId, in definition, "CollectionGasEntityCommandPanelAggregationTests");
         }
 
-        private static Entity CreateActor(World world, string name, params int[] abilityIds)
+        private static Entity CreateActor(World world, string name, int templateKeyId, params int[] abilityIds)
         {
-            Entity actor = world.Create(new Name { Value = name }, new AbilityStateBuffer());
+            Entity actor = world.Create(
+                new Name { Value = name },
+                new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
+                new AbilityStateBuffer());
             ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
             for (int i = 0; i < abilityIds.Length; i++)
             {

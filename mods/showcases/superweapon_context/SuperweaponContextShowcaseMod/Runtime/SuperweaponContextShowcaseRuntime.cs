@@ -24,8 +24,11 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private bool _pendingTargetCommit;
         private bool _showcaseHudSuppressed;
+        private bool _markerDescriptorsReady;
         private int _autoConfirmFrame;
         private int _activeFrame;
+        private EntityCollectionDescriptor _casterMarkerDescriptor;
+        private EntityCollectionDescriptor _targetMarkerDescriptor;
         private readonly SuperweaponContextShowcasePanelController _panelController;
 
         public SuperweaponContextShowcaseState State { get; } = new();
@@ -95,6 +98,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _pendingTargetCommit = true;
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = true;
             SuppressNonEssentialHud(engine);
+            PublishShowcaseMarkers(engine);
             BumpRevision();
         }
 
@@ -118,9 +122,12 @@ namespace SuperweaponContextShowcaseMod.Runtime
             if (_pendingTargetCommit)
             {
                 CommitShowcaseTargets(engine);
+                PublishShowcaseMarkers(engine);
                 _pendingTargetCommit = false;
                 BumpRevision();
             }
+
+            TryRunAutoConfirm(engine);
         }
 
         public void RefreshPanel(GameEngine engine)
@@ -211,6 +218,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
             _activeFrame = 0;
             _autoConfirmFrame = -1;
             _pendingTargetCommit = false;
+            ClearShowcaseMarkers(engine);
             engine.GlobalContext[InteractionShowcaseIds.SuppressUiPanelKey] = false;
             RestoreSuppressedHud(engine);
             _panelController.Clear();
@@ -326,6 +334,72 @@ namespace SuperweaponContextShowcaseMod.Runtime
             targets[1] = State.Vanguard;
             writer.CommitCast(State.LocalPlayer, targets, EntityCollectionSourceKind.UiAcquisition);
             State.RoutedTargetCount = targets.Length;
+        }
+
+        private void PublishShowcaseMarkers(GameEngine engine)
+        {
+            if (State.Commander == Entity.Null ||
+                State.Arcweaver == Entity.Null ||
+                State.Vanguard == Entity.Null ||
+                !engine.World.IsAlive(State.Commander))
+            {
+                return;
+            }
+
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires EntityCollectionStore.");
+            EnsureMarkerDescriptors();
+
+            Span<Entity> caster = stackalloc Entity[1];
+            caster[0] = State.Commander;
+            store.Replace(State.Commander, in _casterMarkerDescriptor, caster, State.Commander);
+
+            Span<Entity> targets = stackalloc Entity[2];
+            targets[0] = State.Arcweaver;
+            targets[1] = State.Vanguard;
+            store.Replace(State.Commander, in _targetMarkerDescriptor, targets, State.Commander);
+        }
+
+        private void ClearShowcaseMarkers(GameEngine engine)
+        {
+            if (State.Commander == Entity.Null)
+            {
+                return;
+            }
+
+            Entity owner = State.Commander;
+            if (!engine.World.IsAlive(owner))
+            {
+                return;
+            }
+
+            var store = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("Superweapon context showcase requires EntityCollectionStore.");
+            EnsureMarkerDescriptors();
+            store.Replace(owner, in _casterMarkerDescriptor, ReadOnlySpan<Entity>.Empty, owner);
+            store.Replace(owner, in _targetMarkerDescriptor, ReadOnlySpan<Entity>.Empty, owner);
+        }
+
+        private void EnsureMarkerDescriptors()
+        {
+            if (_markerDescriptorsReady)
+            {
+                return;
+            }
+
+            _casterMarkerDescriptor = EntityCollectionDescriptor.Create(
+                SuperweaponContextShowcaseIds.CasterMarkerCollectionKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.Display,
+                title: "Superweapon caster marker",
+                summary: "Commander currently owns the superweapon confirmation context.");
+            _targetMarkerDescriptor = EntityCollectionDescriptor.Create(
+                SuperweaponContextShowcaseIds.TargetMarkerCollectionKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.Display,
+                title: "Superweapon locked target markers",
+                summary: "Arcweaver and Vanguard are locked by the active superweapon confirmation.");
+            _markerDescriptorsReady = true;
         }
 
         private bool TryGetActiveSuperweaponFrame(InteractionContextStack stack, out InteractionContextFrame frame)

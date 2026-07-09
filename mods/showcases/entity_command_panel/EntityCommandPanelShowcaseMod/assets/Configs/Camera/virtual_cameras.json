@@ -1,0 +1,22 @@
+[
+  {
+    "id": "Camera.Profile.Tactical",
+    "displayName": "Entity Command Panel Showcase",
+    "priority": 120,
+    "rigKind": "Orbit",
+    "distanceCm": 3600,
+    "pitch": 54,
+    "fovYDeg": 42,
+    "yaw": 180,
+    "minDistanceCm": 2400,
+    "maxDistanceCm": 7600,
+    "minPitchDeg": 44,
+    "maxPitchDeg": 68,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
+  }
+]

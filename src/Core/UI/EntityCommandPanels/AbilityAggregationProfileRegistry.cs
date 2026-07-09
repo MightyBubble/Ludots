@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.UI.EntityCommandPanels
@@ -21,8 +22,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// at install, so profiles must install after ability catalog tags are registered.</item>
     /// <item><c>template.id</c> / <c>ability.id</c> — in this repository ability ids are definition ids
     /// (<see cref="AbilityIdRegistry"/> is the single id space; there is no separate instantiated-ability
-    /// id), so both expressions compile to the same identity key selector. They stay distinct expressions
-    /// for config intent and forward compatibility.</item>
+    /// id). <c>template.id</c> groups by owner unit template plus slot index, while
+    /// <c>ability.id</c> groups by ability definition id.</item>
     /// </list>
     /// Unknown prefixes fail fast at install. Steady-state evaluation is allocation free.
     /// </summary>
@@ -38,8 +39,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
         {
             _profileIds = profileIdRegistry ?? throw new ArgumentNullException(nameof(profileIdRegistry));
             _selectorFactoriesByPrefix.Add("catalog", CompileCatalogSelector);
-            _selectorFactoriesByPrefix.Add("template", CompileIdentitySelector);
-            _selectorFactoriesByPrefix.Add("ability", CompileIdentitySelector);
+            _selectorFactoriesByPrefix.Add("template", CompileTemplateSelector);
+            _selectorFactoriesByPrefix.Add("ability", CompileAbilitySelector);
         }
 
         /// <summary>Profile id space; panel routers reference aggregation profiles by these ids.</summary>
@@ -144,6 +145,9 @@ namespace Ludots.Core.UI.EntityCommandPanels
                 ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? world.Get<ItemGrantedSlotBuffer>(member) : default;
                 bool hasGranted = world.Has<GrantedSlotBuffer>(member);
                 GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(member) : default;
+                int ownerTemplateKeyId = world.Has<EntityTemplateKeyRef>(member)
+                    ? world.Get<EntityTemplateKeyRef>(member).TemplateKeyId
+                    : 0;
 
                 for (int slotIndex = 0; slotIndex < AbilityStateBuffer.CAPACITY; slotIndex++)
                 {
@@ -161,7 +165,8 @@ namespace Ludots.Core.UI.EntityCommandPanels
                         continue;
                     }
 
-                    long key = profile.Selector(in slot, abilities);
+                    var slotContext = new AbilityAggregationSlotContext(member, ownerTemplateKeyId, slotIndex);
+                    long key = profile.Selector(in slot, in slotContext, abilities);
                     result.AppendMember(key, member, slotIndex);
                 }
             }
@@ -259,7 +264,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
                 }
             }
 
-            return (in AbilitySlotState slot, AbilityDefinitionRegistry abilities) =>
+            return (in AbilitySlotState slot, in AbilityAggregationSlotContext _, AbilityDefinitionRegistry abilities) =>
             {
                 if (slot.AbilityId > 0)
                 {
@@ -275,17 +280,53 @@ namespace Ludots.Core.UI.EntityCommandPanels
         }
 
         /// <summary>
-        /// <c>template.id</c> / <c>ability.id</c>: both compile to the identity key because ability ids
-        /// are definition ids in this repository (see class doc). Only the <c>id</c> field is valid.
+        /// <c>template.id</c>: one command layout cell per owner unit template and slot index.
         /// </summary>
-        private static AbilityAggregationKeySelector CompileIdentitySelector(string argument)
+        private static AbilityAggregationKeySelector CompileTemplateSelector(string argument)
         {
             if (!string.Equals(argument, "id", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException($"groupBy field '{argument}' is not supported; expected 'id'.");
             }
 
-            return static (in AbilitySlotState slot, AbilityDefinitionRegistry _) => IdentityKey(in slot);
+            return static (in AbilitySlotState _, in AbilityAggregationSlotContext context, AbilityDefinitionRegistry _) =>
+            {
+                if (context.OwnerTemplateKeyId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Aggregation profile 'template.id' requires owner entity {context.Owner} to have EntityTemplateKeyRef.");
+                }
+
+                return AbilityAggregationKeyKinds.MakeKey(
+                    AbilityAggregationKeyKinds.OwnerTemplateSlot,
+                    MakeOwnerTemplateSlotId(context.OwnerTemplateKeyId, context.SlotIndex));
+            };
+        }
+
+        /// <summary><c>ability.id</c>: one command cell per ability definition id.</summary>
+        private static AbilityAggregationKeySelector CompileAbilitySelector(string argument)
+        {
+            if (!string.Equals(argument, "id", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"groupBy field '{argument}' is not supported; expected 'id'.");
+            }
+
+            return static (in AbilitySlotState slot, in AbilityAggregationSlotContext _, AbilityDefinitionRegistry _) => IdentityKey(in slot);
+        }
+
+        private static int MakeOwnerTemplateSlotId(int ownerTemplateKeyId, int slotIndex)
+        {
+            if (ownerTemplateKeyId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ownerTemplateKeyId));
+            }
+
+            if ((uint)slotIndex >= (uint)AbilityStateBuffer.CAPACITY)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slotIndex));
+            }
+
+            return ownerTemplateKeyId * AbilityStateBuffer.CAPACITY + slotIndex;
         }
 
         /// <summary>Per-ability identity: ability id when present, otherwise the backing template entity id.</summary>

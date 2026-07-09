@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 
@@ -294,8 +295,14 @@ namespace EntityCommandPanelMod.Runtime
                     continue;
                 }
 
+                long groupKey = _aggregationResult.GetGroupKey(groupIndex);
+                string displayLabel = ResolveAggregateDisplayLabel(groupKey, view.DisplayLabel);
                 int aggregateIndex = aggregateCount++;
-                _aggregatedSlots[aggregateIndex] = WithDisplaySlotIndexAndDetail(in view, aggregateIndex, view.DetailLabel);
+                _aggregatedSlots[aggregateIndex] = WithDisplaySlotIndexLabelAndDetail(
+                    in view,
+                    aggregateIndex,
+                    displayLabel,
+                    view.DetailLabel);
                 _ownerCounts[aggregateIndex] = memberCount;
                 if (updateActivationMap)
                 {
@@ -308,7 +315,11 @@ namespace EntityCommandPanelMod.Runtime
             int written = Math.Min(destination.Length, aggregateCount);
             for (int i = 0; i < written; i++)
             {
-                destination[i] = WithDisplaySlotIndexAndDetail(_aggregatedSlots[i], i, ResolveAggregateDetail(i));
+                destination[i] = WithDisplaySlotIndexLabelAndDetail(
+                    _aggregatedSlots[i],
+                    i,
+                    _aggregatedSlots[i].DisplayLabel,
+                    ResolveAggregateDetail(i));
             }
 
             return destination.IsEmpty ? aggregateCount : written;
@@ -525,9 +536,35 @@ namespace EntityCommandPanelMod.Runtime
             return (value & flag) != 0;
         }
 
-        private static EntityCommandPanelSlotView WithDisplaySlotIndexAndDetail(
+        private static string ResolveAggregateDisplayLabel(long groupKey, string fallback)
+        {
+            int kind = (int)(groupKey >> 32);
+            if (kind != AbilityAggregationKeyKinds.CatalogTag)
+            {
+                return fallback;
+            }
+
+            string tagName = TagRegistry.GetName((int)(uint)groupKey);
+            if (string.IsNullOrWhiteSpace(tagName))
+            {
+                return fallback;
+            }
+
+            int dot = tagName.LastIndexOf('.');
+            string leaf = dot >= 0 && dot + 1 < tagName.Length ? tagName[(dot + 1)..] : tagName;
+            if (leaf.Length == 0)
+            {
+                return fallback;
+            }
+
+            leaf = leaf.Replace('_', ' ');
+            return string.Concat(char.ToUpperInvariant(leaf[0]), leaf.Length == 1 ? string.Empty : leaf[1..]);
+        }
+
+        private static EntityCommandPanelSlotView WithDisplaySlotIndexLabelAndDetail(
             in EntityCommandPanelSlotView slot,
             int displaySlotIndex,
+            string displayLabel,
             string detailLabel)
         {
             return new EntityCommandPanelSlotView(
@@ -538,7 +575,7 @@ namespace EntityCommandPanelMod.Runtime
                 slot.CooldownPermille,
                 slot.ChargesCurrent,
                 slot.ChargesMax,
-                slot.DisplayLabel,
+                displayLabel,
                 detailLabel,
                 slot.ActionId);
         }

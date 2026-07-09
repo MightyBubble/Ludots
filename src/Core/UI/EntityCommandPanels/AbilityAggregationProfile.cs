@@ -42,6 +42,9 @@ namespace Ludots.Core.UI.EntityCommandPanels
         /// <summary>Key id is a template entity id (slot backed by a template entity without an ability id).</summary>
         public const int TemplateEntityId = 3;
 
+        /// <summary>Key id is the owner unit template plus command slot index.</summary>
+        public const int OwnerTemplateSlot = 4;
+
         /// <summary>Compose a group key from a kind namespace and an id.</summary>
         public static long MakeKey(int kind, int id)
         {
@@ -53,7 +56,24 @@ namespace Ludots.Core.UI.EntityCommandPanels
     /// Computes the group key for one effective (non-empty) ability slot. Returning the same key
     /// for two slots merges them into one panel group. Must be pure and allocation free.
     /// </summary>
-    public delegate long AbilityAggregationKeySelector(in AbilitySlotState slot, AbilityDefinitionRegistry abilities);
+    public readonly struct AbilityAggregationSlotContext
+    {
+        public AbilityAggregationSlotContext(Entity owner, int ownerTemplateKeyId, int slotIndex)
+        {
+            Owner = owner;
+            OwnerTemplateKeyId = ownerTemplateKeyId;
+            SlotIndex = slotIndex;
+        }
+
+        public Entity Owner { get; }
+        public int OwnerTemplateKeyId { get; }
+        public int SlotIndex { get; }
+    }
+
+    public delegate long AbilityAggregationKeySelector(
+        in AbilitySlotState slot,
+        in AbilityAggregationSlotContext context,
+        AbilityDefinitionRegistry abilities);
 
     /// <summary>
     /// Compiles a <c>groupBy</c> expression into a key selector at profile install time.

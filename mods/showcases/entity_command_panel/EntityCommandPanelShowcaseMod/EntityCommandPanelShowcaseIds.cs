@@ -27,8 +27,16 @@ namespace EntityCommandPanelShowcaseMod
 
         public const int ExpectedSourceActorCount = 3;
         public const int ExpectedFamilyTileCount = 8;
-        public const int ExpectedIdentityTileCount = 24;
+        public const int ExpectedTemplateTileCount = 24;
+        public const int ExpectedAbilityTileCount = 21;
         public const int ProfileButtonCapacity = 8;
+
+        public const string TemplateProjectionCollectionKey = "collection.ui.entity_command_panel.template";
+        public const string AbilityProjectionCollectionKey = "collection.ui.entity_command_panel.ability";
+        public const string FamilyProjectionCollectionKey = "collection.ui.entity_command_panel.family";
+        public const string TemplateProjectionMarkerDefId = "entity_command_panel.visual.template_projection_marker";
+        public const string AbilityProjectionMarkerDefId = "entity_command_panel.visual.ability_projection_marker";
+        public const string FamilyProjectionMarkerDefId = "entity_command_panel.visual.family_projection_marker";
 
         public const string ArcweaverName = "Arcweaver";
         public const string VanguardName = "Vanguard";

@@ -16,8 +16,8 @@ PR581 has reached the current RFC-0065 closeout target for formal Selection reti
 
 | Question | Status | Evidence |
 |---|---|---|
-| Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 timeline, A4 command-source/scheme, A4 blink/mixed-selection UI timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
-| Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable timelines. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
+| Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 world-space superweapon timeline, A4 command-source/scheme, A4 world-space blink/mixed-dispatch timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
+| Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable world-space timelines with visible units, rings, and state changes. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
 | Is Selection retired? | Yes for formal Selection APIs and core command authority | Production and test code now use `EntityCollectionStore`, explicit owner/key collection reads, and `CommandSourceAcquisitionSystem`. `EntityCollectionContextRuntime` is intentionally collection-generic and does not hard-code or fall back to command-source. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
 
 ## Final 2026-07-09 Selection-Retirement Pass
@@ -80,17 +80,17 @@ Latest PR review checked on 2026-07-06:
 
 ## Workflow A - Visible UAT And Showcase
 
-Current status: A1 headless/WebApp/DataPlane evidence completed; A1 CEF toggle/revoke framebuffer captured; A2 official launcher binding, WebUI/CEF War3-style bottom command panel, and player-readable Template -> Family -> Ability screenshots captured; A3 official launcher binding and player-readable Raylib timeline screenshots captured; A4 official launcher binding, command-source/scheme evidence, and blink/mixed-selection UI timeline captured; SHOW-3 referee multi-control-domain projection headless evidence and GUI marker/palette evidence completed.
+Current status: A1 headless/WebApp/DataPlane evidence completed; A1 CEF toggle/revoke framebuffer captured; A2 official launcher binding, WebUI/CEF War3-style bottom command panel, and player-readable Template -> Family -> Ability screenshots captured; A3 official launcher binding and player-readable Raylib world-space timeline screenshots captured; A4 official launcher binding, command-source/scheme evidence, and blink/mixed-dispatch world-space timeline captured; SHOW-3 referee multi-control-domain projection headless evidence and GUI marker/palette evidence completed.
 
-Reason: the current environment can produce real Raylib/CEF framebuffer screenshots and multi-frame Raylib timelines. This pass completes the A1 headless path, launcher binding check, packaged CEF WebApp build, DataPlane topic/command contract, full CEF off -> on -> revoke screenshots, and standard artifacts under `artifacts/acceptance/control-plane-projection-showcase/`. It also completes A2 WebUI/CEF evidence under `artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final9_*.png`: the War3-style bottom command panel shows the same three command-source heroes across Template, Family, and Ability aggregation profiles. SHOW-3 referee projection headless evidence under `artifacts/acceptance/rfc0065-referee-projection-showcase/` and GUI evidence under `artifacts/rfc0065-visible-uat/control-plane-projection-cef/show3_player_referee_markers2_*.png` show marked=1/grants=2/total=3, then after the second grant revoke the view shrinks to marked=1/grants=1/total=2 while the outsider row remains excluded. A4 blink/mixed-selection now has a readable UI timeline for All Together / One By One / Nearest Top-N; it is UI timeline evidence, not in-world 3D motion.
+Reason: the current environment can produce real Raylib/CEF framebuffer screenshots and multi-frame Raylib timelines. This pass completes the A1 headless path, launcher binding check, packaged CEF WebApp build, DataPlane topic/command contract, full CEF off -> on -> revoke screenshots, and standard artifacts under `artifacts/acceptance/control-plane-projection-showcase/`. It also completes A2 WebUI/CEF evidence under `artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final13_*.png`: the War3-style bottom command panel shows the same three command-source heroes across Template, Family, and Ability aggregation profiles, and the world view now keeps the three units visible with blue/yellow/green profile projection rings. SHOW-3 referee projection headless evidence under `artifacts/acceptance/rfc0065-referee-projection-showcase/` and GUI evidence under `artifacts/rfc0065-visible-uat/control-plane-projection-cef/show3_player_referee_markers2_*.png` show marked=1/grants=2/total=3, then after the second grant revoke the view shrinks to marked=1/grants=1/total=2 while the outsider row remains excluded. A3 now shows Commander plus the two locked targets in world space through pending -> complete -> restored. A4 now shows All Together / One By One / Nearest Top-N with visible world actors and response rings, not only a UI panel.
 
 | Item | Current status | Remaining work |
 |---|---|---|
 | A1 control-plane projection | Headless path, launcher binding, packaged CEF WebApp assets, DataPlane topic/command, O-key toggle, profile-owned Controls grant/revoke, standard artifacts, and CEF toggle/revoke screenshots are complete. The captured panel visibly shows Proxy Off -> Proxy On -> Proxy Off/revoke, command acknowledgements, owned/proxy/view counts, and ring shrink. | Keep marker performer topology graph-rule conversion as a separate follow-up if RFC owner still requires the final PROV-4b rule form. |
 | SHOW-3 referee projection | Headless referee projection evidence is complete, and GUI marker/palette evidence now shows `SHOW-3 Referee`: phase0=1, phase1=2, foreign excluded=1, then `P2 Revoked` with phase1=1/view=2. | None for GUI marker/palette UAT. |
-| A2 / SHOW-4 command panel aggregation | Headless/runtime aggregation evidence exists, and the latest WebUI/CEF War3-style 45/135/225 screenshots pass player readability: Template shows 3 hero sheets x 8 commands = 24 tiles; Family shows 8 shared family tiles with 3 owners each; Ability keeps repeated labels owner-qualified across Arcweaver, Vanguard, and Commander. | None for the current framebuffer/timeline UAT pass. |
-| A3 superweapon context | `SuperweaponContextShowcaseMod`, ability-owned interaction frame, target collection routing, confirm IMC path, standard headless artifacts, formal launcher binding `superweapon_context_showcase`, and a real Raylib pending -> complete/restored timeline are complete. | Add video only if terminal closeout requires video instead of timeline PNGs. |
-| A4 pointer intent/dispatch/scheme | Formal launcher binding `interaction_showcase`, readable Raylib timeline, and headless production path evidence exist for right-click ground command -> shared moveTo `OrderBuffer`; tests and screenshots show default command mode, hover ignored, active command group rows, and blink dispatch variants over a mixed command group. | Boundary: blink evidence is a readable UI timeline, not animated in-world displacement. |
+| A2 / SHOW-4 command panel aggregation | Headless/runtime aggregation evidence exists, and the latest WebUI/CEF War3-style 80/160/260 screenshots pass player readability: Template shows 3 hero sheets x 8 commands = 24 tiles with blue world rings; Family shows 8 catalog families such as Projectile with yellow world rings; Ability shows 21 distinct ability definitions with shared Fireball contributor labels and green world rings. | None for the current framebuffer/timeline UAT pass. |
+| A3 superweapon context | `SuperweaponContextShowcaseMod`, ability-owned interaction frame, target collection routing, confirm IMC path, standard headless artifacts, formal launcher binding `superweapon_context_showcase`, and a real Raylib world-space pending -> complete/restored timeline are complete. | Add video only if terminal closeout requires video instead of timeline PNGs. |
+| A4 pointer intent/dispatch/scheme | Formal launcher binding `interaction_showcase`, readable Raylib world-space timeline, and headless production path evidence exist for right-click ground command -> shared moveTo `OrderBuffer`; tests and screenshots show default command mode, hover ignored, active command group rows, and blink dispatch variants over a mixed command group with visible world actors/rings. | Add video only if terminal closeout requires video instead of timeline PNGs. |
 
 Validated headless evidence from the showcase explorer:
 
@@ -99,17 +99,17 @@ Validated headless evidence from the showcase explorer:
 - `EntityCommandPanelShowcaseAcceptanceTests|SuperweaponContextShowcaseAcceptanceTests|Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests`: 67/67 passed in the latest focused closeout filter; `Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests` alone is now 3/3.
 - GasTests Release filtered A1/A2/A3/A4 kernel subsets: A1 8, A2 13, A3 25, A4 46 passed.
 
-Latest visible framebuffer evidence captured and cross-checked on 2026-07-08:
+Latest visible framebuffer evidence captured and cross-checked on 2026-07-09:
 
 | Slice | Binding / selector | Screenshot | Static readability verdict | Boundary |
 |---|---|---|---|---|
 | A1 / SHOW-2 | `control_plane_projection_showcase` with CEF provider | `artifacts/rfc0065-visible-uat/control-plane-projection-cef/a1_player_command_grant_001_f3000.png`, `a1_player_command_grant_002_f10000.png`, `a1_player_command_grant_003_f15000.png` | PASS: Ally Off -> Ally On -> Ally Off/revoke is readable; Mine/Ally/Total counts change 1/0/1 -> 1/1/2 -> 1/0/1. | Timeline PNGs, not a video file. |
-| A2 / SHOW-4 | `entity_command_panel_showcase` WebUI | `artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final9_001_f0045.png`, `a2_webui_war3_final9_002_f0135.png`, `a2_webui_war3_final9_003_f0225.png` | PASS: WebUI/CEF War3-style bottom panel is readable; Template shows 24 tiles across three heroes, Family shows 8 shared families with x3 owners, and Ability shows owner-qualified splits. | Timeline PNGs, not a video file. |
-| A3 / SHOW-1 | `superweapon_context_showcase` | `artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_final_001_f0020.png`, `a3_superweapon_context_final_002_f0090.png`, `a3_superweapon_context_final_003_f0180.png` | PASS: first frame shows Superweapon Targeting pending with Arcweaver + Vanguard locked; later frames show Confirmed and targeting restored. | Timeline PNGs, not a video file. |
-| A4 / SHOW-5/6 | `interaction_showcase` | `artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_final_001_f0045.png`, `a4_blink_mixed_final_002_f0135.png`, `a4_blink_mixed_final_003_f0225.png` | PASS with boundary: All Together, One By One, and Nearest Top-N blink routing variants are readable over the same mixed command group. | UI timeline evidence, not in-world 3D motion. |
+| A2 / SHOW-4 | `entity_command_panel_showcase` WebUI | `artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final13_001_f0080.png`, `a2_webui_war3_final13_002_f0160.png`, `a2_webui_war3_final13_003_f0260.png` | PASS: WebUI/CEF War3-style bottom panel is readable and no longer black-empty in world space; Template shows 24 unit-template slots with blue projection rings, Family shows 8 catalog families with yellow projection rings, and Ability shows 21 distinct ability definitions with shared Fireball contributor labels and green projection rings. | Timeline PNGs, not a video file. |
+| A3 / SHOW-1 | `superweapon_context_showcase` | `artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_world_final2_001_f0060.png`, `a3_superweapon_context_world_final2_002_f0140.png`, `a3_superweapon_context_world_final2_003_f0220.png` | PASS: Commander, Arcweaver, and Vanguard are visible in world space; the panel progresses from confirm pending to confirm complete and then targeting restored. | Timeline PNGs, not a video file. |
+| A4 / SHOW-5/6 | `interaction_showcase` | `artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_world_final_001_f0045.png`, `a4_blink_mixed_world_final_002_f0135.png`, `a4_blink_mixed_world_final_003_f0225.png` | PASS: All Together, One By One, and Nearest Top-N are readable over the same mixed command group, with visible world actors and response rings. | Timeline PNGs, not a video file. |
 | SHOW-3 / referee | `control_plane_projection_showcase` with CEF provider | `artifacts/rfc0065-visible-uat/control-plane-projection-cef/show3_player_referee_markers2_001_f0060.png`, `show3_player_referee_markers2_002_f0160.png`, `show3_player_referee_markers2_003_f0300.png` | PASS: Marked=1/Grants=2/Total=3 is readable, then Grant Revoked shrinks grants to 1 and total to 2 while outsiders stay excluded. | Timeline PNGs, not a video file. |
 
-Old `001` and `002` screenshots are not counted as final evidence. A2 `005` / `006`, A3 `004`, A3 `a3_superweapon_context_readable_*`, and A4 `004` were superseded by the Cucumber/player-readability pass. A2 `a2_webui_final_*` was a later but failed waiting-state rerun; it is superseded by the accepted WebUI/CEF War3-style evidence `a2_webui_war3_final9_*`.
+Old `001` and `002` screenshots are not counted as final evidence. A2 `005` / `006`, A2 `a2_webui_final_*`, A2 `a2_webui_war3_final9_*`, A2 `a2_webui_war3_final10_*`, A2 `a2_webui_war3_final11_*`, and A2 `a2_webui_war3_final12_*` were superseded by the world-space readability pass. A3 `004`, A3 `a3_superweapon_context_readable_*`, A3 `a3_superweapon_context_final_*`, A3 `a3_superweapon_context_world_final_001_*`, A4 `004`, and A4 `a4_blink_mixed_final_*` were superseded by the final world-space Cucumber/player-readability pass. The accepted A2 WebUI/CEF War3-style evidence is `a2_webui_war3_final13_*`; accepted A3/A4 evidence is `a3_superweapon_context_world_final2_*` and `a4_blink_mixed_world_final_*`.
 
 Local ignored summary artifact: `artifacts/rfc0065-visible-uat/visible-uat-summary.md`. It is useful operator evidence, but this tracked closeout does not rely on it as PR-tracked proof.
 
@@ -172,7 +172,7 @@ SHOW-4 / Entity command panel rerun on 2026-07-06:
 dotnet test src\Tests\GasTests\GasTests.csproj -c Release --filter "FullyQualifiedName~EntityCommandPanelShowcaseAcceptanceTests" --logger "console;verbosity=normal"
 
 Passed: 2/2
-Evidence covered: source registry resolves `gas.collection-ability-slots` to `CollectionGasEntityCommandPanelSource`; Core template/ability profiles and EntityCommandPanelMod by-family fragment are installed; EntityCommandPanelShowcaseMod publishes the `collection.command.source` host collection; toolbar runtime switches Family/Template/Ability profiles; copied slots prove 8 by-family groups and 24 identity-profile commands; visible-UAT auto timeline cycles Template -> Family -> Ability.
+Evidence covered: source registry resolves `gas.collection-ability-slots` to `CollectionGasEntityCommandPanelSource`; Core template/ability profiles and EntityCommandPanelMod by-family fragment are installed; EntityCommandPanelShowcaseMod publishes the `collection.command.source` host collection; toolbar runtime switches Family/Template/Ability profiles; copied slots prove 8 by-family groups, 24 by-template slots, and 21 by-ability groups; visible-UAT auto timeline cycles Template -> Family -> Ability.
 ```
 
 SHOW-4 artifacts generated:
@@ -206,14 +206,14 @@ Passed: 2/2
 
 ```text
 LUDOTS_ENTITY_COMMAND_PANEL_AUTO_PROFILE_TIMELINE=1
-LUDOTS_AUTO_EXIT_FRAME=260
-LUDOTS_TAKE_SCREENSHOT_FRAMES=45,135,225
+LUDOTS_AUTO_EXIT_FRAME=300
+LUDOTS_TAKE_SCREENSHOT_FRAMES=80,160,260
 launch entity_command_panel_showcase --adapter raylib --build auto
 
 Captured:
-- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final9_001_f0045.png
-- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final9_002_f0135.png
-- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final9_003_f0225.png
+- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final13_001_f0080.png
+- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final13_002_f0160.png
+- artifacts/rfc0065-visible-uat/entity-command-panel/a2_webui_war3_final13_003_f0260.png
 
 Note: launcher returned nonzero after capture because Chromium logged `Failed opening key Software\Chromium to set usagestats`; CEF rendered and the screenshots were captured.
 ```
@@ -227,17 +227,17 @@ Passed: 3/3
 Evidence covered: ability-owned interaction context frame, target collection routing, confirm IMC path, event-gated completion, default-frame restoration, and visible-UAT auto confirm timeline.
 ```
 
-Visible UAT rerun on 2026-07-08:
+Visible UAT rerun on 2026-07-09:
 
 ```text
-LUDOTS_SUPERWEAPON_CONTEXT_AUTO_CONFIRM_FRAME=20
-LUDOTS_TAKE_SCREENSHOT_FRAMES=20,90,180
-launch superweapon_context_showcase --adapter raylib --build never
+LUDOTS_SUPERWEAPON_CONTEXT_AUTO_CONFIRM_FRAME=90
+LUDOTS_TAKE_SCREENSHOT_FRAMES=60,140,220
+launch superweapon_context_showcase --adapter raylib
 
 Captured and visually accepted:
-- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_final_001_f0020.png
-- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_final_002_f0090.png
-- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_final_003_f0180.png
+- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_world_final2_001_f0060.png
+- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_world_final2_002_f0140.png
+- artifacts/rfc0065-visible-uat/superweapon-context/a3_superweapon_context_world_final2_003_f0220.png
 ```
 
 SHOW-5/6 production path rerun on 2026-07-07:
@@ -249,18 +249,18 @@ Passed: 3/3
 Evidence covered: production startup active `scheme.default`, default command intent, startup command-source collection, hover ambiguity ignored for ground commands, `dispatch.all_together`, shared moveTo order id, and OrderBuffer promotion; visible-UAT default -> WASD scheme timeline; plus hot-switch to `scheme.wasd_move`, WASD `Move` Axis2D input through the authoritative snapshot, and `AxisMoveOrderSystem` moveTo promotion.
 ```
 
-Visible blink-routing UAT rerun on 2026-07-08:
+Visible blink-routing UAT rerun on 2026-07-09:
 
 ```text
 LUDOTS_INTERACTION_SHOWCASE_AUTO_BLINK_TIMELINE=1
 LUDOTS_INTERACTION_SHOWCASE_SEED_HOVER_TARGET=1
 LUDOTS_TAKE_SCREENSHOT_FRAMES=45,135,225
-launch interaction_showcase --adapter raylib --build never
+launch interaction_showcase --adapter raylib
 
 Captured and visually accepted:
-- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_final_001_f0045.png
-- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_final_002_f0135.png
-- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_final_003_f0225.png
+- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_world_final_001_f0045.png
+- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_world_final_002_f0135.png
+- artifacts/rfc0065-visible-uat/interaction/a4_blink_mixed_world_final_003_f0225.png
 ```
 
 SHOW-3 referee projection artifacts generated:
@@ -333,6 +333,20 @@ bench.relationship_runtime_collect_any sources=4096 edge_types_per_source=4 iter
 ```
 
 Conclusion: the B1 benchmark guards pass on this Windows workstation in both Debug/no-build and Release, and every benchmark line reports `alloc_bytes=0`. The Release rerun is the preferred local number set. This is still not claimed as a dedicated lab-machine stability run if that stricter B2 gate is required by reviewers.
+
+## Aggregation Configuration Audit - 2026-07-09
+
+Verdict: A2 aggregation is data-driven, but it is not a general graph JSON with `nodes` / `edges`. The actual PR581 contract is a selector-node DSL: `UI/ability_aggregation_profiles.json` declares `groupBy` expressions, and `AbilityAggregationProfileRegistry` compiles each prefix through a registry-backed selector table at install time. Unknown prefixes fail fast.
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Are the aggregation profiles hardcoded in the showcase runtime? | No. | Core installs `aggregation.by_template` and `aggregation.by_ability_id` from `assets/Configs/UI/ability_aggregation_profiles.json`; EntityCommandPanelMod adds `aggregation.by_family` from `mods/EntityCommandPanelMod/assets/Configs/UI/ability_aggregation_profiles.json` with `groupBy: catalog.castFamily`. |
+| Is Family mapping hardcoded as `Fireball -> Projectile`? | No. | Family grouping reads ability `catalogTags` through `TagRegistry`; the showcase data assigns `castFamily.projectile`, `castFamily.mobility`, `castFamily.defense`, and the remaining families in `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/assets/GAS/abilities.json`. |
+| Is Template mapping hardcoded by hero names? | No for the aggregation key. | `template.id` requires `EntityTemplateKeyRef` and groups by owner unit template plus slot index; the showcase's `assets/Entities/templates.json` supplies the unit-template ability layout. |
+| Is Ability mapping hardcoded by display labels? | No. | `ability.id` groups by ability definition id; repeated labels collapse only when they share the same ability definition id, not because the text matches. |
+| Is this a graph-node DSL? | Not in the broad GAS-graph sense. | It is a small selector-node DSL (`catalog.*`, `template.id`, `ability.id`, plus registered prefixes). Calling it a generic graph DSL would be inaccurate. |
+
+The remaining literal strings in A2 are scenario labels, UI captions, and UAT assertions. They describe the showcase evidence; they do not decide aggregation membership.
 
 Subagent D rerun on 2026-07-06:
 
@@ -566,7 +580,7 @@ Completed now:
 - Handoff Workflow A/B/C remapped to completed, blocked, and follow-up buckets.
 - A1 control-plane projection headless/WebApp/DataPlane evidence completed with standard artifacts; CEF toggle/revoke screenshots captured and player-readable.
 - A2/A3/A4 formal launcher bindings added and verified through `run-mod-launcher` resolve.
-- A2 WebUI/CEF War3-style bottom command panel captured and player-readable for Template -> Family -> Ability at frames 45/135/225.
+- A2 WebUI/CEF War3-style bottom command panel captured and player-readable for Template -> Family -> Ability at frames 80/160/260, with world-space profile projection rings visible in all three frames.
 - A3 and A4 real Raylib framebuffer timelines captured through the formal binding selectors and cleaned into player-readable Gherkin-style screenshots.
 - A3 and A4 headless acceptance artifacts regenerated through tests with launcher binding guards.
 - A4 headless acceptance now covers default right-click dispatch, startup CommandSource rows, hover ambiguity, visible-UAT scheme timeline, and `scheme.wasd_move` WASD hot-switch through the production input snapshot/order path; blink/mixed-selection UI timeline screenshots cover all_together, one_by_one, and nearest_top_n.

@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Registry;
 using Ludots.Core.UI.EntityCommandPanels;
 using NUnit.Framework;
@@ -31,6 +32,9 @@ namespace Ludots.Tests.GAS
         private const int EliteChargeAbilityId = 202;
         private const int FormVariantAbilityId = 203;
         private const int AttackAbilityId = 301;
+        private const int MarineTemplateKeyId = 11;
+        private const int EliteTemplateKeyId = 12;
+        private const int TankTemplateKeyId = 21;
 
         private const string ByFamilyProfileId = "aggregation.by_family";
         private const string ByTemplateProfileId = "aggregation.by_template";
@@ -79,16 +83,19 @@ namespace Ludots.Tests.GAS
             int groupCount = harness.Registry.BuildGroups(
                 harness.ProfileId(ByTemplateProfileId), selection.Members, world, harness.Abilities, ref result);
 
-            Assert.That(groupCount, Is.EqualTo(4));
-            AssertGroup(result, 0, IdentityKey(StimAbilityId), 3);
-            AssertGroup(result, 1, IdentityKey(TankChargeAbilityId), 2);
-            AssertGroup(result, 2, IdentityKey(EliteChargeAbilityId), 1);
-            AssertGroup(result, 3, IdentityKey(AttackAbilityId), 5);
-            Assert.That(result.GroupEntities(2).ToArray(), Is.EqualTo(new[] { selection.Elite }));
+            Assert.That(groupCount, Is.EqualTo(7));
+            AssertGroup(result, 0, OwnerTemplateSlotKey(MarineTemplateKeyId, 0), 2);
+            AssertGroup(result, 1, OwnerTemplateSlotKey(MarineTemplateKeyId, 1), 2);
+            AssertGroup(result, 2, OwnerTemplateSlotKey(EliteTemplateKeyId, 0), 1);
+            AssertGroup(result, 3, OwnerTemplateSlotKey(EliteTemplateKeyId, 1), 1);
+            AssertGroup(result, 4, OwnerTemplateSlotKey(EliteTemplateKeyId, 2), 1);
+            AssertGroup(result, 5, OwnerTemplateSlotKey(TankTemplateKeyId, 0), 2);
+            AssertGroup(result, 6, OwnerTemplateSlotKey(TankTemplateKeyId, 1), 2);
+            Assert.That(result.GroupEntities(4).ToArray(), Is.EqualTo(new[] { selection.Elite }));
         }
 
         [Test]
-        public void ByAbilityId_EachDistinctAbilityIdOwnGroup_SameKeysAsTemplate()
+        public void ByAbilityId_EachDistinctAbilityIdOwnGroup_DistinctFromTemplateLayout()
         {
             using var world = World.Create();
             Harness harness = Harness.Create(world);
@@ -102,13 +109,12 @@ namespace Ludots.Tests.GAS
                 harness.ProfileId(ByTemplateProfileId), selection.Members, world, harness.Abilities, ref byTemplate);
 
             Assert.That(abilityGroups, Is.EqualTo(4), "every distinct ability id is its own group.");
-            // Ability ids are definition ids in this repo, so template.id and ability.id are the same key.
-            Assert.That(templateGroups, Is.EqualTo(abilityGroups));
-            for (int i = 0; i < abilityGroups; i++)
-            {
-                Assert.That(byAbility.GetGroupKey(i), Is.EqualTo(byTemplate.GetGroupKey(i)));
-                Assert.That(byAbility.GroupEntities(i).ToArray(), Is.EqualTo(byTemplate.GroupEntities(i).ToArray()));
-            }
+            Assert.That(templateGroups, Is.EqualTo(7), "template.id preserves unit-template command rows and slot positions.");
+            AssertGroup(byAbility, 0, IdentityKey(StimAbilityId), 3);
+            AssertGroup(byAbility, 1, IdentityKey(TankChargeAbilityId), 2);
+            AssertGroup(byAbility, 2, IdentityKey(EliteChargeAbilityId), 1);
+            AssertGroup(byAbility, 3, IdentityKey(AttackAbilityId), 5);
+            Assert.That(byTemplate.GetGroupKey(0), Is.Not.EqualTo(byAbility.GetGroupKey(0)));
         }
 
         [Test]
@@ -210,6 +216,21 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ByTemplate_RequiresOwnerTemplateKeyRef_FailsFast()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            Entity actor = world.Create(new AbilityStateBuffer());
+            ref AbilityStateBuffer slots = ref world.Get<AbilityStateBuffer>(actor);
+            slots.AddAbility(AttackAbilityId);
+            Entity[] members = { actor };
+            var result = new AbilityAggregationResult();
+
+            Assert.Throws<InvalidOperationException>(() => harness.Registry.BuildGroups(
+                harness.ProfileId(ByTemplateProfileId), members, world, harness.Abilities, ref result));
+        }
+
+        [Test]
         public void BuildGroups_SteadyState_IsAllocationFree()
         {
             using var world = World.Create();
@@ -300,6 +321,13 @@ namespace Ludots.Tests.GAS
             return AbilityAggregationKeyKinds.MakeKey(AbilityAggregationKeyKinds.AbilityId, abilityId);
         }
 
+        private static long OwnerTemplateSlotKey(int templateKeyId, int slotIndex)
+        {
+            return AbilityAggregationKeyKinds.MakeKey(
+                AbilityAggregationKeyKinds.OwnerTemplateSlot,
+                templateKeyId * AbilityStateBuffer.CAPACITY + slotIndex);
+        }
+
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
@@ -384,13 +412,13 @@ namespace Ludots.Tests.GAS
             /// <summary>M6 background: [marine1, marine2, eliteMarine, tank1, tank2].</summary>
             public Selection CreateM6Selection()
             {
-                Entity marine1 = CreateActor(AttackAbilityId, StimAbilityId);
-                Entity marine2 = CreateActor(AttackAbilityId, StimAbilityId);
+                Entity marine1 = CreateActor(MarineTemplateKeyId, AttackAbilityId, StimAbilityId);
+                Entity marine2 = CreateActor(MarineTemplateKeyId, AttackAbilityId, StimAbilityId);
                 // Elite marine slot layout = [0: attack, 1: stim, 2: charge cannon] (slots are panel-agnostic).
-                Entity elite = CreateActor(AttackAbilityId, StimAbilityId, EliteChargeAbilityId);
+                Entity elite = CreateActor(EliteTemplateKeyId, AttackAbilityId, StimAbilityId, EliteChargeAbilityId);
                 World.Add(elite, new AbilityFormSlotBuffer());
-                Entity tank1 = CreateActor(AttackAbilityId, TankChargeAbilityId);
-                Entity tank2 = CreateActor(AttackAbilityId, TankChargeAbilityId);
+                Entity tank1 = CreateActor(TankTemplateKeyId, AttackAbilityId, TankChargeAbilityId);
+                Entity tank2 = CreateActor(TankTemplateKeyId, AttackAbilityId, TankChargeAbilityId);
                 return new Selection(marine1, marine2, elite, tank1, tank2, new[] { marine1, marine2, elite, tank1, tank2 });
             }
 
@@ -399,9 +427,9 @@ namespace Ludots.Tests.GAS
                 return new AbilityAggregationProfilesConfig { Profiles = new List<AbilityAggregationProfileDefinition>(profiles) };
             }
 
-            private Entity CreateActor(params int[] abilityIds)
+            private Entity CreateActor(int templateKeyId, params int[] abilityIds)
             {
-                Entity actor = World.Create(new AbilityStateBuffer());
+                Entity actor = World.Create(new EntityTemplateKeyRef { TemplateKeyId = templateKeyId }, new AbilityStateBuffer());
                 ref AbilityStateBuffer slots = ref World.Get<AbilityStateBuffer>(actor);
                 for (int i = 0; i < abilityIds.Length; i++)
                 {
