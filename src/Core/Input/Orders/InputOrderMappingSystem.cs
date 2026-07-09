@@ -147,9 +147,9 @@ namespace Ludots.Core.Input.Orders
     /// System that converts InputAction triggers to Orders based on configuration.
     ///
     /// Supports three interaction modes (config-level, not per-ability):
-    ///   TargetFirst (WoW): trigger -> immediate submit using configured entity target
-    ///   SmartCast (LoL):   trigger -> immediate submit using cursor/hovered entity
-    ///   AimCast (DotA):    trigger -> enter aiming -> confirm click -> submit
+    ///   TargetFirst (WoW): trigger -> immediate submit using the configured entity target
+    ///   SmartCast (LoL):   trigger -> immediate submit using the mapping's declared target source
+    ///   AimCast (DotA):    trigger -> enter aiming -> confirm action -> submit
     ///
     /// Non-skill mappings (IsSkillMapping=false) always use TargetFirst behavior.
     /// </summary>
@@ -203,8 +203,8 @@ namespace Ludots.Core.Input.Orders
         private SkillMappingOverrideProvider? _skillMappingOverrideProvider;
         private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
 
-        // Pointer command intent routing. These are injected by production wiring so the
-        // legacy mapping path remains available for mods that have not opted into the new chain.
+        // Pointer command intent routing. Production wiring injects these services; non-command
+        // mappings continue through the direct order path.
         private World? _commandIntentWorld;
         private InteractionContextStack? _interactionContextStack;
         private ControlSchemeRuntime? _controlSchemeRuntime;
@@ -631,7 +631,7 @@ namespace Ludots.Core.Input.Orders
         }
 
         /// <summary>
-        /// SmartCast: immediately build and submit, using hover, cursor, or configured auto-target input.
+        /// SmartCast: immediately build and submit through the mapping's declared target source.
         /// </summary>
         private void HandleSmartCast(InputOrderMapping mapping)
         {

@@ -1879,7 +1879,7 @@ namespace Ludots.Core.Engine
                     CancelPendingMapResume(previousFocused.MapId, $"Map resume canceled because '{mid.Value}' became focused.", markFailed: true);
                     CancelPendingMapLoad(previousFocused.MapId, $"Map load canceled because '{mid.Value}' became focused.", markFailed: true);
                 }
-                MapSessions.PushFocused(mid);   // old focused → Suspended
+                MapSessions.PushFocused(mid);
                 if (previousFocused != null)
                 {
                     SetMapEntitiesSuspended(previousFocused.MapId, true);

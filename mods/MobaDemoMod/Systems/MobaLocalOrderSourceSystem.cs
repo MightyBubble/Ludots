@@ -24,7 +24,7 @@ namespace MobaDemoMod.Systems
 {
     /// <summary>
     /// System that converts local player input to Orders using InputOrderMappingSystem.
-    /// Uses configuration-driven mapping instead of hardcoded input checks.
+    /// Uses configuration-driven mapping for input checks.
     ///
     /// The interaction mode (TargetFirst/SmartCast/AimCast) is handled entirely
     /// inside InputOrderMappingSystem based on the config's InteractionMode setting.

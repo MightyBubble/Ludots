@@ -2,7 +2,7 @@ namespace ControlPlaneProjectionShowcaseMod
 {
     /// <summary>
     /// Data-side string constants for the RFC-0065 control plane projection showcase (SHOW-2, M3/M4 slices).
-    /// Every tag/type/collection key the mod touches is declared here; nothing is hardcoded in Core.
+    /// Every tag/type/collection key the mod touches is declared here; Core receives them as data.
     /// </summary>
     public static class ControlPlaneProjectionShowcaseIds
     {

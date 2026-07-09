@@ -37,7 +37,7 @@ namespace Ludots.Tests.GAS
     public class InputOrderAbilityAuditTests
     {
         // ════════════════════════════════════════════════════════════════════
-        // Region: OrderBuffer �?PendingBuffer
+        // Region: OrderBuffer / PendingBuffer
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
@@ -74,12 +74,12 @@ namespace Ludots.Tests.GAS
             var order = new Order { OrderTypeId = 7 };
             buffer.SetPending(in order, 5, expireStep: 50, insertStep: 10);
 
-            // Before expiration �?should not expire
+            // Before expiration: should not expire.
             bool expired = buffer.ExpirePending(currentStep: 49);
             That(expired, Is.False);
             That(buffer.HasPending, Is.True);
 
-            // At expiration step �?should expire
+            // At expiration step: should expire.
             expired = buffer.ExpirePending(currentStep: 50);
             That(expired, Is.True);
             That(buffer.HasPending, Is.False);
@@ -1016,7 +1016,7 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program �?B[0] starts at 1 (pass), no instructions change it
+            // Empty program: B[0] starts at 1 (pass), no instructions change it.
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
             That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
@@ -1083,7 +1083,7 @@ namespace Ludots.Tests.GAS
             }
 
             bool overflow = buffer.Enqueue(new Order { OrderTypeId = 999 }, 0, -1, 100);
-            That(overflow, Is.False, "Queue full �?should reject");
+            That(overflow, Is.False, "Queue full: should reject");
             That(buffer.QueuedCount, Is.EqualTo(OrderBuffer.MAX_QUEUED_ORDERS));
         }
 

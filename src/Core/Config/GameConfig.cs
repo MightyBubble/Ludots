@@ -96,7 +96,7 @@ namespace Ludots.Core.Config
     }
 
     /// <summary>
-    /// Game constants that were previously hardcoded in runtime constant classes.
+    /// Game constants loaded from runtime configuration.
     /// Now fully data-driven via game.json merge.
     /// </summary>
     public class GameConstants

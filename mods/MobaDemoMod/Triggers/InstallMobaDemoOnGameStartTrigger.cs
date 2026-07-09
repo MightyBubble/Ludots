@@ -44,13 +44,13 @@ namespace MobaDemoMod.Triggers
             {
                 return Task.CompletedTask;
             }
+
             engine.GlobalContext[InstalledKey] = true;
 
-            // Load MobaConfig via VFS
             var mobaConfig = MobaConfig.Load(_ctx);
             engine.GlobalContext[MobaConfigKey] = mobaConfig;
             _ctx.Log("[MobaDemoMod] MobaConfig loaded from assets/Configs/moba_config.json");
-            // GameConfig is required; it must be loaded before GameStart.
+
             var config = engine.GetService(CoreServiceKeys.GameConfig);
             _ = config.Constants.OrderTypeIds["stop"];
 
@@ -103,9 +103,8 @@ namespace MobaDemoMod.Triggers
                 });
             }
 
-            // 鍗曚綅娓叉煋鐢?performers.json 瀹氫箟 moba_unit_marker锛坋ntity-scoped Marker3D锛夐┍鍔?
-            // 鍥㈤槦棰滆壊鐢?EntityColor 缁戝畾瑙ｆ瀽
-
+            // Unit rendering is defined by performers.json and entity-scoped Marker3D rules.
+            // Colors come from EntityColor instead of trigger-owned presentation logic.
             return Task.CompletedTask;
         }
     }

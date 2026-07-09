@@ -9,7 +9,7 @@ namespace MobaDemoMod
     /// <summary>
     /// Centralized configuration for MobaDemoMod.
     /// Loaded from assets/Configs/moba_config.json.
-    /// Replaces 25+ hardcoded values across the mod.
+    /// Keeps tunable values in data instead of runtime code.
     /// </summary>
     public sealed class MobaConfig
     {

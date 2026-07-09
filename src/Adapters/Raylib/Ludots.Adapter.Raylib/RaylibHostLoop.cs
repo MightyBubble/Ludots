@@ -159,7 +159,7 @@ namespace Ludots.Adapter.Raylib
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
-            // targetFps = 0 琛ㄧず涓嶉攣甯э紝< 0 浣跨敤榛樿 60
+            // targetFps = 0 leaves VSync/FPS uncapped; values below 0 use the host default.
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;

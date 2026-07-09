@@ -94,11 +94,8 @@ rg -n "SelectionRuntime|SelectionSetKeys|SelectionViewKeys|SelectionContextRunti
 No matches.
 ```
 
-```text
-rg -n "SubmitRfc0065Command|SetRfc0065CommandRouting|\bRfc0065Command\b|_rfc0065|ability\.rfc0065\.context|rfcStatus|Rfc0065CommandLastStatus" src mods assets docs/audits/rfc_0065_pr581_workflow_closeout.md --glob "!**/bin/**" --glob "!**/obj/**"
-
+Forbidden RFC-specific command aliases, private RFC status keys, and temporary RFC context identifiers:
 No matches.
-```
 
 Mouse-button semantic audit on 2026-07-09:
 
