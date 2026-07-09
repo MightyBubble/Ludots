@@ -70,7 +70,7 @@ namespace CoreInputMod.Triggers
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(currentSelection, SystemGroup.InputCollection);
+            engine.RegisterSystem(currentSelection, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>

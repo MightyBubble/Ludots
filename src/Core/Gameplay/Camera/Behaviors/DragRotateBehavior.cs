@@ -6,32 +6,28 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
     internal sealed class DragRotateBehavior : ICameraBehavior
     {
-        private readonly string _holdActionId;
-        private readonly string _lookActionId;
         private readonly float _degPerPixel;
         private readonly float _minPitchDeg;
         private readonly float _maxPitchDeg;
+        private readonly bool _requiresHold;
 
         public DragRotateBehavior(
-            string holdActionId, string lookActionId,
-            float degPerPixel, float minPitchDeg, float maxPitchDeg)
+            float degPerPixel, float minPitchDeg, float maxPitchDeg, bool requiresHold)
         {
-            _holdActionId = holdActionId ?? "OrbitRotateHold";
-            _lookActionId = lookActionId ?? "Look";
             _degPerPixel = degPerPixel;
             _minPitchDeg = minPitchDeg;
             _maxPitchDeg = maxPitchDeg;
+            _requiresHold = requiresHold;
         }
 
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
-            bool hold = ctx.Input.ReadAction<bool>(_holdActionId);
-            if (!hold)
+            if (_requiresHold && !ctx.BehaviorInput.RotateHold)
             {
                 return;
             }
 
-            Vector2 look = ctx.Input.ReadAction<Vector2>(_lookActionId);
+            Vector2 look = ctx.BehaviorInput.Look;
             if (MathF.Abs(look.X) < 0.01f && MathF.Abs(look.Y) < 0.01f)
             {
                 return;

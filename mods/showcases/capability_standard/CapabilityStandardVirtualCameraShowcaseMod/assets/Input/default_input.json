@@ -1,0 +1,103 @@
+{
+  "actions": [
+    { "id": "CapabilityStandardVirtualCameraMode", "name": "CapabilityStandardVirtualCameraMode", "type": "Button" },
+    { "id": "CapabilityStandardVirtualCameraHeightmapMode", "name": "CapabilityStandardVirtualCameraHeightmapMode", "type": "Button" },
+    { "id": "CapabilityStandardVirtualCameraTpsMode", "name": "CapabilityStandardVirtualCameraTpsMode", "type": "Button" },
+    { "id": "CapabilityStandardVirtualCameraFpsMode", "name": "CapabilityStandardVirtualCameraFpsMode", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Move", "name": "CapabilityStandard_VirtualCamera_Move", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.PointerPosition", "name": "CapabilityStandard_VirtualCamera_PointerPosition", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.PointerDelta", "name": "CapabilityStandard_VirtualCamera_PointerDelta", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.GrabDragHold", "name": "CapabilityStandard_VirtualCamera_GrabDragHold", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.RotateHold", "name": "CapabilityStandard_VirtualCamera_RotateHold", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Look", "name": "CapabilityStandard_VirtualCamera_Look", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.AvatarMove", "name": "CapabilityStandard_VirtualCamera_AvatarMove", "type": "Axis2D" },
+    { "id": "CapabilityStandard.VirtualCamera.RotateLeft", "name": "CapabilityStandard_VirtualCamera_RotateLeft", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.RotateRight", "name": "CapabilityStandard_VirtualCamera_RotateRight", "type": "Button" },
+    { "id": "CapabilityStandard.VirtualCamera.Zoom", "name": "CapabilityStandard_VirtualCamera_Zoom", "type": "Axis1D" }
+  ],
+  "contexts": [
+    {
+      "id": "CapabilityStandard.VirtualCamera.Controls",
+      "name": "Capability Standard Virtual Camera Controls",
+      "priority": 120,
+      "bindings": [
+        { "actionId": "CapabilityStandardVirtualCameraMode", "path": "<Keyboard>/f5" },
+        { "actionId": "CapabilityStandardVirtualCameraHeightmapMode", "path": "<Keyboard>/f6" },
+        { "actionId": "CapabilityStandardVirtualCameraTpsMode", "path": "<Keyboard>/f7" },
+        { "actionId": "CapabilityStandardVirtualCameraFpsMode", "path": "<Keyboard>/f8" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Move",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        { "actionId": "CapabilityStandard.VirtualCamera.PointerPosition", "path": "<Mouse>/Pos" },
+        { "actionId": "CapabilityStandard.VirtualCamera.PointerDelta", "path": "<Mouse>/Delta" },
+        { "actionId": "CapabilityStandard.VirtualCamera.GrabDragHold", "path": "<Mouse>/MiddleButton" },
+        { "actionId": "CapabilityStandard.VirtualCamera.RotateHold", "path": "<Mouse>/RightButton" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            { "type": "Invert", "parameters": [{ "name": "Y", "value": 1 }] }
+          ]
+        },
+        { "actionId": "CapabilityStandard.VirtualCamera.RotateLeft", "path": "<Keyboard>/q" },
+        { "actionId": "CapabilityStandard.VirtualCamera.RotateRight", "path": "<Keyboard>/e" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "CapabilityStandard.VirtualCamera.AvatarControls",
+      "name": "Capability Standard Virtual Camera Avatar Controls",
+      "priority": 130,
+      "bindings": [
+        { "actionId": "CapabilityStandardVirtualCameraMode", "path": "<Keyboard>/f5" },
+        { "actionId": "CapabilityStandardVirtualCameraHeightmapMode", "path": "<Keyboard>/f6" },
+        { "actionId": "CapabilityStandardVirtualCameraTpsMode", "path": "<Keyboard>/f7" },
+        { "actionId": "CapabilityStandardVirtualCameraFpsMode", "path": "<Keyboard>/f8" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.AvatarMove",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            { "type": "Invert", "parameters": [{ "name": "Y", "value": 1 }] }
+          ]
+        },
+        { "actionId": "CapabilityStandard.VirtualCamera.RotateHold", "path": "<Mouse>/RightButton" },
+        {
+          "actionId": "CapabilityStandard.VirtualCamera.Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+          ]
+        }
+      ]
+    }
+  ]
+}

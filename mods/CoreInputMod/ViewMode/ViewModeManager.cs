@@ -133,11 +133,16 @@ namespace CoreInputMod.ViewMode
             }
 
             if (!_globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out var registryObj) ||
-                registryObj is not VirtualCameraRegistry registry ||
-                !registry.TryGet(next.VirtualCameraId, out var definition) ||
-                definition == null)
+                registryObj is not VirtualCameraRegistry registry)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared virtual camera '{next.VirtualCameraId}', but VirtualCameraRegistry is not available.");
+            }
+
+            if (!registry.TryGet(next.VirtualCameraId, out var definition) || definition == null)
+            {
+                throw new InvalidOperationException(
+                    $"ViewMode '{next.Id}' declared unknown virtual camera '{next.VirtualCameraId}'.");
             }
 
             if (!Enum.TryParse<CameraFollowTargetKind>(next.FollowTargetKind, ignoreCase: true, out var followTargetKind))

@@ -4,8 +4,13 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.GAS.Bindings;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
@@ -71,6 +76,115 @@ namespace Ludots.Tests.GAS
             accumulator.BuildTickSnapshot(snapshot);
             Assert.That(snapshot.ReleasedThisFrame("Attack"), Is.True);
             Assert.That(snapshot.IsDown("Attack"), Is.False);
+        }
+
+        [Test]
+        public void InputRuntimeSystem_PreservesConfiguredActionValueUntilAuthoritativeSnapshot()
+        {
+            var backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 1,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
+                        }
+                    }
+                }
+            };
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+
+            var accumulator = new AuthoritativeInputAccumulator();
+            var snapshot = new FrozenInputActionReader();
+            int zoomAttribute = AttributeRegistry.Register(CameraBehaviorAttributes.Zoom);
+            var registry = new InputActionAttributeBindingRegistry();
+            registry.Set(new[]
+            {
+                new InputActionAttributeBindingEntry(
+                    "Zoom",
+                    zoomAttribute,
+                    InputActionAttributeValueKind.Axis1D,
+                    0,
+                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: true,
+                    preserveValueUntilSnapshot: true),
+            });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = registry,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.UiCaptured.Name] = false,
+            };
+            var system = new InputRuntimeSystem(globals, accumulator);
+
+            handler.InjectAction("Zoom", new Vector3(1f, 0f, 0f));
+            system.Update(1f / 60f);
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(1f).Within(0.001f));
+            Assert.That(handler.ReadAction<Vector3>("Zoom").X, Is.EqualTo(1f).Within(0.001f));
+            system.Update(1f / 60f);
+            accumulator.BuildTickSnapshot(snapshot);
+
+            Assert.That(snapshot.ReadAction<float>("Zoom"), Is.EqualTo(1f).Within(0.001f));
+        }
+
+        [Test]
+        public void InputActionAttributeBindingSystem_WritesCameraBehaviorInputTargetComponentWithoutRequiringLocalPlayerAttributes()
+        {
+            using var world = World.Create();
+            Entity localPlayerIdentity = world.Create();
+            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            int lookXAttribute = AttributeRegistry.Register(CameraBehaviorAttributes.LookX);
+
+            var authoritativeInput = new FrozenInputActionReader();
+            authoritativeInput.SetActionState(
+                "Look",
+                new Vector3(3f, 0f, 0f),
+                isDown: true,
+                pressedThisFrame: true,
+                releasedThisFrame: false);
+
+            var registry = new InputActionAttributeBindingRegistry();
+            registry.Set(new[]
+            {
+                new InputActionAttributeBindingEntry(
+                    "Look",
+                    lookXAttribute,
+                    InputActionAttributeValueKind.Axis2D,
+                    0,
+                    InputActionAttributeTargetKind.CameraBehaviorInput,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: false,
+                    preserveValueUntilSnapshot: true),
+            });
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayerIdentity,
+                [CoreServiceKeys.UiCaptured.Name] = false,
+            };
+            var system = new InputActionAttributeBindingSystem(world, globals, registry);
+
+            system.Update(0f);
+
+            Assert.That(world.Has<AttributeBuffer>(localPlayerIdentity), Is.False);
+            ref AttributeBuffer cameraAttributes = ref world.Get<AttributeBuffer>(cameraBehaviorInputTarget);
+            Assert.That(cameraAttributes.GetCurrent(lookXAttribute), Is.EqualTo(3f).Within(0.001f));
         }
 
         [Test]
@@ -187,6 +301,9 @@ namespace Ludots.Tests.GAS
         {
             var (backend, handler) = BuildCameraHandler();
             var session = new GameSession();
+            using var world = World.Create();
+            var behaviorInput = new CameraBehaviorInputState();
+            Entity localPlayer = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
             var registry = new VirtualCameraRegistry();
             registry.Register(new VirtualCameraDefinition
             {
@@ -205,20 +322,92 @@ namespace Ludots.Tests.GAS
                 AllowUserInput = true
             });
             session.Camera.SetVirtualCameraRegistry(registry);
-            session.Camera.ConfigureRuntime(handler, new StubViewController());
+            session.Camera.ConfigureRuntime(behaviorInput, new StubViewController());
             session.Camera.ActivateVirtualCamera("EdgePan", blendDurationSeconds: 0f);
 
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.AuthoritativeInput.Name] = handler,
                 [CoreServiceKeys.GameSession.Name] = session,
+                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
                 [CoreServiceKeys.UiCaptured.Name] = true,
             };
+            var actionBindings = new InputActionAttributeBindingRegistry();
+            actionBindings.Set(new[]
+            {
+                new InputActionAttributeBindingEntry(
+                    "PointerPos",
+                    AttributeRegistry.Register(CameraBehaviorAttributes.PointerX),
+                    InputActionAttributeValueKind.Axis2D,
+                    0,
+                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: false,
+                    preserveValueUntilSnapshot: false),
+                new InputActionAttributeBindingEntry(
+                    "PointerPos",
+                    AttributeRegistry.Register(CameraBehaviorAttributes.PointerY),
+                    InputActionAttributeValueKind.Axis2D,
+                    1,
+                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: false,
+                    preserveValueUntilSnapshot: false),
+                new InputActionAttributeBindingEntry(
+                    "PointerPos",
+                    AttributeRegistry.Register(CameraBehaviorAttributes.PointerActive),
+                    InputActionAttributeValueKind.Constant,
+                    0,
+                    InputActionAttributeTargetKind.LocalPlayerEntity,
+                    1f,
+                    zeroWhenUiCaptured: true,
+                    suppressOnUiWheelCaptured: false,
+                    preserveValueUntilSnapshot: false),
+            });
+            globals[CoreServiceKeys.InputActionAttributeBindingRegistry.Name] = actionBindings;
+
+            var sinks = new AttributeSinkRegistry();
+            GasAttributeSinks.RegisterBuiltins(sinks, behaviorInput);
+            int cameraSinkId = sinks.GetId(GasSinkNames.CameraBehaviorInput);
+            var attributeBindings = new AttributeBindingRegistry();
+            attributeBindings.Set(
+                new[]
+                {
+                    new AttributeBindingEntry(
+                        AttributeRegistry.Register(CameraBehaviorAttributes.PointerX),
+                        cameraSinkId,
+                        CameraBehaviorInputChannels.PointerX,
+                        AttributeBindingMode.Override,
+                        AttributeBindingResetPolicy.ResetToZeroPerLogicFrame,
+                        1f),
+                    new AttributeBindingEntry(
+                        AttributeRegistry.Register(CameraBehaviorAttributes.PointerY),
+                        cameraSinkId,
+                        CameraBehaviorInputChannels.PointerY,
+                        AttributeBindingMode.Override,
+                        AttributeBindingResetPolicy.ResetToZeroPerLogicFrame,
+                        1f),
+                    new AttributeBindingEntry(
+                        AttributeRegistry.Register(CameraBehaviorAttributes.PointerActive),
+                        cameraSinkId,
+                        CameraBehaviorInputChannels.PointerActive,
+                        AttributeBindingMode.Override,
+                        AttributeBindingResetPolicy.ResetToZeroPerLogicFrame,
+                        1f),
+                },
+                new[] { new AttributeBindingGroup(cameraSinkId, 0, 3) });
 
             var system = new InputRuntimeSystem(globals);
+            var actionBindingSystem = new InputActionAttributeBindingSystem(world, globals, actionBindings);
+            var attributeBindingSystem = new AttributeBindingSystem(world, sinks, attributeBindings);
 
             backend.MousePosition = Vector2.Zero;
             system.Update(1f);
+            actionBindingSystem.Update(1f);
+            attributeBindingSystem.Update(1f);
             session.Camera.Update(1f);
 
             Assert.That(session.Camera.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
@@ -226,6 +415,8 @@ namespace Ludots.Tests.GAS
 
             globals[CoreServiceKeys.UiCaptured.Name] = false;
             system.Update(1f);
+            actionBindingSystem.Update(1f);
+            attributeBindingSystem.Update(1f);
             session.Camera.Update(1f);
 
             Assert.That(session.Camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));

@@ -82,6 +82,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />

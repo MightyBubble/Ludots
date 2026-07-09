@@ -32,6 +32,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
@@ -132,6 +133,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
         public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
         public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
+        public static readonly ServiceKey<InputActionAttributeBindingRegistry> InputActionAttributeBindingRegistry = new("InputActionAttributeBindingRegistry");
 
         // --- Camera & View ---
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");
@@ -146,6 +148,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<CameraPoseRequest> CameraPoseRequest = new("CameraPoseRequest");
         public static readonly ServiceKey<VirtualCameraRequest> VirtualCameraRequest = new("VirtualCameraRequest");
         public static readonly ServiceKey<VirtualCameraRegistry> VirtualCameraRegistry = new("VirtualCameraRegistry");
+        public static readonly ServiceKey<CameraBehaviorInputState> CameraBehaviorInputState = new("CameraBehaviorInputState");
+        public static readonly ServiceKey<CameraImpulseRuntime> CameraImpulseRuntime = new("CameraImpulseRuntime");
         public static readonly ServiceKey<PlatformManagedCameraDriverRegistry> PlatformManagedCameraDriverRegistry = new("PlatformManagedCameraDriverRegistry");
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
         public static readonly ServiceKey<QuestDefinitionRegistry> QuestDefinitionRegistry = new("QuestDefinitionRegistry");

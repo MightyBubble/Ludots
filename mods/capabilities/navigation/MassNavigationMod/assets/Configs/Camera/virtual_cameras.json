@@ -22,6 +22,7 @@
     "enableGrabDrag": true,
     "rotateMode": "Both",
     "rotateDegPerPixel": 0.28,
+    "rotateRequiresHold": true,
     "rotateDegPerSecond": 90,
     "enableZoom": true,
     "zoomCmPerWheel": 2000,

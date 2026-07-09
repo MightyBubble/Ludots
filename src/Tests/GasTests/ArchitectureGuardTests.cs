@@ -132,6 +132,31 @@ namespace GasTests
         }
 
         [Test]
+        public void CoreInput_ViewModeSwitchSystem_DoesNotRenderPersistentHud()
+        {
+            var repoRoot = FindRepoRoot();
+            string file = Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "ViewModeSwitchSystem.cs");
+            Assert.That(File.Exists(file), Is.True, $"Missing {ToRepoRelativePath(repoRoot, file)}");
+
+            string[] forbidden =
+            {
+                "ScreenOverlayBuffer",
+                "RenderModeHud",
+                "ViewMode:"
+            };
+
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "CoreInput view mode switching is gameplay input state. It must not render persistent debug HUD text into the top-left screen overlay:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue200_KnowledgeProjectionConsumers_DoNotTraverseRelationGrantedCollectionsOutsideCoreResolver()
         {
             var repoRoot = FindRepoRoot();
