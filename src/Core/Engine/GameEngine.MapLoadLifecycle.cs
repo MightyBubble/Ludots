@@ -73,6 +73,7 @@ namespace Ludots.Core.Engine
             if (GameSession == null ||
                 MapSessions == null ||
                 GetService(CoreServiceKeys.TimeFlow) == null ||
+                GetService(CoreServiceKeys.QuestRuntimeService) == null ||
                 GetService(CoreServiceKeys.NarrativeDirector) == null)
             {
                 return;

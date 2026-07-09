@@ -4,6 +4,7 @@ using Arch.Relationships;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Persistence
@@ -19,6 +20,8 @@ namespace Ludots.Core.Persistence
             NormalizeActiveEffectContainer(world);
             NormalizeAbilityStateBuffer(world);
             NormalizeTeamEntityRef(world);
+            NormalizeQuestInstances(world);
+            NormalizeRelationshipInstances(world);
             NormalizeRelationshipKeys<RelationshipEdgeSet>(world);
             NormalizeRelationshipKeys<InRelationship>(world);
         }
@@ -104,6 +107,50 @@ namespace Ludots.Core.Persistence
             });
         }
 
+        private static void NormalizeQuestInstances(World world)
+        {
+            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<QuestInstanceCm>();
+            world.Query(in query, (ref QuestInstanceCm quest) =>
+            {
+                Entity scopeHost = NormalizeOptionalEntity(quest.ScopeHost);
+                if (scopeHost != Entity.Null)
+                {
+                    quest.ScopeHost = EntityUtil.Reconstruct(
+                        scopeHost.Id,
+                        worldId,
+                        scopeHost.Version);
+                    return;
+                }
+
+                quest.ScopeHost = Entity.Null;
+            });
+        }
+
+        private static void NormalizeRelationshipInstances(World world)
+        {
+            int worldId = world.Id;
+            var query = new QueryDescription().WithAll<RelationshipInstanceCm>();
+            world.Query(in query, (ref RelationshipInstanceCm relationship) =>
+            {
+                if (relationship.Source != Entity.Null)
+                {
+                    relationship.Source = EntityUtil.Reconstruct(
+                        relationship.Source.Id,
+                        worldId,
+                        relationship.Source.Version);
+                }
+
+                if (relationship.Target != Entity.Null)
+                {
+                    relationship.Target = EntityUtil.Reconstruct(
+                        relationship.Target.Id,
+                        worldId,
+                        relationship.Target.Version);
+                }
+            });
+        }
+
         private static void NormalizeRelationshipKeys<T>(World world)
         {
             int worldId = world.Id;
@@ -131,6 +178,13 @@ namespace Ludots.Core.Persistence
                     relationships.Elements.Add(entry.Key, entry.Value);
                 }
             });
+        }
+
+        private static Entity NormalizeOptionalEntity(Entity entity)
+        {
+            return entity.Equals(default(Entity)) || entity.Equals(Entity.Null)
+                ? Entity.Null
+                : entity;
         }
     }
 }

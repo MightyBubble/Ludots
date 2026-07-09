@@ -345,6 +345,30 @@ public sealed class ArchPersistenceCharacterizationTests
     }
 
     [Test]
+    public void CoreBinarySerializerRejectsRelationshipProjectionWithoutMatchingEdge()
+    {
+        using World world = World.Create();
+        Entity source = world.Create(new Name { Value = "source" });
+        Entity target = world.Create(new Name { Value = "target" });
+        world.Create(new RelationshipInstanceCm
+        {
+            Source = source,
+            Target = target,
+            TypeId = 1,
+            Revision = 1
+        });
+
+        var directError = Assert.Throws<SaveContextException>(
+            () => SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default));
+        var roundTripError = Assert.Throws<SaveContextException>(() => CoreRoundTrip(world));
+
+        Assert.That(directError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(directError.Message, Does.Contain("no matching relationship edge"));
+        Assert.That(roundTripError!.Message, Does.Contain(nameof(RelationshipInstanceCm)));
+        Assert.That(roundTripError.Message, Does.Contain("no matching relationship edge"));
+    }
+
+    [Test]
     public void CorePersistenceFormatterRegistryCoversComponentRegistryTypes()
     {
         IReadOnlySet<Type> formatterTypes = LudotsCorePersistenceFormatters.GetFormatterComponentTypes();

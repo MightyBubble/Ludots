@@ -11,6 +11,9 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Tests;
 using NUnit.Framework;
@@ -23,6 +26,7 @@ namespace Ludots.Tests.GAS.Production;
 public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
 {
     private const string MapId = "capability_standard_participant_views";
+    private const string LargeWorldCameraId = "MassNavigation.Camera.LargeWorldHeightmap";
 
     private static readonly string[] AcceptanceMods =
     {
@@ -44,6 +48,8 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("Participant showcase map did not load.");
         Assert.That(session.MapId.Value, Is.EqualTo(MapId));
+        Assert.That(session.MapConfig.DefaultCamera, Is.Not.Null);
+        Assert.That(session.MapConfig.DefaultCamera.VirtualCameraId, Is.EqualTo(LargeWorldCameraId));
 
         KnowledgeProjectionResolver resolver = engine.GetService(CoreServiceKeys.KnowledgeProjectionResolver)
             ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod did not install KnowledgeProjectionResolver.");
@@ -93,6 +99,35 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         Assert.That(teamNeutral.IsKnown, Is.False, "Team view should differ from Player 1 by not inheriting Player 1's NPC disclosure.");
     }
 
+    [Test]
+    public void ParticipantShowcaseLoadsRenderableFourTeamWorld()
+    {
+        using GameEngine engine = CreateEngine();
+        engine.Start();
+        engine.LoadMap(MapId);
+
+        for (int frame = 0; frame < 8; frame++)
+        {
+            engine.Tick(1f / 60f);
+        }
+
+        Assert.That(
+            engine.GetService(CoreServiceKeys.VisualHeightmap),
+            Is.AssignableTo<IVisualHeightmapRenderSource>(),
+            "The four-team participant view showcase must bind the MassNavigation visual heightmap through the formal map service.");
+        Assert.That(CountVisualTransforms(engine), Is.GreaterThan(0),
+            "The showcase world must contain visual transforms for its authored team members.");
+
+        PrimitiveDrawBuffer primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+            ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+        SkinnedVisualBatchBuffer skinned = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer)
+            ?? throw new InvalidOperationException("PresentationSkinnedVisualBatchBuffer missing.");
+
+        int worldVisualCount = primitives.GetSpan().Length + skinned.Count;
+        Assert.That(worldVisualCount, Is.GreaterThan(0),
+            "The showcase must emit world visuals after startup; a UI-only participant panel is not a valid capability standard showcase.");
+    }
+
     private static ParticipantKnowledgeSnapshot Resolve(
         GameEngine engine,
         KnowledgeProjectionResolver resolver,
@@ -129,6 +164,14 @@ public sealed class ParticipantViewKnowledgeShowcaseAcceptanceTests
         }
 
         return entity;
+    }
+
+    private static int CountVisualTransforms(GameEngine engine)
+    {
+        int count = 0;
+        var query = new QueryDescription().WithAll<VisualTransform>();
+        engine.World.Query(in query, (Entity _) => count++);
+        return count;
     }
 
     private static GameEngine CreateEngine()

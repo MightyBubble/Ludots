@@ -86,6 +86,52 @@ namespace GasTests
         }
 
         [Test]
+        public void QuestPublicProtocol_MustNotLiveUnderNarrativeKeys()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods"),
+                Path.Combine(repoRoot, "docs", "architecture"),
+                Path.Combine(repoRoot, "gitbook", "architecture")
+            };
+            string[] forbidden =
+            {
+                "Narrative.Quest",
+                "Narrative.Signal",
+                "NarrativeEventKeys.Quest",
+                "NarrativeEventKeys.Signal",
+                "NarrativeServiceKeys.Quest",
+                "NarrativeServiceKeys.Signal"
+            };
+
+            var hits = new List<string>();
+            foreach (string dir in directories)
+            {
+                if (!Directory.Exists(dir))
+                {
+                    continue;
+                }
+
+                foreach (string file in Directory.EnumerateFiles(dir, "*.*", SearchOption.AllDirectories)
+                    .Where(path =>
+                        path.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
+                        path.EndsWith(".md", StringComparison.OrdinalIgnoreCase)))
+                {
+                    AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Quest public protocol must use QuestEventKeys / QuestServiceKeys, not Narrative keys:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
         public void Issue200_KnowledgeProjectionConsumers_DoNotTraverseRelationGrantedCollectionsOutsideCoreResolver()
         {
             var repoRoot = FindRepoRoot();

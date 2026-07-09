@@ -79,6 +79,8 @@ namespace Ludots.Tests.Presentation
             int childAId = fixture.Definitions.GetId("child_a");
             int childBId = fixture.Definitions.GetId("child_b");
             int rootId = fixture.Definitions.GetId("root");
+            int childAScopeId = PerformerScopeTagRegistry.GetId("childA");
+            int childBScopeId = PerformerScopeTagRegistry.GetId("childB");
 
             Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: 100);
             fixture.TickRuleThenRuntime();
@@ -97,7 +99,7 @@ namespace Ludots.Tests.Presentation
                 ref readonly PerformerParent childParent = ref fixture.World.Get<PerformerParent>(childEntity);
                 Assert.That(childParent.Parent, Is.EqualTo(rootEntity));
                 Assert.That(childState.DefId, Is.EqualTo(childAId).Or.EqualTo(childBId));
-                Assert.That(childState.ScopeId, Is.EqualTo(101).Or.EqualTo(102));
+                Assert.That(childState.ScopeId, Is.EqualTo(childAScopeId).Or.EqualTo(childBScopeId));
             }
 
             Assert.That(childCount, Is.EqualTo(2));
@@ -176,6 +178,127 @@ namespace Ludots.Tests.Presentation
             Assert.That(childParent.Parent, Is.EqualTo(rootEntity));
             Assert.That(childState.ScopeId, Is.EqualTo(500));
             Assert.That(childState.DefId, Is.EqualTo(childId));
+        }
+
+        [Test]
+        public void RuleCarrierScopedCreate_EmitsWithoutOwnerInstance()
+        {
+            using var fixture = PerformerTreeFixture.Create();
+            int markerId = fixture.Definitions.Register("carrier_marker", new PerformerDefinition());
+            _ = fixture.Definitions.Register("carrier_rules", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.TagEffectiveChanged,
+                            KeyId = 91,
+                        },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = markerId,
+                            ScopeTag = 700,
+                        },
+                    },
+                ],
+            });
+
+            Assert.That(fixture.Events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.TagEffectiveChanged,
+                KeyId = 91,
+                Source = fixture.Owner,
+                Target = fixture.Owner,
+                Magnitude = 1f,
+            }), Is.True);
+
+            fixture.Rules.Update(0.016f);
+
+            Assert.That(fixture.Commands.Count, Is.EqualTo(1));
+            ref readonly PerformerCommand command = ref fixture.Commands.GetSpan()[0];
+            Assert.That(command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
+            Assert.That(command.PerformerDefinitionId, Is.EqualTo(markerId));
+            Assert.That(command.Source, Is.EqualTo(fixture.Owner));
+            Assert.That(command.ScopeTag, Is.EqualTo(700));
+        }
+
+        [Test]
+        public void ScopedCreateRules_EmitOnlyForMatchingOwnerDefinitionInstance()
+        {
+            using var fixture = PerformerTreeFixture.Create();
+            int markerAId = fixture.Definitions.Register("marker_a", new PerformerDefinition());
+            int markerBId = fixture.Definitions.Register("marker_b", new PerformerDefinition());
+            int rootAId = fixture.Definitions.Register("root_a", new PerformerDefinition
+            {
+                Children = [new ChildPerformerRef { DefinitionId = markerAId, ScopeTag = 1 }],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.TagEffectiveChanged,
+                            KeyId = 92,
+                        },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = markerAId,
+                            ScopeTag = 800,
+                        },
+                    },
+                ],
+            });
+            int rootBId = fixture.Definitions.Register("root_b", new PerformerDefinition
+            {
+                Children = [new ChildPerformerRef { DefinitionId = markerBId, ScopeTag = 1 }],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.TagEffectiveChanged,
+                            KeyId = 92,
+                        },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = markerBId,
+                            ScopeTag = 800,
+                        },
+                    },
+                ],
+            });
+
+            Entity rootA = fixture.CreateRoot(rootAId, scopeTag: 101);
+            Entity otherOwner = fixture.World.Create();
+            _ = fixture.Create(rootBId, otherOwner, scopeTag: 202);
+            fixture.Events.Clear();
+
+            Assert.That(fixture.Events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.TagEffectiveChanged,
+                KeyId = 92,
+                Source = fixture.Owner,
+                Target = fixture.Owner,
+                Magnitude = 1f,
+            }), Is.True);
+
+            fixture.Rules.Update(0.016f);
+
+            Assert.That(fixture.Commands.Count, Is.EqualTo(1));
+            ref readonly PerformerCommand command = ref fixture.Commands.GetSpan()[0];
+            Assert.That(command.CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
+            Assert.That(command.PerformerDefinitionId, Is.EqualTo(markerAId));
+            Assert.That(command.ParentEntity, Is.EqualTo(rootA));
+            Assert.That(command.ScopeTag, Is.EqualTo(800));
         }
 
         [Test]
@@ -352,10 +475,8 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("a"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("b"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Circular child reference"));
         }
 
         [Test]
@@ -411,9 +532,8 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("too_many_behaviors"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("exceeds the max 32 behaviors"));
         }
 
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()

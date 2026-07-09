@@ -8,6 +8,8 @@ using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
@@ -25,8 +27,9 @@ namespace Ludots.Core.Persistence
             registry.Register(CreateGameSessionParticipant(engine.GameSession));
             registry.Register(new EmptySaveParticipant("inventory"));
             registry.Register(CreateMapSessionsParticipant(engine.MapSessions));
+            registry.Register(CreateQuestParticipant(engine.GetService(CoreServiceKeys.QuestRuntimeService)));
             registry.Register(CreateNarrativeParticipant(engine.GetService(CoreServiceKeys.NarrativeDirector)));
-            registry.Register(new EmptySaveParticipant("relationships"));
+            registry.Register(CreateRelationshipParticipant(engine.GetService(CoreServiceKeys.RelationshipRuntime)));
             registry.Register(CreateTeamParticipant());
             registry.Register(CreateTimeFlowParticipant(engine.GetService(CoreServiceKeys.TimeFlow)));
         }
@@ -59,6 +62,16 @@ namespace Ludots.Core.Persistence
         public static ISaveParticipant CreateNarrativeParticipant(NarrativeDirector director)
         {
             return new NarrativeSaveParticipant(director);
+        }
+
+        public static ISaveParticipant CreateQuestParticipant(QuestRuntimeService runtime)
+        {
+            return new QuestSaveParticipant(runtime);
+        }
+
+        public static ISaveParticipant CreateRelationshipParticipant(RelationshipRuntime runtime)
+        {
+            return new RelationshipSaveParticipant(runtime);
         }
 
         private sealed class GameSessionSaveParticipant : ISaveParticipant
@@ -446,24 +459,6 @@ namespace Ludots.Core.Persistence
                     variables[pair.Key] = WriteNarrativeValue(pair.Value);
                 }
 
-                var quests = new JsonArray();
-                for (int i = 0; i < snapshot.Quests.Count; i++)
-                {
-                    NarrativeQuestSnapshot quest = snapshot.Quests[i];
-                    quests.Add(new JsonObject
-                    {
-                        ["questId"] = quest.QuestId,
-                        ["state"] = quest.State.ToString(),
-                        ["stageIndex"] = quest.StageIndex
-                    });
-                }
-
-                var signals = new JsonObject();
-                foreach (KeyValuePair<string, int> pair in snapshot.Signals)
-                {
-                    signals[pair.Key] = pair.Value;
-                }
-
                 var bindings = new JsonArray();
                 for (int i = 0; i < snapshot.Bindings.Count; i++)
                 {
@@ -478,8 +473,6 @@ namespace Ludots.Core.Persistence
                 return new JsonObject
                 {
                     ["variables"] = variables,
-                    ["quests"] = quests,
-                    ["signals"] = signals,
                     ["bindings"] = bindings,
                     ["activeDialogue"] = WriteNarrativeDialogue(snapshot.ActiveDialogue),
                     ["activeCinematic"] = WriteNarrativeCinematic(snapshot.ActiveCinematic)
@@ -498,32 +491,6 @@ namespace Ludots.Core.Persistence
                     variables[pair.Key] = ReadNarrativeValue(RequireObject(pair.Value, $"variables.{pair.Key}"));
                 }
 
-                JsonArray questArray = RequireArray(root, "quests");
-                var quests = new List<NarrativeQuestSnapshot>(questArray.Count);
-                for (int i = 0; i < questArray.Count; i++)
-                {
-                    JsonObject quest = RequireObject(questArray[i], $"quests[{i}]");
-                    string stateText = RequireString(quest, "state");
-                    if (!Enum.TryParse(stateText, ignoreCase: false, out NarrativeQuestState questState) ||
-                        !string.Equals(questState.ToString(), stateText, StringComparison.Ordinal))
-                    {
-                        throw new SaveContextException(
-                            $"Narrative quest state '{stateText}' at quests[{i}] is invalid.");
-                    }
-
-                    quests.Add(new NarrativeQuestSnapshot(
-                        RequireString(quest, "questId"),
-                        questState,
-                        RequireInt(quest, "stageIndex")));
-                }
-
-                var signals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-                JsonObject signalObject = RequireObject(root["signals"], "signals");
-                foreach (KeyValuePair<string, JsonNode?> pair in signalObject)
-                {
-                    signals[pair.Key] = RequireIntValue(pair.Value, $"signals.{pair.Key}");
-                }
-
                 JsonArray bindingArray = RequireArray(root, "bindings");
                 var bindings = new List<NarrativeEntityBindingSnapshot>(bindingArray.Count);
                 for (int i = 0; i < bindingArray.Count; i++)
@@ -536,11 +503,90 @@ namespace Ludots.Core.Persistence
 
                 _director.RestoreSnapshot(new NarrativeDirectorSnapshot(
                     variables,
-                    quests,
-                    signals,
                     bindings,
                     ReadNarrativeDialogue(root["activeDialogue"]),
                     ReadNarrativeCinematic(root["activeCinematic"])));
+            }
+        }
+
+        private sealed class QuestSaveParticipant : ISaveParticipant
+        {
+            private readonly QuestRuntimeService _runtime;
+
+            public QuestSaveParticipant(QuestRuntimeService runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "quests";
+
+            public JsonNode CaptureState()
+            {
+                QuestRuntimeSnapshot snapshot = _runtime.CaptureSnapshot();
+                var signals = new JsonObject();
+                foreach (KeyValuePair<string, int> pair in snapshot.Signals)
+                {
+                    signals[pair.Key] = pair.Value;
+                }
+
+                return new JsonObject
+                {
+                    ["signals"] = signals
+                };
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                JsonObject root = state.AsObject();
+                var signals = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+                JsonObject signalObject = RequireObject(root["signals"], "signals");
+                foreach (KeyValuePair<string, JsonNode?> pair in signalObject)
+                {
+                    signals[pair.Key] = RequireIntValue(pair.Value, $"signals.{pair.Key}");
+                }
+
+                try
+                {
+                    _runtime.RestoreSnapshot(new QuestRuntimeSnapshot(signals));
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Quest save state is invalid: {ex.Message}");
+                }
+            }
+        }
+
+        private sealed class RelationshipSaveParticipant : ISaveParticipant
+        {
+            private readonly RelationshipRuntime _runtime;
+
+            public RelationshipSaveParticipant(RelationshipRuntime runtime)
+            {
+                _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            }
+
+            public string DomainKey => "relationships";
+
+            public JsonNode CaptureState()
+            {
+                return new JsonObject();
+            }
+
+            public void RestoreState(JsonNode state)
+            {
+                if (state == null) throw new ArgumentNullException(nameof(state));
+
+                state.AsObject();
+                try
+                {
+                    _runtime.RebuildEntityIndexFromWorld();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    throw new SaveContextException($"Relationship save state is invalid: {ex.Message}");
+                }
             }
         }
 

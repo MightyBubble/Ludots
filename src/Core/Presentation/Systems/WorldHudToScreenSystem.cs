@@ -28,11 +28,9 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastWorldHudProjectionRevision = -1;
         private int _lastProjectionRevision = -1;
         private int _lastCullVisibilityRevision = -1;
-        private int _lastSelectedCount;
 
         private const int Margin = 200;
         private const float WorldHudCoarseMarginCm = 600f;
-        private SelectedHudProjection[] _selectedHudProjections = Array.Empty<SelectedHudProjection>();
         private OwnerVisibilityCacheEntry[] _ownerVisibilityCache = Array.Empty<OwnerVisibilityCacheEntry>();
         private OwnerProjectionCacheEntry[] _ownerProjectionCache = Array.Empty<OwnerProjectionCacheEntry>();
         private int _frameCacheStamp;
@@ -119,26 +117,6 @@ namespace Ludots.Core.Presentation.Systems
             float maxZ = useCoarseCull ? _cullingDebug!.MaxY + WorldHudCoarseMarginCm : 0f;
             int projectedItems = 0;
             int densitySkippedItems = 0;
-            bool canReplaySelection = projectionRevision >= 0 &&
-                                      worldHudProjectionRevision == _lastWorldHudProjectionRevision &&
-                                      projectionRevision == _lastProjectionRevision &&
-                                      cullVisibilityRevision == _lastCullVisibilityRevision &&
-                                      _lastSelectedCount > 0;
-            if (canReplaySelection)
-            {
-                ReplaySelectedHudItems(ref projectedItems);
-                _timingDiagnostics?.ObserveWorldHudProjection(
-                    (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency,
-                    span.Length,
-                    projectedItems,
-                    0);
-                _screenHud.EndProjectedBuild(removeUnseenProjectedItems: false);
-                _lastWorldHudRevision = worldHudRevision;
-                _lastCullVisibilityRevision = cullVisibilityRevision;
-                return;
-            }
-
-            _lastSelectedCount = 0;
             int projectedBarIndex = 0;
             int projectedTextIndex = 0;
 
@@ -241,81 +219,6 @@ namespace Ludots.Core.Presentation.Systems
                 _screenHud.Count,
                 0);
             return true;
-        }
-
-        private void ReplaySelectedHudItems(ref int projectedItems)
-        {
-            for (int i = 0; i < _lastSelectedCount; i++)
-            {
-                ref readonly SelectedHudProjection selected = ref _selectedHudProjections[i];
-                if (!_worldHud.TryGetByStableId(selected.StableId, out WorldHudItem item))
-                {
-                    continue;
-                }
-
-                if (IsAssignedOwner(item.Owner) && !IsOwnerVisible(item.Owner))
-                {
-                    continue;
-                }
-
-                var screen = selected.ScreenPosition;
-                float x = MathF.Round(screen.X - item.Width * 0.5f);
-                float y = MathF.Round(screen.Y);
-                if (item.Kind == WorldHudItemKind.Bar)
-                {
-                    if (_screenHud.TryAddProjectedBar(new ScreenHudBarItem
-                    {
-                        StableId = item.StableId,
-                        DirtySerial = item.DirtySerial,
-                        ScreenX = x,
-                        ScreenY = y,
-                        Color0 = item.Color0,
-                        Color1 = item.Color1,
-                        Width = item.Width,
-                        Height = item.Height,
-                        Value0 = item.Value0,
-                    }))
-                    {
-                        projectedItems++;
-                    }
-                    continue;
-                }
-
-                if (item.Kind == WorldHudItemKind.Text &&
-                    _screenHud.TryAddProjectedText(new ScreenHudTextItem
-                    {
-                        StableId = item.StableId,
-                        DirtySerial = item.DirtySerial,
-                        ScreenX = x,
-                        ScreenY = y,
-                        Color0 = item.Color0,
-                        Value0 = item.Value0,
-                        Value1 = item.Value1,
-                        Id0 = item.Id0,
-                        Id1 = item.Id1,
-                        FontSize = item.FontSize,
-                        Text = item.Text,
-                    }))
-                {
-                    projectedItems++;
-                }
-            }
-        }
-
-        private void RememberSelectedHudProjection(int stableId, System.Numerics.Vector2 screen)
-        {
-            if (stableId <= 0)
-            {
-                return;
-            }
-
-            if (_lastSelectedCount >= _selectedHudProjections.Length)
-            {
-                int next = _selectedHudProjections.Length == 0 ? 256 : _selectedHudProjections.Length * 2;
-                Array.Resize(ref _selectedHudProjections, next);
-            }
-
-            _selectedHudProjections[_lastSelectedCount++] = new SelectedHudProjection(stableId, screen);
         }
 
         private void ProjectSingleItem(
@@ -637,8 +540,5 @@ namespace Ludots.Core.Presentation.Systems
             System.Numerics.Vector3 WorldPosition,
             System.Numerics.Vector2 ScreenPosition);
 
-        private readonly record struct SelectedHudProjection(
-            int StableId,
-            System.Numerics.Vector2 ScreenPosition);
     }
 }

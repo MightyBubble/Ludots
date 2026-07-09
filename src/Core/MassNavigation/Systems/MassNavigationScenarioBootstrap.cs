@@ -1,12 +1,12 @@
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.MassNavigation.Runtime;
-using System.Text.Json.Nodes;
 
 namespace Ludots.Core.MassNavigation.Systems;
 
@@ -24,6 +24,8 @@ internal static class MassNavigationScenarioBootstrap
 
         simulation.AgentState.Reset();
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
+        MapSession session = RequireCurrentMapSession(engine, simulation.Config.MapId);
+        int[] playerOwnerIdsByScenarioTeam = ResolveScenarioTeamPlayerOwners(session, teamIds);
         simulation.ConfigureScenarioTeams(teamIds);
         ConfigureRelationships(simulation.Config);
         MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, simulation.Config);
@@ -48,7 +50,7 @@ internal static class MassNavigationScenarioBootstrap
                 $"MassNavigation runtime requires RuntimeEntitySpawnQueue free capacity {requested}, actual {spawnQueue.FreeCapacity}.");
         }
 
-        MapId mapId = RequireCurrentMapId(engine, simulation.Config.MapId);
+        MapId mapId = session.MapId;
         for (int i = 0; i < simulation.MassNavigationFlow.UnitCount; i++)
         {
             int teamId = simulation.MassNavigationFlow.GetTeam(i);
@@ -68,7 +70,8 @@ internal static class MassNavigationScenarioBootstrap
                 mapId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
-                teamIdOverride: teamId);
+                teamIdOverride: teamId,
+                playerOwnerIdOverride: ResolvePlayerOwnerId(teamIds, playerOwnerIdsByScenarioTeam, teamId));
         }
 
         string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
@@ -134,24 +137,49 @@ internal static class MassNavigationScenarioBootstrap
             $"MassNavigation runtime scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
     }
 
-    private static void ValidateTemplate(GameEngine engine, string templateId)
+    private static int[] ResolveScenarioTeamPlayerOwners(MapSession session, ReadOnlySpan<int> scenarioTeamIds)
     {
-        if (string.IsNullOrWhiteSpace(templateId))
+        MapConfig mapConfig = session.MapConfig
+            ?? throw new InvalidOperationException($"MassNavigation runtime map '{session.MapId.Value}' has no MapConfig.");
+        int[] playerOwnerIdsByScenarioTeam = new int[scenarioTeamIds.Length];
+        for (int i = 0; i < mapConfig.Players.Count; i++)
         {
-            throw new InvalidOperationException("MassNavigation runtime template id must be non-empty.");
+            PlayerBindingData binding = mapConfig.Players[i];
+            int teamIndex = IndexOfScenarioTeam(scenarioTeamIds, binding.TeamId);
+            if (teamIndex < 0)
+            {
+                continue;
+            }
+
+            if (playerOwnerIdsByScenarioTeam[teamIndex] > 0)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation runtime map '{session.MapId.Value}' binds multiple players to scenario team {binding.TeamId}; generated agents require one PlayerOwner per team.");
+            }
+
+            playerOwnerIdsByScenarioTeam[teamIndex] = binding.PlayerId;
         }
 
-        if (!engine.MapLoader.TemplateRegistry.Contains(templateId))
+        return playerOwnerIdsByScenarioTeam;
+    }
+
+    private static int ResolvePlayerOwnerId(ReadOnlySpan<int> scenarioTeamIds, ReadOnlySpan<int> playerOwnerIdsByScenarioTeam, int teamId)
+    {
+        int teamIndex = IndexOfScenarioTeam(scenarioTeamIds, teamId);
+        return teamIndex >= 0 ? playerOwnerIdsByScenarioTeam[teamIndex] : 0;
+    }
+
+    private static int IndexOfScenarioTeam(ReadOnlySpan<int> scenarioTeamIds, int teamId)
+    {
+        for (int i = 0; i < scenarioTeamIds.Length; i++)
         {
-            throw new InvalidOperationException($"MassNavigation runtime requires configured entity template '{templateId}'.");
+            if (scenarioTeamIds[i] == teamId)
+            {
+                return i;
+            }
         }
 
-        EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
-            ?? throw new InvalidOperationException("MassNavigation runtime requires EntityTemplateKeyRegistry.");
-        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
-        {
-            throw new InvalidOperationException($"MassNavigation runtime template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
-        }
+        return -1;
     }
 
     private static void EnqueueSpawn(
@@ -160,6 +188,7 @@ internal static class MassNavigationScenarioBootstrap
         string templateId,
         Fix64Vec2 worldPosition,
         int teamIdOverride = 0,
+        int playerOwnerIdOverride = 0,
         RuntimeEntitySpawnComponentPatch[]? componentPatches = null)
     {
         var request = new RuntimeEntitySpawnRequest
@@ -170,6 +199,7 @@ internal static class MassNavigationScenarioBootstrap
             WorldPositionCm = worldPosition,
             HasWorldPosition = 1,
             TeamIdOverride = teamIdOverride,
+            PlayerOwnerIdOverride = playerOwnerIdOverride,
             ComponentPatches = componentPatches ?? Array.Empty<RuntimeEntitySpawnComponentPatch>(),
         };
 
@@ -179,7 +209,7 @@ internal static class MassNavigationScenarioBootstrap
         }
     }
 
-    private static MapId RequireCurrentMapId(GameEngine engine, string configuredMapId)
+    private static MapSession RequireCurrentMapSession(GameEngine engine, string configuredMapId)
     {
         MapSession session = engine.CurrentMapSession
             ?? throw new InvalidOperationException("MassNavigation runtime requires an active map session before scenario bootstrap.");
@@ -189,7 +219,7 @@ internal static class MassNavigationScenarioBootstrap
                 $"MassNavigation runtime scenario bootstrap requires active map '{configuredMapId}', got '{session.MapId.Value}'.");
         }
 
-        return session.MapId;
+        return session;
     }
 
 }

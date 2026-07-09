@@ -1,0 +1,12 @@
+{
+  "Id": "mass_navigation",
+  "DefaultCamera": {
+    "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 14000,
+    "FovYDeg": 60
+  }
+}

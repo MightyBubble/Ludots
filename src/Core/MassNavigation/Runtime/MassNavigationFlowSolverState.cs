@@ -861,6 +861,7 @@ public sealed partial class MassNavigationFlowSolverState
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
         EnterSettledState(index, x, y);
+        EnqueueArrivalEvent(index);
         MarkEntityDirty(index);
     }
 
@@ -1503,7 +1504,9 @@ public sealed partial class MassNavigationFlowSolverState
                     continue;
                 }
 
-                float penalty = (ox == 0 && oy == 0) ? 8f : 3f;
+                float penalty = (ox == 0 && oy == 0)
+                    ? Semantics.Solver.CrowdStampCenterCost
+                    : Semantics.Solver.CrowdStampNeighborCost;
                 _cost[idx] += penalty;
             }
         }
@@ -1655,7 +1658,7 @@ public sealed partial class MassNavigationFlowSolverState
                             float ovx = -offsetX;
                             float ovy = -offsetY;
                             float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > Semantics.Solver.EntitySyncVelocityEpsilonSq)
+                            if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
                             {
                                 float invObstacleDist = FastInvSqrt(obstacleDistSq);
                                 float obstacleDist = obstacleDistSq * invObstacleDist;
@@ -1952,15 +1955,6 @@ public sealed partial class MassNavigationFlowSolverState
                 }
             }
 
-            if (suppressTargetMotion)
-            {
-                _velocitiesCm[i2] = 0f;
-                _velocitiesCm[i2 + 1] = 0f;
-                _positionsCm[i2] = px;
-                _positionsCm[i2 + 1] = py;
-                continue;
-            }
-
             float directTargetX = hasGoalTarget ? targetX - px : 0f;
             float directTargetY = hasGoalTarget ? targetY - py : 0f;
             float directTargetSq = hasGoalTarget ? directTargetX * directTargetX + directTargetY * directTargetY : 0f;
@@ -2074,7 +2068,13 @@ public sealed partial class MassNavigationFlowSolverState
                 }
             }
 
-            if (!simulationTimeActive)
+            // Settled agents hold position and velocity to avoid post-arrival jitter, but only
+            // after the scans above have marked hard-resolve candidates: real body overlap must
+            // still be separated by ResolveHardPenetration, which can wake them via the
+            // arrival-recovery push threshold.
+            // TimeFlow pause uses the same hold path after the scans, so navigation cannot move
+            // while simulation time is blocked.
+            if (!simulationTimeActive || suppressTargetMotion)
             {
                 _velocitiesCm[i2] = 0f;
                 _velocitiesCm[i2 + 1] = 0f;
@@ -2468,6 +2468,7 @@ public sealed partial class MassNavigationFlowSolverState
             if (_unitSettledFlags[i] != 0)
             {
                 settled++;
+                EnqueueArrivalEvent(i);
             }
         }
 

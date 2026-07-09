@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Scripting;
 using NarrativeShowcaseMod.Runtime;
 
@@ -71,13 +72,13 @@ namespace NarrativeShowcaseMod.Systems
                 return false;
             }
 
-            if (state == NarrativeQuestState.Active && string.Equals(stageId, "briefing", StringComparison.OrdinalIgnoreCase))
+            if (state == QuestState.Active && string.Equals(stageId, "briefing", StringComparison.OrdinalIgnoreCase))
             {
                 director.StartDialogue(NarrativeShowcaseIds.BriefingDialogueId);
                 return true;
             }
 
-            if (state == NarrativeQuestState.Active && string.Equals(stageId, "return", StringComparison.OrdinalIgnoreCase))
+            if (state == QuestState.Active && string.Equals(stageId, "return", StringComparison.OrdinalIgnoreCase))
             {
                 director.StartDialogue(NarrativeShowcaseIds.ReturnDialogueId);
                 return true;
@@ -94,7 +95,7 @@ namespace NarrativeShowcaseMod.Systems
             }
 
             if (!director.TryGetQuestState(NarrativeShowcaseIds.QuestId, out var state, out string stageId) ||
-                state != NarrativeQuestState.Active ||
+                state != QuestState.Active ||
                 !string.Equals(stageId, "trial", StringComparison.OrdinalIgnoreCase))
             {
                 return;
@@ -123,7 +124,7 @@ namespace NarrativeShowcaseMod.Systems
             }
 
             int healthId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId("Health");
-            if (healthId > 0 && attributes.GetCurrent(healthId) <= 0f)
+            if (healthId != Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.InvalidId && attributes.GetCurrent(healthId) <= 0f)
             {
                 _runtime.MarkBeastDefeated(_engine);
                 director.EmitSignal(NarrativeShowcaseIds.BeastDefeatedSignal);

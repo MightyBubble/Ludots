@@ -5,8 +5,16 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Layers;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.MassNavigation;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using Schedulers;
 using Ludots.Core.Gameplay.Teams;
@@ -48,6 +56,30 @@ namespace Ludots.Tests.Presentation
 
             InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
             Assert.That(missing.Message, Does.Contain("randomSeed"));
+        }
+
+        [Test]
+        public void MassNavigationConfig_SelectionCapacityMustCoverAuthoredScenarioAgents()
+        {
+            JsonObject initialScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            int authoredAgentCount = ResolveAuthoredAgentCount(initialScratchConfig);
+            JsonObject scenarioRuntime = initialScratchConfig["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime must be authored.");
+            scenarioRuntime["initialSelectionScratchCapacity"] = authoredAgentCount - 1;
+
+            InvalidOperationException initialScratch = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(initialScratchConfig))!;
+            Assert.That(initialScratch.Message, Does.Contain("scenarioRuntime.initialSelectionScratchCapacity"));
+            Assert.That(initialScratch.Message, Does.Contain("authored scenario agent count"));
+
+            JsonObject runtimeScratchConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            authoredAgentCount = ResolveAuthoredAgentCount(runtimeScratchConfig);
+            JsonObject runtimeCapacity = runtimeScratchConfig["scenarioRuntime"]?["runtimeCapacity"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenarioRuntime.runtimeCapacity must be authored.");
+            runtimeCapacity["selectionMemberScratchCapacity"] = authoredAgentCount - 1;
+
+            InvalidOperationException runtimeScratch = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(runtimeScratchConfig))!;
+            Assert.That(runtimeScratch.Message, Does.Contain("scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity"));
+            Assert.That(runtimeScratch.Message, Does.Contain("scenarioRuntime.initialSelectedEntityCapacity"));
         }
 
         [Test]
@@ -134,6 +166,60 @@ namespace Ludots.Tests.Presentation
             {
                 World.SharedJobScheduler = previousScheduler;
             }
+        }
+
+        [Test]
+        public void ParallelStep_EmitsExactlyOneArrivalEventPerSettledAgent()
+        {
+            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
+            {
+                ThreadPrefixName = "MassNavArrivalTests",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false
+            });
+
+            const int agentCount = 16;
+            var flow = CreateConfiguredFlow(parallelWorkerCount: 4);
+            flow.Semantics.Solver.ParallelStepMinAgents = 2;
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            for (int i = 0; i < agentCount; i++)
+            {
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 1_000f + ((i % 4) * 800f),
+                    localPositionYCm: 1_000f + ((i / 4) * 800f),
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            flow.ResetAuthoredAgents(seeds);
+            for (int i = 0; i < agentCount; i++)
+            {
+                flow.SetUnitTarget(i, flow.GetPositionX(i), flow.GetPositionY(i), resetRecovery: true);
+            }
+
+            using var world = World.Create();
+            var navGroups = new MassNavigationGroupRuntime(
+                new MassNavigationFormationRuntime(LoadBaseMassNavigationConfig().Semantics.Group),
+                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
+
+            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
+            Assert.That(flow.SettledUnitCount, Is.EqualTo(agentCount));
+            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
+
+            flow.Step(dt: 0.016f, world, navGroups, runHardResolve: false, hardResolveCandidateThresholdAgents: 1);
+            Assert.That(flow.PendingArrivalEventCount, Is.EqualTo(agentCount));
         }
 
         [Test]
@@ -232,6 +318,78 @@ namespace Ludots.Tests.Presentation
             AssertWritableLeavesEqual(config.Arrival, flow.ArrivalTuning, "arrival");
             AssertWritableLeavesEqual(config.Avoidance, flow.AvoidanceTuning, "avoidance");
             AssertWritableLeavesEqual(config.Semantics, flow.Semantics, "semantics");
+        }
+
+        [Test]
+        public void SimulationRuntime_CapturesReadOnlyAvoidanceSnapshot()
+        {
+            using var world = World.Create();
+            MassNavigationConfig config = LoadBaseMassNavigationConfig();
+            config.Solver.FieldWidthCm = 10_000;
+            config.Solver.FieldHeightCm = 10_000;
+            config.Solver.PlayAreaMinXCm = 50f;
+            config.Solver.PlayAreaMaxXCm = 9_950f;
+            config.Solver.PlayAreaMinYCm = 50f;
+            config.Solver.PlayAreaMaxYCm = 9_950f;
+            config.Solver.MaxObstacleCount = 8;
+            config.ScenarioRuntime.InitialSelectedEntityCapacity = 4;
+            config.ScenarioRuntime.InitialSelectionScratchCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.GroupMembershipAgentCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.SelectionMemberScratchCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity = 4;
+            config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity = 4;
+            var runtime = new MassNavigationSimulationRuntime(config);
+            runtime.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100));
+
+            MassNavigationAgentLayer layer = CreateAgentLayer();
+            Entity light = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);
+            Entity heavy = CreateAuthoredAgentEntity(world, localX: 1400f, localY: 1200f, layer);
+            MassNavigationAgentSeed[] seeds =
+            {
+                CreateAvoidanceSeed(teamId: 1, localX: 1000f, localY: 1200f, heavy: false, layer),
+                CreateAvoidanceSeed(teamId: 2, localX: 1400f, localY: 1200f, heavy: true, layer),
+            };
+            runtime.RebuildFromAuthoredAgents(world, new[] { light, heavy }, seeds, new[] { true, true });
+            runtime.SetSelection(new[] { light }, revision: 1);
+            runtime.RebuildRuntimeObstacles(new[]
+            {
+                new MassNavigationObstacleSnapshot(worldXCm: 2200f, worldYCm: 2300f, radiusCm: 150f),
+            });
+
+            var agents = new MassNavigationAvoidanceAgentSnapshot[runtime.NavigationAgentCount];
+            var obstacles = new MassNavigationObstacleSnapshot[runtime.NavigationObstacleCount];
+            MassNavigationAvoidanceSnapshot snapshot = runtime.CaptureAvoidanceSnapshot(agents, obstacles);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(snapshot.UnitCount, Is.EqualTo(2));
+                Assert.That(snapshot.ObstacleCount, Is.EqualTo(1));
+                Assert.That(snapshot.PlayAreaMinXCm, Is.EqualTo(50f));
+                Assert.That(snapshot.PlayAreaMaxXCm, Is.EqualTo(9_950f));
+                Assert.That(agents, Has.Length.EqualTo(2));
+                Assert.That(obstacles, Has.Length.EqualTo(1));
+            });
+
+            MassNavigationAvoidanceAgentSnapshot selectedAgent = agents.Single(agent => agent.AgentIndex == 0);
+            MassNavigationAvoidanceAgentSnapshot heavyAgent = agents.Single(agent => agent.AgentIndex == 1);
+            Assert.Multiple(() =>
+            {
+                Assert.That(selectedAgent.LocalXCm, Is.EqualTo(1000f).Within(0.001f));
+                Assert.That(selectedAgent.LocalYCm, Is.EqualTo(1200f).Within(0.001f));
+                Assert.That(selectedAgent.WorldXCm, Is.EqualTo(-4000f).Within(0.001f));
+                Assert.That(selectedAgent.WorldYCm, Is.EqualTo(-3800f).Within(0.001f));
+                Assert.That(selectedAgent.Selected, Is.True);
+                Assert.That(selectedAgent.InsidePlayArea, Is.True);
+                Assert.That(heavyAgent.TeamId, Is.EqualTo(2));
+                Assert.That(heavyAgent.HeavyProfile, Is.True);
+                Assert.That(heavyAgent.BodyRadiusCm, Is.EqualTo(20f));
+                Assert.That(obstacles[0].WorldXCm, Is.EqualTo(2200f).Within(0.001f));
+                Assert.That(obstacles[0].RadiusCm, Is.EqualTo(150f));
+            });
+
+            Assert.That(
+                () => runtime.CaptureAvoidanceSnapshot(agents.AsSpan(0, 1), obstacles),
+                Throws.InvalidOperationException.With.Message.Contains("agent slots"));
         }
 
         private static MassNavigationFlowSolverState CreateSpawnedFlow(int randomSeed)
@@ -402,6 +560,44 @@ namespace Ludots.Tests.Presentation
             });
         }
 
+        private static MassNavigationAgentLayer CreateAgentLayer()
+        {
+            int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
+            uint mask = 1u << layerIndex;
+            return new MassNavigationAgentLayer(mask, mask);
+        }
+
+        private static MassNavigationAgentSeed CreateAvoidanceSeed(
+            int teamId,
+            float localX,
+            float localY,
+            bool heavy,
+            MassNavigationAgentLayer layer)
+        {
+            return new MassNavigationAgentSeed(
+                teamId,
+                localX,
+                localY,
+                heavy,
+                navMass: heavy ? 4f : 1f,
+                visualScale: heavy ? 1.5f : 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer);
+        }
+
+        private static Entity CreateAuthoredAgentEntity(World world, float localX, float localY, MassNavigationAgentLayer layer)
+        {
+            int profileId = MassNavigationProfileRegistry.Register("light");
+            return world.Create(
+                new MassNavigationAgent { ProfileId = profileId },
+                new Team { Id = 1 },
+                WorldPositionCm.FromCmFloat(localX, localY),
+                new EntityLayer(layer.CategoryMask, layer.InteractionMask),
+                new FacingDirection { AngleRad = 0f },
+                OrderBuffer.CreateEmpty());
+        }
+
         private static JsonObject ReadObject(string path)
         {
             return JsonNode.Parse(File.ReadAllText(path))?.AsObject()
@@ -475,6 +671,17 @@ namespace Ludots.Tests.Presentation
             return property.CanRead &&
                 property.CanWrite &&
                 property.GetIndexParameters().Length == 0;
+        }
+
+        private static int ResolveAuthoredAgentCount(JsonObject config)
+        {
+            JsonObject scenario = config["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario must be authored.");
+            JsonArray teams = scenario["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.teams must be authored.");
+            int agentsPerTeam = scenario["agentsPerTeam"]?.GetValue<int>()
+                ?? throw new InvalidOperationException("MassNavigationConfig.scenario.agentsPerTeam must be authored.");
+            return checked(teams.Count * agentsPerTeam);
         }
 
         private static string MassNavigationModRoot()

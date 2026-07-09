@@ -20,6 +20,7 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Quests;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -562,12 +563,24 @@ namespace Ludots.Core.Engine
             bool reloadNarrative = string.IsNullOrWhiteSpace(group)
                                  || string.Equals(group, "Narrative", StringComparison.OrdinalIgnoreCase)
                                  || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Narrative/", StringComparison.OrdinalIgnoreCase));
+            bool reloadQuests = string.IsNullOrWhiteSpace(group)
+                             || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
+                             || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+
+            if (reloadQuests &&
+                GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
+                GetService(CoreServiceKeys.QuestRuntimeService) is QuestRuntimeService questRuntime)
+            {
+                new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+                questRuntime.ResetState();
+            }
+
             if (reloadNarrative && GetService(CoreServiceKeys.NarrativeDefinitions) is NarrativeDefinitionRegistry narrativeDefinitions)
             {
                 new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
                 if (GetService(CoreServiceKeys.NarrativeDirector) is NarrativeDirector narrativeDirector)
                 {
-                    narrativeDirector.ResetState();
+                    narrativeDirector.ResetNarrativeState();
                 }
             }
 
@@ -1314,6 +1327,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebugPanelRuntime);
             SetService(CoreServiceKeys.InputFrameConsumers, inputFrameConsumers);
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
+            SetService(CoreServiceKeys.PresentationAudienceRevealHidden, false);
             SetService(CoreServiceKeys.PresentationTimingDiagnostics, presentationTimingDiagnostics);
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
             SetService(CoreServiceKeys.GasPresentationEventBuffer, gasPresentationEvents);
@@ -1333,9 +1347,14 @@ namespace Ludots.Core.Engine
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
+            var questDefinitions = new QuestDefinitionRegistry();
+            new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
+            var questRuntime = new QuestRuntimeService(World, questDefinitions);
+            SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
+            SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
-            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions);
+            var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);

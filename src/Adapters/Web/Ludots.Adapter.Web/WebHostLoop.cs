@@ -93,6 +93,7 @@ namespace Ludots.Adapter.Web
 
             BuildAndSendMeshMap(engine, setup.Transport);
 
+            setup.LoopStatus.MarkStarted();
             Log.Info(in LogChannel, $"Web host loop started (target {targetFps} fps, map={config.StartupMapId})");
 
             var sw = Stopwatch.StartNew();
@@ -149,12 +150,19 @@ namespace Ludots.Adapter.Web
                     }
                     catch (Exception ex)
                     {
+                        setup.LoopStatus.MarkFaulted(ex);
                         Log.Error(in LogChannel, $"Unhandled exception in game loop: {ex}");
+                        throw;
                     }
                 }
             }
             finally
             {
+                if (!setup.LoopStatus.IsFaulted)
+                {
+                    setup.LoopStatus.MarkStopped();
+                }
+
                 engine.Stop();
                 setup.Transport.Dispose();
                 Log.Info(in LogChannel, "Web host loop stopped.");

@@ -3,16 +3,6 @@ using System.Collections.Generic;
 
 namespace Ludots.Core.Gameplay.Narrative
 {
-    public sealed record NarrativeQuestView(
-        string QuestId,
-        string DisplayName,
-        string Summary,
-        NarrativeQuestState State,
-        string StageId,
-        string StageTitle,
-        string ObjectiveText,
-        string ObjectiveHint);
-
     public sealed record NarrativeDialogueChoiceView(
         string ChoiceId,
         string Text,
