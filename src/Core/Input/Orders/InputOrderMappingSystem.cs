@@ -793,20 +793,30 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            // Pressing a different skill key while aiming switches to that skill
+            // Pressing a different skill key while aiming cancels the old aim and obeys
+            // the new skill's effective cast mode, including per-ability overrides.
             foreach (var entry in _orderedMappings)
             {
                 string actionId = entry.ActionId;
                 InputOrderMapping mapping = entry.Mapping;
                 if (actionId == _aimingActionId) continue;
-                var effectiveMapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
-                    ? overrideMapping
-                    : mapping;
+                var effectiveMapping = ResolveEffectiveMapping(actionId, mapping, out _);
                 if (!effectiveMapping.IsSkillMapping) continue;
                 if (!_input.PressedThisFrame(actionId)) continue;
 
-                // Switch aim to the new skill
-                EnterAimingState(actionId, effectiveMapping);
+                ExitAimingState();
+                var effectiveMode = effectiveMapping.CastModeOverride ?? _config.InteractionMode;
+                if (effectiveMode != InteractionModeType.TargetFirst)
+                {
+                    HandleSkillMappingWithMode(actionId, effectiveMapping, effectiveMode);
+                    return;
+                }
+
+                if (TryBuildOrder(effectiveMapping, out var order))
+                {
+                    SubmitOrder(effectiveMapping, in order);
+                }
+
                 return;
             }
 

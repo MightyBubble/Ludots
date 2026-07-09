@@ -12,13 +12,59 @@ Scope: PR #581 follow-up review against `main`, latest GitHub PR reviews, PR hea
 
 ## Executive Status
 
-PR581 has reached the current RFC-0065 closeout target for formal Selection retirement and visible showcase evidence. Remaining RFC follow-ups are explicitly scoped below and are not fallback permission.
+PR581 has reached the current RFC-0065 closeout target for formal Selection retirement and visible showcase evidence. It has **not** reached the full RFC-0065 terminal interaction architecture. Remaining RFC follow-ups are explicitly scoped below and are not fallback permission.
+
+Plain-language boundary: the ground `Command` path now follows the new model, but the broader skill/cast path still carries the old interaction-mode state machine. Do not describe this PR as "the complex semantic layering is fully solved" until skill/cast activation is driven by `CastCommitProfile`, `ClientCastPreference`, `InteractionContextStack.frameActions`, and dispatch routing end to end.
 
 | Question | Status | Evidence |
 |---|---|---|
 | Are all follow-up TODOs done? | No | A1 full CEF toggle/revoke, A2 WebUI War3 command panel, SHOW-3 GUI marker/palette, A3 world-space superweapon timeline, A4 command-source/scheme, A4 world-space blink/mixed-dispatch timeline, B1 benchmarks, B2 current-workstation perf rerun, launcher bindings, and focused acceptance are complete. Terminal RFC work still includes Workflow C migrations, full video files where reviewers require video beyond timeline PNGs, and a dedicated isolated B2 perf host rerun if that stricter gate is required. |
 | Are all UAT/showcases done? | Yes for the current framebuffer/timeline UAT pass | A1 has readable CEF toggle/revoke evidence; A2 now has readable WebUI/CEF War3 bottom-panel Template -> Family -> Ability evidence; SHOW-3 has readable GUI referee marker/palette evidence; A3 and A4 have player-readable world-space timelines with visible units, rings, and state changes. Full RFC §6 video recordings remain a separate artifact request if reviewers require video files instead of accepted timeline PNG evidence. |
 | Is Selection retired? | Yes for formal Selection APIs and core command authority | Production and test code now use `EntityCollectionStore`, explicit owner/key collection reads, and `CommandSourceAcquisitionSystem`. `EntityCollectionContextRuntime` is intentionally collection-generic and does not hard-code or fall back to command-source. The deleted formal APIs must not be reintroduced. User-facing "selection" wording may remain only as shorthand for explicit entity collections. |
+| Is the full RFC-0065 semantic layering solved? | No | `Command` actions use `CommandIntentArbiter` / `CommandIntentProfile` / dispatch / `OrderQueue`. Skill/cast activation still uses `InteractionModeType`, `_isAiming`, and SmartCast/AimCast branches in `InputOrderMappingSystem`. This is the C2 migration tail, not a completed terminal architecture. |
+
+## RFC-0065 Semantic Layering Status
+
+The current branch must be read as a completed command-authority slice plus a visible-UAT slice, not as a full replacement of the old skill/cast interaction model.
+
+| User question | Current truthful answer | Code signal |
+|---|---|---|
+| "Right-click / pointer command should be device-independent and data-routed; is that solved?" | Yes for the ground `Command` path. The clicked target facts are frozen before routing, command actors come from an explicit entity collection, and route selection goes through `CommandIntentProfile`. | `InputOrderMappingSystem.SubmitCommandIntentOrder` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue`. |
+| "Hover vs click command vs SmartCast: are they separated?" | Partially. `Command` click target facts bypass the SmartCast hover path; skill SmartCast still reads hover/cursor/auto-target directly. | `SubmitCommandIntentOrder` uses `CommandIntentTargetFacts`; `TryBuildOrderSmartCast` remains the skill/cast target builder. |
+| "User preference vs per-ability preference: are they separated?" | Kernel pieces exist, but the main skill/cast chain is not fully migrated. Per-ability `CastModeOverride` is honored in the legacy mapper, including when switching skills while aiming; terminal `ClientCastPreference` activation is still follow-up. | `ClientCastPreferenceStore` exists; `InputOrderMappingSystem` still branches on `InteractionModeType` / `CastModeOverride`. |
+| "Can we say Selection retirement solved all semantic layering?" | No. Formal Selection APIs are retired, but Selection retirement and cast semantic layering are different problems. | Selection scans are clean; `InteractionModeType` scans are still live by design until C2. |
+
+Latest semantic-layering verification on 2026-07-09:
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~EffectPresetInteractionModeTests|FullyQualifiedName~InputOrderContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 26/26
+```
+
+```text
+dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~CommandIntentProfileTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~Rfc0065ShowcaseWorkflowBoundaryAcceptanceTests|FullyQualifiedName~EffectPresetInteractionModeTests" -v:q -clp:ErrorsOnly
+
+Passed: 46/46
+```
+
+```text
+dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj --no-restore --filter "FullyQualifiedName~Rfc0065InteractionCastingBoundaryContractTests" -v:q -clp:ErrorsOnly
+
+Passed: 13/13
+```
+
+```text
+rg -n "SelectionRuntime|SelectionSetKeys|SelectionViewKeys|SelectionContextRuntime|SelectionViewRuntime|SelectionControlGroupRuntime|SelectionRequest|SelectionResponse|OrderSelectionReference|SelectedEntityProvider|SetSelectedEntityProvider|CurrentSelection|ViewedSelectionPrimary|SelectedGroupFollowTarget|CameraFollowTargetKind\.Selected|CenterOnSelected|RejectCommandWithoutSelection|EmptySelection|SelectionGate|RewireSelection|SelectionBox|startupSelectedPlayerId|StartupSelectedPlayerId|HasSelectedPlayer|TryGetLocalOwner\(" src mods assets --glob "!**/bin/**" --glob "!**/obj/**"
+
+No matches.
+```
+
+```text
+rg -n "SubmitRfc0065Command|SetRfc0065CommandRouting|\bRfc0065Command\b|_rfc0065|ability\.rfc0065\.context|rfcStatus|Rfc0065CommandLastStatus" src mods assets docs/audits/rfc_0065_pr581_workflow_closeout.md --glob "!**/bin/**" --glob "!**/obj/**"
+
+No matches.
+```
 
 ## Final 2026-07-09 Selection-Retirement Pass
 

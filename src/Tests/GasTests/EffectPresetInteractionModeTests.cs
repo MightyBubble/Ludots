@@ -145,6 +145,79 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputOrderMapping_SwitchingAimToPerAbilitySmartCast_UsesPerAbilityMode()
+        {
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var cfg = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.AimCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillQ",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        IsSkillMapping = true,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity
+                    },
+                    new()
+                    {
+                        ActionId = "SkillW",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
+                        IsSkillMapping = true,
+                        RequireTarget = false,
+                        TargetType = OrderTargetType.Entity
+                    }
+                }
+            };
+
+            var mapping = new InputOrderMappingSystem(input, cfg);
+            mapping.SetInteractionActionBindings(new InteractionActionBindings());
+            using var world = World.Create();
+            var actor = world.Create();
+            var target = world.Create();
+            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
+            mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
+            mapping.SetSkillMappingOverrideProvider((Entity _, InputOrderMapping source, out InputOrderMapping overrideMapping) =>
+            {
+                overrideMapping = source;
+                if (source.ActionId != "SkillW")
+                {
+                    return false;
+                }
+
+                overrideMapping = source.Clone();
+                overrideMapping.CastModeOverride = InteractionModeType.SmartCast;
+                return true;
+            });
+
+            var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+
+            input.InjectButtonPress("SkillQ");
+            input.Update();
+            mapping.Update(0f);
+            Assert.That(mapping.IsAiming, Is.True);
+            Assert.That(mapping.AimingActionId, Is.EqualTo("SkillQ"));
+
+            input.InjectButtonPress("SkillW");
+            input.Update();
+            mapping.Update(0f);
+
+            Assert.That(mapping.IsAiming, Is.False,
+                "The new skill's per-ability SmartCast override must not be forced into the previous AimCast state.");
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders[0].Args.I0, Is.EqualTo(1));
+            Assert.That(orders[0].Target, Is.EqualTo(target));
+        }
+
+        [Test]
         public void AbilityExecLoader_CompileAbility_ParsesPresentationMetadata()
         {
             var obj = JsonNode.Parse(
@@ -189,7 +262,9 @@ namespace Ludots.Tests.GAS
                 Actions = new List<InputActionDef>
                 {
                     new() { Id = "SkillQ", Name = "SkillQ", Type = InputActionType.Button },
+                    new() { Id = "SkillW", Name = "SkillW", Type = InputActionType.Button },
                     new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
+                    new() { Id = "CommandSourceAcquire", Name = "CommandSourceAcquire", Type = InputActionType.Button },
                     new() { Id = "Cancel", Name = "Cancel", Type = InputActionType.Button },
                     new() { Id = "Command", Name = "Command", Type = InputActionType.Button },
                 },
