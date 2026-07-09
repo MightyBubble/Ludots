@@ -24,7 +24,8 @@ Quest 定义集中在 `src/Core/Gameplay/Quests/QuestDefinitions.cs`，运行时
 - `QuestDefinition`
 - `QuestStageDefinition`
 - `QuestAttributeDefinition`
-- `QuestGameplayTagDefinition`
+
+Quest tag 不单独建定义类型；内容层用 `QuestDefinition.Tags` 声明 tag 字符串，加载时解析到 `GameplayTagContainer`。
 
 Narrative 定义集中在 `src/Core/Gameplay/Narrative/NarrativeDefinitions.cs`：
 
@@ -229,6 +230,50 @@ Mod 扩展的推荐方式：
 1. 用 `context.OnEvent(NarrativeEventKeys.Xxx, ...)` 接 narrative 生命周期。
 2. 在 handler 内调用正式服务，例如 spawn queue、effect queue、camera、UI、map runtime。
 3. 若缺少公共能力，优先扩充 `ConditionKind` / `ActionKind`，不要在单个 showcase 里私写隐藏协议。
+
+### 5.1 Quest SSOT 与 API 现状
+
+Quest 的状态单一真相分为三层：
+
+- 配置真相：`Quests/quests.json` 通过 `QuestConfigLoader` 进入 `QuestDefinitionRegistry`。
+- 运行时真相：`QuestRuntimeService` 创建和维护 `QuestInstanceCm` entity，索引键是 `(ScopeHost, DefinitionId)`。
+- 信号真相：signal count 存在 `QuestRuntimeService.Signals`，由 `quests` save participant 保存；NarrativeDirector 不再保存第二份 signal 字典。
+
+正式 Core runtime API 位于 `QuestRuntimeService`：
+
+- 命令入口：`StartQuest`、`AdvanceQuestStage`、`CompleteQuest`、`FailQuest`、`EmitSignal`
+- 查询入口：`TryGetQuestState`、`TryResolveQuestEntity`、`TryGetDefinition`、`TryGetStage`、`GetQuestViews`
+- 生命周期事件：`QuestEventPublished` 发布 `Started`、`StageChanged`、`Completed`、`Failed`
+
+正式 Narrative action API 位于 `NarrativeActionKind`：
+
+- `StartQuest`
+- `AdvanceQuestStage`
+- `EmitSignal`
+- `CompleteQuest`
+- `FailQuest`
+
+正式 Trigger API 目前通过 Narrative event 暴露，而不是新建一套 Quest trigger system：
+
+- `Narrative.Signal`
+- `Narrative.QuestStageChanged`
+- `Narrative.QuestCompleted`
+
+这些事件通过 `context.OnEvent(NarrativeEventKeys.Xxx, ...)` 订阅，并通过 `NarrativeServiceKeys.QuestId`、`NarrativeServiceKeys.QuestStageId`、`NarrativeServiceKeys.SignalId` 等 `ScriptContext` key 传参。
+
+事件顺序约束：`NarrativeDirector.EmitSignal` 会先发布 `Narrative.Signal`，再调用 `QuestRuntimeService.EmitSignal` 推进 signal 计数与 quest stage。因此 `Narrative.Signal` handler 不应假设能读到“本次 signal 已推进后”的 quest state；需要读推进后状态时，应监听后续的 `Narrative.QuestStageChanged` 或 `Narrative.QuestCompleted`。
+
+当前尚未完成的公共 API：
+
+- 还没有对外 trigger event：`QuestStarted`、`QuestFailed`。
+- 还没有注册到 `FunctionRegistry` 的字符串函数 API；脚本层不要临时发明 `Quest.Start`、`Quest.Complete` 这类函数名。
+- 还没有配置层直接声明“quest event handler”的专用字段；现阶段用 Narrative action、stage enter、signal 和 `context.OnEvent` 接线。
+
+因此后续若需要更多 Quest 对外能力，正式路径是：
+
+1. 先补 `NarrativeEventKeys` / `NarrativeServiceKeys` 或明确新增 `QuestEventKeys`，不要在 Mod 内私写事件名。
+2. 如果需要脚本函数，统一在 Core 注册 `FunctionRegistry` 名称，并写入本节作为稳定 API。
+3. 如果需要配置动作，扩展 `NarrativeActionKind` / `NarrativeConditionKind`，不在 showcase JSON 里塞隐藏协议。
 
 ## 6. 与 ECS / GAS / Trigger / Camera 的连接
 
