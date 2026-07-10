@@ -165,6 +165,20 @@ public sealed class WebUiPanelKitManifestTests
 	}
 
 	[Test]
+	public void QuestObjectiveDescriptors_MatchSampleCatalogVocabulary()
+	{
+		Assert.That(WebUiQuestObjectivePanelDescriptors.PanelType, Is.EqualTo("objective"));
+		Assert.That(WebUiQuestObjectivePanelDescriptors.GenericProfileId, Is.EqualTo("profile.objective.generic"));
+		Assert.That(WebUiQuestObjectivePanelDescriptors.SampleTopic, Is.EqualTo(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		Assert.That(WebUiQuestObjectivePanelDescriptors.VerticalListLayoutId, Is.EqualTo("layout.list.vertical"));
+
+		string json = File.ReadAllText(WebUiPanelKitSampleCatalog.SampleManifestPath());
+		Assert.That(json, Does.Contain(WebUiQuestObjectivePanelDescriptors.SampleTopic));
+		Assert.That(json, Does.Contain(WebUiQuestObjectivePanelDescriptors.GenericProfileId));
+		Assert.That(json, Does.Contain($"\"panelType\": \"{WebUiQuestObjectivePanelDescriptors.PanelType}\""));
+	}
+
+	[Test]
 	public void DataPlane_IsTopicRegistered_ReportsRegisteredTopics()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();

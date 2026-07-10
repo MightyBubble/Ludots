@@ -24,6 +24,15 @@ namespace Ludots.Core.Gameplay.Quests
         public string Title { get; set; } = string.Empty;
         public string ObjectiveText { get; set; } = string.Empty;
         public string ObjectiveHint { get; set; } = string.Empty;
+        /// <summary>
+        /// Optional PresentationText token key for objective copy.
+        /// When set, WebUI Objective projection validates the token via the WPK-5 text contract hook.
+        /// </summary>
+        public string ObjectiveTextToken { get; set; } = string.Empty;
+        /// <summary>
+        /// Optional PresentationText token key for objective hint copy.
+        /// </summary>
+        public string ObjectiveHintToken { get; set; } = string.Empty;
         public string DialogueOnEnterId { get; set; } = string.Empty;
         public string CinematicOnEnterId { get; set; } = string.Empty;
         public List<string> RequiredSignals { get; set; } = new();
@@ -207,5 +216,7 @@ namespace Ludots.Core.Gameplay.Quests
         string StageTitle,
         string ObjectiveText,
         string ObjectiveHint,
-        Entity QuestEntity);
+        Entity QuestEntity,
+        Entity ScopeHost,
+        int Revision);
 }
