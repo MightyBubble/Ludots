@@ -16,6 +16,9 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
@@ -1162,6 +1165,578 @@ namespace Ludots.Tests.GAS
             });
 
             That(count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_AppliesPerInstancePerformerParamOverrides()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:RuntimeParamBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int templateKeyId = templateKeys.Register("test_runtime_param_batch");
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int tintParamKey = PerformerParamKeyRegistry.Register("test.runtime.tint");
+            int rootDefinitionId = definitions.GetOrRegisterId("test.runtime.param.root");
+            definitions.Register("test.runtime.param.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts,
+                performerRuntime: performerRuntime,
+                performerDefinitions: definitions);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_runtime_param_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + (i * 50), 200 + (i * 60)),
+                    HasWorldPosition = 1,
+                    FacingAngleRad = 0.25f + i,
+                    HasFacing = 1,
+                    TeamIdOverride = 10 + i,
+                    PlayerOwnerIdOverride = 70 + i,
+                    PerformerParamOverrides =
+                    [
+                        new ParamDefault
+                        {
+                            ParamKey = tintParamKey,
+                            Lane = ParamLane.Float,
+                            FloatValue = 0.5f + i,
+                        },
+                    ],
+                    ReceiptChannelId = 33,
+                    ReceiptId = 900 + i,
+                    EmitReceipt = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(receipts.TryDequeueForChannel(33, out RuntimeEntitySpawnReceipt receipt), Is.True);
+                Entity owner = receipt.Entity;
+                That(world.Get<WorldPositionCm>(owner).Value, Is.EqualTo(Fix64Vec2.FromInt(100 + (i * 50), 200 + (i * 60))));
+                That(world.Get<FacingDirection>(owner).AngleRad, Is.EqualTo(0.25f + i).Within(0.0001f));
+                That(world.Get<Team>(owner).Id, Is.EqualTo(10 + i));
+                That(world.Get<PlayerOwner>(owner).PlayerId, Is.EqualTo(70 + i));
+
+                Entity root = world.Get<PresentationOwnerHasPerformerPayload>(owner).SingleRootPerformer;
+                That(world.IsAlive(root), Is.True);
+                That(world.Get<PerformerState>(root).DefId, Is.EqualTo(rootDefinitionId));
+                That(performerRuntime.TryResolveFloat(root, tintParamKey, out float tint), Is.True);
+                That(tint, Is.EqualTo(0.5f + i).Within(0.0001f));
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_PerformerParamOverrides_DoNotBleedAcrossDirectBootstrapRules()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_multi_bootstrap"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:RuntimeParamMultiBootstrap"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int templateKeyId = templateKeys.Register("test_runtime_param_multi_bootstrap");
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int tintParamKey = PerformerParamKeyRegistry.Register("test.runtime.multi.tint");
+            int rootAId = definitions.GetOrRegisterId("test.runtime.multi.root.a");
+            int rootBId = definitions.GetOrRegisterId("test.runtime.multi.root.b");
+            definitions.Register("test.runtime.multi.root.a", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+            });
+            definitions.Register("test.runtime.multi.root.b", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+            });
+            definitions.Register("test.runtime.multi.bootstrap", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootAId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootBId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts,
+                performerRuntime: performerRuntime,
+                performerDefinitions: definitions);
+
+            float[] expectedTints = [0.25f, 0.75f];
+            for (int i = 0; i < expectedTints.Length; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_runtime_param_multi_bootstrap",
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + (i * 100), 200),
+                    HasWorldPosition = 1,
+                    PerformerParamOverrides =
+                    [
+                        new ParamDefault
+                        {
+                            ParamKey = tintParamKey,
+                            Lane = ParamLane.Float,
+                            FloatValue = expectedTints[i],
+                        },
+                    ],
+                    ReceiptChannelId = 34,
+                    ReceiptId = 910 + i,
+                    EmitReceipt = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            for (int i = 0; i < expectedTints.Length; i++)
+            {
+                That(receipts.TryDequeueForChannel(34, out RuntimeEntitySpawnReceipt receipt), Is.True);
+                AssertRootTint(receipt.Entity, rootAId, expectedTints[i]);
+                AssertRootTint(receipt.Entity, rootBId, expectedTints[i]);
+            }
+
+            void AssertRootTint(Entity owner, int definitionId, float expectedTint)
+            {
+                Entity found = Entity.Null;
+                int foundCount = 0;
+                var query = new QueryDescription().WithAll<PerformerState>();
+                world.Query(in query, (Entity entity, ref PerformerState state) =>
+                {
+                    if (state.OwnerEntity == owner && state.DefId == definitionId)
+                    {
+                        found = entity;
+                        foundCount++;
+                    }
+                });
+
+                That(foundCount, Is.EqualTo(1));
+                That(performerRuntime.TryResolveFloat(found, tintParamKey, out float tint), Is.True);
+                That(tint, Is.EqualTo(expectedTint).Within(0.0001f));
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplatePerformerParamOverride_FailsWhenBootstrapConditionSkipsRoot()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_condition_single"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ConditionSingle"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int templateKeyId = templateKeys.Register("test_runtime_param_condition_single");
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int tintParamKey = PerformerParamKeyRegistry.Register("test.runtime.condition.single.tint");
+            int rootDefinitionId = definitions.GetOrRegisterId("test.runtime.condition.single.root");
+            definitions.Register("test.runtime.condition.single.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+            });
+            definitions.Register("test.runtime.condition.single.bootstrap", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Condition = new ConditionRef { Inline = InlineConditionKind.SourceHasAttributes },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                performerRuntime: performerRuntime,
+                performerDefinitions: definitions);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_runtime_param_condition_single",
+                PerformerParamOverrides =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 1f,
+                    },
+                ],
+            }), Is.True);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("no direct performer root was created"));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_PerformerParamOverride_FailsWhenBootstrapConditionSkipsRoot()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_condition_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ConditionBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            int templateKeyId = templateKeys.Register("test_runtime_param_condition_batch");
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int tintParamKey = PerformerParamKeyRegistry.Register("test.runtime.condition.batch.tint");
+            int rootDefinitionId = definitions.GetOrRegisterId("test.runtime.condition.batch.root");
+            definitions.Register("test.runtime.condition.batch.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = tintParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+            });
+            definitions.Register("test.runtime.condition.batch.bootstrap", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Condition = new ConditionRef { Inline = InlineConditionKind.SourceHasAttributes },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                performerRuntime: performerRuntime,
+                performerDefinitions: definitions);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_runtime_param_condition_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                    PerformerParamOverrides =
+                    [
+                        new ParamDefault
+                        {
+                            ParamKey = tintParamKey,
+                            Lane = ParamLane.Float,
+                            FloatValue = i,
+                        },
+                    ],
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("no direct performer root was created"));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplatePerformerParamOverride_RequiresPresentationRuntime()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_missing_runtime"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:NoRuntime"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator());
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_runtime_param_missing_runtime",
+                PerformerParamOverrides =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = PerformerParamKeyRegistry.Register("test.runtime.missing"),
+                        Lane = ParamLane.Float,
+                        FloatValue = 1f,
+                    },
+                ],
+            }), Is.True);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("presentation runtime is not installed"));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_PerformerParamOverride_RequiresDirectBootstrap()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_runtime_param_no_bootstrap"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:NoBootstrap"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            templateKeys.Register("test_runtime_param_no_bootstrap");
+            var definitions = new PerformerDefinitionRegistry();
+            var performerRuntime = new PerformerEntityRuntime(world);
+            performerRuntime.BindDefinitions(definitions);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                performerRuntime: performerRuntime,
+                performerDefinitions: definitions);
+
+            int paramKey = PerformerParamKeyRegistry.Register("test.runtime.no.bootstrap");
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_runtime_param_no_bootstrap",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                    PerformerParamOverrides =
+                    [
+                        new ParamDefault
+                        {
+                            ParamKey = paramKey,
+                            Lane = ParamLane.Float,
+                            FloatValue = i,
+                        },
+                    ],
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("has no direct performer bootstrap"));
         }
 
         [Test]

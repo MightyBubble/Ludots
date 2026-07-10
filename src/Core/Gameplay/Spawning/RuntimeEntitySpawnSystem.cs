@@ -45,6 +45,9 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly Entity[] _performerBatchCreated = new Entity[BatchEntityScratchCapacity];
         private readonly VisualTransform[] _performerBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
         private readonly CullState[] _performerBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
+        private readonly ParamDefault[][] _performerBatchRequestParamOverrides = new ParamDefault[BatchEntityScratchCapacity][];
+        private readonly ParamDefault[][] _performerBatchCreateParamOverrides = new ParamDefault[BatchEntityScratchCapacity][];
+        private readonly byte[] _performerBatchOverrideRootCreated = new byte[BatchEntityScratchCapacity];
         private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
         private readonly PerformerEntityRuntime? _performerRuntime;
         private readonly PerformerDefinitionRegistry? _performerDefinitions;
@@ -156,6 +159,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private Entity SpawnUnitType(in RuntimeEntitySpawnRequest request)
         {
+            RejectPerformerParamOverrides(in request, "Runtime unit spawn");
             if (request.UnitTypeId <= 0)
             {
                 throw new InvalidOperationException("Runtime unit spawn requires a positive UnitTypeId.");
@@ -194,6 +198,7 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
+            ValidateTemplatePerformerParamOverrides(in request, request.TemplateId);
             var builder = _builder
                 .UseTemplate(request.TemplateId)
                 .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'");
@@ -216,7 +221,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryLinkOwnershipEdge(entity);
-            TryBootstrapPerformer(entity, request.TemplateId);
+            TryBootstrapPerformer(entity, request.TemplateId, request.PerformerParamOverrides);
             return entity;
         }
 
@@ -260,7 +265,8 @@ namespace Ludots.Core.Gameplay.Spawning
                     facingAngleRad: request.FacingAngleRad,
                     hasFacing: request.HasFacing != 0,
                     mapEntity: mapEntity ?? default,
-                    hasMapEntity: mapEntity.HasValue);
+                    hasMapEntity: mapEntity.HasValue,
+                    performerParamOverrides: request.PerformerParamOverrides);
             }
 
             int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
@@ -271,6 +277,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
+            bool hasPerformerParamOverrideWork = false;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
@@ -279,6 +286,20 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
+                hasPerformerParamOverrideWork |= HasPerformerParamOverrides(in request);
+                _performerBatchRequestParamOverrides[i] = request.PerformerParamOverrides ?? Array.Empty<ParamDefault>();
+            }
+
+            if (hasPerformerParamOverrideWork && !CanApplyPerformerParamOverrides())
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' declares PerformerParamOverrides but presentation runtime is not installed.");
+            }
+
+            if (hasPerformerParamOverrideWork && !hasDirectBootstrap)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template batch '{templateId}' declares PerformerParamOverrides but has no direct performer bootstrap.");
             }
 
             TemplateBatchSpawnFeatures features =
@@ -401,6 +422,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     _performerBatchStableIds.AsSpan(0, created.Length),
                     _performerBatchOwnerTransforms.AsSpan(0, created.Length),
                     _performerBatchOwnerCulls.AsSpan(0, created.Length),
+                    _performerBatchRequestParamOverrides.AsSpan(0, created.Length),
                     out performerCreated,
                     out performerCreateMs,
                     out performerBootstrapMarkMs,
@@ -416,6 +438,14 @@ namespace Ludots.Core.Gameplay.Spawning
                     out performerChildIndexWriteMs,
                     out performerChildStableIdMs);
                 performerBatchMs = ElapsedMs(performerBatchStart);
+            }
+
+            if (hasPerformerParamOverrideWork)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    _performerBatchRequestParamOverrides[i] = null!;
+                }
             }
 
             _timingDiagnostics?.ObserveRuntimeSpawnBatch(
@@ -445,6 +475,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
         {
+            RejectPerformerParamOverrides(in request, "Runtime assembly spawn");
             var entity = base.World.Create();
 
             if (request.HasProjectileState != 0)
@@ -871,10 +902,17 @@ namespace Ludots.Core.Gameplay.Spawning
             });
         }
 
-        private void TryBootstrapPerformer(Entity owner, string templateId)
+        private void TryBootstrapPerformer(Entity owner, string templateId, ParamDefault[]? rootParamOverrides = null)
         {
+            bool hasParamOverrides = rootParamOverrides != null && rootParamOverrides.Length != 0;
             if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null)
             {
+                if (hasParamOverrides)
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template spawn '{templateId}' declares PerformerParamOverrides but presentation runtime is not installed.");
+                }
+
                 return;
             }
 
@@ -882,12 +920,19 @@ namespace Ludots.Core.Gameplay.Spawning
             if (templateKeyId <= 0 ||
                 !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
             {
+                if (hasParamOverrides)
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template spawn '{templateId}' declares PerformerParamOverrides but has no direct performer bootstrap.");
+                }
+
                 return;
             }
 
             int stableId = World.Has<PresentationStableId>(owner)
                 ? World.Get<PresentationStableId>(owner).Value
                 : 0;
+            int createdCount = 0;
             for (int i = 0; i < rules.Length; i++)
             {
                 ref readonly var rule = ref rules[i];
@@ -922,9 +967,17 @@ namespace Ludots.Core.Gameplay.Spawning
                     _stableIds.Allocate(),
                     Entity.Null,
                     definition,
-                    _stableIds.Allocate);
+                    _stableIds.Allocate,
+                    rootParamOverrides);
                 MarkHierarchyForBootstrapIfNeeded(root);
                 MarkOwnerBootstrapHandled(owner);
+                createdCount++;
+            }
+
+            if (hasParamOverrides && createdCount == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template spawn '{templateId}' declares PerformerParamOverrides but no direct performer root was created for the spawned entity.");
             }
         }
 
@@ -941,6 +994,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 stableIds,
                 ownerTransforms,
                 ownerCulls,
+                default,
                 out _,
                 out _,
                 out _,
@@ -963,6 +1017,7 @@ namespace Ludots.Core.Gameplay.Spawning
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls,
+            ReadOnlySpan<ParamDefault[]> rootParamOverrides,
             out int totalCreated,
             out double performerCreateMs,
             out double bootstrapMarkMs,
@@ -999,7 +1054,8 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (owners.Length != stableIds.Length ||
                 owners.Length != ownerTransforms.Length ||
-                owners.Length != ownerCulls.Length)
+                owners.Length != ownerCulls.Length ||
+                (!rootParamOverrides.IsEmpty && rootParamOverrides.Length != owners.Length))
             {
                 throw new ArgumentException("Performer bootstrap batch spans must have matching lengths.");
             }
@@ -1008,6 +1064,15 @@ namespace Ludots.Core.Gameplay.Spawning
                 !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
             {
                 return;
+            }
+
+            bool hasRootParamOverrides = !rootParamOverrides.IsEmpty;
+            if (hasRootParamOverrides)
+            {
+                for (int oi = 0; oi < owners.Length; oi++)
+                {
+                    _performerBatchOverrideRootCreated[oi] = 0;
+                }
             }
 
             for (int ri = 0; ri < rules.Length; ri++)
@@ -1039,6 +1104,16 @@ namespace Ludots.Core.Gameplay.Spawning
                     _performerBatchStableIds[createCount] = _stableIds.Allocate();
                     _performerBatchOwnerTransforms[createCount] = ownerTransforms[oi];
                     _performerBatchOwnerCulls[createCount] = ownerCulls[oi];
+                    _performerBatchCreateParamOverrides[createCount] = rootParamOverrides.IsEmpty
+                        ? Array.Empty<ParamDefault>()
+                        : rootParamOverrides[oi] ?? Array.Empty<ParamDefault>();
+                    if (hasRootParamOverrides &&
+                        rootParamOverrides[oi] != null &&
+                        rootParamOverrides[oi].Length != 0)
+                    {
+                        _performerBatchOverrideRootCreated[oi] = 1;
+                    }
+
                     createCount++;
                 }
 
@@ -1058,7 +1133,8 @@ namespace Ludots.Core.Gameplay.Spawning
                     _performerBatchOwnerCulls.AsSpan(0, createCount),
                     definition,
                     _performerBatchCreated.AsSpan(0, createCount),
-                    _stableIds.Allocate);
+                    _stableIds.Allocate,
+                    _performerBatchCreateParamOverrides.AsSpan(0, createCount));
                 performerCreateMs += ElapsedMs(createStart);
                 performerCreateSetupMs += _performerRuntime.LastRootBatchSetupMs;
                 performerWorldCreateMs += _performerRuntime.LastRootBatchWorldCreateMs;
@@ -1084,7 +1160,72 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
 
                 totalCreated += createCount;
+                for (int i = 0; i < createCount; i++)
+                {
+                    _performerBatchCreateParamOverrides[i] = null!;
+                }
             }
+
+            if (hasRootParamOverrides)
+            {
+                for (int oi = 0; oi < owners.Length; oi++)
+                {
+                    if (rootParamOverrides[oi] == null || rootParamOverrides[oi].Length == 0)
+                    {
+                        continue;
+                    }
+
+                    if (_performerBatchOverrideRootCreated[oi] == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Runtime template batch '{templateKeyId}' declares PerformerParamOverrides but no direct performer root was created for owner index {oi}.");
+                    }
+                }
+            }
+        }
+
+        private static bool HasPerformerParamOverrides(in RuntimeEntitySpawnRequest request)
+        {
+            return request.PerformerParamOverrides != null && request.PerformerParamOverrides.Length != 0;
+        }
+
+        private static void RejectPerformerParamOverrides(in RuntimeEntitySpawnRequest request, string context)
+        {
+            if (!HasPerformerParamOverrides(in request))
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} does not support PerformerParamOverrides; only template spawns can bootstrap entity-anchored performers.");
+        }
+
+        private void ValidateTemplatePerformerParamOverrides(in RuntimeEntitySpawnRequest request, string templateId)
+        {
+            if (!HasPerformerParamOverrides(in request))
+            {
+                return;
+            }
+
+            if (!CanApplyPerformerParamOverrides())
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template spawn '{templateId}' declares PerformerParamOverrides but presentation runtime is not installed.");
+            }
+
+            int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
+            if (!HasDirectEntitySpawnBootstrap(templateKeyId))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template spawn '{templateId}' declares PerformerParamOverrides but has no direct performer bootstrap.");
+            }
+        }
+
+        private bool CanApplyPerformerParamOverrides()
+        {
+            return _performerRuntime != null &&
+                   _performerDefinitions != null &&
+                   _performerBootstrap != null;
         }
 
         private static double ElapsedMs(long startTimestamp)

@@ -45,13 +45,7 @@ namespace Ludots.Core.Config
                                 $"DataRegistry<{typeof(T).Name}> id mismatch in {relativePath}: catalog entry '{merged[i].Id}' vs item Id '{item.Id}'.");
                         }
 
-                        if (_data.ContainsKey(item.Id))
-                        {
-                            throw new InvalidOperationException(
-                                $"DataRegistry<{typeof(T).Name}> duplicate id '{item.Id}' after merge.");
-                        }
-
-                        _data[item.Id] = item;
+                        Register(item);
                         count++;
                     }
                 }
@@ -64,6 +58,28 @@ namespace Ludots.Core.Config
             }
 
             Log.Info(in LogChannels.Config, $"Loaded {count} DataRegistry<{typeof(T).Name}> items.");
+        }
+
+        public void Register(T item)
+        {
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item));
+            }
+
+            if (string.IsNullOrWhiteSpace(item.Id))
+            {
+                throw new InvalidOperationException(
+                    $"DataRegistry<{typeof(T).Name}> cannot register an item without an Id.");
+            }
+
+            if (_data.ContainsKey(item.Id))
+            {
+                throw new InvalidOperationException(
+                    $"DataRegistry<{typeof(T).Name}> duplicate id '{item.Id}'.");
+            }
+
+            _data[item.Id] = item;
         }
 
         public T Get(string id)

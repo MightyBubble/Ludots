@@ -193,7 +193,14 @@ public static class NavObstacleAuthoringCatalog
                     continue;
                 }
 
-                MapConfig? source = JsonSerializer.Deserialize<MapConfig>(File.ReadAllText(path), JsonOptions);
+                JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
+                if (node == null)
+                {
+                    throw new InvalidOperationException($"Map config '{path}' could not be parsed.");
+                }
+
+                MapConfigContract.RejectUnsupportedKeys(node, path);
+                MapConfig? source = node.Deserialize<MapConfig>(JsonOptions);
                 if (source == null)
                 {
                     throw new InvalidOperationException($"Map config '{path}' could not be deserialized.");
@@ -219,9 +226,11 @@ public static class NavObstacleAuthoringCatalog
         {
             MapConfig parent = LoadMergedMap(repoRoot, mods, loadOrder, merged.ParentId);
             MergeMap(parent, merged);
+            MapConfigContract.ValidateMerged(parent, $"Map '{parent.Id}'");
             return parent;
         }
 
+        MapConfigContract.ValidateMerged(merged, $"Map '{merged.Id}'");
         return merged;
     }
 
@@ -309,6 +318,21 @@ public static class NavObstacleAuthoringCatalog
             target.VisualHeightmapAsset = source.VisualHeightmapAsset;
         }
 
+        if (!string.IsNullOrWhiteSpace(source.StructureCollisionAsset))
+        {
+            target.StructureCollisionAsset = source.StructureCollisionAsset;
+        }
+
+        if (source.StructureAwareGrounding)
+        {
+            target.StructureAwareGrounding = true;
+        }
+
+        if (source.StructureAwareNavigation)
+        {
+            target.StructureAwareNavigation = true;
+        }
+
         if (source.Dependencies != null)
         {
             foreach (KeyValuePair<string, string> kvp in source.Dependencies)
@@ -393,8 +417,27 @@ public static class NavObstacleAuthoringCatalog
 
         if (source.ParticipantRelationships != null)
         {
-            target.ParticipantRelationships = source.ParticipantRelationships;
+            if (target.ParticipantRelationships == null)
+            {
+                target.ParticipantRelationships = new ParticipantRelationshipConfig();
+            }
+
+            if (source.ParticipantRelationships.Teams != null)
+            {
+                target.ParticipantRelationships.Teams.AddRange(source.ParticipantRelationships.Teams);
+            }
+
+            if (source.ParticipantRelationships.Players != null)
+            {
+                target.ParticipantRelationships.Players.AddRange(source.ParticipantRelationships.Players);
+            }
+
+            if (source.ParticipantRelationships.PlayerTeams != null)
+            {
+                target.ParticipantRelationships.PlayerTeams.AddRange(source.ParticipantRelationships.PlayerTeams);
+            }
         }
+
     }
 
     private static bool MapFileExists(string rootPath, string mapId)

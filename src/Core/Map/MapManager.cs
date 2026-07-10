@@ -111,7 +111,7 @@ namespace Ludots.Core.Map
                     try
                     {
                         var jsonStr = fragments[fi].ToJsonString();
-                        RejectLegacyWorldExtentKeys(fragments[fi], jsonPath);
+                        MapConfigContract.RejectUnsupportedKeys(fragments[fi], jsonPath);
                         var config = JsonSerializer.Deserialize<MapConfig>(jsonStr, jsonOptions);
                         if (config != null) configs.Add(config);
                     }
@@ -170,13 +170,22 @@ namespace Ludots.Core.Map
                 {
                     Log.Info(in LogChannels.Map, $"Loading Parent Map: {finalConfig.ParentId}");
                     var parentConfig = LoadMapInternal(new MapId(finalConfig.ParentId), visiting, chain);
+                    if (parentConfig == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' declares missing parent map '{finalConfig.ParentId}'.");
+                    }
+
                     if (parentConfig != null)
                     {
                         var childConfig = finalConfig;
                         finalConfig = parentConfig; 
                         MergeMapConfig(finalConfig, childConfig); 
+                        finalConfig.Id = mapId.ToString();
                     }
                 }
+
+                MapConfigContract.ValidateMerged(finalConfig, $"Map '{mapId}'");
                 
                 Log.Info(in LogChannels.Map, $"Map '{mapId}' loaded.");
                 return finalConfig;
@@ -288,59 +297,5 @@ namespace Ludots.Core.Map
             if (source.DefaultCamera != null) target.DefaultCamera = source.DefaultCamera;
         }
 
-        private static void RejectLegacyWorldExtentKeys(JsonNode fragment, string jsonPath)
-        {
-            if (fragment is not JsonObject root)
-            {
-                return;
-            }
-
-            RejectLegacyKey(root, "WidthInTiles", "widthInMacroTiles", jsonPath);
-            RejectLegacyKey(root, "HeightInTiles", "heightInMacroTiles", jsonPath);
-
-            if (!TryGetPropertyCaseInsensitive(root, "boards", out JsonNode boardsNode) ||
-                boardsNode is not JsonArray boards)
-            {
-                return;
-            }
-
-            for (int i = 0; i < boards.Count; i++)
-            {
-                if (boards[i] is not JsonObject board)
-                {
-                    continue;
-                }
-
-                RejectLegacyKey(board, "WidthInTiles", "widthInMacroTiles", $"{jsonPath}.boards[{i}]");
-                RejectLegacyKey(board, "HeightInTiles", "heightInMacroTiles", $"{jsonPath}.boards[{i}]");
-            }
-        }
-
-        private static void RejectLegacyKey(JsonObject obj, string legacyName, string replacementName, string context)
-        {
-            foreach (var kvp in obj)
-            {
-                if (string.Equals(kvp.Key, legacyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Map config '{context}' uses legacy key '{kvp.Key}'. Use '{replacementName}' instead.");
-                }
-            }
-        }
-
-        private static bool TryGetPropertyCaseInsensitive(JsonObject obj, string name, out JsonNode node)
-        {
-            foreach (var kvp in obj)
-            {
-                if (string.Equals(kvp.Key, name, StringComparison.OrdinalIgnoreCase))
-                {
-                    node = kvp.Value;
-                    return true;
-                }
-            }
-
-            node = null;
-            return false;
-        }
     }
 }

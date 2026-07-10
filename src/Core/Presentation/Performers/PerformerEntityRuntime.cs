@@ -448,7 +448,8 @@ namespace Ludots.Core.Presentation.Performers
             int stableId,
             Entity parent,
             PerformerDefinition definition,
-            Func<int>? allocateStableId = null)
+            Func<int>? allocateStableId = null,
+            ParamDefault[]? rootParamOverrides = null)
         {
             definition = ResolveDefinition(defId, definition);
 
@@ -456,6 +457,7 @@ namespace Ludots.Core.Presentation.Performers
             ref PerformerState state = ref _world.Get<PerformerState>(entity);
             state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
             SetParamDefault(definition, entity);
+            ApplyParamOverrides(entity, rootParamOverrides);
             InitializeTransform(entity, definition);
             CreateChildrenRecursive(definitions, entity, owner, scopeId, anchorKind, allocateStableId);
             return entity;
@@ -3397,7 +3399,7 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
-        private void ApplyParamOverrides(Entity performer, ParamDefault[] overrides)
+        private void ApplyParamOverrides(Entity performer, ParamDefault[]? overrides)
         {
             if (overrides == null || overrides.Length == 0)
             {
