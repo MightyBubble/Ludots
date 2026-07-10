@@ -178,6 +178,35 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_TerrainBenchmarkEntryMap_UsesWorldPositionOverrideContract()
+        {
+            string repoRoot = FindRepoRoot();
+            string terrainModRoot = Path.Combine(repoRoot, "mods", "TerrainBenchmarkMod");
+
+            Assert.That(Directory.Exists(terrainModRoot), Is.True, $"Missing TerrainBenchmarkMod at {terrainModRoot}");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+            vfs.Mount("TerrainBenchmarkMod", terrainModRoot);
+
+            var trigger = new TriggerManager();
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), trigger);
+            modLoader.LoadedModIds.Add("TerrainBenchmarkMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var manager = new MapManager(vfs, trigger, modLoader, pipeline);
+
+            MapConfig cfg = manager.LoadMap("entry");
+
+            Assert.That(cfg, Is.Not.Null);
+            Assert.That(cfg.Entities, Has.Count.EqualTo(3));
+            Assert.That(
+                cfg.Entities,
+                Has.All.Matches<EntitySpawnData>(entity =>
+                    entity.Overrides != null && entity.Overrides.ContainsKey("WorldPositionCm")));
+        }
+
+        [Test]
         public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
         {
             var tempRoot = CreateTempDir();
@@ -538,6 +567,24 @@ namespace GasTests
             var path = Path.Combine(Path.GetTempPath(), "ludots_mapmgr_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
+        }
+
+        private static string FindRepoRoot()
+        {
+            string? dir = AppDomain.CurrentDomain.BaseDirectory;
+            while (dir != null)
+            {
+                if (Directory.Exists(Path.Combine(dir, "assets")) &&
+                    Directory.Exists(Path.Combine(dir, "mods")) &&
+                    File.Exists(Path.Combine(dir, "AGENTS.md")))
+                {
+                    return dir;
+                }
+
+                dir = Directory.GetParent(dir)?.FullName;
+            }
+
+            throw new InvalidOperationException("Cannot find repo root.");
         }
 
         private static void TryDelete(string path)
