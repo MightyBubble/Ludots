@@ -270,6 +270,93 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadEntities_DynamicHeightBatch_BootstrapsPerformerFromMapAuthoredPlacement()
+        {
+            const int authoredXCm = 125_000;
+            const int authoredYCm = -87_000;
+            const float authoredFacing = 1.75f;
+            const float slopeOverride = 0.625f;
+
+            using var world = World.Create();
+            var loader = CreateLoader(world, includeDynamicHeightSampling: true);
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int slopeParamKey = PerformerParamKeyRegistry.Register("test.map.batch.slope");
+            int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
+            int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.dynamic.height.root");
+            definitions.Register("test.map.batch.dynamic.height.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = slopeParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            loader.SetPresentationRuntime(
+                new PresentationStableIdAllocator(),
+                performerRuntime,
+                definitions,
+                new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
+                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-200_000, -200_000, 400_000, 400_000), 100));
+
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPerformerParam(
+                new Dictionary<string, JsonNode>
+                {
+                    ["WorldPositionCm"] = WorldPosition(authoredXCm, authoredYCm),
+                    ["FacingDirection"] = Facing(authoredFacing),
+                },
+                slopeOverride));
+
+            loader.LoadEntities(map);
+
+            var owners = FindTemplateEntities(world);
+            That(owners.Count, Is.EqualTo(1));
+            Entity owner = owners[0];
+            That(world.Has<VisualHeightmapSampleState>(owner), Is.True);
+            That(world.Has<PresentationStaticTransform>(owner), Is.False);
+            AssertPlacement(world, owner, authoredXCm, authoredYCm, authoredFacing);
+
+            Vector3 ownerVisual = world.Get<VisualTransform>(owner).Position;
+            That(ownerVisual.X, Is.EqualTo(authoredXCm * 0.01f).Within(0.0001f));
+            That(ownerVisual.Z, Is.EqualTo(authoredYCm * 0.01f).Within(0.0001f));
+
+            Entity root = world.Get<PresentationOwnerHasPerformerPayload>(owner).SingleRootPerformer;
+            That(world.IsAlive(root), Is.True);
+            Vector3 rootPosition = world.Get<PerformerWorldPosition>(root).Value;
+            That(rootPosition.X, Is.EqualTo(authoredXCm * 0.01f).Within(0.0001f));
+            That(rootPosition.Z, Is.EqualTo(authoredYCm * 0.01f).Within(0.0001f));
+            That(
+                world.Get<PerformerWorldPlanePosition>(root).ValueCm,
+                Is.EqualTo(new Vector2(authoredXCm, authoredYCm)));
+            That(performerRuntime.TryResolveFloat(root, slopeParamKey, out float slope), Is.True);
+            That(slope, Is.EqualTo(slopeOverride).Within(0.0001f));
+        }
+
+        [Test]
         public void LoadEntities_DirectBootstrapBatch_PreseededOwnerPayloadDrivesRootTransformSync()
         {
             using var world = World.Create();
@@ -374,7 +461,7 @@ namespace GasTests
             That(ex.Message, Does.Contain("FacingDirection.AngleRad requires a numeric value"));
         }
 
-        private static MapLoader CreateLoader(World world)
+        private static MapLoader CreateLoader(World world, bool includeDynamicHeightSampling = false)
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_MapLoaderBatchPlacementTests", Guid.NewGuid().ToString("N"));
             try
@@ -383,6 +470,11 @@ namespace GasTests
                 File.WriteAllText(
                     Path.Combine(root, "Configs", "config_catalog.json"),
                     @"[{ ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+                string dynamicHeightComponent = includeDynamicHeightSampling
+                    ? """
+                          "VisualHeightmapSampleState": {},
+                    """
+                    : string.Empty;
                 File.WriteAllText(
                     Path.Combine(root, "Configs", "Entities", "templates.json"),
                     $$"""
@@ -393,6 +485,7 @@ namespace GasTests
                           "Name": { "Value": "{{TemplateName}}" },
                           "WorldPositionCm": { "Value": { "X": 10, "Y": 20 } },
                           "FacingDirection": { "AngleRad": 0.5 },
+                          {{dynamicHeightComponent}}
                           "AttributeBuffer": { "base": {} },
                           "GameplayTagContainer": {},
                           "TagCountContainer": {}

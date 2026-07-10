@@ -269,9 +269,8 @@ namespace Ludots.Core.Config
                     {
                         AngleRad = facingAngle,
                     };
-                    VisualTransform visual = descriptor.HasStaticTransform
-                        ? CreateStaticVisualTransform(in worldPosition, facingAngle)
-                        : descriptor.VisualTransform;
+                    // Seed VisualTransform from the effective batch placement.
+                    VisualTransform visual = CreatePlacementVisualTransform(in worldPosition, facingAngle);
                     CullState cull = descriptor.CullState;
                     visuals[componentIndex] = visual;
                     if (includeDynamicHeightSampling)
@@ -474,7 +473,6 @@ namespace Ludots.Core.Config
             public readonly Name Name;
             public readonly Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 DefaultWorldPosition;
             public readonly FacingDirection Facing;
-            public readonly VisualTransform VisualTransform;
             public readonly CullState CullState;
             public readonly bool HasAttributeBuffer;
             public readonly bool HasGameplayTagContainer;
@@ -503,7 +501,6 @@ namespace Ludots.Core.Config
                 Name name,
                 in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 defaultWorldPosition,
                 FacingDirection facing,
-                VisualTransform visualTransform,
                 CullState cullState,
                 bool hasAttributeBuffer,
                 bool hasGameplayTagContainer,
@@ -531,7 +528,6 @@ namespace Ludots.Core.Config
                 Name = name;
                 DefaultWorldPosition = defaultWorldPosition;
                 Facing = facing;
-                VisualTransform = visualTransform;
                 CullState = cullState;
                 HasAttributeBuffer = hasAttributeBuffer;
                 HasGameplayTagContainer = hasGameplayTagContainer;
@@ -785,7 +781,6 @@ namespace Ludots.Core.Config
                     name,
                     defaultWorldPosition,
                     new FacingDirection { AngleRad = facingAngle },
-                    VisualTransform.Default,
                     new CullState { IsVisible = false, LOD = LODLevel.Low },
                     hasAttributeBuffer,
                     hasGameplayTagContainer,
@@ -814,7 +809,6 @@ namespace Ludots.Core.Config
                     default,
                     false,
                     false,
-                    default,
                     default,
                     default,
                     default,
@@ -1268,17 +1262,13 @@ namespace Ludots.Core.Config
             bool HasCurrent,
             float CurrentValue);
 
-        private static VisualTransform CreateStaticVisualTransform(
+        private static VisualTransform CreatePlacementVisualTransform(
             in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPosition,
             float facingAngleRad)
         {
-            const float cmToM = 0.01f;
             return new VisualTransform
             {
-                Position = new System.Numerics.Vector3(
-                    worldPosition.X.ToFloat() * cmToM,
-                    0f,
-                    worldPosition.Y.ToFloat() * cmToM),
+                Position = WorldPlane2D.LogicCmToVisualMeters(in worldPosition),
                 Rotation = WorldPlane2D.FacingRadToVisualYRotation(facingAngleRad),
                 Scale = System.Numerics.Vector3.One,
             };
