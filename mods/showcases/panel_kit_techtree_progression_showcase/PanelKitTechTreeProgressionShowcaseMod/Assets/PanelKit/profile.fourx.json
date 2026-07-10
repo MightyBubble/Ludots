@@ -1,0 +1,16 @@
+{
+  "profileId": "profile.techtree.showcase",
+  "genre": "fourx",
+  "coachLine": "Open the tree: Foundations done, Colony Charter available, Orbital Yard blocked.",
+  "nodes": [
+    {"nodeId": "node.foundations", "displayTokenId": "token.progression.fourx.node.foundations", "state": "completed"},
+    {"nodeId": "node.colony-charter", "displayTokenId": "token.progression.fourx.node.colony-charter", "state": "available"},
+    {"nodeId": "node.orbital-yard", "displayTokenId": "token.progression.fourx.node.orbital-yard", "state": "locked", "blockedReasonTokenId": "token.progression.fourx.blocked.requires-charter"}
+  ],
+  "tokens": {
+    "token.progression.fourx.node.foundations": "Foundations",
+    "token.progression.fourx.node.colony-charter": "Colony Charter",
+    "token.progression.fourx.node.orbital-yard": "Orbital Yard",
+    "token.progression.fourx.blocked.requires-charter": "Requires Colony Charter"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "profileId": "profile.production-overview.showcase",
+  "genre": "fourx",
+  "coachLine": "Empire desks track research commitment, not factory queues.",
+  "queues": [
+    {"queueId": "queue.research", "labelTokenId": "token.progression.fourx.node.colony-charter", "progress": 0.55, "etaSeconds": 1.2}
+  ],
+  "workers": [],
+  "tokens": {
+    "token.progression.fourx.node.colony-charter": "Colony Charter"
+  }
+}

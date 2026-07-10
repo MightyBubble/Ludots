@@ -11,6 +11,7 @@ public static class WebUiPanelKitSampleCatalog
 	public const string ObjectiveTopic = "panel-kit.sample.objective";
 	public const string ProductionTopic = "panel-kit.sample.production";
 	public const string NotificationTopic = "panel-kit.sample.notification";
+	public const string TechTreeTopic = WebUiTechTreeSampleCatalog.Topic;
 
 	public const string CommandDeckGlobalProfileId = "profile.command-deck.global";
 	public const string CommandDeckEntityProfileId = "profile.command-deck.entity";
@@ -28,7 +29,8 @@ public static class WebUiPanelKitSampleCatalog
 		CommandTopic,
 		ObjectiveTopic,
 		ProductionTopic,
-		NotificationTopic
+		NotificationTopic,
+		TechTreeTopic
 	];
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
@@ -36,7 +38,14 @@ public static class WebUiPanelKitSampleCatalog
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
-		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.bottom-left", "region.top-center"]);
+		surfaceRegions.RegisterAll([
+			"region.top-left",
+			"region.top-right",
+			"region.bottom-center",
+			"region.bottom-left",
+			"region.top-center",
+			"region.center"
+		]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
 		profiles.RegisterAll([
@@ -48,7 +57,8 @@ public static class WebUiPanelKitSampleCatalog
 			CommandDeckEntityProfileId,
 			CommandDeckAggregateProfileId,
 			CommandDeckPinnedProfileId,
-			WebUiNotificationPanelDescriptors.GenericProfileId
+			WebUiNotificationPanelDescriptors.GenericProfileId,
+			WebUiTechTreeSampleCatalog.ProfileId
 		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
@@ -57,14 +67,20 @@ public static class WebUiPanelKitSampleCatalog
 			"layout.deck.grid",
 			"layout.list.vertical",
 			"layout.overview.split",
-			WebUiNotificationPanelDescriptors.ToastStackLayoutId
+			WebUiNotificationPanelDescriptors.ToastStackLayoutId,
+			WebUiTechTreeSampleCatalog.LayoutId
 		]);
 
 		var densities = new WebUiPanelIdRegistry("density");
 		densities.RegisterAll(["density.compact", "density.comfortable"]);
 
 		var inputCapabilities = new WebUiPanelIdRegistry("input capability");
-		inputCapabilities.RegisterAll(["input.none", "input.activate-slot", "input.notification-action"]);
+		inputCapabilities.RegisterAll([
+			"input.none",
+			"input.activate-slot",
+			"input.notification-action",
+			"input.activate-node"
+		]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");
 		visibleConditions.RegisterAll(["condition.always", "condition.binding-flag"]);

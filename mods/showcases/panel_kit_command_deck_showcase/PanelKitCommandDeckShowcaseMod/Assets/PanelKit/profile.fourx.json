@@ -1,0 +1,12 @@
+{
+  "profileId": "profile.command-deck.showcase",
+  "genre": "fourx",
+  "displayMode": "global",
+  "coachLine": "Commit research to Advance Colony Charter from the pinned deck.",
+  "slots": [
+    {"slotId": "slot.research.next", "displayTokenId": "token.command.fourx.research.next", "tooltipTargetId": "tooltip.fourx.next-node", "costPrimary": 10}
+  ],
+  "tokens": {
+    "token.command.fourx.research.next": "Advance Colony Charter"
+  }
+}

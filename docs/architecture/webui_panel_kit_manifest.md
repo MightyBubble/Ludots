@@ -48,7 +48,9 @@ Mod JSON manifest
 ### 3.2 新增
 
 - `Ludots.WebUI.PanelKit`：manifest 合同、id registry、loader、surface binder、sample catalog。
-- Sample：`Samples/sample_panel_kit_manifest.json`（资源栏、命令栏、目标面板三类，通用 id，无游戏硬编码名）。
+- Sample：`Samples/sample_panel_kit_manifest.json`（资源栏、命令栏、目标、生产概览、通知、科技树面板，通用 id，无游戏硬编码名）。
+- TechTree / Progression 展示合同见 [WebUI TechTree / Progression Panel (WPK-9)](webui_techtree_progression_panel.md)。
+- 跨类型独立 showcase 见 [WebUI Panel Kit Showcase Family (WPK-10)](webui_panel_kit_showcase_family.md)。
 
 ### 3.3 Fail-fast
 
@@ -73,10 +75,10 @@ Mod JSON manifest
 ```gherkin
 Feature: 面板组合合同
   Scenario: 新玩家打开 showcase 时多个面板稳定挂载
-    Given mod 声明了资源栏、命令栏和目标面板
+    Given mod 声明了资源栏、命令栏、目标、生产概览、通知和科技树面板
     And 对应的 topic、profile、layout、surface region 都已注册
     When 游戏加载 WebUI surface 并绑定 panel kit manifest
-    Then 三个面板都挂在同一个 UI Host 中
+    Then 这些面板都挂在同一个 UI Host 中
     And 它们按 manifest 的区域与优先级显示
     And 浏览器订阅列表恰好等于 manifest 声明的 topic
 

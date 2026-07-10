@@ -71,6 +71,20 @@
       "layoutId": "layout.toast.stack",
       "densityId": "density.compact",
       "inputCapabilityId": "input.notification-action"
+    },
+    {
+      "panelId": "hud.techtree",
+      "panelType": "techtree",
+      "surfaceRegionId": "region.center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 30,
+      "anchor": "center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.techtree",
+      "profileId": "profile.techtree.generic",
+      "layoutId": "layout.tree.generic",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activate-node"
     }
   ]
 }

@@ -1,0 +1,20 @@
+{
+  "manifestId": "panel-kit.showcase.command-deck.solo",
+  "hostOwnerId": "panel-kit.showcase.command-deck",
+  "panels": [
+    {
+      "panelId": "hud.command-deck",
+      "panelType": "command-deck",
+      "surfaceRegionId": "region.bottom-center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 10,
+      "anchor": "bottom-center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.showcase.command-deck",
+      "profileId": "profile.command.deck.showcase",
+      "layoutId": "layout.deck.grid",
+      "densityId": "density.comfortable",
+      "inputCapabilityId": "input.activate-slot"
+    }
+  ]
+}

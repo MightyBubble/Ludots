@@ -42,6 +42,7 @@ Resource attribute panels (WPK-2) publish `owner` / `descriptor` / `revision` / 
 Production / Worker / Queue overview topics (WPK-4) project existing EntityCommandPanel status/queue, OrderBuffer, and entity-collection worker buckets; see [webui_production_overview_panel.md](webui_production_overview_panel.md).
 Tooltip panels (WPK-5) publish structured rich-text snapshots via `WebUiTooltipTopicProducer`; see [WebUI Tooltip + Rich Text](webui_tooltip_rich_text.md).
 Notification panels (WPK-7) publish ordered message snapshots via `NotificationWebUiTopicProducer` from an independent `NotificationRuntime`; see [WebUI Notification Panel](webui_notification_panel.md).
+TechTree / Progression panels (WPK-9) publish `scopeHost` / `actor` / `descriptor` / `revision` / `nodes` snapshots via `WebUiTechTreeTopicProducer`; see [WebUI TechTree / Progression Panel](webui_techtree_progression_panel.md).
 
 ## 3 Entity Collection Topics
 

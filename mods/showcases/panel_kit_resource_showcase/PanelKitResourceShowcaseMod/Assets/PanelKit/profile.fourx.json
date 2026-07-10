@@ -1,0 +1,15 @@
+{
+  "profileId": "profile.resource-bar.showcase",
+  "genre": "fourx",
+  "coachLine": "Read Influence, Research, and Authority before you commit.",
+  "fields": [
+    {"fieldId": "field.influence", "displayTokenId": "token.resource.fourx.influence", "value": 36, "capacity": 100},
+    {"fieldId": "field.research", "displayTokenId": "token.resource.fourx.research", "value": 14, "capacity": 40},
+    {"fieldId": "field.authority", "displayTokenId": "token.resource.fourx.authority", "value": 8, "capacity": 20}
+  ],
+  "tokens": {
+    "token.resource.fourx.influence": "Influence",
+    "token.resource.fourx.research": "Research",
+    "token.resource.fourx.authority": "Authority"
+  }
+}

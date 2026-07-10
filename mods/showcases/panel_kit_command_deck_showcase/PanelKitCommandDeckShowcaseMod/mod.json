@@ -1,0 +1,12 @@
+{
+  "name": "PanelKitCommandDeckShowcaseMod",
+  "version": "1.0.0",
+  "description": "WPK-10 small showcase for the command-deck panel only. RTS and 4X semantics come from PanelKit profile JSON, not generic PanelKit C#.",
+  "main": "bin/net8.0/PanelKitCommandDeckShowcaseMod.dll",
+  "priority": 50,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "panel-kit", "wpk-10", "command-deck"]
+}

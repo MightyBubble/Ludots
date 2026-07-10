@@ -1,0 +1,17 @@
+{
+  "profileId": "profile.production-overview.showcase",
+  "genre": "rts",
+  "coachLine": "Watch the Scout queue fill, then check idle vs gathering workers.",
+  "queues": [
+    {"queueId": "queue.barracks", "labelTokenId": "token.unit.rts.scout", "progress": 0.35, "etaSeconds": 2.0}
+  ],
+  "workers": [
+    {"bucketId": "worker.idle", "displayTokenId": "token.worker.idle", "count": 3},
+    {"bucketId": "worker.gather", "displayTokenId": "token.worker.gather", "count": 5}
+  ],
+  "tokens": {
+    "token.unit.rts.scout": "Scout",
+    "token.worker.idle": "Idle workers",
+    "token.worker.gather": "Gathering"
+  }
+}
