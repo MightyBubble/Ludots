@@ -17,6 +17,11 @@ namespace Ludots.Core.EntityCollections
     public static class EntityViewKeys
     {
         public const string ControlPlaneCommand = "view.control_plane.command";
+        /// <summary>
+        /// CommandDeck-owned filtered candidate view. FilterProfile materialization writes here
+        /// so the original sourceRef / control-plane collection is never overwritten.
+        /// </summary>
+        public const string CommandDeckFiltered = "view.command_deck.filtered";
     }
 
     public enum EntityCollectionSourceKind : byte
