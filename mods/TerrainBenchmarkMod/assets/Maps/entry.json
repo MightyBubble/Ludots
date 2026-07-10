@@ -8,7 +8,6 @@
   "Entities": [
     {
       "Template": "moba_hero",
-      "Position": {},
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
@@ -20,7 +19,6 @@
     },
     {
       "Template": "moba_dummy",
-      "Position": {},
       "Overrides": {
         "WorldPositionCm": {
           "Value": {
@@ -35,7 +33,6 @@
     },
     {
       "Template": "moba_dummy",
-      "Position": {},
       "Overrides": {
         "WorldPositionCm": {
           "Value": {

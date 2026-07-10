@@ -47,6 +47,7 @@ namespace GasTests
                 var cfg = manager.LoadMap("child");
 
                 Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Id, Is.EqualTo("child"));
                 Assert.That(cfg!.Boards, Is.Not.Null);
                 Assert.That(cfg.Boards.Count, Is.EqualTo(1));
                 var board = cfg.Boards[0];
@@ -91,6 +92,30 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenParentMapIsMissing_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "missing_parent"
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("child"));
+
+                Assert.That(ex!.Message, Does.Contain("missing parent map 'missing_parent'"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void LoadMap_WhenBoardUsesLegacyTileExtentKey_Throws()
         {
             var tempRoot = CreateTempDir();
@@ -122,6 +147,66 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenEntityUsesLegacyPositionField_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "legacy_position", """
+                {
+                  "id": "legacy_position",
+                  "entities": [
+                    {
+                      "instanceId": "unit.alpha",
+                      "template": "unit.template",
+                      "position": { "x": 10, "y": 20 }
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("legacy_position"));
+
+                Assert.That(ex!.Message, Does.Contain("unsupported entity key 'position'"));
+                Assert.That(ex.Message, Does.Contain("Overrides.WorldPositionCm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_TerrainBenchmarkEntryMap_UsesWorldPositionOverrideContract()
+        {
+            string repoRoot = FindRepoRoot();
+            string terrainModRoot = Path.Combine(repoRoot, "mods", "TerrainBenchmarkMod");
+
+            Assert.That(Directory.Exists(terrainModRoot), Is.True, $"Missing TerrainBenchmarkMod at {terrainModRoot}");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+            vfs.Mount("TerrainBenchmarkMod", terrainModRoot);
+
+            var trigger = new TriggerManager();
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), trigger);
+            modLoader.LoadedModIds.Add("TerrainBenchmarkMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var manager = new MapManager(vfs, trigger, modLoader, pipeline);
+
+            MapConfig cfg = manager.LoadMap("entry");
+
+            Assert.That(cfg, Is.Not.Null);
+            Assert.That(cfg.Entities, Has.Count.EqualTo(3));
+            Assert.That(
+                cfg.Entities,
+                Has.All.Matches<EntitySpawnData>(entity =>
+                    entity.Overrides != null && entity.Overrides.ContainsKey("WorldPositionCm")));
+        }
+
+        [Test]
         public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
         {
             var tempRoot = CreateTempDir();
@@ -146,6 +231,57 @@ namespace GasTests
 
                 Assert.That(cfg, Is.Not.Null);
                 Assert.That(cfg!.VisualHeightmapAsset, Is.EqualTo("terrain/parent.vhtm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildOverridesBoardByName_ReplacesParentBoard()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "spatialType": "Hex",
+                      "widthInMacroTiles": 128,
+                      "heightInMacroTiles": 64,
+                      "gridCellSizeCm": 200
+                    }
+                  ]
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "spatialType": "Square",
+                      "widthInMacroTiles": 32,
+                      "heightInMacroTiles": 32,
+                      "gridCellSizeCm": 100
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Boards.Count, Is.EqualTo(1));
+                Assert.That(cfg.Boards[0].SpatialType, Is.EqualTo("Square"));
+                Assert.That(cfg.Boards[0].WidthInMacroTiles, Is.EqualTo(32));
             }
             finally
             {
@@ -230,6 +366,125 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMap_WhenChildDuplicatesParentInstanceId_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "entities": [
+                    { "instanceId": "unit.alpha", "template": "unit.parent" }
+                  ]
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "entities": [
+                    { "instanceId": "unit.alpha", "template": "unit.child" }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("child"));
+
+                Assert.That(ex!.Message, Does.Contain("duplicate entity InstanceId 'unit.alpha'"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildDuplicatesParentParticipantIds_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "entities": [
+                    { "instanceId": "team.alpha", "template": "logical.team" },
+                    { "instanceId": "player.alpha", "template": "logical.player" }
+                  ],
+                  "teams": [
+                    { "teamId": 10, "representativeInstanceId": "team.alpha" }
+                  ],
+                  "players": [
+                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.alpha" }
+                  ]
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "entities": [
+                    { "instanceId": "team.beta", "template": "logical.team" },
+                    { "instanceId": "player.beta", "template": "logical.player" }
+                  ],
+                  "teams": [
+                    { "teamId": 10, "representativeInstanceId": "team.beta" }
+                  ],
+                  "players": [
+                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.beta" }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("child"));
+
+                Assert.That(ex!.Message, Does.Match("duplicate (TeamId 10|PlayerId 7)"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenParticipantRepresentativeIsMissing_Throws()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "invalid_participants", """
+                {
+                  "id": "invalid_participants",
+                  "entities": [
+                    { "instanceId": "team.alpha", "template": "logical.team" }
+                  ],
+                  "teams": [
+                    { "teamId": 10, "representativeInstanceId": "team.alpha" }
+                  ],
+                  "players": [
+                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.missing" }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var ex = Assert.Throws<InvalidOperationException>(() => manager.LoadMap("invalid_participants"));
+
+                Assert.That(ex!.Message, Does.Contain("Players[0].RepresentativeInstanceId"));
+                Assert.That(ex.Message, Does.Contain("unknown entity InstanceId 'player.missing'"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void LoadMap_WhenChildInheritsParticipantBindings_MergesParticipantAuthoring()
         {
             var tempRoot = CreateTempDir();
@@ -246,7 +501,7 @@ namespace GasTests
                     { "teamId": 10, "representativeInstanceId": "team.alpha" }
                   ],
                   "players": [
-                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.local", "isLocal": true }
+                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.local" }
                   ],
                   "participantRelationships": {
                     "playerTeams": [
@@ -312,6 +567,24 @@ namespace GasTests
             var path = Path.Combine(Path.GetTempPath(), "ludots_mapmgr_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
+        }
+
+        private static string FindRepoRoot()
+        {
+            string? dir = AppDomain.CurrentDomain.BaseDirectory;
+            while (dir != null)
+            {
+                if (Directory.Exists(Path.Combine(dir, "assets")) &&
+                    Directory.Exists(Path.Combine(dir, "mods")) &&
+                    File.Exists(Path.Combine(dir, "AGENTS.md")))
+                {
+                    return dir;
+                }
+
+                dir = Directory.GetParent(dir)?.FullName;
+            }
+
+            throw new InvalidOperationException("Cannot find repo root.");
         }
 
         private static void TryDelete(string path)

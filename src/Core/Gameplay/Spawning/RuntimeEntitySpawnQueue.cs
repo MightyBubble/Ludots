@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.Spawning
@@ -34,6 +35,7 @@ namespace Ludots.Core.Gameplay.Spawning
         public int TeamIdOverride;
         public int PlayerOwnerIdOverride;
         public RuntimeEntitySpawnComponentPatch[] ComponentPatches;
+        public ParamDefault[] PerformerParamOverrides;
         public byte CopySourceTeam;
         public byte CopySourcePlayerOwner;
         public Entity Parent;

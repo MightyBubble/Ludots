@@ -12,6 +12,14 @@
 - `PerformerEntityRuntime.CreateEntityAnchoredRootBatch` 在 root `ParamDefaults` 之后、child 创建之前应用 overrides。
 - child performer 通过 parent param resolver 读取到的是 map-authored override，而不是 root 默认值。
 
+`RuntimeEntitySpawnRequest.PerformerParamOverrides` 使用同一条语义，服务 runtime template spawn 与后续 ScenarioPlan materialization：
+
+- 只支持 `RuntimeEntitySpawnKind.Template`。
+- 单个 template spawn 与 batch template spawn 都必须有 presentation runtime 和 direct entity-spawn performer bootstrap。
+- 如果 direct bootstrap 因 inline condition / scope 等原因没有为带 override 的 owner 创建任何 root performer，必须显式失败，禁止把 override 静默丢弃。
+- per-instance overrides 只进入 root performer params，不写入 entity component，不引入 adapter 私有缓存。
+- UnitType / Assembly spawn 不支持 performer param overrides，出现即失败。
+
 ## Validation
 
 Core 必须拒绝以下情况：
@@ -19,6 +27,8 @@ Core 必须拒绝以下情况：
 - `PerformerParamOverrides` 出现在非 template batch-compatible entity 上。
 - batch template 没有 direct performer bootstrap。
 - presentation runtime 没有安装。
+- runtime UnitType / Assembly spawn 声明 performer param overrides。
+- runtime template spawn 声明 performer param overrides 但没有 direct performer bootstrap。
 - override 缺少 `Lane`。
 - `ParamKey` 为空、空白或带首尾空白。
 - `Vector` lane 的 `VectorValue` 不是 4 个值。

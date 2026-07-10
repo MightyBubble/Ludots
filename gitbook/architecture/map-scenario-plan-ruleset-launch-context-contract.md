@@ -79,6 +79,22 @@ Map 拥有：
 
 Map 可以声明地图固有的固定单位与 participant；这些属于世界身份，不属于 ScenarioPlan。ScenarioPlan 负责的是“同一张世界上的不同开局摆放”。
 
+### 3.1.1 MapConfig merge contract（MSP-2）
+
+MapConfig 合并仍然属于 Map 层，不属于 ScenarioPlan。父子 map 与 mod fragment 合并后必须得到一份可直接加载的地图真相。
+
+当前实现要求：
+
+- `ParentId` 指向的父 map 必须存在，不能静默退回只加载子 map。
+- 子 map 继承父 map 时只继承内容，不继承父 map 身份；最终 `MapConfig.Id` 必须仍是请求加载的子 map id。
+- `WidthInTiles` / `HeightInTiles` 旧字段必须失败，继续使用 `widthInMacroTiles` / `heightInMacroTiles`。
+- `Entities[*].position` / `Position` 必须失败；实体初始位置只能走 `Overrides.WorldPositionCm`。
+- `Boards` 按 `Name` 替换同名 board；不同名 board 追加。
+- `Entities`、`Teams`、`Players` 追加后再统一校验；重复 `InstanceId`、`TeamId`、`PlayerId` 必须失败。
+- `ParticipantRelationships` 的 `Teams`、`Players`、`PlayerTeams` 子列表追加，不再由 NavObstacle authoring 路径整段替换。
+- `StructureCollisionAsset`、`StructureAwareGrounding`、`StructureAwareNavigation` 在 MapManager 与 NavObstacle authoring 两条读取路径保持一致。
+- 合并后的 participant 绑定必须闭合：team/player id 为正数，代表实体必须存在，player 引用的 team 必须存在，relationship 引用的 team/player 必须存在。
+
 ### 3.2 ScenarioPlan：开局摆放白名单
 
 ScenarioPlan 只选择并摆放既有规则积木，不得改写地图身份，也不得改写规则定义本体。
@@ -112,6 +128,20 @@ ScenarioPlan 对 performer 参数与批量创建的语义，必须对齐既有 m
 后续 MSP 实现必须让 ScenarioPlan materialization 走同一套白名单与失败语义：缺字段、非法字段、越权字段一律显式失败，禁止静默降级。
 
 ScenarioPlan 可以声明“这一局”的队伍、玩家归属与初始关系意图，但最终 materialization 后仍必须进入 `MapSession` 的正式 participant / relationship 链路。它不得新建第二套 participant 容器、第二套 player/team lookup，或在 `MapLoaded` 后通过扫描补回代表实体。
+
+### 3.2.1 ScenarioPlan schema guardrails（MSP-3）
+
+ScenarioPlan 使用 `ConfigCatalog` 的 `ArrayById` 合并策略，并加载进 `DataRegistry<ScenarioPlan>`；它不是临时 JSON bag，也不是新的 registry 管线。
+
+Schema guardrails：
+
+- 顶层字段采用白名单：`id`、`mapId`、`seed`、`layout`、`placements`、`teams`、`players`、`initialRelationships`。
+- 顶层出现 map / ruleset / launch 字段必须失败，例如 `terrain`、`boards`、`entities`、`defaultCamera`、`triggerTypes`、`metadata`、`templates`、`performers`、`ruleset`。
+- placement id、template id、param key、relationship type id 必须是非空且已 trim 的语义 id。
+- team/player id 必须是正数且不重复；player 必须引用已声明 team。
+- representative placement 必须存在；如果 placement 自己声明了 team/player owner，必须和对应 team/player 声明一致。
+- `performerParamOverrides` 必须声明明确 lane，并只允许 lane 对应的 typed value：`Float.floatValue`、`Int.intValue`、`Vector.vectorValue[4]`。
+- `initialRelationships` 只能引用同一个 ScenarioPlan 已声明的 team/player。
 
 ### 3.3 Ruleset / Profile：规则定义
 
