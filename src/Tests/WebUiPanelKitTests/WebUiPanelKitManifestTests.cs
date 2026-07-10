@@ -14,7 +14,7 @@ namespace Ludots.Tests.WebUiPanelKit;
 public sealed class WebUiPanelKitManifestTests
 {
 	[Test]
-	public void LoadSampleManifest_RegistersThreePanels_OnSameUiSurfaceHost()
+	public void LoadSampleManifest_RegistersFourPanels_OnSameUiSurfaceHost()
 	{
 		using var runtime = new WebUiDataPlaneRuntime();
 		RegisterSampleTopics(runtime);
@@ -23,23 +23,25 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.SampleManifestPath(),
 			catalog);
 
-		Assert.That(manifest.Panels, Has.Count.EqualTo(3));
+		Assert.That(manifest.Panels, Has.Count.EqualTo(4));
 		Assert.That(manifest.Panels.Select(panel => panel.PanelId), Is.EquivalentTo(new[]
 		{
 			"hud.resource-bar",
 			"hud.command-deck",
-			"hud.objective"
+			"hud.objective",
+			"hud.notification"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(3));
+		Assert.That(binder.BoundPanelIds, Has.Count.EqualTo(4));
 		Assert.That(root.Scene, Is.SameAs(host.Scene));
 		Assert.That(root.Scene!.FindByElementId("panel-kit-hud.resource-bar"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.objective"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.notification"), Is.Not.Null);
 	}
 
 	[Test]
@@ -138,14 +140,19 @@ public sealed class WebUiPanelKitManifestTests
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(new[]
-		{
-			WebUiPanelKitSampleCatalog.ResourceTopic,
-			WebUiPanelKitSampleCatalog.CommandTopic,
-			WebUiPanelKitSampleCatalog.ObjectiveTopic
-		}));
+		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(WebUiPanelKitSampleCatalog.SampleTopics));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(manifest.DeclaredTopics, Is.EqualTo(binder.BrowserSubscriptionTopics));
+	}
+
+	[Test]
+	public void NotificationPanelDescriptors_AreIndependentOfNarrativeAndQuest()
+	{
+		Assert.That(WebUiNotificationPanelDescriptors.PanelType, Is.EqualTo("notification"));
+		Assert.That(WebUiNotificationPanelDescriptors.GenericProfileId, Is.EqualTo("profile.notification.generic"));
+		Assert.That(WebUiNotificationPanelDescriptors.SampleTopic, Is.EqualTo(WebUiPanelKitSampleCatalog.NotificationTopic));
+		Assert.That(WebUiNotificationPanelDescriptors.OpenPanelActionId, Is.EqualTo("action.notification.open-panel"));
+		Assert.That(WebUiNotificationPanelDescriptors.OpenPanelCommandName, Is.EqualTo("notification.openPanel"));
 	}
 
 	[Test]
@@ -176,9 +183,10 @@ public sealed class WebUiPanelKitManifestTests
 
 	private static void RegisterSampleTopics(WebUiDataPlaneRuntime runtime)
 	{
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ResourceTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		foreach (string topic in WebUiPanelKitSampleCatalog.SampleTopics)
+		{
+			runtime.RegisterTopic(new StubTopicProducer(topic));
+		}
 	}
 
 	private static string BuildManifestJson(params (string panelId, string panelType, string region, string topic, string profile, string layout)[] panels)

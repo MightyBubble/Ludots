@@ -9,25 +9,48 @@ public static class WebUiPanelKitSampleCatalog
 	public const string ResourceTopic = "panel-kit.sample.resource";
 	public const string CommandTopic = "panel-kit.sample.command";
 	public const string ObjectiveTopic = "panel-kit.sample.objective";
+	public const string NotificationTopic = "panel-kit.sample.notification";
+
+	/// <summary>
+	/// Every topic declared by <see cref="SampleManifestPath"/>. Callers that load the full sample
+	/// manifest must register each of these before catalog validation (fail-fast, no silent skip).
+	/// </summary>
+	public static IReadOnlyList<string> SampleTopics { get; } =
+	[
+		ResourceTopic,
+		CommandTopic,
+		ObjectiveTopic,
+		NotificationTopic
+	];
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
 	{
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
-		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center"]);
+		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.top-center"]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
-		profiles.RegisterAll(["profile.resource.generic", "profile.command.generic", "profile.objective.generic"]);
+		profiles.RegisterAll([
+			"profile.resource.generic",
+			"profile.command.generic",
+			"profile.objective.generic",
+			WebUiNotificationPanelDescriptors.GenericProfileId
+		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
-		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical"]);
+		layouts.RegisterAll([
+			"layout.bar.horizontal",
+			"layout.deck.grid",
+			"layout.list.vertical",
+			WebUiNotificationPanelDescriptors.ToastStackLayoutId
+		]);
 
 		var densities = new WebUiPanelIdRegistry("density");
 		densities.RegisterAll(["density.compact", "density.comfortable"]);
 
 		var inputCapabilities = new WebUiPanelIdRegistry("input capability");
-		inputCapabilities.RegisterAll(["input.none", "input.activate-slot"]);
+		inputCapabilities.RegisterAll(["input.none", "input.activate-slot", "input.notification-action"]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");
 		visibleConditions.Register("condition.always");

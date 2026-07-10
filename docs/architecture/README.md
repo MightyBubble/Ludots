@@ -29,6 +29,7 @@
 - [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
 - [WebUI Panel Kit Manifest (WPK-1)](webui_panel_kit_manifest.md)
 - [WebUI Tooltip + Rich Text (WPK-5)](webui_tooltip_rich_text.md)
+- [WebUI Notification Panel (WPK-7)](webui_notification_panel.md)
 
 ## Target State And Migration
 

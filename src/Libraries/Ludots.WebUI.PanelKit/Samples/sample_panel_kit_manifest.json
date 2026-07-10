@@ -43,6 +43,20 @@
       "layoutId": "layout.list.vertical",
       "densityId": "density.compact",
       "inputCapabilityId": "input.none"
+    },
+    {
+      "panelId": "hud.notification",
+      "panelType": "notification",
+      "surfaceRegionId": "region.top-center",
+      "surfaceSegment": "Overlay",
+      "surfacePriority": 25,
+      "anchor": "top-center",
+      "visibleConditionId": "condition.always",
+      "topic": "panel-kit.sample.notification",
+      "profileId": "profile.notification.generic",
+      "layoutId": "layout.toast.stack",
+      "densityId": "density.compact",
+      "inputCapabilityId": "input.notification-action"
     }
   ]
 }
