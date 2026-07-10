@@ -30,6 +30,7 @@ public sealed class WebUiPanelKitManifestTests
 			"hud.command-deck",
 			"hud.objective",
 			"hud.production-overview"
+			"hud.notification"
 		}));
 
 		UIRoot root = CreateRoot(out UiSurfaceHost host);
@@ -42,6 +43,7 @@ public sealed class WebUiPanelKitManifestTests
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.command-deck"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.objective"), Is.Not.Null);
 		Assert.That(root.Scene.FindByElementId("panel-kit-hud.production-overview"), Is.Not.Null);
+		Assert.That(root.Scene.FindByElementId("panel-kit-hud.notification"), Is.Not.Null);
 	}
 
 	[Test]
@@ -147,8 +149,19 @@ public sealed class WebUiPanelKitManifestTests
 			WebUiPanelKitSampleCatalog.ObjectiveTopic,
 			WebUiPanelKitSampleCatalog.ProductionTopic
 		}));
+		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(WebUiPanelKitSampleCatalog.SampleTopics));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(manifest.DeclaredTopics, Is.EqualTo(binder.BrowserSubscriptionTopics));
+	}
+
+	[Test]
+	public void NotificationPanelDescriptors_AreIndependentOfNarrativeAndQuest()
+	{
+		Assert.That(WebUiNotificationPanelDescriptors.PanelType, Is.EqualTo("notification"));
+		Assert.That(WebUiNotificationPanelDescriptors.GenericProfileId, Is.EqualTo("profile.notification.generic"));
+		Assert.That(WebUiNotificationPanelDescriptors.SampleTopic, Is.EqualTo(WebUiPanelKitSampleCatalog.NotificationTopic));
+		Assert.That(WebUiNotificationPanelDescriptors.OpenPanelActionId, Is.EqualTo("action.notification.open-panel"));
+		Assert.That(WebUiNotificationPanelDescriptors.OpenPanelCommandName, Is.EqualTo("notification.openPanel"));
 	}
 
 	[Test]
@@ -197,6 +210,10 @@ public sealed class WebUiPanelKitManifestTests
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
 		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ProductionTopic));
+		foreach (string topic in WebUiPanelKitSampleCatalog.SampleTopics)
+		{
+			runtime.RegisterTopic(new StubTopicProducer(topic));
+		}
 	}
 
 	private static string BuildManifestJson(params (string panelId, string panelType, string region, string topic, string profile, string layout)[] panels)

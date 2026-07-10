@@ -408,9 +408,11 @@ public sealed class WebUiTooltipPanelTests
 			entityProjection: WebUiTooltipSampleCatalog.CreateSampleEntityProjection());
 
 		using var runtime = new WebUiDataPlaneRuntime();
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ResourceTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.CommandTopic));
-		runtime.RegisterTopic(new StubTopicProducer(WebUiPanelKitSampleCatalog.ObjectiveTopic));
+		foreach (string topic in WebUiPanelKitSampleCatalog.SampleTopics)
+		{
+			runtime.RegisterTopic(new StubTopicProducer(topic));
+		}
+
 		runtime.RegisterTopic(tooltipProducer);
 		runtime.RegisterTopic(new StubTopicProducer("panel-kit.extra.unrelated"));
 
@@ -423,13 +425,9 @@ public sealed class WebUiTooltipPanelTests
 		using var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
 		binder.Bind();
 
-		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(new[]
-		{
-			WebUiPanelKitSampleCatalog.ResourceTopic,
-			WebUiPanelKitSampleCatalog.CommandTopic,
-			WebUiPanelKitSampleCatalog.ObjectiveTopic
-		}));
+		Assert.That(binder.BrowserSubscriptionTopics, Is.EqualTo(WebUiPanelKitSampleCatalog.SampleTopics));
 		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain(WebUiTooltipSampleCatalog.Topic));
+		Assert.That(binder.BrowserSubscriptionTopics, Does.Not.Contain("panel-kit.extra.unrelated"));
 		Assert.That(runtime.IsTopicRegistered(WebUiTooltipSampleCatalog.Topic), Is.True);
 	}
 

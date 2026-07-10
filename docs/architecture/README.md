@@ -33,6 +33,7 @@
 - [WebUI Production / Worker / Queue Overview (WPK-4)](webui_production_overview_panel.md)
 - [WebUI Tooltip + Rich Text (WPK-5)](webui_tooltip_rich_text.md)
 - [WebUI Quest Objective Panel (WPK-6)](webui_quest_objective_panel.md)
+- [WebUI Notification Panel (WPK-7)](webui_notification_panel.md)
 
 ## Target State And Migration
 

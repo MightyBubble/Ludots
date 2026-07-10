@@ -2,7 +2,7 @@ namespace Ludots.WebUI.PanelKit;
 
 /// <summary>
 /// Builds a reference catalog suitable for the checked-in sample panel kit manifest.
-/// Ids are generic panel-kit vocabulary only â€” no game/unit/resource names.
+/// Ids are generic panel-kit vocabulary only â€?no game/unit/resource names.
 /// </summary>
 public static class WebUiPanelKitSampleCatalog
 {
@@ -16,6 +16,19 @@ public static class WebUiPanelKitSampleCatalog
 	public const string CommandDeckAggregateProfileId = "profile.command-deck.aggregate";
 	public const string CommandDeckPinnedProfileId = "profile.command-deck.conditional-pinned";
 	public const string ProductionOverviewProfileId = "profile.production-overview.generic";
+	public const string NotificationTopic = "panel-kit.sample.notification";
+
+	/// <summary>
+	/// Every topic declared by <see cref="SampleManifestPath"/>. Callers that load the full sample
+	/// manifest must register each of these before catalog validation (fail-fast, no silent skip).
+	/// </summary>
+	public static IReadOnlyList<string> SampleTopics { get; } =
+	[
+		ResourceTopic,
+		CommandTopic,
+		ObjectiveTopic,
+		NotificationTopic
+	];
 
 	public static WebUiPanelKitReferenceCatalog Create(Func<string, bool> isTopicRegistered)
 	{
@@ -23,6 +36,7 @@ public static class WebUiPanelKitSampleCatalog
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
 		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.bottom-left"]);
+		surfaceRegions.RegisterAll(["region.top-left", "region.top-right", "region.bottom-center", "region.top-center"]);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
 		profiles.RegisterAll([
@@ -38,12 +52,22 @@ public static class WebUiPanelKitSampleCatalog
 
 		var layouts = new WebUiPanelIdRegistry("layout");
 		layouts.RegisterAll(["layout.bar.horizontal", "layout.deck.grid", "layout.list.vertical", "layout.overview.split"]);
+			WebUiNotificationPanelDescriptors.GenericProfileId
+		]);
+
+		var layouts = new WebUiPanelIdRegistry("layout");
+		layouts.RegisterAll([
+			"layout.bar.horizontal",
+			"layout.deck.grid",
+			"layout.list.vertical",
+			WebUiNotificationPanelDescriptors.ToastStackLayoutId
+		]);
 
 		var densities = new WebUiPanelIdRegistry("density");
 		densities.RegisterAll(["density.compact", "density.comfortable"]);
 
 		var inputCapabilities = new WebUiPanelIdRegistry("input capability");
-		inputCapabilities.RegisterAll(["input.none", "input.activate-slot"]);
+		inputCapabilities.RegisterAll(["input.none", "input.activate-slot", "input.notification-action"]);
 
 		var visibleConditions = new WebUiPanelIdRegistry("visible condition");
 		visibleConditions.RegisterAll(["condition.always", "condition.binding-flag"]);
