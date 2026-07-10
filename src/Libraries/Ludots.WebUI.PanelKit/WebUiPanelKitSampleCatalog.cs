@@ -56,6 +56,10 @@ public static class WebUiPanelKitSampleCatalog
 		]);
 
 		var layouts = new WebUiPanelIdRegistry("layout");
+			WebUiNotificationPanelDescriptors.GenericProfileId
+		]);
+
+		var layouts = new WebUiPanelIdRegistry("layout");
 		layouts.RegisterAll([
 			"layout.bar.horizontal",
 			"layout.deck.grid",
