@@ -40,6 +40,7 @@ Browser adapters must not become selection truth; user-facing selection remains 
 Panel Kit manifests validate topic existence through `WebUiDataPlaneRuntime.IsTopicRegistered` at load time; unknown topic ids fail with the concrete id in the exception message.
 Resource attribute panels (WPK-2) publish `owner` / `descriptor` / `revision` / `values` snapshots via `WebUiResourceAttributeTopicProducer`; see [WebUI Resource Attribute Panel](webui_resource_attribute_panel.md).
 Production / Worker / Queue overview topics (WPK-4) project existing EntityCommandPanel status/queue, OrderBuffer, and entity-collection worker buckets; see [webui_production_overview_panel.md](webui_production_overview_panel.md).
+Tooltip panels (WPK-5) publish structured rich-text snapshots via `WebUiTooltipTopicProducer`; see [WebUI Tooltip + Rich Text](webui_tooltip_rich_text.md).
 
 ## 3 Entity Collection Topics
 
@@ -194,6 +195,7 @@ Current evidence is architectural, source-aligned, and executable:
 - WebUI facade: `src/Libraries/Ludots.WebUI/`
 - DataPlane transport contracts: `src/Libraries/Ludots.WebUI.DataPlane/`
 - Panel Kit manifest (WPK-1 composition contract): `src/Libraries/Ludots.WebUI.PanelKit/` and `docs/architecture/webui_panel_kit_manifest.md`
+- Tooltip + rich text (WPK-5): `src/Libraries/Ludots.WebUI.PanelKit/WebUiTooltip*` / `WebUiRichText*` and `docs/architecture/webui_tooltip_rich_text.md`
 - Shared-memory host transport: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryDataTransport.cs`
 - Host-owned MMF buffer store: `src/Libraries/Ludots.WebUI.Browser/BrowserSharedMemoryBufferStore.cs`
 - Provider-neutral shared-buffer bridge: `src/Libraries/Ludots.UI.Browser/BrowserSharedBufferBridge.cs`
